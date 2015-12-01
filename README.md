@@ -21,9 +21,10 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 
 ### Install python requirements
 
-Client:
+For running the client:
 
-	$ sudo pip install -r requirements.txt (for running client)
+	$ sudo pip install -r requirements.txt
+
 Server:
 
 	$ sudo apt-get install python-dev
