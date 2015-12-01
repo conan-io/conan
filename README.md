@@ -71,4 +71,4 @@ Then add that 'conan' file to your PATH and you are ready:
 
 ## License
 
-[GPL LICENSE](./LICENSE.md)
+[MIT LICENSE](./LICENSE.md)
