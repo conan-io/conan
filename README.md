@@ -21,9 +21,10 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 
 ### Install python requirements
 
-Client:
+For running the client:
 
-	$ sudo pip install -r requirements.txt (for running client)
+	$ sudo pip install -r requirements.txt
+
 Server:
 
 	$ sudo apt-get install python-dev
@@ -33,10 +34,35 @@ Development:
 
 	$ sudo pip install -r requirements_dev.txt
 
-You can also run the tests:
+### Running the tests on Ubuntu
+
+Make sure that the Python requirements have been installed.
+
+Before you can run the tests, you need to set a few environment
+variables first.
+
+	$ export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+The appropriate values of `CONAN_COMPILER` and `CONAN_COMPILER_VERSION`
+depend on your operating system and your requirements. These should work
+for the GCC from `build-essential` on Ubuntu 14.04:
+
+	$ export CONAN_COMPILER=gcc
+	$ export CONAN_COMPILER_VERSION=4.8
+
+You can run the actual tests like this:
 
 	$ nosetests .
 
+About one minute later it should print `OK`:
+
+```
+..................................................................................................................................................
+----------------------------------------------------------------------
+Ran 146 tests in 50.993s
+
+OK
+```
 
 ### Create a launcher
 Conan entry point is "conans.conan.main" module. Fill the absolute path of the cloned repository folder:
