@@ -1,0 +1,4 @@
+# Server
+gevent==1.0.2
+bottle==0.12.8
+gunicorn==19.3.0

@@ -1,0 +1,406 @@
+from conans.client.paths import ConanPaths
+import sys
+import os
+from conans.client.output import ConanOutput, Color
+import argparse
+from conans.errors import ConanException
+import inspect
+from conans.client.remote_manager import RemoteManager
+from conans.client.userio import UserIO
+from conans.client.rest.auth_manager import ConanApiAuthManager
+from conans.client.rest.rest_client import RestApiClient
+from conans.client.store.localdb import LocalDB
+from conans.util.log import logger
+from conans.model.ref import ConanFileReference
+from conans.client.manager import ConanManager
+from conans.paths import CONANFILE
+import requests
+from conans.client.rest.version_checker import VersionCheckerRequester
+from conans import __version__ as CLIENT_VERSION
+from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
+from conans.model.version import Version
+from conans.client.migrations import ClientMigrator
+import hashlib
+import shutil
+from conans.util.files import rmdir, load
+from argparse import RawTextHelpFormatter
+import re
+
+
+class Extender(argparse.Action):
+    '''Allows to use the same flag several times in a command and creates a list with the values.
+       For example:
+           conans install openssl/1.0.2@lasote/testing -o qt:value -o mode:2 -s cucumber:true
+           It creates:
+           options = ['qt:value', 'mode:2']
+           settings = ['cucumber:true']
+    '''
+
+    def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
+        # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
+        dest = getattr(namespace, self.dest, None)
+        if(not hasattr(dest, 'extend') or dest == self.default):
+            dest = []
+            setattr(namespace, self.dest, dest)
+            # if default isn't set to None, this method might be called
+            # with the default as `values` for other arguments which
+            # share this destination.
+            parser.set_defaults(**{self.dest: None})
+
+        try:
+            dest.extend(values)
+        except ValueError:
+            dest.append(values)
+
+
+class Command(object):
+    """ A single command of the conans application, with all the first level commands.
+    Manages the parsing of parameters and delegates functionality in
+    collaborators.
+    It can also show help of the tool
+    """
+    def __init__(self, paths, user_io, runner, remote_manager, localdb):
+        assert isinstance(user_io, UserIO)
+        assert isinstance(paths, ConanPaths)
+        self._conan_paths = paths
+        self._user_io = user_io
+        self._runner = runner
+        self._manager = ConanManager(paths, user_io, runner, remote_manager, localdb)
+        self._localdb = localdb
+
+    def _parse_args(self, parser):
+        parser.add_argument("-r", "--remote", help='look for in the remote storage')
+        parser.add_argument("--options", "-o",
+                            help='load options to build the package, e.g., -o with_qt=true',
+                            nargs=1, action=Extender)
+        parser.add_argument("--settings", "-s",
+                            help='load settings to build the package, -s compiler:gcc',
+                            nargs=1, action=Extender)
+        parser.add_argument("--build", "-b", action=Extender, nargs="*",
+                            help='''Optional, use it to choose if you want to build from sources:
+
+--build            Build all from sources, do not use binary packages.
+--build=never      Default option. Never build, use binary packages or fail if a binary package is not found.
+--build=missing    Build from code if a binary package is not found.
+--build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
+''')
+
+    def _detect_tested_library_name(self):
+        conanfile_content = load(CONANFILE)
+        match = re.search('^\s*name\s*=\s*"(.*)"', conanfile_content, re.MULTILINE)
+        if match:
+            return "%s*" % match.group(1)
+
+        self._user_io.out.warn("Cannot detect a valid conanfile in current directory")
+        return None
+
+    def _get_build_sources_parameter(self, build_param):
+        # returns True if we want to build the missing libraries
+        #         False if building is forbidden
+        #         A list with patterns: Will force build matching libraries,
+        #                               will look for the package for the rest
+
+        if isinstance(build_param, list):
+            if len(build_param) == 0:  # All packages from source
+                return ["*"]
+            elif len(build_param) == 1 and build_param[0] == "never":
+                return False  # Default
+            elif len(build_param) == 1 and build_param[0] == "missing":
+                return True
+            else:  # A list of expressions to match (if matches, will build from source)
+                return ["%s*" % ref_expr for ref_expr in build_param]
+        else:
+            return False  # Nothing is built
+
+    def test(self, *args):
+        """ build and run your package test. Must have conanfile.py with "test"
+        method and "test" subfolder with package consumer test project
+        """
+        parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan",
+                                         formatter_class=RawTextHelpFormatter)
+        parser.add_argument("path", nargs='?', default="",
+                            help='path to conanfile file, '
+                            'e.g., openssl/1.0.2@lasote/testing or ./my_project/')
+        self._parse_args(parser)
+
+        args = parser.parse_args(*args)
+
+        folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
+        test_folder = os.path.join(folder, "test")
+        if not os.path.exists(test_folder):
+            raise ConanException("test folder not available")
+
+        lib_to_test = self._detect_tested_library_name()
+
+        # Get False or a list of patterns to check
+        if args.build is None and lib_to_test:  # Not specified, force build the tested library
+            args.build = [lib_to_test]
+        else:
+            args.build = self._get_build_sources_parameter(args.build)
+
+        options = args.options or []
+        settings = args.settings or []
+
+        sha = hashlib.sha1("".join(options + settings)).hexdigest()
+        build_folder = os.path.join(folder, "build", sha)
+        rmdir(build_folder)
+        shutil.copytree(test_folder, build_folder)
+
+        self._manager.install(reference=build_folder,
+                              remote=args.remote,
+                              options=options,
+                              settings=settings,
+                              build_mode=args.build)
+        self._manager.build(build_folder, test=True)
+
+    def install(self, *args):
+        """ install in the local store the given requirements.
+        Requirements can be defined in the command line or in a conanfile.
+        EX: conans install opencv/2.4.10@lasote/testing
+        """
+        parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan",
+                                         formatter_class=RawTextHelpFormatter)
+        parser.add_argument("reference", nargs='?', default="",
+                            help='reference name or path to conanfile file, '
+                            'e.g., openssl/1.0.2@lasote/testing or ./my_project/')
+        self._parse_args(parser)
+
+        args = parser.parse_args(*args)
+
+        # Get False or a list of patterns to check
+        args.build = self._get_build_sources_parameter(args.build)
+        option_dict = args.options or []
+        settings_dict = args.settings or []
+        try:
+            reference = ConanFileReference.loads(args.reference)
+        except:
+            reference = os.path.normpath(os.path.join(os.getcwd(), args.reference))
+
+        self._manager.install(reference=reference,
+                              remote=args.remote,
+                              options=option_dict,
+                              settings=settings_dict,
+                              build_mode=args.build)
+
+    def build(self, *args):
+        """ calls your project conanfile.py "build" method.
+            EX: conans build ./my_project
+            Intended for package creators, requires a conanfile.py.
+        """
+        parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan")
+        parser.add_argument("path", nargs="?",
+                            help='path to user conanfile.py, e.g., conans build .',
+                            default="")
+        args = parser.parse_args(*args)
+        root_path = os.path.normpath(os.path.join(os.getcwd(), args.path))
+        self._manager.build(root_path)
+
+    def export(self, *args):
+        """ copies a conanfile.py and associated (export) files to your local store,
+        where it can be shared and reused in other projects.
+        From that store, it can be uploaded to any remote with "upload" command.
+        """
+        parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan")
+        parser.add_argument("user", help='user_name[/channel]. By default, channel is '
+                                         '"testing", e.g., phil or phil/stable')
+        parser.add_argument('--path', '-p', default=None,
+                            help='Optional. Folder with a %s. Default current directory.'
+                            % CONANFILE)
+        args = parser.parse_args(*args)
+
+        self._manager.export(args.user, args.path)
+
+    def remove(self, *args):
+        """ Remove any folder from your local/remote store
+        """
+        parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan")
+        parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
+        parser.add_argument('-p', '--packages', const=[], nargs='?',
+                            help='By default, remove all the packages or select one, '
+                                 'specifying the SHA key')
+        parser.add_argument('-b', '--builds', const=[], nargs='?',
+                            help='By default, remove all the build folders or select one, '
+                                 'specifying the SHA key')
+        parser.add_argument('-s', '--src', default=False, action="store_true",
+                            help='Remove source folders')
+        parser.add_argument('-f', '--force', default=False,
+                            action='store_true', help='Remove without requesting a confirmation')
+        parser.add_argument('-r', '--remote', help='Remote origin')
+        args = parser.parse_args(*args)
+
+        if args.packages:
+            args.packages = args.packages.split(",")
+        if args.builds:
+            args.builds = args.builds.split(",")
+        self._manager.remove(args.pattern, package_ids_filter=args.packages, build_ids=args.builds,
+                             src=args.src, force=args.force, remote=args.remote)
+
+    def user(self, *parameters):
+        """ shows or change the current user """
+        parser = argparse.ArgumentParser(description=self.user.__doc__, prog="conan")
+        parser.add_argument("name", nargs='?', default=None,
+                            help='Username you want to use. '
+                                 'If no name is provided it will show the current user.')
+        parser.add_argument("-p", "--password", help='User password')
+        parser.add_argument("--remote", "-r", help='look for in the remote storage')
+        args = parser.parse_args(*parameters)  # To enable -h
+        self._manager.user(args.remote, args.name, args.password)
+
+    def search(self, *args):
+        """ show local/remote packages
+        """
+        parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan")
+        parser.add_argument('pattern', nargs='?', help='Pattern name, e.g., openssl/*')
+        parser.add_argument('--case-sensitive', default=False,
+                            action='store_true', help='Make a case-sensitive search')
+        parser.add_argument('-r', '--remote', help='Remote origin')
+        parser.add_argument('-v', '--verbose', default=False,
+                            action='store_true', help='Show packages options and settings')
+        parser.add_argument('-p', '--package', help='Package ID pattern. EX: 23*', default=None)
+        args = parser.parse_args(*args)
+
+        self._manager.search(args.pattern,
+                             args.remote,
+                             ignorecase=not args.case_sensitive,
+                             verbose=args.verbose,
+                             package_pattern=args.package)
+
+    def upload(self, *args):
+        """ uploads a conanfile or binary packages from the local store to any remote.
+        To upload something, it should be "exported" first.
+        """
+        parser = argparse.ArgumentParser(description=self.upload.__doc__,
+                                         prog="conan")
+        parser.add_argument("reference",
+                            help='conan reference, e.g., openssl/1.0.2@lasote/testing')
+        # TODO: packageparser.add_argument('package', help='user name')
+        parser.add_argument("--package", "-p", default=None, help='package ID to upload')
+        parser.add_argument("--remote", "-r", help='upload to this specific remote')
+        parser.add_argument("--all", action='store_true',
+                            default=False, help='Upload both conans sources and packages')
+        parser.add_argument("--force", action='store_true',
+                            default=False,
+                            help='Do not check conans date, override remote with local')
+
+        args = parser.parse_args(*args)
+
+        conan_ref = ConanFileReference.loads(args.reference)
+        package_id = args.package
+
+        if not conan_ref and not package_id:
+            raise ConanException("Enter conans or package id")
+
+        self._manager.upload(conan_ref, package_id,
+                             args.remote, all_packages=args.all, force=args.force)
+
+    def _show_help(self):
+        """ prints a summary of all commands
+        """
+        self._user_io.out.writeln('Conan commands. Type $conan "command" -h for help',
+                                  Color.BRIGHT_YELLOW)
+        commands = self._commands()
+        for name in sorted(self._commands()):
+            self._user_io.out.write('  %-10s' % name, Color.GREEN)
+            self._user_io.out.writeln(commands[name].__doc__.split('\n', 1)[0])
+
+    def _commands(self):
+        """ returns a list of available commands
+        """
+        result = {}
+        for m in inspect.getmembers(self, predicate=inspect.ismethod):
+            method_name = m[0]
+            if not method_name.startswith('_'):
+                method = m[1]
+                if method.__doc__ and not method.__doc__.startswith('HIDDEN'):
+                    result[method_name] = method
+        return result
+
+    def run(self, *args):
+        """HIDDEN: entry point for executing commands, dispatcher to class
+        methods
+        """
+        errors = False
+        try:
+            try:
+                command = args[0][0]
+                commands = self._commands()
+                method = commands[command]
+            except KeyError as exc:
+                if command in ["-v", "--version"]:
+                    self._user_io.out.success("Conan version %s" % CLIENT_VERSION)
+                    return False
+                self._show_help()
+                if command in ["-h", "--help"]:
+                    return False
+                raise ConanException("Unknown command %s" % str(exc))
+            except IndexError as exc:  # No parameters
+                self._show_help()
+                return False
+            method(args[0][1:])
+        except (KeyboardInterrupt, SystemExit) as exc:
+            logger.error(exc)
+            errors = True
+        except ConanException as exc:
+            logger.error(exc)
+            # logger.debug(traceback.format_exc())
+            errors = True
+            self._user_io.out.error(str(exc))
+
+        return errors
+
+
+def migrate_and_get_paths(base_folder, out, storage_folder=None):
+    # Init paths
+    paths = ConanPaths(base_folder, storage_folder, out)
+
+    # Migration system
+    migrator = ClientMigrator(paths, Version(CLIENT_VERSION), out)
+    migrator.migrate()
+
+    # Init again paths, migration could change config
+    paths = ConanPaths(base_folder, storage_folder, out)
+    return paths
+
+
+def main(args):
+    """ main entry point of the conans application, using a Command to
+    parse parameters
+    """
+    if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+        import colorama
+        colorama.init()
+        color = True
+    else:
+        color = False
+    out = ConanOutput(sys.stdout, color)
+    user_io = UserIO(out=out)
+
+    user_folder = os.path.expanduser("~")
+    paths = migrate_and_get_paths(user_folder, out)
+
+    # Verify client version against remotes
+    version_checker_requester = VersionCheckerRequester(requests, Version(CLIENT_VERSION),
+                                                        Version(MIN_SERVER_COMPATIBLE_VERSION), out)
+    # To handle remote connections
+    rest_api_client = RestApiClient(out, requester=version_checker_requester)
+    # To store user and token
+    localdb = LocalDB(paths.localdb)
+    # Wraps RestApiClient to add authentication support (same interface)
+    auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
+    # Handle remote connections
+    remote_manager = RemoteManager(paths, paths.conan_config.remotes, auth_manager, out)
+
+    command = Command(paths, user_io, os.system, remote_manager, localdb)
+    current_dir = os.getcwd()
+    try:
+        import signal
+
+        def sigint_handler(signal, frame):
+            print('You pressed Ctrl+C!')
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, sigint_handler)
+        error = command.run(args)
+    finally:
+        os.chdir(current_dir)
+    sys.exit(error)
