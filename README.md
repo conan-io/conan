@@ -1,6 +1,6 @@
 # Conan
 
- A binary dependency manager and hosting service for developers
+ A distributed, open source, package manager.
 
 # Setup
 
