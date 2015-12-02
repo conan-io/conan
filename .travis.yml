@@ -1,20 +1,24 @@
-os:
-  - linux
-#  - osx
 language: python
+python: 2.7
+os: linux
 sudo: required
 dist: trusty
+
 env:
   - CONAN_COMPILER=gcc CONAN_COMPILER_VERSION=4.8
-python:
-  - "2.7"
+
+matrix:
+    include:
+        - language: generic
+          os: osx
+          env: PYVER=py27 CONAN_COMPILER=clang CONAN_COMPILER_VERSION=3.5
+          
 # command to install dependencies
 install:
-  - pip install -r requirements_dev.txt
-  - pip install -r requirements_server.txt
-  - pip install -r requirements.txt
+  - ./.ci/travis/install.sh
 before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
   - export CONAN_LOGGING_LEVEL=10
 # command to run tests
-script: nosetests
+script: 
+  - ./.ci/travis/run.sh
