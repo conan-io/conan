@@ -36,7 +36,7 @@ class GoDiamondTest(unittest.TestCase):
         os.chdir(client.current_folder)
         client.run("install --build missing")
         client.run("build")
-        command = "say_hello" if platform.system() == "Windows" else "./say_hello"
+        command = os.sep.join([".", "bin", "say_hello"])
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
                            var_to_add=[('GOPATH', client.current_folder), ]):
 
@@ -67,7 +67,7 @@ class GoDiamondTest(unittest.TestCase):
         client2.save(files3)
 
         client2.run("install --build missing")
-        command = "say_hello" if platform.system() == "Windows" else "./say_hello"
+        command = os.sep.join([".", "bin", "say_hello"])
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
                            var_to_add=[('GOPATH', client2.current_folder), ]):
 
