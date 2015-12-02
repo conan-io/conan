@@ -47,7 +47,7 @@ class MultiBuildTest(unittest.TestCase):
             client.run('install')
             client.run('build')
 
-            command = '.%ssay_hello' % os.sep
+            command = os.sep.join([".", "bin", "say_hello"])
             client.runner(command, client.current_folder)
             self.assertIn("Hello Hello1", client.user_io.out)
             self.assertIn("Hello Hello0", client.user_io.out)

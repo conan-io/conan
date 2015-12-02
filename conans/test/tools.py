@@ -273,12 +273,18 @@ class TestClient(object):
         # Set default settings in global defined
         self.paths.conan_config  # For create the default file if not existing
         text = load(self.paths.conan_conf_path)
-        text = text.replace("compiler.runtime=MD", "")
+        if compiler != "Visual Studio":
+            text = text.replace("compiler.runtime=MD", "")
         text = text.replace("build_type=Release", "")
 
         text += "\n" + "compiler=%s" % compiler
         text += "\n" + "compiler.version=%s" % compiler_version
         save(self.paths.conan_conf_path, text)
+
+    @property
+    def default_compiler_visual_studio(self):
+        text = load(self.paths.conan_conf_path)
+        return "compiler=Visual Studio" in text
 
     def init_dynamic_vars(self, user_io=None):
 

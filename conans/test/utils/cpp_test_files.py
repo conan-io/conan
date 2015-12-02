@@ -32,13 +32,12 @@ class {name}Conan(ConanFile):
         self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
-        self.copy_headers("*.h")
-        self.copy_libs("lib*.a")
-        #self.copy_res("*.txt") # this will copy CMake temp txt files
-        self.copy_bins("*.dll")
-        self.copy_libs("*.dylib")
-        self.copy_libs("*.so")
-        # self.copy("*.h++", "include2", "include")
+        self.copy(pattern="*.h", dst="include", keep_path=False)
+        self.copy(pattern="*.lib", dst="lib", keep_path=False)
+        self.copy(pattern="*lib*.a", dst="lib", keep_path=False)
+        self.copy(pattern="*.dll", dst="bin", keep_path=False)
+        self.copy(pattern="*.dylib", dst="lib", keep_path=False)
+        self.copy(pattern="*.so", dst="lib", keep_path=False)
 
     def package_info(self):
         self.cpp_info.libs = ["hello{name}"]
@@ -56,14 +55,15 @@ INCLUDE(%s)
 
 ADD_DEFINITIONS(-DCONAN_LANGUAGE=${{CONAN_LANGUAGE}})
 MESSAGE("HELLO LANGUAGE " ${{CONAN_LANGUAGE}})
-CONAN_CHECK_COMPILER()
-CONAN_FLAGS_SETUP()
+CONAN_BASIC_SETUP()
 
 ADD_LIBRARY(hello{name} hello.cpp)
 TARGET_LINK_LIBRARIES(hello{name} ${{CONAN_LIBS}})
 set_target_properties(hello{name}  PROPERTIES POSITION_INDEPENDENT_CODE ON)
 ADD_EXECUTABLE(say_hello main.cpp)
 TARGET_LINK_LIBRARIES(say_hello hello{name})
+
+
 """ % BUILD_INFO_CMAKE
 
 body = r"""#include "hello{name}.h"
@@ -85,7 +85,7 @@ void hello{name}(){{
 header = """
 #pragma once
 {includes}
-void hello{name}();
+{export}void hello{name}();
 """
 
 main = """
@@ -98,7 +98,8 @@ int main(){{
 """
 
 
-def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=None):
+def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, 
+                           msg=None, dll_export=False):
     """
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
     param deps: [] list of integers, defining which dependencies this conans
@@ -107,6 +108,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
                             downstream consumers
     param msg: the message to append to Hello/Hola, will be equal the number
                by default
+    param dll_export: Adds __declspec(dllexport) to the .h declaration (to be exported to lib with a dll)
     e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
          "Hello 3", that depends both in Hello4 and Hello7.
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7
@@ -118,7 +120,9 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
     ret = {}
     ret["main.cpp"] = main.format(name=name)
     includes = "\n".join(['#include "hello%s.h"' % d for d in deps])
+    export = "__declspec(dllexport) " if dll_export else ""
     ret["hello%s.h" % name] = header.format(name=name,
+                                            export=export,
                                             includes=(includes if not private_includes else ""))
 
     other_calls = "\n".join(["hello%s();" % d for d in deps])
@@ -133,13 +137,15 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
 
 
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
-                           private_includes=False, msg=None):
+                          private_includes=False, msg=None, dll_export=False):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
     param version: string with the version of the current conans "0.1" by default
     param deps: [] list of string of the form "0/0.1@user/channel"
     param language: 0 = English, 1 = Spanish
+    param dll_export: Adds __declspec(dllexport) to the .h declaration (to be exported to lib with a dll)
+
     e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
          "Hello 3", that depends both in Hello4 and Hello7.
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7"""
@@ -160,7 +166,8 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     requires.append("")
     requires = ", ".join(requires)
 
-    base_files = cpp_hello_source_files(name, code_deps, private_includes, msg=msg)
+    base_files = cpp_hello_source_files(name, code_deps, private_includes, msg=msg,
+                                        dll_export=dll_export)
     conanfile = conanfile_template.format(name=name,
                                       version=version,
                                       requires=requires,

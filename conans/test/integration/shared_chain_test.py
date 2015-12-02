@@ -6,6 +6,7 @@ from conans.model.ref import ConanFileReference
 from nose.plugins.attrib import attr
 from conans.util.files import rmdir
 import shutil
+import os
 
 
 @attr("slow")
@@ -20,11 +21,13 @@ class SharedChainTest(unittest.TestCase):
 
     def _export_upload(self, name, version=None, deps=None):
         conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
-        files = cpp_hello_conan_files(name, version, deps, static=self.static)
+        dll_export = conan.default_compiler_visual_studio
+        files = cpp_hello_conan_files(name, version, deps, static=False, dll_export=dll_export)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         conan.save(files, clean_first=True)
+
         conan.run("export lasote/stable")
-        conan.run("install '%s' -o static=False -o language=0 --build missing" % str(conan_ref))
+        conan.run("install '%s' --build missing" % str(conan_ref))
         conan.run("upload %s --all" % str(conan_ref))
         rmdir(conan.current_folder)
         shutil.rmtree(conan.paths.store, ignore_errors=True)
@@ -39,7 +42,7 @@ class SharedChainTest(unittest.TestCase):
 
         client.run("install . --build missing")
         client.run("build .")
-        command = "say_hello" if platform.system() == "Windows" else "./say_hello"
+        command = os.sep.join([".", "bin", "say_hello"])
 
         client.runner(command, client.current_folder)
         self.assertEqual(['Hello Hello2', 'Hello Hello1', 'Hello Hello0'],

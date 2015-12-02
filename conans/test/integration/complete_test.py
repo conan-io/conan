@@ -70,10 +70,7 @@ class CompleteFlowTest(unittest.TestCase):
         client3.save(files3)
         client3.run('install')
         client3.run('build')
-        if platform.system() == "Windows":
-            command = "say_hello"
-        else:
-            command = './say_hello'
+        command = os.sep.join([".", "bin", "say_hello"])
         client3.runner(command, client3.current_folder)
         self.assertIn("Hello Hello1", client3.user_io.out)
         self.assertIn("Hello Hello0", client3.user_io.out)
@@ -82,10 +79,7 @@ class CompleteFlowTest(unittest.TestCase):
         time.sleep(1)
         client3.run('build')
 
-        if platform.system() == "Windows":
-            command = "say_hello"
-        else:
-            command = './say_hello'
+        command = os.sep.join([".", "bin", "say_hello"])
         client3.runner(command, client3.current_folder)
         self.assertIn("Hola Hello1", client3.user_io.out)
         self.assertIn("Hola Hello0", client3.user_io.out)
@@ -98,7 +92,6 @@ class CompleteFlowTest(unittest.TestCase):
     def _assert_library_files(self, path):
         libraries = os.listdir(os.path.join(path, "lib"))
         self.assertEquals(len(libraries), 1)
-        self.assertTrue(os.path.basename(libraries[0]).startswith("libhello"))
 
     def _assert_library_exists_in_server(self, package_ref, paths):
         folder = uncompress_packaged_files(paths, package_ref)
