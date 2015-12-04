@@ -40,14 +40,17 @@ Development:
 
 	$ sudo pip install -r requirements_dev.txt
 
+
 ### Running the tests on Ubuntu
 
 Make sure that the Python requirements have been installed.
 
 Before you can run the tests, you need to set a few environment
 variables first.
-
+	
 	$ export PYTHONPATH=$PYTHONPATH:$(pwd)
+	
+
 
 And ensure you at least `cmake` > 2.8 installed:
 
@@ -65,6 +68,9 @@ These should work for OS X:
 
   	$ export CONAN_COMPILER=clang
   	$ export CONAN_COMPILER_VERSION=3.5
+
+
+Finally, there are some tests that use conan to package Go-lang libraries, so you would **need to install go-lang** in your computer and add it to the path. 
 
 You can run the actual tests like this:
 
