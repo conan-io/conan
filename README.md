@@ -12,7 +12,7 @@ A distributed, open source, package manager.
 
 ## From binaries
 
-We have installers for [most plattforms here](http://conan.io) but you can run **conan** from sources if you want 
+We have installers for [most platforms here](http://conan.io) but you can run **conan** from sources if you want
 
 ## From source
 
@@ -34,7 +34,7 @@ For running the client:
 Server:
 
 	$ sudo apt-get install python-dev
-    $ sudo pip install -r requirements_server.txt
+  $ sudo pip install -r requirements_server.txt
 	
 Development:
 
@@ -49,12 +49,22 @@ variables first.
 
 	$ export PYTHONPATH=$PYTHONPATH:$(pwd)
 
+And ensure you at least `cmake` > 2.8 installed:
+
+  $ cmake --version
+
 The appropriate values of `CONAN_COMPILER` and `CONAN_COMPILER_VERSION`
-depend on your operating system and your requirements. These should work
-for the GCC from `build-essential` on Ubuntu 14.04:
+depend on your operating system and your requirements.
+
+These should work for the GCC from `build-essential` on Ubuntu 14.04:
 
 	$ export CONAN_COMPILER=gcc
 	$ export CONAN_COMPILER_VERSION=4.8
+
+These should work for OS X:
+
+  $ export CONAN_COMPILER=clang
+  $ export CONAN_COMPILER_VERSION=3.5
 
 You can run the actual tests like this:
 
