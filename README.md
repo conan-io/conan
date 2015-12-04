@@ -34,7 +34,7 @@ For running the client:
 Server:
 
 	$ sudo apt-get install python-dev
-  $ sudo pip install -r requirements_server.txt
+  	$ sudo pip install -r requirements_server.txt
 	
 Development:
 
@@ -51,7 +51,7 @@ variables first.
 
 And ensure you at least `cmake` > 2.8 installed:
 
-  $ cmake --version
+  	$ cmake --version
 
 The appropriate values of `CONAN_COMPILER` and `CONAN_COMPILER_VERSION`
 depend on your operating system and your requirements.
@@ -63,8 +63,8 @@ These should work for the GCC from `build-essential` on Ubuntu 14.04:
 
 These should work for OS X:
 
-  $ export CONAN_COMPILER=clang
-  $ export CONAN_COMPILER_VERSION=3.5
+  	$ export CONAN_COMPILER=clang
+  	$ export CONAN_COMPILER_VERSION=3.5
 
 You can run the actual tests like this:
 
