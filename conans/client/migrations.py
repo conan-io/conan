@@ -1,5 +1,5 @@
 from conans.migrations import Migrator
-from conans.util.files import rmdir
+from conans.util.files import rmdir, load, save
 from conans.model.version import Version
 import os
 
@@ -22,3 +22,10 @@ class ClientMigrator(Migrator):
                 rmdir(self.conf_path)
             if os.path.exists(self.store_path):
                 rmdir(self.store_path)
+        elif old_version < Version("0.5"):
+            self.out.warn("Migration: Updating settings.yml with new gcc versions")
+            default_settings = load(self.paths.settings_path)
+            default_settings = default_settings.replace(
+                                    'version: ["4.6", "4.7", "4.8", "4.9", "5.0"]',
+                                    'version: ["4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3"]')
+            save(self.paths.settings_path, default_settings)
