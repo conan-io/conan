@@ -116,7 +116,7 @@ class Command(object):
         """ build and run your package test. Must have conanfile.py with "test"
         method and "test" subfolder with package consumer test project
         """
-        parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan",
+        parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test",
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("path", nargs='?', default="",
                             help='path to conanfile file, '
@@ -158,7 +158,7 @@ class Command(object):
         Requirements can be defined in the command line or in a conanfile.
         EX: conans install opencv/2.4.10@lasote/testing
         """
-        parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan",
+        parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install",
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("reference", nargs='?', default="",
                             help='reference name or path to conanfile file, '
@@ -187,7 +187,7 @@ class Command(object):
             EX: conans build ./my_project
             Intended for package creators, requires a conanfile.py.
         """
-        parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan")
+        parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
         parser.add_argument("path", nargs="?",
                             help='path to user conanfile.py, e.g., conans build .',
                             default="")
@@ -200,7 +200,7 @@ class Command(object):
             Intended for package creators, for regenerate package without recompile the source.
             EX: conans package openssl/1.0.2@lasote/testing 9cf83afd07b678d38a9c1645f605875400847ff3
         """
-        parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan")
+        parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("reference", help='reference name. e.g., openssl/1.0.2@lasote/testing')
         parser.add_argument("package", help='Package ID to regenerate. e.g., 9cf83afd07b678d38a9c1645f605875400847ff3')
 
@@ -219,7 +219,7 @@ class Command(object):
         where it can be shared and reused in other projects.
         From that store, it can be uploaded to any remote with "upload" command.
         """
-        parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan")
+        parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
         parser.add_argument("user", help='user_name[/channel]. By default, channel is '
                                          '"testing", e.g., phil or phil/stable')
         parser.add_argument('--path', '-p', default=None,
@@ -232,7 +232,7 @@ class Command(object):
     def remove(self, *args):
         """ Remove any folder from your local/remote store
         """
-        parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan")
+        parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
         parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
         parser.add_argument('-p', '--packages', const=[], nargs='?',
                             help='By default, remove all the packages or select one, '
@@ -256,7 +256,7 @@ class Command(object):
 
     def user(self, *parameters):
         """ shows or change the current user """
-        parser = argparse.ArgumentParser(description=self.user.__doc__, prog="conan")
+        parser = argparse.ArgumentParser(description=self.user.__doc__, prog="conan user")
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. '
                                  'If no name is provided it will show the current user.')
@@ -268,7 +268,7 @@ class Command(object):
     def search(self, *args):
         """ show local/remote packages
         """
-        parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan")
+        parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
         parser.add_argument('pattern', nargs='?', help='Pattern name, e.g., openssl/*')
         parser.add_argument('--case-sensitive', default=False,
                             action='store_true', help='Make a case-sensitive search')
@@ -289,7 +289,7 @@ class Command(object):
         To upload something, it should be "exported" first.
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
-                                         prog="conan")
+                                         prog="conan upload")
         parser.add_argument("reference",
                             help='conan reference, e.g., openssl/1.0.2@lasote/testing')
         # TODO: packageparser.add_argument('package', help='user name')
