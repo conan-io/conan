@@ -11,7 +11,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClient
 from conans.client.store.localdb import LocalDB
 from conans.util.log import logger
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.client.manager import ConanManager
 from conans.paths import CONANFILE
 import requests
@@ -194,6 +194,25 @@ class Command(object):
         args = parser.parse_args(*args)
         root_path = os.path.normpath(os.path.join(os.getcwd(), args.path))
         self._manager.build(root_path)
+
+    def package(self, *args):
+        """ calls your conanfile.py "package" method for a specific package.
+            Intended for package creators, for regenerate package without recompile the source.
+            EX: conans package openssl/1.0.2@lasote/testing 9cf83afd07b678d38a9c1645f605875400847ff3
+        """
+        parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan")
+        parser.add_argument("reference", help='reference name. e.g., openssl/1.0.2@lasote/testing')
+        parser.add_argument("package", help='Package ID to regenerate. e.g., 9cf83afd07b678d38a9c1645f605875400847ff3')
+
+        args = parser.parse_args(*args)
+
+        try:
+            reference = ConanFileReference.loads(args.reference)
+        except:
+            raise ConanException("Invalid conanfile reference. e.g., openssl/1.0.2@lasote/testing")
+
+        package_reference = PackageReference(reference, args.package)
+        self._manager.package(package_reference)
 
     def export(self, *args):
         """ copies a conanfile.py and associated (export) files to your local store,

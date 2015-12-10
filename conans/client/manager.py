@@ -5,7 +5,7 @@ from conans.client.export import export_conanfile
 from conans.client.deps_builder import DepsBuilder
 from conans.client.userio import UserIO
 from conans.client.installer import ConanInstaller
-from conans.util.files import save, load
+from conans.util.files import save, load, rmdir
 from conans.util.log import logger
 from conans.client.uploader import ConanUploader
 from conans.client.printer import Printer
@@ -23,6 +23,7 @@ from conans.model.options import OptionsValues
 import re
 from conans.info import SearchInfo
 from conans.model.build_info import DepsCppInfo
+from conans.client import packager
 
 
 def get_user_channel(text):
@@ -132,6 +133,20 @@ class ConanManager(object):
             conanfile.copy = local_installer
             conanfile.imports()
             local_installer.execute()
+
+    def package(self, package_reference):
+        assert(isinstance(package_reference, PackageReference))
+
+        # Package paths
+        conan_file_path = self._paths.conanfile(package_reference.conan)
+        build_folder = self._paths.build(package_reference)
+        package_folder = self._paths.package(package_reference)
+
+        # Will read current conaninfo with specified options and load conanfile with them
+        loader = self._loader(build_folder)
+        conanfile = loader.load_conan(conan_file_path)
+        rmdir(package_folder)
+        packager.create_package(conanfile, build_folder, package_folder, self._user_io.out)
 
     def build(self, path, test=False):
         """ Call to build() method saved on the conanfile.py
