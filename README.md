@@ -3,13 +3,8 @@
 A distributed, open source, package manager.
 
 
-<<<<<<< HEAD
 | **master (linux/osx)** | **develop (linux/osx)** | **master (windows)** | **develop** (windows) |
 |------------------------|-------------------------|----------------------|-----------------------|
-=======
-| **master (linux)** | **develop (linux)** | **master (windows)** | **develop** (windows) |
-|--------------------|---------------------|----------------------|-----------------------|
->>>>>>> Added badges
 |[![Build Status](https://travis-ci.org/conan-io/conan.svg?branch=master)](https://travis-ci.org/conan-io/conan) | [![Build Status](https://travis-ci.org/conan-io/conan.svg?branch=develop)](https://travis-ci.org/conan-io/conan) | [![Build status](https://ci.appveyor.com/api/projects/status/5hedgjt9ggj1artx/branch/develop?svg=true)](https://ci.appveyor.com/project/lasote/conan-mva77/branch/master) | [![Build status](https://ci.appveyor.com/api/projects/status/5hedgjt9ggj1artx/branch/develop?svg=true)](https://ci.appveyor.com/project/lasote/conan-mva77/branch/develop) |
 
 

@@ -2,6 +2,8 @@ import os
 import re
 from conans.errors import ConanException
 from conans.client.generators import TXTGenerator
+from conans.util.log import logger
+import traceback
 
 
 DEFAULT_INCLUDE = "include"
@@ -26,6 +28,7 @@ class _CppInfo(object):
         self.cppflags = []  # C++ compilation flags
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
+        self.rootpath = ""
 
 
 class CppInfo(_CppInfo):
@@ -36,7 +39,7 @@ class CppInfo(_CppInfo):
     """
     def __init__(self, root_folder):
         super(CppInfo, self).__init__()
-        self.root = root_folder  # the full path of the package in which the conans is found
+        self.rootpath = root_folder  # the full path of the package in which the conans is found
         self.includedirs.append(DEFAULT_INCLUDE)
         self.libdirs.append(DEFAULT_LIB)
         self.bindirs.append(DEFAULT_BIN)
@@ -44,15 +47,15 @@ class CppInfo(_CppInfo):
 
     @property
     def include_paths(self):
-        return [os.path.join(self.root, p) for p in self.includedirs]
+        return [os.path.join(self.rootpath, p) for p in self.includedirs]
 
     @property
     def lib_paths(self):
-        return [os.path.join(self.root, p) for p in self.libdirs]
+        return [os.path.join(self.rootpath, p) for p in self.libdirs]
 
     @property
     def bin_paths(self):
-        return [os.path.join(self.root, p) for p in self.bindirs]
+        return [os.path.join(self.rootpath, p) for p in self.bindirs]
 
 
 class DepsCppInfo(_CppInfo):
@@ -62,7 +65,7 @@ class DepsCppInfo(_CppInfo):
     so deps info is managed
     """
     fields = ["includedirs", "libdirs", "bindirs", "libs", "defines", "cppflags",
-              "cflags", "sharedlinkflags", "exelinkflags"]
+              "cflags", "sharedlinkflags", "exelinkflags", "rootpath"]
 
     def __init__(self):
         super(DepsCppInfo, self).__init__()
@@ -82,27 +85,33 @@ class DepsCppInfo(_CppInfo):
     def loads(text):
         pattern = re.compile("^\[([a-zA-Z0-9_-]{2,50})\]")
         result = DepsCppInfo()
-
-        for line in text.splitlines():
-            line = line.strip()
-            if not line or line[0] == '#':
-                continue
-            m = pattern.match(line)
-            if m:
-                group = m.group(1)
-                tokens = group.split("_")
-                field = tokens[0]
-                if field not in DepsCppInfo.fields:
-                    raise ConanException("Unrecognized field '%s'" % field)
-                if len(tokens) == 2:
-                    dep = tokens[1]
-                    child = result._dependencies.setdefault(dep, DepsCppInfo())
-                    current_field = getattr(child, field)
-                else:
-                    current_field = getattr(result, field)
-            else:
-                current_field.append(line)
-
+        try:
+            for line in text.splitlines():
+                line = line.strip()
+                if not line or line[0] == '#':
+                    continue
+                m = pattern.match(line)
+                if m:  # Header like [includedirs]
+                    group = m.group(1)
+                    tokens = group.split("_")
+                    field = tokens[0]
+                    if field not in DepsCppInfo.fields:
+                        raise ConanException("Unrecognized field '%s'" % field)
+                    if len(tokens) == 2:
+                        dep = tokens[1]
+                        child = result._dependencies.setdefault(dep, DepsCppInfo())
+                        current_info_object = child
+                    else:
+                        current_info_object = result
+                else:  # Line with a value
+                    current_field = getattr(current_info_object, field)
+                    if isinstance(current_field, str):  # Attribute of type string
+                        setattr(current_info_object, field, current_field)
+                    else:  # Attribute is a list
+                        current_field.append(line)
+        except Exception:
+            logger.error(traceback.format_exc())
+            raise
         return result
 
     def update(self, dep_cpp_info, conan_ref=None):
