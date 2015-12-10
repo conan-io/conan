@@ -13,7 +13,7 @@ os: [Windows, Linux, Macos, Android]
 arch: [x86, x86_64, arm]
 compiler:
     gcc:
-        version: ["4.6", "4.7", "4.8", "4.9", "5.0"]
+        version: ["4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3"]
     Visual Studio:
         runtime: [None, MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14"]
