@@ -12,8 +12,13 @@ def md5(content):
 
 
 def md5sum(file_path):
+    return _generic_algorithm_sum(file_path, "md5")
+
+
+def _generic_algorithm_sum(file_path, algorithm_name):
+
     with open(file_path, 'rb') as fh:
-        m = hashlib.md5()
+        m = getattr(hashlib, algorithm_name)()
         while True:
             data = fh.read(8192)
             if not data:
