@@ -5,6 +5,7 @@ import os
 from urllib import FancyURLopener
 import urllib2
 from conans.errors import ConanException
+from conans.util.files import _generic_algorithm_sum
 
 
 def human_size(size_bytes):
@@ -128,3 +129,25 @@ def replace_in_file(file_path, search, replace):
         content = content.replace(search, replace)
     with open(file_path, 'wb') as handle:
         handle.write(content)
+
+
+def check_with_algorithm_sum(algorithm_name, file_path, signature):
+
+    real_signature = _generic_algorithm_sum(file_path, algorithm_name)
+    if real_signature != signature:
+        raise ConanException("%s signature failed for '%s' file."
+                             " Computed signature: %s" % (algorithm_name,
+                                                          os.path.basename(file_path),
+                                                          real_signature))
+
+
+def check_sha1(file_path, signature):
+    check_with_algorithm_sum("sha1", file_path, signature)
+
+
+def check_md5(file_path, signature):
+    check_with_algorithm_sum("md5", file_path, signature)
+
+
+def check_sha256(file_path, signature):
+    check_with_algorithm_sum("sha256", file_path, signature)
