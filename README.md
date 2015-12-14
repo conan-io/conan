@@ -16,7 +16,7 @@ You can run **conan** client and server in Windows, MacOS, and Linux.
 ### Clone conan repository
 
 
-    $ git clone https://github.com/conan-co/conan
+    $ git clone https://github.com/conan-io/conan
 
 
 ### Install python requirements
