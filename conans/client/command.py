@@ -120,13 +120,13 @@ class Command(object):
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("path", nargs='?', default="",
                             help='path to conanfile file, '
-                            'e.g., openssl/1.0.2@lasote/testing or ./my_project/')
+                            'e.g. /my_project/')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
 
-        folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
-        test_folder = os.path.join(folder, "test")
+        root_folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
+        test_folder = os.path.join(root_folder, "test")
         if not os.path.exists(test_folder):
             raise ConanException("test folder not available")
 
@@ -142,16 +142,17 @@ class Command(object):
         settings = args.settings or []
 
         sha = hashlib.sha1("".join(options + settings)).hexdigest()
-        build_folder = os.path.join(folder, "build", sha)
+        build_folder = os.path.join(root_folder, "build", sha)
         rmdir(build_folder)
         shutil.copytree(test_folder, build_folder)
 
         self._manager.install(reference=build_folder,
+                              current_path=build_folder,
                               remote=args.remote,
                               options=options,
                               settings=settings,
                               build_mode=args.build)
-        self._manager.build(build_folder, test=True)
+        self._manager.build(build_folder, build_folder, test=True)
 
     def install(self, *args):
         """ install in the local store the given requirements.
@@ -171,12 +172,14 @@ class Command(object):
         args.build = self._get_build_sources_parameter(args.build)
         option_dict = args.options or []
         settings_dict = args.settings or []
+        current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
-            reference = os.path.normpath(os.path.join(os.getcwd(), args.reference))
+            reference = os.path.normpath(os.path.join(current_path, args.reference))
 
         self._manager.install(reference=reference,
+                              current_path=current_path,
                               remote=args.remote,
                               options=option_dict,
                               settings=settings_dict,
@@ -192,17 +195,22 @@ class Command(object):
                             help='path to user conanfile.py, e.g., conans build .',
                             default="")
         args = parser.parse_args(*args)
-        root_path = os.path.normpath(os.path.join(os.getcwd(), args.path))
-        self._manager.build(root_path)
+        current_path = os.getcwd()
+        if args.path:
+            root_path = os.path.abspath(args.path)
+        else:
+            root_path = current_path
+        self._manager.build(root_path, current_path)
 
     def package(self, *args):
         """ calls your conanfile.py "package" method for a specific package.
             Intended for package creators, for regenerate package without recompile the source.
-            EX: conans package openssl/1.0.2@lasote/testing 9cf83afd07b678d38a9c1645f605875400847ff3
+            Eg conans package openssl/1.0.2@lasote/testing 9cf83afd07b678d38a9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("reference", help='reference name. e.g., openssl/1.0.2@lasote/testing')
-        parser.add_argument("package", help='Package ID to regenerate. e.g., 9cf83afd07b678d38a9c1645f605875400847ff3')
+        parser.add_argument("package", help='Package ID to regenerate. e.g., '
+                                            '9cf83afd07b678d38a9c1645f605875400847ff3')
 
         args = parser.parse_args(*args)
 
@@ -227,7 +235,8 @@ class Command(object):
                             % CONANFILE)
         args = parser.parse_args(*args)
 
-        self._manager.export(args.user, args.path)
+        current_path = args.path or os.getcwd()
+        self._manager.export(args.user, current_path)
 
     def remove(self, *args):
         """ Remove any folder from your local/remote store
@@ -399,7 +408,8 @@ def main(args):
 
     # Verify client version against remotes
     version_checker_requester = VersionCheckerRequester(requests, Version(CLIENT_VERSION),
-                                                        Version(MIN_SERVER_COMPATIBLE_VERSION), out)
+                                                        Version(MIN_SERVER_COMPATIBLE_VERSION),
+                                                        out)
     # To handle remote connections
     rest_api_client = RestApiClient(out, requester=version_checker_requester)
     # To store user and token
