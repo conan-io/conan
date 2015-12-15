@@ -2,5 +2,9 @@ from conans.client.command import main
 import sys
 
 
-if __name__ == '__main__':
+def run():
     main(sys.argv[1:])
+
+
+if __name__ == '__main__':
+    run()
