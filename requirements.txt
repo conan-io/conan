@@ -1,7 +1,0 @@
-PyJWT==1.4.0
-cfgparse==1.3
-requests==2.7.0
-colorama==0.3.3
-passlib==1.6.5
-boto==2.38.0
-PyYAML==3.11

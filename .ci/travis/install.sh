@@ -18,6 +18,6 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     pyenv activate conan
 fi
 
-pip install -r requirements_dev.txt
-pip install -r requirements_server.txt
-pip install -r requirements.txt
+pip install -r conans/requirements_dev.txt
+pip install -r conans/requirements_server.txt
+pip install -r conans/requirements.txt

@@ -5,5 +5,8 @@ from conans.model.options import Options
 from conans.model.settings import Settings
 from conans.client.cmake import CMake
 from conans.client.gcc import GCC
+from conans.util.files import load
+import os
 
-__version__ = '0.4.0'
+version_file = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "version.txt"))
+__version__ = load(version_file)
