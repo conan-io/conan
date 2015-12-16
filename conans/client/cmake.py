@@ -26,27 +26,31 @@ class CMake(object):
             raise ConanException("You must specify compiler, compiler.version and arch in "
                                  "your settings to use a CMake generator")
 
-        if self._settings.compiler == "Visual Studio":
+        operating_system = str(self._settings.os) if self._settings.os else None
+        compiler = str(self._settings.compiler) if self._settings.compiler else None
+        arch = str(self._settings.arch) if self._settings.arch else None
+
+        if compiler == "Visual Studio":
             base = "Visual Studio %s" % self._settings.compiler.version
-            if self._settings.arch == "x86_64":
+            if arch == "x86_64":
                 return base + " Win64"
-            elif self._settings.arch == "arm":
+            elif arch == "arm":
                 return base + " ARM"
             else:
                 return base
 
-        if self._settings.os == "Windows":
-            if self._settings.compiler == "gcc":
+        if operating_system == "Windows":
+            if compiler == "gcc":
                 if self._settings.compiler.version == "4.9":
                     return "Unix Makefiles"
                 return "MinGW Makefiles"
-            if self._settings.compiler in ["clang", "apple-clang"]:
+            if compiler in ["clang", "apple-clang"]:
                 return "MinGW Makefiles"
-        if self._settings.os == "Linux":
-            if self._settings.compiler in ["gcc", "clang", "apple-clang"]:
+        if operating_system == "Linux":
+            if compiler in ["gcc", "clang", "apple-clang"]:
                 return "Unix Makefiles"
-        if self._settings.os == "Macos":
-            if self._settings.compiler in ["gcc", "clang", "apple-clang"]:
+        if operating_system == "Macos":
+            if compiler in ["gcc", "clang", "apple-clang"]:
                 return "Unix Makefiles"
 
         raise ConanException("Unknown cmake generator for these settings")
@@ -63,7 +67,7 @@ class CMake(object):
     @property
     def command_line(self):
         return '-G "%s" %s %s %s -Wno-dev' % (self.generator, self.build_type,
-                                     self.runtime, self.flags)
+                                              self.runtime, self.flags)
 
     @property
     def build_type(self):
@@ -89,9 +93,9 @@ class CMake(object):
 
     @property
     def flags(self):
-        op_system = self._settings.os
-        arch = self._settings.arch
-        comp = self._settings.compiler
+        op_system = str(self._settings.os) if self._settings.os else None
+        arch = str(self._settings.arch) if self._settings.arch else None
+        comp = str(self._settings.compiler) if self._settings.compiler else None
         comp_version = self._settings.compiler.version
 
         flags = []
