@@ -12,13 +12,9 @@ from conans.test.utils.test_files import temp_folder
 class FlatRequirementsTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
-        self.servers = {"default": test_server}
         self.conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         self.files = cpp_hello_conan_files("Hello0", "0.1")
-        self.conan = TestClient(servers=self.servers, users=[])
+        self.conan = TestClient()
         self.conan.save(self.files)
         self.conan.run("export lasote/stable")
 
@@ -35,8 +31,9 @@ xcode
 '''
         save(os.path.join(tmp_dir, CONANFILE_TXT), req_file)
 
+        self.conan.current_folder = tmp_dir
         # Install requirements
-        self.conan.run('install "%s" --build missing' % tmp_dir.replace('\\', '/'))
+        self.conan.run('install --build missing')
         self.assertEqual(sorted([CONANFILE_TXT, BUILD_INFO_GCC, BUILD_INFO_CMAKE,
                                  BUILD_INFO_VISUAL_STUDIO, BUILD_INFO_XCODE, CONANINFO]),
                          sorted(os.listdir(tmp_dir)))
