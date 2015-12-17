@@ -1,9 +1,9 @@
 from conans.util.log import logger
-import shutil
 from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.paths import SYSTEM_REQS
 import os
+from conans.util.files import rmdir
 
 
 class DiskRemover(object):
@@ -13,7 +13,7 @@ class DiskRemover(object):
     def _remove(self, path, conan_ref, msg=""):
         try:
             logger.debug("Removing folder %s" % path)
-            shutil.rmtree(path)
+            rmdir(path)
         except OSError as e:
             raise ConanException("Unable to remove %s %s\n\t%s" % (repr(conan_ref), msg, str(e)))
 
