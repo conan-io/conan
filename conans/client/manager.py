@@ -172,6 +172,8 @@ class ConanManager(object):
                     conan_file.deps_cpp_info = deps_cpp_info
                 except:
                     pass
+
+            os.chdir(current_path)
             conan_file.build()
             if test:
                 conan_file.test()
