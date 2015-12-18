@@ -10,7 +10,12 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 import os
+import re
+import sys
+from distutils.errors import DistutilsError
 
+if sys.version_info.major > 2:
+    raise DistutilsError("This package requires Python 2.7")
 
 here = path.abspath(path.dirname(__file__))
 
@@ -30,9 +35,11 @@ dev_requirements = get_requires("conans/requirements_dev.txt")
 
 def load_version():
     '''Loads a file content'''
-    version_file = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "conans/version.txt"))
-    with open(version_file, 'rb') as handle:
-        return handle.read()
+    filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "conans", "__init__.py"))
+    with open(filename) as version_file:
+        conan_init = version_file.read()
+        version = re.search("__version__ = '([0-9a-z.]+)'", conan_init).group(1)
+        return version
 
 
 # def generate_long_description_file():
@@ -46,7 +53,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=load_version() + ".dev1",
+    version=load_version(),  # + ".rc5",
 
     description='Conan C/C++ package manager',
     # long_description="An open source, decentralized package manager, to automate building and sharing of packages",
