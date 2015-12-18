@@ -261,7 +261,7 @@ Package configuration:
                 # and raise to interrupt any other processes (build, package)
                 os.chdir(export_folder)
                 try:
-                    shutil.rmtree(src_folder)
+                    rmdir(src_folder)
                 except Exception as e_rm:
                     self._user_io.out.error("Unable to remove src folder %s\n%s"
                                             % (src_folder, str(e_rm)))

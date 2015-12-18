@@ -75,11 +75,20 @@ def relative_dirs(path):
     return ret
 
 
+def _change_permissions(func, path, exc_info):
+    import stat
+    if not os.access(path, os.W_OK):
+        os.chmod(path, stat.S_IWUSR)
+        func(path)
+    else:
+        raise
+
+
 def rmdir(path, raise_if_not_exist=False):
     '''Recursive rm of a directory. If dir not exists
     only raise exception if raise_if_not_exist'''
     try:
-        shutil.rmtree(path)
+        shutil.rmtree(path, onerror=_change_permissions)
     except OSError as err:
         if err.errno == ENOENT and not raise_if_not_exist:
             return

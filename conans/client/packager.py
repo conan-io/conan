@@ -34,7 +34,7 @@ def create_package(conanfile, build_folder, package_folder, output):
     except Exception as e:
         os.chdir(build_folder)
         try:
-            shutil.rmtree(package_folder)
+            rmdir(package_folder)
         except Exception as e_rm:
             output.error("Unable to remove package folder %s\n%s"
                                     % (package_folder, str(e_rm)))
