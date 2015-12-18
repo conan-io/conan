@@ -1,5 +1,6 @@
-from conans.paths import (BUILD_INFO_GCC, BUILD_INFO_CMAKE, BUILD_INFO,
-                          BUILD_INFO_VISUAL_STUDIO, BUILD_INFO_XCODE)
+from conans.paths import (BUILD_INFO_GCC, BUILD_INFO_CMAKE, BUILD_INFO_QMAKE,
+                          BUILD_INFO, BUILD_INFO_VISUAL_STUDIO, 
+                          BUILD_INFO_XCODE)
 from conans.util.files import save
 import os
 
@@ -29,28 +30,18 @@ class DepsCppCmake(object):
         self.bin_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
                                          for p in deps_cpp_info.bin_paths)
 
+        self.rootpath = '"%s"' % deps_cpp_info.rootpath.replace("\\", "/")
+
 
 class CMakeGenerator(Generator):
 
     @property
     def content(self):
-        deps = DepsCppCmake(self._build_info)
-
-        template = ('SET(CONAN_INCLUDE_DIRS {deps.include_paths} ${{CONAN_INCLUDE_DIRS}})\n'
-            'SET(CONAN_LIB_DIRS {deps.lib_paths} ${{CONAN_LIB_DIRS}})\n'
-            'SET(CONAN_BIN_DIRS {deps.bin_paths} ${{CONAN_BIN_DIRS}})\n'
-            'SET(CONAN_LIBS {deps.libs} ${{CONAN_LIBS}})\n'
-            'SET(CONAN_DEFINES {deps.defines} ${{CONAN_DEFINES}})\n'
-            'SET(CONAN_CXX_FLAGS "{deps.cppflags} ${{CONAN_CXX_FLAGS}}")\n'
-            'SET(CONAN_SHARED_LINK_FLAGS "{deps.sharedlinkflags} ${{CONAN_SHARED_LINK_FLAGS}}")\n'
-            'SET(CONAN_EXE_LINKER_FLAGS "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS}}")\n'
-            'SET(CONAN_C_FLAGS "{deps.cflags} ${{CONAN_C_FLAGS}}")\n')
-
         sections = []
-        all_flags = template.format(deps=deps)
-        sections.append(all_flags)
 
-        template_dep = ('SET(CONAN_INCLUDE_DIRS_{dep} {deps.include_paths})\n'
+        # DEPS VARIABLES
+        template_dep = ('SET(CONAN_{dep}_ROOT {deps.rootpath})\n'
+                        'SET(CONAN_INCLUDE_DIRS_{dep} {deps.include_paths})\n'
                         'SET(CONAN_LIB_DIRS_{dep} {deps.lib_paths})\n'
                         'SET(CONAN_BIN_DIRS_{dep} {deps.bin_paths})\n'
                         'SET(CONAN_LIBS_{dep} {deps.libs})\n'
@@ -66,7 +57,29 @@ class CMakeGenerator(Generator):
                                             deps=deps)
             sections.append(dep_flags)
 
+        # GENERAL VARIABLES
+        deps = DepsCppCmake(self._build_info)
+
+        template = ('SET(CONAN_INCLUDE_DIRS {deps.include_paths} ${{CONAN_INCLUDE_DIRS}})\n'
+            'SET(CONAN_LIB_DIRS {deps.lib_paths} ${{CONAN_LIB_DIRS}})\n'
+            'SET(CONAN_BIN_DIRS {deps.bin_paths} ${{CONAN_BIN_DIRS}})\n'
+            'SET(CONAN_LIBS {deps.libs} ${{CONAN_LIBS}})\n'
+            'SET(CONAN_DEFINES {deps.defines} ${{CONAN_DEFINES}})\n'
+            'SET(CONAN_CXX_FLAGS "{deps.cppflags} ${{CONAN_CXX_FLAGS}}")\n'
+            'SET(CONAN_SHARED_LINK_FLAGS "{deps.sharedlinkflags} ${{CONAN_SHARED_LINK_FLAGS}}")\n'
+            'SET(CONAN_EXE_LINKER_FLAGS "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS}}")\n'
+            'SET(CONAN_C_FLAGS "{deps.cflags} ${{CONAN_C_FLAGS}}")\n'
+            'SET(CONAN_CMAKE_MODULE_PATH {module_paths} ${{CONAN_CMAKE_MODULE_PATH}})')
+
+        rootpaths = [DepsCppCmake(dep_cpp_info).rootpath for _, dep_cpp_info
+                     in self._build_info.dependencies]
+        module_paths = " ".join(rootpaths)
+        all_flags = template.format(deps=deps, module_paths=module_paths)
+        sections.append(all_flags)
+
+        # MACROS
         sections.append(self._aux_cmake_test_setup())
+
         return "\n".join(sections)
 
     def _aux_cmake_test_setup(self):
@@ -74,6 +87,8 @@ class CMakeGenerator(Generator):
     CONAN_CHECK_COMPILER()
     CONAN_OUTPUT_DIRS_SETUP()
     CONAN_FLAGS_SETUP()
+    # CMake can find findXXX.cmake files in the root of packages
+    SET(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
 ENDMACRO()
 
 MACRO(CONAN_FLAGS_SETUP)
@@ -84,6 +99,7 @@ MACRO(CONAN_FLAGS_SETUP)
     SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_C_FLAGS}")
     SET(CMAKE_SHARED_LINK_FLAGS "${CMAKE_SHARED_LINK_FLAGS} ${CONAN_SHARED_LINK_FLAGS}")
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
+
     IF(APPLE)
         # https://cmake.org/Wiki/CMake_RPATH_handling
         # CONAN GUIDE: All generated libraries should have the id and dependencies to other
@@ -138,6 +154,53 @@ ENDMACRO()
 """
 
 
+class DepsCppQmake(object):
+    def __init__(self, deps_cpp_info):
+        self.include_paths = " \\\n    ".join('%s' % p.replace("\\", "/")
+                                              for p in deps_cpp_info.include_paths)
+        self.lib_paths = " \\\n    ".join('-L%s' % p.replace("\\", "/")
+                                          for p in deps_cpp_info.lib_paths)
+        self.libs = " ".join('-l%s' % l for l in deps_cpp_info.libs)
+        self.defines = " \\\n    ".join('"%s"' % d for d in deps_cpp_info.defines)
+        self.cppflags = " ".join(deps_cpp_info.cppflags)
+        self.cflags = " ".join(deps_cpp_info.cflags)
+        self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
+        self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
+        self.bin_paths = " \\\n    ".join('%s' % p.replace("\\", "/")
+                                          for p in deps_cpp_info.bin_paths)
+
+        self.rootpath = '%s' % deps_cpp_info.rootpath.replace("\\", "/")
+
+
+class QmakeGenerator(Generator):
+    @property
+    def content(self):
+        deps = DepsCppQmake(self._build_info)
+
+        template = ('# package{dep} \n\n'
+                    'INCLUDEPATH += {deps.include_paths}\n'
+                    'LIBS += {deps.lib_paths}\n'
+                    'BINDIRS += {deps.bin_paths}\n'
+                    'LIBS += {deps.libs}\n'
+                    'DEFINES += {deps.defines}\n'
+                    'QMAKE_CXXFLAGS += {deps.cppflags}\n'
+                    'QMAKE_CFLAGS += {deps.cflags}\n'
+                    'QMAKE_LFLAGS += {deps.sharedlinkflags}\n'
+                    'QMAKE_LFLAGS += {deps.exelinkflags}\n')
+
+        sections = []
+        all_flags = template.format(dep="", deps=deps)
+        sections.append(all_flags)
+        template_deps = template + 'ROOTPATH{dep} = {deps.rootpath}\n\n'
+
+        for dep_name, dep_cpp_info in self._build_info.dependencies:
+            deps = DepsCppQmake(dep_cpp_info)
+            dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
+            sections.append(dep_flags)
+
+        return "\n".join(sections)
+
+
 class GCCGenerator(Generator):
 
     @property
@@ -175,6 +238,7 @@ class DepsCppTXT(object):
         self.exelinkflags = "\n".join(deps_cpp_info.exelinkflags)
         self.bin_paths = "\n".join(p.replace("\\", "/")
                                    for p in deps_cpp_info.bin_paths)
+        self.rootpath = "%s" % deps_cpp_info.rootpath.replace("\\", "/")
 
 
 class TXTGenerator(Generator):
@@ -196,10 +260,11 @@ class TXTGenerator(Generator):
         sections = []
         all_flags = template.format(dep="", deps=deps)
         sections.append(all_flags)
+        template_deps = template + '[rootpath{dep}]\n{deps.rootpath}\n\n'
 
         for dep_name, dep_cpp_info in self._build_info.dependencies:
             deps = DepsCppTXT(dep_cpp_info)
-            dep_flags = template.format(dep="_" + dep_name, deps=deps)
+            dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
             sections.append(dep_flags)
 
         return "\n".join(sections)
@@ -276,6 +341,7 @@ def write_generators(conanfile, path, output):
     available_generators = {"txt": (TXTGenerator, BUILD_INFO),
                             "gcc": (GCCGenerator, BUILD_INFO_GCC),
                             "cmake": (CMakeGenerator, BUILD_INFO_CMAKE),
+                            "qmake": (QmakeGenerator, BUILD_INFO_QMAKE),
                             "visual_studio": (VisualStudioGenerator, BUILD_INFO_VISUAL_STUDIO),
                             "xcode": (XCodeGenerator, BUILD_INFO_XCODE)}
 

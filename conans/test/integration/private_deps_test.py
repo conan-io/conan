@@ -22,8 +22,9 @@ class PrivateDepsTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users=[("lasote", "mypass")])
 
     def _export_upload(self, name=0, version=None, deps=None, msg=None, static=True):
+        dll_export = self.client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files(name, version, deps, msg=msg, static=static,
-                                       private_includes=True)
+                                      private_includes=True, dll_export=dll_export)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)
         self.client.run("export lasote/stable")
@@ -33,13 +34,13 @@ class PrivateDepsTest(unittest.TestCase):
         self._export_upload("Hello0", "0.1")
         self._export_upload("Hello00", "0.2", msg="#")
         self._export_upload("Hello1", "0.1", deps=[("Hello0/0.1@lasote/stable", "private")],
-                              static=False)
+                            static=False)
         self._export_upload("Hello2", "0.1", deps=[("Hello00/0.2@lasote/stable", "private")],
-                              static=False)
+                            static=False)
 
         client = TestClient(servers=self.servers, users=[("lasote", "mypass")])  # Mocked userio
         files3 = cpp_hello_conan_files("Hello3", "0.1", ["Hello1/0.1@lasote/stable",
-                                                          "Hello2/0.1@lasote/stable"])
+                                                        "Hello2/0.1@lasote/stable"])
 
         # WE need to copy the DLLs and dylib
         local_install = """    def imports(self):
@@ -59,8 +60,7 @@ class PrivateDepsTest(unittest.TestCase):
         # Ensure it does not depend on Hello0 to build, as private in dlls
         self.assertNotIn("Hello0", repr(build_info_cmake))
 
-        command = "say_hello" if platform.system() == "Windows" else "./say_hello"
-
+        command = os.sep.join([".", "bin", "say_hello"])
         client.runner(command, client.current_folder)
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0', 'Hello Hello2',
                           'Hello #'],

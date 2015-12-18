@@ -4,8 +4,9 @@ from mock import Mock
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.client.paths import ConanPaths
-from conans.test.tools import TestBufferConanOutput
+from conans.test.tools import TestBufferConanOutput, TestClient
 from conans.test.utils.test_files import temp_folder
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
 
 class MockRemoteClient(object):
@@ -35,9 +36,17 @@ class RemoteManagerTest(unittest.TestCase):
         self.package_reference = PackageReference(self.conan_reference, "123123123")
         self.remote_client = MockRemoteClient()
         self.output = TestBufferConanOutput()
-        self.paths = ConanPaths(temp_folder(), None, self.output)
+        self.paths = ConanPaths(temp_folder(), temp_folder(), self.output)
         self.remotes = [("default", "url1"), ("other", "url2"), ("last", "url3")]
         self.manager = RemoteManager(self.paths, self.remotes, self.remote_client, self.output)
+
+    def test_no_remotes(self):
+        client = TestClient()
+        files = cpp_hello_conan_files("Hello0", "0.1")
+        client.save(files)
+        client.run("export lasote/stable")
+        client.run("upload Hello0/0.1@lasote/stable", ignore_error=True)
+        self.assertIn("ERROR: There is no configured default remote", client.user_io.out)
 
     def test_properties(self):
         # Remote names

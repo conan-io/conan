@@ -18,8 +18,8 @@ class Migrator(object):
 
     def migrate(self):
         old_version = self._load_old_version()
-        self._make_migrations(old_version)
         if old_version != self.current_version:
+            self._make_migrations(old_version)
             self._update_version_file()
 
     def _make_migrations(self, old_version):

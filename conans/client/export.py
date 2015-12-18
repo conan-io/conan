@@ -4,7 +4,7 @@ to the local store, as an initial step before building or uploading to remotes
 
 import shutil
 import os
-from conans.util.files import save, load
+from conans.util.files import save, load, rmdir
 from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.errors import ConanException
 from conans.client.file_copier import FileCopier
@@ -39,7 +39,7 @@ def _init_export_folder(destination_folder):
                 manifest_content = load(os.path.join(destination_folder, CONAN_MANIFEST))
                 previous_digest = FileTreeManifest.loads(manifest_content)
             # Maybe here we want to invalidate cache
-            shutil.rmtree(destination_folder)
+            rmdir(destination_folder)
         os.makedirs(destination_folder)
     except Exception as e:
         raise ConanException("Unable to create folder %s\n%s" % (destination_folder, str(e)))

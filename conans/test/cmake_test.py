@@ -37,3 +37,22 @@ class CMakeTest(unittest.TestCase):
                          '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS=-m32 '
                          '-DCONAN_SHARED_LINK_FLAGS=-m32 -DCONAN_C_FLAGS=-m32 -Wno-dev',
                          cmake.command_line)
+
+    def deleted_os_test(self):
+        partial_settings = """
+os: [Linux]
+arch: [x86_64]
+compiler:
+    gcc:
+        version: ["4.9"]
+build_type: [ Release]
+"""
+        settings = Settings.loads(partial_settings)
+        settings.os = "Linux"
+        settings.compiler = "gcc"
+        settings.compiler.version = "4.9"
+        settings.arch = "x86_64"
+
+        cmake = CMake(settings)
+        self.assertEqual('-G "Unix Makefiles"   -DCONAN_COMPILER="gcc" '
+                         '-DCONAN_COMPILER_VERSION="4.9" -Wno-dev', cmake.command_line)

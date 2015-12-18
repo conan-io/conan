@@ -15,11 +15,12 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
-    def _create(self, number, version, deps=None, export=True):
+    def _create(self, number, version, deps=None, export=True, no_config=False):
         files = cpp_hello_conan_files(number, version, deps)
         # To avoid building
-        files = {CONANFILE: files[CONANFILE].replace("build(", "build2(").replace("config(",
-                                                                                  "config2(")}
+        files = {CONANFILE: files[CONANFILE].replace("build(", "build2(")}
+        if no_config:
+            files[CONANFILE] = files[CONANFILE].replace("config(", "config2(")
         self.client.save(files, clean_first=True)
         if export:
             self.client.run("export lasote/stable")
@@ -31,8 +32,8 @@ class InstallTest(unittest.TestCase):
 
         for lang, id0, id1 in [(0, "2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
                                    "44671ecdd9c606eb7166f2197ab50be8d36a3c3b"),
-                               (1, "2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
-                                   "44671ecdd9c606eb7166f2197ab50be8d36a3c3b")]:
+                               (1, "8b964e421a5b7e48b7bc19b94782672be126be8b",
+                                   "3eeab577a3134fa3afdcd82881751789ec48e08f")]:
 
             self.client.run("install -o language=%d %s --build missing" % (lang, self.settings))
             info_path = os.path.join(self.client.current_folder, CONANINFO)
@@ -49,19 +50,19 @@ class InstallTest(unittest.TestCase):
             hello0 = self.client.paths.package(PackageReference(conan_ref, id0))
             hello0_info = os.path.join(hello0, CONANINFO)
             hello0_conan_info = ConanInfo.load_file(hello0_info)
-            self.assertEqual(0, hello0_conan_info.options.language)
+            self.assertEqual(lang, hello0_conan_info.options.language)
 
             package_ref1 = PackageReference(ConanFileReference.loads("Hello1/0.1@lasote/stable"),
                                             id1)
             hello1 = self.client.paths.package(package_ref1)
             hello1_info = os.path.join(hello1, CONANINFO)
             hello1_conan_info = ConanInfo.load_file(hello1_info)
-            self.assertEqual(0, hello1_conan_info.options.language)
+            self.assertEqual(lang, hello1_conan_info.options.language)
 
     def upper_option_test(self):
-        self._create("Hello0", "0.1")
-        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+        self._create("Hello0", "0.1", no_config=True)
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False, no_config=True)
 
         self.client.run("install -o language=1 -o Hello1:language=0 -o Hello0:language=1 %s "
                         "--build missing" % self.settings)
@@ -84,9 +85,9 @@ class InstallTest(unittest.TestCase):
         self.assertEqual(0, hello1_conan_info.options.language)
 
     def inverse_upper_option_test(self):
-        self._create("Hello0", "0.1")
-        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+        self._create("Hello0", "0.1", no_config=True)
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False, no_config=True)
 
         self.client.run("install -o language=0 -o Hello1:language=1 -o Hello0:language=0 %s "
                         "--build missing" % self.settings)
@@ -111,8 +112,8 @@ class InstallTest(unittest.TestCase):
         self.assertEqual("language=1\nstatic=True", hello1_conan_info.options.dumps())
 
     def upper_option_txt_test(self):
-        self._create("Hello0", "0.1")
-        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello0", "0.1", no_config=True)
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
 
         files = cpp_hello_conan_files("Hello2", "0.1", ["Hello1/0.1@lasote/stable"])
         files.pop(CONANFILE)

@@ -15,15 +15,16 @@ class BasicBuildTest(unittest.TestCase):
 
     def complete_build_flow_test(self):
         """In local user folder"""
-        files = cpp_hello_conan_files("Hello0", "0.1")
         client = TestClient()
-        client.save(files)
-        command = "say_hello" if platform.system() == "Windows" else "./say_hello"
+        command = os.sep.join([".", "bin", "say_hello"])
 
         for install, lang, static in [("install", 0, True),
                                       ("install -o language=1", 1, True),
                                       ("install -o language=1 -o static=False", 1, False),
                                       ("install -o static=False", 0, False)]:
+            dll_export = client.default_compiler_visual_studio and not static
+            files = cpp_hello_conan_files("Hello0", "0.1", dll_export=dll_export)
+            client.save(files)
             client.run(install)
             time.sleep(1)  # necessary so the conaninfo.txt is flushed to disc
             client.run('build')

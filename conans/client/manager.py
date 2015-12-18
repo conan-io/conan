@@ -5,7 +5,7 @@ from conans.client.export import export_conanfile
 from conans.client.deps_builder import DepsBuilder
 from conans.client.userio import UserIO
 from conans.client.installer import ConanInstaller
-from conans.util.files import save, load
+from conans.util.files import save, load, rmdir
 from conans.util.log import logger
 from conans.client.uploader import ConanUploader
 from conans.client.printer import Printer
@@ -23,6 +23,7 @@ from conans.model.options import OptionsValues
 import re
 from conans.info import SearchInfo
 from conans.model.build_info import DepsCppInfo
+from conans.client import packager
 
 
 def get_user_channel(text):
@@ -52,6 +53,7 @@ class ConanManager(object):
         # The disk settings definition, already including the default disk values
         settings = self._paths.settings
         options = OptionsValues()
+
         if current_path:
             conan_info_path = os.path.join(current_path, CONANINFO)
             if os.path.exists(conan_info_path):
@@ -75,12 +77,10 @@ class ConanManager(object):
         """ Export the conans
         param conanfile_path: the original source directory of the user containing a
                            conanfile.py
-        param user: user under this conans will be exported
-        param channel: string
+        param user: user under this package will be exported
+        param channel: string (stable, testing,...)
         """
-
-        conan_file_path = conan_file_path or os.path.abspath(os.path.curdir)
-
+        assert conan_file_path
         logger.debug("Exporting %s" % conan_file_path)
         user_name, channel = get_user_channel(user)
         conan_file = self._loader().load_conan(os.path.join(conan_file_path, CONANFILE))
@@ -88,16 +88,16 @@ class ConanManager(object):
         export_conanfile(self._user_io.out, self._paths,
                          conan_file.exports, conan_file_path, conan_ref)
 
-    def install(self, reference, remote=None, options=None, settings=None, build_mode=False):
+    def install(self, reference, current_path, remote=None, options=None, settings=None,
+                build_mode=False):
         """ Fetch and build all dependencies for the given reference
         param reference: ConanFileReference or path to user space conanfile
+        param current_path: where the output files will be saved
         param remote: install only from that remote
         param options: written in JSON, e.g. {"compiler": "Visual Studio 12", ...}
         """
-        if isinstance(reference, ConanFileReference):
-            current_path = os.getcwd()
-        else:
-            current_path = reference
+        if not isinstance(reference, ConanFileReference):
+            conanfile_path = reference
             reference = None
 
         loader = self._loader(current_path, settings, options)
@@ -107,11 +107,11 @@ class ConanManager(object):
             conanfile = installer.retrieve_conanfile(reference, consumer=True)
         else:
             try:
-                conan_file_path = os.path.join(current_path, CONANFILE)
+                conan_file_path = os.path.join(conanfile_path, CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, consumer=True)
                 is_txt = False
             except NotFoundException:  # Load requirements.txt
-                conan_path = os.path.join(current_path, CONANFILE_TXT)
+                conan_path = os.path.join(conanfile_path, CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path)
                 is_txt = True
 
@@ -133,31 +133,47 @@ class ConanManager(object):
             conanfile.imports()
             local_installer.execute()
 
-    def build(self, path, test=False):
+    def package(self, package_reference):
+        assert(isinstance(package_reference, PackageReference))
+
+        # Package paths
+        conan_file_path = self._paths.conanfile(package_reference.conan)
+        build_folder = self._paths.build(package_reference)
+        package_folder = self._paths.package(package_reference)
+
+        # Will read current conaninfo with specified options and load conanfile with them
+        loader = self._loader(build_folder)
+        conanfile = loader.load_conan(conan_file_path)
+        rmdir(package_folder)
+        packager.create_package(conanfile, build_folder, package_folder, self._user_io.out)
+
+    def build(self, conanfile_path, current_path, test=False):
         """ Call to build() method saved on the conanfile.py
         param conanfile_path: the original source directory of the user containing a
                             conanfile.py
         """
-        logger.debug("Building in %s" % path)
-        conanfile_path = os.path.join(path, CONANFILE)
+        logger.debug("Building in %s" % current_path)
+        logger.debug("Conanfile in %s" % conanfile_path)
+        conanfile_file = os.path.join(conanfile_path, CONANFILE)
 
         try:
-            conan_file = self._loader(path).load_conan(conanfile_path, consumer=True)
+            conan_file = self._loader(current_path).load_conan(conanfile_file, consumer=True)
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"
-                               "Use 'conan new' for generate '%s' and move manually the "
+                               "Create a '%s' and move manually the "
                                "requirements and generators from '%s' file"
                                % (CONANFILE, CONANFILE, CONANFILE_TXT))
-        cwd = os.getcwd()
         try:
-            os.chdir(path)
-            if os.path.exists(BUILD_INFO):
+            build_info_file = os.path.join(current_path, BUILD_INFO)
+            if os.path.exists(build_info_file):
                 try:
-                    deps_cpp_info = DepsCppInfo.loads(load(BUILD_INFO))
+                    deps_cpp_info = DepsCppInfo.loads(load(build_info_file))
                     conan_file.deps_cpp_info = deps_cpp_info
                 except:
                     pass
+
+            os.chdir(current_path)
             conan_file.build()
             if test:
                 conan_file.test()
@@ -167,8 +183,6 @@ class ConanManager(object):
             import traceback
             trace = traceback.format_exc().split('\n')
             raise ConanException("Unable to build it successfully\n%s" % '\n'.join(trace[3:]))
-        finally:
-            os.chdir(cwd)
 
     def upload(self, conan_reference, package_id=None, remote=None, all_packages=None,
                force=False):

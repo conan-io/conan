@@ -122,7 +122,7 @@ class DepsGraph(object):
                                                    n.conan_ref)
 
                 for n in neighbors:
-                    # FIXME: Check this imports propagation, wrong for deep hierachies
+                    # FIXME: Check this imports propagation, wrong for deep hierarchies
                     conanfile.deps_cpp_info.update(n.conanfile.transitive_buildinfo)
         return ordered
 

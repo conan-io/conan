@@ -5,6 +5,32 @@ import os
 from urllib import FancyURLopener
 import urllib2
 from conans.errors import ConanException
+from conans.util.files import _generic_algorithm_sum
+
+
+def human_size(size_bytes):
+    """
+    format a size in bytes into a 'human' file size, e.g. bytes, KB, MB, GB, TB, PB
+    Note that bytes/KB will be reported in whole numbers but MB and above will have greater precision
+    e.g. 1 byte, 43 bytes, 443 KB, 4.3 MB, 4.43 GB, etc
+    """
+    if size_bytes == 1:
+        return "1 byte"
+
+    suffixes_table = [('bytes', 0), ('KB', 0), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
+
+    num = float(size_bytes)
+    for suffix, precision in suffixes_table:
+        if num < 1024.0:
+            break
+        num /= 1024.0
+
+    if precision == 0:
+        formatted_size = "%d" % num
+    else:
+        formatted_size = str(round(num, ndigits=precision))
+
+    return "%s %s" % (formatted_size, suffix)
 
 
 def update_progress(progress, total_size):
@@ -21,9 +47,9 @@ def update_progress(progress, total_size):
         progress = 1
         status = "Done...\r\n"
     block = int(round(bar_length * progress))
-    text = "\rPercent: [{0}] {1:.1f}% of {2:.1f}Mb {3}".format("#" * block +
+    text = "\rPercent: [{0}] {1:.1f}% of {2} {3}".format("#" * block +
                                                                "-" * (bar_length - block),
-                                                               progress * 100, total_size, status)
+                                                               progress * 100, human_size(total_size), status)
     sys.stdout.write(text)
     sys.stdout.flush()
 
@@ -35,7 +61,7 @@ def unzip(filename, destination="."):
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
     with zipfile.ZipFile(filename, "r") as z:
         uncompress_size = sum((file_.file_size for file_ in z.infolist()))
-        print "Unzipping %.0f Mb, this can take a while" % (uncompress_size / (1024.0 * 1024.0))
+        print "Unzipping %s, this can take a while" % (human_size(uncompress_size))
         extracted_size = 0
         for file_ in z.infolist():
             extracted_size += file_.file_size
@@ -85,8 +111,7 @@ def fetch_sourceforge_url(url):
 
 def download(url, filename):
     def dl_progress_callback_cmd(count, block_size, total_size):
-        update_progress(min(count * block_size, total_size) / float(total_size),
-                        total_size / (1024 ** 2))
+        update_progress(min(count * block_size, total_size) / float(total_size), total_size)
 
     # Some websites blocks urllib (maybe for block scripts or crawl)
     class MyOpener(FancyURLopener):
@@ -104,3 +129,25 @@ def replace_in_file(file_path, search, replace):
         content = content.replace(search, replace)
     with open(file_path, 'wb') as handle:
         handle.write(content)
+
+
+def check_with_algorithm_sum(algorithm_name, file_path, signature):
+
+    real_signature = _generic_algorithm_sum(file_path, algorithm_name)
+    if real_signature != signature:
+        raise ConanException("%s signature failed for '%s' file."
+                             " Computed signature: %s" % (algorithm_name,
+                                                          os.path.basename(file_path),
+                                                          real_signature))
+
+
+def check_sha1(file_path, signature):
+    check_with_algorithm_sum("sha1", file_path, signature)
+
+
+def check_md5(file_path, signature):
+    check_with_algorithm_sum("md5", file_path, signature)
+
+
+def check_sha256(file_path, signature):
+    check_with_algorithm_sum("sha256", file_path, signature)

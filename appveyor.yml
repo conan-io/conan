@@ -1,0 +1,22 @@
+build: false
+
+environment:
+  matrix:
+    - PYTHON: "C:\\Python27"
+      PYTHON_VERSION: "2.7.8"
+      PYTHON_ARCH: "32"
+
+init:
+  - "ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH%"
+
+install:
+  - "set PYTHONPATH=%PYTHONPATH%;%CD%"
+  - "set CONAN_LOGGING_LEVEL=10"
+  - "set CONAN_COMPILER=Visual Studio"
+  - "set CONAN_COMPILER_VERSION=12"
+  - "%PYTHON%/Scripts/pip.exe install -r conans/requirements.txt"
+  - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_dev.txt"
+  - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt"
+
+test_script:
+  - "%PYTHON%/Scripts/nosetests"
