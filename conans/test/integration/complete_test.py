@@ -2,7 +2,6 @@ import unittest
 from conans.test.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
-import platform
 import time
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
