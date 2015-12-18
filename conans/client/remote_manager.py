@@ -117,7 +117,10 @@ class RemoteManager(object):
 
     @property
     def default_remote(self):
-        return self.remote_names[0]
+        try:
+            return self.remote_names[0]
+        except IndexError:
+            raise ConanException("There is no configured default remote")
 
     def authenticate(self, remote, name, password):
         return self._call_without_remote_selection(remote, 'authenticate', name, password)
