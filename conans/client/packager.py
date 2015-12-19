@@ -1,4 +1,4 @@
-from conans.util.files import mkdir, save
+from conans.util.files import mkdir, save, rmdir
 import os
 from conans.util.log import logger
 from conans.paths import CONANINFO, CONAN_MANIFEST
