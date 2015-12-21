@@ -10,6 +10,7 @@ from conans.util.config_parser import ConfigParser
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
+import sys
 
 
 class ConanFileLoader(object):
@@ -63,15 +64,28 @@ class ConanFileLoader(object):
         if not os.path.exists(conan_file_path):
             raise NotFoundException("%s not found!" % conan_file_path)
 
-        # We have to generate a new name for each conans
-        module_id = uuid.uuid1()
         try:
-            loaded = imp.load_source("conan_conan%s" % module_id, conan_file_path)
+            current_dir = os.path.dirname(conan_file_path)
+            sys.path.append(current_dir)
+            old_modules = sys.modules.keys()
+            loaded = imp.load_source("conanfile", conan_file_path)
+            # Put all imported files under a new package name
+            module_id = uuid.uuid1()
+            added_modules = set(sys.modules).difference(old_modules)
+            for added in added_modules:
+                m = sys.modules[added]
+                folder = os.path.dirname(m.__file__)
+                if folder.startswith(current_dir):
+                    m = sys.modules.pop(added)
+                    sys.modules["%s.%s" % (module_id, added)] = m
         except Exception:
             import traceback
             trace = traceback.format_exc().split('\n')
             raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
                                                                          '\n'.join(trace[3:])))
+        finally:
+            sys.path.pop()
+
         try:
             result = self._create_check_conan(loaded, consumer)
             if consumer:

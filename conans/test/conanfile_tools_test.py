@@ -1,11 +1,10 @@
 import unittest
-import tempfile
-from conans.test import CONAN_TEST_FOLDER
 import os
 from conans.util.files import save, load
 from conans.client.loader import ConanFileLoader
 from conans.model.settings import Settings
 from conans.model.options import OptionsValues
+from conans.test.utils.test_files import temp_folder
 
 
 class ConanfileToolsTest(unittest.TestCase):
@@ -28,7 +27,7 @@ class ConanFileToolsTest(ConanFile):
         replace_in_file("otherfile.txt", "ONE TWO THREE", "FOUR FIVE SIX")
 
 '''
-        tmp_dir = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+        tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "conanfile.py")
         other_file = os.path.join(tmp_dir, "otherfile.txt")
         save(file_path, file_content)
