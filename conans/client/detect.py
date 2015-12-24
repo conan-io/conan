@@ -25,7 +25,7 @@ def gcc_compiler(output):
     try:
         _, out = execute('gcc -dumpversion')
         compiler = "gcc"
-        installed_version = Version(out).minor(fill=False)
+        installed_version = re.search("([0-9]\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
