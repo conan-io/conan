@@ -130,7 +130,7 @@ class DefaultNameConan(ConanFile):
 
         # Now even if the package is in local store, check that's rebuilded
         other_conan.run("install %s -b Hello*" % str(conan_reference))
-        self.assertIn("Preparing your build", other_conan.user_io.out)
+        self.assertIn("Copying sources to build folder", other_conan.user_io.out)
 
         other_conan.run("install %s" % str(conan_reference))
-        self.assertNotIn("Preparing your build", other_conan.user_io.out)
+        self.assertNotIn("Copying sources to build folder", other_conan.user_io.out)

@@ -1,4 +1,5 @@
 from conans.client.output import Color
+from conans.model.ref import PackageReference
 
 
 class Printer(object):
@@ -24,6 +25,13 @@ class Printer(object):
             ref, _ = node
             if not ref:
                 continue
+            self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
+        self._out.writeln("Packages", Color.BRIGHT_YELLOW)
+        for node in sorted(deps_graph.nodes):
+            ref, conanfile = node
+            if not ref:
+                continue
+            ref = PackageReference(ref, conanfile.info.package_id())
             self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
 
     def print_info(self, info, pattern=None, verbose=False):
