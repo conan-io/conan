@@ -129,7 +129,7 @@ class ConanManager(object):
         builder = DepsBuilder(installer, self._user_io.out)
         deps_graph = builder.load(reference, conanfile)
         if info:
-            Printer(self._user_io.out).print_meta(deps_graph, info)
+            Printer(self._user_io.out).print_info(deps_graph, info)
             return
         Printer(self._user_io.out).print_graph(deps_graph)
         installer.install(deps_graph, build_mode)
@@ -245,7 +245,7 @@ class ConanManager(object):
                 raise ConanException("Invalid package pattern")
 
         printer = Printer(self._user_io.out)
-        printer.print_info(filtered_info, pattern, verbose)
+        printer.print_search(filtered_info, pattern, verbose)
 
     @property
     def file_manager(self):

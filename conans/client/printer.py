@@ -34,8 +34,7 @@ class Printer(object):
             ref = PackageReference(ref, conanfile.info.package_id())
             self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
 
-    def print_meta(self, deps_graph, _):
-        self._out.writeln("Requirements", Color.BRIGHT_YELLOW)
+    def print_info(self, deps_graph, _):
         for node in sorted(deps_graph.nodes):
             ref, conan = node
             if not ref:
@@ -61,7 +60,7 @@ class Printer(object):
                 for d in depends:
                     self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
 
-    def print_info(self, info, pattern=None, verbose=False):
+    def print_search(self, info, pattern=None, verbose=False):
         """ Print all the exported conans information
         param pattern: wildcards, e.g., "opencv/*"
         """
