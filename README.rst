@@ -135,7 +135,7 @@ of the cloned repository folder:
 
     #!/usr/bin/env python
     import sys
-    sys.path.append('/home/user/conanco/conan') # EDIT!!
+    sys.path.append('/home/user/conan') # EDIT!!
 
     from conans.conan import main
     main(sys.argv[1:])
