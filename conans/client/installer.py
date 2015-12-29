@@ -277,7 +277,7 @@ Package configuration:
         if not os.path.exists(build_folder):
             self._config_source(export_folder, src_folder, conan_file)
             self._user_io.out.info('Preparing your build in %s' % build_folder)
-            shutil.copytree(src_folder, build_folder)
+            shutil.copytree(src_folder, build_folder, symlinks=True)
         self._user_io.out.info('Building your packages in %s' % build_folder)
         os.chdir(build_folder)
         # Read generators from conanfile and generate the needed files
