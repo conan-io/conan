@@ -71,6 +71,7 @@ class ConanFile(object):
     url = None  # The URL where this File is located, as github, to collaborate in package
     license = None  # The license of the PACKAGE, just a shortcut, does not replace or
                     # change the actual license of the source code
+    author = None  # Main maintainer/responsible for the package, any format
 
     def __init__(self, output, runner, settings):
         '''

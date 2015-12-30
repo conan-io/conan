@@ -1,4 +1,5 @@
 from conans.client.output import Color
+from conans.model.ref import PackageReference
 
 
 class Printer(object):
@@ -25,8 +26,41 @@ class Printer(object):
             if not ref:
                 continue
             self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
+        self._out.writeln("Packages", Color.BRIGHT_YELLOW)
+        for node in sorted(deps_graph.nodes):
+            ref, conanfile = node
+            if not ref:
+                continue
+            ref = PackageReference(ref, conanfile.info.package_id())
+            self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
 
-    def print_info(self, info, pattern=None, verbose=False):
+    def print_info(self, deps_graph, _):
+        for node in sorted(deps_graph.nodes):
+            ref, conan = node
+            if not ref:
+                continue
+            self._out.writeln("%s" % repr(ref), Color.BRIGHT_CYAN)
+            url = getattr(conan, "url", None)
+            license_ = getattr(conan, "license", None)
+            author = getattr(conan, "author", None)
+            if url:
+                self._out.writeln("    URL: %s" % url, Color.BRIGHT_GREEN)
+            if license_:
+                self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
+            if author:
+                self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
+            dependants = deps_graph.inverse_neighbors(node)
+            self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
+            for d in dependants:
+                ref = repr(d.conan_ref) if d.conan_ref else "Project"
+                self._out.writeln("        %s" % ref, Color.BRIGHT_YELLOW)
+            depends = deps_graph.neighbors(node)
+            if depends:
+                self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
+                for d in depends:
+                    self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
+
+    def print_search(self, info, pattern=None, verbose=False):
         """ Print all the exported conans information
         param pattern: wildcards, e.g., "opencv/*"
         """
@@ -63,7 +97,8 @@ class Printer(object):
                 else:
                     if conan_info.settings:
                         settings_line = [values[1] for values in \
-                                         [setting.split("=") for setting in conan_info.settings.dumps().splitlines()]]
+                                         [setting.split("=")
+                                          for setting in conan_info.settings.dumps().splitlines()]]
                         settings_line = "(%s)" % ", ".join(settings_line)
                         self._print_colored_line(settings_line, indent=3)
 

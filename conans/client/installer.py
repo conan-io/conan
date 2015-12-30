@@ -9,6 +9,7 @@ import shutil
 from conans.client.generators import write_generators
 from conans.model.build_info import CppInfo
 import fnmatch
+from conans.client.output import Color
 
 
 class ConanInstaller(object):
@@ -66,6 +67,7 @@ class ConanInstaller(object):
     def install(self, deps_graph, build_mode=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
+        self._user_io.out.writeln("Installing requirements", Color.BRIGHT_YELLOW)
         nodes_by_level = self._process_buildinfo(deps_graph)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         self._build(nodes_by_level, skip_private_nodes, build_mode)
@@ -274,11 +276,11 @@ Package configuration:
         in every build, as some configure processes actually change the source
         code
         """
+        self._user_io.out.info('Building your package in %s' % build_folder)
         if not os.path.exists(build_folder):
             self._config_source(export_folder, src_folder, conan_file)
-            self._user_io.out.info('Preparing your build in %s' % build_folder)
+            self._user_io.out.info('Copying sources to build folder')
             shutil.copytree(src_folder, build_folder, symlinks=True)
-        self._user_io.out.info('Building your packages in %s' % build_folder)
         os.chdir(build_folder)
         # Read generators from conanfile and generate the needed files
         write_generators(conan_file, build_folder, self._user_io.out)

@@ -185,6 +185,38 @@ class Command(object):
                               settings=settings_dict,
                               build_mode=args.build)
 
+    def info(self, *args):
+        """ Prints information about the requirements.
+        Requirements can be defined in the command line or in a conanfile.
+        EX: conans info opencv/2.4.10@lasote/testing
+        """
+        parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info",
+                                         formatter_class=RawTextHelpFormatter)
+        parser.add_argument("reference", nargs='?', default="",
+                            help='reference name or path to conanfile file, '
+                            'e.g., openssl/1.0.2@lasote/testing or ./my_project/')
+        self._parse_args(parser)
+
+        args = parser.parse_args(*args)
+
+        # Get False or a list of patterns to check
+        args.build = self._get_build_sources_parameter(args.build)
+        option_dict = args.options or []
+        settings_dict = args.settings or []
+        current_path = os.getcwd()
+        try:
+            reference = ConanFileReference.loads(args.reference)
+        except:
+            reference = os.path.normpath(os.path.join(current_path, args.reference))
+
+        self._manager.install(reference=reference,
+                              current_path=current_path,
+                              remote=args.remote,
+                              options=option_dict,
+                              settings=settings_dict,
+                              build_mode=args.build,
+                              info=True)
+
     def build(self, *args):
         """ calls your project conanfile.py "build" method.
             EX: conans build ./my_project

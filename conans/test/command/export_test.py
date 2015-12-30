@@ -23,7 +23,7 @@ class ExportTest(unittest.TestCase):
         reg_path = self.conan.paths.export(self.conan_ref)
         manif = FileTreeManifest.loads(load(self.conan.paths.digestfile_conanfile(self.conan_ref)))
 
-        self.assertIn('conanfile.py exported as %s in %s' % (self.conan_ref, reg_path),
+        self.assertIn('conanfile.py exported as %s.\nFolder: %s' % (self.conan_ref, reg_path),
                       self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
@@ -94,7 +94,7 @@ class OpenSSLConan(ConanFile):
         self.assertNotIn('Cleaning the old builds ...', conan2.user_io.out)
         self.assertNotIn('Cleaning the old packs ...', conan2.user_io.out)
         self.assertNotIn('All the previous packs were cleaned', conan2.user_io.out)
-        self.assertIn('conanfile.py exported as %s in %s'
+        self.assertIn('conanfile.py exported as %s.\nFolder: %s'
                       % (self.conan_ref, reg_path2), conan2.user_io.out)
         self.assertTrue(os.path.exists(reg_path2))
 
@@ -126,7 +126,7 @@ class OpenSSLConan(ConanFile):
 
         self.assertIn('A new conanfile.py version was exported', conan2.user_io.out)
         # self.assertIn('All the previous packs were cleaned', conan2.user_io.out)
-        self.assertIn('conanfile.py exported as %s in %s'
+        self.assertIn('conanfile.py exported as %s.\nFolder: %s'
                       % (self.conan_ref, reg_path3), conan2.user_io.out)
 
         self.assertTrue(os.path.exists(reg_path3))
