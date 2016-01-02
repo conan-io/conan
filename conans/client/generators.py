@@ -1,13 +1,14 @@
 from conans.paths import (BUILD_INFO_GCC, BUILD_INFO_CMAKE, BUILD_INFO_QMAKE,
                           BUILD_INFO, BUILD_INFO_VISUAL_STUDIO, 
-                          BUILD_INFO_XCODE)
+                          BUILD_INFO_XCODE, BUILD_INFO_YCM)
 from conans.util.files import save
 import os
 
 
 class Generator(object):
 
-    def __init__(self, build_info):
+    def __init__(self, deps_build_info, build_info):
+        self._deps_build_info = deps_build_info
         self._build_info = build_info
 
     @property
@@ -51,14 +52,14 @@ class CMakeGenerator(Generator):
                         'SET(CONAN_EXE_LINKER_FLAGS_{dep} "{deps.exelinkflags}")\n'
                         'SET(CONAN_C_FLAGS_{dep} "{deps.cflags}")\n')
 
-        for dep_name, dep_cpp_info in self._build_info.dependencies:
+        for dep_name, dep_cpp_info in self._deps_build_info.dependencies:
             deps = DepsCppCmake(dep_cpp_info)
             dep_flags = template_dep.format(dep=dep_name.upper(),
                                             deps=deps)
             sections.append(dep_flags)
 
         # GENERAL VARIABLES
-        deps = DepsCppCmake(self._build_info)
+        deps = DepsCppCmake(self._deps_build_info)
 
         template = ('SET(CONAN_INCLUDE_DIRS {deps.include_paths} ${{CONAN_INCLUDE_DIRS}})\n'
             'SET(CONAN_LIB_DIRS {deps.lib_paths} ${{CONAN_LIB_DIRS}})\n'
@@ -72,7 +73,7 @@ class CMakeGenerator(Generator):
             'SET(CONAN_CMAKE_MODULE_PATH {module_paths} ${{CONAN_CMAKE_MODULE_PATH}})')
 
         rootpaths = [DepsCppCmake(dep_cpp_info).rootpath for _, dep_cpp_info
-                     in self._build_info.dependencies]
+                     in self._deps_build_info.dependencies]
         module_paths = " ".join(rootpaths)
         all_flags = template.format(deps=deps, module_paths=module_paths)
         sections.append(all_flags)
@@ -175,7 +176,7 @@ class DepsCppQmake(object):
 class QmakeGenerator(Generator):
     @property
     def content(self):
-        deps = DepsCppQmake(self._build_info)
+        deps = DepsCppQmake(self._deps_build_info)
 
         template = ('# package{dep} \n\n'
                     'INCLUDEPATH += {deps.include_paths}\n'
@@ -193,7 +194,7 @@ class QmakeGenerator(Generator):
         sections.append(all_flags)
         template_deps = template + 'ROOTPATH{dep} = {deps.rootpath}\n\n'
 
-        for dep_name, dep_cpp_info in self._build_info.dependencies:
+        for dep_name, dep_cpp_info in self._deps_build_info.dependencies:
             deps = DepsCppQmake(dep_cpp_info)
             dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
             sections.append(dep_flags)
@@ -208,17 +209,17 @@ class GCCGenerator(Generator):
         """With gcc_flags you can invoke gcc like that:
         $ gcc main.c @conanbuildinfo.gcc -o main
         """
-        defines = " ".join("-D%s" % x for x in self._build_info.defines)
+        defines = " ".join("-D%s" % x for x in self._deps_build_info.defines)
         include_paths = " ".join("-I%s"
-                                 % x.replace("\\", "/") for x in self._build_info.include_paths)
+                                 % x.replace("\\", "/") for x in self._deps_build_info.include_paths)
         rpaths = " ".join("-Wl,-rpath=%s"
-                          % x.replace("\\", "/") for x in self._build_info.lib_paths)
-        lib_paths = " ".join("-L%s" % x.replace("\\", "/") for x in self._build_info.lib_paths)
-        libs = " ".join("-l%s" % x for x in self._build_info.libs)
-        other_flags = " ".join(self._build_info.cppflags +
-                               self._build_info.cflags +
-                               self._build_info.sharedlinkflags +
-                               self._build_info.exelinkflags)
+                          % x.replace("\\", "/") for x in self._deps_build_info.lib_paths)
+        lib_paths = " ".join("-L%s" % x.replace("\\", "/") for x in self._deps_build_info.lib_paths)
+        libs = " ".join("-l%s" % x for x in self._deps_build_info.libs)
+        other_flags = " ".join(self._deps_build_info.cppflags +
+                               self._deps_build_info.cflags +
+                               self._deps_build_info.sharedlinkflags +
+                               self._deps_build_info.exelinkflags)
         flags = ("%s %s %s %s %s %s"
                  % (defines, include_paths, lib_paths, rpaths, libs, other_flags))
         return flags
@@ -245,7 +246,7 @@ class TXTGenerator(Generator):
 
     @property
     def content(self):
-        deps = DepsCppTXT(self._build_info)
+        deps = DepsCppTXT(self._deps_build_info)
 
         template = ('[includedirs{dep}]\n{deps.include_paths}\n\n'
                     '[libdirs{dep}]\n{deps.lib_paths}\n\n'
@@ -262,7 +263,7 @@ class TXTGenerator(Generator):
         sections.append(all_flags)
         template_deps = template + '[rootpath{dep}]\n{deps.rootpath}\n\n'
 
-        for dep_name, dep_cpp_info in self._build_info.dependencies:
+        for dep_name, dep_cpp_info in self._deps_build_info.dependencies:
             deps = DepsCppTXT(dep_cpp_info)
             dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
             sections.append(dep_flags)
@@ -292,7 +293,7 @@ class VisualStudioGenerator(Generator):
   <ItemGroup />
 </Project>'''
 
-    def __init__(self, deps_cpp_info):
+    def __init__(self, deps_cpp_info, cpp_info):
         self.include_dirs = "".join('%s;' % p.replace("\\", "/")
                                     for p in deps_cpp_info.include_paths)
         self.lib_dirs = "".join('%s;' % p.replace("\\", "/")
@@ -320,7 +321,7 @@ OTHER_CFLAGS = $(inherited)
 OTHER_CPLUSPLUSFLAGS = $(inherited)
 '''
 
-    def __init__(self, deps_cpp_info):
+    def __init__(self, deps_cpp_info, cpp_info):
         self.include_dirs = " ".join('"%s"' % p.replace("\\", "/")
                                      for p in deps_cpp_info.include_paths)
         self.lib_dirs = " ".join('"%s"' % p.replace("\\", "/")
@@ -335,15 +336,199 @@ OTHER_CPLUSPLUSFLAGS = $(inherited)
         return self.template.format(**self.__dict__)
 
 
+class YouCompleteMeGenerator(Generator):
+    template = '''
+# This file is NOT licensed under the GPLv3, which is the license for the rest
+# of YouCompleteMe.
+#
+# Here's the license text for this file:
+#
+# This is free and unencumbered software released into the public domain.
+#
+# Anyone is free to copy, modify, publish, use, compile, sell, or
+# distribute this software, either in source code form or as a compiled
+# binary, for any purpose, commercial or non-commercial, and by any
+# means.
+#
+# In jurisdictions that recognize copyright laws, the author or authors
+# of this software dedicate any and all copyright interest in the
+# software to the public domain. We make this dedication for the benefit
+# of the public at large and to the detriment of our heirs and
+# successors. We intend this dedication to be an overt act of
+# relinquishment in perpetuity of all present and future rights to this
+# software under copyright law.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+# EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+# MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+# IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+# OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+# OTHER DEALINGS IN THE SOFTWARE.
+#
+# For more information, please refer to <http://unlicense.org/>
+
+import os
+import ycm_core
+import logging
+
+
+_logger = logging.getLogger(__name__)
+
+
+def DirectoryOfThisScript():
+  return os.path.dirname( os.path.abspath( __file__ ) )
+
+
+# These are the compilation flags that will be used in case there's no
+# compilation database set (by default, one is not set).
+# CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
+flags = [
+{default_flags}
+]
+
+
+# Set this to the absolute path to the folder (NOT the file!) containing the
+# compile_commands.json file to use that instead of 'flags'. See here for
+# more details: http://clang.llvm.org/docs/JSONCompilationDatabase.html
+#
+# You can get CMake to generate this file for you by adding:
+#   set( CMAKE_EXPORT_COMPILE_COMMANDS 1 )
+# to your CMakeLists.txt file.
+#
+# Most projects will NOT need to set this to anything; you can just change the
+# 'flags' list of compilation flags. Notice that YCM itself uses that approach.
+compilation_database_folder = os.path.join(DirectoryOfThisScript(), 'Debug')
+
+if os.path.exists( compilation_database_folder ):
+  database = ycm_core.CompilationDatabase( compilation_database_folder )
+  if not database.DatabaseSuccessfullyLoaded():
+      _logger.warn("Failed to load database")
+      database = None
+else:
+  database = None
+
+SOURCE_EXTENSIONS = [ '.cpp', '.cxx', '.cc', '.c', '.m', '.mm' ]
+
+def GetAbsolutePath(include_path, working_directory):
+    if os.path.isabs(include_path):
+        return include_path
+    return os.path.join(working_directory, include_path)
+
+
+def MakeRelativePathsInFlagsAbsolute( flags, working_directory ):
+  if not working_directory:
+    return list( flags )
+  new_flags = []
+  make_next_absolute = False
+  path_flags = [ '-isystem', '-I', '-iquote', '--sysroot=' ]
+  for flag in flags:
+    new_flag = flag
+
+    if make_next_absolute:
+      make_next_absolute = False
+      new_flag = GetAbsolutePath(flag, working_directory)
+
+    for path_flag in path_flags:
+      if flag == path_flag:
+        make_next_absolute = True
+        break
+
+      if flag.startswith( path_flag ):
+        path = flag[ len( path_flag ): ]
+        new_flag = flag[:len(path_flag)] + GetAbsolutePath(path, working_directory)
+        break
+
+    if new_flag:
+      new_flags.append( new_flag )
+  return new_flags
+
+
+def IsHeaderFile( filename ):
+  extension = os.path.splitext( filename )[ 1 ]
+  return extension in [ '.h', '.hxx', '.hpp', '.hh' ]
+
+
+def GetCompilationInfoForFile( filename ):
+  # The compilation_commands.json file generated by CMake does not have entries
+  # for header files. So we do our best by asking the db for flags for a
+  # corresponding source file, if any. If one exists, the flags for that file
+  # should be good enough.
+  if IsHeaderFile( filename ):
+    basename = os.path.splitext( filename )[ 0 ]
+    for extension in SOURCE_EXTENSIONS:
+      replacement_file = basename + extension
+      if os.path.exists( replacement_file ):
+        compilation_info = database.GetCompilationInfoForFile( replacement_file )
+        if compilation_info.compiler_flags_:
+          return compilation_info
+    return None
+  return database.GetCompilationInfoForFile( filename )
+
+
+def FlagsForFile( filename, **kwargs ):
+  relative_to = None
+  compiler_flags = None
+
+  if database:
+    # Bear in mind that compilation_info.compiler_flags_ does NOT return a
+    # python list, but a "list-like" StringVec object
+    compilation_info = GetCompilationInfoForFile( filename )
+    if compilation_info is None:
+      relative_to = DirectoryOfThisScript()
+      compiler_flags = flags
+    else:
+      relative_to = compilation_info.compiler_working_dir_
+      compiler_flags = compilation_info.compiler_flags_
+
+  else:
+    relative_to = DirectoryOfThisScript()
+    compiler_flags = flags
+
+  final_flags = MakeRelativePathsInFlagsAbsolute( compiler_flags, relative_to )
+  for flag in final_flags:
+      if flag.startswith("-W"):
+          final_flags.remove(flag)
+  _logger.info("Final flags for %s are %s" % (filename, ' '.join(final_flags)))
+
+  return {{
+    'flags': final_flags + ["-I/usr/include", "-I/usr/include/c++/5"],
+    'do_cache': True
+  }}
+'''
+
+    @property
+    def content(self):
+        def prefixed(prefix, values):
+            return [prefix + x for x in values]
+
+        flags = ['-x', 'c++']
+        flags.extend(self._deps_build_info.cppflags)
+        flags.extend(self._build_info.cppflags)
+        flags.extend(prefixed("-D", self._deps_build_info.defines))
+        flags.extend(prefixed("-D", self._build_info.defines))
+        flags.extend(prefixed("-I", self._build_info.include_paths))
+        flags.extend(prefixed("-I", self._deps_build_info.include_paths))
+
+        return self.template.format(default_flags="'" + "', '".join(flags) + "'")
+
+
 def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
+
+    from conans.model.build_info import CppInfo
+
     available_generators = {"txt": (TXTGenerator, BUILD_INFO),
                             "gcc": (GCCGenerator, BUILD_INFO_GCC),
                             "cmake": (CMakeGenerator, BUILD_INFO_CMAKE),
                             "qmake": (QmakeGenerator, BUILD_INFO_QMAKE),
                             "visual_studio": (VisualStudioGenerator, BUILD_INFO_VISUAL_STUDIO),
-                            "xcode": (XCodeGenerator, BUILD_INFO_XCODE)}
+                            "xcode": (XCodeGenerator, BUILD_INFO_XCODE),
+                            "ycm": (YouCompleteMeGenerator, BUILD_INFO_YCM)}
+    conanfile.cpp_info = CppInfo(path)
+    conanfile.cpp_info.dependencies = []
+    conanfile.package_info()
 
     for generator in conanfile.generators:
         if generator not in available_generators:
@@ -351,6 +536,6 @@ def write_generators(conanfile, path, output):
                         (generator, ", ".join(available_generators.keys())))
         else:
             generator_class, filename = available_generators[generator]
-            generator = generator_class(conanfile.deps_cpp_info)
+            generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
             output.info("Generated %s" % filename)
             save(os.path.join(path, filename), generator.content)
