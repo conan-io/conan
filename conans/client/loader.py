@@ -76,6 +76,7 @@ class ConanFileLoader(object):
             result = self._create_check_conan(loaded, consumer)
             if consumer:
                 result.options.initialize_upstream(self._options)
+	    type(result).conanfile_directory = property(lambda self, _path=conan_file_path: os.path.dirname(_path))
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conan_file_path, str(e)))
