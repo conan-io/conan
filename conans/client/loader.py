@@ -27,7 +27,7 @@ class ConanFileLoader(object):
         self._settings = settings
         self._options = options
 
-    def _create_check_conan(self, conan_file, consumer):
+    def _create_check_conan(self, conan_file, consumer, conan_file_path):
         """ Check the integrity of a given conanfile
         """
         result = None
@@ -37,7 +37,8 @@ class ConanFileLoader(object):
             if inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile:
                 if result is None:
                     # Actual instantiation of ConanFile object
-                    result = attr(self._output, self._runner, self._settings.copy())
+                    result = attr(self._output, self._runner, self._settings.copy(),
+				  os.path.dirname(conan_file_path))
                 else:
                     raise ConanException("More than 1 conanfile in the file")
 
@@ -73,10 +74,9 @@ class ConanFileLoader(object):
             raise ConanException("Unable to load conanfile in %s\n%s" % (conan_file_path,
                                                                          '\n'.join(trace[3:])))
         try:
-            result = self._create_check_conan(loaded, consumer)
+            result = self._create_check_conan(loaded, consumer, conan_file_path)
             if consumer:
                 result.options.initialize_upstream(self._options)
-	    type(result).conanfile_directory = property(lambda self, _path=conan_file_path: os.path.dirname(_path))
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conan_file_path, str(e)))
@@ -86,7 +86,8 @@ class ConanFileLoader(object):
         if not os.path.exists(conan_requirements_path):
             raise NotFoundException("%s not found!" % CONANFILE_TXT)
 
-        conanfile = ConanFile(self._output, self._runner, self._settings.copy())
+        conanfile = ConanFile(self._output, self._runner, self._settings.copy(),
+			      os.path.dirname(conan_requirements_path))
 
         parser = ConanFileTextLoader(load(conan_requirements_path))
         for requirement_text in parser.requirements:
