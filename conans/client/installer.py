@@ -6,7 +6,7 @@ from conans.util.log import logger
 from conans.errors import ConanException
 from conans.client.packager import create_package
 import shutil
-from conans.client.generators import write_generators
+from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 import fnmatch
 from conans.client.output import Color
@@ -200,7 +200,8 @@ class ConanInstaller(object):
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
             self._user_io.out.info("Generated %s" % CONANINFO)
-            save(os.path.join(build_folder, BUILD_INFO), repr(conan_file.deps_cpp_info))
+            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file.deps_cpp_info,
+                                                                      conan_file.cpp_info).content)
             self._user_io.out.info("Generated %s" % BUILD_INFO)
 
             self._user_io.out.info("Generating the package")
