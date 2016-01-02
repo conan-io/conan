@@ -73,7 +73,7 @@ class ConanFile(object):
                     # change the actual license of the source code
     author = None  # Main maintainer/responsible for the package, any format
 
-    def __init__(self, output, runner, settings):
+    def __init__(self, output, runner, settings, conanfile_directory):
         '''
         param settings: Settings
         '''
@@ -98,6 +98,12 @@ class ConanFile(object):
         self.output = output
         # something that can run commands, as os.sytem
         self._runner = runner
+
+        self._conanfile_directory = conanfile_directory
+
+    @property
+    def conanfile_directory(self):
+        return self._conanfile_directory
 
     def source(self):
         pass
