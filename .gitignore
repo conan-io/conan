@@ -87,6 +87,7 @@ cacert.pem
 
 #linux backup files
 *~
+.*.swp
 
 #Pyinstaller generated binaries
 /pyinstaller
