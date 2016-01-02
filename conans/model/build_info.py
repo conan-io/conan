@@ -79,7 +79,7 @@ class DepsCppInfo(_CppInfo):
         return self._dependencies[item]
 
     def __repr__(self):
-        return TXTGenerator(self).content
+        return TXTGenerator(self, CppInfo(os.getcwd())).content
 
     @staticmethod
     def loads(text):
