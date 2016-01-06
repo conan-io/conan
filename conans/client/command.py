@@ -236,7 +236,7 @@ class Command(object):
 
     def package(self, *args):
         """ calls your conanfile.py "package" method for a specific package.
-            Intended for package creators, for regenerate package without recompile the source.
+            Intended for package creators, for regenerating a package without recompiling the source.
             Eg conans package openssl/1.0.2@lasote/testing 9cf83afd07b678d38a9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
