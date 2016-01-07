@@ -39,7 +39,7 @@ class HelloReuseConan(ConanFile):
 cmake_minimum_required(VERSION 2.8)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-CONAN_BASIC_SETUP()
+conan_basic_setup()
 
 ADD_EXECUTABLE(greet main.cpp)
 TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
