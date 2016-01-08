@@ -2,7 +2,6 @@ import unittest
 from conans.test.tools import TestClient
 import os
 from conans.paths import CONANINFO
-import platform
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
 from conans.util.files import load
