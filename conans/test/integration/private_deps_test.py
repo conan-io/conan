@@ -1,13 +1,11 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference
-import platform
 import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE, BUILD_INFO, CONANINFO, BUILD_INFO_CMAKE
+from conans.paths import CONANINFO, BUILD_INFO_CMAKE
 from conans.util.files import load
 from conans.model.info import ConanInfo
-from conans.model.build_info import DepsCppInfo
 from nose.plugins.attrib import attr
 
 
@@ -43,12 +41,6 @@ class PrivateDepsTest(unittest.TestCase):
                                                         "Hello2/0.1@lasote/stable"])
 
         # WE need to copy the DLLs and dylib
-        local_install = """    def imports(self):
-        self.copy("*.dll", "", "bin")
-        self.copy("*.dylib", "", "lib")
-"""
-        copy_dlls_conanfile = files3[CONANFILE] + local_install
-        files3[CONANFILE] = copy_dlls_conanfile
         client.save(files3)
 
         client.run('install --build missing')
@@ -83,8 +75,6 @@ class PrivateDepsTest(unittest.TestCase):
                                                           "Hello2/0.1@lasote/stable"])
 
         # WE need to copy the DLLs
-        copy_dlls_conanfile = files2[CONANFILE] + local_install
-        files2[CONANFILE] = copy_dlls_conanfile
         client2.save(files2)
 
         client2.run("install . --build missing")
@@ -105,8 +95,6 @@ class PrivateDepsTest(unittest.TestCase):
         files3 = cpp_hello_conan_files("Hello3", "0.2", ["Hello1/0.1@lasote/stable",
                                                           "Hello2/0.1@lasote/stable"], language=1)
 
-        copy_dlls_conanfile = files3[CONANFILE] + local_install
-        files3[CONANFILE] = copy_dlls_conanfile
         client2.save(files3)
         client2.run('install -o language=1 --build missing')
         client2.run('build')
@@ -119,3 +107,23 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertEqual(['Hola Hello3', 'Hola Hello1',
                           'Hola Hello0', 'Hola Hello2', 'Hola #'],
                          str(client2.user_io.out).splitlines()[-5:])
+
+        # Issue 79, fixing private deps from current project
+        files3 = cpp_hello_conan_files("Hello3", "0.2", ["Hello1/0.1@lasote/stable",
+                                                         "Hello2/0.1@lasote/stable",
+                                                         ("Hello0/0.1@lasote/stable", "private"),
+                                                         ("Hello00/0.2@lasote/stable", "private")],
+                                       language=1)
+
+        client2.save(files3, clean_first=True)
+        client2.run('install -o language=1 --build missing')
+        client2.run('build')
+        self.assertNotIn("libhello0.a", client2.user_io.out)
+        self.assertNotIn("libhello00.a", client2.user_io.out)
+        self.assertNotIn("libhello1.a", client2.user_io.out)
+        self.assertNotIn("libhello2.a", client2.user_io.out)
+        self.assertNotIn("libhello3.a", client2.user_io.out)
+        client2.runner(command, client2.current_folder)
+        self.assertEqual(['Hola Hello3', 'Hola Hello1',
+                          'Hola Hello0', 'Hola Hello2', 'Hola #', 'Hola Hello0', 'Hola #'],
+                         str(client2.user_io.out).splitlines()[-7:])
