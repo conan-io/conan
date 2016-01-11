@@ -38,8 +38,8 @@ class ConanFileLoader(object):
             if inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile:
                 if result is None:
                     # Actual instantiation of ConanFile object
-                    result = attr(self._output, self._runner, self._settings.copy(),
-				  os.path.dirname(conan_file_path))
+                    result = attr(self._output, self._runner,
+                                  self._settings.copy(), os.path.dirname(conan_file_path))
                 else:
                     raise ConanException("More than 1 conanfile in the file")
 
@@ -74,11 +74,12 @@ class ConanFileLoader(object):
             module_id = uuid.uuid1()
             added_modules = set(sys.modules).difference(old_modules)
             for added in added_modules:
-                m = sys.modules[added]
-                folder = os.path.dirname(m.__file__)
-                if folder.startswith(current_dir):
-                    m = sys.modules.pop(added)
-                    sys.modules["%s.%s" % (module_id, added)] = m
+                module = sys.modules[added]
+                if module:
+                    folder = os.path.dirname(module.__file__)
+                    if folder.startswith(current_dir):
+                        module = sys.modules.pop(added)
+                        sys.modules["%s.%s" % (module_id, added)] = module
         except Exception:
             import traceback
             trace = traceback.format_exc().split('\n')
@@ -101,7 +102,7 @@ class ConanFileLoader(object):
             raise NotFoundException("%s not found!" % CONANFILE_TXT)
 
         conanfile = ConanFile(self._output, self._runner, self._settings.copy(),
-			      os.path.dirname(conan_requirements_path))
+                              os.path.dirname(conan_requirements_path))
 
         parser = ConanFileTextLoader(load(conan_requirements_path))
         for requirement_text in parser.requirements:
