@@ -6,9 +6,10 @@ from conans.util.log import logger
 from conans.errors import ConanException
 from conans.client.packager import create_package
 import shutil
-from conans.client.generators import write_generators
+from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 import fnmatch
+from conans.client.output import Color
 
 
 class ConanInstaller(object):
@@ -66,6 +67,7 @@ class ConanInstaller(object):
     def install(self, deps_graph, build_mode=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
+        self._user_io.out.writeln("Installing requirements", Color.BRIGHT_YELLOW)
         nodes_by_level = self._process_buildinfo(deps_graph)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         self._build(nodes_by_level, skip_private_nodes, build_mode)
@@ -105,6 +107,8 @@ class ConanInstaller(object):
         for private_node, private_requirers in private_closure:
             for private_requirer in private_requirers:
                 conan_ref, conan_file = private_requirer
+                if conan_ref is None:
+                    continue
                 package_id = conan_file.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
                 package_folder = self._paths.package(package_reference)
@@ -198,7 +202,8 @@ class ConanInstaller(object):
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
             self._user_io.out.info("Generated %s" % CONANINFO)
-            save(os.path.join(build_folder, BUILD_INFO), repr(conan_file.deps_cpp_info))
+            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file.deps_cpp_info,
+                                                                      conan_file.cpp_info).content)
             self._user_io.out.info("Generated %s" % BUILD_INFO)
 
             self._user_io.out.info("Generating the package")
@@ -274,11 +279,11 @@ Package configuration:
         in every build, as some configure processes actually change the source
         code
         """
+        self._user_io.out.info('Building your package in %s' % build_folder)
         if not os.path.exists(build_folder):
             self._config_source(export_folder, src_folder, conan_file)
-            self._user_io.out.info('Preparing your build in %s' % build_folder)
-            shutil.copytree(src_folder, build_folder)
-        self._user_io.out.info('Building your packages in %s' % build_folder)
+            self._user_io.out.info('Copying sources to build folder')
+            shutil.copytree(src_folder, build_folder, symlinks=True)
         os.chdir(build_folder)
         # Read generators from conanfile and generate the needed files
         write_generators(conan_file, build_folder, self._user_io.out)

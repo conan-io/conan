@@ -26,7 +26,7 @@ class {name}Conan(ConanFile):
         lang = '-DCONAN_LANGUAGE=%s' % self.options.language
         cmake = CMake(self.settings)
         cmake_flags = cmake.command_line
-        cmd = "cmake . %s %s %s" % (cmake_flags, lang, static_flags)
+        cmd = 'cmake "%s" %s %s %s' % (self.conanfile_directory, cmake_flags, lang, static_flags)
         #print "Executing command ", cmd
         self.run(cmd)
         self.run("cmake --build . %s" % cmake.build_config)
@@ -48,20 +48,20 @@ class {name}Conan(ConanFile):
 """
 
 cmake_file = """
-PROJECT(MyHello)
+project(MyHello)
 cmake_minimum_required(VERSION 2.8.12)
 
-INCLUDE(${{CMAKE_BINARY_DIR}}/%s)
+include(${{CMAKE_BINARY_DIR}}/%s)
 
-ADD_DEFINITIONS(-DCONAN_LANGUAGE=${{CONAN_LANGUAGE}})
-MESSAGE("HELLO LANGUAGE " ${{CONAN_LANGUAGE}})
-CONAN_BASIC_SETUP()
+add_definitions(-DCONAN_LANGUAGE=${{CONAN_LANGUAGE}})
+message("HELLO LANGUAGE " ${{CONAN_LANGUAGE}})
+conan_basic_setup()
 
-ADD_LIBRARY(hello{name} hello.cpp)
-TARGET_LINK_LIBRARIES(hello{name} ${{CONAN_LIBS}})
+add_library(hello{name} hello.cpp)
+target_link_libraries(hello{name} ${{CONAN_LIBS}})
 set_target_properties(hello{name}  PROPERTIES POSITION_INDEPENDENT_CODE ON)
-ADD_EXECUTABLE(say_hello main.cpp)
-TARGET_LINK_LIBRARIES(say_hello hello{name})
+add_executable(say_hello main.cpp)
+target_link_libraries(say_hello hello{name})
 
 
 """ % BUILD_INFO_CMAKE
@@ -98,7 +98,7 @@ int main(){{
 """
 
 
-def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, 
+def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
                            msg=None, dll_export=False):
     """
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -108,7 +108,8 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
                             downstream consumers
     param msg: the message to append to Hello/Hola, will be equal the number
                by default
-    param dll_export: Adds __declspec(dllexport) to the .h declaration (to be exported to lib with a dll)
+    param dll_export: Adds __declspec(dllexport) to the .h declaration
+                      (to be exported to lib with a dll)
     e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
          "Hello 3", that depends both in Hello4 and Hello7.
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7
@@ -144,7 +145,8 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     param version: string with the version of the current conans "0.1" by default
     param deps: [] list of string of the form "0/0.1@user/channel"
     param language: 0 = English, 1 = Spanish
-    param dll_export: Adds __declspec(dllexport) to the .h declaration (to be exported to lib with a dll)
+    param dll_export: Adds __declspec(dllexport) to the .h declaration
+                      (to be exported to lib with a dll)
 
     e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
          "Hello 3", that depends both in Hello4 and Hello7.

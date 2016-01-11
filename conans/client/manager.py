@@ -24,6 +24,7 @@ import re
 from conans.info import SearchInfo
 from conans.model.build_info import DepsCppInfo
 from conans.client import packager
+from conans.client.output import Color
 
 
 def get_user_channel(text):
@@ -84,12 +85,21 @@ class ConanManager(object):
         logger.debug("Exporting %s" % conan_file_path)
         user_name, channel = get_user_channel(user)
         conan_file = self._loader().load_conan(os.path.join(conan_file_path, CONANFILE))
+        url = getattr(conan_file, "url", None)
+        license_ = getattr(conan_file, "license", None)
+        if not url:
+            self._user_io.out.warn("Conanfile doesn't have 'url'.\n"
+                                   "It is recommended to add your repo URL as attribute")
+        if not license_:
+            self._user_io.out.warn("Conanfile doesn't have a 'license'.\n"
+                                  "It is recommended to add the package license as attribute")
+
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
         export_conanfile(self._user_io.out, self._paths,
                          conan_file.exports, conan_file_path, conan_ref)
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
-                build_mode=False):
+                build_mode=False, info=None):
         """ Fetch and build all dependencies for the given reference
         param reference: ConanFileReference or path to user space conanfile
         param current_path: where the output files will be saved
@@ -118,6 +128,9 @@ class ConanManager(object):
         # build deps graph and install it
         builder = DepsBuilder(installer, self._user_io.out)
         deps_graph = builder.load(reference, conanfile)
+        if info:
+            Printer(self._user_io.out).print_info(deps_graph, info)
+            return
         Printer(self._user_io.out).print_graph(deps_graph)
         installer.install(deps_graph, build_mode)
 
@@ -232,7 +245,7 @@ class ConanManager(object):
                 raise ConanException("Invalid package pattern")
 
         printer = Printer(self._user_io.out)
-        printer.print_info(filtered_info, pattern, verbose)
+        printer.print_search(filtered_info, pattern, verbose)
 
     @property
     def file_manager(self):

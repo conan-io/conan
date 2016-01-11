@@ -1,6 +1,5 @@
 import unittest
 from conans.test.tools import TestServer, TestClient
-import platform
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
 from nose.plugins.attrib import attr
@@ -42,8 +41,8 @@ class DiamondTest(unittest.TestCase):
         content = load(build_file)
         for dep in ("Hello3", "Hello2", "Hello1", "Hello0"):
             self.assertEqual(len(deps_cpp_info[dep].include_paths), 1)
-            self.assertIn("SET(CONAN_INCLUDE_DIRS_%s " % dep.upper(), content)
-            self.assertIn("SET(CONAN_LIBS_%s hello%s)" % (dep.upper(), dep), content)
+            self.assertIn("set(CONAN_INCLUDE_DIRS_%s " % dep.upper(), content)
+            self.assertIn("set(CONAN_LIBS_%s hello%s)" % (dep.upper(), dep), content)
 
     def reuse_test(self):
         self._export_upload("Hello0", "0.1")
