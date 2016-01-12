@@ -120,8 +120,10 @@ def download(url, filename):
     if "sourceforge.net" in url:
         url = fetch_sourceforge_url(url)
 
-    MyOpener().retrieve(url, filename=filename, reporthook=dl_progress_callback_cmd)
-
+    try:
+        MyOpener().retrieve(url, filename=filename, reporthook=dl_progress_callback_cmd)
+    except:
+        retrieve(url, filename=filename, reporthook=dl_progress_callback_cmd)
 
 def replace_in_file(file_path, search, replace):
     with open(file_path, 'r') as content_file:
