@@ -93,17 +93,20 @@ def download(url, filename):
     def dl_progress_callback_cmd(count, block_size, total_size):
         update_progress(min(count * block_size, total_size) / float(total_size), total_size)
 
-    chunk_size=8192
+    chunk_size = 8192
 
     with closing(requests.get(url, stream=True)) as r:
         if r.status_code == 200:
-            total_size = r.headers['content-length']
+            content_length = r.headers['content-length']
             with open(filename, "wb") as fd:
-                i=0
-                for chunk in r.iter_content(chunk_size):
-                    i += 1
-                    dl_progress_callback_cmd(i,chunk_size,total_size)
-                    fd.write(chunk)
+                if content_length is None:
+                    fd.write(r.content)
+                else:
+                    i = 0
+                    for chunk in r.iter_content(chunk_size):
+                        i += 1
+                        dl_progress_callback_cmd(i, chunk_size, content_length)
+                        fd.write(chunk)
 
 
 def replace_in_file(file_path, search, replace):
