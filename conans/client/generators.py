@@ -535,12 +535,12 @@ def write_generators(conanfile, path, output):
     conanfile.cpp_info.dependencies = []
     conanfile.package_info()
 
-    for generator in conanfile.generators:
-        if generator not in available_generators:
+    for generator_name in conanfile.generators:
+        if generator_name not in available_generators:
             output.warn("Invalid generator '%s'. Available options: %s" %
-                        (generator, ", ".join(available_generators.keys())))
+                        (generator_name, ", ".join(available_generators.keys())))
         else:
-            generator_class, filename = available_generators[generator]
+            generator_class, filename = available_generators[generator_name]
             generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
-            output.info("Generated %s" % filename)
+            output.info('Generator "%s" created %s' % (generator_name, filename))
             save(os.path.join(path, filename), generator.content)

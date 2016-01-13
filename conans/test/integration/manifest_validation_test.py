@@ -38,7 +38,8 @@ class ManifestValidationTest(unittest.TestCase):
         save(file_path, "BAD CONTENT")
 
         self.conan.run("install %s --build missing" % str(self.conan_reference))
-        self.assertIn("Conan %s not found, retrieving from server" % str(self.conan_reference),
+        self.assertIn("%s: Conanfile not found, retrieving from server"
+                      % str(self.conan_reference),
                       self.conan.user_io.out)
 
     def test_corrupted_package(self):
@@ -51,7 +52,7 @@ class ManifestValidationTest(unittest.TestCase):
         self.conan.run("install %s --build missing" % str(self.conan_reference))
         self.assertNotIn("Package for %s does not exist" % str(self.conan_reference),
                          self.conan.user_io.out)
-        self.assertIn("Package for %s in" % str(self.conan_reference), self.conan.user_io.out)
+        self.assertIn("%s: Package installed" % str(self.conan_reference), self.conan.user_io.out)
 
         # Now alter a local file and try to install it,
         # conan should try to download the package from remote
@@ -61,5 +62,5 @@ class ManifestValidationTest(unittest.TestCase):
         save(file_path, "BAD CONTENT")
 
         self.conan.run("install %s --build missing" % str(self.conan_reference))
-        self.assertIn("Package for %s does not exist" % str(self.conan_reference),
+        self.assertIn("%s: Package not installed" % str(self.conan_reference),
                       self.conan.user_io.out)

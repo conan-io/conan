@@ -25,6 +25,7 @@ from conans.info import SearchInfo
 from conans.model.build_info import DepsCppInfo
 from conans.client import packager
 from conans.client.package_copier import PackageCopier
+from conans.client.output import ScopedOutput
 
 
 def get_user_channel(text):
@@ -72,7 +73,7 @@ class ConanManager(object):
             # into account, just those from CONANFILE + user command line
             options = OptionsValues.loads("\n".join(user_options_values))
 
-        return ConanFileLoader(self._user_io.out, self._runner, settings, options=options)
+        return ConanFileLoader(self._runner, settings, options=options)
 
     def export(self, user, conan_file_path):
         """ Export the conans
@@ -84,7 +85,8 @@ class ConanManager(object):
         assert conan_file_path
         logger.debug("Exporting %s" % conan_file_path)
         user_name, channel = get_user_channel(user)
-        conan_file = self._loader().load_conan(os.path.join(conan_file_path, CONANFILE))
+        conan_file = self._loader().load_conan(os.path.join(conan_file_path, CONANFILE),
+                                               self._user_io.out)
         url = getattr(conan_file, "url", None)
         license_ = getattr(conan_file, "license", None)
         if not url:
@@ -95,7 +97,8 @@ class ConanManager(object):
                                   "It is recommended to add the package license as attribute")
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
-        export_conanfile(self._user_io.out, self._paths,
+        output = ScopedOutput(str(conan_ref), self._user_io.out)
+        export_conanfile(output, self._paths,
                          conan_file.exports, conan_file_path, conan_ref)
 
     def download(self, reference, package_ids, remote=None):
@@ -135,13 +138,14 @@ class ConanManager(object):
         if reference:
             conanfile = installer.retrieve_conanfile(reference, consumer=True)
         else:
+            output = ScopedOutput("Project", self._user_io.out)
             try:
                 conan_file_path = os.path.join(conanfile_path, CONANFILE)
-                conanfile = loader.load_conan(conan_file_path, consumer=True)
+                conanfile = loader.load_conan(conan_file_path, output, consumer=True)
                 is_txt = False
             except NotFoundException:  # Load requirements.txt
                 conan_path = os.path.join(conanfile_path, CONANFILE_TXT)
-                conanfile = loader.load_conan_txt(conan_path)
+                conanfile = loader.load_conan_txt(conan_path, output)
                 is_txt = True
 
         # build deps graph and install it
@@ -158,8 +162,9 @@ class ConanManager(object):
                 conanfile.info.settings = loader._settings.values
                 conanfile.info.full_settings = loader._settings.values
             save(os.path.join(current_path, CONANINFO), conanfile.info.dumps())
-            self._user_io.out.info("Generated %s" % CONANINFO)
-            write_generators(conanfile, current_path, self._user_io.out)
+            self._user_io.out.writeln("")
+            output.info("Generated %s" % CONANINFO)
+            write_generators(conanfile, current_path, output)
             local_installer = FileImporter(deps_graph, self._paths, current_path)
             conanfile.copy = local_installer
             conanfile.imports()
@@ -187,7 +192,7 @@ class ConanManager(object):
                 self._user_io.out.info("Packaging %s" % package_reference.package_id)
                 build_folder = self._paths.build(package_reference)
                 loader = self._loader(build_folder)
-                conanfile = loader.load_conan(conan_file_path)
+                conanfile = loader.load_conan(conan_file_path, self._user_io.out)
                 rmdir(package_folder)
                 packager.create_package(conanfile, build_folder, package_folder, self._user_io.out)
             else:
@@ -206,7 +211,9 @@ class ConanManager(object):
         conanfile_file = os.path.join(conanfile_path, CONANFILE)
 
         try:
-            conan_file = self._loader(current_path).load_conan(conanfile_file, consumer=True)
+            output = ScopedOutput("Project", self._user_io.out)
+            conan_file = self._loader(current_path).load_conan(conanfile_file, output,
+                                                               consumer=True)
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"
