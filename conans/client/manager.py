@@ -165,19 +165,36 @@ class ConanManager(object):
             conanfile.imports()
             local_installer.execute()
 
-    def package(self, package_reference):
-        assert(isinstance(package_reference, PackageReference))
+    def package(self, reference, package_id, only_manifest, package_all):
+        assert(isinstance(reference, ConanFileReference))
 
         # Package paths
-        conan_file_path = self._paths.conanfile(package_reference.conan)
-        build_folder = self._paths.build(package_reference)
-        package_folder = self._paths.package(package_reference)
+        conan_file_path = self._paths.conanfile(reference)
 
-        # Will read current conaninfo with specified options and load conanfile with them
-        loader = self._loader(build_folder)
-        conanfile = loader.load_conan(conan_file_path)
-        rmdir(package_folder)
-        packager.create_package(conanfile, build_folder, package_folder, self._user_io.out)
+        if package_all:
+            packages_dir = self._paths.packages(reference)
+            if not os.path.exists(packages_dir):
+                raise NotFoundException('%s does not exist' % str(reference))
+            packages = [PackageReference(reference, packid)
+                        for packid in os.listdir(packages_dir)]
+        else:
+            packages = [PackageReference(reference, package_id)]
+
+        for package_reference in packages:
+            package_folder = self._paths.package(package_reference)
+            # Will read current conaninfo with specified options and load conanfile with them
+            if not only_manifest:
+                self._user_io.out.info("Packaging %s" % package_reference.package_id)
+                build_folder = self._paths.build(package_reference)
+                loader = self._loader(build_folder)
+                conanfile = loader.load_conan(conan_file_path)
+                rmdir(package_folder)
+                packager.create_package(conanfile, build_folder, package_folder, self._user_io.out)
+            else:
+                self._user_io.out.info("Creating manifest for %s" % package_reference.package_id)
+                if not os.path.exists(package_folder):
+                    raise NotFoundException('Package %s does not exist' % str(package_reference))
+                packager.generate_manifest(package_folder)
 
     def build(self, conanfile_path, current_path, test=False):
         """ Call to build() method saved on the conanfile.py
