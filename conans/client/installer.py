@@ -39,24 +39,16 @@ class ConanInstaller(object):
             self._user_io.out.info("Conan %s not found, retrieving from server"
                                    % str(conan_reference))
             # If not in localhost, download it. Will raise if not found
-            self._retrieve_remote_conan_file(conan_reference)
+            self._remote_manager.get_conanfile(conan_reference, self._remote)
         conanfile = self._loader.load_conan(conanfile_path, consumer)
         return conanfile
 
     def download_packages(self, reference, package_ids):
         assert(isinstance(package_ids, list))
-        self._retrieve_remote_conan_file(reference)
+        self._remote_manager.get_conanfile(reference, self._remote)
         for package_id in package_ids:
             package_reference = PackageReference(reference, package_id)
             self._retrieve_remote_package(package_reference)
-
-    def _retrieve_remote_conan_file(self, conan_reference):
-        export_files = self._remote_manager.get_conanfile(conan_reference, self._remote)
-        export_folder = self._paths.export(conan_reference)
-#       TODO: Download only the CONANFILE file and only download the rest of files
-#       in install if needed (not found remote package)
-        for file_name, content in export_files:  # export_files is a generator
-            save(os.path.join(export_folder, file_name), content)
 
     def _retrieve_remote_package(self, package_reference):
         try:
@@ -226,10 +218,10 @@ class ConanInstaller(object):
         options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
         author_contact = " at '%s'" % conan_file.url if conan_file.url else ""
 
-        raise ConanException('''Can't find a '%s' package for the specified options and settings. 
+        raise ConanException('''Can't find a '%s' package for the specified options and settings
 
 - Try to build from sources with "--build %s" parameter
-- If it fails, you could try to contact the package author%s, report your configuration and try to collaborate to support it.
+- If it fails, you could try to contact the package author %s, report your configuration and try to collaborate to support it.
 
 Package configuration:
 - Settings: %s

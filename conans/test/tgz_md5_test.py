@@ -1,10 +1,10 @@
 import unittest
-from conans.client.remote_manager import compress_package_files
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save, md5sum
 from conans.paths import PACKAGE_TGZ_NAME
 import os
 import time
+from conans.client.remote_manager import compress_files
 
 
 class TgzMd5Test(unittest.TestCase):
@@ -13,7 +13,7 @@ class TgzMd5Test(unittest.TestCase):
     def testMd5Name(self):
         files = {"one_file.txt": "The contents",
                  "Two_file.txt": "Two contents"}
-        new_files = compress_package_files(files)
+        new_files = compress_files(files, PACKAGE_TGZ_NAME, excluded=[])
         folder = temp_folder()
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
         save(file_path, new_files[PACKAGE_TGZ_NAME])
@@ -22,7 +22,7 @@ class TgzMd5Test(unittest.TestCase):
 
         time.sleep(1)  # Timestamps change
 
-        new_files = compress_package_files(files)
+        new_files = compress_files(files, PACKAGE_TGZ_NAME, excluded=[])
         folder = temp_folder()
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
         save(file_path, new_files[PACKAGE_TGZ_NAME])

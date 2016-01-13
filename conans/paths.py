@@ -26,6 +26,7 @@ CONANINFO = "conaninfo.txt"
 SYSTEM_REQS = "system_reqs.txt"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
+EXPORT_TGZ_NAME = "conan_export.tgz"
 
 
 class SimplePaths(object):
