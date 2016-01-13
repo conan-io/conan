@@ -310,13 +310,13 @@ class Command(object):
         """ Copy packages to another user/channel
         """
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
-        parser.add_argument("reference", nargs='?', default="",
+        parser.add_argument("reference", default="",
                             help='reference'
                             'e.g., OpenSSL/1.0.2e@lasote/stable')
-        parser.add_argument("user_channel", nargs='?', default="",
+        parser.add_argument("user_channel", default="",
                             help='Destination user/channel'
                             'e.g., lasote/testing')
-        parser.add_argument("--package", "-p", nargs=1, action=Extender, 
+        parser.add_argument("--package", "-p", nargs=1, action=Extender,
                             help='copy specified package ID')
         parser.add_argument("--all", action='store_true',
                             default=False,
