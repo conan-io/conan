@@ -3,6 +3,9 @@ import shutil
 from errno import ENOENT, EEXIST
 import hashlib
 import sys
+import tarfile
+from os.path import abspath, realpath, dirname, join as joinpath
+from tarfile import TarInfo
 
 
 def md5(content):
@@ -169,3 +172,26 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=9, **k
         raise
     t._extfileobj = False
     return t
+
+
+def tar_extract(fileobj, destination_dir):
+    '''Extract tar file controlling not absolute paths and fixing the routes
+    if the tar was zipped in windows'''
+    def badpath(path, base):
+        # joinpath will ignore base if path is absolute
+        return not realpath(abspath(joinpath(base, path))).startswith(base)
+
+    def safemembers(members):
+        base = realpath(abspath("."))
+
+        for finfo in members:
+            if badpath(finfo.name, base) or finfo.issym() or finfo.islnk():
+                continue
+            else:
+                # Fixes unzip a windows zipped file in linux
+                finfo.name = finfo.name.replace("\\", "/")
+                yield finfo
+
+    the_tar = tarfile.open(fileobj=fileobj)
+    the_tar.extractall(path=destination_dir, members=safemembers(the_tar))
+    the_tar.close()

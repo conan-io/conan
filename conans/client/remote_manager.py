@@ -1,6 +1,6 @@
 from conans.errors import ConanException, NotFoundException, ConanConnectionError
 from requests.exceptions import ConnectionError
-from conans.util.files import build_files_set, save
+from conans.util.files import build_files_set, save, tar_extract
 from conans.util.log import logger
 import traceback
 from conans.errors import ConanOutdatedClient
@@ -93,8 +93,7 @@ class RemoteManager(object):
                 save(os.path.join(self._paths.package(package_reference), file_name), content)
             else:
                 #  Unzip the file
-                tar = tarfile.open(fileobj=StringIO(content))
-                tar.extractall(self._paths.package(package_reference))
+                tar_extract(StringIO(content), self._paths.package(package_reference))
 
     def search(self, pattern=None, remote=None, ignorecase=True):
         """

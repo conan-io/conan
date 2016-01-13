@@ -24,7 +24,7 @@ import re
 from conans.info import SearchInfo
 from conans.model.build_info import DepsCppInfo
 from conans.client import packager
-from conans.client.output import Color
+from conans.client.package_copier import PackageCopier
 
 
 def get_user_channel(text):
@@ -98,13 +98,32 @@ class ConanManager(object):
         export_conanfile(self._user_io.out, self._paths,
                          conan_file.exports, conan_file_path, conan_ref)
 
+    def download(self, reference, package_ids, remote=None):
+        """ Download conanfile and specified packages to local repository
+        @param reference: ConanFileReference
+        @param package_ids: Package ids or empty for download all
+        @param remote: install only from that remote
+        """
+        assert(isinstance(reference, ConanFileReference))
+        installer = ConanInstaller(self._paths, self._user_io, None, self.remote_manager, remote)
+
+        if package_ids:
+            installer.download_packages(reference, package_ids)
+        else:  # Not specified packages, download all
+            info = self.remote_manager.search(str(reference), remote, ignorecase=False)
+            if reference not in info:
+                remote = remote or self.remote_manager.default_remote
+                raise ConanException("'%s' not found in remote '%s'" % (str(reference), remote))
+
+            installer.download_packages(reference, info[reference].keys())
+
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, info=None):
         """ Fetch and build all dependencies for the given reference
-        param reference: ConanFileReference or path to user space conanfile
-        param current_path: where the output files will be saved
-        param remote: install only from that remote
-        param options: written in JSON, e.g. {"compiler": "Visual Studio 12", ...}
+        @param reference: ConanFileReference or path to user space conanfile
+        @param current_path: where the output files will be saved
+        @param remote: install only from that remote
+        @param options: written in JSON, e.g. {"compiler": "Visual Studio 12", ...}
         """
         if not isinstance(reference, ConanFileReference):
             conanfile_path = reference
@@ -272,6 +291,18 @@ class ConanManager(object):
         disk_adapter = DiskAdapter("", self._paths.store, None)
         file_manager = FileManager(self._paths, disk_adapter)
         return file_manager
+
+    def copy(self, reference, package_ids, username, channel, force=False):
+        """ Copy or move conanfile (exported) and packages to another user and or channel
+        @param reference: ConanFileReference containing the packages to be moved
+        @param package_ids: list of ids or [] for all list
+        @param username: Destination username
+        @param channel: Destination channel
+        @param remote: install only from that remote
+        """
+        copier = PackageCopier(self._paths, self._user_io)
+        package_ids = package_ids or os.listdir(self._paths.packages(reference))
+        copier.copy(reference, package_ids, username, channel, force)
 
     def remove(self, pattern, src=False, build_ids=None, package_ids_filter=None, force=False,
                remote=None):
