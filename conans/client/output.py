@@ -78,3 +78,14 @@ class ConanOutput(object):
         self.write("\r%s%s" % (line, " " * (TOTAL_SIZE - len(line))))
         self._stream.flush()
         self._color = tmp_color
+
+
+class ScopedOutput(ConanOutput):
+    def __init__(self, scope, output):
+        self.scope = scope
+        self._stream = output._stream
+        self._color = output._color
+
+    def write(self, data, front=None, back=None, newline=False):
+        super(ScopedOutput, self).write("%s: %s" % (self.scope, data),
+                                        front, back, newline)

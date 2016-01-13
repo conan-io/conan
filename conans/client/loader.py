@@ -14,21 +14,19 @@ import sys
 
 
 class ConanFileLoader(object):
-    def __init__(self, output, runner, settings, options):
+    def __init__(self, runner, settings, options):
         '''
         param settings: Settings object, to assign to ConanFile at load time
         param options: OptionsValues, necessary so the base conanfile loads the options
                         to start propagation, and having them in order to call build()
         '''
-
-        self._output = output
         self._runner = runner
         assert isinstance(settings, Settings)
         assert isinstance(options, OptionsValues)
         self._settings = settings
         self._options = options
 
-    def _create_check_conan(self, conan_file, consumer, conan_file_path):
+    def _create_check_conan(self, conan_file, consumer, conan_file_path, output):
         """ Check the integrity of a given conanfile
         """
         result = None
@@ -38,7 +36,7 @@ class ConanFileLoader(object):
             if inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile:
                 if result is None:
                     # Actual instantiation of ConanFile object
-                    result = attr(self._output, self._runner,
+                    result = attr(output, self._runner,
                                   self._settings.copy(), os.path.dirname(conan_file_path))
                 else:
                     raise ConanException("More than 1 conanfile in the file")
@@ -55,7 +53,7 @@ class ConanFileLoader(object):
 
         return result
 
-    def load_conan(self, conan_file_path, consumer=False):
+    def load_conan(self, conan_file_path, output, consumer=False):
         """ loads a ConanFile object from the given file
         """
         # Check if precompiled exist, delete it
@@ -89,19 +87,19 @@ class ConanFileLoader(object):
             sys.path.pop()
 
         try:
-            result = self._create_check_conan(loaded, consumer, conan_file_path)
+            result = self._create_check_conan(loaded, consumer, conan_file_path, output)
             if consumer:
                 result.options.initialize_upstream(self._options)
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conan_file_path, str(e)))
 
-    def load_conan_txt(self, conan_requirements_path):
+    def load_conan_txt(self, conan_requirements_path, output):
 
         if not os.path.exists(conan_requirements_path):
             raise NotFoundException("%s not found!" % CONANFILE_TXT)
 
-        conanfile = ConanFile(self._output, self._runner, self._settings.copy(),
+        conanfile = ConanFile(output, self._runner, self._settings.copy(),
                               os.path.dirname(conan_requirements_path))
 
         parser = ConanFileTextLoader(load(conan_requirements_path))

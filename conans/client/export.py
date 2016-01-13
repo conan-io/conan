@@ -26,9 +26,8 @@ def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref):
         output.success('A new %s version was exported' % CONANFILE)
 
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
-    output.success('%s exported as %s.\nFolder: %s' % (CONANFILE,
-                                                       str(conan_ref),
-                                                       destination_folder))
+    output.success('%s exported to local storage' % CONANFILE)
+    output.success('Folder: %s' % destination_folder)
 
 
 def _init_export_folder(destination_folder):

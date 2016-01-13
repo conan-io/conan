@@ -23,8 +23,9 @@ class ExportTest(unittest.TestCase):
         reg_path = self.conan.paths.export(self.conan_ref)
         manif = FileTreeManifest.loads(load(self.conan.paths.digestfile_conanfile(self.conan_ref)))
 
-        self.assertIn('conanfile.py exported as %s.\nFolder: %s' % (self.conan_ref, reg_path),
+        self.assertIn('%s: conanfile.py exported to local storage' % str(self.conan_ref),
                       self.conan.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in self.files.keys():
@@ -94,8 +95,9 @@ class OpenSSLConan(ConanFile):
         self.assertNotIn('Cleaning the old builds ...', conan2.user_io.out)
         self.assertNotIn('Cleaning the old packs ...', conan2.user_io.out)
         self.assertNotIn('All the previous packs were cleaned', conan2.user_io.out)
-        self.assertIn('conanfile.py exported as %s.\nFolder: %s'
-                      % (self.conan_ref, reg_path2), conan2.user_io.out)
+        self.assertIn('%s: conanfile.py exported to local storage' % str(self.conan_ref),
+                      self.conan.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path2), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path2))
 
         for name in files2.keys():
@@ -125,9 +127,9 @@ class OpenSSLConan(ConanFile):
         digest3 = FileTreeManifest.loads(load(conan2.paths.digestfile_conanfile(self.conan_ref)))
 
         self.assertIn('A new conanfile.py version was exported', conan2.user_io.out)
-        # self.assertIn('All the previous packs were cleaned', conan2.user_io.out)
-        self.assertIn('conanfile.py exported as %s.\nFolder: %s'
-                      % (self.conan_ref, reg_path3), conan2.user_io.out)
+        self.assertIn('%s: conanfile.py exported to local storage' % str(self.conan_ref),
+                      self.conan.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path3), self.conan.user_io.out)
 
         self.assertTrue(os.path.exists(reg_path3))
 

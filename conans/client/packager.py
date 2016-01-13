@@ -16,7 +16,8 @@ def create_package(conanfile, build_folder, package_folder, output):
     mkdir(package_folder)
 
     # Make the copy of all the patterns
-    output.info("Copying files to %s" % (package_folder))
+    output.info("Generating the package")
+    output.info("Package folder %s" % (package_folder))
     conanfile.copy = FileCopier(build_folder, package_folder)
 
     def wrap(dst_folder):
@@ -42,7 +43,7 @@ def create_package(conanfile, build_folder, package_folder, output):
         raise ConanException("%s: %s" % (conanfile.name, str(e)))
 
     _create_aux_files(build_folder, package_folder)
-    output.success("Created '%s' package." % os.path.basename(package_folder))
+    output.success("Package '%s' created" % os.path.basename(package_folder))
 
 
 def _create_aux_files(build_folder, package_folder):

@@ -32,8 +32,8 @@ class ConanFileToolsTest(ConanFile):
         other_file = os.path.join(tmp_dir, "otherfile.txt")
         save(file_path, file_content)
         save(other_file, "ONE TWO THREE")
-        loader = ConanFileLoader(None, None, Settings(), OptionsValues.loads(""))
-        ret = loader.load_conan(file_path)
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        ret = loader.load_conan(file_path, None)
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
         try:
