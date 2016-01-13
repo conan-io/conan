@@ -3,6 +3,7 @@ from conans.test.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
 from conans.paths import CONANFILE
+from conans.util.files import save
 
 
 class PackageCommandTest(unittest.TestCase):
@@ -78,3 +79,22 @@ class MyConan(ConanFile):
         # Verify the headers are there but lib doesn't
         self.assertTrue(os.path.exists(os.path.join(package_path, "include", "file.h")))
         self.assertTrue(os.path.exists(os.path.join(package_path, "lib", "file1.a")))
+
+        # Now change a file by hand and regenerate manifest
+        save(os.path.join(package_path, "newfile.txt"), "new content")
+        self.client.run("package %s --all --only-manifest" % str(conan_reference))
+        self.assertIn("Creating manifest for", self.client.user_io.out)
+        self.client.run("install %s" % str(conan_reference))
+        self.assertNotIn("Bad package", self.client.user_io.out)
+
+        # And try to do the same without regenerate manifest
+        save(os.path.join(package_path, "newfile2.txt"), "new content")
+        self.client.run("install %s" % str(conan_reference), ignore_error=True)
+        self.assertIn("Bad package", self.client.user_io.out)
+
+        # Try to do it specifying the package (without --all)
+        save(os.path.join(package_path, "newfile3.txt"), "new content")
+        self.client.run("package %s %s --only-manifest" % (str(conan_reference), package_id))
+        self.assertIn("Creating manifest for", self.client.user_io.out)
+        self.client.run("install %s" % str(conan_reference))
+        self.assertNotIn("Bad package", self.client.user_io.out)

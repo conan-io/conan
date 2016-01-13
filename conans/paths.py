@@ -152,8 +152,5 @@ class StorePaths(SimplePaths):
         if not os.path.exists(digest_path):
             return False
         expected_digest = FileTreeManifest.create(os.path.dirname(digest_path))
-        del expected_digest.file_sums[CONAN_MANIFEST]  # Exclude the MANIFEST itself
-        expected_digest.file_sums.pop(CONANFILE + "c", None)  # Exclude the CONANFILE.pyc
-        expected_digest.file_sums.pop(".DS_Store", None)  # Exclude tmp in mac
         readed_digest = FileTreeManifest.loads(load(digest_path))
         return readed_digest.file_sums == expected_digest.file_sums
