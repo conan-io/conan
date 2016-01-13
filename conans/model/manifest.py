@@ -45,6 +45,11 @@ class FileTreeManifest(object):
                 file_dict[rel_path] = md5sum(abs_path)
 
         date = calendar.timegm(time.gmtime())
+        from conans.paths import CONAN_MANIFEST, CONANFILE
+        file_dict.pop(CONAN_MANIFEST, None)  # Exclude the MANIFEST itself
+        file_dict.pop(CONANFILE + "c", None)  # Exclude the CONANFILE.pyc
+        file_dict.pop(".DS_Store", None)  # Exclude tmp in mac
+
         return cls(date, file_dict)
 
     def __eq__(self, other):

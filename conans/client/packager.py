@@ -45,6 +45,12 @@ def create_package(conanfile, build_folder, package_folder, output):
     output.success("Created '%s' package." % os.path.basename(package_folder))
 
 
+def generate_manifest(package_folder):
+    # Create the digest for the package
+    digest = FileTreeManifest.create(package_folder)
+    save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
+
+
 def _create_aux_files(build_folder, package_folder):
     """ auxiliary method that creates CONANINFO in
     the package_folder
@@ -54,9 +60,8 @@ def _create_aux_files(build_folder, package_folder):
         shutil.copy(os.path.join(build_folder, CONANINFO), package_folder)
 
         # Create the digest for the package
-        digest = FileTreeManifest.create(package_folder)
-        save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
+        generate_manifest(package_folder)
 
     except IOError:
         raise ConanException("%s does not exist inside of your % folder. Try to re-build it again"
-                           " to solve it." % (CONANINFO, build_folder))
+                             " to solve it." % (CONANINFO, build_folder))

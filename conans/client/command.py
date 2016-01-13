@@ -235,14 +235,21 @@ class Command(object):
         self._manager.build(root_path, current_path)
 
     def package(self, *args):
-        """ calls your conanfile.py "package" method for a specific package.
+        """ calls your conanfile.py "package" method for a specific package or regenerates the existing
+            package's manifest.
             Intended for package creators, for regenerating a package without recompiling the source.
-            Eg conans package openssl/1.0.2@lasote/testing 9cf83afd07b678d38a9c1645f605875400847ff3
+            e.g. conan package openssl/1.0.2@lasote/testing 9cf83afd07b678d38a9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("reference", help='reference name. e.g., openssl/1.0.2@lasote/testing')
-        parser.add_argument("package", help='Package ID to regenerate. e.g., '
-                                            '9cf83afd07b678d38a9c1645f605875400847ff3')
+        parser.add_argument("package", nargs="?", default="",
+                            help='Package ID to regenerate. e.g., '
+                                 '9cf83afd07b678d38a9c1645f605875400847ff3')
+        parser.add_argument("-o", "--only-manifest", default=False, action='store_true',
+                            help='Just regenerate manifest for the existing package.'
+                                 'If True conan won\'t call your conanfile\'s package method.')
+        parser.add_argument("--all", action='store_true',
+                            default=False, help='Package all packages from specified reference')
 
         args = parser.parse_args(*args)
 
@@ -251,8 +258,7 @@ class Command(object):
         except:
             raise ConanException("Invalid conanfile reference. e.g., openssl/1.0.2@lasote/testing")
 
-        package_reference = PackageReference(reference, args.package)
-        self._manager.package(package_reference)
+        self._manager.package(reference, args.package, args.only_manifest, args.all)
 
     def export(self, *args):
         """ copies a conanfile.py and associated (export) files to your local store,
