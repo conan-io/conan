@@ -60,8 +60,7 @@ class DownloadTest(unittest.TestCase):
 
         client2 = TestClient(servers=servers)
         client2.init_dynamic_vars()
-        loader = ConanFileLoader(TestBufferConanOutput(), None, Settings(),
-                                 OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
 
         installer = ConanInstaller(client2.paths,
                                     client2.user_io,
@@ -69,7 +68,7 @@ class DownloadTest(unittest.TestCase):
                                     client2.remote_manager,
                                     "default")
         installer.retrieve_conanfile(conan_ref)
-        installer._retrieve_remote_package(package_ref)
+        installer._retrieve_remote_package(package_ref, TestBufferConanOutput())
 
         reg_path = client2.paths.export(ConanFileReference.loads("Hello/1.2.1/frodo/stable"))
         pack_folder = client2.paths.package(package_ref)
