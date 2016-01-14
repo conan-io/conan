@@ -292,6 +292,9 @@ Package configuration:
         # Read generators from conanfile and generate the needed files
         write_generators(conan_file, build_folder, output)
         try:
+            # This is necessary because it is different for user projects
+            # than for packages
+            conan_file._conanfile_directory = build_folder
             conan_file.build()
             self._out.writeln("")
             output.success("Package '%s' built" % os.path.basename(build_folder))

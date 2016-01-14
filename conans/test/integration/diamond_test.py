@@ -20,7 +20,7 @@ class DiamondTest(unittest.TestCase):
         self.conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
 
     def _export_upload(self, name, version=None, deps=None):
-        files = cpp_hello_conan_files(name, version, deps)
+        files = cpp_hello_conan_files(name, version, deps, need_patch=True)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.conan.save(files, clean_first=True)
         self.conan.run("export lasote/stable")
