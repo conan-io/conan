@@ -55,6 +55,5 @@ def _export(file_patterns, origin_folder, destination_folder):
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in file_patterns:
         copier(pattern)
-    copier.execute()
 
     shutil.copy2(os.path.join(origin_folder, CONANFILE), destination_folder)
