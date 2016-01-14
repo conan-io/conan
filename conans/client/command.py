@@ -11,7 +11,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClient
 from conans.client.store.localdb import LocalDB
 from conans.util.log import logger
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.client.manager import ConanManager
 from conans.paths import CONANFILE
 import requests
@@ -481,10 +481,17 @@ def main(args):
     user_io = UserIO(out=out)
 
     user_folder = os.path.expanduser("~")
-    paths = migrate_and_get_paths(user_folder, out)
+    try:
+        # To capture exceptions in conan.conf parsing
+        paths = migrate_and_get_paths(user_folder, out)
+    except Exception as e:
+        out.error(str(e))
+        sys.exit(True)
 
+    requester = requests.Session()
+    requester.proxies = paths.conan_config.proxies
     # Verify client version against remotes
-    version_checker_requester = VersionCheckerRequester(requests, Version(CLIENT_VERSION),
+    version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
                                                         Version(MIN_SERVER_COMPATIBLE_VERSION),
                                                         out)
     # To handle remote connections
