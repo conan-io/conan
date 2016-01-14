@@ -32,7 +32,6 @@ def create_package(conanfile, build_folder, package_folder, output):
     try:
         conanfile.package_folder = package_folder
         conanfile.package()
-        conanfile.copy.execute()
     except Exception as e:
         os.chdir(build_folder)
         try:
