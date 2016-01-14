@@ -1,13 +1,14 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
-from conans.test.utils.test_files import hello_source_files
+from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.client.manager import CONANFILE
 import os
-from conans.paths import CONAN_MANIFEST
+from conans.paths import CONAN_MANIFEST, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.files import save
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import uncompress_packaged_files
+from conans.tools import untargz
 
 
 myconan1 = """
@@ -89,8 +90,15 @@ class UploadTest(unittest.TestCase):
                  'include/math/lib1.h',
                  'my_data/readme.txt']
 
-        for _file in files:
-            self.assertTrue(os.path.exists(os.path.join(self.server_reg_folder, _file)))
+        self.assertTrue(os.path.exists(os.path.join(self.server_reg_folder, CONANFILE)))
+        self.assertTrue(os.path.exists(os.path.join(self.server_reg_folder, EXPORT_TGZ_NAME)))
+        tmp = temp_folder()
+        untargz(os.path.join(self.server_reg_folder, EXPORT_TGZ_NAME), tmp)
+        for f in files:
+            if f not in (CONANFILE, CONAN_MANIFEST):
+                self.assertTrue(os.path.exists(os.path.join(tmp, f)))
+            else:
+                self.assertFalse(os.path.exists(os.path.join(tmp, f)))
 
         folder = uncompress_packaged_files(self.test_server.paths, self.package_ref)
 
