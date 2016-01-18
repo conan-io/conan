@@ -70,7 +70,7 @@ class CompleteFlowTest(unittest.TestCase):
         client3.run('install')
         client3.run('build')
         command = os.sep.join([".", "bin", "say_hello"])
-        client3.runner(command, client3.current_folder)
+        client3.runner(command, cwd=client3.current_folder)
         self.assertIn("Hello Hello1", client3.user_io.out)
         self.assertIn("Hello Hello0", client3.user_io.out)
 
@@ -79,7 +79,7 @@ class CompleteFlowTest(unittest.TestCase):
         client3.run('build')
 
         command = os.sep.join([".", "bin", "say_hello"])
-        client3.runner(command, client3.current_folder)
+        client3.runner(command, cwd=client3.current_folder)
         self.assertIn("Hola Hello1", client3.user_io.out)
         self.assertIn("Hola Hello0", client3.user_io.out)
 

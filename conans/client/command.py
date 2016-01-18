@@ -25,6 +25,7 @@ import shutil
 from conans.util.files import rmdir, load
 from argparse import RawTextHelpFormatter
 import re
+from conans.client.runner import ConanRunner
 
 
 class Extender(argparse.Action):
@@ -503,7 +504,7 @@ def main(args):
     # Handle remote connections
     remote_manager = RemoteManager(paths, paths.conan_config.remotes, auth_manager, out)
 
-    command = Command(paths, user_io, os.system, remote_manager, localdb)
+    command = Command(paths, user_io, ConanRunner(), remote_manager, localdb)
     current_dir = os.getcwd()
     try:
         import signal
