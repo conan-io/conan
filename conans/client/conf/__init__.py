@@ -6,7 +6,7 @@ from conans.util.files import save, load
 from ConfigParser import NoSectionError, ConfigParser
 from conans.model.values import Values
 
-MIN_SERVER_COMPATIBLE_VERSION = '0.4.0'
+MIN_SERVER_COMPATIBLE_VERSION = '0.6.0'
 
 default_settings_yml = """
 os: [Windows, Linux, Macos, Android]

@@ -107,6 +107,8 @@ class ConanInstaller(object):
         for private_node, private_requirers in private_closure:
             for private_requirer in private_requirers:
                 conan_ref, conan_file = private_requirer
+                if conan_ref is None:
+                    continue
                 package_id = conan_file.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
                 package_folder = self._paths.package(package_reference)
