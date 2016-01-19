@@ -137,11 +137,11 @@ class ConanFile(object):
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command):
+    def run(self, command, output=True):
         """ runs such a command in the folder the Conan
         is defined
         """
-        retcode = self._runner(command)
+        retcode = self._runner(command, output)
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
