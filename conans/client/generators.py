@@ -1,5 +1,5 @@
 from conans.paths import (BUILD_INFO_GCC, BUILD_INFO_CMAKE, BUILD_INFO_QMAKE,
-                          BUILD_INFO, BUILD_INFO_VISUAL_STUDIO,
+                          BUILD_INFO_QBS, BUILD_INFO, BUILD_INFO_VISUAL_STUDIO,
                           BUILD_INFO_XCODE, BUILD_INFO_YCM)
 from conans.util.files import save
 import os
@@ -158,6 +158,63 @@ macro(CONAN_CHECK_COMPILER)
 
 endmacro()
 """
+
+
+class DepsCppQbs(object):
+    def __init__(self, deps_cpp_info):
+        delimiter = ",\n                "
+        self.include_paths = delimiter.join('"%s"' % p.replace("\\", "/") 
+                                            for p in deps_cpp_info.include_paths)
+        self.lib_paths = delimiter.join('"%s"' % p.replace("\\", "/") 
+                                        for p in deps_cpp_info.lib_paths)
+        self.libs = delimiter.join('"%s"' % l for l in deps_cpp_info.libs)
+        self.defines = delimiter.join('"%s"' % d for d in deps_cpp_info.defines)
+        self.cppflags = delimiter.join('"%s"' % d
+                                       for d in deps_cpp_info.cppflags)
+        self.cflags = delimiter.join('"%s"' % d for d in deps_cpp_info.cflags)
+        self.sharedlinkflags = delimiter.join('"%s"' % d 
+                                              for d in deps_cpp_info.sharedlinkflags)
+        self.sharedlinkflags += delimiter.join('"%s"' % d 
+                                               for d in deps_cpp_info.exelinkflags)
+        self.bin_paths = delimiter.join('"%s"' % p.replace("\\", "/") 
+                                        for p in deps_cpp_info.bin_paths)
+        self.rootpath = '%s' % deps_cpp_info.rootpath.replace("\\", "/")
+
+
+class QbsGenerator(Generator):
+    @property
+    def content(self):
+        deps = DepsCppQbs(self._deps_build_info)
+
+        template = ('    Product {{\n'
+                    '        name: "{dep}"\n'
+                    '        Export {{\n'
+                    '            Depends {{ name: "cpp" }}\n'
+                    '            cpp.includePaths: [{deps.include_paths}]\n'
+                    '            cpp.libraryPaths: [{deps.lib_paths}]\n'
+                    '            cpp.systemIncludePaths: [{deps.bin_paths}]\n'
+                    '            cpp.dynamicLibraries: [{deps.libs}]\n'
+                    '            cpp.defines: [{deps.defines}]\n'
+                    '            cpp.cppFlags: [{deps.cppflags}]\n'
+                    '            cpp.cFlags: [{deps.cflags}]\n'
+                    '            cpp.linkerFlags: [{deps.sharedlinkflags}]\n'
+                    '        }}\n'
+                    '    }}\n')
+
+        sections = []
+        all_flags = template.format(dep="conanbuildinfo", deps=deps)
+        sections.append(all_flags)
+        template_deps = template + '    // {dep} root path: {deps.rootpath}\n'
+
+        for dep_name, dep_cpp_info in self._deps_build_info.dependencies:
+            deps = DepsCppQbs(dep_cpp_info)
+            dep_flags = template_deps.format(dep=dep_name, deps=deps)
+            sections.append(dep_flags)
+
+        output = 'import qbs 1.0\n\nProject {\n'
+        output += '\n'.join(sections)
+        output += '}\n'
+        return output
 
 
 class DepsCppQmake(object):
@@ -528,6 +585,7 @@ def write_generators(conanfile, path, output):
                             "gcc": (GCCGenerator, BUILD_INFO_GCC),
                             "cmake": (CMakeGenerator, BUILD_INFO_CMAKE),
                             "qmake": (QmakeGenerator, BUILD_INFO_QMAKE),
+                            "qbs": (QbsGenerator, BUILD_INFO_QBS),
                             "visual_studio": (VisualStudioGenerator, BUILD_INFO_VISUAL_STUDIO),
                             "xcode": (XCodeGenerator, BUILD_INFO_XCODE),
                             "ycm": (YouCompleteMeGenerator, BUILD_INFO_YCM)}
