@@ -202,7 +202,7 @@ class QbsGenerator(Generator):
                     '    }}\n')
 
         sections = []
-        all_flags = template.format(dep="conanbuildinfo", deps=deps)
+        all_flags = template.format(dep="ConanBasicSetup", deps=deps)
         sections.append(all_flags)
         template_deps = template + '    // {dep} root path: {deps.rootpath}\n'
 
