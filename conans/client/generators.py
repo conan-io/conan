@@ -183,28 +183,41 @@ class QmakeGenerator(Generator):
     def content(self):
         deps = DepsCppQmake(self._deps_build_info)
 
-        template = ('# package{dep} \n\n'
-                    'INCLUDEPATH += {deps.include_paths}\n'
-                    'LIBS += {deps.lib_paths}\n'
-                    'BINDIRS += {deps.bin_paths}\n'
-                    'LIBS += {deps.libs}\n'
-                    'DEFINES += {deps.defines}\n'
-                    'QMAKE_CXXFLAGS += {deps.cppflags}\n'
-                    'QMAKE_CFLAGS += {deps.cflags}\n'
-                    'QMAKE_LFLAGS += {deps.sharedlinkflags}\n'
-                    'QMAKE_LFLAGS += {deps.exelinkflags}\n')
-
+        template = ('CONAN_INCLUDEPATH{dep_name} += {deps.include_paths}\n'
+                    'CONAN_LIBS{dep_name} += {deps.lib_paths}\n'
+                    'CONAN_BINDIRS{dep_name} += {deps.bin_paths}\n'
+                    'CONAN_LIBS{dep_name} += {deps.libs}\n'
+                    'CONAN_DEFINES{dep_name} += {deps.defines}\n'
+                    'CONAN_QMAKE_CXXFLAGS{dep_name} += {deps.cppflags}\n'
+                    'CONAN_QMAKE_CFLAGS{dep_name} += {deps.cflags}\n'
+                    'CONAN_QMAKE_LFLAGS{dep_name} += {deps.sharedlinkflags}\n'
+                    'CONAN_QMAKE_LFLAGS{dep_name} += {deps.exelinkflags}\n')
         sections = []
-        all_flags = template.format(dep="", deps=deps)
+        template_all = template
+        all_flags = template_all.format(dep_name="", deps=deps)
         sections.append(all_flags)
-        template_deps = template + 'ROOTPATH{dep} = {deps.rootpath}\n\n'
+        
+        template_deps = template + 'CONAN_ROOTPATH{dep_name} = {deps.rootpath}\n'
 
         for dep_name, dep_cpp_info in self._deps_build_info.dependencies:
             deps = DepsCppQmake(dep_cpp_info)
-            dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
+            dep_flags = template_deps.format(dep_name="_" + dep_name.upper(), deps=deps)
             sections.append(dep_flags)
+            
+        output = "\n".join(sections)
+        
+        output += ('\nCONFIG(conan_basic_setup) {\n'
+                   '    INCLUDEPATH += $$CONAN_INCLUDEPATH\n'
+                   '    LIBS += $$CONAN_LIBS\n'
+                   '    BINDIRS += $$CONAN_BINDIRS\n'
+                   '    LIBS += $$CONAN_LIBS\n'
+                   '    DEFINES += $$CONAN_DEFINES\n'
+                   '    QMAKE_CXXFLAGS += $$CONAN_QMAKE_CXXFLAGS\n'
+                   '    QMAKE_CFLAGS += $$CONAN_QMAKE_CFLAGS\n'
+                   '    QMAKE_LFLAGS += $$CONAN_QMAKE_LFLAGS\n'
+                   '}\n')
 
-        return "\n".join(sections)
+        return output
 
 
 class GCCGenerator(Generator):
