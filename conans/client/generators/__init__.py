@@ -1,4 +1,5 @@
 from conans.model import registered_generators
+from conans.util.files import save
 from os.path import join
 from .text import TXTGenerator
 from .gcc import GCCGenerator
@@ -9,13 +10,16 @@ from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 
 
-registered_generators.add("txt", TXTGenerator)
-registered_generators.add("gcc", GCCGenerator)
-registered_generators.add("cmake", CMakeGenerator)
-registered_generators.add("qmake", QmakeGenerator)
-registered_generators.add("visual_studio", VisualStudioGenerator)
-registered_generators.add("xcode", XCodeGenerator)
-registered_generators.add("ycm", YouCompleteMeGenerator)
+def _save_generator(name, klass):
+    if name not in registered_generators:
+        registered_generators.add(name, klass)
+_save_generator("txt", TXTGenerator)
+_save_generator("gcc", GCCGenerator)
+_save_generator("cmake", CMakeGenerator)
+_save_generator("qmake", QmakeGenerator)
+_save_generator("visual_studio", VisualStudioGenerator)
+_save_generator("xcode", XCodeGenerator)
+_save_generator("ycm", YouCompleteMeGenerator)
 
 
 def write_generators(conanfile, path, output):
@@ -29,7 +33,7 @@ def write_generators(conanfile, path, output):
     conanfile.package_info()
 
     for generator_name in conanfile.generators:
-        if generator not in registered_generators:
+        if generator_name not in registered_generators:
             output.warn("Invalid generator '%s'. Available types: %s" %
                         (generator_name, ", ".join(registered_generators.available)))
         else:

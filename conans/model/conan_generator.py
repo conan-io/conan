@@ -1,4 +1,5 @@
 from conans.util.files import save
+from conans.errors import ConanException
 
 
 class Generator(object):
@@ -46,5 +47,5 @@ class GeneratorManager(object):
     def __contains__(self, key):
         return key in self._known_generators
 
-    def __getattr__(self, key):
+    def __getitem__(self, key):
         return self._known_generators[key]
