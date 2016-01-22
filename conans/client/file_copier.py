@@ -20,7 +20,6 @@ class FileCopier(object):
         """
         self._base_src = root_source_folder
         self._base_dst = root_destination_folder
-        self._copies = []
 
     def __call__(self, pattern, dst="", src="", keep_path=True):
         """ FileCopier is lazy, it just store requested copies, and execute them later
@@ -34,29 +33,23 @@ class FileCopier(object):
                          to collect e.g. many *.libs among many dirs into a single
                          lib dir
         """
-        self._copies.append((pattern, dst, src, keep_path))
-
-    def execute(self):
-        """ execute the stored requested copy
-        """
-        for pattern, dst_folder, src_folder, keep_path in self._copies:
-            root_src_folder = os.path.join(self._base_src, src_folder)
-            root_dst_folder = os.path.join(self._base_dst, dst_folder)
-            for root, subfolders, files in os.walk(root_src_folder):
-                # do the copy
-                relative_path = os.path.relpath(root, root_src_folder)
-                # Skip git or svn subfolders
-                if os.path.basename(root) in [".git", ".svn"]:
-                    subfolders[:] = []
-                    continue
-                for f in files:
-                    relative_name = os.path.normpath(os.path.join(relative_path, f))
-                    if fnmatch.fnmatch(relative_name, pattern):
-                        abs_src_name = os.path.join(root, f)
-                        filename = relative_name if keep_path else f
-                        abs_dst_name = os.path.normpath(os.path.join(root_dst_folder, filename))
-                        try:
-                            os.makedirs(os.path.dirname(abs_dst_name))
-                        except:
-                            pass
-                        shutil.copy2(abs_src_name, abs_dst_name)
+        src = os.path.join(self._base_src, src)
+        dst = os.path.join(self._base_dst, dst)
+        for root, subfolders, files in os.walk(src):
+            # do the copy
+            relative_path = os.path.relpath(root, src)
+            # Skip git or svn subfolders
+            if os.path.basename(root) in [".git", ".svn"]:
+                subfolders[:] = []
+                continue
+            for f in files:
+                relative_name = os.path.normpath(os.path.join(relative_path, f))
+                if fnmatch.fnmatch(relative_name, pattern):
+                    abs_src_name = os.path.join(root, f)
+                    filename = relative_name if keep_path else f
+                    abs_dst_name = os.path.normpath(os.path.join(dst, filename))
+                    try:
+                        os.makedirs(os.path.dirname(abs_dst_name))
+                    except:
+                        pass
+                    shutil.copy2(abs_src_name, abs_dst_name)

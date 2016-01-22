@@ -35,5 +35,5 @@ def write_generators(conanfile, path, output):
         else:
             generator_class = registered_generators[generator_name]
             generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
-            output.info("Generated %s" % generator.filename)
+            output.info("Generated %s created %s" % (generator_name, generator.filename))
             save(join(path, generator.filename), generator.content)

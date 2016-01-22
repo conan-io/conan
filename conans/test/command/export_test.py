@@ -23,8 +23,9 @@ class ExportTest(unittest.TestCase):
         reg_path = self.conan.paths.export(self.conan_ref)
         manif = FileTreeManifest.loads(load(self.conan.paths.digestfile_conanfile(self.conan_ref)))
 
-        self.assertIn('conanfile.py exported as %s.\nFolder: %s' % (self.conan_ref, reg_path),
+        self.assertIn('%s: conanfile.py exported to local storage' % str(self.conan_ref),
                       self.conan.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
         for name in self.files.keys():
@@ -33,7 +34,7 @@ class ExportTest(unittest.TestCase):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '79cdacbd40569a842fcd3ae5085b3cbf',
+                         'conanfile.py': '644b60e95962dabec1a814dedea32874',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
 
@@ -94,8 +95,9 @@ class OpenSSLConan(ConanFile):
         self.assertNotIn('Cleaning the old builds ...', conan2.user_io.out)
         self.assertNotIn('Cleaning the old packs ...', conan2.user_io.out)
         self.assertNotIn('All the previous packs were cleaned', conan2.user_io.out)
-        self.assertIn('conanfile.py exported as %s.\nFolder: %s'
-                      % (self.conan_ref, reg_path2), conan2.user_io.out)
+        self.assertIn('%s: conanfile.py exported to local storage' % str(self.conan_ref),
+                      self.conan.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path2), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path2))
 
         for name in files2.keys():
@@ -104,7 +106,7 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '79cdacbd40569a842fcd3ae5085b3cbf',
+                         'conanfile.py': '644b60e95962dabec1a814dedea32874',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest2.file_sums)
 
@@ -125,9 +127,9 @@ class OpenSSLConan(ConanFile):
         digest3 = FileTreeManifest.loads(load(conan2.paths.digestfile_conanfile(self.conan_ref)))
 
         self.assertIn('A new conanfile.py version was exported', conan2.user_io.out)
-        # self.assertIn('All the previous packs were cleaned', conan2.user_io.out)
-        self.assertIn('conanfile.py exported as %s.\nFolder: %s'
-                      % (self.conan_ref, reg_path3), conan2.user_io.out)
+        self.assertIn('%s: conanfile.py exported to local storage' % str(self.conan_ref),
+                      self.conan.user_io.out)
+        self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path3), self.conan.user_io.out)
 
         self.assertTrue(os.path.exists(reg_path3))
 
@@ -137,7 +139,7 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': 'a816517b2ae7642d09d4a8a75b7f4563',
+                         'conanfile.py': '833d37426fe82042ddaf343c26a34ec8',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest3.file_sums)
 

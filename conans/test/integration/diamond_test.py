@@ -20,7 +20,7 @@ class DiamondTest(unittest.TestCase):
         self.conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
 
     def _export_upload(self, name, version=None, deps=None):
-        files = cpp_hello_conan_files(name, version, deps)
+        files = cpp_hello_conan_files(name, version, deps, need_patch=True)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.conan.save(files, clean_first=True)
         self.conan.run("export lasote/stable")
@@ -70,7 +70,7 @@ class DiamondTest(unittest.TestCase):
         self._check_individual_deps(client)
 
         command = os.sep.join([".", "bin", "say_hello"])
-        client.runner(command, client.current_folder)
+        client.runner(command, cwd=client.current_folder)
         self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                           'Hello Hello2', 'Hello Hello0'],
                          str(client.user_io.out).splitlines()[-6:])
@@ -80,7 +80,7 @@ class DiamondTest(unittest.TestCase):
         client.run("install . --build missing")
         client.run("build .")
 
-        client.runner(command, client.current_folder)
+        client.runner(command, cwd=client.current_folder)
         self.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
                           'Hola Hello2', 'Hola Hello0'],
                          str(client.user_io.out).splitlines()[-6:])
@@ -105,7 +105,7 @@ class DiamondTest(unittest.TestCase):
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
-        client2.runner(command, client2.current_folder)
+        client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                           'Hello Hello2', 'Hello Hello0'],
                          str(client2.user_io.out).splitlines()[-6:])
@@ -118,7 +118,7 @@ class DiamondTest(unittest.TestCase):
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
-        client2.runner(command, client2.current_folder)
+        client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
                           'Hola Hello2', 'Hola Hello0'],
                          str(client2.user_io.out).splitlines()[-6:])

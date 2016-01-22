@@ -16,7 +16,8 @@ def create_package(conanfile, build_folder, package_folder, output):
     mkdir(package_folder)
 
     # Make the copy of all the patterns
-    output.info("Copying files to %s" % (package_folder))
+    output.info("Generating the package")
+    output.info("Package folder %s" % (package_folder))
     conanfile.copy = FileCopier(build_folder, package_folder)
 
     def wrap(dst_folder):
@@ -29,8 +30,8 @@ def create_package(conanfile, build_folder, package_folder, output):
     conanfile.copy_bins = wrap(DEFAULT_BIN)
     conanfile.copy_res = wrap(DEFAULT_RES)
     try:
+        conanfile.package_folder = package_folder
         conanfile.package()
-        conanfile.copy.execute()
     except Exception as e:
         os.chdir(build_folder)
         try:
@@ -42,7 +43,13 @@ def create_package(conanfile, build_folder, package_folder, output):
         raise ConanException("%s: %s" % (conanfile.name, str(e)))
 
     _create_aux_files(build_folder, package_folder)
-    output.success("Created '%s' package." % os.path.basename(package_folder))
+    output.success("Package '%s' created" % os.path.basename(package_folder))
+
+
+def generate_manifest(package_folder):
+    # Create the digest for the package
+    digest = FileTreeManifest.create(package_folder)
+    save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
 
 
 def _create_aux_files(build_folder, package_folder):
@@ -54,9 +61,8 @@ def _create_aux_files(build_folder, package_folder):
         shutil.copy(os.path.join(build_folder, CONANINFO), package_folder)
 
         # Create the digest for the package
-        digest = FileTreeManifest.create(package_folder)
-        save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
+        generate_manifest(package_folder)
 
     except IOError:
         raise ConanException("%s does not exist inside of your % folder. Try to re-build it again"
-                           " to solve it." % (CONANINFO, build_folder))
+                             " to solve it." % (CONANINFO, build_folder))

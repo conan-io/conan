@@ -68,4 +68,3 @@ class FileImporter(object):
             for matching_path in matching_paths:
                 real_src_folder = os.path.join(matching_path, src_folder)
                 file_copier(pattern, real_dst_folder, real_src_folder)
-        file_copier.execute()
