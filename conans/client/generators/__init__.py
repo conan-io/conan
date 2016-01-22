@@ -3,7 +3,7 @@ from os.path import join
 from .text import TXTGenerator
 from .gcc import GCCGenerator
 from .cmake import CMakeGenerator
-from .qmake import QMakeGenerator
+from .qmake import QmakeGenerator
 from .visualstudio import VisualStudioGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator

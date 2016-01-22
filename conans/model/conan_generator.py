@@ -36,7 +36,7 @@ class GeneratorManager(object):
             self._known_generators[name] = generator_class
 
     def remove(self, name):
-        if name in self._known_generators
+        if name in self._known_generators:
             del self._known_generators[name]
 
     @property
