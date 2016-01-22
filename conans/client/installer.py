@@ -9,7 +9,7 @@ import shutil
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 import fnmatch
-from conans.client.output import Color
+from conans.client.output import Color, ScopedOutput
 
 
 class ConanInstaller(object):
@@ -19,7 +19,7 @@ class ConanInstaller(object):
     def __init__(self, paths, user_io, conan_loader, remote_manager, remote):
         self._paths = paths
         self._loader = conan_loader
-        self._user_io = user_io
+        self._out = user_io.out
         self._remote_manager = remote_manager
         self._remote = remote
 
@@ -27,47 +27,45 @@ class ConanInstaller(object):
         """ returns the requested conanfile object, retrieving it from
         remotes if necessary. Can raise NotFoundException
         """
+        output = ScopedOutput(str(conan_reference), self._out)
         conanfile_path = self._paths.conanfile(conan_reference)
 
         if not self._paths.valid_conan_digest(conan_reference):
             conan_dir_path = self._paths.export(conan_reference)
             if path_exists(conan_dir_path, self._paths.store):
                 # If not valid conanfile, ensure empty folder
-                self._user_io.out.warn("Bad conanfile '%s' detected! Removing "
-                                       "export directory... " % str(conan_reference))
+                output.warn("Bad conanfile detected! Removing export directory... ")
                 rmdir(conan_dir_path)
-            self._user_io.out.info("Conan %s not found, retrieving from server"
-                                   % str(conan_reference))
+            output.info("Conanfile not found, retrieving from server")
             # If not in localhost, download it. Will raise if not found
-            self._retrieve_remote_conan_file(conan_reference)
-        conanfile = self._loader.load_conan(conanfile_path, consumer)
+            self._remote_manager.get_conanfile(conan_reference, self._remote)
+        conanfile = self._loader.load_conan(conanfile_path, output, consumer)
         return conanfile
 
-    def _retrieve_remote_conan_file(self, conan_reference):
-        export_files = self._remote_manager.get_conanfile(conan_reference, self._remote)
-        export_folder = self._paths.export(conan_reference)
-#       TODO: Download only the CONANFILE file and only download the rest of files
-#       in install if needed (not found remote package)
-        for file_name, content in export_files:  # export_files is a generator
-            save(os.path.join(export_folder, file_name), content)
+    def download_packages(self, reference, package_ids):
+        assert(isinstance(package_ids, list))
+        self._remote_manager.get_conanfile(reference, self._remote)
+        output = ScopedOutput(str(reference), self._out)
+        for package_id in package_ids:
+            package_reference = PackageReference(reference, package_id)
+            self._retrieve_remote_package(package_reference, output)
 
-    def _retrieve_remote_package(self, package_reference):
+    def _retrieve_remote_package(self, package_reference, output):
+        package_id = str(package_reference.package_id)
         try:
-            self._user_io.out.info("Looking for package in remotes")
+            output.info("Looking for package %s in remotes" % package_id)
             # Will raise if not found NotFoundException
             self._remote_manager.get_package(package_reference, self._remote)
-            self._user_io.out.success('Package for "%s" installed in %s'
-                                      % (package_reference.conan, str(package_reference)))
+            output.success('Package installed %s' % package_id)
             return True
         except ConanException as e:
-            self._user_io.out.warn('Binary for %s not in remote: %s'
-                                   % (str(package_reference), str(e)))
+            output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
             return False
 
     def install(self, deps_graph, build_mode=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
-        self._user_io.out.writeln("Installing requirements", Color.BRIGHT_YELLOW)
+        self._out.writeln("\nInstalling requirements", Color.BRIGHT_YELLOW)
         nodes_by_level = self._process_buildinfo(deps_graph)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         self._build(nodes_by_level, skip_private_nodes, build_mode)
@@ -114,8 +112,9 @@ class ConanInstaller(object):
                 package_folder = self._paths.package(package_reference)
                 if not path_exists(package_folder, self._paths.store):
                     if not self._force_build(conan_ref, build_mode):  # Not download package
-                        self._user_io.out.info('Package for %s does not exist' % str(conan_ref))
-                        if not self._retrieve_remote_package(package_reference):
+                        output = ScopedOutput(str(conan_ref), self._out)
+                        output.info('Package not installed')
+                        if not self._retrieve_remote_package(package_reference, output):
                             break
             else:
                 skippable_nodes.append(private_node)
@@ -155,7 +154,10 @@ class ConanInstaller(object):
 
     def _build_node(self, conan_ref, conan_file, build_mode):
         # Compute conan_file package from local (already compiled) or from remote
+        output = ScopedOutput(str(conan_ref), self._out)
         package_id = conan_file.info.package_id()
+        self._out.writeln("")
+        output.info("Installing package %s" % package_id)
         package_reference = PackageReference(conan_ref, package_id)
 
         conan_ref = package_reference.conan
@@ -164,14 +166,14 @@ class ConanInstaller(object):
         src_folder = self._paths.source(conan_ref)
         export_folder = self._paths.export(conan_ref)
 
-        self._handle_system_requirements(conan_ref, package_reference, conan_file)
+        self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
         # Check if package is corrupted
         valid_package_digest = self._paths.valid_package_digest(package_reference)
         if os.path.exists(package_folder) and not valid_package_digest:
             # If not valid package, ensure empty folder
-            self._user_io.out.warn("Bad package '%s' detected! Removing "
-                                   "package directory... " % str(package_reference))
+            output.warn("Bad package '%s' detected! Removing "
+                        "package directory... " % str(package_id))
             rmdir(package_folder)
 
         # Check if any only_source pattern matches with package
@@ -180,11 +182,11 @@ class ConanInstaller(object):
         if not force_build:
             local_package = os.path.exists(package_folder)
             if local_package:
-                self._user_io.out.info('Package for %s in %s' % (str(conan_ref), package_folder))
+                output.info('Package installed in %s' % package_folder)
                 return
 
-            self._user_io.out.info('Package for %s does not exist' % str(conan_ref))
-            remote_package = self._retrieve_remote_package(package_reference)
+            output.info('Package not installed')
+            remote_package = self._retrieve_remote_package(package_reference, output)
             if remote_package:
                 return
 
@@ -195,22 +197,19 @@ class ConanInstaller(object):
             rmdir(build_folder)
             rmdir(package_folder)
             if force_build:
-                self._user_io.out.warn('Forced build from source: "%s"' % str(conan_ref))
+                output.warn('Forced build from source')
 
-            self._build_package(export_folder, src_folder, build_folder, conan_file)
+            self._build_package(export_folder, src_folder, build_folder, conan_file, output)
 
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
-            self._user_io.out.info("Generated %s" % CONANINFO)
+            output.info("Generated %s" % CONANINFO)
             save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file.deps_cpp_info,
                                                                       conan_file.cpp_info).content)
-            self._user_io.out.info("Generated %s" % BUILD_INFO)
+            output.info("Generated %s" % BUILD_INFO)
 
-            self._user_io.out.info("Generating the package")
             os.chdir(build_folder)
-            create_package(conan_file, build_folder, package_folder, self._user_io.out)
-            self._user_io.out.success('Package for "%s" installed in %s'
-                                      % (conan_ref, package_folder))
+            create_package(conan_file, build_folder, package_folder, output)
         else:
             self._raise_package_not_found_error(conan_ref, conan_file)
 
@@ -219,16 +218,16 @@ class ConanInstaller(object):
         options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
         author_contact = " at '%s'" % conan_file.url if conan_file.url else ""
 
-        raise ConanException('''Can't find a '%s' package for the specified options and settings. 
+        raise ConanException('''Can't find a '%s' package for the specified options and settings
 
 - Try to build from sources with "--build %s" parameter
-- If it fails, you could try to contact the package author%s, report your configuration and try to collaborate to support it.
+- If it fails, you could try to contact the package author %s, report your configuration and try to collaborate to support it.
 
 Package configuration:
 - Settings: %s
 - Options: %s''' % (conan_ref, conan_ref.name, author_contact, settings_text, options_text))
 
-    def _handle_system_requirements(self, conan_ref, package_reference, conan_file):
+    def _handle_system_requirements(self, conan_ref, package_reference, conan_file, coutput):
         """ check first the system_reqs/system_requirements.txt existence, if not existing
         check package/sha1/
         """
@@ -240,58 +239,72 @@ Package configuration:
         if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
             return
 
-        output = conan_file.system_requirements()
+        try:
+            output = conan_file.system_requirements()
+        except Exception as e:
+            coutput.error("while executing system_requirements(): %s" % str(e))
+            raise ConanException("Error in system requirements")
+
         try:
             output = str(output or "")
         except:
-            self._user_io.out.warn("%s system requirements didnt return a string" % conan_ref)
+            coutput.warn("System requirements didn't return a string")
             output = ""
         if getattr(conan_file, "global_system_requirements", None):
             save(system_reqs_path, output)
         else:
             save(system_reqs_package_path, output)
 
-    def _config_source(self, export_folder, src_folder, conan_file):
+    def _config_source(self, export_folder, src_folder, conan_file, output):
         """ creates src folder and retrieve, calling source() from conanfile
         the necessary source code
         """
         if not os.path.exists(src_folder):
-            self._user_io.out.info('Configuring sources in %s' % src_folder)
+            output.info('Configuring sources in %s' % src_folder)
             shutil.copytree(export_folder, src_folder)
             os.chdir(src_folder)
             try:
                 conan_file.source()
             except Exception as e:
+                output.error("Error while executing source(): %s" % str(e))
                 # in case source() fails (user error, typically), remove the src_folder
                 # and raise to interrupt any other processes (build, package)
                 os.chdir(export_folder)
                 try:
                     rmdir(src_folder)
                 except Exception as e_rm:
-                    self._user_io.out.error("Unable to remove src folder %s\n%s"
-                                            % (src_folder, str(e_rm)))
-                    self._user_io.out.warn("**** Please delete it manually ****")
+                    output.error("Unable to remove src folder %s\n%s" % (src_folder, str(e_rm)))
+                    output.warn("**** Please delete it manually ****")
                 raise ConanException("%s: %s" % (conan_file.name, str(e)))
 
-    def _build_package(self, export_folder, src_folder, build_folder, conan_file):
+    def _build_package(self, export_folder, src_folder, build_folder, conan_file, output):
         """ builds the package, creating the corresponding build folder if necessary
         and copying there the contents from the src folder. The code is duplicated
         in every build, as some configure processes actually change the source
         code
         """
-        self._user_io.out.info('Building your package in %s' % build_folder)
+        output.info('Building your package in %s' % build_folder)
         if not os.path.exists(build_folder):
-            self._config_source(export_folder, src_folder, conan_file)
-            self._user_io.out.info('Copying sources to build folder')
+            self._config_source(export_folder, src_folder, conan_file, output)
+            output.info('Copying sources to build folder')
             shutil.copytree(src_folder, build_folder, symlinks=True)
         os.chdir(build_folder)
         conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files
-        write_generators(conan_file, build_folder, self._user_io.out)
+        write_generators(conan_file, build_folder, output)
         try:
+            # This is necessary because it is different for user projects
+            # than for packages
+            conan_file._conanfile_directory = build_folder
             conan_file.build()
+            self._out.writeln("")
+            output.success("Package '%s' built" % os.path.basename(build_folder))
+            output.info("Build folder %s" % build_folder)
         except Exception as e:
             os.chdir(src_folder)
+            self._out.writeln("")
+            output.error("Package '%s' build failed" % os.path.basename(build_folder))
+            output.warn("Build folder %s" % build_folder)
             raise ConanException("%s: %s" % (conan_file.name, str(e)))
         finally:
             conan_file._conanfile_directory = export_folder

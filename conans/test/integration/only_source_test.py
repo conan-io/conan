@@ -74,18 +74,20 @@ class DefaultNameConan(ConanFile):
         # Now Hello2 should be built and not fail
         client.run("test")
         self.assertNotIn("Can't find a 'Hello2/2.2@lasote/stable' package", client.user_io.out)
-        self.assertIn('Forced build from source: "Hello2/2.2@lasote/stable"', client.user_io.out)
+        self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
+                      client.user_io.out)
 
         # Now package is generated but should be built again
         client.run("test")
-        self.assertIn('Forced build from source: "Hello2/2.2@lasote/stable"', client.user_io.out)
+        self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
+                      client.user_io.out)
 
         # Now if name is not detected in conanfile
         client.save({CONANFILE: ""})
         client.run("test")
         self.assertIn('Cannot detect a valid conanfile in current directory', client.user_io.out)
         # It found the package already generated
-        self.assertIn('Package for Hello2/2.2@lasote/stable', client.user_io.out)
+        self.assertIn('Hello2/2.2@lasote/stable: Package installed', client.user_io.out)
 
     def reuse_test(self):
 

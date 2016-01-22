@@ -14,7 +14,7 @@ class MockRemoteClient(object):
     def __init__(self):
         self.upload_package = Mock()
         self.get_conan_digest = Mock()
-        self.get_conanfile = Mock()
+        self.get_conanfile = Mock(return_value=[("one.txt", "ONE")])
         self.get_package = Mock(return_value=[("one.txt", "ONE")])
         self.remote_url = None
 

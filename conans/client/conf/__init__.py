@@ -5,6 +5,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import save, load
 from ConfigParser import NoSectionError, ConfigParser
 from conans.model.values import Values
+import urllib
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.6.0'
 
@@ -34,6 +35,14 @@ path: ~/.conan/data
 [remotes]
 conan.io: https://server.conan.io
 local: http://localhost:9300
+
+[proxies]
+# Empty section will try to use system proxies.
+# If don't want proxy at all, remove section [proxies]
+# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
+# http: http://user:pass@10.10.1.10:3128/
+# http: http://10.10.1.10:3128
+# https: http://10.10.1.10:1080
 
 [settings_defaults]
 
@@ -69,6 +78,19 @@ class ConanClientConfigParser(ConfigParser):
     @property
     def remotes(self):
         return self.get_conf("remotes")
+
+    @property
+    def proxies(self):
+        """ optional field, might not exist
+        """
+        try:
+            proxies = self.get_conf("proxies")
+            # If there is proxies section, but empty, it will try to use system proxy
+            if not proxies:
+                return urllib.getproxies()
+            return dict(proxies)
+        except:
+            return None
 
     @property
     def settings_defaults(self):

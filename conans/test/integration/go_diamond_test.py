@@ -39,12 +39,12 @@ class GoDiamondTest(unittest.TestCase):
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
                            var_to_add=[('GOPATH', client.current_folder), ]):
 
-            client.runner('go install hello4_main', os.path.join(client.current_folder, 'src'))
+            client.runner('go install hello4_main', cwd=os.path.join(client.current_folder, 'src'))
         if platform.system() == "Windows":
             command = "hello4_main"
         else:
             command = './hello4_main'
-        client.runner(command, os.path.join(client.current_folder, 'bin'))
+        client.runner(command, cwd=os.path.join(client.current_folder, 'bin'))
 
         self.assertEqual(['Hello 4', 'Hello 3', 'Hello 1', 'Hello 0', 'Hello 2', 'Hello 0'],
                          str(client.user_io.out).splitlines()[-6:])
@@ -70,12 +70,12 @@ class GoDiamondTest(unittest.TestCase):
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
                            var_to_add=[('GOPATH', client2.current_folder), ]):
 
-            client2.runner('go install hello4_main', os.path.join(client2.current_folder, 'src'))
+            client2.runner('go install hello4_main', cwd=os.path.join(client2.current_folder, 'src'))
         if platform.system() == "Windows":
             command = "hello4_main"
         else:
             command = './hello4_main'
-        client2.runner(command, os.path.join(client2.current_folder, 'bin'))
+        client2.runner(command, cwd=os.path.join(client2.current_folder, 'bin'))
 
         self.assertEqual(['Hello 4', 'Hello 3', 'Hello 1', 'Hello 0', 'Hello 2', 'Hello 0'],
                          str(client2.user_io.out).splitlines()[-6:])

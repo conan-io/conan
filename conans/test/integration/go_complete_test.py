@@ -137,8 +137,8 @@ class GoCompleteTest(unittest.TestCase):
                 command = "hello"
             else:
                 command = './hello'
-            reuse_conan.runner('go install hello', reuse_conan.current_folder)
-            reuse_conan.runner(command, os.path.join(reuse_conan.current_folder, 'bin'))
+            reuse_conan.runner('go install hello', cwd=reuse_conan.current_folder)
+            reuse_conan.runner(command, cwd=os.path.join(reuse_conan.current_folder, 'bin'))
         self.assertIn("Hello, Go!", reuse_conan.user_io.out)
 
     def _assert_package_exists(self, package_ref, paths, files):
