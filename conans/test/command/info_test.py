@@ -2,6 +2,7 @@ import unittest
 from conans.test.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE
+import textwrap
 
 
 class InstallTest(unittest.TestCase):
@@ -14,10 +15,13 @@ class InstallTest(unittest.TestCase):
         self.client.save(files, clean_first=True)
         if export:
             self.client.run("export lasote/stable")
-            self.assertIn("""WARN: Conanfile doesn't have 'url'.
-It is recommended to add your repo URL as attribute
-WARN: Conanfile doesn't have a 'license'.
-It is recommended to add the package license as attribute""", self.client.user_io.out)
+            expected_output = textwrap.dedent(
+                """\
+                WARN: Conanfile doesn't have 'url'.
+                It is recommended to add your repo URL as attribute
+                WARN: Conanfile doesn't have a 'license'.
+                It is recommended to add the package license as attribute""")
+            self.assertIn(expected_output, self.client.user_io.out)
 
         files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
                                                     'version = "0.1"\n'
@@ -35,18 +39,18 @@ It is recommended to add the package license as attribute""", self.client.user_i
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
         self.client.run("info")
-        self.assertIn("""Hello0/0.1@lasote/stable
-    URL: myurl
-    License: MIT
-    Required by:
-        Hello1/0.1@lasote/stable
-Hello1/0.1@lasote/stable
-    URL: myurl
-    License: MIT
-    Required by:
-        Project
-    Requires:
-        Hello0/0.1@lasote/stable""", self.client.user_io.out)
-
-
- 
+        expected_output = textwrap.dedent(
+            """\
+            Hello0/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+                Required by:
+                    Hello1/0.1@lasote/stable
+            Hello1/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+                Required by:
+                    Project
+                Requires:
+                    Hello0/0.1@lasote/stable""")
+        self.assertIn(expected_output, self.client.user_io.out)
