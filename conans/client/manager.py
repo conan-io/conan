@@ -128,14 +128,17 @@ class ConanManager(object):
         @param remote: install only from that remote
         @param options: written in JSON, e.g. {"compiler": "Visual Studio 12", ...}
         """
+        reference_given = True
         if not isinstance(reference, ConanFileReference):
             conanfile_path = reference
+            reference_given = False
             reference = None
 
         loader = self._loader(current_path, settings, options)
         installer = ConanInstaller(self._paths, self._user_io, loader, self.remote_manager, remote)
 
-        if reference:
+        placeholder_reference = None
+        if reference_given:
             conanfile = installer.retrieve_conanfile(reference, consumer=True)
         else:
             output = ScopedOutput("Project", self._user_io.out)
@@ -147,17 +150,20 @@ class ConanManager(object):
                 conan_path = os.path.join(conanfile_path, CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
                 is_txt = True
+            current_user = self._localdb.get_username() or 'anonymous'
+            user, channel = get_user_channel(current_user)
+            placeholder_reference = ConanFileReference.loads("%s/%s@%s/%s" % (conanfile.name, conanfile.version, user, channel))
 
         # build deps graph and install it
         builder = DepsBuilder(installer, self._user_io.out)
         deps_graph = builder.load(reference, conanfile)
         if info:
-            Printer(self._user_io.out).print_info(deps_graph, info)
+            Printer(self._user_io.out).print_info(deps_graph, placeholder_reference, info)
             return
         Printer(self._user_io.out).print_graph(deps_graph)
         installer.install(deps_graph, build_mode)
 
-        if not reference:
+        if not reference_given:
             if is_txt:
                 conanfile.info.settings = loader._settings.values
                 conanfile.info.full_settings = loader._settings.values
