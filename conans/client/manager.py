@@ -146,13 +146,16 @@ class ConanManager(object):
                 conan_file_path = os.path.join(conanfile_path, CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
                 is_txt = False
+
+                if conanfile.name is not None and conanfile.version is not None:
+                    # Calculate a placeholder conan file reference for the project
+                    current_user = self._localdb.get_username() or 'anonymous'
+                    user, channel = get_user_channel(current_user)
+                    placeholder_reference = ConanFileReference.loads("%s/%s@%s/%s" % (conanfile.name, conanfile.version, user, channel))
             except NotFoundException:  # Load requirements.txt
                 conan_path = os.path.join(conanfile_path, CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
                 is_txt = True
-            current_user = self._localdb.get_username() or 'anonymous'
-            user, channel = get_user_channel(current_user)
-            placeholder_reference = ConanFileReference.loads("%s/%s@%s/%s" % (conanfile.name, conanfile.version, user, channel))
 
         # build deps graph and install it
         builder = DepsBuilder(installer, self._user_io.out)

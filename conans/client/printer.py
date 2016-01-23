@@ -40,14 +40,19 @@ class Printer(object):
             Attributes:
                 deps_graph: the dependency graph of conan file references to print
                 placeholder_reference: the conan file reference that represents the conan
-                                       file for a project on the path
+                                       file for a project on the path. This may be None,
+                                       in which case the project itself will not be part
+                                       of the printed dependencies.
         """
         for node in sorted(deps_graph.nodes):
             ref, conan = node
             if not ref:
                 # ref is only None iff info is being printed for a project directory, and
                 # not a passed in reference
-                ref = placeholder_reference
+                if placeholder_reference is None:
+                    continue
+                else:
+                    ref = placeholder_reference
             self._out.writeln("%s" % repr(ref), Color.BRIGHT_CYAN)
             url = getattr(conan, "url", None)
             license_ = getattr(conan, "license", None)
