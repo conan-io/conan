@@ -94,7 +94,7 @@ class ConanManager(object):
                                    "It is recommended to add your repo URL as attribute")
         if not license_:
             self._user_io.out.warn("Conanfile doesn't have a 'license'.\n"
-                                  "It is recommended to add the package license as attribute")
+                                   "It is recommended to add the package license as attribute")
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
         output = ScopedOutput(str(conan_ref), self._user_io.out)
@@ -217,9 +217,9 @@ class ConanManager(object):
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"
-                               "Create a '%s' and move manually the "
-                               "requirements and generators from '%s' file"
-                               % (CONANFILE, CONANFILE, CONANFILE_TXT))
+                                 "Create a '%s' and move manually the "
+                                 "requirements and generators from '%s' file"
+                                 % (CONANFILE, CONANFILE, CONANFILE_TXT))
         try:
             build_info_file = os.path.join(current_path, BUILD_INFO)
             if os.path.exists(build_info_file):

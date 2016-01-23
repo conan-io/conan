@@ -96,7 +96,7 @@ class Printer(object):
                             self._print_colored_line(str(name), indent=3)
                 else:
                     if conan_info.settings:
-                        settings_line = [values[1] for values in \
+                        settings_line = [values[1] for values in
                                          [setting.split("=")
                                           for setting in conan_info.settings.dumps().splitlines()]]
                         settings_line = "(%s)" % ", ".join(settings_line)
