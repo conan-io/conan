@@ -197,7 +197,7 @@ class QmakeGenerator(Generator):
         all_flags = template_all.format(dep_name="", deps=deps)
         sections.append(all_flags)
         
-        template_deps = template + 'CONAN_ROOTPATH{dep_name} = {deps.rootpath}\n'
+        template_deps = template + 'CONAN{dep_name}_ROOT = {deps.rootpath}\n'
 
         for dep_name, dep_cpp_info in self._deps_build_info.dependencies:
             deps = DepsCppQmake(dep_cpp_info)
