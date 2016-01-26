@@ -1,25 +1,28 @@
 from conans.util.files import save
 from conans.errors import ConanException
+from abc import ABCMeta, abstractproperty
 
 
 class Generator(object):
+    __metaclass__ = ABCMeta
+
     def __init__(self, deps_build_info, build_info):
         self._deps_build_info = deps_build_info
         self._build_info = build_info
 
-    @property
+    @abstractproperty
     def deps_build_info(self):
         return self._deps_build_info
 
-    @property
+    @abstractproperty
     def build_info(self):
         return self._build_info
 
-    @property
+    @abstractproperty
     def content(self):
         raise NotImplementedError()
 
-    @property
+    @abstractproperty
     def filename(self):
         raise NotImplementedError()
 
