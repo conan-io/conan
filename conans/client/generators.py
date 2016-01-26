@@ -136,6 +136,17 @@ macro(CONAN_OUTPUT_DIRS_SETUP)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 endmacro()
 
+macro(CONAN_SPLIT_VERSION VERSION_STRING MAJOR MINOR)
+        #make a list from the version string
+        string(REPLACE "." ";" VERSION_LIST ${${VERSION_STRING}})
+        
+        #write output values
+        list(GET VERSION_LIST 0 ${MAJOR})
+        list(GET VERSION_LIST 1 ${MINOR})
+
+endmacro()
+
+
 macro(CONAN_CHECK_COMPILER)
     if("${CONAN_COMPILER}" STREQUAL "Visual Studio")
         if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL MSVC)
@@ -145,15 +156,28 @@ macro(CONAN_CHECK_COMPILER)
         if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
              message(FATAL_ERROR "The current compiler is not GCC")
         endif()
-        string(REGEX MATCHALL "[0-9]+" GCC_VERSION_COMPONENTS ${CMAKE_CXX_COMPILER_VERSION})
-        list(GET GCC_VERSION_COMPONENTS 0 GCC_MAJOR)
-        list(GET GCC_VERSION_COMPONENTS 1 GCC_MINOR)
+        
+        CONAN_SPLIT_VERSION(CMAKE_CXX_COMPILER_VERSION GCC_MAJOR GCC_MINOR)
+
         if(NOT ${GCC_MAJOR}.${GCC_MINOR} VERSION_EQUAL "${CONAN_COMPILER_VERSION}")
            message(FATAL_ERROR "INCORRECT GCC VERSION CONAN=" ${CONAN_COMPILER_VERSION}
                                " CURRENT GCC=" ${GCC_MAJOR}.${GCC_MINOR})
         endif()
     elseif("${CONAN_COMPILER}" STREQUAL "clang")
-        # TODO, CHECK COMPILER AND VERSIONS, AND MATCH WITH apple-clang TOO
+        #this should match Clang and apple-Clang
+        if(NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
+           message(ERROR "current compiler-id: " ${CMAKE_CXX_COMPILER_ID})
+           message(FATAL_ERROR "The current compiler is not clang")
+
+        endif()
+
+        CONAN_SPLIT_VERSION(CMAKE_CXX_COMPILER_VERSION CLANG_MAJOR CLANG_MINOR)
+        if(NOT ${CLANG_MAJOR}.${CLANG_MINOR} VERSION_EQUAL "${CONAN_COMPILER_VERSION}")
+           message(FATAL_ERROR "INCORRECT CLANG VERSION CONAN=${CONAN_COMPILER_VERSION} \
+                                CURRENT CLANG= ${CLANG_MAJOR}.${CLANG_MINOR}")
+        endif()
+
+
     endif()
 
 endmacro()
