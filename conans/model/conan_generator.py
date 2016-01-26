@@ -10,11 +10,11 @@ class Generator(object):
         self._deps_build_info = deps_build_info
         self._build_info = build_info
 
-    @abstractproperty
+    @property
     def deps_build_info(self):
         return self._deps_build_info
 
-    @abstractproperty
+    @property
     def build_info(self):
         return self._build_info
 
