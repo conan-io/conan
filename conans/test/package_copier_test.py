@@ -51,7 +51,7 @@ class PackageCopierTest(unittest.TestCase):
         self.assertIn("Copied Hello/0.1@lasote/testing to Hello/0.1@lasote/stable", output)
         self.assertIn("Copied 0101001 to Hello/0.1@lasote/stable", output)
         self.assertIn("Copied 2222222 to Hello/0.1@lasote/stable", output)
-        self.assertIn("'Hello/0.1@lasote/testing' already exist. Override?", output)
+        self.assertIn("'Hello/0.1@lasote/stable' already exist. Override?", output)
         self.assertIn("Package '2222222' already exist. Override?", output)
         self.assertIn("Package '0101001' already exist. Override?", output)
 

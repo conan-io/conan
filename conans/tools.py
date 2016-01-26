@@ -6,6 +6,7 @@ from urllib import FancyURLopener
 import urllib2
 from conans.errors import ConanException
 from conans.util.files import _generic_algorithm_sum
+from patch import fromfile, fromstring
 
 
 def human_size(size_bytes):
@@ -151,3 +152,17 @@ def check_md5(file_path, signature):
 
 def check_sha256(file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
+
+
+def patch(base_path=None, patch_file=None, patch_string=None):
+    """Applies a diff from file (patch_file)  or string (patch_string)
+    in base_path directory or current dir if None"""
+
+    if not patch_file and not patch_string:
+        return
+    if patch_file:
+        patchset = fromfile(patch_file)
+    else:
+        patchset = fromstring(patch_string)
+
+    patchset.apply(root=base_path)
