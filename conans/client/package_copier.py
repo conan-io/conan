@@ -23,7 +23,7 @@ class PackageCopier(object):
         export_dest = self._paths.export(dest_ref)
         if os.path.exists(export_dest):
             if not force and not self._user_io.request_boolean("'%s' already exist. Override?"
-                                                               % str(reference)):
+                                                               % str(dest_ref)):
                 return
             rmdir(export_dest)
         shutil.copytree(export_origin, export_dest)

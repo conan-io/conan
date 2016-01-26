@@ -5,6 +5,7 @@ from .text import TXTGenerator
 from .gcc import GCCGenerator
 from .cmake import CMakeGenerator
 from .qmake import QmakeGenerator
+from .qbs import QbsGenerator
 from .visualstudio import VisualStudioGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
@@ -17,6 +18,7 @@ _save_generator("txt", TXTGenerator)
 _save_generator("gcc", GCCGenerator)
 _save_generator("cmake", CMakeGenerator)
 _save_generator("qmake", QmakeGenerator)
+_save_generator("qbs", QbsGenerator)
 _save_generator("visual_studio", VisualStudioGenerator)
 _save_generator("xcode", XCodeGenerator)
 _save_generator("ycm", YouCompleteMeGenerator)
