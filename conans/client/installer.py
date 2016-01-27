@@ -289,6 +289,7 @@ Package configuration:
             output.info('Copying sources to build folder')
             shutil.copytree(src_folder, build_folder, symlinks=True)
         os.chdir(build_folder)
+        conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files
         write_generators(conan_file, build_folder, output)
         try:
@@ -305,3 +306,5 @@ Package configuration:
             output.error("Package '%s' build failed" % os.path.basename(build_folder))
             output.warn("Build folder %s" % build_folder)
             raise ConanException("%s: %s" % (conan_file.name, str(e)))
+        finally:
+            conan_file._conanfile_directory = export_folder
