@@ -125,25 +125,52 @@ macro(CONAN_OUTPUT_DIRS_SETUP)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 endmacro()
 
-macro(CONAN_CHECK_COMPILER)
-    if("${CONAN_COMPILER}" STREQUAL "Visual Studio")
-        if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-            message(FATAL_ERROR "The current compiler is not MSVC")
-        endif()
-    elseif("${CONAN_COMPILER}" STREQUAL "gcc")
-        if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-             message(FATAL_ERROR "The current compiler is not GCC")
-        endif()
-        string(REGEX MATCHALL "[0-9]+" GCC_VERSION_COMPONENTS ${CMAKE_CXX_COMPILER_VERSION})
-        list(GET GCC_VERSION_COMPONENTS 0 GCC_MAJOR)
-        list(GET GCC_VERSION_COMPONENTS 1 GCC_MINOR)
-        if(NOT ${GCC_MAJOR}.${GCC_MINOR} VERSION_EQUAL "${CONAN_COMPILER_VERSION}")
-           message(FATAL_ERROR "INCORRECT GCC VERSION CONAN=" ${CONAN_COMPILER_VERSION}
-                               " CURRENT GCC=" ${GCC_MAJOR}.${GCC_MINOR})
-        endif()
-    elseif("${CONAN_COMPILER}" STREQUAL "clang")
-        # TODO, CHECK COMPILER AND VERSIONS, AND MATCH WITH apple-clang TOO
-    endif()
+macro(CONAN_SPLIT_VERSION VERSION_STRING MAJOR MINOR)
+    #make a list from the version string
+    string(REPLACE "." ";" VERSION_LIST ${${VERSION_STRING}})
 
+    #write output values
+    list(GET VERSION_LIST 0 ${MAJOR})
+    list(GET VERSION_LIST 1 ${MINOR})
+endmacro()
+
+macro(ERROR_COMPILER_VERSION)
+    message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}' version 'compiler.version=${CONAN_COMPILER_VERSION}'"
+                        " is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}="${VERSION_MAJOR}.${VERSION_MINOR}')
+endmacro()
+
+macro(CHECK_COMPILER_VERSION)
+
+    CONAN_SPLIT_VERSION(CMAKE_CXX_COMPILER_VERSION VERSION_MAJOR VERSION_MINOR)
+
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+        # https://cmake.org/cmake/help/v3.2/variable/MSVC_VERSION.html
+        if( (${CONAN_COMPILER_VERSION} STREQUAL "14" AND NOT ${VERSION_MAJOR} STREQUAL "19") OR
+            (${CONAN_COMPILER_VERSION} STREQUAL "12" AND NOT ${VERSION_MAJOR} STREQUAL "18") OR
+            (${CONAN_COMPILER_VERSION} STREQUAL "11" AND NOT ${VERSION_MAJOR} STREQUAL "17") OR
+            (${CONAN_COMPILER_VERSION} STREQUAL "10" AND NOT ${VERSION_MAJOR} STREQUAL "16") OR
+            (${CONAN_COMPILER_VERSION} STREQUAL "9" AND NOT ${VERSION_MAJOR} STREQUAL "15") OR
+            (${CONAN_COMPILER_VERSION} STREQUAL "8" AND NOT ${VERSION_MAJOR} STREQUAL "14") OR
+            (${CONAN_COMPILER_VERSION} STREQUAL "7" AND NOT ${VERSION_MAJOR} STREQUAL "13") OR
+            (${CONAN_COMPILER_VERSION} STREQUAL "6" AND NOT ${VERSION_MAJOR} STREQUAL "12") )
+            ERROR_COMPILER_VERSION()
+        endif()
+    elseif("${CONAN_COMPILER}" STREQUAL "gcc" OR "${CONAN_COMPILER}" MATCHES "Clang")
+        if(NOT ${VERSION_MAJOR}.${VERSION_MINOR} VERSION_EQUAL "${CONAN_COMPILER_VERSION}")
+           ERROR_COMPILER_VERSION()
+        endif()
+    else()
+        message("Skipping version checking of not detected compiler...")
+    endif()
+endmacro()
+
+macro(CONAN_CHECK_COMPILER)
+    if( ("${CONAN_COMPILER}" STREQUAL "Visual Studio" AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC") OR
+        ("${CONAN_COMPILER}" STREQUAL "gcc" AND NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") OR
+        ("${CONAN_COMPILER}" STREQUAL "apple-clang" AND (NOT APPLE OR NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")) OR
+        ("${CONAN_COMPILER}" STREQUAL "clang" AND NOT ${CMAKE_CXX_COMPILER_ID} MATCHES "Clang") )
+        message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
+    endif()
+    CHECK_COMPILER_VERSION()
 endmacro()
 """
