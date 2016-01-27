@@ -35,7 +35,7 @@ class CMakeTest(unittest.TestCase):
         settings.arch = "x86"
         self.assertEqual('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug  -DCONAN_COMPILER="gcc" '
                          '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS=-m32 '
-                         '-DCONAN_SHARED_LINK_FLAGS=-m32 -DCONAN_C_FLAGS=-m32 -Wno-dev',
+                         '-DCONAN_SHARED_LINKER_FLAGS=-m32 -DCONAN_C_FLAGS=-m32 -Wno-dev',
                          cmake.command_line)
 
     def deleted_os_test(self):
