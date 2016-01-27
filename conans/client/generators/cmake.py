@@ -37,7 +37,7 @@ class CMakeGenerator(Generator):
                         'set(CONAN_LIBS_{dep} {deps.libs})\n'
                         'set(CONAN_DEFINES_{dep} {deps.defines})\n'
                         'set(CONAN_CXX_FLAGS_{dep} "{deps.cppflags}")\n'
-                        'set(CONAN_SHARED_LINK_FLAGS_{dep} "{deps.sharedlinkflags}")\n'
+                        'set(CONAN_SHARED_LINKER_FLAGS_{dep} "{deps.sharedlinkflags}")\n'
                         'set(CONAN_EXE_LINKER_FLAGS_{dep} "{deps.exelinkflags}")\n'
                         'set(CONAN_C_FLAGS_{dep} "{deps.cflags}")\n')
 
@@ -56,7 +56,7 @@ class CMakeGenerator(Generator):
             'set(CONAN_LIBS {deps.libs} ${{CONAN_LIBS}})\n'
             'set(CONAN_DEFINES {deps.defines} ${{CONAN_DEFINES}})\n'
             'set(CONAN_CXX_FLAGS "{deps.cppflags} ${{CONAN_CXX_FLAGS}}")\n'
-            'set(CONAN_SHARED_LINK_FLAGS "{deps.sharedlinkflags} ${{CONAN_SHARED_LINK_FLAGS}}")\n'
+            'set(CONAN_SHARED_LINKER_FLAGS "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS}}")\n'
             'set(CONAN_EXE_LINKER_FLAGS "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS}}")\n'
             'set(CONAN_C_FLAGS "{deps.cflags} ${{CONAN_C_FLAGS}}")\n'
             'set(CONAN_CMAKE_MODULE_PATH {module_paths} ${{CONAN_CMAKE_MODULE_PATH}})')
@@ -92,7 +92,7 @@ macro(CONAN_FLAGS_SETUP)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CXX_FLAGS}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_C_FLAGS}")
-    set(CMAKE_SHARED_LINK_FLAGS "${CMAKE_SHARED_LINK_FLAGS} ${CONAN_SHARED_LINK_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_SHARED_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
 
     if(APPLE)
@@ -127,7 +127,7 @@ endmacro()
 
 macro(CONAN_CHECK_COMPILER)
     if("${CONAN_COMPILER}" STREQUAL "Visual Studio")
-        if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL MSVC)
+        if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
             message(FATAL_ERROR "The current compiler is not MSVC")
         endif()
     elseif("${CONAN_COMPILER}" STREQUAL "gcc")
