@@ -5,7 +5,7 @@ from conans.paths import CONANFILE
 import textwrap
 
 
-class InstallTest(unittest.TestCase):
+class InfoTest(unittest.TestCase):
 
     def _create(self, number, version, deps=None, export=True):
         files = cpp_hello_conan_files(number, version, deps)
@@ -41,7 +41,7 @@ class InstallTest(unittest.TestCase):
         self.client.run("info")
         expected_output = textwrap.dedent(
             """\
-            Hello2/0.1@anonymous/testing
+            Hello2/0.1@PROJECT
                 URL: myurl
                 License: MIT
                 Required by:
@@ -56,7 +56,7 @@ class InstallTest(unittest.TestCase):
                 URL: myurl
                 License: MIT
                 Required by:
-                    Project
+                    Hello2/0.1@PROJECT
                 Requires:
                     Hello0/0.1@lasote/stable""")
         self.assertIn(expected_output, self.client.user_io.out)
@@ -71,7 +71,7 @@ class InstallTest(unittest.TestCase):
         self.client.run("info")
         expected_output = textwrap.dedent(
             """\
-            Hello2/0.1@superman/testing
+            Hello2/0.1@superman/PROJECT
                 URL: myurl
                 License: MIT
                 Required by:
@@ -86,7 +86,7 @@ class InstallTest(unittest.TestCase):
                 URL: myurl
                 License: MIT
                 Required by:
-                    Project
+                    Hello2/0.1@superman/PROJECT
                 Requires:
                     Hello0/0.1@lasote/stable""")
         self.assertIn(expected_output, self.client.user_io.out)

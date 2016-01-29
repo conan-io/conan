@@ -34,7 +34,7 @@ class Printer(object):
             ref = PackageReference(ref, conanfile.info.package_id())
             self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
 
-    def print_info(self, deps_graph, placeholder_reference, _info):
+    def print_info(self, deps_graph, project_reference, _info):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -49,11 +49,11 @@ class Printer(object):
             if not ref:
                 # ref is only None iff info is being printed for a project directory, and
                 # not a passed in reference
-                if placeholder_reference is None:
+                if project_reference is None:
                     continue
                 else:
-                    ref = placeholder_reference
-            self._out.writeln("%s" % repr(ref), Color.BRIGHT_CYAN)
+                    ref = project_reference
+            self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             url = getattr(conan, "url", None)
             license_ = getattr(conan, "license", None)
             author = getattr(conan, "author", None)
@@ -66,7 +66,7 @@ class Printer(object):
             dependants = deps_graph.inverse_neighbors(node)
             self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
             for d in dependants:
-                ref = repr(d.conan_ref) if d.conan_ref else "Project"
+                ref = repr(d.conan_ref) if d.conan_ref else project_reference
                 self._out.writeln("        %s" % ref, Color.BRIGHT_YELLOW)
             depends = deps_graph.neighbors(node)
             if depends:
