@@ -11,7 +11,7 @@ matrix:
     include:
         - language: generic
           os: osx
-          env: PYVER=py27 CONAN_COMPILER=clang CONAN_COMPILER_VERSION=3.5
+          env: PYVER=py27 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
           
 # command to install dependencies
 install:
