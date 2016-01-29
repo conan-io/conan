@@ -137,21 +137,24 @@ class ConanManager(object):
         loader = self._loader(current_path, settings, options)
         installer = ConanInstaller(self._paths, self._user_io, loader, self.remote_manager, remote)
 
-        placeholder_reference = None
         if reference_given:
+            project_reference = None
             conanfile = installer.retrieve_conanfile(reference, consumer=True)
         else:
-            output = ScopedOutput("Project", self._user_io.out)
+            project_reference = "PROJECT"
+            output = ScopedOutput(project_reference, self._user_io.out)
             try:
                 conan_file_path = os.path.join(conanfile_path, CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
                 is_txt = False
 
                 if conanfile.name is not None and conanfile.version is not None:
+                    project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
                     # Calculate a placeholder conan file reference for the project
-                    current_user = self._localdb.get_username() or 'anonymous'
-                    user, channel = get_user_channel(current_user)
-                    placeholder_reference = ConanFileReference.loads("%s/%s@%s/%s" % (conanfile.name, conanfile.version, user, channel))
+                    current_user = self._localdb.get_username()
+                    if current_user:
+                        project_reference += "%s/" % current_user
+                    project_reference += "PROJECT"
             except NotFoundException:  # Load requirements.txt
                 conan_path = os.path.join(conanfile_path, CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
@@ -161,7 +164,7 @@ class ConanManager(object):
         builder = DepsBuilder(installer, self._user_io.out)
         deps_graph = builder.load(reference, conanfile)
         if info:
-            Printer(self._user_io.out).print_info(deps_graph, placeholder_reference, info)
+            Printer(self._user_io.out).print_info(deps_graph, project_reference, info)
             return
         Printer(self._user_io.out).print_graph(deps_graph)
         installer.install(deps_graph, build_mode)
