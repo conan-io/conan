@@ -82,7 +82,7 @@ class CMakeGenerator(Generator):
 endmacro()
 
 macro(CONAN_FLAGS_SETUP)
-    include_directories(${CONAN_INCLUDE_DIRS})
+    include_directories(SYSTEM ${CONAN_INCLUDE_DIRS})
     link_directories(${CONAN_LIB_DIRS})
     add_definitions(${CONAN_DEFINES})
 
