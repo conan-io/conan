@@ -94,7 +94,7 @@ class ConanManager(object):
                                    "It is recommended to add your repo URL as attribute")
         if not license_:
             self._user_io.out.warn("Conanfile doesn't have a 'license'.\n"
-                                  "It is recommended to add the package license as attribute")
+                                   "It is recommended to add the package license as attribute")
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
         output = ScopedOutput(str(conan_ref), self._user_io.out)
@@ -128,21 +128,33 @@ class ConanManager(object):
         @param remote: install only from that remote
         @param options: written in JSON, e.g. {"compiler": "Visual Studio 12", ...}
         """
+        reference_given = True
         if not isinstance(reference, ConanFileReference):
             conanfile_path = reference
+            reference_given = False
             reference = None
 
         loader = self._loader(current_path, settings, options)
         installer = ConanInstaller(self._paths, self._user_io, loader, self.remote_manager, remote)
 
-        if reference:
+        if reference_given:
+            project_reference = None
             conanfile = installer.retrieve_conanfile(reference, consumer=True)
         else:
-            output = ScopedOutput("Project", self._user_io.out)
+            project_reference = "PROJECT"
+            output = ScopedOutput(project_reference, self._user_io.out)
             try:
                 conan_file_path = os.path.join(conanfile_path, CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
                 is_txt = False
+
+                if conanfile.name is not None and conanfile.version is not None:
+                    project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
+                    # Calculate a placeholder conan file reference for the project
+                    current_user = self._localdb.get_username()
+                    if current_user:
+                        project_reference += "%s/" % current_user
+                    project_reference += "PROJECT"
             except NotFoundException:  # Load requirements.txt
                 conan_path = os.path.join(conanfile_path, CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
@@ -152,12 +164,12 @@ class ConanManager(object):
         builder = DepsBuilder(installer, self._user_io.out)
         deps_graph = builder.load(reference, conanfile)
         if info:
-            Printer(self._user_io.out).print_info(deps_graph, info)
+            Printer(self._user_io.out).print_info(deps_graph, project_reference, info)
             return
         Printer(self._user_io.out).print_graph(deps_graph)
         installer.install(deps_graph, build_mode)
 
-        if not reference:
+        if not reference_given:
             if is_txt:
                 conanfile.info.settings = loader._settings.values
                 conanfile.info.full_settings = loader._settings.values
@@ -217,9 +229,9 @@ class ConanManager(object):
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"
-                               "Create a '%s' and move manually the "
-                               "requirements and generators from '%s' file"
-                               % (CONANFILE, CONANFILE, CONANFILE_TXT))
+                                 "Create a '%s' and move manually the "
+                                 "requirements and generators from '%s' file"
+                                 % (CONANFILE, CONANFILE, CONANFILE_TXT))
         try:
             build_info_file = os.path.join(current_path, BUILD_INFO)
             if os.path.exists(build_info_file):
