@@ -5,7 +5,7 @@ from conans.client.export import export_conanfile
 from conans.client.deps_builder import DepsBuilder
 from conans.client.userio import UserIO
 from conans.client.installer import ConanInstaller
-from conans.util.files import save, load, rmdir
+from conans.util.files import save, load, rmdir, normalize
 from conans.util.log import logger
 from conans.client.uploader import ConanUploader
 from conans.client.printer import Printer
@@ -173,7 +173,8 @@ class ConanManager(object):
             if is_txt:
                 conanfile.info.settings = loader._settings.values
                 conanfile.info.full_settings = loader._settings.values
-            save(os.path.join(current_path, CONANINFO), conanfile.info.dumps())
+            content = normalize(conanfile.info.dumps())
+            save(os.path.join(current_path, CONANINFO), content)
             self._user_io.out.writeln("")
             output.info("Generated %s" % CONANINFO)
             write_generators(conanfile, current_path, output)

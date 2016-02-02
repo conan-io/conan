@@ -4,8 +4,16 @@ from errno import ENOENT, EEXIST
 import hashlib
 import sys
 import tarfile
-from os.path import abspath, realpath, dirname, join as joinpath
-from tarfile import TarInfo
+from os.path import abspath, realpath, join as joinpath
+import platform
+import re
+
+
+def normalize(text):
+    if platform.system() == "Windows":
+        return re.sub("\r?\n", "\r\n", text)
+    else:
+        return text
 
 
 def md5(content):
@@ -110,7 +118,7 @@ def mkdir(path, raise_if_already_exists=False):
 
 
 def path_exists(path, basedir=None):
-    """Case sensitive, for windows, optional 
+    """Case sensitive, for windows, optional
     basedir for skip caps check for tmp folders in testing for example (returned always
     in lowercase for some strange reason)"""
     exists = os.path.exists(path)

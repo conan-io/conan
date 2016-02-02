@@ -1,5 +1,5 @@
 from conans.model import registered_generators
-from conans.util.files import save
+from conans.util.files import save, normalize
 from os.path import join
 from .text import TXTGenerator
 from .gcc import GCCGenerator
@@ -42,4 +42,5 @@ def write_generators(conanfile, path, output):
             generator_class = registered_generators[generator_name]
             generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
             output.info("Generated %s created %s" % (generator_name, generator.filename))
-            save(join(path, generator.filename), generator.content)
+            content = normalize(generator.content)
+            save(join(path, generator.filename), content)

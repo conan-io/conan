@@ -1,4 +1,3 @@
-from conans.util.files import save
 from conans.errors import ConanException
 from abc import ABCMeta, abstractproperty
 
