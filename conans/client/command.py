@@ -269,6 +269,9 @@ class Command(object):
         except:
             raise ConanException("Invalid conanfile reference. e.g., OpenSSL/1.0.2e@lasote/stable")
 
+        if not args.all and not args.package:
+            raise ConanException("'conan package': Please specify --all or a package ID")
+
         self._manager.package(reference, args.package, args.only_manifest, args.all)
 
     def export(self, *args):

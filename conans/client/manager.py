@@ -189,7 +189,10 @@ class ConanManager(object):
         conan_file_path = self._paths.conanfile(reference)
 
         if package_all:
-            packages_dir = self._paths.packages(reference)
+            if only_manifest:
+                packages_dir = self._paths.packages(reference)
+            else:
+                packages_dir = self._paths.builds(reference)
             if not os.path.exists(packages_dir):
                 raise NotFoundException('%s does not exist' % str(reference))
             packages = [PackageReference(reference, packid)
