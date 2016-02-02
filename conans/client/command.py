@@ -282,10 +282,14 @@ class Command(object):
         parser.add_argument('--path', '-p', default=None,
                             help='Optional. Folder with a %s. Default current directory.'
                             % CONANFILE)
+        parser.add_argument('--keep-source', '-k', default=False, action='store_true',
+                            help='Optional. Do not remove the source folder in local store. '
+                                 'Use for testing purposes only')
         args = parser.parse_args(*args)
 
         current_path = args.path or os.getcwd()
-        self._manager.export(args.user, current_path)
+        keep_source = args.keep_source
+        self._manager.export(args.user, current_path, keep_source)
 
     def remove(self, *args):
         """ Remove any folder from your local/remote store

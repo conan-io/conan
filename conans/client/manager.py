@@ -75,7 +75,7 @@ class ConanManager(object):
 
         return ConanFileLoader(self._runner, settings, options=options)
 
-    def export(self, user, conan_file_path):
+    def export(self, user, conan_file_path, keep_source=False):
         """ Export the conans
         param conanfile_path: the original source directory of the user containing a
                            conanfile.py
@@ -99,7 +99,7 @@ class ConanManager(object):
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
         output = ScopedOutput(str(conan_ref), self._user_io.out)
         export_conanfile(output, self._paths,
-                         conan_file.exports, conan_file_path, conan_ref)
+                         conan_file.exports, conan_file_path, conan_ref, keep_source)
 
     def download(self, reference, package_ids, remote=None):
         """ Download conanfile and specified packages to local repository
