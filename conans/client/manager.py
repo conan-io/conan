@@ -121,7 +121,7 @@ class ConanManager(object):
             installer.download_packages(reference, info[reference].keys())
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
-                build_mode=False, info=None):
+                build_mode=False, info=None, filename=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -144,7 +144,9 @@ class ConanManager(object):
             project_reference = "PROJECT"
             output = ScopedOutput(project_reference, self._user_io.out)
             try:
-                conan_file_path = os.path.join(conanfile_path, CONANFILE)
+                if filename and filename.endswith(".txt"):
+                    raise NotFoundException()
+                conan_file_path = os.path.join(conanfile_path, filename or CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
                 is_txt = False
 
@@ -156,7 +158,7 @@ class ConanManager(object):
                         project_reference += "%s/" % current_user
                     project_reference += "PROJECT"
             except NotFoundException:  # Load requirements.txt
-                conan_path = os.path.join(conanfile_path, CONANFILE_TXT)
+                conan_path = os.path.join(conanfile_path, filename or CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
                 is_txt = True
 
@@ -217,14 +219,18 @@ class ConanManager(object):
                     raise NotFoundException('Package %s does not exist' % str(package_reference))
                 packager.generate_manifest(package_folder)
 
-    def build(self, conanfile_path, current_path, test=False):
+    def build(self, conanfile_path, current_path, test=False, filename=None):
         """ Call to build() method saved on the conanfile.py
         param conanfile_path: the original source directory of the user containing a
                             conanfile.py
         """
         logger.debug("Building in %s" % current_path)
         logger.debug("Conanfile in %s" % conanfile_path)
-        conanfile_file = os.path.join(conanfile_path, CONANFILE)
+
+        if filename and filename.endswith(".txt"):
+            raise ConanException("A conanfile.py is needed to call 'conan build'")
+
+        conanfile_file = os.path.join(conanfile_path, filename or CONANFILE)
 
         try:
             output = ScopedOutput("Project", self._user_io.out)

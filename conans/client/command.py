@@ -168,10 +168,11 @@ class Command(object):
         parser.add_argument("--package", "-p", nargs=1, action=Extender, help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("--all", action='store_true',
                             default=False, help='Install all packages from the specified reference')
-
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
+
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -194,7 +195,8 @@ class Command(object):
                                   remote=args.remote,
                                   options=option_dict,
                                   settings=settings_dict,
-                                  build_mode=args.build)
+                                  build_mode=args.build,
+                                  filename=args.file)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -206,6 +208,7 @@ class Command(object):
         parser.add_argument("reference", nargs='?', default="",
                             help='reference name or path to conanfile file, '
                             'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -226,7 +229,8 @@ class Command(object):
                               options=option_dict,
                               settings=settings_dict,
                               build_mode=args.build,
-                              info=True)
+                              info=True,
+                              filename=args.file)
 
     def build(self, *args):
         """ calls your project conanfile.py "build" method.
@@ -237,13 +241,14 @@ class Command(object):
         parser.add_argument("path", nargs="?",
                             help='path to user conanfile.py, e.g., conans build .',
                             default="")
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
         args = parser.parse_args(*args)
         current_path = os.getcwd()
         if args.path:
             root_path = os.path.abspath(args.path)
         else:
             root_path = current_path
-        self._manager.build(root_path, current_path)
+        self._manager.build(root_path, current_path, filename=args.file)
 
     def package(self, *args):
         """ calls your conanfile.py "package" method for a specific package or regenerates the existing
