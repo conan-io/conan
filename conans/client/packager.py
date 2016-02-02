@@ -64,5 +64,5 @@ def _create_aux_files(build_folder, package_folder):
         generate_manifest(package_folder)
 
     except IOError:
-        raise ConanException("%s does not exist inside of your % folder. Try to re-build it again"
+        raise ConanException("%s does not exist inside of your %s folder. Try to re-build it again"
                              " to solve it." % (CONANINFO, build_folder))
