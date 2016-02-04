@@ -65,6 +65,7 @@ class ConanInstaller(object):
     def install(self, deps_graph, build_mode=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
+        self._deps_graph = deps_graph  # necessary for _build_package
         self._out.writeln("\nInstalling requirements", Color.BRIGHT_YELLOW)
         nodes_by_level = self._process_buildinfo(deps_graph)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
@@ -292,6 +293,15 @@ Package configuration:
         conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files
         write_generators(conan_file, build_folder, output)
+
+        # Build step might need DLLs, binaries as protoc to generate source files
+        # So execute imports() before build, storing the list of copied_files
+        from conans.client.importer import FileImporter
+        local_installer = FileImporter(self._deps_graph, self._paths, build_folder)
+        conan_file.copy = local_installer
+        conan_file.imports()
+        copied_files = local_installer.execute()
+
         try:
             # This is necessary because it is different for user projects
             # than for packages
@@ -308,3 +318,9 @@ Package configuration:
             raise ConanException("%s: %s" % (conan_file.name, str(e)))
         finally:
             conan_file._conanfile_directory = export_folder
+            # Now remove all files that were imported with imports()
+            for f in copied_files:
+                try:
+                    os.remove(f)
+                except Exception:
+                    self._out.warn("Unable to remove imported file from build: %s" % f)

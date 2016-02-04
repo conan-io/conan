@@ -32,7 +32,9 @@ class FileCopier(object):
                          src to dst folders, or just drop. False is useful if you want
                          to collect e.g. many *.libs among many dirs into a single
                          lib dir
+        return: list of copied files
         """
+        copied_files = []
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
         for root, subfolders, files in os.walk(src):
@@ -53,3 +55,5 @@ class FileCopier(object):
                     except:
                         pass
                     shutil.copy2(abs_src_name, abs_dst_name)
+                    copied_files.append(abs_dst_name)
+        return copied_files
