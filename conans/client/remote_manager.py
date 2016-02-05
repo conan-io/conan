@@ -1,11 +1,11 @@
 from conans.errors import ConanException, NotFoundException, ConanConnectionError
 from requests.exceptions import ConnectionError
-from conans.util.files import build_files_set, save
+from conans.util.files import build_files_set, save, tar_extract
 from conans.util.log import logger
 import traceback
 from conans.errors import ConanOutdatedClient
 import os
-from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST
+from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
 from cStringIO import StringIO
 import tarfile
 from conans.util.files import gzopen_without_timestamps
@@ -49,7 +49,7 @@ class RemoteManager(object):
         rel_files = self._paths.export_paths(conan_reference)
 
         the_files = build_files_set(basedir, rel_files)
-
+        the_files = compress_export_files(the_files)
         return self._call_without_remote_selection(remote,
                                                    "upload_conan", conan_reference, the_files)
 
@@ -78,7 +78,11 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:content , remote_name)"""
-        return self._call_with_remote_selection(remote, "get_conanfile", conan_reference)
+        export_files = self._call_with_remote_selection(remote, "get_conanfile", conan_reference)
+        export_folder = self._paths.export(conan_reference)
+        uncompress_files(export_files, export_folder, EXPORT_TGZ_NAME)
+#       TODO: Download only the CONANFILE file and only download the rest of files
+#       in install if needed (not found remote package)
 
     def get_package(self, package_reference, remote=None):
         """
@@ -87,14 +91,7 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:content , remote_name)"""
         package_files = self._call_with_remote_selection(remote, "get_package", package_reference)
-
-        for file_name, content in package_files:  # package_files is a generator
-            if os.path.basename(file_name) != PACKAGE_TGZ_NAME:
-                save(os.path.join(self._paths.package(package_reference), file_name), content)
-            else:
-                #  Unzip the file
-                tar = tarfile.open(fileobj=StringIO(content))
-                tar.extractall(self._paths.package(package_reference))
+        uncompress_files(package_files, self._paths.package(package_reference), PACKAGE_TGZ_NAME)
 
     def search(self, pattern=None, remote=None, ignorecase=True):
         """
@@ -170,11 +167,19 @@ class RemoteManager(object):
 
 
 def compress_package_files(files):
+    return compress_files(files, PACKAGE_TGZ_NAME, excluded=(CONANINFO, CONAN_MANIFEST))
+
+
+def compress_export_files(files):
+    return compress_files(files, EXPORT_TGZ_NAME, excluded=(CONANFILE, CONAN_MANIFEST))
+
+
+def compress_files(files, name, excluded):
     """Compress the package and returns the new dict (name => content) of files,
     only with the conanXX files and the compressed file"""
 
     tgz_contents = StringIO()
-    tgz = gzopen_without_timestamps(PACKAGE_TGZ_NAME, mode="w", fileobj=tgz_contents)
+    tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_contents)
 
     def addfile(name, contents, tar):
         info = tarfile.TarInfo(name=name)
@@ -183,15 +188,23 @@ def compress_package_files(files):
         tar.addfile(tarinfo=info, fileobj=string)
 
     for the_file, content in files.iteritems():
-        if the_file not in (CONANINFO, CONAN_MANIFEST):
+        if the_file not in excluded:
             addfile(the_file, content, tgz)
 
     tgz.close()
     ret = {}
-    if CONANINFO in files:
-        ret[CONANINFO] = files[CONANINFO]
-    if CONAN_MANIFEST in files:
-        ret[CONAN_MANIFEST] = files[CONAN_MANIFEST]
-    ret[PACKAGE_TGZ_NAME] = tgz_contents.getvalue()
+    for e in excluded:
+        if e in files:
+            ret[e] = files[e]
+    ret[name] = tgz_contents.getvalue()
 
     return ret
+
+
+def uncompress_files(files, folder, name):
+    for file_name, content in files:
+        if os.path.basename(file_name) != name:
+            save(os.path.join(folder, file_name), content)
+        else:
+            #  Unzip the file
+            tar_extract(StringIO(content), folder)

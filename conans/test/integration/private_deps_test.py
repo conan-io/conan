@@ -53,7 +53,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("Hello0", repr(build_info_cmake))
 
         command = os.sep.join([".", "bin", "say_hello"])
-        client.runner(command, client.current_folder)
+        client.runner(command, cwd=client.current_folder)
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0', 'Hello Hello2',
                           'Hello #'],
                          str(client.user_io.out).splitlines()[-5:])
@@ -87,7 +87,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
-        client2.runner(command, client2.current_folder)
+        client2.runner(command, cwd=client2.current_folder)
 
         self.assertEqual(['Hello Hello3', 'Hello Hello1', 'Hello Hello0', 'Hello Hello2',
                           'Hello #'],
@@ -103,7 +103,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
-        client2.runner(command, client2.current_folder)
+        client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hola Hello3', 'Hola Hello1',
                           'Hola Hello0', 'Hola Hello2', 'Hola #'],
                          str(client2.user_io.out).splitlines()[-5:])
@@ -123,7 +123,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
-        client2.runner(command, client2.current_folder)
+        client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hola Hello3', 'Hola Hello1',
                           'Hola Hello0', 'Hola Hello2', 'Hola #', 'Hola Hello0', 'Hola #'],
                          str(client2.user_io.out).splitlines()[-7:])

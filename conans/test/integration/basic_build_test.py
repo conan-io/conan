@@ -27,7 +27,7 @@ class BasicBuildTest(unittest.TestCase):
             client.run(install)
             time.sleep(1)  # necessary so the conaninfo.txt is flushed to disc
             client.run('build')
-            client.runner(command, client.current_folder)
+            client.runner(command, cwd=client.current_folder)
             msg = "Hello" if lang == 0 else "Hola"
             self.assertIn("%s Hello0" % msg, client.user_io.out)
             conan_info_path = os.path.join(client.current_folder, CONANINFO)

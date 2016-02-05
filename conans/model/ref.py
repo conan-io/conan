@@ -19,10 +19,10 @@ def validate_conan_name(name):
                           " at least %s characters." % (name, ConanFileReference.min_chars)
             else:
                 message = "'%s' is an invalid name. Valid names MUST begin with a "\
-                            "letter or number, have between %s-%s chars, including "\
-                            "letters, numbers, underscore,"\
-                            " dot and dash" % (name, ConanFileReference.min_chars,
-                                               ConanFileReference.max_chars)
+                          "letter or number, have between %s-%s chars, including "\
+                          "letters, numbers, underscore,"\
+                          " dot and dash" % (name, ConanFileReference.min_chars,
+                                             ConanFileReference.max_chars)
             raise InvalidNameException(message)
         return name
     except AttributeError:
@@ -68,7 +68,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             channel = tokens[3]
         except IndexError:
             raise ConanException("Wrong conans reference %s\nWrite something like "
-                               "OpenCV/1.0.6@phil/stable" % text)
+                                 "OpenCV/1.0.6@phil/stable" % text)
         return ConanFileReference(name, version, user, channel, validate)
 
     def __repr__(self):

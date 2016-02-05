@@ -11,7 +11,7 @@ from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClient
 from conans.client.store.localdb import LocalDB
 from conans.util.log import logger
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.client.manager import ConanManager
 from conans.paths import CONANFILE
 import requests
@@ -25,12 +25,13 @@ import shutil
 from conans.util.files import rmdir, load
 from argparse import RawTextHelpFormatter
 import re
+from conans.client.runner import ConanRunner
 
 
 class Extender(argparse.Action):
     '''Allows to use the same flag several times in a command and creates a list with the values.
        For example:
-           conans install openssl/1.0.2@lasote/testing -o qt:value -o mode:2 -s cucumber:true
+           conans install OpenSSL/1.0.2e@lasote/stable -o qt:value -o mode:2 -s cucumber:true
            It creates:
            options = ['qt:value', 'mode:2']
            settings = ['cucumber:true']
@@ -162,28 +163,40 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install",
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("reference", nargs='?', default="",
-                            help='reference name or path to conanfile file, '
-                            'e.g., openssl/1.0.2@lasote/testing or ./my_project/')
+                            help='reference'
+                            'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
+        parser.add_argument("--package", "-p", nargs=1, action=Extender, help='Force install specified package ID (ignore settings/options)')
+        parser.add_argument("--all", action='store_true',
+                            default=False, help='Install all packages from the specified reference')
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
 
-        # Get False or a list of patterns to check
-        args.build = self._get_build_sources_parameter(args.build)
-        option_dict = args.options or []
-        settings_dict = args.settings or []
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, args.reference))
 
-        self._manager.install(reference=reference,
-                              current_path=current_path,
-                              remote=args.remote,
-                              options=option_dict,
-                              settings=settings_dict,
-                              build_mode=args.build)
+        if args.all or args.package:  # Install packages without settings (fixed ids or all)
+            if args.all:
+                args.package = []
+            if not args.reference or not isinstance(reference, ConanFileReference):
+                raise ConanException("Invalid conanfile reference. e.g., OpenSSL/1.0.2e@lasote/stable")
+            self._manager.download(reference, args.package, remote=args.remote)
+        else:  # Classic install, package chosen with settings and options
+            # Get False or a list of patterns to check
+            args.build = self._get_build_sources_parameter(args.build)
+            option_dict = args.options or []
+            settings_dict = args.settings or []
+            self._manager.install(reference=reference,
+                                  current_path=current_path,
+                                  remote=args.remote,
+                                  options=option_dict,
+                                  settings=settings_dict,
+                                  build_mode=args.build,
+                                  filename=args.file)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -194,7 +207,8 @@ class Command(object):
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("reference", nargs='?', default="",
                             help='reference name or path to conanfile file, '
-                            'e.g., openssl/1.0.2@lasote/testing or ./my_project/')
+                            'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -215,7 +229,8 @@ class Command(object):
                               options=option_dict,
                               settings=settings_dict,
                               build_mode=args.build,
-                              info=True)
+                              info=True,
+                              filename=args.file)
 
     def build(self, *args):
         """ calls your project conanfile.py "build" method.
@@ -226,33 +241,43 @@ class Command(object):
         parser.add_argument("path", nargs="?",
                             help='path to user conanfile.py, e.g., conans build .',
                             default="")
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
         args = parser.parse_args(*args)
         current_path = os.getcwd()
         if args.path:
             root_path = os.path.abspath(args.path)
         else:
             root_path = current_path
-        self._manager.build(root_path, current_path)
+        self._manager.build(root_path, current_path, filename=args.file)
 
     def package(self, *args):
-        """ calls your conanfile.py "package" method for a specific package.
+        """ calls your conanfile.py "package" method for a specific package or regenerates the existing
+            package's manifest.
             Intended for package creators, for regenerating a package without recompiling the source.
-            Eg conans package openssl/1.0.2@lasote/testing 9cf83afd07b678d38a9c1645f605875400847ff3
+            e.g. conan package OpenSSL/1.0.2e@lasote/stable 9cf83afd07b678d38a9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("reference", help='reference name. e.g., openssl/1.0.2@lasote/testing')
-        parser.add_argument("package", help='Package ID to regenerate. e.g., '
-                                            '9cf83afd07b678d38a9c1645f605875400847ff3')
+        parser.add_argument("package", nargs="?", default="",
+                            help='Package ID to regenerate. e.g., '
+                                 '9cf83afd07b678d38a9c1645f605875400847ff3')
+        parser.add_argument("-o", "--only-manifest", default=False, action='store_true',
+                            help='Just regenerate manifest for the existing package.'
+                                 'If True conan won\'t call your conanfile\'s package method.')
+        parser.add_argument("--all", action='store_true',
+                            default=False, help='Package all packages from specified reference')
 
         args = parser.parse_args(*args)
 
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
-            raise ConanException("Invalid conanfile reference. e.g., openssl/1.0.2@lasote/testing")
+            raise ConanException("Invalid conanfile reference. e.g., OpenSSL/1.0.2e@lasote/stable")
 
-        package_reference = PackageReference(reference, args.package)
-        self._manager.package(package_reference)
+        if not args.all and not args.package:
+            raise ConanException("'conan package': Please specify --all or a package ID")
+
+        self._manager.package(reference, args.package, args.only_manifest, args.all)
 
     def export(self, *args):
         """ copies a conanfile.py and associated (export) files to your local store,
@@ -265,10 +290,14 @@ class Command(object):
         parser.add_argument('--path', '-p', default=None,
                             help='Optional. Folder with a %s. Default current directory.'
                             % CONANFILE)
+        parser.add_argument('--keep-source', '-k', default=False, action='store_true',
+                            help='Optional. Do not remove the source folder in local store. '
+                                 'Use for testing purposes only')
         args = parser.parse_args(*args)
 
         current_path = args.path or os.getcwd()
-        self._manager.export(args.user, current_path)
+        keep_source = args.keep_source
+        self._manager.export(args.user, current_path, keep_source)
 
     def remove(self, *args):
         """ Remove any folder from your local/remote store
@@ -292,8 +321,37 @@ class Command(object):
             args.packages = args.packages.split(",")
         if args.builds:
             args.builds = args.builds.split(",")
-        self._manager.remove(args.pattern, package_ids_filter=args.packages, build_ids=args.builds,
+        self._manager.remove(args.pattern, package_ids_filter=args.packages,
+                             build_ids=args.builds,
                              src=args.src, force=args.force, remote=args.remote)
+
+    def copy(self, *args):
+        """ Copy packages to another user/channel
+        """
+        parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
+        parser.add_argument("reference", default="",
+                            help='reference'
+                            'e.g., OpenSSL/1.0.2e@lasote/stable')
+        parser.add_argument("user_channel", default="",
+                            help='Destination user/channel'
+                            'e.g., lasote/testing')
+        parser.add_argument("--package", "-p", nargs=1, action=Extender,
+                            help='copy specified package ID')
+        parser.add_argument("--all", action='store_true',
+                            default=False,
+                            help='Copy all packages from the specified reference')
+        parser.add_argument("--force", action='store_true',
+                            default=False,
+                            help='Override destination packages and conanfile')
+        args = parser.parse_args(*args)
+
+        reference = ConanFileReference.loads(args.reference)
+        new_ref = ConanFileReference.loads("%s/%s@%s" % (reference.name,
+                                                         reference.version,
+                                                         args.user_channel))
+        if args.all:
+            args.package = []
+        self._manager.copy(reference, args.package, new_ref.user, new_ref.channel, args.force)
 
     def user(self, *parameters):
         """ shows or change the current user """
@@ -332,7 +390,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
         parser.add_argument("reference",
-                            help='conan reference, e.g., openssl/1.0.2@lasote/testing')
+                            help='conan reference, e.g., OpenSSL/1.0.2e@lasote/stable')
         # TODO: packageparser.add_argument('package', help='user name')
         parser.add_argument("--package", "-p", default=None, help='package ID to upload')
         parser.add_argument("--remote", "-r", help='upload to this specific remote')
@@ -436,10 +494,17 @@ def main(args):
     user_io = UserIO(out=out)
 
     user_folder = os.path.expanduser("~")
-    paths = migrate_and_get_paths(user_folder, out)
+    try:
+        # To capture exceptions in conan.conf parsing
+        paths = migrate_and_get_paths(user_folder, out)
+    except Exception as e:
+        out.error(str(e))
+        sys.exit(True)
 
+    requester = requests.Session()
+    requester.proxies = paths.conan_config.proxies
     # Verify client version against remotes
-    version_checker_requester = VersionCheckerRequester(requests, Version(CLIENT_VERSION),
+    version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
                                                         Version(MIN_SERVER_COMPATIBLE_VERSION),
                                                         out)
     # To handle remote connections
@@ -451,7 +516,7 @@ def main(args):
     # Handle remote connections
     remote_manager = RemoteManager(paths, paths.conan_config.remotes, auth_manager, out)
 
-    command = Command(paths, user_io, os.system, remote_manager, localdb)
+    command = Command(paths, user_io, ConanRunner(), remote_manager, localdb)
     current_dir = os.getcwd()
     try:
         import signal

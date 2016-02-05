@@ -19,6 +19,7 @@ BUILD_INFO = 'conanbuildinfo.txt'
 BUILD_INFO_GCC = 'conanbuildinfo.gcc'
 BUILD_INFO_CMAKE = 'conanbuildinfo.cmake'
 BUILD_INFO_QMAKE = 'conanbuildinfo.pri'
+BUILD_INFO_QBS = 'conanbuildinfo.qbs'
 BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
 BUILD_INFO_YCM = '.ycm_extra_conf.py'
@@ -26,6 +27,7 @@ CONANINFO = "conaninfo.txt"
 SYSTEM_REQS = "system_reqs.txt"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
+EXPORT_TGZ_NAME = "conan_export.tgz"
 
 
 class SimplePaths(object):
@@ -152,8 +154,5 @@ class StorePaths(SimplePaths):
         if not os.path.exists(digest_path):
             return False
         expected_digest = FileTreeManifest.create(os.path.dirname(digest_path))
-        del expected_digest.file_sums[CONAN_MANIFEST]  # Exclude the MANIFEST itself
-        expected_digest.file_sums.pop(CONANFILE + "c", None)  # Exclude the CONANFILE.pyc
-        expected_digest.file_sums.pop(".DS_Store", None)  # Exclude tmp in mac
         readed_digest = FileTreeManifest.loads(load(digest_path))
         return readed_digest.file_sums == expected_digest.file_sums
