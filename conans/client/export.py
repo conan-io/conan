@@ -11,7 +11,7 @@ from conans.client.file_copier import FileCopier
 from conans.model.manifest import FileTreeManifest
 
 
-def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref):
+def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, keep_source=False):
     destination_folder = paths.export(conan_ref)
 
     previous_digest = _init_export_folder(destination_folder)
@@ -19,16 +19,17 @@ def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref):
     _export(file_patterns, origin_folder, destination_folder)
 
     digest = FileTreeManifest.create(destination_folder)
+    save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
     if previous_digest and previous_digest.file_sums == digest.file_sums:
         digest = previous_digest
+        output.info("The stored package has not changed")
     else:
         output.success('A new %s version was exported' % CONANFILE)
-
-    save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
-    output.success('%s exported as %s.\nFolder: %s' % (CONANFILE,
-                                                       str(conan_ref),
-                                                       destination_folder))
+        if not keep_source:
+            rmdir(paths.source(conan_ref))
+        output.success('%s exported to local storage' % CONANFILE)
+        output.success('Folder: %s' % destination_folder)
 
 
 def _init_export_folder(destination_folder):
@@ -56,6 +57,5 @@ def _export(file_patterns, origin_folder, destination_folder):
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in file_patterns:
         copier(pattern)
-    copier.execute()
 
     shutil.copy2(os.path.join(origin_folder, CONANFILE), destination_folder)

@@ -3,6 +3,7 @@ from conans.paths import CONANFILE, BUILD_INFO_CMAKE
 
 conanfile_template = """
 from conans import ConanFile, CMake
+from conans.tools import replace_in_file
 import platform
 
 class {name}Conan(ConanFile):
@@ -20,6 +21,17 @@ class {name}Conan(ConanFile):
     def config(self):
         for name, req in self.requires.iteritems():
             self.options[name].language = self.options.language
+
+    def source(self):
+        # Try-except necessary, not all tests have all files
+        try:
+            replace_in_file("CMakeLists.txt", "projct", "project")
+        except:
+            pass
+        try:
+            replace_in_file("main.cpp", "retunr", "return")
+        except:
+            pass
 
     def build(self):
         static_flags = "-DBUILD_SHARED_LIBS=ON" if not self.options.static else ""
@@ -99,7 +111,7 @@ int main(){{
 
 
 def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
-                           msg=None, dll_export=False):
+                           msg=None, dll_export=False, need_patch=False):
     """
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
     param deps: [] list of integers, defining which dependencies this conans
@@ -110,6 +122,12 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
                by default
     param dll_export: Adds __declspec(dllexport) to the .h declaration
                       (to be exported to lib with a dll)
+    param need_patch: It will generated wrong CMakeLists and main.cpp files,
+                      so they will need to be fixed/patched in the source() method. 
+                      Such method just have to replace_in_file in those two files to have a
+                      correct "source" directory. This was introduced to be sure that the
+                      source and build methods are executed using their respective folders
+                      while packaging.
     e.g. (3, [4, 7]) means that a Hello3 conans will be created, with message
          "Hello 3", that depends both in Hello4 and Hello7.
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7
@@ -134,11 +152,14 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
 
     # Naive approximation, NO DEPS
     ret["CMakeLists.txt"] = cmake_file.format(name=name)
+    if need_patch:
+        ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project", "projct")
+        ret["main.cpp"] = ret["main.cpp"].replace("return", "retunr")
     return ret
 
 
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
-                          private_includes=False, msg=None, dll_export=False):
+                          private_includes=False, msg=None, dll_export=False, need_patch=False):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -169,7 +190,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     requires = ", ".join(requires)
 
     base_files = cpp_hello_source_files(name, code_deps, private_includes, msg=msg,
-                                        dll_export=dll_export)
+                                        dll_export=dll_export, need_patch=need_patch)
     conanfile = conanfile_template.format(name=name,
                                       version=version,
                                       requires=requires,

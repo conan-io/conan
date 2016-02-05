@@ -17,14 +17,15 @@ from conans.test.utils.test_files import temp_folder
 
 
 class Retriever(object):
-    def __init__(self, loader):
+    def __init__(self, loader, output):
         self.loader = loader
+        self.output = output
         self.folder = temp_folder()
 
     def root(self, content):
         conan_path = os.path.join(self.folder, "root")
         save(conan_path, content)
-        conanfile = self.loader.load_conan(conan_path, consumer=True)
+        conanfile = self.loader.load_conan(conan_path, self.output, consumer=True)
         return conanfile
 
     def conan(self, conan_ref, content):
@@ -35,7 +36,7 @@ class Retriever(object):
 
     def retrieve_conanfile(self, conan_ref):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return self.loader.load_conan(conan_path)
+        return self.loader.load_conan(conan_path, self.output)
 
 say_content = """
 from conans import ConanFile
@@ -100,9 +101,9 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(self.output, None, Settings.loads(""),
+        self.loader = ConanFileLoader(None, Settings.loads(""),
                                       OptionsValues.loads(""))
-        self.retriever = Retriever(self.loader)
+        self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsBuilder(self.retriever, self.output)
 
     def root(self, content):
@@ -1173,8 +1174,8 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         options = OptionsValues.loads(options)
-        loader = ConanFileLoader(self.output, None, full_settings, options)
-        retriever = Retriever(loader)
+        loader = ConanFileLoader(None, full_settings, options)
+        retriever = Retriever(loader, self.output)
         builder = DepsBuilder(retriever, self.output)
         root_conan = retriever.root(content)
         deps_graph = builder.load(None, root_conan)
@@ -1358,11 +1359,11 @@ class ChatConan(ConanFile):
     options = {"myoption_chat": ["on", "off"]}
 """
         output = TestBufferConanOutput()
-        loader = ConanFileLoader(output, None, Settings.loads(""),
+        loader = ConanFileLoader(None, Settings.loads(""),
                                       OptionsValues.loads("Say:myoption_say=123\n"
                                                           "Hello:myoption_hello=True\n"
                                                           "myoption_chat=on"))
-        retriever = Retriever(loader)
+        retriever = Retriever(loader, output)
         builder = DepsBuilder(retriever, output)
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)

@@ -110,7 +110,7 @@ class CMake(object):
         if arch == "x86":
             if op_system == "Linux":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
-                             "-DCONAN_SHARED_LINK_FLAGS=-m32",
+                             "-DCONAN_SHARED_LINKER_FLAGS=-m32",
                              "-DCONAN_C_FLAGS=-m32"])
             elif op_system == "Macos":
                 flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")

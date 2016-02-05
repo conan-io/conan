@@ -54,8 +54,8 @@ OpenCV2:other_option=Cosa
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, None, Settings(), OptionsValues.loads(""))
-        ret = loader.load_conan_txt(file_path)
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        ret = loader.load_conan_txt(file_path, None)
         options1 = OptionsValues.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
 OpenCV2:use_python2=1
@@ -81,9 +81,9 @@ OpenCV/2.4.104phil/stable <- use_python:True, other_option:False
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
         with self.assertRaisesRegexp(ConanException, "Wrong conans reference(.*)"):
-            loader.load_conan_txt(file_path)
+            loader.load_conan_txt(file_path, None)
 
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable <- use_python:True, other_option:False
@@ -93,6 +93,6 @@ OpenCV/bin/* - ./bin
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
         with self.assertRaisesRegexp(ConanException, "is too long. Valid names must contain"):
-            loader.load_conan_txt(file_path)
+            loader.load_conan_txt(file_path, None)
