@@ -140,6 +140,10 @@ macro(ERROR_COMPILER_VERSION)
 endmacro()
 
 macro(CHECK_COMPILER_VERSION)
+    if(CONAN_DISABLE_CHECK_COMPILER)
+        message(STATUS "WARN: Disabled conan compiler checks")
+        return()
+    endif()
     CONAN_SPLIT_VERSION(CMAKE_CXX_COMPILER_VERSION VERSION_MAJOR VERSION_MINOR)
     if(CMAKE_CXX_COMPILER_ID MATCHES MSVC)
         # https://cmake.org/cmake/help/v3.2/variable/MSVC_VERSION.html
