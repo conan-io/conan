@@ -174,7 +174,9 @@ class ConanManager(object):
         if not reference_given:
             if is_txt:
                 conanfile.info.settings = loader._settings.values
-                conanfile.info.full_settings = loader._settings.values
+            # Just in case the current package is header only, we still store the full settings
+            # for reference and compiler checks
+            conanfile.info.full_settings = loader._settings.values
             content = normalize(conanfile.info.dumps())
             save(os.path.join(current_path, CONANINFO), content)
             self._user_io.out.writeln("")
