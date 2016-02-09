@@ -73,7 +73,7 @@ class CMakeGenerator(Generator):
         return "\n".join(sections)
 
     def _aux_cmake_test_setup(self):
-        return """macro(CONAN_BASIC_SETUP)
+        return """macro(conan_basic_setup)
     conan_check_compiler()
     conan_output_dirs_setup()
     conan_flags_setup()
@@ -81,7 +81,7 @@ class CMakeGenerator(Generator):
     set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
 endmacro()
 
-macro(CONAN_FLAGS_SETUP)
+macro(conan_flags_setup)
     include_directories(SYSTEM ${CONAN_INCLUDE_DIRS})
     link_directories(${CONAN_LIB_DIRS})
     add_definitions(${CONAN_DEFINES})
@@ -115,7 +115,7 @@ macro(CONAN_FLAGS_SETUP)
     endif()
 endmacro()
 
-macro(CONAN_OUTPUT_DIRS_SETUP)
+macro(conan_output_dirs_setup)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
@@ -125,7 +125,7 @@ macro(CONAN_OUTPUT_DIRS_SETUP)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 endmacro()
 
-macro(CONAN_SPLIT_VERSION VERSION_STRING MAJOR MINOR)
+macro(conan_split_version VERSION_STRING MAJOR MINOR)
     #make a list from the version string
     string(REPLACE "." ";" VERSION_LIST ${${VERSION_STRING}})
 
@@ -134,16 +134,24 @@ macro(CONAN_SPLIT_VERSION VERSION_STRING MAJOR MINOR)
     list(GET VERSION_LIST 1 ${MINOR})
 endmacro()
 
-macro(ERROR_COMPILER_VERSION)
+macro(conan_error_compiler_version)
     message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}' version 'compiler.version=${CONAN_COMPILER_VERSION}'"
                         " is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}=" ${VERSION_MAJOR}.${VERSION_MINOR}')
 endmacro()
 
-macro(CHECK_COMPILER_VERSION)
-    if(CONAN_DISABLE_CHECK_COMPILER)
-        message(STATUS "WARN: Disabled conan compiler checks")
-        return()
-    endif()
+function(conan_get_compiler CONAN_INFO_COMPILER CONAN_INFO_COMPILER_VERSION)
+    file (READ "${CMAKE_BINARY_DIR}/conaninfo.txt" CONANINFO)
+
+    string(REGEX MATCH "compiler=([A-Za-z0-9_ ]+)" _MATCHED ${CONANINFO})
+    string(STRIP ${CMAKE_MATCH_1} _CONAN_INFO_COMPILER)
+    string(REGEX MATCH "compiler.version=([-A-Za-z0-9_.]+)" _MATCHED ${CONANINFO})
+    string(STRIP ${CMAKE_MATCH_1} _CONAN_INFO_COMPILER_VERSION)
+
+    SET(${CONAN_INFO_COMPILER} ${_CONAN_INFO_COMPILER} PARENT_SCOPE)
+    SET(${CONAN_INFO_COMPILER_VERSION} ${_CONAN_INFO_COMPILER_VERSION} PARENT_SCOPE)
+endfunction()
+
+function(check_compiler_version)
     CONAN_SPLIT_VERSION(CMAKE_CXX_COMPILER_VERSION VERSION_MAJOR VERSION_MINOR)
     if(CMAKE_CXX_COMPILER_ID MATCHES MSVC)
         # https://cmake.org/cmake/help/v3.2/variable/MSVC_VERSION.html
@@ -155,23 +163,32 @@ macro(CHECK_COMPILER_VERSION)
             (CONAN_COMPILER_VERSION STREQUAL "8" AND NOT VERSION_MAJOR STREQUAL "14") OR
             (CONAN_COMPILER_VERSION STREQUAL "7" AND NOT VERSION_MAJOR STREQUAL "13") OR
             (CONAN_COMPILER_VERSION STREQUAL "6" AND NOT VERSION_MAJOR STREQUAL "12") )
-            ERROR_COMPILER_VERSION()
+            conan_error_compiler_version()
         endif()
     elseif(CONAN_COMPILER STREQUAL "gcc" OR CONAN_COMPILER MATCHES "Clang")
         if(NOT ${VERSION_MAJOR}.${VERSION_MINOR} VERSION_EQUAL CONAN_COMPILER_VERSION)
-           ERROR_COMPILER_VERSION()
+           conan_error_compiler_version()
         endif()
     else()
         message("Skipping version checking of not detected compiler...")
     endif()
-endmacro()
+endfunction()
 
-macro(CONAN_CHECK_COMPILER)
-    if(NOT DEFINED CONAN_COMPILER)
-        message(STATUS "WARN: CONAN_COMPILER variable not set, please make sure yourself that "
-                       "your compiler and version matches your declared settings")
+function(conan_check_compiler)
+    if(CONAN_DISABLE_CHECK_COMPILER)
+        message(STATUS "WARN: Disabled conan compiler checks")
         return()
     endif()
+
+    if(NOT DEFINED CONAN_COMPILER)
+        conan_get_compiler(CONAN_COMPILER CONAN_COMPILER_VERSION)
+        if(NOT DEFINED CONAN_COMPILER)
+            message(STATUS "WARN: CONAN_COMPILER variable not set, please make sure yourself that "
+                       "your compiler and version matches your declared settings")
+            return()
+        endif()
+    endif()
+
     if( (CONAN_COMPILER STREQUAL "Visual Studio" AND NOT CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR
         (CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
         (CONAN_COMPILER STREQUAL "apple-clang" AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
@@ -179,11 +196,12 @@ macro(CONAN_CHECK_COMPILER)
 
         message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
     endif()
+
     if(NOT DEFINED CONAN_COMPILER_VERSION)
         message(STATUS "WARN: CONAN_COMPILER_VERSION variable not set, please make sure yourself "
                        "that your compiler version matches your declared settings")
         return()
     endif()
-    CHECK_COMPILER_VERSION()
-endmacro()
+    check_compiler_version()
+endfunction()
 """
