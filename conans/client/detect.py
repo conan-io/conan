@@ -23,7 +23,8 @@ def execute(command):
 
 def gcc_compiler(output):
     try:
-        _, out = execute('gcc -dumpversion')
+        compiler_exe = os.environ.get("CC", "gcc")
+        _, out = execute('%s -dumpversion' % compiler_exe)
         compiler = "gcc"
         installed_version = re.search("([0-9]\.[0-9])", out).group()
         if installed_version:
@@ -118,7 +119,6 @@ def priorize_by_env(gcc, clang, output):
         return gcc
     else:
         return None
-
 
 
 def detect_defaults_settings(output):
