@@ -205,7 +205,8 @@ class ConanInstaller(object):
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
             output.info("Generated %s" % CONANINFO)
-            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file.deps_cpp_info,
+            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file.conanfile_directory,
+                                                                      conan_file.deps_cpp_info,
                                                                       conan_file.cpp_info).content)
             output.info("Generated %s" % BUILD_INFO)
 

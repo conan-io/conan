@@ -140,12 +140,13 @@ macro(conan_error_compiler_version)
 endmacro()
 
 function(conan_get_compiler CONAN_INFO_COMPILER CONAN_INFO_COMPILER_VERSION)
-    if(NOT EXISTS ${CMAKE_BINARY_DIR}/conaninfo.txt)
+    set(CONANINFO_TXT \"""" + self.conanfile_directory.replace('\\', '/') + """/conaninfo.txt")
+    if(NOT EXISTS "${CONANINFO_TXT}")
         message(STATUS "WARN: conaninfo.txt not found")
         return()
     endif()
 
-    file (READ "${CMAKE_BINARY_DIR}/conaninfo.txt" CONANINFO)
+    file (READ "${CONANINFO_TXT}" CONANINFO)
 
     string(REGEX MATCH "compiler=([A-Za-z0-9_ ]+)" _MATCHED ${CONANINFO})
     if(DEFINED CMAKE_MATCH_1)
