@@ -359,7 +359,8 @@ class Command(object):
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. '
                                  'If no name is provided it will show the current user.')
-        parser.add_argument("-p", "--password", help='User password')
+        parser.add_argument("-p", "--password", help='User password. Use double quotes '
+                            'if password with spacing, and escape quotes if existing')
         parser.add_argument("--remote", "-r", help='look for in the remote storage')
         args = parser.parse_args(*parameters)  # To enable -h
         self._manager.user(args.remote, args.name, args.password)
