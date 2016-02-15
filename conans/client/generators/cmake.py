@@ -139,13 +139,15 @@ macro(conan_error_compiler_version)
                         " is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}=" ${VERSION_MAJOR}.${VERSION_MINOR}')
 endmacro()
 
+set(_CONAN_CURRENT_DIR ${CMAKE_CURRENT_LIST_DIR})
 function(conan_get_compiler CONAN_INFO_COMPILER CONAN_INFO_COMPILER_VERSION)
-    if(NOT EXISTS ${CMAKE_BINARY_DIR}/conaninfo.txt)
+    MESSAGE(STATUS "Current conanbuildinfo.cmake directory: " ${_CONAN_CURRENT_DIR})
+    if(NOT EXISTS ${_CONAN_CURRENT_DIR}/conaninfo.txt)
         message(STATUS "WARN: conaninfo.txt not found")
         return()
     endif()
 
-    file (READ "${CMAKE_BINARY_DIR}/conaninfo.txt" CONANINFO)
+    file (READ "${_CONAN_CURRENT_DIR}/conaninfo.txt" CONANINFO)
 
     string(REGEX MATCH "compiler=([A-Za-z0-9_ ]+)" _MATCHED ${CONANINFO})
     if(DEFINED CMAKE_MATCH_1)
