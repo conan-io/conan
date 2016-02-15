@@ -2,12 +2,12 @@
 """
 import sys
 import os
-from urllib import FancyURLopener
-import urllib2
 from conans.errors import ConanException
 from conans.util.files import _generic_algorithm_sum
 from patch import fromfile, fromstring
 
+import requests
+from contextlib import closing
 
 def human_size(size_bytes):
     """
@@ -90,38 +90,24 @@ def get(url):
     os.unlink(filename)
 
 
-AGENT = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) '\
-        'Chrome/41.0.2228.0 Safari/537.36'
-
-
-def fetch_sourceforge_url(url):
-    opener = urllib2.build_opener()
-    opener.addheaders = [('User-agent', AGENT)]
-    new_url = ""
-    try:
-        response = opener.open(url)
-        html = response.read()
-        good_url_pos_init = html.find("http://downloads.sourceforge.net")
-        good_url_pos_fin = html[good_url_pos_init:].find("\"") + good_url_pos_init
-        new_url = html[good_url_pos_init:good_url_pos_fin]
-    finally:
-        if not new_url:
-            raise ConanException("File not found: %s" % url)
-    return new_url
-
-
 def download(url, filename):
     def dl_progress_callback_cmd(count, block_size, total_size):
         update_progress(min(count * block_size, total_size) / float(total_size), total_size)
 
-    # Some websites blocks urllib (maybe for block scripts or crawl)
-    class MyOpener(FancyURLopener):
-        version = (AGENT)
+    chunk_size = 8192
 
-    if "sourceforge.net" in url:
-        url = fetch_sourceforge_url(url)
-
-    MyOpener().retrieve(url, filename=filename, reporthook=dl_progress_callback_cmd)
+    with closing(requests.get(url, stream=True)) as r:
+        if r.status_code == 200:
+            content_length = r.headers['content-length']
+            with open(filename, "wb") as fd:
+                if content_length is None:
+                    fd.write(r.content)
+                else:
+                    i = 0
+                    for chunk in r.iter_content(chunk_size):
+                        i += 1
+                        dl_progress_callback_cmd(i, chunk_size, content_length)
+                        fd.write(chunk)
 
 
 def replace_in_file(file_path, search, replace):
