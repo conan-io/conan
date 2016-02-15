@@ -43,3 +43,21 @@ class UserTest(unittest.TestCase):
         self.assertEqual((None, None), conan.localdb.get_login())
         conan.run('user')
         self.assertIn('Current user: None (anonymous)', conan.user_io.out)
+
+    def test_command_user_with_password_spaces(self):
+        """ Checks the -p option, that obtains a token from the password.
+        Useful for integrations as travis, that interactive password is not
+        possible
+        """
+        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
+                                 [],  # write permissions
+                                 users={"lasote": 'my "password'})
+        servers = {"default": test_server}
+        conan = TestClient(servers=servers, users=[("lasote", "mypass")])
+        conan.run(r'user lasote -p="my \"password"')
+        self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
+        self.assertIn("Change user from None to lasote", conan.user_io.out)
+        conan.run('user none')
+        conan.run(r'user lasote -p "my \"password"')
+        self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
+        self.assertIn("Change user from None to lasote", conan.user_io.out)
