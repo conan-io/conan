@@ -69,7 +69,14 @@ class ConanClientConfigParser(ConfigParser):
     @property
     def storage_path(self):
         try:
-            result = os.path.expanduser(self.storage["path"])
+            conan_user_home = os.getenv("CONAN_USER_HOME")
+            if conan_user_home:
+                storage = self.storage["path"]
+                if storage[:2] == "~/":
+                    storage = storage[2:]
+                result = os.path.join(conan_user_home, storage)
+            else:
+                result = os.path.expanduser(self.storage["path"])
         except KeyError:
             result = None
         result = get_env('CONAN_STORAGE_PATH', result)

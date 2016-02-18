@@ -494,7 +494,7 @@ def main(args):
     out = ConanOutput(sys.stdout, color)
     user_io = UserIO(out=out)
 
-    user_folder = os.path.expanduser("~")
+    user_folder = os.getenv("CONAN_USER_HOME", os.path.expanduser("~"))
     try:
         # To capture exceptions in conan.conf parsing
         paths = migrate_and_get_paths(user_folder, out)
