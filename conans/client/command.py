@@ -165,9 +165,10 @@ class Command(object):
         parser.add_argument("reference", nargs='?', default="",
                             help='reference'
                             'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
-        parser.add_argument("--package", "-p", nargs=1, action=Extender, help='Force install specified package ID (ignore settings/options)')
-        parser.add_argument("--all", action='store_true',
-                            default=False, help='Install all packages from the specified reference')
+        parser.add_argument("--package", "-p", nargs=1, action=Extender,
+                            help='Force install specified package ID (ignore settings/options)')
+        parser.add_argument("--all", action='store_true', default=False,
+                            help='Install all packages from the specified reference')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         self._parse_args(parser)
 
@@ -183,7 +184,8 @@ class Command(object):
             if args.all:
                 args.package = []
             if not args.reference or not isinstance(reference, ConanFileReference):
-                raise ConanException("Invalid conanfile reference. e.g., OpenSSL/1.0.2e@lasote/stable")
+                raise ConanException("Invalid conanfile reference. "
+                                     "e.g., OpenSSL/1.0.2e@lasote/stable")
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
             # Get False or a list of patterns to check
@@ -251,10 +253,11 @@ class Command(object):
         self._manager.build(root_path, current_path, filename=args.file)
 
     def package(self, *args):
-        """ calls your conanfile.py "package" method for a specific package or regenerates the existing
-            package's manifest.
-            Intended for package creators, for regenerating a package without recompiling the source.
-            e.g. conan package OpenSSL/1.0.2e@lasote/stable 9cf83afd07b678d38a9c1645f605875400847ff3
+        """ calls your conanfile.py "package" method for a specific package or
+            regenerates the existing package's manifest.
+            Intended for package creators, for regenerating a package without
+            recompiling the source.
+            e.g. conan package OpenSSL/1.0.2e@lasote/stable 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("reference", help='reference name. e.g., openssl/1.0.2@lasote/testing')
@@ -522,7 +525,7 @@ def main(args):
     try:
         import signal
 
-        def sigint_handler(signal, frame):
+        def sigint_handler(signal, frame):  # @UnusedVariable
             print('You pressed Ctrl+C!')
             sys.exit(0)
 

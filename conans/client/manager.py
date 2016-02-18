@@ -26,6 +26,7 @@ from conans.model.build_info import DepsCppInfo
 from conans.client import packager
 from conans.client.package_copier import PackageCopier
 from conans.client.output import ScopedOutput
+from conans.client.proxy import ConanfileRemoteProxy, ConanRemoteProxy
 
 
 def get_user_channel(text):
@@ -48,7 +49,7 @@ class ConanManager(object):
         self._paths = paths
         self._user_io = user_io
         self._runner = runner
-        self.remote_manager = remote_manager
+        self._remote_manager = remote_manager
         self._localdb = localdb
 
     def _loader(self, current_path=None, user_settings_values=None, user_options_values=None):
@@ -108,17 +109,17 @@ class ConanManager(object):
         @param remote: install only from that remote
         """
         assert(isinstance(reference, ConanFileReference))
-        installer = ConanInstaller(self._paths, self._user_io, None, self.remote_manager, remote)
+        remote_proxy = ConanRemoteProxy(self._paths, self._user_io, self._remote_manager, remote)
 
         if package_ids:
-            installer.download_packages(reference, package_ids)
+            remote_proxy.download_packages(reference, package_ids)
         else:  # Not specified packages, download all
-            info = self.remote_manager.search(str(reference), remote, ignorecase=False)
+            info = remote_proxy.search(str(reference), ignorecase=False)
             if reference not in info:
-                remote = remote or self.remote_manager.default_remote
+                remote = remote or self._remote_manager.default_remote
                 raise ConanException("'%s' not found in remote '%s'" % (str(reference), remote))
 
-            installer.download_packages(reference, info[reference].keys())
+            remote_proxy.download_packages(reference, info[reference].keys())
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, info=None, filename=None):
@@ -135,11 +136,12 @@ class ConanManager(object):
             reference = None
 
         loader = self._loader(current_path, settings, options)
-        installer = ConanInstaller(self._paths, self._user_io, loader, self.remote_manager, remote)
+        remote_proxy = ConanfileRemoteProxy(self._paths, self._user_io, loader,
+                                            self._remote_manager, remote)
 
         if reference_given:
             project_reference = None
-            conanfile = installer.retrieve_conanfile(reference, consumer=True)
+            conanfile = remote_proxy.retrieve_conanfile(reference, consumer=True)
         else:
             project_reference = "PROJECT"
             output = ScopedOutput(project_reference, self._user_io.out)
@@ -163,12 +165,15 @@ class ConanManager(object):
                 is_txt = True
 
         # build deps graph and install it
-        builder = DepsBuilder(installer, self._user_io.out)
+        builder = DepsBuilder(remote_proxy, self._user_io.out)
         deps_graph = builder.load(reference, conanfile)
         if info:
             Printer(self._user_io.out).print_info(deps_graph, project_reference, info)
             return
         Printer(self._user_io.out).print_graph(deps_graph)
+
+        remote_proxy = ConanRemoteProxy(self._paths, self._user_io, self._remote_manager, remote)
+        installer = ConanInstaller(self._paths, self._user_io, remote_proxy)
         installer.install(deps_graph, build_mode)
 
         if not reference_given:
@@ -268,9 +273,10 @@ class ConanManager(object):
                force=False):
 
         if not remote:
-            remote = self.remote_manager.default_remote  # Not iterate in remotes, just current
+            remote = self._remote_manager.default_remote  # Not iterate in remotes, just current
 
-        uploader = ConanUploader(self._paths, self._user_io, self.remote_manager, remote)
+        remote_proxy = ConanRemoteProxy(self._paths, self._user_io, self._remote_manager, remote)
+        uploader = ConanUploader(self._paths, self._user_io, remote_proxy)
 
         if package_id:  # Upload package
             uploader.upload_package(PackageReference(conan_reference, package_id))
@@ -287,7 +293,7 @@ class ConanManager(object):
                 remote = search on another origin to get packages info
         """
         if remote:
-            info = self.remote_manager.search(pattern, remote, ignorecase)
+            info = self._remote_manager.search(pattern, remote, ignorecase)
         else:
             info = self.file_manager.search(pattern, ignorecase)
 
@@ -343,7 +349,8 @@ class ConanManager(object):
         @param remote: search on another origin to get packages info
         @param force: if True, it will be deleted without requesting anything
         """
-        remover = ConanRemover(self.file_manager, self._user_io, self.remote_manager, remote)
+        remote_proxy = ConanRemoteProxy(self._paths, self._user_io, self._remote_manager, remote)
+        remover = ConanRemover(self.file_manager, self._user_io, remote_proxy)
         remover.remove(pattern, src, build_ids, package_ids_filter, force=force)
 
     def user(self, remote=None, name=None, password=None):
@@ -355,9 +362,9 @@ class ConanManager(object):
             name = None if name == 'none' else name
             anon = '(anonymous)' if not name else ''
             if password is not None:
-                token = self.remote_manager.authenticate(remote=remote,
-                                                         name=name,
-                                                         password=password)
+                token = self._remote_manager.authenticate(remote=remote,
+                                                          name=name,
+                                                          password=password)
             else:
                 token = None
             if name == user:
