@@ -136,7 +136,15 @@ def detect_defaults_settings(output):
     systems = {'Darwin': 'Macos'}
     result.append(("os", systems.get(platform.system(), platform.system())))
     arch = architectures.get(platform.machine().lower(), platform.machine().lower())
-    arch = 'arm' if arch.startswith('arm') else arch
+    if arch.startswith('arm'):
+        for a in ("armv6", "armv7hf", "armv7", "armv8"):
+            if arch.startswith(a):
+                arch = a
+                break
+        else:
+            output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
+                        "Please check your conan.conf and settings.yml files" % arch)
+
     result.append(("arch", arch))
 
     try:
