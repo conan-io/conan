@@ -16,51 +16,10 @@ class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, paths, user_io, conan_loader, remote_manager, remote):
+    def __init__(self, paths, user_io, remote_proxy):
         self._paths = paths
-        self._loader = conan_loader
         self._out = user_io.out
-        self._remote_manager = remote_manager
-        self._remote = remote
-
-    def retrieve_conanfile(self, conan_reference, consumer=False):
-        """ returns the requested conanfile object, retrieving it from
-        remotes if necessary. Can raise NotFoundException
-        """
-        output = ScopedOutput(str(conan_reference), self._out)
-        conanfile_path = self._paths.conanfile(conan_reference)
-
-        if not self._paths.valid_conan_digest(conan_reference):
-            conan_dir_path = self._paths.export(conan_reference)
-            if path_exists(conan_dir_path, self._paths.store):
-                # If not valid conanfile, ensure empty folder
-                output.warn("Bad conanfile detected! Removing export directory... ")
-                rmdir(conan_dir_path)
-            output.info("Conanfile not found, retrieving from server")
-            # If not in localhost, download it. Will raise if not found
-            self._remote_manager.get_conanfile(conan_reference, self._remote)
-        conanfile = self._loader.load_conan(conanfile_path, output, consumer)
-        return conanfile
-
-    def download_packages(self, reference, package_ids):
-        assert(isinstance(package_ids, list))
-        self._remote_manager.get_conanfile(reference, self._remote)
-        output = ScopedOutput(str(reference), self._out)
-        for package_id in package_ids:
-            package_reference = PackageReference(reference, package_id)
-            self._retrieve_remote_package(package_reference, output)
-
-    def _retrieve_remote_package(self, package_reference, output):
-        package_id = str(package_reference.package_id)
-        try:
-            output.info("Looking for package %s in remotes" % package_id)
-            # Will raise if not found NotFoundException
-            self._remote_manager.get_package(package_reference, self._remote)
-            output.success('Package installed %s' % package_id)
-            return True
-        except ConanException as e:
-            output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
-            return False
+        self._remote_proxy = remote_proxy
 
     def install(self, deps_graph, build_mode=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
@@ -115,7 +74,8 @@ class ConanInstaller(object):
                     if not self._force_build(conan_ref, build_mode):  # Not download package
                         output = ScopedOutput(str(conan_ref), self._out)
                         output.info('Package not installed')
-                        if not self._retrieve_remote_package(package_reference, output):
+                        if not self._remote_proxy.retrieve_remote_package(package_reference,
+                                                                          output):
                             break
             else:
                 skippable_nodes.append(private_node)
@@ -187,7 +147,7 @@ class ConanInstaller(object):
                 return
 
             output.info('Package not installed')
-            remote_package = self._retrieve_remote_package(package_reference, output)
+            remote_package = self._remote_proxy.retrieve_remote_package(package_reference, output)
             if remote_package:
                 return
 
