@@ -58,5 +58,5 @@ if __name__ == "__main__":
     source_folder = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
     output_folder = pyinstall(source_folder)
     print("\n**************Conan binaries created!******************\n \
-    \nAppend this folder to your system PATH: '%s'\nFell free to move the whole folder to another location." % output_folder)
+    \nAppend this folder to your system PATH: '%s'\nFeel free to move the whole folder to another location." % output_folder)
 
