@@ -150,5 +150,9 @@ class Values(object):
     def sha(self):
         result = []
         for (name, value) in self.as_list(list_all=False):
-            result.append("%s=%s" % (name, value))
+            # It is important to discard None values, so migrations in settings can be done
+            # without breaking all existing packages SHAs, by adding a first "None" option
+            # that doesn't change the final sha
+            if value != "None":
+                result.append("%s=%s" % (name, value))
         return sha1('\n'.join(result))

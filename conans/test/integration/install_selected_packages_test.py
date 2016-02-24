@@ -45,6 +45,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         client.run("export lasote/stable")
         client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Linux --build missing")
-        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s compiler.version=4.6  --build missing")
+        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s "
+                   "compiler.version=4.6 -s compiler.stdlib=None --build missing")
         client.run("upload  Hello0/0.1@lasote/stable --all")
         return os.listdir(self.client.paths.packages(self.ref))
