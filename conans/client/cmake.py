@@ -41,8 +41,6 @@ class CMake(object):
 
         if operating_system == "Windows":
             if compiler == "gcc":
-                if self._settings.compiler.version == "4.9":
-                    return "Unix Makefiles"
                 return "MinGW Makefiles"
             if compiler in ["clang", "apple-clang"]:
                 return "MinGW Makefiles"
