@@ -126,7 +126,7 @@ def _detect_compiler_version(result, output):
         if compiler == "Visual Studio":
             result.append(("compiler.runtime", "MD"))
         if compiler == "gcc" or "clang" in compiler:
-            result.append(("compiler.stdlib", None))
+            result.append(("compiler.libcxx", "libstdc++"))
 
 
 def _detect_os_arch(result, output):
@@ -143,7 +143,7 @@ def _detect_os_arch(result, output):
                 break
         else:
             output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
-                        "Please check your conan.conf and settings.yml files" % arch)
+                         "Please check your conan.conf and settings.yml files" % arch)
     result.append(("arch", arch))
 
 

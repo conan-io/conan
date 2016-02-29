@@ -114,8 +114,8 @@ class CMake(object):
                 flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
 
         try:
-            stdlib = self._settings.compiler.stdlib
-            flags.append('-DCONAN_STDLIB="%s"' % stdlib)
+            libcxx = self._settings.compiler.libcxx
+            flags.append('-DCONAN_LIBCXX="%s"' % libcxx)
         except:
             pass
         return " ".join(flags)
