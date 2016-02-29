@@ -16,7 +16,7 @@ class Printer(object):
     def __init__(self, out):
         self._out = out
 
-    def print_graph(self, deps_graph):
+    def print_graph(self, deps_graph, registry):
         """ Simple pretty printing of a deps graph, can be improved
         with options, info like licenses, etc
         """
@@ -25,7 +25,9 @@ class Printer(object):
             ref, _ = node
             if not ref:
                 continue
-            self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
+            remote = registry.get_ref(ref)
+            from_text = "from local" if not remote else "from %s" % remote.name
+            self._out.writeln("    %s %s" % (repr(ref), from_text), Color.BRIGHT_CYAN)
         self._out.writeln("Packages", Color.BRIGHT_YELLOW)
         for node in sorted(deps_graph.nodes):
             ref, conanfile = node
@@ -34,7 +36,7 @@ class Printer(object):
             ref = PackageReference(ref, conanfile.info.package_id())
             self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
 
-    def print_info(self, deps_graph, project_reference, _info):
+    def print_info(self, deps_graph, project_reference, _info, registry):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -54,6 +56,12 @@ class Printer(object):
                 else:
                     ref = project_reference
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
+            remote = registry.get_ref(ref)
+            if remote:
+                self._out.writeln("    Remote: %s=%s" % (remote.name, remote.url),
+                                  Color.BRIGHT_GREEN)
+            else:
+                self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
             url = getattr(conan, "url", None)
             license_ = getattr(conan, "license", None)
             author = getattr(conan, "author", None)

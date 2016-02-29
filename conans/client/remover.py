@@ -17,7 +17,8 @@ class ConanRemover(object):
         @param force: if True, it will be deleted without requesting anything
         """
 
-        if self._remote_proxy.remote:
+        has_remote = self._remote_proxy._remote_name
+        if has_remote:
             if build_ids is not None or src:
                 raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
             search_info = self._remote_proxy.search(pattern)
@@ -30,7 +31,7 @@ class ConanRemover(object):
 
         for conan_ref in search_info:
             if self._ask_permission(conan_ref, src, build_ids, package_ids_filter, force):
-                if self._remote_proxy.remote:
+                if has_remote:
                     if package_ids_filter is None:
                         self._remote_proxy.remove(conan_ref)
                     else:

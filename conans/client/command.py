@@ -518,7 +518,7 @@ def main(args):
     # Wraps RestApiClient to add authentication support (same interface)
     auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
     # Handle remote connections
-    remote_manager = RemoteManager(paths, paths.conan_config.remotes, auth_manager, out)
+    remote_manager = RemoteManager(paths, auth_manager, out)
 
     command = Command(paths, user_io, ConanRunner(), remote_manager, localdb)
     current_dir = os.getcwd()

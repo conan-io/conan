@@ -29,6 +29,7 @@ from conans.model.version import Version
 from conans.client.command import migrate_and_get_paths
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.test.utils.test_files import temp_folder
+from conans.client.remote_registry import RemoteRegistry
 
 
 class TestingResponse(object):
@@ -299,6 +300,11 @@ class TestClient(object):
         self.paths = migrate_and_get_paths(self.base_folder, output,
                                            storage_folder=self.storage_folder)
 
+        save(self.paths.registry, "")
+        registry = RemoteRegistry(self.paths.registry, output)
+        for name, server in self.servers.iteritems():
+            registry.add(name, server.fake_url)
+
         self.user_io = user_io or MockedUserIO(self.users, out=output)
 
         self.runner = TestRunner(output)
@@ -315,8 +321,7 @@ class TestClient(object):
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(self.rest_api_client, self.user_io, self.localdb)
         # Handle remote connections
-        self.remote_manager = RemoteManager(self.paths, self.servers.items(), auth_manager,
-                                            self.user_io.out)
+        self.remote_manager = RemoteManager(self.paths, auth_manager, self.user_io.out)
         # self.loader = ConanFileLoader(self.user_io.out, self.runner, self.paths.settings, None)
 
     def run(self, command_line, user_io=None, ignore_error=False):
