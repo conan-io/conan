@@ -183,7 +183,7 @@ class ConanManager(object):
 
         remote_proxy = ConanRemoteProxy(self._paths, self._user_io, self._remote_manager, remote)
         installer = ConanInstaller(self._paths, self._user_io, remote_proxy)
-        installer.install(deps_graph, build_mode)
+        installer.install(deps_graph, build_mode, conanfile)
 
         if not reference_given:
             if is_txt:
