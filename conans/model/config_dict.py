@@ -69,6 +69,15 @@ class ConfigItem(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __delattr__(self, item):
+        """ This is necessary to remove libcxx subsetting from compiler in config()
+           del self.settings.compiler.stdlib
+        """
+        try:
+            self._get_child(self._value).remove(item)
+        except:
+            pass
+
     def remove(self, values):
         if not isinstance(values, (list, tuple, set)):
             values = [values]
