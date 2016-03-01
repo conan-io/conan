@@ -112,6 +112,12 @@ class CMake(object):
                              "-DCONAN_C_FLAGS=-m32"])
             elif op_system == "Macos":
                 flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
+
+        try:
+            stdlib = self._settings.compiler.stdlib
+            flags.append('-DCONAN_STDLIB="%s"' % stdlib)
+        except:
+            pass
         return " ".join(flags)
 
     @property

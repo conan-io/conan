@@ -125,6 +125,8 @@ def _detect_compiler_version(result, output):
         result.append(("compiler.version", version))
         if compiler == "Visual Studio":
             result.append(("compiler.runtime", "MD"))
+        if compiler == "gcc" or "clang" in compiler:
+            result.append(("compiler.stdlib", None))
 
 
 def _detect_os_arch(result, output):

@@ -1328,7 +1328,7 @@ class SayConan(ConanFile):
 
         with self.assertRaises(ConanException) as cm:
             self.root(content, options="arch_independent=True", settings="os=Linux")
-        self.assertIn(bad_value_msg("settings.os", "Linux", ['Android', 'Macos', "Windows"]),
+        self.assertIn(bad_value_msg("settings.os", "Linux", ['Android', 'Macos', "Windows", "iOS"]),
                          str(cm.exception))
         
     def test_config_remove2(self):

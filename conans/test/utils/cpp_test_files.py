@@ -69,10 +69,10 @@ add_definitions(-DCONAN_LANGUAGE=${{CONAN_LANGUAGE}})
 message("HELLO LANGUAGE " ${{CONAN_LANGUAGE}})
 conan_basic_setup()
 
-add_library(hello{name} hello.cpp)
+add_library(hello{name} hello{ext})
 target_link_libraries(hello{name} ${{CONAN_LIBS}})
 set_target_properties(hello{name}  PROPERTIES POSITION_INDEPENDENT_CODE ON)
-add_executable(say_hello main.cpp)
+add_executable(say_hello main{ext})
 target_link_libraries(say_hello hello{name})
 
 
@@ -94,6 +94,22 @@ void hello{name}(){{
     {other_calls}
 }}
 """
+
+body_c = r"""#include "hello{name}.h"
+
+#include <stdio.h>
+
+{includes}
+
+void hello{name}(){{
+#if CONAN_LANGUAGE == 0
+    printf("Hello {msg}\n");
+#elif CONAN_LANGUAGE == 1
+    printf("Hola {msg}\n");
+#endif
+    {other_calls}
+}}
+"""
 header = """
 #pragma once
 {includes}
@@ -111,7 +127,7 @@ int main(){{
 
 
 def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
-                           msg=None, dll_export=False, need_patch=False):
+                           msg=None, dll_export=False, need_patch=False, pure_c=False):
     """
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
     param deps: [] list of integers, defining which dependencies this conans
@@ -137,7 +153,8 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
     if msg is None:
         msg = name
     ret = {}
-    ret["main.cpp"] = main.format(name=name)
+    ext = ".c" if pure_c else ".cpp"
+    ret["main%s" % ext] = main.format(name=name)
     includes = "\n".join(['#include "hello%s.h"' % d for d in deps])
     export = "__declspec(dllexport) " if dll_export else ""
     ret["hello%s.h" % name] = header.format(name=name,
@@ -145,21 +162,26 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
                                             includes=(includes if not private_includes else ""))
 
     other_calls = "\n".join(["hello%s();" % d for d in deps])
-    ret["hello.cpp"] = body.format(name=name,
-                                   includes=includes,
-                                   other_calls=other_calls,
-                                   msg=msg)
+    body_content = body if not pure_c else body_c
+    ret["hello%s" % ext] = body_content.format(name=name,
+                                               includes=includes,
+                                               other_calls=other_calls,
+                                               msg=msg)
 
     # Naive approximation, NO DEPS
-    ret["CMakeLists.txt"] = cmake_file.format(name=name)
+    ret["CMakeLists.txt"] = cmake_file.format(name=name, ext=ext)
+    if pure_c:
+        ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project(MyHello)",
+                                                              "project(MyHello C)")
     if need_patch:
         ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project", "projct")
-        ret["main.cpp"] = ret["main.cpp"].replace("return", "retunr")
+        ret["main%s" % ext] = ret["main%s" % ext].replace("return", "retunr") 
     return ret
 
 
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
-                          private_includes=False, msg=None, dll_export=False, need_patch=False):
+                          private_includes=False, msg=None, dll_export=False, need_patch=False,
+                          pure_c=False):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -190,7 +212,8 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     requires = ", ".join(requires)
 
     base_files = cpp_hello_source_files(name, code_deps, private_includes, msg=msg,
-                                        dll_export=dll_export, need_patch=need_patch)
+                                        dll_export=dll_export, need_patch=need_patch,
+                                        pure_c=pure_c)
     conanfile = conanfile_template.format(name=name,
                                       version=version,
                                       requires=requires,
