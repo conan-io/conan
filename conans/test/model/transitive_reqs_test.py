@@ -1330,6 +1330,32 @@ class SayConan(ConanFile):
             self.root(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux", ['Android', 'Macos', "Windows", "iOS"]),
                          str(cm.exception))
+        
+    def test_config_remove2(self):
+        content = """
+from conans import ConanFile
+
+class SayConan(ConanFile):
+    name = "Say"
+    version = "0.1"
+    settings = "os", "arch", "compiler"
+
+    def config(self):
+        del self.settings.compiler.version
+"""
+        deps_graph = self.root(content, settings="os=Windows\n compiler=gcc\narch=x86")
+        self.assertEqual(deps_graph.edges, set())
+        self.assertEqual(1, len(deps_graph.nodes))
+        node = deps_graph.get_nodes("Say")[0]
+        self.assertEqual(node.conan_ref, None)
+        conanfile = node.conanfile
+
+        self.assertEqual(conanfile.version, "0.1")
+        self.assertEqual(conanfile.name, "Say")
+        self.assertEqual(conanfile.options.values.dumps(), "")
+        self.assertEqual(conanfile.settings.fields, ["arch", "compiler", "os"])
+        self.assertNotIn("compiler.version", conanfile.settings.values.dumps())
+        self.assertEqual(conanfile.requires, Requirements())
 
     def test_transitive_two_levels_options(self):
         say_content = """

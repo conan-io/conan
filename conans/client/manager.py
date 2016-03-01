@@ -98,6 +98,15 @@ class ConanManager(object):
                                    "It is recommended to add the package license as attribute")
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
+
+        conan_ref_str = str(conan_ref)
+        # Maybe a platform check could be added, but depends on disk partition
+        info = self.file_manager.search(conan_ref_str, ignorecase=True)
+        refs = {s for s in info.iterkeys() if str(s).lower() == conan_ref_str.lower()}
+        if refs and conan_ref not in refs:
+            raise ConanException("Cannot export package with same name but different case\n"
+                                 "You exported '%s' but already existing '%s'"
+                                 % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
         export_conanfile(output, self._paths,
                          conan_file.exports, conan_file_path, conan_ref, keep_source)

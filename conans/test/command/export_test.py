@@ -6,6 +6,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
 from conans.test.tools import TestClient
+from conans.errors import ConanException
 
 
 class ExportTest(unittest.TestCase):
@@ -37,6 +38,15 @@ class ExportTest(unittest.TestCase):
                          'conanfile.py': '644b60e95962dabec1a814dedea32874',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
+
+    def test_case_sensitive(self):
+        self.files = cpp_hello_conan_files("hello0", "0.1")
+        self.conan_ref = ConanFileReference("hello0", "0.1", "lasote", "stable")
+        self.conan.save(self.files)
+        error = self.conan.run("export lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Cannot export package with same name but different case",
+                      self.conan.user_io.out)
 
     def test_export_filter(self):
         content = """
