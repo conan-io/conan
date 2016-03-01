@@ -1328,7 +1328,7 @@ class SayConan(ConanFile):
 
         with self.assertRaises(ConanException) as cm:
             self.root(content, options="arch_independent=True", settings="os=Linux")
-        self.assertIn(bad_value_msg("settings.os", "Linux", ['Android', 'Macos', "Windows"]),
+        self.assertIn(bad_value_msg("settings.os", "Linux", ['Android', 'Macos', "Windows", "iOS"]),
                          str(cm.exception))
         
     def test_config_remove2(self):
@@ -1343,7 +1343,7 @@ class SayConan(ConanFile):
     def config(self):
         del self.settings.compiler.version
 """
-        deps_graph = self.root(content, settings="os=Windows\n compiler=gcc\narch=x86")
+        deps_graph = self.root(content, settings="os=Windows\n compiler=gcc\narch=x86\ncompiler.libcxx=libstdc++")
         self.assertEqual(deps_graph.edges, set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = deps_graph.get_nodes("Say")[0]

@@ -161,11 +161,11 @@ class TestServer(object):
         # just urls, so testing framework performs a map between fake urls and instances
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         self.test_server = TestServerLauncher(base_path, read_permissions,
-                                              write_permissions, users,
-                                              base_url=self.fake_url + "/v1",
-                                              plugins=plugins,
-                                              server_version=server_version,
-                                              min_client_compatible_version=min_client_compatible_version)
+                                      write_permissions, users,
+                                      base_url=self.fake_url + "/v1",
+                                      plugins=plugins,
+                                      server_version=server_version,
+                                      min_client_compatible_version=min_client_compatible_version)
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property
@@ -257,13 +257,15 @@ class TestClient(object):
         self.min_server_compatible_version = Version(min_server_compatible_version)
 
         self.base_folder = base_folder or temp_folder()
-        # Define storage_folder, if not, it will be readed from conf file and pointed to real user home
+        # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
-        # First initialization for set paths (some test copies data before first real initialization)
-        self.init_dynamic_vars()
+
+        self.paths = migrate_and_get_paths(self.base_folder, TestBufferConanOutput(),
+                                           storage_folder=self.storage_folder)
+
         self.default_settings(get_env("CONAN_COMPILER", "gcc"),
                               get_env("CONAN_COMPILER_VERSION", "4.8"))
-
+        self.init_dynamic_vars()
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder()
 
@@ -275,10 +277,13 @@ class TestClient(object):
         text = load(self.paths.conan_conf_path)
         if compiler != "Visual Studio":
             text = text.replace("compiler.runtime=MD", "")
-        text = text.replace("build_type=Release", "")
+        # text = text.replace("build_type=Release", "")
 
-        text += "\n" + "compiler=%s" % compiler
-        text += "\n" + "compiler.version=%s" % compiler_version
+        text += "\ncompiler=%s" % compiler
+        text += "\ncompiler.version=%s" % compiler_version
+        if compiler != "Visual Studio":
+            text += "\ncompiler.libcxx=libstdc++"
+
         save(self.paths.conan_conf_path, text)
 
     @property

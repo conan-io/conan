@@ -10,18 +10,21 @@ import urllib
 MIN_SERVER_COMPATIBLE_VERSION = '0.6.0'
 
 default_settings_yml = """
-os: [Windows, Linux, Macos, Android]
+os: [Windows, Linux, Macos, Android, iOS]
 arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
 compiler:
     gcc:
         version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3"]
+        libcxx: [libstdc++, libstdc++11]
     Visual Studio:
-        runtime: [None, MD, MT, MTd, MDd]
+        runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14"]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7"]
+        libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0"]
+        libcxx: [libstdc++, libc++]
 
 build_type: [None, Debug, Release]
 """

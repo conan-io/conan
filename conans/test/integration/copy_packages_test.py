@@ -33,4 +33,5 @@ class CopyPackagesTest(unittest.TestCase):
         client.run("export lasote/stable")
         client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Linux --build missing")
-        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s compiler.version=4.6  --build missing")
+        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc "
+                   "-s compiler.version=4.6 -s compiler.libcxx=libstdc++ --build missing")
