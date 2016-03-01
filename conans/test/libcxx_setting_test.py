@@ -76,7 +76,7 @@ class LibcxxSettingTest(unittest.TestCase):
     def test_C_only(self):
         config = '''
     def config(self):
-        self.settings.compiler[self.settings.compiler].remove("libcxx") # C package only
+        del self.settings.compiler.libcxx # C package only
 '''
         self.files["conanfile.py"] = self.files["conanfile.py"].replace('["cmake"]',
                                                                         '["cmake"]\n %s' % config)

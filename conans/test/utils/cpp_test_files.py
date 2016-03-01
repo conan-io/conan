@@ -19,6 +19,7 @@ class {name}Conan(ConanFile):
     exports = '*'
 
     def config(self):
+        {libcxx_remove}
         for name, req in self.requires.iteritems():
             self.options[name].language = self.options.language
 
@@ -214,10 +215,12 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     base_files = cpp_hello_source_files(name, code_deps, private_includes, msg=msg,
                                         dll_export=dll_export, need_patch=need_patch,
                                         pure_c=pure_c)
+    libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
     conanfile = conanfile_template.format(name=name,
                                       version=version,
                                       requires=requires,
                                       language=language,
-                                      static=static)
+                                      static=static,
+                                      libcxx_remove=libcxx_remove)
     base_files[CONANFILE] = conanfile
     return base_files

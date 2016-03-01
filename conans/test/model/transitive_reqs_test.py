@@ -1343,7 +1343,7 @@ class SayConan(ConanFile):
     def config(self):
         del self.settings.compiler.version
 """
-        deps_graph = self.root(content, settings="os=Windows\n compiler=gcc\narch=x86")
+        deps_graph = self.root(content, settings="os=Windows\n compiler=gcc\narch=x86\ncompiler.libcxx=libstdc++")
         self.assertEqual(deps_graph.edges, set())
         self.assertEqual(1, len(deps_graph.nodes))
         node = deps_graph.get_nodes("Say")[0]
