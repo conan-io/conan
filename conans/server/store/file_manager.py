@@ -9,6 +9,7 @@ from abc import ABCMeta, abstractmethod
 from conans.util.log import logger
 from conans.errors import ConanException
 import traceback
+from conans.util.files import delete_empty_dirs
 
 
 class StorageAdapter:
@@ -99,7 +100,9 @@ class FileManager(object):
     # ######### DELETE
     def remove_conanfile(self, reference):
         assert isinstance(reference, ConanFileReference)
-        return self._file_adapter.delete_folder(self.paths.conan(reference))
+        result = self._file_adapter.delete_folder(self.paths.conan(reference))
+        delete_empty_dirs(self.paths.store)
+        return result
 
     def remove_packages(self, reference, package_ids_filter):
         assert isinstance(reference, ConanFileReference)
@@ -113,7 +116,7 @@ class FileManager(object):
                 package_ref = PackageReference(reference, package_id)
                 package_folder = self.paths.package(package_ref)
                 self._file_adapter.delete_folder(package_folder)
-
+        delete_empty_dirs(self.paths.store)
         return
 
     def remove_conanfile_files(self, reference, files):

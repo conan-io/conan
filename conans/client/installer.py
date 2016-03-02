@@ -21,13 +21,13 @@ class ConanInstaller(object):
         self._out = user_io.out
         self._remote_proxy = remote_proxy
 
-    def install(self, deps_graph, build_mode=False, source=None):
+    def install(self, deps_graph, build_mode=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
         self._out.writeln("\nInstalling requirements", Color.BRIGHT_YELLOW)
         nodes_by_level = self._process_buildinfo(deps_graph)
-        skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode, source)
+        skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         self._build(nodes_by_level, skip_private_nodes, build_mode)
 
     def _process_buildinfo(self, deps_graph):
@@ -56,7 +56,7 @@ class ConanInstaller(object):
         nodes_by_level = deps_graph.propagate_buildinfo()
         return nodes_by_level
 
-    def _compute_private_nodes(self, deps_graph, build_mode, source=None):
+    def _compute_private_nodes(self, deps_graph, build_mode):
         """ computes a list of nodes that are not required to be built, as they are
         private requirements of already available shared libraries as binaries
         """
@@ -65,10 +65,8 @@ class ConanInstaller(object):
         for private_node, private_requirers in private_closure:
             for private_requirer in private_requirers:
                 conan_ref, conan_file = private_requirer
-                if conan_file is source:
-                    break
                 if conan_ref is None:
-                    continue
+                    break
                 package_id = conan_file.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
                 package_folder = self._paths.package(package_reference)
