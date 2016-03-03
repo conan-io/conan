@@ -17,7 +17,7 @@ class DiamondTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        self.conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
 
     def _export_upload(self, name, version=None, deps=None):
         files = cpp_hello_conan_files(name, version, deps, need_patch=True)
@@ -51,7 +51,7 @@ class DiamondTest(unittest.TestCase):
         self._export_upload("Hello3", "0.1", ["Hello1/0.1@lasote/stable",
                                               "Hello2/0.1@lasote/stable"])
 
-        client = TestClient(servers=self.servers, users=[("lasote", "mypass")])  # Mocked userio
+        client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})  # Mocked userio
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"])
 
         # Add some stuff to base project conanfile to test further the individual
@@ -95,7 +95,7 @@ class DiamondTest(unittest.TestCase):
         client.run("upload Hello0/0.1@lasote/stable --all")
         self.assertEqual(str(client.user_io.out).count("Uploading package"), 2)
 
-        client2 = TestClient(servers=self.servers, users=[("lasote", "mypass")])  # Mocked userio
+        client2 = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})  # Mocked userio
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"])
         client2.save(files3)
         client2.run("install . --build missing")

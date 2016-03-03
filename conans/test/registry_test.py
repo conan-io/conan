@@ -5,7 +5,6 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
 from conans.test.tools import TestBufferConanOutput
-from conans.util.files import load
 
 
 class RegistryTest(unittest.TestCase):

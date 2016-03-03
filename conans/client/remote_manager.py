@@ -91,7 +91,7 @@ class RemoteManager(object):
         return self._call_remote(remote, 'authenticate', name, password)
 
     def _call_remote(self, remote, method, *argc, **argv):
-        self._remote_client.remote_url = remote.url
+        self._remote_client.remote = remote
         try:
             return getattr(self._remote_client, method)(*argc, **argv)
         except ConnectionError as exc:

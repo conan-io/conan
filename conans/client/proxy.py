@@ -104,9 +104,20 @@ class ConanProxy(object):
 
         raise ConanException("No remote defined")
 
-    def upload_conan(self, conan_reference):
-        remote = self._defined_remote
-        return self._remote_manager.upload_conan(conan_reference, remote)
+    def upload_conan(self, conan_reference):  
+        current_remote = self._registry.get_ref(conan_reference) 
+        if self._remote_name:
+            remote = self._registry.remote(self._remote_name)
+        else:
+            if current_remote:
+                remote = current_remote
+            else:
+                remote = self._registry.default_remote
+                
+        result = self._remote_manager.upload_conan(conan_reference, remote)
+        if not current_remote:
+            self._registry.set_ref(conan_reference, remote)
+        return result
 
     def upload_package(self, package_reference):
         remote = self._defined_remote
@@ -158,6 +169,6 @@ class ConanProxy(object):
             output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
             return False
 
-    def authenticate(self, remote, name, password):
+    def authenticate(self, name, password):
         remote = self._defined_remote
         return self._remote_manager.authenticate(remote, name, password)

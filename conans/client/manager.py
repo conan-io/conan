@@ -44,14 +44,13 @@ class ConanManager(object):
     """ Manage all the commands logic  The main entry point for all the client
     business logic
     """
-    def __init__(self, paths, user_io, runner, remote_manager, localdb):
+    def __init__(self, paths, user_io, runner, remote_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(paths, ConanPaths)
         self._paths = paths
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._localdb = localdb
 
     def _loader(self, current_path=None, user_settings_values=None, user_options_values=None):
         # The disk settings definition, already including the default disk values
@@ -165,10 +164,6 @@ class ConanManager(object):
 
                 if conanfile.name is not None and conanfile.version is not None:
                     project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
-                    # Calculate a placeholder conan file reference for the project
-                    current_user = self._localdb.get_username()
-                    if current_user:
-                        project_reference += "%s/" % current_user
                     project_reference += "PROJECT"
             except NotFoundException:  # Load requirements.txt
                 conan_path = os.path.join(conanfile_path, filename or CONANFILE_TXT)
@@ -362,21 +357,6 @@ class ConanManager(object):
         remover.remove(pattern, src, build_ids, package_ids_filter, force=force)
 
     def user(self, remote=None, name=None, password=None):
-        user = self._localdb.get_username()
-        if not name:
-            anon = '(anonymous)' if not user else ''
-            self._user_io.out.info('Current user: %s %s' % (user, anon))
-        else:
-            name = None if name == 'none' else name
-            anon = '(anonymous)' if not name else ''
-            if password is not None:
-                remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager,
-                                                remote)
-                token = remote_proxy.authenticate(remote=remote, name=name, password=password)
-            else:
-                token = None
-            if name == user:
-                self._user_io.out.info('Current user already: %s %s' % (user, anon))
-            else:
-                self._user_io.out.info('Change user from %s to %s %s' % (user, name, anon))
-            self._localdb.set_login((name, token))
+        remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote)
+        return remote_proxy.authenticate(name, password)
+        

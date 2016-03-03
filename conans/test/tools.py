@@ -30,6 +30,7 @@ from conans.client.command import migrate_and_get_paths
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.test.utils.test_files import temp_folder
 from conans.client.remote_registry import RemoteRegistry
+from collections import Counter
 
 
 class TestingResponse(object):
@@ -212,24 +213,29 @@ class MockedUserIO(UserIO):
 
     def __init__(self, logins, ins=sys.stdin, out=None):
         """
-        logins is a list of (user, password)==> [("lasote", "mypass"), ("other", "otherpass")]
+        logins is a dict of {remote: list(user, password)}
         will return sequentially
         """
+        assert isinstance(logins, dict)
         self.logins = logins
-        self.login_index = 0
+        self.login_index = Counter()
         UserIO.__init__(self, ins, out)
 
-    def get_username(self):
+    def get_username(self, remote_name):
         """Overridable for testing purpose"""
-        if len(self.logins) - 1 < self.login_index:
+        sub_dict = self.logins[remote_name]
+        index = self.login_index[remote_name]
+        if len(sub_dict) - 1 < index:
             raise Exception("Bad user/password in testing framework, "
                             "provide more tuples or input the right ones")
-        return self.logins[self.login_index][0]
+        return sub_dict[index][0]
 
-    def get_password(self):
+    def get_password(self, remote_name):
         """Overridable for testing purpose"""
-        tmp = self.logins[self.login_index][1]
-        self.login_index += 1
+        sub_dict = self.logins[remote_name]
+        index = self.login_index[remote_name]
+        tmp = sub_dict[index][1]
+        self.login_index.update([remote_name])
         return tmp
 
 
@@ -249,9 +255,8 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
-        if users is None:
-            users = [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]
-        self.users = users
+        self.users = users or {"default":
+                               [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
         self.servers = servers or {}
 
         self.client_version = Version(client_version)
@@ -263,7 +268,11 @@ class TestClient(object):
 
         self.paths = migrate_and_get_paths(self.base_folder, TestBufferConanOutput(),
                                            storage_folder=self.storage_folder)
-
+        save(self.paths.registry, "")
+        registry = RemoteRegistry(self.paths.registry, TestBufferConanOutput())
+        for name, server in self.servers.iteritems():
+            registry.add(name, server.fake_url)
+        
         self.default_settings(get_env("CONAN_COMPILER", "gcc"),
                               get_env("CONAN_COMPILER_VERSION", "4.8"))
         self.init_dynamic_vars()
@@ -300,10 +309,7 @@ class TestClient(object):
         self.paths = migrate_and_get_paths(self.base_folder, output,
                                            storage_folder=self.storage_folder)
 
-        save(self.paths.registry, "")
-        registry = RemoteRegistry(self.paths.registry, output)
-        for name, server in self.servers.iteritems():
-            registry.add(name, server.fake_url)
+        
 
         self.user_io = user_io or MockedUserIO(self.users, out=output)
 
@@ -331,8 +337,7 @@ class TestClient(object):
         """
         self.init_dynamic_vars(user_io)
 
-        command = Command(
-            self.paths, self.user_io, self.runner, self.remote_manager, self.localdb)
+        command = Command(self.paths, self.user_io, self.runner, self.remote_manager)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)

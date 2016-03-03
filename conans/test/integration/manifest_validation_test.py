@@ -14,7 +14,7 @@ class ManifestValidationTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        self.conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
 
         # Export and upload the conanfile
         self.conan_reference = ConanFileReference.loads("hello0/0.1@lasote/stable")

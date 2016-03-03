@@ -30,9 +30,9 @@ class AuthorizeTest(unittest.TestCase):
 
     def retries_test(self):
         """Bad login 2 times"""
-        self.conan = TestClient(servers=self.servers, users=[("baduser", "badpass"),
-                                                   ("baduser", "badpass2"),
-                                                   ("pepe", "pepepass")])  # Mocked userio
+        self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
+                                                                       ("baduser", "badpass2"),
+                                                                       ("pepe", "pepepass")]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export lasote")
         errors = self.conan.run("upload %s" % str(self.conan_reference))
@@ -42,13 +42,13 @@ class AuthorizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(self.test_server.paths.export(self.conan_reference)))
 
         # Check that login failed two times before ok
-        self.assertEquals(self.conan.user_io.login_index, 3)
+        self.assertEquals(self.conan.user_io.login_index["default"], 3)
 
     def max_retries_test(self):
         """Bad login 3 times"""
-        self.conan = TestClient(servers=self.servers, users=[("baduser", "badpass"),
-                                                        ("baduser", "badpass2"),
-                                                        ("baduser3", "badpass3")])  # Mocked userio
+        self.conan = TestClient(servers=self.servers, users={"default": [("baduser", "badpass"),
+                                                                    ("baduser", "badpass2"),
+                                                                    ("baduser3", "badpass3")]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export lasote -p ./ ")
         errors = self.conan.run("upload %s" % str(self.conan_reference), ignore_error=True)
@@ -58,4 +58,4 @@ class AuthorizeTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.test_server.paths.export(self.conan_reference)))
 
         # Check that login failed all times
-        self.assertEquals(self.conan.user_io.login_index, 3)
+        self.assertEquals(self.conan.user_io.login_index["default"], 3)
