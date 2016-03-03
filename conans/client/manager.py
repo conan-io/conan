@@ -26,7 +26,8 @@ from conans.model.build_info import DepsCppInfo
 from conans.client import packager
 from conans.client.package_copier import PackageCopier
 from conans.client.output import ScopedOutput
-from conans.client.proxy import ConanfileRemoteProxy, ConanRemoteProxy
+from conans.client.proxy import ConanProxy
+from conans.client.remote_registry import RemoteRegistry
 
 
 def get_user_channel(text):
@@ -43,14 +44,13 @@ class ConanManager(object):
     """ Manage all the commands logic  The main entry point for all the client
     business logic
     """
-    def __init__(self, paths, user_io, runner, remote_manager, localdb):
+    def __init__(self, paths, user_io, runner, remote_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(paths, ConanPaths)
         self._paths = paths
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._localdb = localdb
 
     def _loader(self, current_path=None, user_settings_values=None, user_options_values=None):
         # The disk settings definition, already including the default disk values
@@ -118,7 +118,7 @@ class ConanManager(object):
         @param remote: install only from that remote
         """
         assert(isinstance(reference, ConanFileReference))
-        remote_proxy = ConanRemoteProxy(self._paths, self._user_io, self._remote_manager, remote)
+        remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote)
 
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
@@ -145,12 +145,13 @@ class ConanManager(object):
             reference = None
 
         loader = self._loader(current_path, settings, options)
-        remote_proxy = ConanfileRemoteProxy(self._paths, self._user_io, loader,
-                                            self._remote_manager, remote)
+        remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote)
 
         if reference_given:
             project_reference = None
-            conanfile = remote_proxy.retrieve_conanfile(reference, consumer=True)
+            conanfile_path = remote_proxy.get_conanfile(reference)
+            output = ScopedOutput(str(reference), self._user_io.out)
+            conanfile = loader.load_conan(conanfile_path, output, consumer=True)
         else:
             project_reference = "PROJECT"
             output = ScopedOutput(project_reference, self._user_io.out)
@@ -163,10 +164,6 @@ class ConanManager(object):
 
                 if conanfile.name is not None and conanfile.version is not None:
                     project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
-                    # Calculate a placeholder conan file reference for the project
-                    current_user = self._localdb.get_username()
-                    if current_user:
-                        project_reference += "%s/" % current_user
                     project_reference += "PROJECT"
             except NotFoundException:  # Load requirements.txt
                 conan_path = os.path.join(conanfile_path, filename or CONANFILE_TXT)
@@ -174,14 +171,14 @@ class ConanManager(object):
                 is_txt = True
 
         # build deps graph and install it
-        builder = DepsBuilder(remote_proxy, self._user_io.out)
+        builder = DepsBuilder(remote_proxy, self._user_io.out, loader)
         deps_graph = builder.load(reference, conanfile)
+        registry = RemoteRegistry(self._paths.registry, self._user_io.out)
         if info:
-            Printer(self._user_io.out).print_info(deps_graph, project_reference, info)
+            Printer(self._user_io.out).print_info(deps_graph, project_reference, info, registry)
             return
-        Printer(self._user_io.out).print_graph(deps_graph)
+        Printer(self._user_io.out).print_graph(deps_graph, registry)
 
-        remote_proxy = ConanRemoteProxy(self._paths, self._user_io, self._remote_manager, remote)
         installer = ConanInstaller(self._paths, self._user_io, remote_proxy)
         installer.install(deps_graph, build_mode)
 
@@ -281,10 +278,7 @@ class ConanManager(object):
     def upload(self, conan_reference, package_id=None, remote=None, all_packages=None,
                force=False):
 
-        if not remote:
-            remote = self._remote_manager.default_remote  # Not iterate in remotes, just current
-
-        remote_proxy = ConanRemoteProxy(self._paths, self._user_io, self._remote_manager, remote)
+        remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote)
         uploader = ConanUploader(self._paths, self._user_io, remote_proxy)
 
         if package_id:  # Upload package
@@ -358,26 +352,11 @@ class ConanManager(object):
         @param remote: search on another origin to get packages info
         @param force: if True, it will be deleted without requesting anything
         """
-        remote_proxy = ConanRemoteProxy(self._paths, self._user_io, self._remote_manager, remote)
+        remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote)
         remover = ConanRemover(self.file_manager, self._user_io, remote_proxy)
         remover.remove(pattern, src, build_ids, package_ids_filter, force=force)
 
     def user(self, remote=None, name=None, password=None):
-        user = self._localdb.get_username()
-        if not name:
-            anon = '(anonymous)' if not user else ''
-            self._user_io.out.info('Current user: %s %s' % (user, anon))
-        else:
-            name = None if name == 'none' else name
-            anon = '(anonymous)' if not name else ''
-            if password is not None:
-                token = self._remote_manager.authenticate(remote=remote,
-                                                          name=name,
-                                                          password=password)
-            else:
-                token = None
-            if name == user:
-                self._user_io.out.info('Current user already: %s %s' % (user, anon))
-            else:
-                self._user_io.out.info('Change user from %s to %s %s' % (user, name, anon))
-            self._localdb.set_login((name, token))
+        remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote)
+        return remote_proxy.authenticate(name, password)
+        

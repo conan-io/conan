@@ -17,7 +17,7 @@ class RemoveTest(unittest.TestCase):
                                  base_path=self.server_folder)  # exported users and passwords
         self.server = test_server
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users=[("fenix", "mypass")])
+        client = TestClient(servers=servers, users={"default":[("fenix", "mypass")]})
 
         # Conans with and without packages created
         self.root_folder = {"H1": 'Hello/1.4.10/fenix/testing',

@@ -14,7 +14,7 @@ class ManifestValidationTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        self.conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
 
         # Export and upload the conanfile
         self.conan_reference = ConanFileReference.loads("hello0/0.1@lasote/stable")
@@ -38,7 +38,7 @@ class ManifestValidationTest(unittest.TestCase):
         save(file_path, "BAD CONTENT")
 
         self.conan.run("install %s --build missing" % str(self.conan_reference))
-        self.assertIn("%s: Conanfile not found, retrieving from server"
+        self.assertIn("%s: Retrieving a fresh conanfile from remotes"
                       % str(self.conan_reference),
                       self.conan.user_io.out)
 

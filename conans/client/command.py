@@ -60,14 +60,13 @@ class Command(object):
     collaborators.
     It can also show help of the tool
     """
-    def __init__(self, paths, user_io, runner, remote_manager, localdb):
+    def __init__(self, paths, user_io, runner, remote_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(paths, ConanPaths)
         self._conan_paths = paths
         self._user_io = user_io
         self._runner = runner
-        self._manager = ConanManager(paths, user_io, runner, remote_manager, localdb)
-        self._localdb = localdb
+        self._manager = ConanManager(paths, user_io, runner, remote_manager)
 
     def _parse_args(self, parser):
         parser.add_argument("-r", "--remote", help='look for in the remote storage')
@@ -518,9 +517,9 @@ def main(args):
     # Wraps RestApiClient to add authentication support (same interface)
     auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
     # Handle remote connections
-    remote_manager = RemoteManager(paths, paths.conan_config.remotes, auth_manager, out)
+    remote_manager = RemoteManager(paths, auth_manager, out)
 
-    command = Command(paths, user_io, ConanRunner(), remote_manager, localdb)
+    command = Command(paths, user_io, ConanRunner(), remote_manager)
     current_dir = os.getcwd()
     try:
         import signal

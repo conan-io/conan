@@ -129,27 +129,9 @@ class ConanInstaller(object):
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
-        # Check if package is corrupted
-        valid_package_digest = self._paths.valid_package_digest(package_reference)
-        if os.path.exists(package_folder) and not valid_package_digest:
-            # If not valid package, ensure empty folder
-            output.warn("Bad package '%s' detected! Removing "
-                        "package directory... " % str(package_id))
-            rmdir(package_folder)
-
-        # Check if any only_source pattern matches with package
         force_build = self._force_build(conan_ref, build_mode)
-
-        if not force_build:
-            local_package = os.path.exists(package_folder)
-            if local_package:
-                output.info('Package installed in %s' % package_folder)
-                return
-
-            output.info('Package not installed')
-            remote_package = self._remote_proxy.retrieve_remote_package(package_reference, output)
-            if remote_package:
-                return
+        if self._remote_proxy.get_package(package_reference, force_build):
+            return
 
         # Can we build? Only if we are forced or build_mode missing and package not exists
         build_allowed = force_build or build_mode is True

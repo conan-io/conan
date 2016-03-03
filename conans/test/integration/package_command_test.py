@@ -10,7 +10,7 @@ class PackageCommandTest(unittest.TestCase):
 
     def package_test(self):
         """Use 'conan package' command to repackage a generated package (without build it)"""
-        self.client = TestClient(users=[("lasote", "mypass")])
+        self.client = TestClient(users={"default":[("lasote", "mypass")]})
         conanfile_template = """
 from conans import ConanFile, CMake
 import platform
