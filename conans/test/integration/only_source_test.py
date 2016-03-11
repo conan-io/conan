@@ -27,7 +27,7 @@ class OnlySourceTest(unittest.TestCase):
     def conan_test_test(self):
         '''Checks --build in test command'''
 
-        client = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         self._create(client, "Hello0", "0.0")
         self._create(client, "Hello1", "1.1", ["Hello0/0.0@lasote/stable"])
 
@@ -87,11 +87,11 @@ class DefaultNameConan(ConanFile):
         client.run("test")
         self.assertIn('Cannot detect a valid conanfile in current directory', client.user_io.out)
         # It found the package already generated
-        self.assertIn('Hello2/2.2@lasote/stable: Package installed', client.user_io.out)
+        self.assertIn('Hello2/2.2@lasote/stable: Already installed!', client.user_io.out)
 
     def reuse_test(self):
 
-        client = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1")
         files[CONANFILE] = files[CONANFILE].replace("build", "build2")
@@ -107,25 +107,25 @@ class DefaultNameConan(ConanFile):
         client.run("upload %s --all" % str(conan_reference))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
-        other_conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        other_conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         other_conan.run("install %s --build missing" % str(conan_reference))
         self.assertFalse(os.path.exists(other_conan.paths.builds(conan_reference)))
         self.assertTrue(os.path.exists(other_conan.paths.packages(conan_reference)))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
-        other_conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        other_conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         other_conan.run("install %s --build" % str(conan_reference))
         self.assertTrue(os.path.exists(other_conan.paths.builds(conan_reference)))
         self.assertTrue(os.path.exists(other_conan.paths.packages(conan_reference)))
 
         # Use an invalid pattern and check that its not builded from source
-        other_conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        other_conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         other_conan.run("install %s --build HelloInvalid" % str(conan_reference))
         self.assertFalse(os.path.exists(other_conan.paths.builds(conan_reference)))
         self.assertTrue(os.path.exists(other_conan.paths.packages(conan_reference)))
 
         # Use another valid pattern and check that its not builded from source
-        other_conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        other_conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         other_conan.run("install %s --build HelloInvalid -b Hello" % str(conan_reference))
         self.assertTrue(os.path.exists(other_conan.paths.builds(conan_reference)))
         self.assertTrue(os.path.exists(other_conan.paths.packages(conan_reference)))

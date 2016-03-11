@@ -7,10 +7,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONAN_MANIFEST
 from conans.util.files import save
 from conans.model.manifest import FileTreeManifest
-from conans.model.options import OptionsValues
-from conans.client.loader import ConanFileLoader
-from conans.model.settings import Settings
-from conans.client.proxy import ConanfileRemoteProxy, ConanRemoteProxy
+from conans.client.proxy import ConanProxy
 
 
 myconan1 = """
@@ -55,24 +52,19 @@ class DownloadTest(unittest.TestCase):
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
              "//res")
 
-        client.remote_manager.upload_conan(conan_ref)
-        client.remote_manager.upload_package(package_ref)
+        client.run("upload %s" % str(conan_ref))
+        client.run("upload %s -p %s" % (str(conan_ref), package_ref.package_id))
 
         client2 = TestClient(servers=servers)
         client2.init_dynamic_vars()
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
 
-        installer = ConanfileRemoteProxy(client2.paths,
-                                         client2.user_io,
-                                         loader,
-                                         client2.remote_manager,
-                                         "default")
-        installer.retrieve_conanfile(conan_ref)
-        installer = ConanRemoteProxy(client2.paths,
+        installer = ConanProxy(client2.paths,
                                      client2.user_io,
                                      client2.remote_manager,
                                      "default")
-        installer.retrieve_remote_package(package_ref, TestBufferConanOutput())
+
+        installer.get_conanfile(conan_ref)
+        installer.get_package(package_ref, force_build=False)
 
         reg_path = client2.paths.export(ConanFileReference.loads("Hello/1.2.1/frodo/stable"))
         pack_folder = client2.paths.package(package_ref)

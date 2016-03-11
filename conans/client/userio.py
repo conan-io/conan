@@ -18,30 +18,30 @@ class UserIO(object):
             out = ConanOutput(sys.stdout)
         self.out = out
 
-    def request_login(self, username=None):
+    def request_login(self, remote_name, username=None):
         """Request user to input their name and password
         :param username If username is specified it only request password"""
         user_input = ''
         while not username:
             try:
-                self.out.write('Username: ')
-                user_input = self.get_username()
+                self.out.write("Remote '%s' username: " % remote_name)
+                user_input = self.get_username(remote_name)
                 username = Username(user_input)
             except InvalidNameException:
                 self.out.error('%s is not a valid username' % user_input)
 
         self.out.write('Please enter a password for "%s" account: ' % username)
         try:
-            pwd = self.get_password()
+            pwd = self.get_password(remote_name)
         except Exception as e:
             raise ConanException('Cancelled pass %s' % e)
         return username, pwd
 
-    def get_username(self):
+    def get_username(self, remote_name):
         """Overridable for testing purpose"""
         return raw_input()
 
-    def get_password(self):
+    def get_password(self, remote_name):
         """Overridable for testing purpose"""
         return getpass.getpass("")
 

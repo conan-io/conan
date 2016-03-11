@@ -13,9 +13,10 @@ class InstallSelectedPackagesTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers,  users=[("lasote", "mypass")])
+        self.client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         self.package_ids = self._upload_some_packages(self.client)
-        self.new_client = TestClient(servers=self.servers,  users=[("lasote", "mypass")])
+        self.new_client = TestClient(servers=self.servers, 
+                                     users={"default":[("lasote", "mypass")]})
 
     def install_all_test(self):
         # Should retrieve the three packages

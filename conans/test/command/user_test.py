@@ -8,20 +8,30 @@ class UserTest(unittest.TestCase):
         """ Test that the user can be shown and changed, and it is reflected in the
         user cache localdb
         """
-        conan = TestClient()
-        conan.run('user')
-        self.assertIn('Current user: None (anonymous)', conan.user_io.out)
-        conan.run('user john')
-        self.assertIn('Change user from None to john', conan.user_io.out)
-        self.assertEqual(('john', None), conan.localdb.get_login())
-        conan.run('user will')
-        self.assertIn('Change user from john to will', conan.user_io.out)
-        self.assertEqual(('will', None), conan.localdb.get_login())
-        conan.run('user none')
-        self.assertIn('Change user from will to None (anonymous)', conan.user_io.out)
-        self.assertEqual((None, None), conan.localdb.get_login())
-        conan.run('user')
-        self.assertIn('Current user: None (anonymous)', conan.user_io.out)
+        client = TestClient()
+        client.run('user', ignore_error=True)
+        self.assertIn("ERROR: No default remote defined", client.user_io.out)
+
+    def test_with_remote_no_connect(self):
+        test_server = TestServer()
+        client = TestClient(servers={"default": test_server})
+        client.run('user')
+        self.assertIn("Current 'default' user: None (anonymous)", client.user_io.out)
+
+        client.run('user john')
+        self.assertIn("Change 'default' user from None (anonymous) to john", client.user_io.out)
+        self.assertEqual(('john', None), client.localdb.get_login(test_server.fake_url))
+
+        client.run('user will')
+        self.assertIn("Change 'default' user from john to will", client.user_io.out)
+        self.assertEqual(('will', None), client.localdb.get_login(test_server.fake_url))
+
+        client.run('user None')
+        self.assertIn("Change 'default' user from will to None (anonymous)", client.user_io.out)
+        self.assertEqual((None, None), client.localdb.get_login(test_server.fake_url))
+
+        client.run('user')
+        self.assertIn("Current 'default' user: None (anonymous)", client.user_io.out)
 
     def test_command_user_with_password(self):
         """ Checks the -p option, that obtains a token from the password.
@@ -32,17 +42,17 @@ class UserTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         servers = {"default": test_server}
-        conan = TestClient(servers=servers, users=[("lasote", "mypass")])  # Mocked userio
+        conan = TestClient(servers=servers, users={"default":[("lasote", "mypass")]})  # Mocked userio
         conan.run('user dummy -p ping_pong2', ignore_error=True)
         self.assertIn("ERROR: Wrong user or password", conan.user_io.out)
         conan.run('user lasote -p mypass')
         self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
-        self.assertIn("Change user from None to lasote", conan.user_io.out)
+        self.assertIn("Change 'default' user from None (anonymous) to lasote", conan.user_io.out)
         conan.run('user none')
-        self.assertIn('Change user from lasote to None (anonymous)', conan.user_io.out)
-        self.assertEqual((None, None), conan.localdb.get_login())
+        self.assertIn("Change 'default' user from lasote to None (anonymous)", conan.user_io.out)
+        self.assertEqual((None, None), conan.localdb.get_login(test_server.fake_url))
         conan.run('user')
-        self.assertIn('Current user: None (anonymous)', conan.user_io.out)
+        self.assertIn("Current 'default' user: None (anonymous)", conan.user_io.out)
 
     def test_command_user_with_password_spaces(self):
         """ Checks the -p option, that obtains a token from the password.
@@ -53,11 +63,11 @@ class UserTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": 'my "password'})
         servers = {"default": test_server}
-        conan = TestClient(servers=servers, users=[("lasote", "mypass")])
+        conan = TestClient(servers=servers, users={"default":[("lasote", "mypass")]})
         conan.run(r'user lasote -p="my \"password"')
         self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
-        self.assertIn("Change user from None to lasote", conan.user_io.out)
+        self.assertIn("Change 'default' user from None (anonymous) to lasote", conan.user_io.out)
         conan.run('user none')
         conan.run(r'user lasote -p "my \"password"')
         self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
-        self.assertIn("Change user from None to lasote", conan.user_io.out)
+        self.assertIn("Change 'default' user from None (anonymous) to lasote", conan.user_io.out)

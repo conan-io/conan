@@ -86,7 +86,7 @@ class ConanClientConfigParser(ConfigParser):
         return result
 
     @property
-    def remotes(self):
+    def deprecated_remotes(self):
         return self.get_conf("remotes")
 
     @property

@@ -16,7 +16,7 @@ class CompleteFlowTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        self.client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
 
     def reuse_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
@@ -46,7 +46,7 @@ class CompleteFlowTest(unittest.TestCase):
         self._assert_library_exists_in_server(package_ref, server_paths)
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
-        other_conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        other_conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         other_conan.run("install %s --build missing" % str(conan_reference))
         # Build should be empty
         build_path = other_conan.paths.build(package_ref)
@@ -63,7 +63,7 @@ class CompleteFlowTest(unittest.TestCase):
             ref = PackageReference(conan_reference, package_id)
             self._assert_library_exists(ref, other_conan.paths)
 
-        client3 = TestClient(servers=self.servers, users=[("lasote", "mypass")])  # Mocked userio
+        client3 = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})  # Mocked userio
         conan_reference = ConanFileReference.loads("Hello1/0.2@lasote/stable")
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         client3.save(files3)

@@ -85,7 +85,21 @@ class RestApiClient(object):
         urls = self._get_json(url)
 
         # Get the digest
-        contents = self.download_files(urls, self._output)
+        contents = self.download_files(urls)
+        contents = dict(contents)  # Unroll generator
+        return FileTreeManifest.loads(contents[CONAN_MANIFEST])
+
+    def get_package_digest(self, package_reference):
+        """Gets a FileTreeManifest from conans"""
+
+        # Obtain the URLs
+        url = "%s/conans/%s/packages/%s/digest" % (self._remote_api_url,
+                                                   "/".join(package_reference.conan),
+                                                   package_reference.package_id)
+        urls = self._get_json(url)
+
+        # Get the digest
+        contents = self.download_files(urls)
         contents = dict(contents)  # Unroll generator
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
@@ -306,7 +320,7 @@ class RestApiClient(object):
     def _remote_api_url(self):
         return "%s/v1" % self.remote_url
 
-    def download_files(self, file_urls, output):
+    def download_files(self, file_urls, output=None):
         """
         :param: file_urls is a dict with {filename: url}
 
@@ -314,9 +328,11 @@ class RestApiClient(object):
         """
         downloader = Downloader(self.requester, output, self.VERIFY_SSL)
         for filename, resource_url in file_urls.iteritems():
-            output.writeln("Downloading %s" % filename)
+            if output:
+                output.writeln("Downloading %s" % filename)
             contents = downloader.download(resource_url)
-            output.writeln("")
+            if output:
+                output.writeln("")
             yield os.path.normpath(filename), contents
 
     def upload_files(self, file_urls, files, output):

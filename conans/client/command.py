@@ -26,6 +26,7 @@ from conans.util.files import rmdir, load
 from argparse import RawTextHelpFormatter
 import re
 from conans.client.runner import ConanRunner
+from conans.client.remote_registry import RemoteRegistry
 
 
 class Extender(argparse.Action):
@@ -60,14 +61,13 @@ class Command(object):
     collaborators.
     It can also show help of the tool
     """
-    def __init__(self, paths, user_io, runner, remote_manager, localdb):
+    def __init__(self, paths, user_io, runner, remote_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(paths, ConanPaths)
         self._conan_paths = paths
         self._user_io = user_io
         self._runner = runner
-        self._manager = ConanManager(paths, user_io, runner, remote_manager, localdb)
-        self._localdb = localdb
+        self._manager = ConanManager(paths, user_io, runner, remote_manager)
 
     def _parse_args(self, parser):
         parser.add_argument("-r", "--remote", help='look for in the remote storage')
@@ -85,6 +85,16 @@ class Command(object):
 --build=missing    Build from code if a binary package is not found.
 --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 ''')
+
+    def _get_tuples_list_from_extender_arg(self, items):
+        if not items:
+            return []
+        # Validate the pairs
+        for item in items:
+            chunks = item.split("=")
+            if len(chunks) != 2:
+                raise ConanException("Invalid input '%s', use 'name=value'" % item)
+        return [(item[0], item[1]) for item in [item.split("=") for item in items]]
 
     def _detect_tested_library_name(self):
         conanfile_content = load(CONANFILE)
@@ -147,6 +157,9 @@ class Command(object):
         rmdir(build_folder)
         shutil.copytree(test_folder, build_folder)
 
+        options = self._get_tuples_list_from_extender_arg(args.options)
+        settings = self._get_tuples_list_from_extender_arg(args.settings)
+
         self._manager.install(reference=build_folder,
                               current_path=build_folder,
                               remote=args.remote,
@@ -170,6 +183,8 @@ class Command(object):
         parser.add_argument("--all", action='store_true', default=False,
                             help='Install all packages from the specified reference')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
+        parser.add_argument("--update", "-u", action='store_true', default=False,
+                            help="update with new upstream packages")
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -190,15 +205,17 @@ class Command(object):
         else:  # Classic install, package chosen with settings and options
             # Get False or a list of patterns to check
             args.build = self._get_build_sources_parameter(args.build)
-            option_dict = args.options or []
-            settings_dict = args.settings or []
+            options = self._get_tuples_list_from_extender_arg(args.options)
+            settings = self._get_tuples_list_from_extender_arg(args.settings)
+
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,
-                                  options=option_dict,
-                                  settings=settings_dict,
+                                  options=options,
+                                  settings=settings,
                                   build_mode=args.build,
-                                  filename=args.file)
+                                  filename=args.file,
+                                  update=args.update)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -211,14 +228,18 @@ class Command(object):
                             help='reference name or path to conanfile file, '
                             'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        self._parse_args(parser)
+        parser.add_argument("-r", "--remote", help='look for in the remote storage')
+        parser.add_argument("--options", "-o",
+                            help='load options to build the package, e.g., -o with_qt=true',
+                            nargs=1, action=Extender)
+        parser.add_argument("--settings", "-s",
+                            help='load settings to build the package, -s compiler:gcc',
+                            nargs=1, action=Extender)
 
         args = parser.parse_args(*args)
 
-        # Get False or a list of patterns to check
-        args.build = self._get_build_sources_parameter(args.build)
-        option_dict = args.options or []
-        settings_dict = args.settings or []
+        options = self._get_tuples_list_from_extender_arg(args.options)
+        settings = self._get_tuples_list_from_extender_arg(args.settings)
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -228,9 +249,9 @@ class Command(object):
         self._manager.install(reference=reference,
                               current_path=current_path,
                               remote=args.remote,
-                              options=option_dict,
-                              settings=settings_dict,
-                              build_mode=args.build,
+                              options=options,
+                              settings=settings,
+                              build_mode=False,
                               info=True,
                               filename=args.file)
 
@@ -414,6 +435,54 @@ class Command(object):
 
         self._manager.upload(conan_ref, package_id,
                              args.remote, all_packages=args.all, force=args.force)
+        
+    def remote(self, *args):
+        """ manage remotes
+        """
+        parser = argparse.ArgumentParser(description=self.remote.__doc__, prog="conan remote")
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+
+        # create the parser for the "a" command
+        parser_list = subparsers.add_parser('list', help='list current remotes')
+        parser_add = subparsers.add_parser('add', help='add help')
+        parser_add.add_argument('remote',  help='name of the remote help')
+        parser_add.add_argument('url',  help='name of the remote help')
+        parser_rm = subparsers.add_parser('remove', help='remove help')
+        parser_rm.add_argument('remote',  help='name of the remote help')
+        parser_upd = subparsers.add_parser('update', help='remove help')
+        parser_upd.add_argument('remote',  help='name of the remote')
+        parser_upd.add_argument('url',  help='url')
+        parser_plist = subparsers.add_parser('plist', help='plist current remotes')
+        parser_padd = subparsers.add_parser('padd', help='padd current remotes')
+        parser_padd.add_argument('remote',  help='name of the remote help')
+        parser_padd.add_argument('url',  help='name of the remote help')
+        parser_prm = subparsers.add_parser('premove', help='premove current remotes')
+        parser_prm.add_argument('remote',  help='name of the remote help')
+        parser_pupd = subparsers.add_parser('pupdate', help='pupdate current remotes')
+        parser_pupd.add_argument('remote',  help='name of the remote help')
+        parser_pupd.add_argument('url',  help='name of the remote help')
+        args = parser.parse_args(*args)
+        
+        registry = RemoteRegistry(self._conan_paths.registry, self._user_io.out)
+        if args.subcommand == "list":
+            for r in registry.remotes:
+                self._user_io.out.info("%s: %s" % (r.name, r.url))
+        elif args.subcommand == "add":
+            registry.add(args.remote, args.url)
+        elif args.subcommand == "remove":
+            registry.remove(args.remote)
+        elif args.subcommand == "update":
+            registry.update(args.remote, args.url)
+        elif args.subcommand == "plist":
+            for ref, remote in registry.refs.iteritems():
+                self._user_io.out.info("%s: %s" % (ref, remote))
+        elif args.subcommand == "padd":
+            registry.add_ref(args.remote, args.url)
+        elif args.subcommand == "premove":
+            registry.remove_ref(args.remote)
+        elif args.subcommand == "pupdate":
+            registry.update_ref(args.remote, args.url)
+        
 
     def _show_help(self):
         """ prints a summary of all commands
@@ -471,12 +540,12 @@ class Command(object):
         return errors
 
 
-def migrate_and_get_paths(base_folder, out, storage_folder=None):
+def migrate_and_get_paths(base_folder, out, manager, storage_folder=None):
     # Init paths
     paths = ConanPaths(base_folder, storage_folder, out)
 
     # Migration system
-    migrator = ClientMigrator(paths, Version(CLIENT_VERSION), out)
+    migrator = ClientMigrator(paths, Version(CLIENT_VERSION), out, manager)
     migrator.migrate()
 
     # Init again paths, migration could change config
@@ -484,10 +553,25 @@ def migrate_and_get_paths(base_folder, out, storage_folder=None):
     return paths
 
 
-def main(args):
-    """ main entry point of the conans application, using a Command to
-    parse parameters
-    """
+def get_command():
+
+    def instance_remote_manager(paths):
+        requester = requests.Session()
+        requester.proxies = paths.conan_config.proxies
+        # Verify client version against remotes
+        version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
+                                                            Version(MIN_SERVER_COMPATIBLE_VERSION),
+                                                            out)
+        # To handle remote connections
+        rest_api_client = RestApiClient(out, requester=version_checker_requester)
+        # To store user and token
+        localdb = LocalDB(paths.localdb)
+        # Wraps RestApiClient to add authentication support (same interface)
+        auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
+        # Handle remote connections
+        remote_manager = RemoteManager(paths, auth_manager, out)
+        return remote_manager
+
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         import colorama
         colorama.init()
@@ -500,27 +584,26 @@ def main(args):
     user_folder = os.getenv("CONAN_USER_HOME", os.path.expanduser("~"))
     try:
         # To capture exceptions in conan.conf parsing
-        paths = migrate_and_get_paths(user_folder, out)
+        paths = ConanPaths(user_folder, None, out)
+        # obtain a temp ConanManager instance to execute the migrations
+        remote_manager = instance_remote_manager(paths)
+        manager = ConanManager(paths, user_io, ConanRunner(), remote_manager)
+        paths = migrate_and_get_paths(user_folder, out, manager)
     except Exception as e:
         out.error(str(e))
         sys.exit(True)
 
-    requester = requests.Session()
-    requester.proxies = paths.conan_config.proxies
-    # Verify client version against remotes
-    version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
-                                                        Version(MIN_SERVER_COMPATIBLE_VERSION),
-                                                        out)
-    # To handle remote connections
-    rest_api_client = RestApiClient(out, requester=version_checker_requester)
-    # To store user and token
-    localdb = LocalDB(paths.localdb)
-    # Wraps RestApiClient to add authentication support (same interface)
-    auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
-    # Handle remote connections
-    remote_manager = RemoteManager(paths, paths.conan_config.remotes, auth_manager, out)
+    # Get the new command instance after migrations have been done
+    manager = instance_remote_manager(paths)
+    command = Command(paths, user_io, ConanRunner(), manager)
+    return command
 
-    command = Command(paths, user_io, ConanRunner(), remote_manager, localdb)
+
+def main(args):
+    """ main entry point of the conans application, using a Command to
+    parse parameters
+    """
+    command = get_command()
     current_dir = os.getcwd()
     try:
         import signal
