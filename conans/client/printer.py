@@ -1,5 +1,6 @@
 from conans.client.output import Color
 from conans.model.ref import PackageReference
+from conans.model.ref import ConanFileReference
 
 
 class Printer(object):
@@ -60,13 +61,14 @@ class Printer(object):
                     ref = project_reference
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             reg_remote = registry.get_ref(ref)
-            if reg_remote:
-                remote_name = remote or reg_remote.name
-                self._out.writeln("    Remote: %s=%s" % (reg_remote.name, reg_remote.url),
-                                  Color.BRIGHT_GREEN)
-            else:
-                self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
-                remote_name = remote
+            if isinstance(ref, ConanFileReference):  # Excludes PROJECT fake reference
+                if reg_remote:
+                    remote_name = remote or reg_remote.name
+                    self._out.writeln("    Remote: %s=%s" % (reg_remote.name, reg_remote.url),
+                                      Color.BRIGHT_GREEN)
+                else:
+                    self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
+                    remote_name = remote
 
             url = getattr(conan, "url", None)
             license_ = getattr(conan, "license", None)
@@ -77,18 +79,23 @@ class Printer(object):
                 self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
             if author:
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
-            update = graph_updates_info.get(ref, 0)
-            update_messages = {
-             0: ("You have the latest version (%s)" % remote_name, Color.BRIGHT_GREEN),
-             1: ("There is a newer version (%s)" % remote_name, Color.BRIGHT_YELLOW),
-             -1: ("The local file is newer than remote's one (%s)" % remote_name, Color.BRIGHT_RED)
-            }
-            self._out.writeln("    Updates: %s" % update_messages[update][0], update_messages[update][1])
+
+            if isinstance(ref, ConanFileReference):  # Excludes PROJECT fake reference
+                update = graph_updates_info.get(ref, 0)
+                update_messages = {
+                 0: ("You have the latest version (%s)" % remote_name, Color.BRIGHT_GREEN),
+                 1: ("There is a newer version (%s)" % remote_name, Color.BRIGHT_YELLOW),
+                 -1: ("The local file is newer than remote's one (%s)" % remote_name, Color.BRIGHT_RED)
+                }
+                self._out.writeln("    Updates: %s" % update_messages[update][0], update_messages[update][1])
+
             dependants = deps_graph.inverse_neighbors(node)
-            self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
-            for d in dependants:
-                ref = repr(d.conan_ref) if d.conan_ref else project_reference
-                self._out.writeln("        %s" % ref, Color.BRIGHT_YELLOW)
+            if isinstance(ref, ConanFileReference):  # Excludes PROJECT fake reference
+                self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
+                for d in dependants:
+                    ref = repr(d.conan_ref) if d.conan_ref else project_reference
+                    self._out.writeln("        %s" % ref, Color.BRIGHT_YELLOW)
+
             depends = deps_graph.neighbors(node)
             if depends:
                 self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
