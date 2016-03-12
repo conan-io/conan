@@ -42,11 +42,8 @@ class InfoTest(unittest.TestCase):
         expected_output = textwrap.dedent(
             """\
             Hello2/0.1@PROJECT
-                Remote: None
                 URL: myurl
                 License: MIT
-                Updates: You have the latest version (None)
-                Required by:
                 Requires:
                     Hello1/0.1@lasote/stable
             Hello0/0.1@lasote/stable

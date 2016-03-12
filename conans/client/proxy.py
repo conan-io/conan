@@ -106,8 +106,14 @@ class ConanProxy(object):
                                     rmdir(self._paths.packages(conan_reference))
                                 _refresh()
                         elif ret == -1:
-                            output.error("Current conanfile is newer than %s's one. Remove the local conanfile "\
-                                         "and execute install again." % remote.name)
+                            if not self._update:
+                                output.info("Current conanfile is newer "
+                                            "than %s's one" % remote.name)
+                            else:
+                                output.error("Current conanfile is newer than %s's one. "
+                                             "Run 'conan remove %s' and run install again "
+                                             "to replace it." % (remote.name, conan_reference))
+
         else:
             self._retrieve_conanfile(conan_reference, output)
         return conanfile_path
