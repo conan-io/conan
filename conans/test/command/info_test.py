@@ -44,49 +44,22 @@ class InfoTest(unittest.TestCase):
             Hello2/0.1@PROJECT
                 URL: myurl
                 License: MIT
-                Required by:
                 Requires:
                     Hello1/0.1@lasote/stable
             Hello0/0.1@lasote/stable
+                Remote: None
                 URL: myurl
                 License: MIT
+                Updates: You have the latest version (None)
                 Required by:
                     Hello1/0.1@lasote/stable
             Hello1/0.1@lasote/stable
+                Remote: None
                 URL: myurl
                 License: MIT
+                Updates: You have the latest version (None)
                 Required by:
                     Hello2/0.1@PROJECT
-                Requires:
-                    Hello0/0.1@lasote/stable""")
-        self.assertIn(expected_output, self.client.user_io.out)
-
-    def username_included_in_info_test(self):
-        self.client = TestClient()
-        self._create("Hello0", "0.1")
-        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
-
-        self.client.run("user superman")
-        self.client.run("info")
-        expected_output = textwrap.dedent(
-            """\
-            Hello2/0.1@superman/PROJECT
-                URL: myurl
-                License: MIT
-                Required by:
-                Requires:
-                    Hello1/0.1@lasote/stable
-            Hello0/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-                Required by:
-                    Hello1/0.1@lasote/stable
-            Hello1/0.1@lasote/stable
-                URL: myurl
-                License: MIT
-                Required by:
-                    Hello2/0.1@superman/PROJECT
                 Requires:
                     Hello0/0.1@lasote/stable""")
         self.assertIn(expected_output, self.client.user_io.out)

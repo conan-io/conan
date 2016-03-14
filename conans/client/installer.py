@@ -25,7 +25,6 @@ class ConanInstaller(object):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
-        self._out.writeln("\nInstalling requirements", Color.BRIGHT_YELLOW)
         nodes_by_level = self._process_buildinfo(deps_graph)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         self._build(nodes_by_level, skip_private_nodes, build_mode)
@@ -69,14 +68,9 @@ class ConanInstaller(object):
                     break
                 package_id = conan_file.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
-                package_folder = self._paths.package(package_reference)
-                if not path_exists(package_folder, self._paths.store):
-                    if not self._force_build(conan_ref, build_mode):  # Not download package
-                        output = ScopedOutput(str(conan_ref), self._out)
-                        output.info('Package not installed')
-                        if not self._remote_proxy.retrieve_remote_package(package_reference,
-                                                                          output):
-                            break
+                force_build = self._force_build(conan_ref, build_mode)
+                if not self._remote_proxy.get_package(package_reference, force_build):
+                    break
             else:
                 skippable_nodes.append(private_node)
         return skippable_nodes
@@ -117,8 +111,6 @@ class ConanInstaller(object):
         # Compute conan_file package from local (already compiled) or from remote
         output = ScopedOutput(str(conan_ref), self._out)
         package_id = conan_file.info.package_id()
-        self._out.writeln("")
-        output.info("Installing package %s" % package_id)
         package_reference = PackageReference(conan_ref, package_id)
 
         conan_ref = package_reference.conan
@@ -127,29 +119,17 @@ class ConanInstaller(object):
         src_folder = self._paths.source(conan_ref)
         export_folder = self._paths.export(conan_ref)
 
+        # If already exists do not dirt the output, the common situation
+        # is that package is already installed and OK. If don't, the proxy
+        # will print some other message about it
+        if not os.path.exists(package_folder):
+            output.info("Installing package %s" % package_id)
+
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
-        # Check if package is corrupted
-        valid_package_digest = self._paths.valid_package_digest(package_reference)
-        if os.path.exists(package_folder) and not valid_package_digest:
-            # If not valid package, ensure empty folder
-            output.warn("Bad package '%s' detected! Removing "
-                        "package directory... " % str(package_id))
-            rmdir(package_folder)
-
-        # Check if any only_source pattern matches with package
         force_build = self._force_build(conan_ref, build_mode)
-
-        if not force_build:
-            local_package = os.path.exists(package_folder)
-            if local_package:
-                output.info('Package installed in %s' % package_folder)
-                return
-
-            output.info('Package not installed')
-            remote_package = self._remote_proxy.retrieve_remote_package(package_reference, output)
-            if remote_package:
-                return
+        if self._remote_proxy.get_package(package_reference, force_build):
+            return
 
         # Can we build? Only if we are forced or build_mode missing and package not exists
         build_allowed = force_build or build_mode is True

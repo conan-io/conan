@@ -140,19 +140,17 @@ class StorePaths(SimplePaths):
         filename = os.path.join(self.export(conan_reference), CONAN_MANIFEST)
         return FileTreeManifest.loads(load(filename))
 
-    def valid_conan_digest(self, conan_reference):
+    def conan_manifests(self, conan_reference):
         digest_path = self.digestfile_conanfile(conan_reference)
-        if not path_exists(digest_path, self.store):
-            return False
-        return self.valid_digest(digest_path)
-
-    def valid_package_digest(self, package_reference):
+        return self._digests(digest_path)
+    
+    def package_manifests(self, package_reference):
         digest_path = self.digestfile_package(package_reference)
-        return self.valid_digest(digest_path)
-
-    def valid_digest(self, digest_path):
-        if not os.path.exists(digest_path):
-            return False
-        expected_digest = FileTreeManifest.create(os.path.dirname(digest_path))
+        return self._digests(digest_path)
+        
+    def _digests(self, digest_path):
+        if not path_exists(digest_path, self.store):
+            return None, None
         readed_digest = FileTreeManifest.loads(load(digest_path))
-        return readed_digest.file_sums == expected_digest.file_sums
+        expected_digest = FileTreeManifest.create(os.path.dirname(digest_path))
+        return readed_digest, expected_digest

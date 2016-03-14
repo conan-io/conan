@@ -11,7 +11,7 @@ class VersionCheckTest(unittest.TestCase):
         # Client deprecated
         self.servers = {"default": self._get_server(10, 5)}
         self.client = TestClient(servers=self.servers,
-                                 users=[("lasote", "mypass")], client_version=4)
+                                 users={"default":[("lasote", "mypass")]}, client_version=4)
 
         errors = self.client.run("search something -r default", ignore_error=True)
         self.assertIn("Your conan's client version is deprecated for the current remote (v10). Upgrade conan client.", self.client.user_io.out)
@@ -20,7 +20,7 @@ class VersionCheckTest(unittest.TestCase):
         # Client outdated
         self.servers = {"default": self._get_server(10, 4)}
         self.client = TestClient(servers=self.servers,
-                                 users=[("lasote", "mypass")], client_version=4)
+                                 users={"default":[("lasote", "mypass")]}, client_version=4)
 
         errors = self.client.run("search something -r default", ignore_error=False)
         self.assertIn(" A new conan version (v10) is available in current remote. Please, upgrade conan client to avoid deprecation.", self.client.user_io.out)
@@ -29,7 +29,7 @@ class VersionCheckTest(unittest.TestCase):
         # Client ok
         self.servers = {"default": self._get_server(10, 4)}
         self.client = TestClient(servers=self.servers,
-                                 users=[("lasote", "mypass")], client_version=10)
+                                 users={"default":[("lasote", "mypass")]}, client_version=10)
 
         errors = self.client.run("search something -r default", ignore_error=False)
         self.assertNotIn("conan client", self.client.user_io.out)
@@ -38,7 +38,7 @@ class VersionCheckTest(unittest.TestCase):
         # Server outdated
         self.servers = {"default": self._get_server(1, 1)}
         self.client = TestClient(servers=self.servers,
-                                 users=[("lasote", "mypass")], client_version=10,
+                                 users={"default":[("lasote", "mypass")]}, client_version=10,
                                  min_server_compatible_version=1)
 
         errors = self.client.run("search something -r default", ignore_error=True)
@@ -50,7 +50,7 @@ class VersionCheckTest(unittest.TestCase):
         # Server deprecated
         self.servers = {"default": self._get_server(1, 1)}
         self.client = TestClient(servers=self.servers,
-                                 users=[("lasote", "mypass")], client_version=10,
+                                 users={"default":[("lasote", "mypass")]}, client_version=10,
                                  min_server_compatible_version=2)
 
         errors = self.client.run("search something -r default", ignore_error=True)
@@ -73,7 +73,7 @@ class VersionCheckTest(unittest.TestCase):
 
         # First upload a package ok with an ok client
         tmp_client = TestClient(servers=self.servers,
-                                users=[("lasote", "mypass")], client_version=4)
+                                users={"default":[("lasote", "mypass")]}, client_version=4)
         files = cpp_hello_conan_files("Hello0", "0.1")
         tmp_client.save(files)
         tmp_client.run("export lasote/stable")
@@ -83,7 +83,7 @@ class VersionCheckTest(unittest.TestCase):
 
         # Now with a conflictive client...try to look in servers
         self.client = TestClient(servers=self.servers,
-                                 users=[("lasote", "mypass")], client_version=2)
+                                 users={"default":[("lasote", "mypass")]}, client_version=2)
         errors = self.client.run("search something -r the_last_server", ignore_error=True)
         self.assertIn("Your conan's client version is deprecated for the current remote (v10). Upgrade conan client.", self.client.user_io.out)
         self.assertTrue(errors)  # Errors

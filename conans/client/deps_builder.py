@@ -7,6 +7,7 @@ from conans.model.ref import PackageReference
 from conans.model.build_info import DepsCppInfo
 from conans.model.info import ConanInfo
 from conans.errors import ConanException
+from conans.client.output import ScopedOutput
 
 
 class Edge(namedtuple("Edge", "src dst")):
@@ -213,12 +214,20 @@ class DepsGraph(object):
 class DepsBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, retriever, output):
+    def __init__(self, retriever, output, loader):
         """ param retriever: something that implements retrieve_conanfile for installed conans
         param loader: helper ConanLoader to be able to load user space conanfile
         """
         self._retriever = retriever
         self._output = output
+        self._loader = loader
+
+    def get_graph_updates_info(self, deps_graph):
+        """
+        returns a dict of conan_reference: 1 if there is an update, 0 if don't and -1 if local is newer
+        """
+        return {conan_reference: self._retriever.update_available(conan_reference)
+                for conan_reference, _ in deps_graph.nodes}
 
     def load(self, conan_ref, conanfile):
         """ compute the dependencies graph for:
@@ -302,7 +311,9 @@ class DepsBuilder(object):
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req):
         """ creates and adds a new node to the dependency graph
         """
-        dep_conanfile = self._retriever.retrieve_conanfile(requirement.conan_reference)
+        conanfile_path = self._retriever.get_conanfile(requirement.conan_reference)
+        output = ScopedOutput(str(requirement.conan_reference), self._output)
+        dep_conanfile = self._loader.load_conan(conanfile_path, output)
         if dep_conanfile:
             new_node = Node(requirement.conan_reference, dep_conanfile)
             dep_graph.add_node(new_node)

@@ -10,7 +10,7 @@ from conans.util.files import rmdir
 class CopyPackagesTest(unittest.TestCase):
 
     def test_copy_command(self):
-        client = TestClient(users=[("lasote", "mypass")])
+        client = TestClient()
         self._export_some_packages(client)
         # Copy all packages
         new_reference = ConanFileReference.loads("Hello0/0.1@pepe/testing")
