@@ -47,7 +47,9 @@ class ConanRemover(object):
                         remover.remove_packages(conan_ref, package_ids_filter)
                     if not src and build_ids is None and package_ids_filter is None:
                         remover.remove(conan_ref)
-                        
+                        registry = self._remote_proxy.registry
+                        registry.remove_ref(conan_ref)
+
         if not has_remote:
             delete_empty_dirs(self._file_manager.paths.store)
 

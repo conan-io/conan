@@ -23,6 +23,10 @@ class ConanProxy(object):
         self._update = update
         self._check_updates = check_updates
 
+    @property
+    def registry(self):
+        return self._registry
+
     def get_package(self, package_reference, force_build):
         """ obtain a package, either from disk or retrieve from remotes if necessary
         and not necessary to build
@@ -228,9 +232,11 @@ class ConanProxy(object):
     def remove(self, conan_ref):
         if not self._remote_name:
             raise ConanException("Cannot remove, remote not defined")
-        remote = self._registry.remote(self._remote_name)    
+        remote = self._registry.remote(self._remote_name)
         result = self._remote_manager.remove(conan_ref, remote)
-        self._registry.remove_ref(conan_ref)
+        current_remote = self._registry.get_ref(conan_ref)
+        if current_remote == remote:
+            self._registry.remove_ref(conan_ref)
         return result
 
     def remove_packages(self, conan_ref, remove_ids):
