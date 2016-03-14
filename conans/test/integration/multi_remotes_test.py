@@ -39,13 +39,13 @@ class MultiRemotesTest(unittest.TestCase):
         self._create(client_a, "Hello0", "0.0")
         client_a.run("upload Hello0/0.0@lasote/stable -r local")
         client_a.run("upload Hello0/0.0@lasote/stable -r default")
-        client_a.run("remote plist")
+        client_a.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: local", str(client_a.user_io.out))
         sleep(1)  # For timestamp and updates checks
 
         # Download Hello0 from local with client_b
         client_b.run("install Hello0/0.0@lasote/stable -r local --build missing")
-        client_b.run("remote plist")
+        client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
 
         # Update Hello0 with client_a and reupload
@@ -61,14 +61,14 @@ class MultiRemotesTest(unittest.TestCase):
         self.assertIn("There is a new conanfile in 'local' remote", str(client_b.user_io.out))
 
         # Now try to update the package with install -u
-        client_b.run("remote plist")
+        client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
         client_b.run("install Hello0/0.0@lasote/stable -u --build")
         self.assertIn("Hello0/0.0@lasote/stable: Retrieving from remote 'local'", str(client_b.user_io.out))
-        client_b.run("remote plist")
+        client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
 
-        # Upload a new version from client A, but only to the default server (not the plisted)
+        # Upload a new version from client A, but only to the default server (not the ref-listed)
         # Upload Hello0 to local and default from client_a
         sleep(1)  # For timestamp and updates checks
         self._create(client_a, "Hello0", "0.0", modifier="\n\n")
@@ -83,7 +83,7 @@ class MultiRemotesTest(unittest.TestCase):
         client_b.run("info Hello0/0.0@lasote/stable -r default")
         self.assertIn("Remote: local", str(client_b.user_io.out))
         self.assertIn("There is a newer version (default)", str(client_b.user_io.out))
-        client_b.run("remote plist")
+        client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
 
         # Well, now try to update the package with -r default -u
