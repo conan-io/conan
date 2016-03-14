@@ -67,7 +67,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
             user = tokens[2]
             channel = tokens[3]
         except IndexError:
-            raise ConanException("Wrong conans reference %s\nWrite something like "
+            raise ConanException("Wrong recipe reference %s\nWrite something like "
                                  "OpenCV/1.0.6@phil/stable" % text)
         return ConanFileReference(name, version, user, channel, validate)
 
@@ -80,7 +80,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
 
 
 class PackageReference(namedtuple("PackageReference", "conan package_id")):
-    """ Full reference of a conans binary package, e.g.:
+    """ Full package reference, e.g.:
     opencv/2.4.10@lasote/testing, fe566a677f77734ae
     """
 

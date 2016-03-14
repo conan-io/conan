@@ -176,12 +176,12 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install",
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("reference", nargs='?', default="",
-                            help='reference'
+                            help='recipe reference'
                             'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
         parser.add_argument("--package", "-p", nargs=1, action=Extender,
                             help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("--all", action='store_true', default=False,
-                            help='Install all packages from the specified reference')
+                            help='Install all packages from the specified recipe reference')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="update with new upstream packages")
@@ -199,7 +199,7 @@ class Command(object):
             if args.all:
                 args.package = []
             if not args.reference or not isinstance(reference, ConanFileReference):
-                raise ConanException("Invalid conanfile reference. "
+                raise ConanException("Invalid recipe reference. "
                                      "e.g., OpenSSL/1.0.2e@lasote/stable")
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
@@ -281,7 +281,7 @@ class Command(object):
             e.g. conan package OpenSSL/1.0.2e@lasote/stable 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("reference", help='reference name. e.g., openssl/1.0.2@lasote/testing')
+        parser.add_argument("reference", help='recipe reference name. e.g., openssl/1.0.2@lasote/testing')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3')
@@ -296,7 +296,7 @@ class Command(object):
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
-            raise ConanException("Invalid conanfile reference. e.g., OpenSSL/1.0.2e@lasote/stable")
+            raise ConanException("Invalid recipe reference. e.g., OpenSSL/1.0.2e@lasote/stable")
 
         if not args.all and not args.package:
             raise ConanException("'conan package': Please specify --all or a package ID")
@@ -304,7 +304,7 @@ class Command(object):
         self._manager.package(reference, args.package, args.only_manifest, args.all)
 
     def export(self, *args):
-        """ copies a conanfile.py and associated (export) files to your local store,
+        """ copies the recipe (conanfile.py and associated files) to your local store,
         where it can be shared and reused in other projects.
         From that store, it can be uploaded to any remote with "upload" command.
         """
@@ -324,7 +324,7 @@ class Command(object):
         self._manager.export(args.user, current_path, keep_source)
 
     def remove(self, *args):
-        """ Remove any folder from your local/remote store
+        """ Remove any recipe or package from your local/remote store
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
         parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
@@ -350,11 +350,11 @@ class Command(object):
                              src=args.src, force=args.force, remote=args.remote)
 
     def copy(self, *args):
-        """ Copy packages to another user/channel
+        """ Copy recipe and packages to another user/channel
         """
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
         parser.add_argument("reference", default="",
-                            help='reference'
+                            help='recipe reference'
                             'e.g., OpenSSL/1.0.2e@lasote/stable')
         parser.add_argument("user_channel", default="",
                             help='Destination user/channel'
@@ -363,10 +363,10 @@ class Command(object):
                             help='copy specified package ID')
         parser.add_argument("--all", action='store_true',
                             default=False,
-                            help='Copy all packages from the specified reference')
+                            help='Copy all packages from the specified recipe')
         parser.add_argument("--force", action='store_true',
                             default=False,
-                            help='Override destination packages and conanfile')
+                            help='Override destination packages and the recipe')
         args = parser.parse_args(*args)
 
         reference = ConanFileReference.loads(args.reference)
@@ -415,12 +415,12 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
         parser.add_argument("reference",
-                            help='conan reference, e.g., OpenSSL/1.0.2e@lasote/stable')
+                            help='recipe reference, e.g., OpenSSL/1.0.2e@lasote/stable')
         # TODO: packageparser.add_argument('package', help='user name')
         parser.add_argument("--package", "-p", default=None, help='package ID to upload')
         parser.add_argument("--remote", "-r", help='upload to this specific remote')
         parser.add_argument("--all", action='store_true',
-                            default=False, help='Upload both conans sources and packages')
+                            default=False, help='Upload both recipe and packages')
         parser.add_argument("--force", action='store_true',
                             default=False,
                             help='Do not check conans date, override remote with local')
@@ -435,7 +435,7 @@ class Command(object):
 
         self._manager.upload(conan_ref, package_id,
                              args.remote, all_packages=args.all, force=args.force)
-        
+
     def remote(self, *args):
         """ manage remotes
         """
@@ -443,26 +443,26 @@ class Command(object):
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
         # create the parser for the "a" command
-        parser_list = subparsers.add_parser('list', help='list current remotes')
-        parser_add = subparsers.add_parser('add', help='add help')
-        parser_add.add_argument('remote',  help='name of the remote help')
-        parser_add.add_argument('url',  help='name of the remote help')
-        parser_rm = subparsers.add_parser('remove', help='remove help')
+        subparsers.add_parser('list', help='list current remotes')
+        parser_add = subparsers.add_parser('add', help='add a remote')
+        parser_add.add_argument('remote',  help='name of the remote')
+        parser_add.add_argument('url',  help='url of the remote')
+        parser_rm = subparsers.add_parser('remove', help='remove')
         parser_rm.add_argument('remote',  help='name of the remote help')
         parser_upd = subparsers.add_parser('update', help='remove help')
         parser_upd.add_argument('remote',  help='name of the remote')
         parser_upd.add_argument('url',  help='url')
-        parser_plist = subparsers.add_parser('plist', help='plist current remotes')
-        parser_padd = subparsers.add_parser('padd', help='padd current remotes')
-        parser_padd.add_argument('remote',  help='name of the remote help')
-        parser_padd.add_argument('url',  help='name of the remote help')
-        parser_prm = subparsers.add_parser('premove', help='premove current remotes')
-        parser_prm.add_argument('remote',  help='name of the remote help')
-        parser_pupd = subparsers.add_parser('pupdate', help='pupdate current remotes')
-        parser_pupd.add_argument('remote',  help='name of the remote help')
-        parser_pupd.add_argument('url',  help='name of the remote help')
+        subparsers.add_parser('list_ref', help='list the recipes and its associated remotes')
+        parser_padd = subparsers.add_parser('add_ref', help="associate a recipe's reference to a remote")
+        parser_padd.add_argument('reference',  help='recipe reference')
+        parser_padd.add_argument('remote',  help='name of the remote')
+        parser_prm = subparsers.add_parser('remove_ref', help="dissociate a recipe's reference and its remote")
+        parser_prm.add_argument('reference',  help='recipe reference')
+        parser_pupd = subparsers.add_parser('update_ref', help="update the remote associated with a recipe")
+        parser_pupd.add_argument('reference',  help='recipe reference')
+        parser_pupd.add_argument('remote',  help='name of the remote')
         args = parser.parse_args(*args)
-        
+
         registry = RemoteRegistry(self._conan_paths.registry, self._user_io.out)
         if args.subcommand == "list":
             for r in registry.remotes:
@@ -473,16 +473,15 @@ class Command(object):
             registry.remove(args.remote)
         elif args.subcommand == "update":
             registry.update(args.remote, args.url)
-        elif args.subcommand == "plist":
+        elif args.subcommand == "list_ref":
             for ref, remote in registry.refs.iteritems():
                 self._user_io.out.info("%s: %s" % (ref, remote))
-        elif args.subcommand == "padd":
-            registry.add_ref(args.remote, args.url)
-        elif args.subcommand == "premove":
-            registry.remove_ref(args.remote)
-        elif args.subcommand == "pupdate":
-            registry.update_ref(args.remote, args.url)
-        
+        elif args.subcommand == "add_ref":
+            registry.add_ref(args.reference, args.remote)
+        elif args.subcommand == "remove_ref":
+            registry.remove_ref(args.reference)
+        elif args.subcommand == "update_ref":
+            registry.update_ref(args.reference, args.remote)
 
     def _show_help(self):
         """ prints a summary of all commands
