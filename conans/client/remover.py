@@ -27,7 +27,7 @@ class ConanRemover(object):
             search_info = self._file_manager.search(pattern)
 
         if not search_info:
-            self._user_io.out.warn("No recipe reference matches with %s pattern" % pattern)
+            self._user_io.out.warn("No package recipe reference matches with %s pattern" % pattern)
             return
 
         for conan_ref in search_info:
