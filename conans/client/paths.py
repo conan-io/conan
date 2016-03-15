@@ -9,6 +9,7 @@ from conans.client.detect import detect_defaults_settings
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
+REGISTRY = "registry.txt"
 
 
 class ConanPaths(StorePaths):
@@ -22,6 +23,10 @@ class ConanPaths(StorePaths):
         self._output = output
         self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
         StorePaths.__init__(self, self._store_folder)
+
+    @property
+    def registry(self):
+        return os.path.join(self.conan_folder, REGISTRY)
 
     @property
     def conan_config(self):

@@ -4,17 +4,20 @@ from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDE
 import os
 from mock import Mock
 from conans.client.userio import UserIO
+from conans.test.utils.test_files import temp_folder
 
 
 class RemoveTest(unittest.TestCase):
 
     def setUp(self):
+        self.server_folder = temp_folder()
         test_server = TestServer([("*/*@*/*", "*")],  # read permissions
                                  [],  # write permissions
-                                 users={"fenix": "mypass"})  # exported users and passwords
+                                 users={"fenix": "mypass"},
+                                 base_path=self.server_folder)  # exported users and passwords
         self.server = test_server
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users=[("fenix", "mypass")])
+        client = TestClient(servers=servers, users={"default":[("fenix", "mypass")]})
 
         # Conans with and without packages created
         self.root_folder = {"H1": 'Hello/1.4.10/fenix/testing',
@@ -86,6 +89,8 @@ class RemoveTest(unittest.TestCase):
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             {"H1": False, "H2": False, "B": True, "O": True})
+        folders = os.listdir(self.client.storage_folder)
+        self.assertItemsEqual(["Other", "Bye"], folders)
 
     def basic_mocked_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
@@ -95,6 +100,8 @@ class RemoveTest(unittest.TestCase):
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             {"H1": False, "H2": False, "B": True, "O": True})
+        folders = os.listdir(self.client.storage_folder)
+        self.assertItemsEqual(["Other", "Bye"], folders)
 
     def basic_packages_test(self):
         self.client.run("remove hello/* -p -f")
@@ -102,6 +109,14 @@ class RemoveTest(unittest.TestCase):
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": True, "H2": True, "B": True, "O": True})
+        folders = os.listdir(self.client.storage_folder)
+        self.assertItemsEqual(["Hello", "Other", "Bye"], folders)
+        self.assertItemsEqual(["build", "source", "export"],
+                              os.listdir(os.path.join(self.client.storage_folder,
+                                                      "Hello/1.4.10/fenix/testing")))
+        self.assertItemsEqual(["build", "source", "export"],
+                              os.listdir(os.path.join(self.client.storage_folder,
+                                                      "Hello/2.4.11/fenix/testing")))
 
     def builds_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
@@ -111,6 +126,14 @@ class RemoveTest(unittest.TestCase):
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
                             {"H1": True, "H2": True, "B": True, "O": True})
+        folders = os.listdir(self.client.storage_folder)
+        self.assertItemsEqual(["Hello", "Other", "Bye"], folders)
+        self.assertItemsEqual(["package", "source", "export"],
+                              os.listdir(os.path.join(self.client.storage_folder,
+                                                      "Hello/1.4.10/fenix/testing")))
+        self.assertItemsEqual(["package", "source", "export"],
+                              os.listdir(os.path.join(self.client.storage_folder,
+                                                      "Hello/2.4.11/fenix/testing")))
 
     def src_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
@@ -120,6 +143,14 @@ class RemoveTest(unittest.TestCase):
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": False, "H2": False, "B": True, "O": True})
+        folders = os.listdir(self.client.storage_folder)
+        self.assertItemsEqual(["Hello", "Other", "Bye"], folders)
+        self.assertItemsEqual(["package", "build", "export"],
+                              os.listdir(os.path.join(self.client.storage_folder,
+                                                      "Hello/1.4.10/fenix/testing")))
+        self.assertItemsEqual(["package", "build", "export"],
+                              os.listdir(os.path.join(self.client.storage_folder,
+                                                      "Hello/2.4.11/fenix/testing")))
 
     def reject_removal_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
@@ -151,6 +182,9 @@ class RemoveTest(unittest.TestCase):
                             {"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": True, "H2": True, "B": True, "O": True})
+        remote_folder = os.path.join(self.server_folder, ".conan_server/data") 
+        folders = os.listdir(remote_folder)
+        self.assertItemsEqual(["Other", "Bye"], folders)
 
     def remove_specific_package_test(self):
         self.client.run("remove hello/1.4.10* -p=1_H1 -f")

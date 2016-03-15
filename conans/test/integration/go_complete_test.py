@@ -83,7 +83,7 @@ class GoCompleteTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        self.client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
 
     def reuse_test(self):
         conan_reference = ConanFileReference.loads("stringutil/0.1@lasote/stable")
@@ -116,7 +116,7 @@ class GoCompleteTest(unittest.TestCase):
         self._assert_package_exists_in_server(package_ref, server_paths, files.keys())
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
-        other_conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        other_conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         other_conan.run("install %s --build missing" % str(conan_reference))
         # Build should be empty
         build_path = other_conan.paths.build(package_ref)
@@ -124,7 +124,7 @@ class GoCompleteTest(unittest.TestCase):
         # Lib should exist
         self._assert_package_exists(package_ref, other_conan.paths, files.keys())
 
-        reuse_conan = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        reuse_conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         files = {'conanfile.py': reuse_conanfile,
                  'src/hello/main.go': main}
         reuse_conan.save(files)

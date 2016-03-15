@@ -82,7 +82,7 @@ OpenCV/2.4.104phil/stable <- use_python:True, other_option:False
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
         loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
-        with self.assertRaisesRegexp(ConanException, "Wrong conans reference(.*)"):
+        with self.assertRaisesRegexp(ConanException, "Wrong package recipe reference(.*)"):
             loader.load_conan_txt(file_path, None)
 
         file_content = '''[requires]

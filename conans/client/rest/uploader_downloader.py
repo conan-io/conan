@@ -42,7 +42,8 @@ class Downloader(object):
                 ret.append(data)
                 units = progress_units(dl, total_length)
                 if last_progress != units:  # Avoid screen refresh if nothing has change
-                    print_progress(self.output, units)
+                    if self.output:
+                        print_progress(self.output, units)
                     last_progress = units
 
         return "".join(ret)

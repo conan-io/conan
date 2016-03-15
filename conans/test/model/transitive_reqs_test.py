@@ -34,9 +34,9 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)
 
-    def retrieve_conanfile(self, conan_ref):
+    def get_conanfile(self, conan_ref):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
-        return self.loader.load_conan(conan_path, self.output)
+        return conan_path
 
 say_content = """
 from conans import ConanFile
@@ -104,7 +104,7 @@ class ConanRequirementsTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, Settings.loads(""),
                                       OptionsValues.loads(""))
         self.retriever = Retriever(self.loader, self.output)
-        self.builder = DepsBuilder(self.retriever, self.output)
+        self.builder = DepsBuilder(self.retriever, self.output, self.loader)
 
     def root(self, content):
         root_conan = self.retriever.root(content)
@@ -1176,7 +1176,7 @@ class CoreSettingsTest(unittest.TestCase):
         options = OptionsValues.loads(options)
         loader = ConanFileLoader(None, full_settings, options)
         retriever = Retriever(loader, self.output)
-        builder = DepsBuilder(retriever, self.output)
+        builder = DepsBuilder(retriever, self.output, loader)
         root_conan = retriever.root(content)
         deps_graph = builder.load(None, root_conan)
         return deps_graph
@@ -1328,8 +1328,34 @@ class SayConan(ConanFile):
 
         with self.assertRaises(ConanException) as cm:
             self.root(content, options="arch_independent=True", settings="os=Linux")
-        self.assertIn(bad_value_msg("settings.os", "Linux", ['Android', 'Macos', "Windows"]),
+        self.assertIn(bad_value_msg("settings.os", "Linux", ['Android', 'Macos', "Windows", "iOS"]),
                          str(cm.exception))
+        
+    def test_config_remove2(self):
+        content = """
+from conans import ConanFile
+
+class SayConan(ConanFile):
+    name = "Say"
+    version = "0.1"
+    settings = "os", "arch", "compiler"
+
+    def config(self):
+        del self.settings.compiler.version
+"""
+        deps_graph = self.root(content, settings="os=Windows\n compiler=gcc\narch=x86\ncompiler.libcxx=libstdc++")
+        self.assertEqual(deps_graph.edges, set())
+        self.assertEqual(1, len(deps_graph.nodes))
+        node = deps_graph.get_nodes("Say")[0]
+        self.assertEqual(node.conan_ref, None)
+        conanfile = node.conanfile
+
+        self.assertEqual(conanfile.version, "0.1")
+        self.assertEqual(conanfile.name, "Say")
+        self.assertEqual(conanfile.options.values.dumps(), "")
+        self.assertEqual(conanfile.settings.fields, ["arch", "compiler", "os"])
+        self.assertNotIn("compiler.version", conanfile.settings.values.dumps())
+        self.assertEqual(conanfile.requires, Requirements())
 
     def test_transitive_two_levels_options(self):
         say_content = """
@@ -1364,7 +1390,7 @@ class ChatConan(ConanFile):
                                                           "Hello:myoption_hello=True\n"
                                                           "myoption_chat=on"))
         retriever = Retriever(loader, output)
-        builder = DepsBuilder(retriever, output)
+        builder = DepsBuilder(retriever, output, loader)
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 

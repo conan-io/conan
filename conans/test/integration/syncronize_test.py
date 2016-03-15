@@ -18,7 +18,7 @@ class SynchronizeTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users=[("lasote", "mypass")])
+        self.client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
 
     def upload_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")

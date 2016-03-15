@@ -30,7 +30,7 @@ class UploadTest(unittest.TestCase):
         servers["default"] = self.test_server
         conan_digest = FileTreeManifest('123123123', {})
 
-        self.client = TestClient(servers=servers, users=[("lasote", "mypass")])
+        self.client = TestClient(servers=servers, users={"default":[("lasote", "mypass")]})
         self.conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         reg_folder = self.client.paths.export(self.conan_ref)
 

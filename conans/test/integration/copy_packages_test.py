@@ -10,7 +10,7 @@ from conans.util.files import rmdir
 class CopyPackagesTest(unittest.TestCase):
 
     def test_copy_command(self):
-        client = TestClient(users=[("lasote", "mypass")])
+        client = TestClient()
         self._export_some_packages(client)
         # Copy all packages
         new_reference = ConanFileReference.loads("Hello0/0.1@pepe/testing")
@@ -33,4 +33,5 @@ class CopyPackagesTest(unittest.TestCase):
         client.run("export lasote/stable")
         client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Linux --build missing")
-        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s compiler.version=4.6  --build missing")
+        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc "
+                   "-s compiler.version=4.6 -s compiler.libcxx=libstdc++ --build missing")

@@ -5,7 +5,6 @@ import uuid
 import imp
 import os
 from conans.util.files import load
-from conans.paths import CONANFILE_TXT
 from conans.util.config_parser import ConfigParser
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference

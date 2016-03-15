@@ -6,7 +6,7 @@ from conans.model.version import Version
 import os
 
 
-def execute(command):
+def _execute(command):
     proc = Popen(command, shell=True, bufsize=1, stdout=PIPE, stderr=STDOUT)
 
     output_buffer = []
@@ -21,34 +21,34 @@ def execute(command):
     return proc.returncode, "".join(output_buffer)
 
 
-def gcc_compiler(output):
+def _gcc_compiler(output, compiler_exe="gcc"):
     try:
-        compiler_exe = os.environ.get("CC", "gcc")
-        _, out = execute('%s -dumpversion' % compiler_exe)
+        _, out = _execute('%s -dumpversion' % compiler_exe)
         compiler = "gcc"
         installed_version = re.search("([0-9]\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
     except:
-        pass
+        return None
 
 
-def clang_compiler(output):
+def _clang_compiler(output, compiler_exe="clang"):
     try:
-        _, out = execute('clang --version')
+        _, out = _execute('%s --version' % compiler_exe)
         if "Apple" in out:
             compiler = "apple-clang"
         elif "clang version" in out:
             compiler = "clang"
         installed_version = re.search("([0-9]\.[0-9])", out).group()
-        output.success("Found %s %s" % (compiler, installed_version))
-        return compiler, Version(installed_version)
+        if installed_version:
+            output.success("Found %s %s" % (compiler, installed_version))
+            return compiler, installed_version
     except:
-        pass
+        return None
 
 
-def visual_compiler_version(version):
+def _visual_compiler(output, version):
     'version have to be 8.0, or 9.0 or... anything .0'
     import _winreg
 
@@ -70,33 +70,40 @@ def visual_compiler_version(version):
     try:
         key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, key_name)
         _winreg.QueryValueEx(key, version)
-        return Version(version).major(fill=False)
+        installed_version = Version(version).major(fill=False)
+        compiler = "Visual Studio"
+        output.success("Found %s %s" % (compiler, installed_version))
+        return compiler, installed_version
     except EnvironmentError:
-        pass
+        return None
 
 
-def visual_compiler(output):
-    compiler = "Visual Studio"
+def _visual_compiler_last(output):
     last_version = None
     for version in ["8.0", "9.0", "10.0", "11.0", "12.0", "14.0"]:
-        vs = visual_compiler_version(version)
-        if vs:
-            compiler = "Visual Studio"
-            last_version = vs
-            output.success("Found %s %s" % (compiler, last_version))
-    if last_version:
-        return compiler, last_version
+        vs = _visual_compiler(output, version)
+        last_version = vs or last_version
+    return last_version
 
 
-def get_default_compiler(output):
+def _get_default_compiler(output):
+    cc = os.environ.get("CC", "")
+    cxx = os.environ.get("CXX", "")
+    if cc or cxx:  # Env defined, use them
+        output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
+        command = cc or cxx
+        if "gcc" in command:
+            return _gcc_compiler(output, command)
+        if "clang" in command.lower():
+            return _clang_compiler(output, command)
+        # I am not able to find its version
+        output.error("Not able to automatically detect '%s' version" % command)
+        return None
+
     if platform.system() == "Windows":
-        vs = visual_compiler(output)
-
-    gcc = gcc_compiler(output)
-    clang = clang_compiler(output)
-    env_priorized = priorize_by_env(gcc, clang, output)
-    if env_priorized:
-        return env_priorized
+        vs = _visual_compiler_last(output)
+    gcc = _gcc_compiler(output)
+    clang = _clang_compiler(output)
 
     if platform.system() == "Windows":
         return vs or gcc or clang
@@ -106,41 +113,9 @@ def get_default_compiler(output):
         return gcc or clang
 
 
-def priorize_by_env(gcc, clang, output):
-
-    cc = os.environ.get("CC", "")
-    cxx = os.environ.get("CXX", "")
-    output.info("CC and CXX: %s, %s " % (cc, cxx))
-    if "clang" == cc or "clang++" == cxx:
-        output.info("Detected clang compiler in env CC/CXX")
-        return clang
-    if "gcc" == cc or "g++" == cxx:
-        output.info("Detected gcc compiler in env CC/CXX")
-        return gcc
-    else:
-        return None
-
-
-def detect_defaults_settings(output):
-    """ try to deduce current machine values without any
-    constraints at all
-    """
-    output.writeln("\nIt seems to be the first time you run conan",
-                   Color.BRIGHT_YELLOW)
-    output.writeln("Auto detecting your dev setup to initialize conan.conf",
-                   Color.BRIGHT_YELLOW)
-    result = []
-    architectures = {'i386': 'x86',
-                     'amd64': 'x86_64'}
-
-    systems = {'Darwin': 'Macos'}
-    result.append(("os", systems.get(platform.system(), platform.system())))
-    arch = architectures.get(platform.machine().lower(), platform.machine().lower())
-    arch = 'arm' if arch.startswith('arm') else arch
-    result.append(("arch", arch))
-
+def _detect_compiler_version(result, output):
     try:
-        compiler, version = get_default_compiler(output)
+        compiler, version = _get_default_compiler(output)
     except:
         compiler, version = None, None
     if not compiler or not version:
@@ -150,8 +125,40 @@ def detect_defaults_settings(output):
         result.append(("compiler.version", version))
         if compiler == "Visual Studio":
             result.append(("compiler.runtime", "MD"))
+        if compiler == "gcc" or "clang" in compiler:
+            result.append(("compiler.libcxx", "libstdc++"))
 
+
+def _detect_os_arch(result, output):
+    architectures = {'i386': 'x86',
+                     'amd64': 'x86_64'}
+
+    systems = {'Darwin': 'Macos'}
+    result.append(("os", systems.get(platform.system(), platform.system())))
+    arch = architectures.get(platform.machine().lower(), platform.machine().lower())
+    if arch.startswith('arm'):
+        for a in ("armv6", "armv7hf", "armv7", "armv8"):
+            if arch.startswith(a):
+                arch = a
+                break
+        else:
+            output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
+                         "Please check your conan.conf and settings.yml files" % arch)
+    result.append(("arch", arch))
+
+
+def detect_defaults_settings(output):
+    """ try to deduce current machine values without any
+    constraints at all
+    """
+    output.writeln("\nIt seems to be the first time you run conan", Color.BRIGHT_YELLOW)
+    output.writeln("Auto detecting your dev setup to initialize conan.conf", Color.BRIGHT_YELLOW)
+
+    result = []
+    _detect_os_arch(result, output)
+    _detect_compiler_version(result, output)
     result.append(("build_type", "Release"))
+
     output.writeln("Default conan.conf settings", Color.BRIGHT_YELLOW)
     output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in result]), Color.BRIGHT_YELLOW)
     output.writeln("*** You can change them in ~/.conan/conan.conf ***", Color.BRIGHT_MAGENTA)

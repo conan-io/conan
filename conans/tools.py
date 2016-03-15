@@ -2,11 +2,12 @@
 """
 import sys
 import os
-from urllib import FancyURLopener
-import urllib2
 from conans.errors import ConanException
-from conans.util.files import _generic_algorithm_sum
+from conans.util.files import _generic_algorithm_sum, save
 from patch import fromfile, fromstring
+from conans.client.rest.uploader_downloader import Downloader
+import requests
+from conans.client.output import ConanOutput
 
 
 def human_size(size_bytes):
@@ -32,27 +33,6 @@ def human_size(size_bytes):
         formatted_size = str(round(num, ndigits=precision))
 
     return "%s %s" % (formatted_size, suffix)
-
-
-def update_progress(progress, total_size):
-    '''prints a progress bar, with percentages, and auto-cr so always printed in same line
-    @param progress: percentage, float
-    @param total_size: file total size in Mb
-    '''
-    bar_length = 40
-    status = ""
-    if progress < 0:
-        progress = 0
-        status = "Halt...\r\n"
-    if progress >= 1:
-        progress = 1
-        status = "Done...\r\n"
-    block = int(round(bar_length * progress))
-    text = "\rPercent: [{0}] {1:.1f}% of {2} {3}".format("#" * block +
-                                                               "-" * (bar_length - block),
-                                                               progress * 100, human_size(total_size), status)
-    sys.stdout.write(text)
-    sys.stdout.flush()
 
 
 def unzip(filename, destination="."):
@@ -90,38 +70,16 @@ def get(url):
     os.unlink(filename)
 
 
-AGENT = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) '\
-        'Chrome/41.0.2228.0 Safari/537.36'
-
-
-def fetch_sourceforge_url(url):
-    opener = urllib2.build_opener()
-    opener.addheaders = [('User-agent', AGENT)]
-    new_url = ""
-    try:
-        response = opener.open(url)
-        html = response.read()
-        good_url_pos_init = html.find("http://downloads.sourceforge.net")
-        good_url_pos_fin = html[good_url_pos_init:].find("\"") + good_url_pos_init
-        new_url = html[good_url_pos_init:good_url_pos_fin]
-    finally:
-        if not new_url:
-            raise ConanException("File not found: %s" % url)
-    return new_url
-
-
-def download(url, filename):
-    def dl_progress_callback_cmd(count, block_size, total_size):
-        update_progress(min(count * block_size, total_size) / float(total_size), total_size)
-
-    # Some websites blocks urllib (maybe for block scripts or crawl)
-    class MyOpener(FancyURLopener):
-        version = (AGENT)
-
-    if "sourceforge.net" in url:
-        url = fetch_sourceforge_url(url)
-
-    MyOpener().retrieve(url, filename=filename, reporthook=dl_progress_callback_cmd)
+def download(url, filename, verify=True):
+    out = ConanOutput(sys.stdout, True)
+    if verify:
+        # We check the certificate using a list of known verifiers
+        import conans.client.rest.cacert as cacert
+        verify = cacert.file_path
+    downloader = Downloader(requests, out, verify=verify)
+    content = downloader.download(url)
+    out.writeln("")
+    save(filename, content)
 
 
 def replace_in_file(file_path, search, replace):

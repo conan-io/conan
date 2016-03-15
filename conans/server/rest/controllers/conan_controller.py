@@ -30,6 +30,21 @@ class ConanController(Controller):
             if not urls:
                 raise NotFoundException("No digest found")
             return urls
+        
+        @app.route("%s/packages/:package_id/digest" % conan_route, method=["GET"])
+        def get_package_digest_url(conanname, version, username, channel, package_id, auth_user):
+            """
+            Get a dict with all files and the download url
+            """
+            conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
+            reference = ConanFileReference(conanname, version, username, channel)
+            package_reference = PackageReference(reference, package_id)
+            
+            urls = conan_service.get_package_download_urls(package_reference, [CONAN_MANIFEST])
+            if not urls:
+                raise NotFoundException("No digest found")
+            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.iteritems()}
+            return urls_norm
 
         @app.route(conan_route, method=["GET"])
         def get_conanfile_snapshot(conanname, version, username, channel, auth_user):

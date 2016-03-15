@@ -13,9 +13,10 @@ class InstallSelectedPackagesTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers,  users=[("lasote", "mypass")])
+        self.client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         self.package_ids = self._upload_some_packages(self.client)
-        self.new_client = TestClient(servers=self.servers,  users=[("lasote", "mypass")])
+        self.new_client = TestClient(servers=self.servers, 
+                                     users={"default":[("lasote", "mypass")]})
 
     def install_all_test(self):
         # Should retrieve the three packages
@@ -45,6 +46,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         client.run("export lasote/stable")
         client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Linux --build missing")
-        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s compiler.version=4.6  --build missing")
+        client.run("install Hello0/0.1@lasote/stable -s os=Linux -s compiler=gcc -s "
+                   "compiler.version=4.6 -s compiler.libcxx=libstdc++ --build missing")
         client.run("upload  Hello0/0.1@lasote/stable --all")
         return os.listdir(self.client.paths.packages(self.ref))

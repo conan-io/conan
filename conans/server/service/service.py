@@ -131,12 +131,13 @@ class ConanService(object):
         snap = self._file_manager.get_package_snapshot(package_reference)
         return snap
 
-    def get_package_download_urls(self, package_reference):
+    def get_package_download_urls(self, package_reference, files_subset=None):
         """Gets a list with filepaths and the urls and md5:
             [filename: {'url': url, 'md5': md5}]
         """
         self._authorizer.check_read_package(self._auth_user, package_reference)
-        urls = self._file_manager.get_download_package_urls(package_reference)
+        urls = self._file_manager.get_download_package_urls(package_reference,
+                                                            files_subset=files_subset)
         return urls
 
     def get_package_upload_urls(self, package_reference, filesizes):

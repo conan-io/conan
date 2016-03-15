@@ -26,6 +26,7 @@ from conans.util.files import rmdir, load
 from argparse import RawTextHelpFormatter
 import re
 from conans.client.runner import ConanRunner
+from conans.client.remote_registry import RemoteRegistry
 
 
 class Extender(argparse.Action):
@@ -60,14 +61,13 @@ class Command(object):
     collaborators.
     It can also show help of the tool
     """
-    def __init__(self, paths, user_io, runner, remote_manager, localdb):
+    def __init__(self, paths, user_io, runner, remote_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(paths, ConanPaths)
         self._conan_paths = paths
         self._user_io = user_io
         self._runner = runner
-        self._manager = ConanManager(paths, user_io, runner, remote_manager, localdb)
-        self._localdb = localdb
+        self._manager = ConanManager(paths, user_io, runner, remote_manager)
 
     def _parse_args(self, parser):
         parser.add_argument("-r", "--remote", help='look for in the remote storage')
@@ -85,6 +85,16 @@ class Command(object):
 --build=missing    Build from code if a binary package is not found.
 --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 ''')
+
+    def _get_tuples_list_from_extender_arg(self, items):
+        if not items:
+            return []
+        # Validate the pairs
+        for item in items:
+            chunks = item.split("=")
+            if len(chunks) != 2:
+                raise ConanException("Invalid input '%s', use 'name=value'" % item)
+        return [(item[0], item[1]) for item in [item.split("=") for item in items]]
 
     def _detect_tested_library_name(self):
         conanfile_content = load(CONANFILE)
@@ -147,6 +157,9 @@ class Command(object):
         rmdir(build_folder)
         shutil.copytree(test_folder, build_folder)
 
+        options = self._get_tuples_list_from_extender_arg(args.options)
+        settings = self._get_tuples_list_from_extender_arg(args.settings)
+
         self._manager.install(reference=build_folder,
                               current_path=build_folder,
                               remote=args.remote,
@@ -163,12 +176,15 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install",
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("reference", nargs='?', default="",
-                            help='reference'
+                            help='package recipe reference'
                             'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
-        parser.add_argument("--package", "-p", nargs=1, action=Extender, help='Force install specified package ID (ignore settings/options)')
-        parser.add_argument("--all", action='store_true',
-                            default=False, help='Install all packages from the specified reference')
+        parser.add_argument("--package", "-p", nargs=1, action=Extender,
+                            help='Force install specified package ID (ignore settings/options)')
+        parser.add_argument("--all", action='store_true', default=False,
+                            help='Install all packages from the specified package recipe')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
+        parser.add_argument("--update", "-u", action='store_true', default=False,
+                            help="update with new upstream packages")
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -183,20 +199,23 @@ class Command(object):
             if args.all:
                 args.package = []
             if not args.reference or not isinstance(reference, ConanFileReference):
-                raise ConanException("Invalid conanfile reference. e.g., OpenSSL/1.0.2e@lasote/stable")
+                raise ConanException("Invalid package recipe reference. "
+                                     "e.g., OpenSSL/1.0.2e@lasote/stable")
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
             # Get False or a list of patterns to check
             args.build = self._get_build_sources_parameter(args.build)
-            option_dict = args.options or []
-            settings_dict = args.settings or []
+            options = self._get_tuples_list_from_extender_arg(args.options)
+            settings = self._get_tuples_list_from_extender_arg(args.settings)
+
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,
-                                  options=option_dict,
-                                  settings=settings_dict,
+                                  options=options,
+                                  settings=settings,
                                   build_mode=args.build,
-                                  filename=args.file)
+                                  filename=args.file,
+                                  update=args.update)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -209,14 +228,18 @@ class Command(object):
                             help='reference name or path to conanfile file, '
                             'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        self._parse_args(parser)
+        parser.add_argument("-r", "--remote", help='look for in the remote storage')
+        parser.add_argument("--options", "-o",
+                            help='load options to build the package, e.g., -o with_qt=true',
+                            nargs=1, action=Extender)
+        parser.add_argument("--settings", "-s",
+                            help='load settings to build the package, -s compiler:gcc',
+                            nargs=1, action=Extender)
 
         args = parser.parse_args(*args)
 
-        # Get False or a list of patterns to check
-        args.build = self._get_build_sources_parameter(args.build)
-        option_dict = args.options or []
-        settings_dict = args.settings or []
+        options = self._get_tuples_list_from_extender_arg(args.options)
+        settings = self._get_tuples_list_from_extender_arg(args.settings)
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -226,9 +249,9 @@ class Command(object):
         self._manager.install(reference=reference,
                               current_path=current_path,
                               remote=args.remote,
-                              options=option_dict,
-                              settings=settings_dict,
-                              build_mode=args.build,
+                              options=options,
+                              settings=settings,
+                              build_mode=False,
                               info=True,
                               filename=args.file)
 
@@ -251,13 +274,14 @@ class Command(object):
         self._manager.build(root_path, current_path, filename=args.file)
 
     def package(self, *args):
-        """ calls your conanfile.py "package" method for a specific package or regenerates the existing
-            package's manifest.
-            Intended for package creators, for regenerating a package without recompiling the source.
-            e.g. conan package OpenSSL/1.0.2e@lasote/stable 9cf83afd07b678d38a9c1645f605875400847ff3
+        """ calls your conanfile.py "package" method for a specific package or
+            regenerates the existing package's manifest.
+            Intended for package creators, for regenerating a package without
+            recompiling the source.
+            e.g. conan package OpenSSL/1.0.2e@lasote/stable 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("reference", help='reference name. e.g., openssl/1.0.2@lasote/testing')
+        parser.add_argument("reference", help='package recipe reference name. e.g., openssl/1.0.2@lasote/testing')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3')
@@ -272,7 +296,7 @@ class Command(object):
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
-            raise ConanException("Invalid conanfile reference. e.g., OpenSSL/1.0.2e@lasote/stable")
+            raise ConanException("Invalid package recipe reference. e.g., OpenSSL/1.0.2e@lasote/stable")
 
         if not args.all and not args.package:
             raise ConanException("'conan package': Please specify --all or a package ID")
@@ -280,7 +304,7 @@ class Command(object):
         self._manager.package(reference, args.package, args.only_manifest, args.all)
 
     def export(self, *args):
-        """ copies a conanfile.py and associated (export) files to your local store,
+        """ copies the package recipe (conanfile.py and associated files) to your local store,
         where it can be shared and reused in other projects.
         From that store, it can be uploaded to any remote with "upload" command.
         """
@@ -300,7 +324,7 @@ class Command(object):
         self._manager.export(args.user, current_path, keep_source)
 
     def remove(self, *args):
-        """ Remove any folder from your local/remote store
+        """ Remove any package recipe or package from your local/remote store
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
         parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
@@ -326,11 +350,11 @@ class Command(object):
                              src=args.src, force=args.force, remote=args.remote)
 
     def copy(self, *args):
-        """ Copy packages to another user/channel
+        """ Copy package recipe and packages to another user/channel
         """
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
         parser.add_argument("reference", default="",
-                            help='reference'
+                            help='package recipe reference'
                             'e.g., OpenSSL/1.0.2e@lasote/stable')
         parser.add_argument("user_channel", default="",
                             help='Destination user/channel'
@@ -339,10 +363,10 @@ class Command(object):
                             help='copy specified package ID')
         parser.add_argument("--all", action='store_true',
                             default=False,
-                            help='Copy all packages from the specified reference')
+                            help='Copy all packages from the specified package recipe')
         parser.add_argument("--force", action='store_true',
                             default=False,
-                            help='Override destination packages and conanfile')
+                            help='Override destination packages and the package recipe')
         args = parser.parse_args(*args)
 
         reference = ConanFileReference.loads(args.reference)
@@ -359,7 +383,8 @@ class Command(object):
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. '
                                  'If no name is provided it will show the current user.')
-        parser.add_argument("-p", "--password", help='User password')
+        parser.add_argument("-p", "--password", help='User password. Use double quotes '
+                            'if password with spacing, and escape quotes if existing')
         parser.add_argument("--remote", "-r", help='look for in the remote storage')
         args = parser.parse_args(*parameters)  # To enable -h
         self._manager.user(args.remote, args.name, args.password)
@@ -390,12 +415,12 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
         parser.add_argument("reference",
-                            help='conan reference, e.g., OpenSSL/1.0.2e@lasote/stable')
+                            help='package recipe reference, e.g., OpenSSL/1.0.2e@lasote/stable')
         # TODO: packageparser.add_argument('package', help='user name')
         parser.add_argument("--package", "-p", default=None, help='package ID to upload')
         parser.add_argument("--remote", "-r", help='upload to this specific remote')
         parser.add_argument("--all", action='store_true',
-                            default=False, help='Upload both conans sources and packages')
+                            default=False, help='Upload both package recipe and packages')
         parser.add_argument("--force", action='store_true',
                             default=False,
                             help='Do not check conans date, override remote with local')
@@ -410,6 +435,53 @@ class Command(object):
 
         self._manager.upload(conan_ref, package_id,
                              args.remote, all_packages=args.all, force=args.force)
+
+    def remote(self, *args):
+        """ manage remotes
+        """
+        parser = argparse.ArgumentParser(description=self.remote.__doc__, prog="conan remote")
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+
+        # create the parser for the "a" command
+        subparsers.add_parser('list', help='list current remotes')
+        parser_add = subparsers.add_parser('add', help='add a remote')
+        parser_add.add_argument('remote',  help='name of the remote')
+        parser_add.add_argument('url',  help='url of the remote')
+        parser_rm = subparsers.add_parser('remove', help='remove a remote')
+        parser_rm.add_argument('remote',  help='name of the remote')
+        parser_upd = subparsers.add_parser('update', help='update the remote url')
+        parser_upd.add_argument('remote',  help='name of the remote')
+        parser_upd.add_argument('url',  help='url')
+        subparsers.add_parser('list_ref', help='list the package recipes and its associated remotes')
+        parser_padd = subparsers.add_parser('add_ref', help="associate a recipe's reference to a remote")
+        parser_padd.add_argument('reference',  help='package recipe reference')
+        parser_padd.add_argument('remote',  help='name of the remote')
+        parser_prm = subparsers.add_parser('remove_ref', help="dissociate a recipe's reference and its remote")
+        parser_prm.add_argument('reference',  help='package recipe reference')
+        parser_pupd = subparsers.add_parser('update_ref', help="update the remote associated with a package recipe")
+        parser_pupd.add_argument('reference',  help='package recipe reference')
+        parser_pupd.add_argument('remote',  help='name of the remote')
+        args = parser.parse_args(*args)
+
+        registry = RemoteRegistry(self._conan_paths.registry, self._user_io.out)
+        if args.subcommand == "list":
+            for r in registry.remotes:
+                self._user_io.out.info("%s: %s" % (r.name, r.url))
+        elif args.subcommand == "add":
+            registry.add(args.remote, args.url)
+        elif args.subcommand == "remove":
+            registry.remove(args.remote)
+        elif args.subcommand == "update":
+            registry.update(args.remote, args.url)
+        elif args.subcommand == "list_ref":
+            for ref, remote in registry.refs.iteritems():
+                self._user_io.out.info("%s: %s" % (ref, remote))
+        elif args.subcommand == "add_ref":
+            registry.add_ref(args.reference, args.remote)
+        elif args.subcommand == "remove_ref":
+            registry.remove_ref(args.reference)
+        elif args.subcommand == "update_ref":
+            registry.update_ref(args.reference, args.remote)
 
     def _show_help(self):
         """ prints a summary of all commands
@@ -467,12 +539,12 @@ class Command(object):
         return errors
 
 
-def migrate_and_get_paths(base_folder, out, storage_folder=None):
+def migrate_and_get_paths(base_folder, out, manager, storage_folder=None):
     # Init paths
     paths = ConanPaths(base_folder, storage_folder, out)
 
     # Migration system
-    migrator = ClientMigrator(paths, Version(CLIENT_VERSION), out)
+    migrator = ClientMigrator(paths, Version(CLIENT_VERSION), out, manager)
     migrator.migrate()
 
     # Init again paths, migration could change config
@@ -480,10 +552,25 @@ def migrate_and_get_paths(base_folder, out, storage_folder=None):
     return paths
 
 
-def main(args):
-    """ main entry point of the conans application, using a Command to
-    parse parameters
-    """
+def get_command():
+
+    def instance_remote_manager(paths):
+        requester = requests.Session()
+        requester.proxies = paths.conan_config.proxies
+        # Verify client version against remotes
+        version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
+                                                            Version(MIN_SERVER_COMPATIBLE_VERSION),
+                                                            out)
+        # To handle remote connections
+        rest_api_client = RestApiClient(out, requester=version_checker_requester)
+        # To store user and token
+        localdb = LocalDB(paths.localdb)
+        # Wraps RestApiClient to add authentication support (same interface)
+        auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
+        # Handle remote connections
+        remote_manager = RemoteManager(paths, auth_manager, out)
+        return remote_manager
+
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         import colorama
         colorama.init()
@@ -493,35 +580,34 @@ def main(args):
     out = ConanOutput(sys.stdout, color)
     user_io = UserIO(out=out)
 
-    user_folder = os.path.expanduser("~")
+    user_folder = os.getenv("CONAN_USER_HOME", os.path.expanduser("~"))
     try:
         # To capture exceptions in conan.conf parsing
-        paths = migrate_and_get_paths(user_folder, out)
+        paths = ConanPaths(user_folder, None, out)
+        # obtain a temp ConanManager instance to execute the migrations
+        remote_manager = instance_remote_manager(paths)
+        manager = ConanManager(paths, user_io, ConanRunner(), remote_manager)
+        paths = migrate_and_get_paths(user_folder, out, manager)
     except Exception as e:
         out.error(str(e))
         sys.exit(True)
 
-    requester = requests.Session()
-    requester.proxies = paths.conan_config.proxies
-    # Verify client version against remotes
-    version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
-                                                        Version(MIN_SERVER_COMPATIBLE_VERSION),
-                                                        out)
-    # To handle remote connections
-    rest_api_client = RestApiClient(out, requester=version_checker_requester)
-    # To store user and token
-    localdb = LocalDB(paths.localdb)
-    # Wraps RestApiClient to add authentication support (same interface)
-    auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
-    # Handle remote connections
-    remote_manager = RemoteManager(paths, paths.conan_config.remotes, auth_manager, out)
+    # Get the new command instance after migrations have been done
+    manager = instance_remote_manager(paths)
+    command = Command(paths, user_io, ConanRunner(), manager)
+    return command
 
-    command = Command(paths, user_io, ConanRunner(), remote_manager, localdb)
+
+def main(args):
+    """ main entry point of the conans application, using a Command to
+    parse parameters
+    """
+    command = get_command()
     current_dir = os.getcwd()
     try:
         import signal
 
-        def sigint_handler(signal, frame):
+        def sigint_handler(signal, frame):  # @UnusedVariable
             print('You pressed Ctrl+C!')
             sys.exit(0)
 

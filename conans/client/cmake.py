@@ -41,8 +41,6 @@ class CMake(object):
 
         if operating_system == "Windows":
             if compiler == "gcc":
-                if self._settings.compiler.version == "4.9":
-                    return "Unix Makefiles"
                 return "MinGW Makefiles"
             if compiler in ["clang", "apple-clang"]:
                 return "MinGW Makefiles"
@@ -114,6 +112,12 @@ class CMake(object):
                              "-DCONAN_C_FLAGS=-m32"])
             elif op_system == "Macos":
                 flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
+
+        try:
+            libcxx = self._settings.compiler.libcxx
+            flags.append('-DCONAN_LIBCXX="%s"' % libcxx)
+        except:
+            pass
         return " ".join(flags)
 
     @property
