@@ -34,9 +34,16 @@ class ConfigureEnvironment(object):
             # Append the definition for libcxx
             all_cpp_flags = copy.copy(self._deps_cpp_info.cppflags)
             if self.libcxx:
-                tmp = "-D_GLIBCXX_USE_CXX11_ABI="
-                tmp += "1" if self.libcxx == "libstdc++11" else "0"
-                all_cpp_flags.append(tmp)
+                if str(self.libcxx) == "libstdc++":
+                    all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
+                elif str(self.libcxx) == "libstdc++11":
+                    all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
+
+                if "clang" in str(self.compiler):
+                    if str(self.libcxx) == "libc++":
+                        all_cpp_flags.append("-stdlib=libc++")
+                    else:
+                        all_cpp_flags.append("-stdlib=libstdc++")
 
             cpp_flags = 'CPPFLAGS="%s %s"' % (archflag, " ".join(all_cpp_flags))
             include_paths = ":".join(['"%s"' % lib for lib in self._deps_cpp_info.include_paths])
