@@ -35,7 +35,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
 
     esac
     pyenv rehash
-    pyenv activate psutil
+    pyenv activate conan
 fi
 
 pip install -r conans/requirements_dev.txt
