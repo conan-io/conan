@@ -101,7 +101,7 @@ class ConanManager(object):
         conan_ref_str = str(conan_ref)
         # Maybe a platform check could be added, but depends on disk partition
         info = self.file_manager.search(conan_ref_str, ignorecase=True)
-        refs = {s for s in info.iterkeys() if str(s).lower() == conan_ref_str.lower()}
+        refs = {s for s in info.keys() if str(s).lower() == conan_ref_str.lower()}
         if refs and conan_ref not in refs:
             raise ConanException("Cannot export package with same name but different case\n"
                                  "You exported '%s' but already existing '%s'"
@@ -127,7 +127,7 @@ class ConanManager(object):
                 remote = remote or self._remote_manager.default_remote
                 raise ConanException("'%s' not found in remote '%s'" % (str(reference), remote))
 
-            remote_proxy.download_packages(reference, info[reference].keys())
+            remote_proxy.download_packages(reference, list(info[reference].keys()))
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, info=None, filename=None, update=False):
@@ -318,8 +318,8 @@ class ConanManager(object):
                 # Compile expression
                 package_pattern = re.compile(package_pattern, re.IGNORECASE)
                 filtered_info = SearchInfo()
-                for conan_ref, packages in sorted(info.iteritems()):
-                    filtered_packages = {pid: data for pid, data in packages.iteritems()
+                for conan_ref, packages in sorted(info.items()):
+                    filtered_packages = {pid: data for pid, data in packages.items()
                                          if package_pattern.match(pid)}
                     if filtered_packages:
                         filtered_info[conan_ref] = filtered_packages

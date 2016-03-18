@@ -31,7 +31,7 @@ class DiskAdapter(StorageAdapter):
             url_path = url_path.replace("\\", "/")
             # FALTA SIZE DEL FICHERO PARA EL UPLOAD URL!
             signature = self.updown_auth_manager.get_token_for(url_path, user)
-            url = "%s/%s?signature=%s" % (self.base_url, url_path, signature)
+            url = "%s/%s?signature=%s" % (self.base_url, url_path, signature.decode())
             ret[filepath] = url
 
         return ret
@@ -43,12 +43,12 @@ class DiskAdapter(StorageAdapter):
         paths_sizes is a dict of {path: size_in_bytes} '''
         assert isinstance(paths_sizes, dict)
         ret = {}
-        for filepath, filesize in paths_sizes.iteritems():
+        for filepath, filesize in paths_sizes.items():
             url_path = os.path.relpath(filepath, self.base_storage_path)
             url_path = url_path.replace("\\", "/")
             # FALTA SIZE DEL FICHERO PARA EL UPLOAD URL!
             signature = self.updown_auth_manager.get_token_for(url_path, user, filesize)
-            url = "%s/%s?signature=%s" % (self.base_url, url_path, signature)
+            url = "%s/%s?signature=%s" % (self.base_url, url_path, signature.decode())
             ret[filepath] = url
 
         return ret

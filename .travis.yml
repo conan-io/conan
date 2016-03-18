@@ -1,5 +1,9 @@
 language: python
-python: 2.7
+python:
+    - 2.7
+    - 3.3
+    - 3.4
+    - 3.5
 os: linux
 sudo: required
 dist: trusty
@@ -12,6 +16,18 @@ matrix:
         - language: generic
           os: osx
           env: PYVER=py27 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
+          
+        - language: generic
+          os: osx
+          env: PYVER=py33 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
+        
+        - language: generic
+          os: osx
+          env: PYVER=py34 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
+          
+        - language: generic
+          os: osx
+          env: PYVER=py35 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
           
 # command to install dependencies
 install:

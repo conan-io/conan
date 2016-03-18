@@ -200,7 +200,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     code_deps = []
     requires = []
     for d in deps or []:
-        if isinstance(d, basestring):
+        if isinstance(d, str):
             requires.append('"%s"' % d)
             code_dep = d.split("/", 1)[0]
         elif isinstance(d, tuple):

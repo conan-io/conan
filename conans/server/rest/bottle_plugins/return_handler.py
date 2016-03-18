@@ -26,9 +26,9 @@ class ReturnHandlerPlugin(object):
             '''Capture possible exceptions to manage the return'''
             try:
                 # The encoding from browsers is utf-8, so we assume it
-                for key, value in kwargs.iteritems():
+                for key, value in kwargs.items():
                     if isinstance(value, str):
-                        kwargs[key] = value.decode("utf-8")
+                        kwargs[key] = value
                 return callback(*args, **kwargs)  # kwargs has :xxx variables from url
             except HTTPResponse:
                 raise
@@ -46,6 +46,6 @@ def get_response_from_exception(excep, exception_mapping):
     status = exception_mapping.get(excep.__class__, None)
     if status is None:
         status = 500
-    ret = HTTPResponse(status=status, body=str(excep.message))
+    ret = HTTPResponse(status=status, body=str(excep))
     ret.add_header("Content-Type", "text/plain")
     return ret

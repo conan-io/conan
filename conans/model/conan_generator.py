@@ -44,7 +44,7 @@ class GeneratorManager(object):
 
     @property
     def available(self):
-        return self._known_generators.keys()
+        return list(self._known_generators.keys())
 
     def __contains__(self, key):
         return key in self._known_generators

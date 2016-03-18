@@ -3,11 +3,11 @@ Conan
 
 A distributed, open source, package manager.
 
-+--------------------------+---------------------------+------------------------+-------------------------+
-| **master (linux/osx)**   | **develop (linux/osx)**   | **master (windows)**   | **develop** (windows)   |
-+==========================+===========================+========================+=========================+
-| |Build Status1|          | |Build Status2|           | |Build status3|        | |Build status4|         |
-+--------------------------+---------------------------+------------------------+-------------------------+
++------------------------+-------------------------+----------------------+-----------------------+
+| **master (linux/osx)** | **develop (linux/osx)** | **master (windows)** | **develop** (windows) |
++========================+=========================+======================+=======================+
+| |Build Status1|        | |Build Status2|         | |Build status3|      | |Build status4|       |
++------------------------+-------------------------+----------------------+-----------------------+
 
 Setup
 =====
@@ -21,6 +21,8 @@ can run **conan** from sources if you want
 
 From pip
 --------
+
+Conan is compatible with Python 2 and Python 3.
 
 - Install pip following `pip docs`_
 

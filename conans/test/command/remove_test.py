@@ -5,6 +5,7 @@ import os
 from mock import Mock
 from conans.client.userio import UserIO
 from conans.test.utils.test_files import temp_folder
+import six
 
 
 class RemoveTest(unittest.TestCase):
@@ -26,7 +27,7 @@ class RemoveTest(unittest.TestCase):
                             "O": 'Other/1.2/fenix/testing'}
 
         files = {}
-        for key, folder in self.root_folder.iteritems():
+        for key, folder in self.root_folder.items():
             files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = ""
             files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = ""
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
@@ -38,7 +39,7 @@ class RemoveTest(unittest.TestCase):
         client.save(files, client.paths.store)
         self.client = client
 
-        for folder in self.root_folder.itervalues():
+        for folder in self.root_folder.values():
             client.run("upload %s --all" % folder.replace("/fenix", "@fenix"))
 
         self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
@@ -50,7 +51,7 @@ class RemoveTest(unittest.TestCase):
         for base_path, folders in [(self.client.paths, local_folders),
                                    (self.server.paths, remote_folders)]:
             root_folder = base_path.store
-            for k, shas in folders.iteritems():
+            for k, shas in folders.items():
                 folder = os.path.join(root_folder, self.root_folder[k])
                 if shas is None:
                     self.assertFalse(os.path.exists(folder))
@@ -64,7 +65,7 @@ class RemoveTest(unittest.TestCase):
                             self.assertFalse(os.path.exists(package_folder))
 
         root_folder = self.client.paths.store
-        for k, shas in build_folders.iteritems():
+        for k, shas in build_folders.items():
             folder = os.path.join(root_folder, self.root_folder[k])
             if shas is None:
                 self.assertFalse(os.path.exists(folder))
@@ -76,7 +77,7 @@ class RemoveTest(unittest.TestCase):
                         self.assertTrue(os.path.exists(build_folder))
                     else:
                         self.assertFalse(os.path.exists(build_folder))
-        for k, value in src_folders.iteritems():
+        for k, value in src_folders.items():
             folder = os.path.join(root_folder, self.root_folder[k], "source")
             if value:
                 self.assertTrue(os.path.exists(folder))
@@ -90,7 +91,7 @@ class RemoveTest(unittest.TestCase):
                             {"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             {"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        self.assertItemsEqual(["Other", "Bye"], folders)
+        six.assertCountEqual(self, ["Other", "Bye"], folders)
 
     def basic_mocked_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
@@ -101,7 +102,7 @@ class RemoveTest(unittest.TestCase):
                             {"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
                             {"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        self.assertItemsEqual(["Other", "Bye"], folders)
+        six.assertCountEqual(self, ["Other", "Bye"], folders)
 
     def basic_packages_test(self):
         self.client.run("remove hello/* -p -f")
@@ -110,11 +111,11 @@ class RemoveTest(unittest.TestCase):
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        self.assertItemsEqual(["Hello", "Other", "Bye"], folders)
-        self.assertItemsEqual(["build", "source", "export"],
+        six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
+        six.assertCountEqual(self, ["build", "source", "export"],
                               os.listdir(os.path.join(self.client.storage_folder,
                                                       "Hello/1.4.10/fenix/testing")))
-        self.assertItemsEqual(["build", "source", "export"],
+        six.assertCountEqual(self, ["build", "source", "export"],
                               os.listdir(os.path.join(self.client.storage_folder,
                                                       "Hello/2.4.11/fenix/testing")))
 
@@ -127,11 +128,11 @@ class RemoveTest(unittest.TestCase):
                             {"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
                             {"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        self.assertItemsEqual(["Hello", "Other", "Bye"], folders)
-        self.assertItemsEqual(["package", "source", "export"],
+        six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
+        six.assertCountEqual(self, ["package", "source", "export"],
                               os.listdir(os.path.join(self.client.storage_folder,
                                                       "Hello/1.4.10/fenix/testing")))
-        self.assertItemsEqual(["package", "source", "export"],
+        six.assertCountEqual(self, ["package", "source", "export"],
                               os.listdir(os.path.join(self.client.storage_folder,
                                                       "Hello/2.4.11/fenix/testing")))
 
@@ -144,11 +145,11 @@ class RemoveTest(unittest.TestCase):
                             {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
                             {"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
-        self.assertItemsEqual(["Hello", "Other", "Bye"], folders)
-        self.assertItemsEqual(["package", "build", "export"],
+        six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
+        six.assertCountEqual(self, ["package", "build", "export"],
                               os.listdir(os.path.join(self.client.storage_folder,
                                                       "Hello/1.4.10/fenix/testing")))
-        self.assertItemsEqual(["package", "build", "export"],
+        six.assertCountEqual(self, ["package", "build", "export"],
                               os.listdir(os.path.join(self.client.storage_folder,
                                                       "Hello/2.4.11/fenix/testing")))
 
@@ -184,7 +185,7 @@ class RemoveTest(unittest.TestCase):
                             {"H1": True, "H2": True, "B": True, "O": True})
         remote_folder = os.path.join(self.server_folder, ".conan_server/data") 
         folders = os.listdir(remote_folder)
-        self.assertItemsEqual(["Other", "Bye"], folders)
+        six.assertCountEqual(self, ["Other", "Bye"], folders)
 
     def remove_specific_package_test(self):
         self.client.run("remove hello/1.4.10* -p=1_H1 -f")

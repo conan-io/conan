@@ -13,7 +13,7 @@ class FileTreeManifest(object):
 
     def __repr__(self):
         ret = "%s" % (self.time)
-        for filepath, file_md5 in self.file_sums.iteritems():
+        for filepath, file_md5 in self.file_sums.items():
             ret += "\n%s: %s" % (filepath, file_md5)
         return ret
 
@@ -49,6 +49,8 @@ class FileTreeManifest(object):
         file_dict.pop(CONAN_MANIFEST, None)  # Exclude the MANIFEST itself
         file_dict.pop(CONANFILE + "c", None)  # Exclude the CONANFILE.pyc
         file_dict.pop(".DS_Store", None)  # Exclude tmp in mac
+        
+        file_dict = {key:value for key, value in file_dict.items() if not key.startswith("__pycache__")}
 
         return cls(date, file_dict)
 

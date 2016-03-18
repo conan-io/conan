@@ -29,7 +29,7 @@ class Retriever(object):
         return conanfile
 
     def conan(self, conan_ref, content):
-        if isinstance(conan_ref, basestring):
+        if isinstance(conan_ref, str):
             conan_ref = ConanFileReference.loads(conan_ref)
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)

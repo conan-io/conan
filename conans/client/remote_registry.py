@@ -42,9 +42,9 @@ class RemoteRegistry(object):
         return remotes, refs
 
     def _to_string(self, remotes, refs):
-        lines = ["%s %s" % (ref, remote) for ref, remote in remotes.iteritems()]
+        lines = ["%s %s" % (ref, remote) for ref, remote in remotes.items()]
         lines.append("")
-        lines.extend(["%s %s" % (ref, remote) for ref, remote in sorted(refs.iteritems())])
+        lines.extend(["%s %s" % (ref, remote) for ref, remote in sorted(refs.items())])
         text = os.linesep.join(lines)
         return text
 
@@ -72,7 +72,7 @@ class RemoteRegistry(object):
     def remotes(self):
         with fasteners.InterProcessLock(self._filename + ".lock"):
             remotes, _ = self._load()
-            return [Remote(ref, remote) for ref, remote in remotes.iteritems()]
+            return [Remote(ref, remote) for ref, remote in remotes.items()]
 
     @property
     def refs(self):
@@ -152,7 +152,7 @@ class RemoteRegistry(object):
             if remote_name not in remotes:
                 raise ConanException("%s not found in remotes" % remote_name)
             del remotes[remote_name]
-            refs = {k: v for k, v in refs.iteritems() if v!=remote_name}
+            refs = {k: v for k, v in refs.items() if v!=remote_name}
             self._save(remotes, refs)
 
     def update(self, remote_name, remote):

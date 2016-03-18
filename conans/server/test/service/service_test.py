@@ -116,7 +116,7 @@ class ConanServiceTest(unittest.TestCase):
     def test_get_conanfile_download_urls(self):
         urls = self.service.get_conanfile_download_urls(self.conan_reference)
         # Remove parameters
-        urls = {name: url.split("?signature")[0] for name, url in urls.iteritems()}
+        urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
             return self.fake_url + "/" + "/".join(self.conan_reference) + "/export/" + filename
@@ -131,7 +131,7 @@ class ConanServiceTest(unittest.TestCase):
     def test_get_package_download_urls(self):
         urls = self.service.get_package_download_urls(self.package_reference)
         # Remove parameters
-        urls = {name: url.split("?signature")[0] for name, url in urls.iteritems()}
+        urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
             return self.fake_url + "/" + "/".join(self.package_reference.conan) \
@@ -148,7 +148,7 @@ class ConanServiceTest(unittest.TestCase):
                                                       {"conanfile.py": 23,
                                                        "conanmanifest.txt": 24})
         # Remove parameters
-        urls = {name: url.split("?signature")[0] for name, url in urls.iteritems()}
+        urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
             return self.fake_url + "/" + "/".join(self.conan_reference) + "/export/" + filename
@@ -161,7 +161,7 @@ class ConanServiceTest(unittest.TestCase):
         urls = self.service.get_package_upload_urls(self.package_reference, {"uno.lib": 23,
                                                                              "dos.dll": 24})
         # Remove parameters
-        urls = {name: url.split("?signature")[0] for name, url in urls.iteritems()}
+        urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
             return self.fake_url + "/" + "/".join(self.package_reference.conan) \

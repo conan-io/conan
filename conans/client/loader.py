@@ -1,5 +1,6 @@
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
+from conans.util.files import rmdir
 import inspect
 import uuid
 import imp
@@ -29,7 +30,7 @@ class ConanFileLoader(object):
         """ Check the integrity of a given conanfile
         """
         result = None
-        for name, attr in conan_file.__dict__.iteritems():
+        for name, attr in conan_file.__dict__.items():
             if "_" in name:
                 continue
             if (inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile
@@ -59,6 +60,11 @@ class ConanFileLoader(object):
         # Check if precompiled exist, delete it
         if os.path.exists(conan_file_path + "c"):
             os.unlink(conan_file_path + "c")
+            
+        # Python 3
+        pycache = os.path.join(os.path.dirname(conan_file_path), "__pycache__")
+        if os.path.exists(pycache):
+            rmdir(pycache)
 
         if not os.path.exists(conan_file_path):
             raise NotFoundException("%s not found!" % conan_file_path)
@@ -68,7 +74,7 @@ class ConanFileLoader(object):
         try:
             current_dir = os.path.dirname(conan_file_path)
             sys.path.append(current_dir)
-            old_modules = sys.modules.keys()
+            old_modules = list(sys.modules.keys())
             loaded = imp.load_source(filename, conan_file_path)
             # Put all imported files under a new package name
             module_id = uuid.uuid1()

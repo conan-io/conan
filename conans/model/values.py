@@ -1,5 +1,6 @@
 from conans.util.sha import sha1
 from conans.errors import ConanException
+import six
 
 
 class Values(object):
@@ -27,7 +28,7 @@ class Values(object):
         """
         cls = type(self)
         result = cls(self._value)
-        for k, v in self._dict.iteritems():
+        for k, v in self._dict.items():
             result._dict[k] = v.copy()
         return result
 
@@ -35,10 +36,13 @@ class Values(object):
     def fields(self):
         """ return a sorted list of fields: [compiler, os, ...]
         """
-        return sorted(self._dict.keys())
+        return sorted(list(self._dict.keys()))
+
+    def __bool__(self):
+        return self._value.lower() not in ["false", "none", "0", "off", ""]
 
     def __nonzero__(self):
-        return self._value.lower() not in ["false", "none", "0", "off", ""]
+        return self.__bool__()
 
     def __str__(self):
         return self._value
@@ -86,7 +90,7 @@ class Values(object):
         return result
 
     def add(self, option_text):
-        assert isinstance(option_text, basestring)
+        assert isinstance(option_text, six.string_types)
         name, value = option_text.split("=")
         tokens = name.strip().split(".")
         attr = self
@@ -97,7 +101,7 @@ class Values(object):
     def update(self, other):
         assert isinstance(other, Values)
         self._value = other._value
-        for k, v in other._dict.iteritems():
+        for k, v in other._dict.items():
             if k in self._dict:
                 self._dict[k].update(v)
             else:
@@ -155,4 +159,4 @@ class Values(object):
             # that doesn't change the final sha
             if value != "None":
                 result.append("%s=%s" % (name, value))
-        return sha1('\n'.join(result))
+        return sha1('\n'.join(result).encode())

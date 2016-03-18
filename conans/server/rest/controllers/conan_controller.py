@@ -6,6 +6,7 @@ from conans.errors import NotFoundException
 import json
 from conans.paths import CONAN_MANIFEST
 import os
+import codecs
 
 
 class ConanController(Controller):
@@ -43,7 +44,7 @@ class ConanController(Controller):
             urls = conan_service.get_package_download_urls(package_reference, [CONAN_MANIFEST])
             if not urls:
                 raise NotFoundException("No digest found")
-            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.iteritems()}
+            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
         @app.route(conan_route, method=["GET"])
@@ -55,7 +56,7 @@ class ConanController(Controller):
             reference = ConanFileReference(conanname, version, username, channel)
             snapshot = conan_service.get_conanfile_snapshot(reference)
             snapshot_norm = {filename.replace("\\", "/"): the_md5
-                             for filename, the_md5 in snapshot.iteritems()}
+                             for filename, the_md5 in snapshot.items()}
             return snapshot_norm
 
         @app.route('%s/packages/:package_id' % conan_route, method=["GET"])
@@ -68,7 +69,7 @@ class ConanController(Controller):
             package_reference = PackageReference(reference, package_id)
             snapshot = conan_service.get_package_snapshot(package_reference)
             snapshot_norm = {filename.replace("\\", "/"): the_md5 
-                             for filename, the_md5 in snapshot.iteritems()}
+                             for filename, the_md5 in snapshot.items()}
             return snapshot_norm
 
         @app.route("%s/download_urls" % conan_route, method=["GET"])
@@ -79,7 +80,7 @@ class ConanController(Controller):
             conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
             reference = ConanFileReference(conanname, version, username, channel)
             urls = conan_service.get_conanfile_download_urls(reference)
-            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.iteritems()}
+            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
         @app.route('%s/packages/:package_id/download_urls' % conan_route, method=["GET"])
@@ -91,7 +92,7 @@ class ConanController(Controller):
             reference = ConanFileReference(conanname, version, username, channel)
             package_reference = PackageReference(reference, package_id)
             urls = conan_service.get_package_download_urls(package_reference)
-            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.iteritems()}
+            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
         @app.route("%s/upload_urls" % conan_route, method=["POST"])
@@ -101,9 +102,10 @@ class ConanController(Controller):
             """
             conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
             reference = ConanFileReference(conanname, version, username, channel)
-            filesizes = json.load(request.body)
+            reader = codecs.getreader("utf-8")
+            filesizes = json.load(reader(request.body))
             urls = conan_service.get_conanfile_upload_urls(reference, filesizes)
-            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.iteritems()}
+            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
         @app.route('%s/packages/:package_id/upload_urls' % conan_route, method=["POST"])
@@ -114,9 +116,10 @@ class ConanController(Controller):
             conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
             reference = ConanFileReference(conanname, version, username, channel)
             package_reference = PackageReference(reference, package_id)
-            filesizes = json.load(request.body)
+            reader = codecs.getreader("utf-8")
+            filesizes = json.load(reader(request.body))
             urls = conan_service.get_package_upload_urls(package_reference, filesizes)
-            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.iteritems()}
+            urls_norm = {filename.replace("\\", "/"): url for filename, url in urls.items()}
             return urls_norm
 
         @app.route('%s/search' % self.route, method=["GET"])
@@ -141,7 +144,8 @@ class ConanController(Controller):
             """ Remove any existing conanfiles or its packages created """
             conan_reference = ConanFileReference(conanname, version, username, channel)
             conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
-            payload = json.load(request.body)
+            reader = codecs.getreader("utf-8")
+            payload = json.load(reader(request.body))
             conan_service.remove_packages(conan_reference, payload["package_ids"])
 
         @app.route('%s/remove_files' % conan_route, method="POST")
@@ -149,7 +153,8 @@ class ConanController(Controller):
             """ Remove any existing conanfiles or its packages created """
             conan_reference = ConanFileReference(conanname, version, username, channel)
             conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
-            payload = json.load(request.body)
+            reader = codecs.getreader("utf-8")
+            payload = json.load(reader(request.body))
             files = [os.path.normpath(filename) for filename in payload["files"]]
             conan_service.remove_conanfile_files(conan_reference, files)
 
@@ -159,6 +164,7 @@ class ConanController(Controller):
             conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
             reference = ConanFileReference(conanname, version, username, channel)
             package_reference = PackageReference(reference, package_id)
-            payload = json.load(request.body)
+            reader = codecs.getreader("utf-8")
+            payload = json.load(reader(request.body))
             files = [os.path.normpath(filename) for filename in payload["files"]]
             conan_service.remove_package_files(package_reference, files)

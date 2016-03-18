@@ -5,7 +5,7 @@ from conans.util.log import logger
 import traceback
 import os
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
-from cStringIO import StringIO
+from io import StringIO, BytesIO
 import tarfile
 from conans.util.files import gzopen_without_timestamps
 
@@ -44,7 +44,7 @@ class RemoteManager(object):
 
         returns (ConanDigest, remote_name)"""
         return self._call_remote(remote, "get_conan_digest", conan_reference)
-    
+
     def get_package_digest(self, package_reference, remote):
         """
         Read ConanDigest from remotes
@@ -52,7 +52,6 @@ class RemoteManager(object):
 
         returns (ConanDigest, remote_name)"""
         return self._call_remote(remote, "get_package_digest", package_reference)
-
 
     def get_conanfile(self, conan_reference, remote):
         """
@@ -124,16 +123,16 @@ def compress_files(files, name, excluded):
     """Compress the package and returns the new dict (name => content) of files,
     only with the conanXX files and the compressed file"""
 
-    tgz_contents = StringIO()
+    tgz_contents = BytesIO()
     tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_contents)
 
     def addfile(name, contents, tar):
         info = tarfile.TarInfo(name=name)
-        string = StringIO(contents)
+        the_str = BytesIO(contents)
         info.size = len(contents)
-        tar.addfile(tarinfo=info, fileobj=string)
+        tar.addfile(tarinfo=info, fileobj=the_str)
 
-    for the_file, content in files.iteritems():
+    for the_file, content in files.items():
         if the_file not in excluded:
             addfile(the_file, content, tgz)
 
@@ -153,4 +152,4 @@ def uncompress_files(files, folder, name):
             save(os.path.join(folder, file_name), content)
         else:
             #  Unzip the file
-            tar_extract(StringIO(content), folder)
+            tar_extract(BytesIO(content), folder)

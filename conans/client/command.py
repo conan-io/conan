@@ -152,7 +152,7 @@ class Command(object):
         options = args.options or []
         settings = args.settings or []
 
-        sha = hashlib.sha1("".join(options + settings)).hexdigest()
+        sha = hashlib.sha1("".join(options + settings).encode()).hexdigest()
         build_folder = os.path.join(root_folder, "build", sha)
         rmdir(build_folder)
         shutil.copytree(test_folder, build_folder)
@@ -474,7 +474,7 @@ class Command(object):
         elif args.subcommand == "update":
             registry.update(args.remote, args.url)
         elif args.subcommand == "list_ref":
-            for ref, remote in registry.refs.iteritems():
+            for ref, remote in registry.refs.items():
                 self._user_io.out.info("%s: %s" % (ref, remote))
         elif args.subcommand == "add_ref":
             registry.add_ref(args.reference, args.remote)
@@ -532,7 +532,8 @@ class Command(object):
             errors = True
         except ConanException as exc:
             logger.error(exc)
-            # logger.debug(traceback.format_exc())
+#             import traceback
+#             logger.debug(traceback.format_exc())
             errors = True
             self._user_io.out.error(str(exc))
 

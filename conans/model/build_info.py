@@ -73,7 +73,7 @@ class DepsCppInfo(_CppInfo):
 
     @property
     def dependencies(self):
-        return self._dependencies.iteritems()
+        return self._dependencies.items()
 
     def __getitem__(self, item):
         return self._dependencies[item]

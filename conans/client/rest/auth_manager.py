@@ -113,7 +113,7 @@ class ConanApiAuthManager(object):
     @staticmethod
     def get_mac_digest():
         sha1 = hashlib.sha1()
-        sha1.update(str(get_mac()))
+        sha1.update(str(get_mac()).encode())
         return str(sha1.hexdigest())
 
     def set_custom_headers(self, username):

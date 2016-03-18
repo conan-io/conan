@@ -28,6 +28,33 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
         return "%s => %s" % (repr(self.conan_ref), repr(self.conanfile)[:100].replace("\n", " "))
 
 
+    def __cmp__(self, other):
+        if other is None:
+            return -1
+        elif self.conan_ref is None:
+            return 0 if other.conan_ref is None else -1
+        elif other.conan_ref is None:
+            return 1
+        
+        if self.conan_ref == other.conan_ref:
+            return 0
+        if self.conan_ref < other.conan_ref:
+            return -1
+        
+        return 1
+    
+    def __gt__(self, other):
+        return self.__cmp__(other) == 1
+
+    def __lt__(self, other):
+        return self.__cmp__(other) == -1
+
+    def __le__(self, other):
+        return self.__cmp__(other) in [0, -1]
+
+    def __ge__(self, other):
+        return self.__cmp__(other) in [0, 1]
+
 class DepsGraph(object):
     """ DAG of dependencies
     """
@@ -65,7 +92,7 @@ class DepsGraph(object):
         result = []
         _, conanfile = node
         for n in neighbors:
-            for req in conanfile.requires.itervalues():
+            for req in conanfile.requires.values():
                 if req.conan_reference == n.conan_ref:
                     if not req.private:
                         result.append(n)
@@ -78,7 +105,7 @@ class DepsGraph(object):
         result = []
         for n in neighbors:
             _, conanfile = n
-            for req in conanfile.requires.itervalues():
+            for req in conanfile.requires.values():
                 if req.conan_reference == node.conan_ref:
                     if req.private:
                         result.append(n)
@@ -262,7 +289,7 @@ class DepsBuilder(object):
                                                   down_options)
 
         # Expand each one of the current requirements
-        for name, require in conanfile.requires.iteritems():
+        for name, require in conanfile.requires.items():
             if require.override or require.conan_reference is None:
                 continue
             previous_node = public_deps.get(name)

@@ -14,13 +14,13 @@ class ConanRunner(object):
                     line = proc.stdout.readline()
                     if not line:
                         break
-                    output.write(line)
+                    output.write(line.decode())
             out, err = proc.communicate()
 
             if hasattr(output, "write"):
                 if out:
-                    output.write(out)
+                    output.write(out.decode())
                 if err:
-                    output.write(err)
+                    output.write(err.decode())
 
             return proc.returncode

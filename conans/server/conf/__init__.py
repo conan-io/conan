@@ -9,7 +9,7 @@ import random
 import string
 from conans.errors import ConanException
 from conans.util.files import save, mkdir
-from ConfigParser import ConfigParser, NoSectionError
+from six.moves.configparser import ConfigParser, NoSectionError
 from conans.paths import SimplePaths
 from conans.server.store.disk_adapter import DiskAdapter
 from conans.server.store.file_manager import FileManager
@@ -139,8 +139,8 @@ class ConanServerConfigParser(ConfigParser):
     def users(self):
         def validate_pass_encoding(password):
             try:
-                password.encode('latin1')
-            except UnicodeDecodeError:
+                password.encode('ascii')
+            except (UnicodeDecodeError, UnicodeEncodeError):
                 raise ConanException("Password contains invalid characters. Only ASCII encoding is supported")
             return password
 
@@ -149,7 +149,7 @@ class ConanServerConfigParser(ConfigParser):
             return {pair.split(":")[0]: validate_pass_encoding(pair.split(":")[1]) for pair in pairs}
         else:
             tmp = dict(self._get_file_conf("users"))
-            tmp = {key: validate_pass_encoding(value) for key, value in tmp.iteritems()}
+            tmp = {key: validate_pass_encoding(value) for key, value in tmp.items()}
             return tmp
 
     @property

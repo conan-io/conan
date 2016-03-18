@@ -113,11 +113,11 @@ class Printer(object):
             return
 
         self._out.info("Existing packages info:\n")
-        for conan_ref, packages in sorted(info.iteritems()):
+        for conan_ref, packages in sorted(info.items()):
             self._print_colored_line(str(conan_ref), indent=0)
             if not packages:
                 self._out.writeln('    There are no packages', Color.RED)
-            for package_id, conan_info in packages.iteritems():
+            for package_id, conan_info in packages.items():
                 self._print_colored_line("Package_ID", package_id, 1)
                 if verbose:
                     # Printing the Package information (settings, options, requires, ...)

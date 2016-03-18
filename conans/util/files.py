@@ -7,6 +7,8 @@ import tarfile
 from os.path import abspath, realpath, join as joinpath
 import platform
 import re
+import six
+
 
 def delete_empty_dirs(folder):
     for root, _, _ in os.walk(folder, topdown=False):
@@ -15,7 +17,7 @@ def delete_empty_dirs(folder):
         except OSError:
             pass  # not empty
 
-            
+
 def normalize(text):
     if platform.system() == "Windows":
         return re.sub("\r?\n", "\r\n", text)
@@ -25,7 +27,11 @@ def normalize(text):
 
 def md5(content):
     md5alg = hashlib.md5()
-    md5alg.update(content)
+    if isinstance(content, bytes):
+        tmp = content
+    else:
+        tmp = content.encode()
+    md5alg.update(tmp)
     return md5alg.hexdigest()
 
 
@@ -36,7 +42,7 @@ def md5sum(file_path):
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
-        m = getattr(hashlib, algorithm_name)()
+        m = hashlib.new(algorithm_name)
         while True:
             data = fh.read(8192)
             if not data:
@@ -57,19 +63,23 @@ def save(path, content):
     except:
         pass
 
+    if six.PY3:
+        if not isinstance(content, bytes):
+            content = bytes(content, "utf-8")
     with open(path, 'wb') as handle:
         handle.write(content)
 
 
 def save_files(path, files):
-    for name, content in files.iteritems():
+    for name, content in list(files.items()):
         save(os.path.join(path, name), content)
 
 
-def load(path):
+def load(path, binary=False):
     '''Loads a file content'''
     with open(path, 'rb') as handle:
-        return handle.read()
+        tmp = handle.read()
+        return tmp if binary else tmp.decode()
 
 
 def build_files_set(basedir, rel_files):
@@ -77,7 +87,7 @@ def build_files_set(basedir, rel_files):
     ret = {}
     for filename in rel_files:
         abs_path = os.path.join(basedir, filename)
-        ret[filename] = load(abs_path)
+        ret[filename] = load(abs_path, binary=True)
 
     return ret
 

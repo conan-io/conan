@@ -60,7 +60,7 @@ class RequirementsInfo(object):
     def refs(self):
         """ used for updating downstream requirements with this
         """
-        return self._data.keys()
+        return list(self._data.keys())
 
     def __getitem__(self, item):
         """Approximate search by key
@@ -80,7 +80,7 @@ class RequirementsInfo(object):
         result = []
         for key in sorted(self._data):
             result.append(self._data[key].sha)
-        return sha1('\n'.join(result))
+        return sha1('\n'.join(result).encode())
 
     def dumps(self):
         result = []
@@ -91,12 +91,12 @@ class RequirementsInfo(object):
         return "\n".join(result)
 
     def serialize(self):
-        return {str(ref): requinfo.serialize() for ref, requinfo in self._data.iteritems()}
+        return {str(ref): requinfo.serialize() for ref, requinfo in self._data.items()}
 
     @staticmethod
     def deserialize(data):
         ret = RequirementsInfo({})
-        for ref, requinfo in data.iteritems():
+        for ref, requinfo in data.items():
             ret._data[ref] = RequirementInfo.deserialize(requinfo)
         return ret
 
@@ -192,7 +192,7 @@ class ConanInfo(object):
         result.append(self.settings.sha)
         result.append(self.options.sha)
         result.append(self.requires.sha)
-        return sha1('\n'.join(result))
+        return sha1('\n'.join(result).encode())
 
     def serialize(self):
         conan_info_json = {"settings": self.settings.serialize(),

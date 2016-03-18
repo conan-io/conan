@@ -3,11 +3,10 @@ from conans.test.tools import TestClient
 import random
 import string
 
-
 class ConanfileHelpersTest(unittest.TestCase):
 
     def test_replace_in_file(self):
-        for libname in [''.join(random.choice(string.lowercase) for _ in range(5))
+        for libname in [''.join(random.choice(string.ascii_lowercase) for _ in range(5))
                         for _ in range(5)]:
             helpers = '''
 def build_helper(output):

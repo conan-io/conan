@@ -70,7 +70,7 @@ class RestApiTest(unittest.TestCase):
     def upload_huge_conan_test(self):
         # Upload a conans
         conan_reference = ConanFileReference.loads("conanhuge/1.0.0@private_user/testing")
-        files = {"file%s.cpp" % name: "File conent" for name in xrange(1000)}
+        files = {"file%s.cpp" % name: "File conent" for name in range(1000)}
         self._upload_conan(conan_reference, files)
 
         # Get the conans
@@ -182,7 +182,7 @@ class MyConan(ConanFile):
     settings = arch, compiler, os
 """ % (conan_reference.name, conan_reference.version)
         files[CONANFILE] = content
-        files_md5s = {filename: md5(content) for filename, content in files.iteritems()}
+        files_md5s = {filename: md5(content) for filename, content in files.items()}
         conan_digest = FileTreeManifest(123123123, files_md5s)
         files[CONAN_MANIFEST] = str(conan_digest)
 

@@ -28,7 +28,7 @@ class HttpBasicAuthentication(AuthorizationHeader):
         method parameters"""
         if header_value is None:
             return None
-        username, password = base64.b64decode(header_value).split(":", 1)
+        username, password = base64.b64decode(header_value).decode().split(":", 1)
         ret = UserPasswordPair(username, password)
         return {self.keyword: ret}
 

@@ -11,11 +11,7 @@ from codecs import open
 from os import path
 import os
 import re
-import sys
-from distutils.errors import DistutilsError
 
-if sys.version_info.major > 2:
-    raise DistutilsError("This package requires Python 2.7")
 
 here = path.abspath(path.dirname(__file__))
 

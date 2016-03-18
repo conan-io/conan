@@ -194,8 +194,9 @@ class FileManager(object):
                 conan_info_content = self._file_adapter.get_file(info_path)
                 conan_vars_info = ConanInfo.loads(conan_info_content)
                 result[package_id] = conan_vars_info
-            except Exception:
+            except Exception as exc:
                 logger.error("Package %s has not ConanInfo file" % str(package_reference))
+                logger.error(exc)
 
         return result
 
@@ -210,13 +211,13 @@ class FileManager(object):
         for a subset of files. files_subset has to be a list with paths
         relative to relative_path"""
         relative_snap = self._file_adapter.get_snapshot(relative_path, files_subset)
-        urls = self._file_adapter.get_download_urls(relative_snap.keys(), user)
+        urls = self._file_adapter.get_download_urls(list(relative_snap.keys()), user)
         urls = self._relativize_keys(urls, relative_path)
         return urls
 
     def _get_upload_urls(self, relative_path, filesizes, user=None):
         abs_paths = {}
-        for path, filesize in filesizes.iteritems():
+        for path, filesize in filesizes.items():
             abs_paths[os.path.join(relative_path, path)] = filesize
         urls = self._file_adapter.get_upload_urls(abs_paths, user)
         urls = self._relativize_keys(urls, relative_path)

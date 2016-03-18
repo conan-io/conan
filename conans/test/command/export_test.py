@@ -28,7 +28,7 @@ class ExportTest(unittest.TestCase):
         self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
-        for name in self.files.keys():
+        for name in list(self.files.keys()):
             self.assertTrue(os.path.exists(os.path.join(reg_path, name)))
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
@@ -109,7 +109,7 @@ class OpenSSLConan(ConanFile):
         self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path2), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path2))
 
-        for name in files2.keys():
+        for name in list(files2.keys()):
             self.assertTrue(os.path.exists(os.path.join(reg_path2, name)))
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
@@ -142,7 +142,7 @@ class OpenSSLConan(ConanFile):
 
         self.assertTrue(os.path.exists(reg_path3))
 
-        for name in files2.keys():
+        for name in list(files2.keys()):
             self.assertTrue(os.path.exists(os.path.join(reg_path3, name)))
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
@@ -166,7 +166,7 @@ class OpenSSLConan(ConanFile):
 
         file_list = []
         for f in folders:
-            for name, content in {'file1.h': 'asddfasdf', 'file1.dll': 'asddfasdf'}.iteritems():
+            for name, content in {'file1.h': 'asddfasdf', 'file1.dll': 'asddfasdf'}.items():
                 file_path = os.path.join(f, name)
                 save(file_path, content)
                 file_list.append(file_path)

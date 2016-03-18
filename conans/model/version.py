@@ -46,12 +46,25 @@ class Version(str):
 
     def __cmp__(self, other):
         if other is None:
-            return cmp(self.as_list, None)
+            return 1
         if not isinstance(other, Version):
             other = Version(other)
 
-        return cmp(self.as_list, other.as_list)
-
+        for ind, el in enumerate(self.as_list):
+            if ind +1 > len(other.as_list):
+                return 1
+            elif el == other.as_list[ind]:
+                continue
+            elif el > other.as_list[ind]:
+                return 1
+            else:
+                return -1
+    
+        if len(other.as_list) > len(self.as_list):
+            return -1
+        else:
+            return 0
+            
     def __gt__(self, other):
         return self.__cmp__(other) == 1
 

@@ -74,7 +74,7 @@ class Options(object):
     def values(self):
         result = OptionsValues()
         result._options = Values.from_list(self._options.values_list)
-        for k, v in self._reqs_options.iteritems():
+        for k, v in self._reqs_options.items():
             result._reqs_options[k] = v.copy()
         return result
 
@@ -83,7 +83,7 @@ class Options(object):
         assert isinstance(v, OptionsValues)
         self._options.values = v._options
         self._reqs_options.clear()
-        for k, v in v._reqs_options.iteritems():
+        for k, v in v._reqs_options.items():
             self._reqs_options[k] = v.copy()
 
     def propagate_upstream(self, values, down_ref, own_ref, output):
@@ -93,7 +93,7 @@ class Options(object):
             assert isinstance(values, OptionsValues)
             own_values = values.pop(own_ref.name)
             self._options.propagate_upstream(own_values, down_ref, own_ref, output)
-            for name, option_values in values._reqs_options.iteritems():
+            for name, option_values in sorted(list(values._reqs_options.items())):
                 self._reqs_options.setdefault(name, Values()).propagate_upstream(option_values,
                                                                                  down_ref,
                                                                                  own_ref,
@@ -106,7 +106,7 @@ class Options(object):
         if values is not None:
             assert isinstance(values, OptionsValues)
             self._options.values = values._options
-            for name, option_values in values._reqs_options.iteritems():
+            for name, option_values in values._reqs_options.items():
                 self._reqs_options.setdefault(name, Values()).update(option_values)
 
     def validate(self):
@@ -115,7 +115,7 @@ class Options(object):
     def propagate_downstream(self, ref, options):
         assert isinstance(options, OptionsValues)
         self._reqs_options[ref.name] = options._options
-        for k, v in options._reqs_options.iteritems():
+        for k, v in options._reqs_options.items():
             self._reqs_options[k] = v.copy()
 
     def clear_unused(self, references):
@@ -123,7 +123,7 @@ class Options(object):
         that should be the upstream requirements
         """
         existing_names = [r.conan.name for r in references]
-        for name in self._reqs_options.keys():
+        for name in list(self._reqs_options.keys()):
             if name not in existing_names:
                 self._reqs_options.pop(name)
 
@@ -152,7 +152,7 @@ class OptionsValues(object):
     def copy(self):
         result = OptionsValues()
         result._options = self._options.copy()
-        for k, v in self._reqs_options.iteritems():
+        for k, v in self._reqs_options.items():
             result._reqs_options[k] = v.copy()
         return result
 
@@ -162,7 +162,7 @@ class OptionsValues(object):
         return setattr(self._options, attr, value)
 
     def clear_indirect(self):
-        for v in self._reqs_options.itervalues():
+        for v in self._reqs_options.values():
             v.clear()
 
     def as_list(self):
@@ -170,7 +170,7 @@ class OptionsValues(object):
         options_list = self._options.as_list()
         if options_list:
             result.extend(options_list)
-        for key in sorted(self._reqs_options.iterkeys()):
+        for key in sorted(self._reqs_options.keys()):
             for line in self._reqs_options[key].as_list():
                 line_key, line_value = line
                 result.append(("%s:%s" % (key, line_key), line_value))
@@ -188,7 +188,7 @@ class OptionsValues(object):
             else:
                 by_package[None].append((k, v))
         result._options = Values.from_list(by_package[None])
-        for k, v in by_package.iteritems():
+        for k, v in by_package.items():
             if k is not None:
                 result._reqs_options[k] = Values.from_list(v)
         return result
@@ -220,15 +220,15 @@ class OptionsValues(object):
     def sha(self):
         result = []
         result.append(self._options.sha)
-        for key in sorted(self._reqs_options.iterkeys()):
+        for key in sorted(list(self._reqs_options.keys())):
             result.append(self._reqs_options[key].sha)
-        return sha1('\n'.join(result))
+        return sha1('\n'.join(result).encode())
 
     def serialize(self):
         ret = {}
         ret["options"] = self._options.serialize()
         ret["req_options"] = {}
-        for name, values in self._reqs_options.iteritems():
+        for name, values in self._reqs_options.items():
             ret["req_options"][name] = values.serialize()
         return ret
 
@@ -236,7 +236,7 @@ class OptionsValues(object):
     def deserialize(data):
         result = OptionsValues()
         result._options = Values.deserialize(data["options"])
-        for name, data_values in data["req_options"].iteritems():
+        for name, data_values in data["req_options"].items():
             result._reqs_options[name] = Values.deserialize(data_values)
         return result
 

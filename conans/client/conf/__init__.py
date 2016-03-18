@@ -3,7 +3,7 @@ from conans.errors import ConanException
 import logging
 from conans.util.env_reader import get_env
 from conans.util.files import save, load
-from ConfigParser import NoSectionError, ConfigParser
+from six.moves.configparser import ConfigParser, NoSectionError
 from conans.model.values import Values
 import urllib
 

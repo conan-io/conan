@@ -15,7 +15,7 @@ class OptionsTest(unittest.TestCase):
 
     def items_test(self):
         self.assertEqual(self.sut.items(), [("optimized", "3"), ("static", "True")])
-        self.assertEqual(self.sut.iteritems(), [("optimized", "3"), ("static", "True")])
+        self.assertEqual(self.sut.items(), [("optimized", "3"), ("static", "True")])
 
     def boolean_test(self):
         self.sut.static = False
@@ -64,14 +64,14 @@ class OptionsTest(unittest.TestCase):
 but it was already assigned to 4 by Hello0/0.1@diego/testing
 WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option static to True
 but it was already assigned to False by Hello0/0.1@diego/testing
-WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option Poco:deps_bundled to What
-but it was already assigned to True by Hello0/0.1@diego/testing
 WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option Boost:static to 2
 but it was already assigned to False by Hello0/0.1@diego/testing
 WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option Boost:thread to Any
 but it was already assigned to True by Hello0/0.1@diego/testing
 WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option Boost:thread.multi to on
-but it was already assigned to off by Hello0/0.1@diego/testing""", output)
+but it was already assigned to off by Hello0/0.1@diego/testing
+WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option Poco:deps_bundled to What
+but it was already assigned to True by Hello0/0.1@diego/testing""", str(output))
         self.assertEqual(self.sut.values.dumps(),
                          """optimized=4
 static=False

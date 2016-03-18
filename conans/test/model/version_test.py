@@ -10,6 +10,9 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(v1 > "1.1")
         self.assertTrue(v1 > None)
         self.assertTrue(v1 < "1.11")
+        self.assertTrue(v1 > "1.2")
+        self.assertTrue(v1 > "1.2.2.2")
+        self.assertTrue(v1 < "1.2.3.2")
         self.assertEqual(v1.major(), "1.Y.Z")  # 1.X.Y
         self.assertEqual(v1.minor(), "1.2.Z")  # 1.2.Y
         self.assertTrue(v1.compatible("1.X"))

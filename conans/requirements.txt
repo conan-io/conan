@@ -5,5 +5,6 @@ colorama>=0.3.3, <0.4.0
 passlib>=1.6.5, <1.7.0
 boto>=2.38.0, <2.39.0
 PyYAML>=3.11, <3.12.0
-patch>=1.15, <1.16
+patch==1.16
 fasteners>=0.14.1
+six>=1.10.0

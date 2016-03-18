@@ -1,6 +1,6 @@
 from conans.client.output import ConanOutput
 from conans.client.command import Command
-from cStringIO import StringIO
+from io import StringIO
 import shlex
 from conans.util.files import save_files, load, save
 from conans.test.utils.runner import TestRunner
@@ -17,7 +17,7 @@ from mock import Mock
 import uuid
 from webtest.app import TestApp
 from conans.client.rest.rest_client import RestApiClient
-import urlparse
+from six.moves.urllib.parse import urlsplit, urlunsplit, urlparse, urlencode
 from conans.server.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
                                                       TestServerLauncher)
@@ -27,7 +27,6 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans.model.version import Version
 from conans.client.command import migrate_and_get_paths
-from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.test.utils.test_files import temp_folder
 from conans.client.remote_registry import RemoteRegistry
 from collections import Counter
@@ -55,6 +54,18 @@ class TestingResponse(object):
     @property
     def content(self):
         return self.test_response.body
+    
+    @property
+    def charset(self):
+        return self.test_response.charset
+    
+    @charset.setter
+    def charset(self, newcharset):
+        self.test_response.charset = newcharset
+    
+    @property
+    def text(self):
+        return self.test_response.text
 
     def iter_content(self, chunk_size=1):  # @UnusedVariable
         return [self.content]
@@ -73,12 +84,12 @@ class TestRequester(object):
 
     def _get_url_path(self, url):
         # Remove schema from url
-        _, _, path, query, _ = urlparse.urlsplit(url)
-        url = urlparse.urlunsplit(("", "", path, query, ""))
+        _, _, path, query, _ = urlsplit(url)
+        url = urlunsplit(("", "", path, query, ""))
         return url
 
     def _get_wsgi_app(self, url):
-        for test_server in self.test_servers.itervalues():
+        for test_server in self.test_servers.values():
             if url.startswith(test_server.fake_url):
                 return test_server.app
 
@@ -96,8 +107,6 @@ class TestRequester(object):
     def put(self, url, data, headers=None, verify=None):
         app, url = self._prepare_call(url, {}, None)
         if app:
-            if isinstance(data, IterableToFileAdapter):
-                data = "".join(tmp for tmp in data)
             response = app.put(url, data, expect_errors=True, headers=headers)
             return TestingResponse(response)
         else:
@@ -274,7 +283,7 @@ class TestClient(object):
 
         save(self.paths.registry, "")
         registry = RemoteRegistry(self.paths.registry, TestBufferConanOutput())
-        for name, server in self.servers.iteritems():
+        for name, server in self.servers.items():
             registry.add(name, server.fake_url)
 
         logger.debug("Client storage = %s" % self.storage_folder)
@@ -286,16 +295,18 @@ class TestClient(object):
         # Set default settings in global defined
         self.paths.conan_config  # For create the default file if not existing
         text = load(self.paths.conan_conf_path)
-        if compiler != "Visual Studio":
-            text = text.replace("compiler.runtime=MD", "")
-        # text = text.replace("build_type=Release", "")
-
-        text += "\ncompiler=%s" % compiler
-        text += "\ncompiler.version=%s" % compiler_version
-        if compiler != "Visual Studio":
-            text += "\ncompiler.libcxx=libstdc++"
-
-        save(self.paths.conan_conf_path, text)
+        # prevent TestClient instances with reused paths to write again the compiler
+        if "compiler=" not in text: 
+            if compiler != "Visual Studio":
+                text = text.replace("compiler.runtime=MD", "")
+            # text = text.replace("build_type=Release", "")
+    
+            text += "\ncompiler=%s" % compiler
+            text += "\ncompiler.version=%s" % compiler_version
+            if compiler != "Visual Studio":
+                text += "\ncompiler.libcxx=libstdc++"
+    
+            save(self.paths.conan_conf_path, text)
 
     @property
     def default_compiler_visual_studio(self):

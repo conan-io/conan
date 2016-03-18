@@ -11,7 +11,7 @@ def diff_snapshots(snap_origin, snap_dest):
     new = []
     modified = []
 
-    for filename, md5_origin in snap_origin.iteritems():
+    for filename, md5_origin in snap_origin.items():
         if filename not in snap_dest:
             new.append(filename)
         else:
@@ -20,7 +20,7 @@ def diff_snapshots(snap_origin, snap_dest):
 
     deleted = []
 
-    for filename in snap_dest.keys():
+    for filename in list(snap_dest.keys()):
         if filename not in snap_origin:
             deleted.append(filename)
 

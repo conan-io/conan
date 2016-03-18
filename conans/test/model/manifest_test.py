@@ -12,7 +12,7 @@ class ManifestTest(unittest.TestCase):
         files = {"one.ext": "aalakjshdlkjahsdlkjahsdljkhsadljkhasljkdhlkjashd",
                  "path/to/two.txt": "asdas13123",
                  "two.txt": "asdasdasdasdasdasd"}
-        for filename, content in files.iteritems():
+        for filename, content in files.items():
             save(os.path.join(tmp_dir, filename), content)
 
         manifest = FileTreeManifest.create(tmp_dir)
@@ -23,6 +23,6 @@ class ManifestTest(unittest.TestCase):
 
         self.assertEquals(readed_manifest, manifest)
 
-        for filepath, md5readed in manifest.file_sums.iteritems():
+        for filepath, md5readed in manifest.file_sums.items():
             content = files[filepath]
             self.assertEquals(md5(content), md5readed)
