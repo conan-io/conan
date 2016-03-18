@@ -33,8 +33,9 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
             pyenv virtualenv 3.5.0 conan
             ;;
 
+    esac
     pyenv rehash
-    pyenv activate conan
+    pyenv activate psutil
 fi
 
 pip install -r conans/requirements_dev.txt
