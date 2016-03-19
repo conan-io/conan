@@ -296,9 +296,9 @@ class TestClient(object):
         self.paths.conan_config  # For create the default file if not existing
         text = load(self.paths.conan_conf_path)
         # prevent TestClient instances with reused paths to write again the compiler
+        if compiler != "Visual Studio":
+            text = text.replace("compiler.runtime=MD", "")
         if "compiler=" not in text: 
-            if compiler != "Visual Studio":
-                text = text.replace("compiler.runtime=MD", "")
             # text = text.replace("build_type=Release", "")
     
             text += "\ncompiler=%s" % compiler
