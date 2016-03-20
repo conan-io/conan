@@ -3,6 +3,7 @@ from conans.test.tools import TestClient, TestServer
 from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.client.manager import CONANFILE
 import os
+import platform
 import stat
 from conans.paths import CONAN_MANIFEST, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
 from conans.util.files import save
@@ -118,10 +119,12 @@ class UploadTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(folder,
                                                     "res",
                                                     "shares/readme.txt")))
-        self.assertEqual(os.stat(os.path.join(folder,
-                                              "bin",
-                                              "my_bin/executable")).st_mode &
-                         stat.S_IRWXU, stat.S_IRWXU)
+
+        if platform.system() != "Windows":
+            self.assertEqual(os.stat(os.path.join(folder,
+                                                  "bin",
+                                                  "my_bin/executable")).st_mode &
+                             stat.S_IRWXU, stat.S_IRWXU)
 
     def upload_all_test(self):
         '''Upload conans and package together'''
