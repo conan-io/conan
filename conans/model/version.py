@@ -53,13 +53,12 @@ class Version(str):
         for ind, el in enumerate(self.as_list):
             if ind + 1 > len(other.as_list):
                 return 1
-            elif str(el) == str(other.as_list[ind]):
+            elif el == other.as_list[ind]:
                 continue
-            elif str(el) > str(other.as_list[ind]):
+            elif el > other.as_list[ind]:
                 return 1
             else:
                 return -1
-
         if len(other.as_list) > len(self.as_list):
             return -1
         else:

@@ -1,5 +1,6 @@
 import unittest
 from conans.model.version import Version
+from builtins import TypeError
 
 
 class VersionTest(unittest.TestCase):
@@ -22,3 +23,7 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(v2.compatible("1.X"))
         self.assertTrue(v2.compatible("1.2.3.4"))
         self.assertFalse(v2.compatible("1.3.3.4"))
+
+        v1 = Version("1.2.rc1")
+        self.assertRaises(TypeError, lambda: v1 > "1.2.3")
+
