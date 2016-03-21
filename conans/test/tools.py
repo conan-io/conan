@@ -31,6 +31,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.client.remote_registry import RemoteRegistry
 from collections import Counter
 from conans.client.paths import ConanPaths
+import six
 
 
 class TestingResponse(object):
@@ -54,15 +55,15 @@ class TestingResponse(object):
     @property
     def content(self):
         return self.test_response.body
-    
+
     @property
     def charset(self):
         return self.test_response.charset
-    
+
     @charset.setter
     def charset(self, newcharset):
         self.test_response.charset = newcharset
-    
+
     @property
     def text(self):
         return self.test_response.text
@@ -202,7 +203,14 @@ class TestBufferConanOutput(ConanOutput):
         ConanOutput.__init__(self, self._buffer, color=False)
 
     def __repr__(self):
-        return self._buffer.getvalue()
+        # FIXME: I'm sure there is a better approach. Look at six docs.
+        if six.PY2:
+            return str(self._buffer.getvalue().encode("ascii", "ignore"))
+        else:
+            return self._buffer.getvalue()
+
+    def __str__(self, *args, **kwargs):
+        return self.__repr__()
 
     def __eq__(self, value):
         return self.__repr__() == value

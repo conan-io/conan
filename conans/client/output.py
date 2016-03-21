@@ -95,4 +95,3 @@ class ScopedOutput(ConanOutput):
     def write(self, data, front=None, back=None, newline=False):
         super(ScopedOutput, self).write("%s: " % self.scope, front, back, False)
         super(ScopedOutput, self).write("%s" % data, Color.BRIGHT_WHITE, back, newline)
-        

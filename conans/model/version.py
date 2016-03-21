@@ -53,6 +53,11 @@ class Version(str):
         for ind, el in enumerate(self.as_list):
             if ind + 1 > len(other.as_list):
                 return 1
+            if not isinstance(el, int) and isinstance(other.as_list[ind], int):
+                # Version compare with 1.4.rc2
+                return -1
+            elif not isinstance(other.as_list[ind], int) and isinstance(el, int):
+                return 1
             elif el == other.as_list[ind]:
                 continue
             elif el > other.as_list[ind]:
