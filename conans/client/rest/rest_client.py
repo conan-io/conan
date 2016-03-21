@@ -7,7 +7,7 @@ import json
 from conans.paths import CONANFILE, CONAN_MANIFEST
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import md5
+from conans.util.files import md5, decode_text
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -24,7 +24,7 @@ def handle_return_deserializer(deserializer=None):
             if ret.status_code != 200:
                 ret.charset = "utf-8" # To be able to access ret.text (ret.content are bytes)
                 raise get_exception_from_error(ret.status_code)(ret.text)
-            return deserializer(ret.content) if deserializer else ret.content.decode()
+            return deserializer(ret.content) if deserializer else decode_text(ret.content)
         return inner
     return handle_return
 
@@ -87,7 +87,7 @@ class RestApiClient(object):
 
         # Get the digest
         contents = self.download_files(urls)
-        contents = {key: value.decode() for key, value in dict(contents).items()}  # Unroll generator and decode shas (plain text)
+        contents = {key: decode_text(value) for key, value in dict(contents).items()}  # Unroll generator and decode shas (plain text)
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
     def get_package_digest(self, package_reference):
@@ -101,7 +101,7 @@ class RestApiClient(object):
 
         # Get the digest
         contents = self.download_files(urls)
-        contents = dict(contents)  # Unroll generator
+        contents = {key: decode_text(value) for key, value in dict(contents).items()}  # Unroll generator and decode shas (plain text)
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
     def get_conanfile(self, conan_reference):
@@ -316,7 +316,7 @@ class RestApiClient(object):
             response.charset = "utf-8" # To be able to access ret.text (ret.content are bytes)
             raise get_exception_from_error(response.status_code)(response.text)
 
-        return json.loads(response.content.decode())
+        return json.loads(decode_text(response.content))
 
     @property
     def _remote_api_url(self):

@@ -298,9 +298,9 @@ class TestClient(object):
         # prevent TestClient instances with reused paths to write again the compiler
         if compiler != "Visual Studio":
             text = text.replace("compiler.runtime=MD", "")
-        if "compiler=" not in text: 
+        if "compiler=" not in text:
             # text = text.replace("build_type=Release", "")
-    
+
             text += "\ncompiler=%s" % compiler
             text += "\ncompiler.version=%s" % compiler_version
             if compiler != "Visual Studio":

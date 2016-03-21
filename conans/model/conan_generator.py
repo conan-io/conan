@@ -32,9 +32,9 @@ class GeneratorManager(object):
 
     def add(self, name, generator_class):
         if name in self._known_generators:
-            raise ConanException()
+            raise ConanException("")
         elif not issubclass(generator_class, Generator):
-            raise ConanException()
+            raise ConanException("")
         else:
             self._known_generators[name] = generator_class
 

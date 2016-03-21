@@ -196,7 +196,8 @@ class FileManager(object):
                 result[package_id] = conan_vars_info
             except Exception as exc:
                 logger.error("Package %s has not ConanInfo file" % str(package_reference))
-                logger.error(exc)
+                if str(exc):
+                    logger.error(str(exc))
 
         return result
 

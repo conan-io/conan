@@ -8,6 +8,18 @@ from os.path import abspath, realpath, join as joinpath
 import platform
 import re
 import six
+from conans.util.log import logger
+
+
+def decode_text(text):
+    decoders = ["utf-8", "Windows-1252"]
+    for decoder in decoders:
+        try:
+            return text.decode(decoder)
+        except UnicodeDecodeError:
+            continue
+    logger.warn("can't decode %s" % str(text))
+    return text.decode("utf-8", "ignore")  # Ignore not compatible characters
 
 
 def delete_empty_dirs(folder):
@@ -79,7 +91,7 @@ def load(path, binary=False):
     '''Loads a file content'''
     with open(path, 'rb') as handle:
         tmp = handle.read()
-        return tmp if binary else tmp.decode()
+        return tmp if binary else decode_text(tmp)
 
 
 def build_files_set(basedir, rel_files):

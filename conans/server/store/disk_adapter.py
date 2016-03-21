@@ -2,7 +2,7 @@
 import os
 from conans.errors import NotFoundException
 from conans.server.store.file_manager import StorageAdapter
-from conans.util.files import relative_dirs, rmdir, load, md5sum
+from conans.util.files import relative_dirs, rmdir, load, md5sum, decode_text
 from conans.util.files import path_exists
 
 
@@ -31,7 +31,7 @@ class DiskAdapter(StorageAdapter):
             url_path = url_path.replace("\\", "/")
             # FALTA SIZE DEL FICHERO PARA EL UPLOAD URL!
             signature = self.updown_auth_manager.get_token_for(url_path, user)
-            url = "%s/%s?signature=%s" % (self.base_url, url_path, signature.decode())
+            url = "%s/%s?signature=%s" % (self.base_url, url_path, decode_text(signature))
             ret[filepath] = url
 
         return ret
@@ -48,7 +48,7 @@ class DiskAdapter(StorageAdapter):
             url_path = url_path.replace("\\", "/")
             # FALTA SIZE DEL FICHERO PARA EL UPLOAD URL!
             signature = self.updown_auth_manager.get_token_for(url_path, user, filesize)
-            url = "%s/%s?signature=%s" % (self.base_url, url_path, signature.decode())
+            url = "%s/%s?signature=%s" % (self.base_url, url_path, decode_text(signature))
             ret[filepath] = url
 
         return ret
@@ -56,7 +56,7 @@ class DiskAdapter(StorageAdapter):
     def get_snapshot(self, absolute_path="", files_subset=None):
         """returns a dict with the filepaths and md5"""
         if not path_exists(absolute_path, self.base_storage_path):
-            raise NotFoundException()
+            raise NotFoundException("")
         paths = relative_dirs(absolute_path)
         if files_subset is not None:
             paths = set(paths).intersection(set(files_subset))
@@ -66,13 +66,13 @@ class DiskAdapter(StorageAdapter):
     def delete_folder(self, path):
         '''Delete folder from disk. Path already contains base dir'''
         if not path_exists(path, self.base_storage_path):
-            raise NotFoundException()
+            raise NotFoundException("")
         rmdir(path)
 
     def delete_file(self, path):
         '''Delete files from bucket. Path already contains base dir'''
         if not path_exists(path, self.base_storage_path):
-            raise NotFoundException()
+            raise NotFoundException("")
         os.remove(path)
 
     # ######### FOR SEARCH
@@ -96,5 +96,5 @@ class DiskAdapter(StorageAdapter):
         """path already contains the base_storage_path
         (obtained through paths object)"""
         if not path_exists(filepath, self.base_storage_path):
-            raise NotFoundException()
+            raise NotFoundException("")
         return load(filepath)

@@ -1,6 +1,7 @@
 from conans.model.ref import ConanFileReference
 from conans.model.info import ConanInfo
 import json
+from conans.util.files import decode_text
 
 
 class SearchInfo(dict):
@@ -15,7 +16,7 @@ class SearchInfo(dict):
 
     @staticmethod
     def deserialize(data):
-        tmp = json.loads(data.decode())
+        tmp = json.loads(decode_text(data))
         ret = SearchInfo()
         for conan_ref, packages in tmp.items():
             conan_ref = ConanFileReference.loads(conan_ref)

@@ -160,7 +160,7 @@ class ConanManager(object):
             output = ScopedOutput(project_reference, self._user_io.out)
             try:
                 if filename and filename.endswith(".txt"):
-                    raise NotFoundException()
+                    raise NotFoundException("")
                 conan_file_path = os.path.join(conanfile_path, filename or CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
                 is_txt = False

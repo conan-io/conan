@@ -1,5 +1,6 @@
 from colorama import Fore, Back, Style
 import six
+from conans.util.files import decode_text
 
 
 class Color(object):
@@ -47,7 +48,7 @@ class ConanOutput(object):
     def write(self, data, front=None, back=None, newline=False):
         if six.PY2:
             if isinstance(data, str):
-                data = data.decode()  # Keep python 2 compatibility
+                data = decode_text(data)  # Keep python 2 compatibility
 
         if self._color and (front or back):
             color = "%s%s" % (front or '', back or '')
