@@ -25,6 +25,9 @@ class CompleteFlowTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
+
+        self.assertIn("Hello0/0.1@lasote/stable package(): Copied 1 '.h' files: helloHello0.h",
+                      self.client.user_io.out)
         # Check compilation ok
         package_ids = self.client.paths.conan_packages(conan_reference)
         self.assertEquals(len(package_ids), 1)
