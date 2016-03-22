@@ -34,6 +34,12 @@ class FileCopier(object):
                          lib dir
         return: list of copied files
         """
+        # Check for ../ patterns and allow them
+        reldir = os.path.abspath(os.path.join(self._base_src, pattern))
+        if self._base_src.startswith(os.path.dirname(reldir)):  # ../ relative dir
+            self._base_src = os.path.dirname(reldir)
+            pattern = os.path.basename(reldir)
+
         copied_files = []
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
