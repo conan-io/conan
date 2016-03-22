@@ -1,7 +1,21 @@
 import os
 import fnmatch
 import shutil
+from collections import defaultdict
 
+
+def report_copied_files(copied, output, warn=False):
+    ext_files = defaultdict(list)
+    for f in copied:
+        _, ext = os.path.splitext(f)
+        ext_files[ext].append(os.path.basename(f))
+
+    for ext, files in ext_files.items():
+        files_str = (": " + ", ".join(files)) if len(files)<5 else ""
+        output.info("Copied %d '%s' files%s" % (len(files), ext, files_str))
+
+    if warn and not ext_files:
+        output.warn("No files copied!")
 
 class FileCopier(object):
     """ main responsible of copying files from place to place:
@@ -20,6 +34,10 @@ class FileCopier(object):
         """
         self._base_src = root_source_folder
         self._base_dst = root_destination_folder
+        self._copied = []
+ 
+    def report(self, output, warn=False):
+        report_copied_files(self._copied, output, warn)
 
     def __call__(self, pattern, dst="", src="", keep_path=True):
         """ FileCopier is lazy, it just store requested copies, and execute them later
@@ -56,4 +74,5 @@ class FileCopier(object):
                         pass
                     shutil.copy2(abs_src_name, abs_dst_name)
                     copied_files.append(abs_dst_name)
+                    self._copied.append(relative_name)
         return copied_files

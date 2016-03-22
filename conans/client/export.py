@@ -9,6 +9,7 @@ from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.errors import ConanException
 from conans.client.file_copier import FileCopier
 from conans.model.manifest import FileTreeManifest
+from conans.client.output import ScopedOutput
 
 
 def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, keep_source=False):
@@ -16,7 +17,7 @@ def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, kee
 
     previous_digest = _init_export_folder(destination_folder)
 
-    _export(file_patterns, origin_folder, destination_folder)
+    _export(file_patterns, origin_folder, destination_folder, output)
 
     digest = FileTreeManifest.create(destination_folder)
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
@@ -47,7 +48,7 @@ def _init_export_folder(destination_folder):
     return previous_digest
 
 
-def _export(file_patterns, origin_folder, destination_folder):
+def _export(file_patterns, origin_folder, destination_folder, output):
     file_patterns = file_patterns or []
     try:
         os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
@@ -57,5 +58,7 @@ def _export(file_patterns, origin_folder, destination_folder):
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in file_patterns:
         copier(pattern)
+    package_output = ScopedOutput("%s export" % output.scope, output)
+    copier.report(package_output)
 
     shutil.copy2(os.path.join(origin_folder, CONANFILE), destination_folder)
