@@ -23,7 +23,7 @@ compiler:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
-        version: ["5.0", "5.1", "6.0", "6.1", "7.0"]
+        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]
         libcxx: [libstdc++, libc++]
 
 build_type: [None, Debug, Release]

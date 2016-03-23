@@ -108,3 +108,11 @@ build_type: [None, Debug, Release]
                 self.out.warn("You can read more information about this new setting and how to adapt your packages here: http://blog.conan.io/")
                 self.out.warn("*" * 71)
                 self.out.info("   ")
+        elif old_version < Version("0.8.3"):
+            self.out.warn("Migration: Updating settings.yml with new Apple clang 7.3 version")
+            default_settings = load(self.paths.settings_path)
+            default_settings = default_settings.replace(
+                                    'version: ["5.0", "5.1", "6.0", "6.1", "7.0"]',
+                                    'version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]')
+            save(self.paths.settings_path, default_settings)
+
