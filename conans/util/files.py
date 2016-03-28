@@ -8,6 +8,12 @@ from os.path import abspath, realpath, join as joinpath
 import platform
 import re
 
+
+def touch(fname, times=None):
+    with open(fname, 'a'):
+        os.utime(fname, times)
+
+
 def delete_empty_dirs(folder):
     for root, _, _ in os.walk(folder, topdown=False):
         try:  # Take advantage that os.rmdir does not delete non-empty dirs
@@ -15,7 +21,7 @@ def delete_empty_dirs(folder):
         except OSError:
             pass  # not empty
 
-            
+
 def normalize(text):
     if platform.system() == "Windows":
         return re.sub("\r?\n", "\r\n", text)
