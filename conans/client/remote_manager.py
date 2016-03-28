@@ -8,6 +8,7 @@ from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE,
 from cStringIO import StringIO
 import tarfile
 from conans.util.files import gzopen_without_timestamps
+from conans.util.files import touch
 
 
 class RemoteManager(object):
@@ -44,7 +45,7 @@ class RemoteManager(object):
 
         returns (ConanDigest, remote_name)"""
         return self._call_remote(remote, "get_conan_digest", conan_reference)
-    
+
     def get_package_digest(self, package_reference, remote):
         """
         Read ConanDigest from remotes
@@ -52,7 +53,6 @@ class RemoteManager(object):
 
         returns (ConanDigest, remote_name)"""
         return self._call_remote(remote, "get_package_digest", package_reference)
-
 
     def get_conanfile(self, conan_reference, remote):
         """
@@ -75,7 +75,13 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:content , remote_name)"""
         package_files = self._call_remote(remote, "get_package", package_reference)
-        uncompress_files(package_files, self._paths.package(package_reference), PACKAGE_TGZ_NAME)
+        destination_dir = self._paths.package(package_reference)
+        uncompress_files(package_files, destination_dir, PACKAGE_TGZ_NAME)
+
+        # Issue #214 https://github.com/conan-io/conan/issues/214
+        for dirname, _, files in os.walk(destination_dir):
+            for fname in files:
+                touch(os.path.join(dirname, fname))
 
     def search(self, remote, pattern=None, ignorecase=True):
         """
