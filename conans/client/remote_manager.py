@@ -8,7 +8,7 @@ from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE,
 from cStringIO import StringIO
 import tarfile
 from conans.util.files import gzopen_without_timestamps
-from conan.conans.util.files import touch
+from conans.util.files import touch
 
 
 class RemoteManager(object):
