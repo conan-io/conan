@@ -233,7 +233,8 @@ class ConanManager(object):
                 loader = self._loader(build_folder)
                 conanfile = loader.load_conan(conan_file_path, self._user_io.out)
                 rmdir(package_folder)
-                packager.create_package(conanfile, build_folder, package_folder, self._user_io.out)
+                output = ScopedOutput(str(reference), self._user_io.out)
+                packager.create_package(conanfile, build_folder, package_folder, output)
             else:
                 self._user_io.out.info("Creating manifest for %s" % package_reference.package_id)
                 if not os.path.exists(package_folder):
