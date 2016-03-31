@@ -19,6 +19,10 @@ class MockWinSettings(Settings):
     def compiler(self):
         return "Visual Studio"
 
+    @property
+    def build_type(self):
+        return "release"
+
 
 class MockWinGccSettings(MockWinSettings):
 
@@ -82,7 +86,7 @@ class CompileHelpersTest(unittest.TestCase):
 
         env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
         self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
-                                            '-Lpath/to/lib2" CFLAGS="-m32 cflag1" '
+                                            '-Lpath/to/lib2 -m32" CFLAGS="-m32 cflag1 -s -DNDEBUG" '
                                             'CPPFLAGS="-m32 cppflag1" '
                                             'C_INCLUDE_PATH="path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
