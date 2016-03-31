@@ -190,7 +190,6 @@ class TestBufferConanOutput(ConanOutput):
 
     def __init__(self):
         self._buffer = StringIO()
-        self.scope = ""
         ConanOutput.__init__(self, self._buffer, color=False)
 
     def __repr__(self):
