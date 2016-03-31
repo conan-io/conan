@@ -115,12 +115,12 @@ class DepsGraph(object):
                 # Compute transitive build_info
                 for n in public_neighbors:
                     conanfile.transitive_buildinfo.update(n.conanfile.cpp_info, n.conan_ref)
+                for n in public_neighbors:
                     conanfile.transitive_buildinfo.update(n.conanfile.transitive_buildinfo)
 
                 # propagate first (order is important), the export_buildinfo
                 for n in neighbors:
-                    conanfile.deps_cpp_info.update(n.conanfile.cpp_info,
-                                                   n.conan_ref)
+                    conanfile.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
 
                 for n in neighbors:
                     # FIXME: Check this imports propagation, wrong for deep hierarchies
