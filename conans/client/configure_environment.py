@@ -11,6 +11,7 @@ class ConfigureEnvironment(object):
         self.compiler = getattr(self._settings, "compiler", None)
         self.arch = getattr(self._settings, "arch", None)
         self.os = getattr(self._settings, "os", None)
+        self.build_type = getattr(self._settings, "build_type", None)
         self.libcxx = None
         try:
             self.libcxx = self.compiler.libcxx
@@ -27,9 +28,11 @@ class ConfigureEnvironment(object):
         command = ""
         if self.os == "Linux" or self.os == "Macos":
             libs = 'LIBS="%s"' % " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
-            ldflags = 'LDFLAGS="%s"' % " ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths])
             archflag = "-m32" if self.arch == "x86" else ""
-            cflags = 'CFLAGS="%s %s"' % (archflag, " ".join(self._deps_cpp_info.cflags))
+            ldflags = 'LDFLAGS="%s %s"' % (" ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths]), archflag)
+            debug = "-g" if self.build_type == "Debug" else "-s -DNDEBUG"
+            cflags = 'CFLAGS="%s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cflags), debug)
+            cpp_flags = 'CPPFLAGS="%s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cppflags), debug)
 
             # Append the definition for libcxx
             all_cpp_flags = copy.copy(self._deps_cpp_info.cppflags)
