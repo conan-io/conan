@@ -7,6 +7,7 @@ from conans.model.build_info import DEFAULT_RES, DEFAULT_BIN, DEFAULT_LIB, DEFAU
 import shutil
 from conans.client.file_copier import FileCopier
 from conans.model.manifest import FileTreeManifest
+from conans.client.output import ScopedOutput
 
 
 def create_package(conanfile, build_folder, package_folder, output):
@@ -32,6 +33,8 @@ def create_package(conanfile, build_folder, package_folder, output):
     try:
         conanfile.package_folder = package_folder
         conanfile.package()
+        package_output = ScopedOutput("%s package()" % output.scope, output)
+        conanfile.copy.report(package_output, warn=True)
     except Exception as e:
         os.chdir(build_folder)
         try:
