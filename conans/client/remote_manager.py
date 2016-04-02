@@ -133,21 +133,22 @@ def compress_files(files, name, excluded):
     tgz_contents = StringIO()
     tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_contents)
 
-    def addfile(name, contents, tar):
+    def addfile(name, file_info, tar):
         info = tarfile.TarInfo(name=name)
-        string = StringIO(contents)
-        info.size = len(contents)
+        string = StringIO(file_info["contents"])
+        info.size = len(file_info["contents"])
+        info.mode = file_info["mode"]
         tar.addfile(tarinfo=info, fileobj=string)
 
-    for the_file, content in files.iteritems():
+    for the_file, info in files.iteritems():
         if the_file not in excluded:
-            addfile(the_file, content, tgz)
+            addfile(the_file, info, tgz)
 
     tgz.close()
     ret = {}
     for e in excluded:
         if e in files:
-            ret[e] = files[e]
+            ret[e] = files[e]["contents"]
     ret[name] = tgz_contents.getvalue()
 
     return ret
