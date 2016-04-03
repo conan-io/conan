@@ -357,5 +357,3 @@ class RestApiClient(object):
             raise ConanException("Upload failed!")
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
-
-  
