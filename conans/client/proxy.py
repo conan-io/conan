@@ -269,6 +269,8 @@ class ConanProxy(object):
             self._remote_manager.get_package(package_reference, remote)
             output.success('Package installed %s' % package_id)
             return True
+        except ConanConnectionError:
+            raise  # This shouldn't be skipped
         except ConanException as e:
             output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
             return False
