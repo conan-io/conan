@@ -274,5 +274,12 @@ class ConanProxy(object):
             return False
 
     def authenticate(self, name, password):
+        if not name:  # List all users, from all remotes
+            remotes = self._registry.remotes
+            if not remotes:
+                self._out.error("No remotes defined")
+            for remote in remotes:
+                self._remote_manager.authenticate(remote, None, None)
+            return
         remote, _ = self._get_remote()
         return self._remote_manager.authenticate(remote, name, password)

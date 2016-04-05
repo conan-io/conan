@@ -31,7 +31,7 @@ def input_credentials_if_unauthorized(func):
             self.set_custom_headers(self.user)
             ret = func(self, *args, **kwargs)
             return ret
-        except ForbiddenException as e:
+        except ForbiddenException:
             # User valid but not enough permissions
             if self.user is None or self._rest_client.token is None:
                 # token is None when you change user with user command
@@ -44,7 +44,7 @@ def input_credentials_if_unauthorized(func):
             else:
                 # If our user receives a ForbiddenException propagate it, not
                 # log with other user
-                raise e
+                raise ForbiddenException("Unauthorized user: '%s')" % self.user)
         except AuthenticationException:
             # Token expired or not valid, so clean the token and repeat the call
             # (will be anonymous call but exporting who is calling)

@@ -1,5 +1,6 @@
 """ ConanFile user tools, as download, etc
 """
+from __future__ import print_function
 import sys
 import os
 from conans.errors import ConanException
@@ -46,7 +47,8 @@ def unzip(filename, destination="."):
         extracted_size = 0
         for file_ in z.infolist():
             extracted_size += file_.file_size
-            print("Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size),)
+            txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
+            print(txt_msg, end='')
             try:
                 if len(file_.filename) + len(full_path) > 200:
                     raise ValueError("Filename too long")
