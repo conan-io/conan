@@ -120,33 +120,20 @@ class DepsCppInfo(_CppInfo):
         else:
             self._dependencies.update(dep_cpp_info.dependencies)
 
-        for d in dep_cpp_info.include_paths:
-            if d not in self.includedirs:
-                self.includedirs.append(d)
-        for d in dep_cpp_info.lib_paths:
-            if d not in self.libdirs:
-                self.libdirs.append(d)
-        for d in dep_cpp_info.bin_paths:
-            if d not in self.bindirs:
-                self.bindirs.append(d)
-        for d in dep_cpp_info.libs:
-            if d not in self.libs:
-                self.libs.append(d)
-        for d in dep_cpp_info.defines:
-            if d not in self.defines:
-                self.defines.append(d)
-        for d in dep_cpp_info.cppflags:
-            if d not in self.cppflags:
-                self.cppflags.append(d)
-        for d in dep_cpp_info.sharedlinkflags:
-            if d not in self.sharedlinkflags:
-                self.sharedlinkflags.append(d)
-        for d in dep_cpp_info.exelinkflags:
-            if d not in self.exelinkflags:
-                self.exelinkflags.append(d)
-        for d in dep_cpp_info.cflags:
-            if d not in self.cflags:
-                self.cflags.append(d)
+        def merge_lists(seq1, seq2):
+            return [s for s in seq1 if s not in seq2] + seq2
+
+        self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
+        self.libdirs = merge_lists(self.libdirs, dep_cpp_info.lib_paths)
+        self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
+        self.libs = merge_lists(self.libs, dep_cpp_info.libs)
+
+        # Note these are in reverse order
+        self.defines = merge_lists(dep_cpp_info.defines, self.defines)
+        self.cppflags = merge_lists(dep_cpp_info.cppflags, self.cppflags)
+        self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
+        self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
+        self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
 
     @property
     def include_paths(self):
