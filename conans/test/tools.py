@@ -283,8 +283,8 @@ class TestClient(object):
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
         self.servers = servers or {}
 
-        self.client_version = Version(client_version)
-        self.min_server_compatible_version = Version(min_server_compatible_version)
+        self.client_version = Version(str(client_version))
+        self.min_server_compatible_version = Version(str(min_server_compatible_version))
 
         self.base_folder = base_folder or temp_folder()
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
