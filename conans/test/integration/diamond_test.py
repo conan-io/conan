@@ -31,6 +31,9 @@ class DiamondTest(unittest.TestCase):
         self.assertIn(".conan/data/Hello0/0.1/lasote/stable", client.user_io.out)
         build_file = os.path.join(client.current_folder, BUILD_INFO)
         content = load(build_file)
+        cmakebuildinfo = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))
+        self.assertIn("set(CONAN_LIBS helloHello3 helloHello1 helloHello2 helloHello0",
+                      cmakebuildinfo)
         deps_cpp_info = DepsCppInfo.loads(content)
         self.assertEqual(len(deps_cpp_info.include_paths), 4)
         for dep in ("Hello3", "Hello2", "Hello1", "Hello0"):

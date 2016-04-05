@@ -1,6 +1,6 @@
 import os
 from conans.paths import CONANINFO, BUILD_INFO
-from conans.util.files import save, rmdir, path_exists
+from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import ConanException
@@ -9,7 +9,26 @@ import shutil
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 import fnmatch
-from conans.client.output import Color, ScopedOutput
+from conans.client.output import ScopedOutput
+
+
+def init_cpp_info(deps_graph, paths):
+    """ Made external so it is independent of installer and can called
+    in testing too
+    """
+    # Assign export root folders
+    for node in deps_graph.nodes:
+        conan_ref, conan_file = node
+        if conan_ref:
+            package_id = conan_file.info.package_id()
+            package_reference = PackageReference(conan_ref, package_id)
+            package_folder = paths.package(package_reference)
+            conan_file.cpp_info = CppInfo(package_folder)
+            try:
+                conan_file.package_info()
+            except Exception as e:
+                raise ConanException("Error in %s\n\tpackage_info()\n\t%s"
+                                     % (conan_ref, str(e)))
 
 
 class ConanInstaller(object):
@@ -37,19 +56,7 @@ class ConanInstaller(object):
         passes their exported build flags and included directories to the downstream
         imports flags
         """
-        # Assign export root folders
-        for node in deps_graph.nodes:
-            conan_ref, conan_file = node
-            if conan_ref:
-                package_id = conan_file.info.package_id()
-                package_reference = PackageReference(conan_ref, package_id)
-                package_folder = self._paths.package(package_reference)
-                conan_file.cpp_info = CppInfo(package_folder)
-                try:
-                    conan_file.package_info()
-                except Exception as e:
-                    raise ConanException("Error in %s\n\tpackage_info()\n\t%s"
-                                         % (conan_ref, str(e)))
+        init_cpp_info(deps_graph, self._paths)
 
         # order by levels and propagate exports as download imports
         nodes_by_level = deps_graph.propagate_buildinfo()
