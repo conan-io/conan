@@ -8,7 +8,7 @@ class ConfigParser(object):
     as parser.section
     Currently used in ConanInfo and ConanFileTextLoader
     """
-    def __init__(self, text, allowed_fields=None):
+    def __init__(self, text, allowed_fields=None, parse_lines=False):
         self._sections = {}
         self._allowed_fields = allowed_fields or []
         pattern = re.compile("^\[([a-z_]{2,50})\]")
@@ -25,6 +25,9 @@ class ConfigParser(object):
                 current_lines = []
                 self._sections[group] = current_lines
             else:
+                if parse_lines:
+                    line = line.split('#')[0]
+                    line = line.strip()
                 current_lines.append(line)
 
     def __getattr__(self, name):

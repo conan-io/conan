@@ -11,8 +11,16 @@ class TgzMd5Test(unittest.TestCase):
     """The md5 of a tgz should be the same if the files inside are the same"""
 
     def testMd5Name(self):
-        files = {"one_file.txt": b"The contents",
-                 "Two_file.txt": b"Two contents"}
+        files = {
+            "one_file.txt": {
+                "contents": b"The contents",
+                "mode": 0o777
+            },
+            "Two_file.txt": {
+                "contents": b"Two contents",
+                "mode": 0o777
+            }
+        }
         new_files = compress_files(files, PACKAGE_TGZ_NAME, excluded=[])
         folder = temp_folder()
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)

@@ -10,6 +10,7 @@ from conans.client.packager import create_package
 from conans.client.loader import ConanFileLoader
 from conans.model.options import OptionsValues
 from conans.model.settings import Settings
+from conans.client.output import ScopedOutput
 
 
 myconan1 = """
@@ -80,7 +81,8 @@ class ExporterTest(unittest.TestCase):
 
         loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
         conanfile = loader.load_conan(conanfile_path, None)
-        create_package(conanfile, build_folder, package_folder, TestBufferConanOutput())
+        output = ScopedOutput("", TestBufferConanOutput())
+        create_package(conanfile, build_folder, package_folder, output)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

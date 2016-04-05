@@ -145,8 +145,9 @@ class ConanService(object):
         :param package_reference: PackageReference
         :param filesizes: {filepath: bytes}
         :return {filepath: url} """
-        info = self._file_manager.search(str(package_reference.conan), exclude_index=True)
-        if not info:
+        try:
+            self._file_manager.get_conanfile_snapshot(package_reference.conan)
+        except NotFoundException:
             raise NotFoundException("There are no remote conanfiles like %s"
                                     % str(package_reference.conan))
         self._authorizer.check_write_package(self._auth_user, package_reference)

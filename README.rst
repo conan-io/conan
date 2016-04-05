@@ -33,6 +33,18 @@ Conan is compatible with Python 2 and Python 3.
     $ pip install conan
 
 
+From Homebrew (OSx)
+-------------------
+
+- Install Homebrew following `brew homepage`_.
+
+::
+
+    $ brew update
+    $ brew install conan
+
+
+
 From source
 -----------
 
@@ -179,3 +191,5 @@ License
 .. |Build status4| image:: https://ci.appveyor.com/api/projects/status/5hedgjt9ggj1artx/branch/develop?svg=true
    :target: https://ci.appveyor.com/project/lasote/conan-mva77/branch/develop
 .. _`pip docs`: https://pip.pypa.io/en/stable/installing/
+.. _`brew homepage`: http://brew.sh/
+

@@ -127,31 +127,15 @@ class DepsGraph(object):
         Note the difference, include_paths used to compute full paths as the user
         defines export relative to its folder
         """
-        # Temporary field to store the transitive build info to account for
-        # private requirements
-        for node in self.nodes:
-            node.conanfile.transitive_buildinfo = DepsCppInfo()
-
-        # To propagate, this should be done in top-down order
         ordered = self.by_levels()
+        flat = self.inverse_levels()
         for level in ordered[1:]:
             for node in level:
+                node_order = self.ordered_closure(node, flat)
                 _, conanfile = node
-                neighbors = self.neighbors(node)
-                public_neighbors = self.public_neighbors(node)
-                # Compute transitive build_info
-                for n in public_neighbors:
-                    conanfile.transitive_buildinfo.update(n.conanfile.cpp_info, n.conan_ref)
-                    conanfile.transitive_buildinfo.update(n.conanfile.transitive_buildinfo)
+                for n in node_order:
+                    conanfile.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
 
-                # propagate first (order is important), the export_buildinfo
-                for n in neighbors:
-                    conanfile.deps_cpp_info.update(n.conanfile.cpp_info,
-                                                   n.conan_ref)
-
-                for n in neighbors:
-                    # FIXME: Check this imports propagation, wrong for deep hierarchies
-                    conanfile.deps_cpp_info.update(n.conanfile.transitive_buildinfo)
         return ordered
 
     def propagate_info(self):
@@ -192,6 +176,21 @@ class DepsGraph(object):
                 conanfile.conan_info()
         return ordered
 
+    def ordered_closure(self, node, flat):
+        closure = set()
+        current = self.neighbors(node)
+        while current:
+            new_current = set()
+            for n in current:
+                closure.add(n)
+                new_neighs = self.public_neighbors(n)
+                to_add = set(new_neighs).difference(current)
+                new_current.update(to_add)
+            current = new_current
+
+        result = [n for n in flat if n in closure]
+        return result
+
     def by_levels(self):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
@@ -214,6 +213,34 @@ class DepsGraph(object):
                 current_level = []
                 result.append(current_level)
         return result
+
+    def inverse_levels(self):
+        """ order by node degree. The first level will be the one which nodes dont have
+        dependencies. Second level will be with nodes that only have dependencies to
+        first level nodes, and so on
+        return [[node1, node34], [node3], [node23, node8],...]
+        """
+        current_level = []
+        result = [current_level]
+        opened = self.nodes.copy()
+        while opened:
+            current = opened.copy()
+            for o in opened:
+                if not any(o == edge.dst and edge.src in opened for edge in self.edges):
+                    current_level.append(o)
+                    current.discard(o)
+            current_level.sort()
+            # now initialize new level
+            opened = current
+            if opened:
+                current_level = []
+                result.append(current_level)
+
+        flat = []
+        for level in result:
+            level = sorted(level, key=lambda x: x.conan_ref)
+            flat.extend(level)
+        return flat
 
     def private_nodes(self):
         """ computes a list of nodes living in the private zone of the deps graph,

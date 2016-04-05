@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanConnectionError
 
 
 class Uploader(object):
@@ -29,24 +29,29 @@ class Downloader(object):
         if not response.ok:
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
-        total_length = response.headers.get('content-length')
+        try:
+            total_length = response.headers.get('content-length')
 
-        if total_length is None:  # no content length header
-            ret += response.content
-        else:
-            dl = 0
-            total_length = int(total_length)
-            last_progress = None
-            for data in response.iter_content(chunk_size=1024):
-                dl += len(data)
-                ret += data
-                units = progress_units(dl, total_length)
-                if last_progress != units:  # Avoid screen refresh if nothing has change
-                    if self.output:
-                        print_progress(self.output, units)
-                    last_progress = units
+            if total_length is None:  # no content length header
+                ret.append(response.content)
+            else:
+                dl = 0
+                total_length = int(total_length)
+                last_progress = None
+                for data in response.iter_content(chunk_size=1024):
+                    dl += len(data)
+                    ret += data
+                    units = progress_units(dl, total_length)
+                    if last_progress != units:  # Avoid screen refresh if nothing has change
+                        if self.output:
+                            print_progress(self.output, units)
+                        last_progress = units
 
-        return ret
+            return ret
+        except Exception as e:
+            # If this part failed, it means problems with the connection to server
+            raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
+                                       % str(e))
 
 
 class upload_in_chunks(object):

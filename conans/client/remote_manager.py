@@ -8,6 +8,7 @@ from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE,
 from io import StringIO, BytesIO
 import tarfile
 from conans.util.files import gzopen_without_timestamps
+from conans.util.files import touch
 
 
 class RemoteManager(object):
@@ -74,7 +75,13 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:content , remote_name)"""
         package_files = self._call_remote(remote, "get_package", package_reference)
-        uncompress_files(package_files, self._paths.package(package_reference), PACKAGE_TGZ_NAME)
+        destination_dir = self._paths.package(package_reference)
+        uncompress_files(package_files, destination_dir, PACKAGE_TGZ_NAME)
+
+        # Issue #214 https://github.com/conan-io/conan/issues/214
+        for dirname, _, files in os.walk(destination_dir):
+            for fname in files:
+                touch(os.path.join(dirname, fname))
 
     def search(self, remote, pattern=None, ignorecase=True):
         """
@@ -126,21 +133,22 @@ def compress_files(files, name, excluded):
     tgz_contents = BytesIO()
     tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_contents)
 
-    def addfile(name, contents, tar):
+    def addfile(name, file_info, tar):
         info = tarfile.TarInfo(name=name)
-        the_str = BytesIO(contents)
-        info.size = len(contents)
+        the_str = BytesIO(file_info["contents"])
+        info.size = len(file_info["contents"])
+        info.mode = file_info["mode"]
         tar.addfile(tarinfo=info, fileobj=the_str)
 
-    for the_file, content in files.items():
+    for the_file, info in files.items():
         if the_file not in excluded:
-            addfile(the_file, content, tgz)
+            addfile(the_file, info, tgz)
 
     tgz.close()
     ret = {}
     for e in excluded:
         if e in files:
-            ret[e] = files[e]
+            ret[e] = files[e]["contents"]
     ret[name] = tgz_contents.getvalue()
 
     return ret
