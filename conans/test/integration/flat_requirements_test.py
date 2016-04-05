@@ -5,7 +5,7 @@ from conans.paths import (CONANFILE_TXT, BUILD_INFO_CMAKE, BUILD_INFO_GCC, CONAN
                           BUILD_INFO_VISUAL_STUDIO, BUILD_INFO_XCODE)
 from conans.util.files import save, load
 import os
-from conans.test.tools import TestClient, TestServer
+from conans.test.tools import TestClient
 from conans.test.utils.test_files import temp_folder
 
 
@@ -22,9 +22,9 @@ class FlatRequirementsTest(unittest.TestCase):
         # We want to reuse exported Hello0/0.1@lasote/stable
         tmp_dir = temp_folder()
         req_file = '''[requires]
-Hello0/0.1@lasote/stable
+Hello0/0.1@lasote/stable # My req comment
 [generators]
-gcc
+gcc # I need this generator for..
 cmake
 visual_studio
 xcode

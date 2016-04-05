@@ -17,17 +17,17 @@ class ConanLoaderTest(unittest.TestCase):
     def plain_text_parser_test(self):
         # Valid content
         file_content = '''[requires]
-OpenCV/2.4.10@phil/stable
-OpenCV2/2.4.10@phil/stable
+OpenCV/2.4.10@phil/stable # My requirement for CV
+OpenCV2/2.4.10@phil/stable #
 OpenCV3/2.4.10@phil/stable
 [generators]
-one
+one # My generator for this
 two
 [options]
-OpenCV:use_python=True
+OpenCV:use_python=True # Some option
 OpenCV:other_option=False
 OpenCV2:use_python2=1
-OpenCV2:other_option=Cosa
+OpenCV2:other_option=Cosa #
 '''
         parser = ConanFileTextLoader(file_content)
         exp = ['OpenCV/2.4.10@phil/stable',
@@ -43,7 +43,7 @@ OpenCV2/2.4.10@phil/stable
 one
 two
 [imports]
-OpenCV/bin, * -> ./bin
+OpenCV/bin, * -> ./bin # I need this binaries
 OpenCV/lib, * -> ./lib
 [options]
 OpenCV:use_python=True

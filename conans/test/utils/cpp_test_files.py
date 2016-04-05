@@ -58,6 +58,7 @@ class {name}Conan(ConanFile):
     def imports(self):
         self.copy(pattern="*.dylib", dst=".", src="lib")
         self.copy(pattern="*.dll", dst=".", src="bin")
+        self.copy(pattern="*", dst="bin", src="bin")
 """
 
 cmake_file = """
@@ -126,6 +127,9 @@ int main(){{
 }}
 """
 
+executable = """
+"""
+
 
 def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
                            msg=None, dll_export=False, need_patch=False, pure_c=False):
@@ -177,6 +181,8 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
     if need_patch:
         ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project", "projct")
         ret["main%s" % ext] = ret["main%s" % ext].replace("return", "retunr") 
+    ret["executable"] = executable
+
     return ret
 
 

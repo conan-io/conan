@@ -107,6 +107,7 @@ class ConanServiceTest(unittest.TestCase):
 
         snap_expected = {'hello.cpp': md5sum(os.path.join(base_path, "hello.cpp")),
                          'conanmanifest.txt': md5sum(os.path.join(base_path, "conanmanifest.txt")),
+                         'executable': md5sum(os.path.join(base_path, "executable")),
                          'main.cpp':  md5sum(os.path.join(base_path, "main.cpp")),
                          'CMakeLists.txt':  md5sum(os.path.join(base_path, "CMakeLists.txt")),
                          'hellotest.h':  md5sum(os.path.join(base_path, "hellotest.h"))}
@@ -123,6 +124,7 @@ class ConanServiceTest(unittest.TestCase):
 
         expected_urls = {'CMakeLists.txt': fake_url_build('CMakeLists.txt'),
                          'conanmanifest.txt': fake_url_build('conanmanifest.txt'),
+                         'executable': fake_url_build('executable'),
                          'hello.cpp': fake_url_build('hello.cpp'),
                          'hellotest.h': fake_url_build('hellotest.h'),
                          'main.cpp': fake_url_build('main.cpp')}
@@ -138,6 +140,7 @@ class ConanServiceTest(unittest.TestCase):
                 + "/package/" + self.package_reference.package_id + "/" + filename
 
         expected_urls = {'CMakeLists.txt': fake_url_build('CMakeLists.txt'),
+                         'executable': fake_url_build('executable'),
                          'hello.cpp': fake_url_build('hello.cpp'),
                          'hellopackage.h': fake_url_build('hellopackage.h'),
                          'main.cpp': fake_url_build('main.cpp')}

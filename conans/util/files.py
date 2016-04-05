@@ -83,7 +83,10 @@ def build_files_set(basedir, rel_files):
     ret = {}
     for filename in rel_files:
         abs_path = os.path.join(basedir, filename)
-        ret[filename] = load(abs_path)
+        ret[filename] = {
+            "contents": load(abs_path),
+            "mode": os.stat(abs_path).st_mode
+        }
 
     return ret
 
