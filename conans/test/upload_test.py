@@ -3,7 +3,7 @@ from conans.test.tools import TestClient, TestServer
 from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.client.manager import CONANFILE
 import os
-from conans.paths import CONAN_MANIFEST, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME
 from conans.util.files import save
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest

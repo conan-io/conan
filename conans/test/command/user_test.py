@@ -9,8 +9,8 @@ class UserTest(unittest.TestCase):
         user cache localdb
         """
         client = TestClient()
-        client.run('user', ignore_error=True)
-        self.assertIn("ERROR: No default remote defined", client.user_io.out)
+        client.run('user')
+        self.assertIn("ERROR: No remotes defined", client.user_io.out)
 
     def test_with_remote_no_connect(self):
         test_server = TestServer()

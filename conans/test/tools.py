@@ -32,6 +32,7 @@ from conans.client.remote_registry import RemoteRegistry
 from collections import Counter
 from conans.client.paths import ConanPaths
 import six
+from conans.client.rest.uploader_downloader import IterableToFileAdapter
 
 
 class TestingResponse(object):
@@ -108,6 +109,11 @@ class TestRequester(object):
     def put(self, url, data, headers=None, verify=None):
         app, url = self._prepare_call(url, {}, None)
         if app:
+            if isinstance(data, IterableToFileAdapter):
+                data_accum = b""
+                for tmp in data:
+                    data_accum += tmp
+                data = data_accum
             response = app.put(url, data, expect_errors=True, headers=headers)
             return TestingResponse(response)
         else:
