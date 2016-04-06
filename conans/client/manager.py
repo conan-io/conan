@@ -137,7 +137,7 @@ class ConanManager(object):
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
         @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
-        @param settings: list of tuples: [(settingname, settingvalue), (settingname, settingvalue)...]
+        @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
         """
         reference_given = True
         if not isinstance(reference, ConanFileReference):
@@ -274,6 +274,7 @@ class ConanManager(object):
                     pass
 
             os.chdir(current_path)
+            conan_file._conanfile_directory = conanfile_path
             conan_file.build()
             if test:
                 conan_file.test()
@@ -369,4 +370,3 @@ class ConanManager(object):
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote)
         return remote_proxy.authenticate(name, password)
-        
