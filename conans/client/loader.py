@@ -11,6 +11,8 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 import sys
+from conans.model.conan_generator import Generator
+from conans.client.generators import _save_generator
 
 
 class ConanFileLoader(object):
@@ -33,14 +35,17 @@ class ConanFileLoader(object):
         for name, attr in conan_file.__dict__.items():
             if "_" in name:
                 continue
-            if (inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile
-                and attr.__dict__["__module__"] == filename):
+            if (inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile and
+                    attr.__dict__["__module__"] == filename):
                 if result is None:
                     # Actual instantiation of ConanFile object
                     result = attr(output, self._runner,
                                   self._settings.copy(), os.path.dirname(conan_file_path))
                 else:
                     raise ConanException("More than 1 conanfile in the file")
+            if (inspect.isclass(attr) and issubclass(attr, Generator) and attr != Generator and
+                    attr.__dict__["__module__"] == filename):
+                    _save_generator(attr.__name__, attr)
 
         if result is None:
             raise ConanException("No subclass of ConanFile")
@@ -60,7 +65,7 @@ class ConanFileLoader(object):
         # Check if precompiled exist, delete it
         if os.path.exists(conan_file_path + "c"):
             os.unlink(conan_file_path + "c")
-            
+
         # Python 3
         pycache = os.path.join(os.path.dirname(conan_file_path), "__pycache__")
         if os.path.exists(pycache):
