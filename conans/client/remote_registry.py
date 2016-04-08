@@ -98,7 +98,7 @@ class RemoteRegistry(object):
             except:
                 return None
 
-    def remove_ref(self, conan_reference):
+    def remove_ref(self, conan_reference, quiet=False):
         with fasteners.InterProcessLock(self._filename + ".lock"):
             conan_reference = str(conan_reference)
             remotes, refs = self._load()
@@ -106,7 +106,9 @@ class RemoteRegistry(object):
                 del refs[conan_reference]
                 self._save(remotes, refs)
             except:
-                self._output.warn("Couldn't delete '%s' from remote registry" % conan_reference)
+                if not quiet:
+                    self._output.warn("Couldn't delete '%s' from remote registry"
+                                      % conan_reference)
 
     def set_ref(self, conan_reference, remote):
         with fasteners.InterProcessLock(self._filename + ".lock"):
