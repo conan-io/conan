@@ -21,7 +21,6 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.model.version import Version
 from conans.client.migrations import ClientMigrator
 import hashlib
-import shutil
 from conans.util.files import rmdir, load
 from argparse import RawTextHelpFormatter
 import re
@@ -131,11 +130,11 @@ class Command(object):
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
-        parser.add_argument("-t", "--test", help='alternative test folder name')
+        parser.add_argument("-f", "--folder", help='alternative test folder name')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
-        test_folder_name = args.test or "test"
+        test_folder_name = args.folder or "test"
 
         root_folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
         test_folder = os.path.join(root_folder, test_folder_name)
