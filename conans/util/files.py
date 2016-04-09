@@ -239,3 +239,25 @@ def tar_extract(fileobj, destination_dir):
     the_tar = tarfile.open(fileobj=fileobj)
     the_tar.extractall(path=destination_dir, members=safemembers(the_tar))
     the_tar.close()
+
+def expand_user_path(path):
+    if sys.platform == 'win32':
+        # Workaround for Python 2.7 issue (http://bugs.python.org/issue13207) with user path
+        # that contains Unicode characters
+        return os.path.expanduser(path).decode(sys.getfilesystemencoding())
+    else:
+        return os.path.expanduser(path)
+
+def encode_fs_path(path):
+    if sys.platform == 'win32':
+        # Workaround for Python 2.7 issue
+        return path.encode(sys.getfilesystemencoding())
+    else:
+        return path
+
+def decode_fs_path(path):
+    if sys.platform == 'win32':
+        # Workaround for Python 2.7 issue
+        return path.decode(sys.getfilesystemencoding())
+    else:
+        return path
