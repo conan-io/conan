@@ -27,6 +27,7 @@ from argparse import RawTextHelpFormatter
 import re
 from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
+from conans.tools import expand_user_path
 
 
 class Extender(argparse.Action):
@@ -581,7 +582,8 @@ def get_command():
     out = ConanOutput(sys.stdout, color)
     user_io = UserIO(out=out)
 
-    user_folder = os.getenv("CONAN_USER_HOME", os.path.expanduser("~"))
+    p = expand_user_path("~")
+    user_folder = os.getenv("CONAN_USER_HOME", p)
     try:
         # To capture exceptions in conan.conf parsing
         paths = ConanPaths(user_folder, None, out)

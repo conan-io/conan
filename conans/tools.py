@@ -126,3 +126,11 @@ def patch(base_path=None, patch_file=None, patch_string=None):
         patchset = fromstring(patch_string.encode())
 
     patchset.apply(root=base_path)
+
+def expand_user_path(path):
+    if sys.platform == 'win32':
+        # Workaround for Python 2.7 issue (http://bugs.python.org/issue13207) with user path
+        # that contains Unicode characters
+        return os.path.expanduser(path).decode("cp1251")
+    else:
+        return os.path.expanduser(path)
