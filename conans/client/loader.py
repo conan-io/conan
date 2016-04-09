@@ -5,7 +5,7 @@ import inspect
 import uuid
 import imp
 import os
-from conans.util.files import load
+from conans.util.files import load, encode_fs_path, decode_fs_path
 from conans.util.config_parser import ConfigParser
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
@@ -80,14 +80,14 @@ class ConanFileLoader(object):
             current_dir = os.path.dirname(conan_file_path)
             sys.path.append(current_dir)
             old_modules = list(sys.modules.keys())
-            loaded = imp.load_source(filename, conan_file_path)
+            loaded = imp.load_source(filename, encode_fs_path(conan_file_path))
             # Put all imported files under a new package name
             module_id = uuid.uuid1()
             added_modules = set(sys.modules).difference(old_modules)
             for added in added_modules:
                 module = sys.modules[added]
                 if module:
-                    folder = os.path.dirname(module.__file__)
+                    folder = os.path.dirname(decode_fs_path(module.__file__))
                     if folder.startswith(current_dir):
                         module = sys.modules.pop(added)
                         sys.modules["%s.%s" % (module_id, added)] = module
