@@ -22,7 +22,7 @@ from conans.model.version import Version
 from conans.client.migrations import ClientMigrator
 import hashlib
 import shutil
-from conans.util.files import rmdir, load
+from conans.util.files import rmdir, load, expand_user_path
 from argparse import RawTextHelpFormatter
 import re
 from conans.client.runner import ConanRunner
@@ -581,7 +581,7 @@ def get_command():
     out = ConanOutput(sys.stdout, color)
     user_io = UserIO(out=out)
 
-    user_folder = os.getenv("CONAN_USER_HOME", os.path.expanduser("~"))
+    user_folder = os.getenv("CONAN_USER_HOME", expand_user_path("~"))
     try:
         # To capture exceptions in conan.conf parsing
         paths = ConanPaths(user_folder, None, out)
