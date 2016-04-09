@@ -5,6 +5,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import save, load
 from six.moves.configparser import ConfigParser, NoSectionError
 from conans.model.values import Values
+from conans.tools import expand_user_path
 import urllib
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.6.0'
@@ -79,7 +80,7 @@ class ConanClientConfigParser(ConfigParser):
                     storage = storage[2:]
                 result = os.path.join(conan_user_home, storage)
             else:
-                result = os.path.expanduser(self.storage["path"])
+                result = expand_user_path(self.storage["path"])
         except KeyError:
             result = None
         result = get_env('CONAN_STORAGE_PATH', result)

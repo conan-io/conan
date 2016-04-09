@@ -12,6 +12,7 @@ from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
 from conans.model.version import Version
 from conans.server.migrations import ServerMigrator
 from conans.util.log import logger
+from conans.tools import expand_user_path
 
 
 def migrate_and_get_server_config(base_folder, storage_folder=None):
@@ -33,7 +34,7 @@ def migrate_and_get_server_config(base_folder, storage_folder=None):
 
 class ServerLauncher(object):
     def __init__(self):
-        user_folder = os.path.expanduser("~")
+        user_folder = expand_user_path("~")
 
         server_config = migrate_and_get_server_config(user_folder)
 
