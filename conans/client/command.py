@@ -21,7 +21,6 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.model.version import Version
 from conans.client.migrations import ClientMigrator
 import hashlib
-import shutil
 from conans.util.files import rmdir, load
 from argparse import RawTextHelpFormatter
 import re
@@ -129,15 +128,16 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test",
                                          formatter_class=RawTextHelpFormatter)
-        parser.add_argument("path", nargs='?', default="",
-                            help='path to conanfile file, '
+        parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
+        parser.add_argument("-f", "--folder", help='alternative test folder name')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
+        test_folder_name = args.folder or "test"
 
         root_folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
-        test_folder = os.path.join(root_folder, "test")
+        test_folder = os.path.join(root_folder, test_folder_name)
         if not os.path.exists(test_folder):
             raise ConanException("test folder not available")
 
@@ -153,20 +153,20 @@ class Command(object):
         settings = args.settings or []
 
         sha = hashlib.sha1("".join(options + settings).encode()).hexdigest()
-        build_folder = os.path.join(root_folder, "build", sha)
+        build_folder = os.path.join(test_folder, "build", sha)
         rmdir(build_folder)
-        shutil.copytree(test_folder, build_folder)
+        # shutil.copytree(test_folder, build_folder)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         settings = self._get_tuples_list_from_extender_arg(args.settings)
 
-        self._manager.install(reference=build_folder,
+        self._manager.install(reference=test_folder,
                               current_path=build_folder,
                               remote=args.remote,
                               options=options,
                               settings=settings,
                               build_mode=args.build)
-        self._manager.build(build_folder, build_folder, test=True)
+        self._manager.build(test_folder, build_folder, test=True)
 
     def install(self, *args):
         """ install in the local store the given requirements.
