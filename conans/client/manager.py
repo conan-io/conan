@@ -297,7 +297,7 @@ class ConanManager(object):
             uploader.upload_conan(conan_reference, all_packages=all_packages, force=force)
 
     def search(self, pattern=None, remote=None, ignorecase=True,
-               verbose=False, package_pattern=None):
+               verbose=False, extra_verbose=False, package_pattern=None):
         """ Print the single information saved in conan.vars about all the packages
             or the packages which match with a pattern
 
@@ -332,7 +332,7 @@ class ConanManager(object):
                 raise ConanException("Invalid package pattern")
 
         printer = Printer(self._user_io.out)
-        printer.print_search(filtered_info, pattern, verbose)
+        printer.print_search(filtered_info, pattern, verbose, extra_verbose)
 
     @property
     def file_manager(self):
