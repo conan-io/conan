@@ -398,6 +398,8 @@ class Command(object):
                             action='store_true', help='Make a case-sensitive search')
         parser.add_argument('-r', '--remote', help='Remote origin')
         parser.add_argument('-v', '--verbose', default=False,
+                            action='store_true', help='Show packages')
+        parser.add_argument('-x', '--extra-verbose', default=False,
                             action='store_true', help='Show packages options and settings')
         parser.add_argument('-p', '--package', help='Package ID pattern. EX: 23*', default=None)
         args = parser.parse_args(*args)
@@ -406,6 +408,7 @@ class Command(object):
                              args.remote,
                              ignorecase=not args.case_sensitive,
                              verbose=args.verbose,
+                             extra_verbose=args.extra_verbose,
                              package_pattern=args.package)
 
     def upload(self, *args):

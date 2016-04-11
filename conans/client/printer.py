@@ -102,7 +102,7 @@ class Printer(object):
                 for d in depends:
                     self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
 
-    def print_search(self, info, pattern=None, verbose=False):
+    def print_search(self, info, pattern=None, verbose=False, extra_verbose=False):
         """ Print all the exported conans information
         param pattern: wildcards, e.g., "opencv/*"
         """
@@ -115,34 +115,35 @@ class Printer(object):
         self._out.info("Existing packages info:\n")
         for conan_ref, packages in sorted(info.items()):
             self._print_colored_line(str(conan_ref), indent=0)
-            if not packages:
-                self._out.writeln('    There are no packages', Color.RED)
-            for package_id, conan_info in packages.items():
-                self._print_colored_line("Package_ID", package_id, 1)
-                if verbose:
-                    # Printing the Package information (settings, options, requires, ...)
-                    # Options
-                    if conan_info.options:
-                        self._print_colored_line("[options]", indent=2)
-                        for option in conan_info.options.dumps().splitlines():
-                            self._print_colored_line(option, indent=3)
-                    # Settings
-                    if conan_info.settings:
-                        self._print_colored_line("[settings]", indent=2)
-                        for settings in conan_info.settings.dumps().splitlines():
-                            self._print_colored_line(settings, indent=3)
-                    # Requirements
-                    if conan_info.requires:
-                        self._print_colored_line("[requirements]", indent=2)
-                        for name in conan_info.requires.dumps().splitlines():
-                            self._print_colored_line(str(name), indent=3)
-                else:
-                    if conan_info.settings:
-                        settings_line = [values[1] for values in
-                                         [setting.split("=")
-                                          for setting in conan_info.settings.dumps().splitlines()]]
-                        settings_line = "(%s)" % ", ".join(settings_line)
-                        self._print_colored_line(settings_line, indent=3)
+            if extra_verbose or verbose:
+                if not packages:
+                    self._out.writeln('    There are no packages', Color.RED)
+                for package_id, conan_info in packages.items():
+                    self._print_colored_line("Package_ID", package_id, 1)
+                    if extra_verbose:
+                        # Printing the Package information (settings, options, requires, ...)
+                        # Options
+                        if conan_info.options:
+                            self._print_colored_line("[options]", indent=2)
+                            for option in conan_info.options.dumps().splitlines():
+                                self._print_colored_line(option, indent=3)
+                        # Settings
+                        if conan_info.settings:
+                            self._print_colored_line("[settings]", indent=2)
+                            for settings in conan_info.settings.dumps().splitlines():
+                                self._print_colored_line(settings, indent=3)
+                        # Requirements
+                        if conan_info.requires:
+                            self._print_colored_line("[requirements]", indent=2)
+                            for name in conan_info.requires.dumps().splitlines():
+                                self._print_colored_line(str(name), indent=3)
+                    else:
+                        if conan_info.settings:
+                            settings_line = [values[1] for values in
+                                             [setting.split("=")
+                                              for setting in conan_info.settings.dumps().splitlines()]]
+                            settings_line = "(%s)" % ", ".join(settings_line)
+                            self._print_colored_line(settings_line, indent=3)
 
     def _print_colored_line(self, text, value=None, indent=0):
         """ Print a colored line depending on its indentation level

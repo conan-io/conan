@@ -76,7 +76,7 @@ class SearchTest(unittest.TestCase):
                                                   PACKAGES_FOLDER,
                                                   "hello.txt"): "Hello"}, client.paths.store)
 
-        client.run("search -v")
+        client.run("search -x")
         self.assertEqual("""Existing packages info:
 
 Bye/0.14@fenix/testing
@@ -120,7 +120,7 @@ helloTest/1.4.10@fenix/stable
         [requirements]
 """, client.user_io.out)
 
-        client.run("search")
+        client.run("search -v")
         self.assertEqual("""Existing packages info:
 
 Bye/0.14@fenix/testing
@@ -141,7 +141,18 @@ helloTest/1.4.10@fenix/stable
             (x64, Ubuntu, 15.04)
 """, client.user_io.out)
 
-        client.run("search Bye/* -v")
+        client.run("search ")
+        self.assertEqual("""Existing packages info:
+
+Bye/0.14@fenix/testing
+Empty/1.10@fake/test
+Hello/1.4.10@fenix/testing
+MissFile/1.0.2@fenix/stable
+NodeInfo/1.0.2@fenix/stable
+helloTest/1.4.10@fenix/stable
+""", client.user_io.out)
+
+        client.run("search Bye/* -x")
         self.assertEqual("""Existing packages info:
 
 Bye/0.14@fenix/testing
@@ -155,7 +166,7 @@ Bye/0.14@fenix/testing
 """, client.user_io.out)
 
         # bad pattern
-        client.run("search OpenCV/*")
+        client.run("search OpenCV/* -v")
         self.assertIn("There are no packages matching the OpenCV/* pattern", client.user_io.out)
 
         # pattern case-sensitive
@@ -166,7 +177,7 @@ Bye/0.14@fenix/testing
         self.assertNotIn("NodeInfo/1.0.2@fenix/stable", client.user_io.out)
 
         # Package search
-        client.run("search -p e4*")
+        client.run("search -p e4* -v")
         self.assertIn('''Bye/0.14@fenix/testing
     Package_ID: e4f7vdwcv4w55d
             (Darwin)
@@ -174,10 +185,10 @@ NodeInfo/1.0.2@fenix/stable
     Package_ID: e4f7vdwcv4w55d
             (x86_64, gcc, Windows)''', client.user_io.out)
 
-        client.run("search -p d9")
+        client.run("search -p d9 -v")
         self.assertIn('''Hello/1.4.10@fenix/testing
     Package_ID: d91960d4c06b38
             (x64, Windows, 8.1)''', client.user_io.out)
 
-        client.run("search Bye/0.14@fenix/testing -p e4*")
+        client.run("search Bye/0.14@fenix/testing -p e4* -v")
         self.assertNotIn('''NodeInfo/1.0.2@fenix/stable''', client.user_io.out)
