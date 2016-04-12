@@ -33,7 +33,7 @@ class Downloader(object):
             total_length = response.headers.get('content-length')
 
             if total_length is None:  # no content length header
-                ret.append(response.content)
+                ret += response.content
             else:
                 dl = 0
                 total_length = int(total_length)
