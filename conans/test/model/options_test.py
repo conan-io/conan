@@ -3,19 +3,33 @@ from conans.model.options import OptionsValues, PackageOptions, Options
 from conans.model.ref import ConanFileReference
 from conans.test.tools import TestBufferConanOutput
 from conans.model.values import Values
+from conans.errors import ConanException
 
 
 class OptionsTest(unittest.TestCase):
 
     def setUp(self):
         package_options = PackageOptions.loads("""{static: [True, False],
-        optimized: [2, 3, 4]}""")
-        package_options.values = Values.loads("static=True\noptimized=3")
+        optimized: [2, 3, 4],
+        path: ANY}""")
+        package_options.values = Values.loads("static=True\noptimized=3\npath=NOTDEF")
         self.sut = Options(package_options)
 
     def items_test(self):
-        self.assertEqual(self.sut.items(), [("optimized", "3"), ("static", "True")])
-        self.assertEqual(self.sut.items(), [("optimized", "3"), ("static", "True")])
+        self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "NOTDEF"),
+                                            ("static", "True")])
+        self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "NOTDEF"),
+                                            ("static", "True")])
+
+    def change_test(self):
+        self.sut.path = "C:/MyPath"
+        self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "C:/MyPath"),
+                                            ("static", "True")])
+        self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "C:/MyPath"),
+                                            ("static", "True")])
+        with self.assertRaisesRegexp(ConanException,
+                                     "'5' is not a valid 'options.optimized' value"):
+            self.sut.optimized = 5
 
     def boolean_test(self):
         self.sut.static = False
@@ -43,11 +57,12 @@ class OptionsTest(unittest.TestCase):
         output = TestBufferConanOutput()
         self.sut.propagate_upstream(options, down_ref, own_ref, output)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "4"),
-                                                   ("static", "False"),
-                                                   ("Boost:static", "False"),
-                                                   ("Boost:thread", "True"),
-                                                   ("Boost:thread.multi", "off"),
-                                                   ("Poco:deps_bundled", "True")])
+                                                     ("path", "NOTDEF"),
+                                                     ("static", "False"),
+                                                     ("Boost:static", "False"),
+                                                     ("Boost:thread", "True"),
+                                                     ("Boost:thread.multi", "off"),
+                                                     ("Poco:deps_bundled", "True")])
 
         options2 = OptionsValues.loads("""other_option=True
         optimized_var=3
@@ -74,6 +89,7 @@ WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option P
 but it was already assigned to True by Hello0/0.1@diego/testing""", str(output))
         self.assertEqual(self.sut.values.dumps(),
                          """optimized=4
+path=NOTDEF
 static=False
 Boost:static=False
 Boost:thread=True
@@ -98,25 +114,25 @@ class OptionsValuesTest(unittest.TestCase):
 
     def test_dumps(self):
         self.assertEqual(self.sut.dumps(), "\n".join(["optimized=3",
-                                                     "static=True",
-                                                     "Boost:static=False",
-                                                     "Boost:thread=True",
-                                                     "Boost:thread.multi=off",
-                                                     "Poco:deps_bundled=True"]))
+                                                      "static=True",
+                                                      "Boost:static=False",
+                                                      "Boost:thread=True",
+                                                      "Boost:thread.multi=off",
+                                                      "Poco:deps_bundled=True"]))
 
     def test_sha_constant(self):
         self.assertEqual(self.sut.sha, "7e406fc70a1c40b597353b39a0c0a605e9f95332")
         self.sut.new_option = False
         self.sut["Boost"].new_option = "off"
         self.sut["Poco"].new_option = 0
-        #self.sut["Other"].new_option = 123
+
         self.assertEqual(self.sut.dumps(), "\n".join(["new_option=False",
                                                       "optimized=3",
-                                                     "static=True",
-                                                     "Boost:new_option=off",
-                                                     "Boost:static=False",
-                                                     "Boost:thread=True",
-                                                     "Boost:thread.multi=off",
-                                                     "Poco:deps_bundled=True",
-                                                     "Poco:new_option=0"]))
+                                                      "static=True",
+                                                      "Boost:new_option=off",
+                                                      "Boost:static=False",
+                                                      "Boost:thread=True",
+                                                      "Boost:thread.multi=off",
+                                                      "Poco:deps_bundled=True",
+                                                      "Poco:new_option=0"]))
         self.assertEqual(self.sut.sha, "7e406fc70a1c40b597353b39a0c0a605e9f95332")

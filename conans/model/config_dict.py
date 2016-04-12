@@ -30,6 +30,8 @@ class ConfigItem(object):
             for k, v in definition.items():
                 k = str(k)
                 self._definition[k] = cls(v, name, k)
+        elif definition == "ANY":
+            self._definition = "ANY"
         else:
             # list or tuple of possible values
             self._definition = sorted([str(v) for v in definition])
@@ -88,7 +90,7 @@ class ConfigItem(object):
             v = str(v)
             if isinstance(self._definition, dict):
                 self._definition.pop(v, None)
-            else:
+            elif self._definition != "ANY":
                 if v in self._definition:
                     self._definition.remove(v)
             if self._value == v:
@@ -128,7 +130,7 @@ class ConfigItem(object):
     @value.setter
     def value(self, v):
         v = str(v)
-        if v not in self._definition:
+        if self._definition != "ANY" and v not in self._definition:
             raise ConanException(bad_value_msg(self._name, v, self.values_range))
         self._value = v
 
