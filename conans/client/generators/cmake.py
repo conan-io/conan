@@ -50,21 +50,23 @@ class CMakeGenerator(Generator):
         # GENERAL VARIABLES
         deps = DepsCppCmake(self.deps_build_info)
 
-        template = ('set(CONAN_INCLUDE_DIRS {deps.include_paths} ${{CONAN_INCLUDE_DIRS}})\n'
-            'set(CONAN_LIB_DIRS {deps.lib_paths} ${{CONAN_LIB_DIRS}})\n'
-            'set(CONAN_BIN_DIRS {deps.bin_paths} ${{CONAN_BIN_DIRS}})\n'
-            'set(CONAN_LIBS {deps.libs} ${{CONAN_LIBS}})\n'
-            'set(CONAN_DEFINES {deps.defines} ${{CONAN_DEFINES}})\n'
-            'set(CONAN_CXX_FLAGS "{deps.cppflags} ${{CONAN_CXX_FLAGS}}")\n'
-            'set(CONAN_SHARED_LINKER_FLAGS "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS}}")\n'
-            'set(CONAN_EXE_LINKER_FLAGS "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS}}")\n'
-            'set(CONAN_C_FLAGS "{deps.cflags} ${{CONAN_C_FLAGS}}")\n'
-            'set(CONAN_CMAKE_MODULE_PATH {module_paths} ${{CONAN_CMAKE_MODULE_PATH}})')
+        template = ('set(CONAN_DEPENDENCIES {dependencies})\n'
+                    'set(CONAN_INCLUDE_DIRS {deps.include_paths} ${{CONAN_INCLUDE_DIRS}})\n'
+                    'set(CONAN_LIB_DIRS {deps.lib_paths} ${{CONAN_LIB_DIRS}})\n'
+                    'set(CONAN_BIN_DIRS {deps.bin_paths} ${{CONAN_BIN_DIRS}})\n'
+                    'set(CONAN_LIBS {deps.libs} ${{CONAN_LIBS}})\n'
+                    'set(CONAN_DEFINES {deps.defines} ${{CONAN_DEFINES}})\n'
+                    'set(CONAN_CXX_FLAGS "{deps.cppflags} ${{CONAN_CXX_FLAGS}}")\n'
+                    'set(CONAN_SHARED_LINKER_FLAGS "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS}}")\n'
+                    'set(CONAN_EXE_LINKER_FLAGS "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS}}")\n'
+                    'set(CONAN_C_FLAGS "{deps.cflags} ${{CONAN_C_FLAGS}}")\n'
+                    'set(CONAN_CMAKE_MODULE_PATH {module_paths} ${{CONAN_CMAKE_MODULE_PATH}})')
 
         rootpaths = [DepsCppCmake(dep_cpp_info).rootpath for _, dep_cpp_info
                      in self.deps_build_info.dependencies]
         module_paths = " ".join(rootpaths)
-        all_flags = template.format(deps=deps, module_paths=module_paths)
+        all_flags = template.format(deps=deps, module_paths=module_paths,
+                                    dependencies=" ".join(self.deps_build_info.deps))
         sections.append(all_flags)
 
         # MACROS
