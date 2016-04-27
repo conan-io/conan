@@ -166,6 +166,35 @@ class Command(object):
                               options=options,
                               settings=settings,
                               build_mode=args.build)
+        # Check old tests, format
+        test_conanfile = os.path.join(test_folder, "conanfile.py")
+        if not os.path.exists(test_conanfile):
+            raise ConanException("Test conanfile.py does not exist")
+        test_conanfile_content = load(test_conanfile)
+        if ".conanfile_directory" not in test_conanfile_content:
+            self._user_io.out.error("""******* conan test command layout has changed *******
+
+In your "%s" folder 'conanfile.py' you should use the
+path to the conanfile_directory, something like:
+
+    self.run('cmake %%s %%s' %% (self.conanfile_directory, cmake.command_line))
+
+ """ % (test_folder_name))
+
+        test_cmake = os.path.join(test_folder, "CMakeLists.txt")
+        if not os.path.exists(test_cmake):
+            raise ConanException("Test CMakeLists.txt does not exist")
+        test_cmake_content = load(test_cmake)
+        if "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" not in test_cmake_content:
+            self._user_io.out.error("""******* conan test command layout has changed *******
+
+In your "%s" folder 'CMakeLists.txt' you should use the
+path to the CMake binary directory, like this:
+
+   include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+
+ """ % (test_folder_name))
+
         self._manager.build(test_folder, build_folder, test=True)
 
     def install(self, *args):
