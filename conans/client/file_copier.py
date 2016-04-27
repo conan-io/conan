@@ -61,7 +61,7 @@ class FileCopier(object):
         copied_files = []
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
-        for root, subfolders, files in os.walk(src):
+        for root, subfolders, files in os.walk(src,followlinks=True):
             # do the copy
             relative_path = os.path.relpath(root, src)
             # Skip git or svn subfolders
