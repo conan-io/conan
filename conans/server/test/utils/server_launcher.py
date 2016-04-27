@@ -6,9 +6,9 @@ from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.util.log import logger
-from conans.server.server_launcher import migrate_and_get_server_config
 from conans.util.files import mkdir
 from conans.test.utils.test_files import temp_folder
+from conans.server.migrate import migrate_and_get_server_config
 
 
 TESTING_REMOTE_PRIVATE_USER = "private_user"

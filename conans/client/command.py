@@ -182,11 +182,10 @@ path to the conanfile_directory, something like:
  """ % (test_folder_name))
 
         test_cmake = os.path.join(test_folder, "CMakeLists.txt")
-        if not os.path.exists(test_cmake):
-            raise ConanException("Test CMakeLists.txt does not exist")
-        test_cmake_content = load(test_cmake)
-        if "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" not in test_cmake_content:
-            self._user_io.out.error("""******* conan test command layout has changed *******
+        if os.path.exists(test_cmake):
+            test_cmake_content = load(test_cmake)
+            if "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" not in test_cmake_content:
+                self._user_io.out.error("""******* conan test command layout has changed *******
 
 In your "%s" folder 'CMakeLists.txt' you should use the
 path to the CMake binary directory, like this:
