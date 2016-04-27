@@ -352,7 +352,12 @@ class ConanManager(object):
         @param remote: install only from that remote
         """
         copier = PackageCopier(self._paths, self._user_io)
-        package_ids = package_ids or os.listdir(self._paths.packages(reference))
+        if not package_ids:
+            packages = self._paths.packages(reference)
+            if os.path.exists(packages):
+                package_ids = os.listdir(packages)
+            else:
+                package_ids = []
         copier.copy(reference, package_ids, username, channel, force)
 
     def remove(self, pattern, src=False, build_ids=None, package_ids_filter=None, force=False,
