@@ -50,7 +50,7 @@ class FileCopierTest(unittest.TestCase):
             self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir1/file1.txt")))
             self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/subdir1/sub1/file1.txt")))
             self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir2/file1.txt")))
-            self.assertEqual(['file1.txt', 'sub1'].sort(), os.listdir(os.path.join(folder2, "texts/subdir2").sort()))
+            self.assertEqual(['file1.txt', 'sub1'].sort(), os.listdir(os.path.join(folder2, "texts/subdir2")).sort())
 
             folder2 = temp_folder()
             copier = FileCopier(folder1, folder2)
