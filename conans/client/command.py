@@ -154,11 +154,11 @@ path to the CMake binary directory, like this:
 
  """ % (test_folder_name))
 
-    def test(self, *args):
+    def test_package(self, *args):
         """ build and run your package test. Must have conanfile.py with "test"
-        method and "test" subfolder with package consumer test project
+        method and "test_package" subfolder with package consumer test project
         """
-        parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test",
+        parser = argparse.ArgumentParser(description=self.test_package.__doc__, prog="conan test",
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
@@ -166,12 +166,25 @@ path to the CMake binary directory, like this:
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
-        test_folder_name = args.folder or "test"
 
         root_folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
-        test_folder = os.path.join(root_folder, test_folder_name)
-        if not os.path.exists(test_folder):
-            raise ConanException("test folder not available")
+        if args.folder:
+            test_folder_name = args.folder
+            test_folder = os.path.join(root_folder, test_folder_name)
+            test_conanfile = os.path.join(test_folder, "conanfile.py")
+            if not os.path.exists(test_conanfile):
+                raise ConanException("test folder '%s' not available, "
+                                     "or it doesn't have a conanfile.py" % args.folder)
+        else:
+            for name in ["test_package", "test"]:
+                test_folder_name = name
+                test_folder = os.path.join(root_folder, test_folder_name)
+                test_conanfile = os.path.join(test_folder, "conanfile.py")
+                if os.path.exists(test_conanfile):
+                    break
+            else:
+                raise ConanException("test folder 'test_package' not available, "
+                                     "or it doesn't have a conanfile.py")
 
         lib_to_test = self._detect_tested_library_name()
 
@@ -200,6 +213,12 @@ path to the CMake binary directory, like this:
                               build_mode=args.build)
         self._test_check(test_folder, test_folder_name)
         self._manager.build(test_folder, build_folder, test=True)
+
+    # Alias to test
+    def test(self, *args):
+        """ (deprecated). Alias to test_pkg, use it instead
+        """
+        self.test_package(*args)
 
     def install(self, *args):
         """ install in the local store the given requirements.
