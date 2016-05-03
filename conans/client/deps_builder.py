@@ -294,7 +294,9 @@ class DepsBuilder(object):
         dep_graph.add_node(root_node)
         public_deps = {}  # {name: Node} dict with public nodes, so they are not added again
         # enter recursive computation
+        print "Enter load deps"
         self._load_deps(root_node, Requirements(), dep_graph, public_deps, conan_ref, None)
+        print "Exist load deps"
         dep_graph.propagate_info()
         return dep_graph
 

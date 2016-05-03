@@ -41,7 +41,7 @@ class ConanProxy(object):
                 output.warn("Bad package '%s' detected! Removing "
                             "package directory... " % str(package_reference.package_id))
                 rmdir(package_folder)
-            else:
+            elif self._check_updates:
                 try:  # get_conan_digest can fail, not in server
                     upstream_manifest = self.get_package_digest(package_reference)
                     if upstream_manifest.file_sums != read_manifest.file_sums:
