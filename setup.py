@@ -31,7 +31,8 @@ dev_requirements = get_requires("conans/requirements_dev.txt")
 
 def load_version():
     '''Loads a file content'''
-    filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "conans", "__init__.py"))
+    filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                            "conans", "__init__.py"))
     with open(filename, "rt") as version_file:
         conan_init = version_file.read()
         version = re.search("__version__ = '([0-9a-z.]+)'", conan_init).group(1)
@@ -40,7 +41,7 @@ def load_version():
 
 # def generate_long_description_file():
 #     import pypandoc
-# 
+#
 #     output = pypandoc.convert('README.md', 'rst')
 #     return output
 
