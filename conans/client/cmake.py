@@ -21,8 +21,8 @@ class CMake(object):
     @property
     def generator(self):
         if (not self._settings.compiler or
-            not self._settings.compiler.version or
-            not self._settings.arch):
+                not self._settings.compiler.version or
+                not self._settings.arch):
             raise ConanException("You must specify compiler, compiler.version and arch in "
                                  "your settings to use a CMake generator")
 
@@ -31,7 +31,14 @@ class CMake(object):
         arch = str(self._settings.arch) if self._settings.arch else None
 
         if compiler == "Visual Studio":
-            base = "Visual Studio %s" % self._settings.compiler.version
+            _visuals = {'8': '8 2005',
+                        '9': '9 2008',
+                        '10': '10 2010',
+                        '11': '11 2012',
+                        '12': '12 2013',
+                        '14': '14 2015'}
+            str_ver = str(self._settings.compiler.version)
+            base = "Visual Studio %s" % _visuals.get(str_ver, "UnknownVersion %s" % str_ver)
             if arch == "x86_64":
                 return base + " Win64"
             elif arch == "arm":
