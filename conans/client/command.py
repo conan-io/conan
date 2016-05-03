@@ -21,7 +21,6 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.model.version import Version
 from conans.client.migrations import ClientMigrator
 import hashlib
-import shutil
 from conans.util.files import rmdir, load
 from argparse import RawTextHelpFormatter
 import re
@@ -123,23 +122,69 @@ class Command(object):
         else:
             return False  # Nothing is built
 
-    def test(self, *args):
-        """ build and run your package test. Must have conanfile.py with "test"
-        method and "test" subfolder with package consumer test project
+    def _test_check(self, test_folder, test_folder_name):
+        """ To ensure that the 0.9 version new layout is detected and users warned
         """
-        parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test",
+        # Check old tests, format
+        test_conanfile = os.path.join(test_folder, "conanfile.py")
+        if not os.path.exists(test_conanfile):
+            raise ConanException("Test conanfile.py does not exist")
+        test_conanfile_content = load(test_conanfile)
+        if ".conanfile_directory" not in test_conanfile_content:
+            self._user_io.out.error("""******* conan test command layout has changed *******
+
+In your "%s" folder 'conanfile.py' you should use the
+path to the conanfile_directory, something like:
+
+    self.run('cmake %%s %%s' %% (self.conanfile_directory, cmake.command_line))
+
+ """ % (test_folder_name))
+
+        # Test the CMakeLists, if existing
+        test_cmake = os.path.join(test_folder, "CMakeLists.txt")
+        if os.path.exists(test_cmake):
+            test_cmake_content = load(test_cmake)
+            if "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" not in test_cmake_content:
+                self._user_io.out.error("""******* conan test command layout has changed *******
+
+In your "%s" folder 'CMakeLists.txt' you should use the
+path to the CMake binary directory, like this:
+
+   include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+
+ """ % (test_folder_name))
+
+    def test_package(self, *args):
+        """ build and run your package test. Must have conanfile.py with "test"
+        method and "test_package" subfolder with package consumer test project
+        """
+        parser = argparse.ArgumentParser(description=self.test_package.__doc__, prog="conan test",
                                          formatter_class=RawTextHelpFormatter)
-        parser.add_argument("path", nargs='?', default="",
-                            help='path to conanfile file, '
+        parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
+        parser.add_argument("-f", "--folder", help='alternative test folder name')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
 
         root_folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
-        test_folder = os.path.join(root_folder, "test")
-        if not os.path.exists(test_folder):
-            raise ConanException("test folder not available")
+        if args.folder:
+            test_folder_name = args.folder
+            test_folder = os.path.join(root_folder, test_folder_name)
+            test_conanfile = os.path.join(test_folder, "conanfile.py")
+            if not os.path.exists(test_conanfile):
+                raise ConanException("test folder '%s' not available, "
+                                     "or it doesn't have a conanfile.py" % args.folder)
+        else:
+            for name in ["test_package", "test"]:
+                test_folder_name = name
+                test_folder = os.path.join(root_folder, test_folder_name)
+                test_conanfile = os.path.join(test_folder, "conanfile.py")
+                if os.path.exists(test_conanfile):
+                    break
+            else:
+                raise ConanException("test folder 'test_package' not available, "
+                                     "or it doesn't have a conanfile.py")
 
         lib_to_test = self._detect_tested_library_name()
 
@@ -152,21 +197,28 @@ class Command(object):
         options = args.options or []
         settings = args.settings or []
 
-        sha = hashlib.sha1("".join(options + settings)).hexdigest()
-        build_folder = os.path.join(root_folder, "build", sha)
+        sha = hashlib.sha1("".join(options + settings).encode()).hexdigest()
+        build_folder = os.path.join(test_folder, "build", sha)
         rmdir(build_folder)
-        shutil.copytree(test_folder, build_folder)
+        # shutil.copytree(test_folder, build_folder)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         settings = self._get_tuples_list_from_extender_arg(args.settings)
 
-        self._manager.install(reference=build_folder,
+        self._manager.install(reference=test_folder,
                               current_path=build_folder,
                               remote=args.remote,
                               options=options,
                               settings=settings,
                               build_mode=args.build)
-        self._manager.build(build_folder, build_folder, test=True)
+        self._test_check(test_folder, test_folder_name)
+        self._manager.build(test_folder, build_folder, test=True)
+
+    # Alias to test
+    def test(self, *args):
+        """ (deprecated). Alias to test_pkg, use it instead
+        """
+        self.test_package(*args)
 
     def install(self, *args):
         """ install in the local store the given requirements.
@@ -398,6 +450,8 @@ class Command(object):
                             action='store_true', help='Make a case-sensitive search')
         parser.add_argument('-r', '--remote', help='Remote origin')
         parser.add_argument('-v', '--verbose', default=False,
+                            action='store_true', help='Show packages')
+        parser.add_argument('-x', '--extra-verbose', default=False,
                             action='store_true', help='Show packages options and settings')
         parser.add_argument('-p', '--package', help='Package ID pattern. EX: 23*', default=None)
         args = parser.parse_args(*args)
@@ -406,6 +460,7 @@ class Command(object):
                              args.remote,
                              ignorecase=not args.case_sensitive,
                              verbose=args.verbose,
+                             extra_verbose=args.extra_verbose,
                              package_pattern=args.package)
 
     def upload(self, *args):
@@ -474,7 +529,7 @@ class Command(object):
         elif args.subcommand == "update":
             registry.update(args.remote, args.url)
         elif args.subcommand == "list_ref":
-            for ref, remote in registry.refs.iteritems():
+            for ref, remote in registry.refs.items():
                 self._user_io.out.info("%s: %s" % (ref, remote))
         elif args.subcommand == "add_ref":
             registry.add_ref(args.reference, args.remote)
@@ -532,7 +587,8 @@ class Command(object):
             errors = True
         except ConanException as exc:
             logger.error(exc)
-            # logger.debug(traceback.format_exc())
+#             import traceback
+#             logger.debug(traceback.format_exc())
             errors = True
             self._user_io.out.error(str(exc))
 

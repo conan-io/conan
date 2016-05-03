@@ -11,9 +11,29 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     if which pyenv > /dev/null; then
         eval "$(pyenv init -)"
     fi
+    if which pyenv > /dev/null; then
+        eval "$(pyenv init -)"
+    fi
 
-    pyenv install 2.7.10
-    pyenv virtualenv 2.7.10 conan
+    case "${PYVER}" in
+        py27)
+            pyenv install 2.7.10
+            pyenv virtualenv 2.7.10 conan
+            ;;
+        py33)
+            pyenv install 3.3.6
+            pyenv virtualenv 3.3.6 conan
+            ;;
+        py34)
+            pyenv install 3.4.3
+            pyenv virtualenv 3.4.3 conan
+            ;;
+        py35)
+            pyenv install 3.5.0
+            pyenv virtualenv 3.5.0 conan
+            ;;
+
+    esac
     pyenv rehash
     pyenv activate conan
 fi

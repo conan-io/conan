@@ -13,16 +13,16 @@ class CMakeTest(unittest.TestCase):
         settings.arch = "x86"
 
         cmake = CMake(settings)
-        self.assertEqual('-G "Visual Studio 12"   -DCONAN_COMPILER="Visual Studio" '
+        self.assertEqual('-G "Visual Studio 12 2013"   -DCONAN_COMPILER="Visual Studio" '
                          '-DCONAN_COMPILER_VERSION="12" -Wno-dev', cmake.command_line)
         self.assertEqual('', cmake.build_config)
         settings.build_type = "Debug"
-        self.assertEqual('-G "Visual Studio 12"   -DCONAN_COMPILER="Visual Studio" '
+        self.assertEqual('-G "Visual Studio 12 2013"   -DCONAN_COMPILER="Visual Studio" '
                          '-DCONAN_COMPILER_VERSION="12" -Wno-dev', cmake.command_line)
         self.assertEqual('--config Debug', cmake.build_config)
 
         settings.arch = "x86_64"
-        self.assertEqual('-G "Visual Studio 12 Win64"   -DCONAN_COMPILER="Visual Studio" '
+        self.assertEqual('-G "Visual Studio 12 2013 Win64"   -DCONAN_COMPILER="Visual Studio" '
                          '-DCONAN_COMPILER_VERSION="12" -Wno-dev', cmake.command_line)
 
         settings.os = "Windows"

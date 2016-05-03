@@ -28,13 +28,14 @@ class ExportTest(unittest.TestCase):
         self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path))
 
-        for name in self.files.keys():
+        for name in list(self.files.keys()):
             self.assertTrue(os.path.exists(os.path.join(reg_path, name)))
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': 'f21a98d974e9294b0d709070042c6e78',
+                         'conanfile.py': '5632cf850a7161388ab24f42b9bdb3fd',
+                         'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
 
@@ -109,13 +110,14 @@ class OpenSSLConan(ConanFile):
         self.assertIn('%s: Folder: %s' % (str(self.conan_ref), reg_path2), self.conan.user_io.out)
         self.assertTrue(os.path.exists(reg_path2))
 
-        for name in files2.keys():
+        for name in list(files2.keys()):
             self.assertTrue(os.path.exists(os.path.join(reg_path2, name)))
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': 'f21a98d974e9294b0d709070042c6e78',
+                         'conanfile.py': '5632cf850a7161388ab24f42b9bdb3fd',
+                         'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest2.file_sums)
 
@@ -142,13 +144,14 @@ class OpenSSLConan(ConanFile):
 
         self.assertTrue(os.path.exists(reg_path3))
 
-        for name in files2.keys():
+        for name in list(files2.keys()):
             self.assertTrue(os.path.exists(os.path.join(reg_path3, name)))
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': 'c5889ea6485599c7a0cae02b54270b35',
+                         'conanfile.py': '7f7a5352e781be814b86e8f333593b4f',
+                         'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest3.file_sums)
 
@@ -166,7 +169,7 @@ class OpenSSLConan(ConanFile):
 
         file_list = []
         for f in folders:
-            for name, content in {'file1.h': 'asddfasdf', 'file1.dll': 'asddfasdf'}.iteritems():
+            for name, content in {'file1.h': 'asddfasdf', 'file1.dll': 'asddfasdf'}.items():
                 file_path = os.path.join(f, name)
                 save(file_path, content)
                 file_list.append(file_path)

@@ -3,7 +3,7 @@ from conans.errors import ConanException
 import logging
 from conans.util.env_reader import get_env
 from conans.util.files import save, load
-from ConfigParser import NoSectionError, ConfigParser
+from six.moves.configparser import ConfigParser, NoSectionError
 from conans.model.values import Values
 import urllib
 
@@ -35,10 +35,6 @@ default_client_conf = '''
 # This is the default path, but you can write your own
 path: ~/.conan/data
 
-[remotes]
-conan.io: https://server.conan.io
-local: http://localhost:9300
-
 [proxies]
 # Empty section will try to use system proxies.
 # If don't want proxy at all, remove section [proxies]
@@ -48,7 +44,6 @@ local: http://localhost:9300
 # https: http://10.10.1.10:1080
 
 [settings_defaults]
-
 '''
 
 

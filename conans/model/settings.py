@@ -16,10 +16,10 @@ class Settings(ConfigDict):
         if isinstance(constraint_def, (list, tuple, set)):
             constraint_def = {str(k): None for k in constraint_def or []}
         else:
-            constraint_def = {str(k): v for k, v in constraint_def.iteritems()}
+            constraint_def = {str(k): v for k, v in constraint_def.items()}
 
         fields_to_remove = []
-        for field, config_item in self._data.iteritems():
+        for field, config_item in self._data.items():
             if field not in constraint_def:
                 fields_to_remove.append(field)
                 continue

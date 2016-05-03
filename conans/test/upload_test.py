@@ -3,7 +3,9 @@ from conans.test.tools import TestClient, TestServer
 from conans.test.utils.test_files import hello_source_files, temp_folder
 from conans.client.manager import CONANFILE
 import os
-from conans.paths import CONAN_MANIFEST, PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME
+import platform
+import stat
 from conans.util.files import save
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
@@ -26,11 +28,11 @@ class UploadTest(unittest.TestCase):
         servers = {}
         # All can write (for avoid authentication until we mock user_io)
         self.test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
-                                 users={"lasote": "mypass"})
+                                      users={"lasote": "mypass"})
         servers["default"] = self.test_server
         conan_digest = FileTreeManifest('123123123', {})
 
-        self.client = TestClient(servers=servers, users={"default":[("lasote", "mypass")]})
+        self.client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         self.conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         reg_folder = self.client.paths.export(self.conan_ref)
 
@@ -41,10 +43,11 @@ class UploadTest(unittest.TestCase):
         files = hello_source_files()
         self.client.save(files, path=reg_folder)
         self.client.save({CONANFILE: myconan1,
-                       CONAN_MANIFEST: str(conan_digest),
-                      "include/math/lib1.h": "//copy",
-                      "my_lib/debug/libd.a": "//copy",
-                      "my_data/readme.txt": "//copy"}, path=reg_folder)
+                          CONAN_MANIFEST: str(conan_digest),
+                          "include/math/lib1.h": "//copy",
+                          "my_lib/debug/libd.a": "//copy",
+                          "my_data/readme.txt": "//copy",
+                          "my_bin/executable": "//copy"}, path=reg_folder)
 
         self.package_ref = PackageReference(self.conan_ref, "myfakeid")
         self.server_pack_folder = self.test_server.paths.package(self.package_ref)
@@ -54,6 +57,10 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "lib", "my_lib", "libd.a"), "//lib")
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
              "//res")
+        save(os.path.join(package_folder, "bin", "my_bin", "executable"), "//bin")
+        os.chmod(os.path.join(package_folder, "bin", "my_bin", "executable"),
+                 os.stat(os.path.join(package_folder, "bin", "my_bin", "executable")).st_mode |
+                 stat.S_IRWXU)
 
         self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
         self.assertFalse(os.path.exists(self.server_reg_folder))
@@ -88,7 +95,8 @@ class UploadTest(unittest.TestCase):
                  CONAN_MANIFEST,
                  'main.cpp',
                  'include/math/lib1.h',
-                 'my_data/readme.txt']
+                 'my_data/readme.txt',
+                 'my_bin/executable']
 
         self.assertTrue(os.path.exists(os.path.join(self.server_reg_folder, CONANFILE)))
         self.assertTrue(os.path.exists(os.path.join(self.server_reg_folder, EXPORT_TGZ_NAME)))
@@ -111,6 +119,12 @@ class UploadTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(folder,
                                                     "res",
                                                     "shares/readme.txt")))
+
+        if platform.system() != "Windows":
+            self.assertEqual(os.stat(os.path.join(folder,
+                                                  "bin",
+                                                  "my_bin/executable")).st_mode &
+                             stat.S_IRWXU, stat.S_IRWXU)
 
     def upload_all_test(self):
         '''Upload conans and package together'''

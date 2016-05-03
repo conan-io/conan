@@ -5,7 +5,7 @@ from conans.util.log import logger
 import traceback
 import os
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
-from cStringIO import StringIO
+from io import StringIO, BytesIO
 import tarfile
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
@@ -130,24 +130,25 @@ def compress_files(files, name, excluded):
     """Compress the package and returns the new dict (name => content) of files,
     only with the conanXX files and the compressed file"""
 
-    tgz_contents = StringIO()
+    tgz_contents = BytesIO()
     tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_contents)
 
-    def addfile(name, contents, tar):
+    def addfile(name, file_info, tar):
         info = tarfile.TarInfo(name=name)
-        string = StringIO(contents)
-        info.size = len(contents)
-        tar.addfile(tarinfo=info, fileobj=string)
+        the_str = BytesIO(file_info["contents"])
+        info.size = len(file_info["contents"])
+        info.mode = file_info["mode"]
+        tar.addfile(tarinfo=info, fileobj=the_str)
 
-    for the_file, content in files.iteritems():
+    for the_file, info in files.items():
         if the_file not in excluded:
-            addfile(the_file, content, tgz)
+            addfile(the_file, info, tgz)
 
     tgz.close()
     ret = {}
     for e in excluded:
         if e in files:
-            ret[e] = files[e]
+            ret[e] = files[e]["contents"]
     ret[name] = tgz_contents.getvalue()
 
     return ret
@@ -159,4 +160,4 @@ def uncompress_files(files, folder, name):
             save(os.path.join(folder, file_name), content)
         else:
             #  Unzip the file
-            tar_extract(StringIO(content), folder)
+            tar_extract(BytesIO(content), folder)

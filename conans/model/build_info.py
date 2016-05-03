@@ -4,6 +4,7 @@ from conans.errors import ConanException
 from conans.client.generators import TXTGenerator
 from conans.util.log import logger
 import traceback
+from collections import OrderedDict
 
 
 DEFAULT_INCLUDE = "include"
@@ -69,11 +70,15 @@ class DepsCppInfo(_CppInfo):
 
     def __init__(self):
         super(DepsCppInfo, self).__init__()
-        self._dependencies = {}
+        self._dependencies = OrderedDict()
 
     @property
     def dependencies(self):
-        return self._dependencies.iteritems()
+        return self._dependencies.items()
+
+    @property
+    def deps(self):
+        return self._dependencies.keys()
 
     def __getitem__(self, item):
         return self._dependencies[item]

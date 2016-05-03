@@ -99,7 +99,7 @@ class GoCompleteTest(unittest.TestCase):
         package_ids = self.client.paths.conan_packages(conan_reference)
         self.assertEquals(len(package_ids), 1)
         package_ref = PackageReference(conan_reference, package_ids[0])
-        self._assert_package_exists(package_ref, self.client.paths, files.keys())
+        self._assert_package_exists(package_ref, self.client.paths, list(files.keys()))
 
         # Upload conans
         self.client.run("upload %s" % str(conan_reference))
@@ -113,7 +113,7 @@ class GoCompleteTest(unittest.TestCase):
         self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
 
         # Check library on server
-        self._assert_package_exists_in_server(package_ref, server_paths, files.keys())
+        self._assert_package_exists_in_server(package_ref, server_paths, list(files.keys()))
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
@@ -122,7 +122,7 @@ class GoCompleteTest(unittest.TestCase):
         build_path = other_conan.paths.build(package_ref)
         self.assertFalse(os.path.exists(build_path))
         # Lib should exist
-        self._assert_package_exists(package_ref, other_conan.paths, files.keys())
+        self._assert_package_exists(package_ref, other_conan.paths, list(files.keys()))
 
         reuse_conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         files = {'conanfile.py': reuse_conanfile,

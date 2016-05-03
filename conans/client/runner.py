@@ -1,5 +1,6 @@
 import os
 from subprocess import Popen, PIPE, STDOUT
+from conans.util.files import decode_text
 
 
 class ConanRunner(object):
@@ -14,13 +15,13 @@ class ConanRunner(object):
                     line = proc.stdout.readline()
                     if not line:
                         break
-                    output.write(line)
+                    output.write(decode_text(line))
             out, err = proc.communicate()
 
             if hasattr(output, "write"):
                 if out:
-                    output.write(out)
+                    output.write(decode_text(out))
                 if err:
-                    output.write(err)
+                    output.write(decode_text(err))
 
             return proc.returncode

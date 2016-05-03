@@ -27,7 +27,7 @@ class ConfigItem(object):
         self._definition = {}
         if isinstance(definition, dict):
             # recursive
-            for k, v in definition.iteritems():
+            for k, v in definition.items():
                 k = str(k)
                 self._definition[k] = cls(v, name, k)
         else:
@@ -43,17 +43,20 @@ class ConfigItem(object):
         if self.is_final:
             result._definition = self._definition[:]
         else:
-            result._definition = {k: v.copy() for k, v in self._definition.iteritems()}
+            result._definition = {k: v.copy() for k, v in self._definition.items()}
         return result
 
     @property
     def is_final(self):
         return not isinstance(self._definition, dict)
 
-    def __nonzero__(self):
+    def __bool__(self):
         if not self._value:
             return False
         return self._value.lower() not in ["false", "none", "0", "off"]
+
+    def __nonzero__(self):
+        return self.__bool__()
 
     def __str__(self):
         return self._value
@@ -132,7 +135,7 @@ class ConfigItem(object):
     @property
     def values_range(self):
         try:
-            return sorted(self._definition.keys())
+            return sorted(list(self._definition.keys()))
         except:
             return self._definition
 
@@ -162,14 +165,14 @@ class ConfigDict(object):
         self._parent_value = parent_value  # gcc, x86
         cls = type(self)
         self._data = {str(k): ConfigItem(v, "%s.%s" % (name, k), cls)
-                      for k, v in definition.iteritems()}
+                      for k, v in definition.items()}
 
     def copy(self):
         """ deepcopy, recursive
         """
         cls = type(self)
         result = cls({}, name=self._name, parent_value=self._parent_value)
-        for k, v in self._data.iteritems():
+        for k, v in self._data.items():
             result._data[k] = v.copy()
         return result
 
@@ -187,7 +190,7 @@ class ConfigDict(object):
 
     @property
     def fields(self):
-        return sorted(self._data.keys())
+        return sorted(list(self._data.keys()))
 
     def remove(self, item):
         if not isinstance(item, (list, tuple, set)):

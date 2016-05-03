@@ -94,7 +94,7 @@ class ConanService(object):
         return urls
 
     def get_conanfile_upload_urls(self, reference, filesizes):
-        _validate_conan_reg_filenames(filesizes.keys())
+        _validate_conan_reg_filenames(list(filesizes.keys()))
         self._authorizer.check_write_conan(self._auth_user, reference)
         urls = self._file_manager.get_upload_conanfile_urls(reference,
                                                             filesizes,
@@ -163,11 +163,11 @@ class ConanService(object):
         info = self._file_manager.search(pattern, ignorecase)
 
         # Filter out restricted items
-        for conan_ref in info.keys():
+        for conan_ref in list(info.keys()):
             try:
                 self._authorizer.check_read_conan(self._auth_user, conan_ref)
                 conan_search_info = info[conan_ref]
-                for package_id in conan_search_info.keys():
+                for package_id in list(conan_search_info.keys()):
                     package_ref = PackageReference(conan_ref, package_id)
                     try:
                         self._authorizer.check_read_package(self._auth_user, package_ref)

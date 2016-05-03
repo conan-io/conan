@@ -34,7 +34,7 @@ class ManifestValidationTest(unittest.TestCase):
         # because the local files are not correct
 
         export_path = self.conan.paths.export(self.conan_reference)
-        file_path = os.path.join(export_path, self.files.keys()[0])
+        file_path = os.path.join(export_path, list(self.files.keys())[0])
         save(file_path, "BAD CONTENT")
 
         self.conan.run("install %s --build missing" % str(self.conan_reference))

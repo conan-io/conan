@@ -1,5 +1,6 @@
 """ ConanFile user tools, as download, etc
 """
+from __future__ import print_function
 import sys
 import os
 from conans.errors import ConanException
@@ -42,17 +43,18 @@ def unzip(filename, destination="."):
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
     with zipfile.ZipFile(filename, "r") as z:
         uncompress_size = sum((file_.file_size for file_ in z.infolist()))
-        print "Unzipping %s, this can take a while" % (human_size(uncompress_size))
+        print("Unzipping %s, this can take a while" % human_size(uncompress_size))
         extracted_size = 0
         for file_ in z.infolist():
             extracted_size += file_.file_size
-            print "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size),
+            txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
+            print(txt_msg, end='')
             try:
                 if len(file_.filename) + len(full_path) > 200:
                     raise ValueError("Filename too long")
                 z.extract(file_, full_path)
             except Exception as e:
-                print "Error extract %s\n%s" % (file_.filename, str(e))
+                print("Error extract %s\n%s" % (file_.filename, str(e)))
 
 
 def untargz(filename, destination="."):
@@ -83,10 +85,10 @@ def download(url, filename, verify=True):
 
 
 def replace_in_file(file_path, search, replace):
-    with open(file_path, 'r') as content_file:
+    with open(file_path, 'rt') as content_file:
         content = content_file.read()
         content = content.replace(search, replace)
-    with open(file_path, 'wb') as handle:
+    with open(file_path, 'wt') as handle:
         handle.write(content)
 
 
@@ -121,6 +123,6 @@ def patch(base_path=None, patch_file=None, patch_string=None):
     if patch_file:
         patchset = fromfile(patch_file)
     else:
-        patchset = fromstring(patch_string)
+        patchset = fromstring(patch_string.encode())
 
     patchset.apply(root=base_path)

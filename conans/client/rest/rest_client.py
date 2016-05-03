@@ -7,7 +7,7 @@ import json
 from conans.paths import CONANFILE, CONAN_MANIFEST
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import md5
+from conans.util.files import md5, decode_text
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -22,15 +22,16 @@ def handle_return_deserializer(deserializer=None):
         def inner(*argc, **argv):
             ret = method(*argc, **argv)
             if ret.status_code != 200:
-                raise get_exception_from_error(ret.status_code)(ret.content)
-            return deserializer(ret.content) if deserializer else ret.content
+                ret.charset = "utf-8" # To be able to access ret.text (ret.content are bytes)
+                raise get_exception_from_error(ret.status_code)(ret.text)
+            return deserializer(ret.content) if deserializer else decode_text(ret.content)
         return inner
     return handle_return
 
 
 def get_exception_from_error(error_code):
     try:
-        tmp = {value: key for key, value in EXCEPTION_CODE_MAPPING.iteritems()}
+        tmp = {value: key for key, value in EXCEPTION_CODE_MAPPING.items()}
         if error_code in tmp:
             logger.debug("From server: %s" % str(tmp[error_code]))
             return tmp[error_code]
@@ -52,7 +53,7 @@ class JWTAuth(AuthBase):
 
     def __call__(self, request):
         if self.token:
-            request.headers['Authorization'] = "Bearer %s" % self.token
+            request.headers['Authorization'] = "Bearer %s" % str(self.token)
         return request
 
 
@@ -60,7 +61,7 @@ class RestApiClient(object):
     """
         Rest Api Client for handle remote.
     """
-    import cacert
+    from conans.client.rest import cacert
     # Necessary for pyinstaller, because it doesn't copy the cacert.
     # It should not be necessary anymore the own conan.io certificate (fixed in server)
     VERIFY_SSL = cacert.file_path
@@ -86,7 +87,7 @@ class RestApiClient(object):
 
         # Get the digest
         contents = self.download_files(urls)
-        contents = dict(contents)  # Unroll generator
+        contents = {key: decode_text(value) for key, value in dict(contents).items()}  # Unroll generator and decode shas (plain text)
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
     def get_package_digest(self, package_reference):
@@ -100,7 +101,7 @@ class RestApiClient(object):
 
         # Get the digest
         contents = self.download_files(urls)
-        contents = dict(contents)  # Unroll generator
+        contents = {key: decode_text(value) for key, value in dict(contents).items()}  # Unroll generator and decode shas (plain text)
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
     def get_conanfile(self, conan_reference):
@@ -109,7 +110,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
         urls = self._get_json(url)
 
-        if CONANFILE not in urls.keys():
+        if CONANFILE not in list(urls.keys()):
             raise NotFoundException("Conan '%s' doesn't have a %s!" % (conan_reference, CONANFILE))
 
         # TODO: Get fist an snapshot and compare files and download only required?
@@ -140,7 +141,7 @@ class RestApiClient(object):
 
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
-        local_snapshot = {filename: md5(content) for filename, content in the_files.iteritems()}
+        local_snapshot = {filename: md5(content) for filename, content in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -149,7 +150,7 @@ class RestApiClient(object):
         if files_to_upload:
             # Get the upload urls
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
-            filesizes = {filename.replace("\\", "/"): len(content) for filename, content in files_to_upload.iteritems()}
+            filesizes = {filename.replace("\\", "/"): len(content) for filename, content in files_to_upload.items()}
             urls = self._get_json(url, data=filesizes)
             self.upload_files(urls, files_to_upload, self._output)
         if deleted:
@@ -164,7 +165,7 @@ class RestApiClient(object):
 
         # Get the remote snapshot
         remote_snapshot = self._get_package_snapshot(package_reference)
-        local_snapshot = {filename: md5(content) for filename, content in the_files.iteritems()}
+        local_snapshot = {filename: md5(content) for filename, content in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -174,7 +175,7 @@ class RestApiClient(object):
             url = "%s/conans/%s/packages/%s/upload_urls" % (self._remote_api_url,
                                                             "/".join(package_reference.conan),
                                                             package_reference.package_id)
-            filesizes = {filename: len(content) for filename, content in files_to_upload.iteritems()}
+            filesizes = {filename: len(content) for filename, content in files_to_upload.items()}
             self._output.rewrite_line("Requesting upload permissions...")
             urls = self._get_json(url, data=filesizes)
             self._output.rewrite_line("Requesting upload permissions...Done!")
@@ -284,7 +285,7 @@ class RestApiClient(object):
         except NotFoundException:
             snapshot = {}
         norm_snapshot = {os.path.normpath(filename): the_md5
-                         for filename, the_md5 in snapshot.iteritems()}
+                         for filename, the_md5 in snapshot.items()}
         return norm_snapshot
 
     def _get_package_snapshot(self, package_reference):
@@ -296,7 +297,7 @@ class RestApiClient(object):
         except NotFoundException:
             snapshot = {}
         norm_snapshot = {os.path.normpath(filename): the_md5
-                         for filename, the_md5 in snapshot.iteritems()}
+                         for filename, the_md5 in snapshot.items()}
         return norm_snapshot
 
     def _get_json(self, url, data=None):
@@ -311,10 +312,11 @@ class RestApiClient(object):
             response = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                           verify=self.VERIFY_SSL,
                                           stream=True)
-        if response.status_code != 200:
-            raise get_exception_from_error(response.status_code)(response.content)
+        if response.status_code != 200: # Error message is text
+            response.charset = "utf-8" # To be able to access ret.text (ret.content are bytes)
+            raise get_exception_from_error(response.status_code)(response.text)
 
-        return json.loads(response.content)
+        return json.loads(decode_text(response.content))
 
     @property
     def _remote_api_url(self):
@@ -327,7 +329,7 @@ class RestApiClient(object):
         Its a generator, so it yields elements for memory performance
         """
         downloader = Downloader(self.requester, output, self.VERIFY_SSL)
-        for filename, resource_url in file_urls.iteritems():
+        for filename, resource_url in file_urls.items():
             if output:
                 output.writeln("Downloading %s" % filename)
             contents = downloader.download(resource_url)
@@ -339,7 +341,7 @@ class RestApiClient(object):
         t1 = time.time()
         failed = {}
         uploader = Uploader(self.requester, output, self.VERIFY_SSL)
-        for filename, resource_url in file_urls.iteritems():
+        for filename, resource_url in file_urls.items():
             output.rewrite_line("Uploading %s" % filename)
             response = uploader.post(resource_url, files[filename])
             output.writeln("")
@@ -357,5 +359,3 @@ class RestApiClient(object):
             raise ConanException("Upload failed!")
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
-
-  

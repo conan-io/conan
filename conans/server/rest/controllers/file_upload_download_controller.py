@@ -2,7 +2,9 @@ from conans.server.rest.controllers.controller import Controller
 from bottle import request, static_file, FileUpload, cached_property
 from conans.server.service.service import FileUploadDownloadService
 import os
+import sys
 from unicodedata import normalize
+import six
 
 
 class FileUploadDownloadController(Controller):
@@ -49,8 +51,9 @@ class ConanFileUpload(FileUpload):
             or dashes are removed. The filename is limited to 255 characters.
         '''
         fname = self.raw_filename
-        if not isinstance(fname, unicode):
-            fname = fname.decode('utf8', 'ignore')
+        if six.PY2:
+            if not isinstance(fname, unicode):
+                fname = fname.decode('utf8', 'ignore')
         fname = normalize('NFKD', fname).encode('ASCII', 'ignore').decode('ASCII')
         fname = os.path.basename(fname.replace('\\', os.path.sep))
 #         fname = re.sub(r'[^a-zA-Z0-9-_.\s]', '', fname).strip()

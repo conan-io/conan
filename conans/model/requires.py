@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
+import six
 
 
 class Requirement(object):
@@ -29,6 +30,7 @@ class Requirement(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+    
 
 
 class Requirements(OrderedDict):
@@ -60,14 +62,17 @@ class Requirements(OrderedDict):
         properly defined
         """
         result = Requirements()
-        for name, req in self.iteritems():
+        for name, req in self.items():
             result[name] = req
         return result
+
+    def iteritems(self): # FIXME: Just a trick to not change the default testing conanfile for python 3
+        return self.items()
 
     def add(self, reference, private=False, override=False):
         """ to define requirements by the user in text, prior to any propagation
         """
-        assert isinstance(reference, basestring)
+        assert isinstance(reference, six.string_types)
         try:
             conan_reference = ConanFileReference.loads(reference)
             name = conan_reference.name
@@ -99,7 +104,7 @@ class Requirements(OrderedDict):
         new_reqs = down_reqs.copy()
         if own_ref:
             new_reqs.pop(own_ref.name, None)
-        for name, req in self.iteritems():
+        for name, req in self.items():
             if name in down_reqs:
                 other_req = down_reqs[name]
                 # update dependency
@@ -118,6 +123,6 @@ class Requirements(OrderedDict):
 
     def __repr__(self):
         result = []
-        for req in self.itervalues():
+        for req in self.values():
             result.append(str(req))
         return '\n'.join(result)

@@ -102,7 +102,7 @@ class ConanManager(object):
         conan_ref_str = str(conan_ref)
         # Maybe a platform check could be added, but depends on disk partition
         info = self.file_manager.search(conan_ref_str, ignorecase=True)
-        refs = {s for s in info.iterkeys() if str(s).lower() == conan_ref_str.lower()}
+        refs = {s for s in info.keys() if str(s).lower() == conan_ref_str.lower()}
         if refs and conan_ref not in refs:
             raise ConanException("Cannot export package with same name but different case\n"
                                  "You exported '%s' but already existing '%s'"
@@ -128,7 +128,7 @@ class ConanManager(object):
                 remote = remote or self._remote_manager.default_remote
                 raise ConanException("'%s' not found in remote '%s'" % (str(reference), remote))
 
-            remote_proxy.download_packages(reference, info[reference].keys())
+            remote_proxy.download_packages(reference, list(info[reference].keys()))
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, info=None, filename=None, update=False):
@@ -137,7 +137,7 @@ class ConanManager(object):
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
         @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
-        @param settings: list of tuples: [(settingname, settingvalue), (settingname, settingvalue)...]
+        @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
         """
         reference_given = True
         if not isinstance(reference, ConanFileReference):
@@ -161,7 +161,7 @@ class ConanManager(object):
             output = ScopedOutput(project_reference, self._user_io.out)
             try:
                 if filename and filename.endswith(".txt"):
-                    raise NotFoundException()
+                    raise NotFoundException("")
                 conan_file_path = os.path.join(conanfile_path, filename or CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
                 is_txt = False
@@ -274,6 +274,7 @@ class ConanManager(object):
                     pass
 
             os.chdir(current_path)
+            conan_file._conanfile_directory = conanfile_path
             conan_file.build()
             if test:
                 conan_file.test()
@@ -296,7 +297,7 @@ class ConanManager(object):
             uploader.upload_conan(conan_reference, all_packages=all_packages, force=force)
 
     def search(self, pattern=None, remote=None, ignorecase=True,
-               verbose=False, package_pattern=None):
+               verbose=False, extra_verbose=False, package_pattern=None):
         """ Print the single information saved in conan.vars about all the packages
             or the packages which match with a pattern
 
@@ -322,8 +323,8 @@ class ConanManager(object):
                 # Compile expression
                 package_pattern = re.compile(package_pattern, re.IGNORECASE)
                 filtered_info = SearchInfo()
-                for conan_ref, packages in sorted(info.iteritems()):
-                    filtered_packages = {pid: data for pid, data in packages.iteritems()
+                for conan_ref, packages in sorted(info.items()):
+                    filtered_packages = {pid: data for pid, data in packages.items()
                                          if package_pattern.match(pid)}
                     if filtered_packages:
                         filtered_info[conan_ref] = filtered_packages
@@ -331,7 +332,7 @@ class ConanManager(object):
                 raise ConanException("Invalid package pattern")
 
         printer = Printer(self._user_io.out)
-        printer.print_search(filtered_info, pattern, verbose)
+        printer.print_search(filtered_info, pattern, verbose, extra_verbose)
 
     @property
     def file_manager(self):
@@ -351,7 +352,12 @@ class ConanManager(object):
         @param remote: install only from that remote
         """
         copier = PackageCopier(self._paths, self._user_io)
-        package_ids = package_ids or os.listdir(self._paths.packages(reference))
+        if not package_ids:
+            packages = self._paths.packages(reference)
+            if os.path.exists(packages):
+                package_ids = os.listdir(packages)
+            else:
+                package_ids = []
         copier.copy(reference, package_ids, username, channel, force)
 
     def remove(self, pattern, src=False, build_ids=None, package_ids_filter=None, force=False,
@@ -369,4 +375,3 @@ class ConanManager(object):
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote)
         return remote_proxy.authenticate(name, password)
-        

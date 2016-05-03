@@ -16,7 +16,7 @@ def create_options(conanfile):
                 default_values = OptionsValues.loads("\n".join(default_options))
             elif isinstance(default_options, list):
                 default_values = OptionsValues.from_list(default_options)
-            elif isinstance(default_options, basestring):
+            elif isinstance(default_options, str):
                 default_values = OptionsValues.loads(default_options)
             else:
                 raise ConanException("Please define your default_options as list or "
@@ -44,7 +44,7 @@ def create_requirements(conanfile):
 def create_settings(conanfile, settings):
     try:
         defined_settings = getattr(conanfile, "settings", None)
-        if isinstance(defined_settings, basestring):
+        if isinstance(defined_settings, str):
             defined_settings = [defined_settings]
         current = defined_settings or {}
         settings.constraint(current)
@@ -57,7 +57,7 @@ def create_exports(conanfile):
     if not hasattr(conanfile, "exports"):
         return None
     else:
-        if isinstance(conanfile.exports, basestring):
+        if isinstance(conanfile.exports, str):
             return (conanfile.exports, )
         return conanfile.exports
 
@@ -80,7 +80,7 @@ class ConanFile(object):
 
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
-        self.generators = [self.generators] if isinstance(self.generators, basestring) \
+        self.generators = [self.generators] if isinstance(self.generators, str) \
                                             else self.generators
 
         # User defined options

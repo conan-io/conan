@@ -107,6 +107,7 @@ class ConanServiceTest(unittest.TestCase):
 
         snap_expected = {'hello.cpp': md5sum(os.path.join(base_path, "hello.cpp")),
                          'conanmanifest.txt': md5sum(os.path.join(base_path, "conanmanifest.txt")),
+                         'executable': md5sum(os.path.join(base_path, "executable")),
                          'main.cpp':  md5sum(os.path.join(base_path, "main.cpp")),
                          'CMakeLists.txt':  md5sum(os.path.join(base_path, "CMakeLists.txt")),
                          'hellotest.h':  md5sum(os.path.join(base_path, "hellotest.h"))}
@@ -116,13 +117,14 @@ class ConanServiceTest(unittest.TestCase):
     def test_get_conanfile_download_urls(self):
         urls = self.service.get_conanfile_download_urls(self.conan_reference)
         # Remove parameters
-        urls = {name: url.split("?signature")[0] for name, url in urls.iteritems()}
+        urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
             return self.fake_url + "/" + "/".join(self.conan_reference) + "/export/" + filename
 
         expected_urls = {'CMakeLists.txt': fake_url_build('CMakeLists.txt'),
                          'conanmanifest.txt': fake_url_build('conanmanifest.txt'),
+                         'executable': fake_url_build('executable'),
                          'hello.cpp': fake_url_build('hello.cpp'),
                          'hellotest.h': fake_url_build('hellotest.h'),
                          'main.cpp': fake_url_build('main.cpp')}
@@ -131,13 +133,14 @@ class ConanServiceTest(unittest.TestCase):
     def test_get_package_download_urls(self):
         urls = self.service.get_package_download_urls(self.package_reference)
         # Remove parameters
-        urls = {name: url.split("?signature")[0] for name, url in urls.iteritems()}
+        urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
             return self.fake_url + "/" + "/".join(self.package_reference.conan) \
                 + "/package/" + self.package_reference.package_id + "/" + filename
 
         expected_urls = {'CMakeLists.txt': fake_url_build('CMakeLists.txt'),
+                         'executable': fake_url_build('executable'),
                          'hello.cpp': fake_url_build('hello.cpp'),
                          'hellopackage.h': fake_url_build('hellopackage.h'),
                          'main.cpp': fake_url_build('main.cpp')}
@@ -148,7 +151,7 @@ class ConanServiceTest(unittest.TestCase):
                                                       {"conanfile.py": 23,
                                                        "conanmanifest.txt": 24})
         # Remove parameters
-        urls = {name: url.split("?signature")[0] for name, url in urls.iteritems()}
+        urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
             return self.fake_url + "/" + "/".join(self.conan_reference) + "/export/" + filename
@@ -161,7 +164,7 @@ class ConanServiceTest(unittest.TestCase):
         urls = self.service.get_package_upload_urls(self.package_reference, {"uno.lib": 23,
                                                                              "dos.dll": 24})
         # Remove parameters
-        urls = {name: url.split("?signature")[0] for name, url in urls.iteritems()}
+        urls = {name: url.split("?signature")[0] for name, url in urls.items()}
 
         def fake_url_build(filename):
             return self.fake_url + "/" + "/".join(self.package_reference.conan) \

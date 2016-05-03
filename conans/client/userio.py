@@ -3,6 +3,7 @@ from conans.client.output import ConanOutput
 from conans.model.username import Username
 from conans.errors import InvalidNameException, ConanException
 import getpass
+from six.moves import input as raw_input
 
 
 class UserIO(object):

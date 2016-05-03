@@ -52,7 +52,7 @@ class FileImporter(object):
         """
         result_paths = []
         folders = self._get_folders()
-        for name, path in folders.iteritems():
+        for name, path in folders.items():
             if fnmatch.fnmatch(name, conan_name_pattern):
                 result_paths.append(path)
         return result_paths

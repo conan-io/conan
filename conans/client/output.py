@@ -1,4 +1,6 @@
 from colorama import Fore, Back, Style
+import six
+from conans.util.files import decode_text
 
 
 class Color(object):
@@ -44,7 +46,10 @@ class ConanOutput(object):
         self.write(data, front, back, True)
 
     def write(self, data, front=None, back=None, newline=False):
-        data = str(data)
+        if six.PY2:
+            if isinstance(data, str):
+                data = decode_text(data)  # Keep python 2 compatibility
+
         if self._color and (front or back):
             color = "%s%s" % (front or '', back or '')
             end = (Style.RESET_ALL + "\n") if newline else Style.RESET_ALL  # @UndefinedVariable
@@ -53,6 +58,7 @@ class ConanOutput(object):
             if newline:
                 data = "%s\n" % data
             self._stream.write(data)
+        self._stream.flush()
 
     def info(self, data):
         self.writeln(data, Color.BRIGHT_CYAN)
@@ -89,4 +95,3 @@ class ScopedOutput(ConanOutput):
     def write(self, data, front=None, back=None, newline=False):
         super(ScopedOutput, self).write("%s: " % self.scope, front, back, False)
         super(ScopedOutput, self).write("%s" % data, Color.BRIGHT_WHITE, back, newline)
-        

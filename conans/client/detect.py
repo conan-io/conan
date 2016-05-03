@@ -50,17 +50,17 @@ def _clang_compiler(output, compiler_exe="clang"):
 
 def _visual_compiler(output, version):
     'version have to be 8.0, or 9.0 or... anything .0'
-    import _winreg
+    from six.moves import winreg
 
     try:
-        hKey = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE,
+        hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
                                 r"SOFTWARE\Microsoft\Windows\CurrentVersion")
-        _winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
+        winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
         is_64bits = True
     except EnvironmentError:
         is_64bits = False
     finally:
-        _winreg.CloseKey(hKey)
+        winreg.CloseKey(hKey)
 
     if is_64bits:
         key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
@@ -68,8 +68,8 @@ def _visual_compiler(output, version):
         key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
 
     try:
-        key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, key_name)
-        _winreg.QueryValueEx(key, version)
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
+        winreg.QueryValueEx(key, version)
         installed_version = Version(version).major(fill=False)
         compiler = "Visual Studio"
         output.success("Found %s %s" % (compiler, installed_version))
