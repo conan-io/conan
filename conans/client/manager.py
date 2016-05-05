@@ -30,6 +30,9 @@ from conans.client.proxy import ConanProxy
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.file_copier import report_copied_files
 import time
+import cProfile
+import cStringIO
+import pstats
 
 
 def get_user_channel(text):
@@ -179,8 +182,17 @@ class ConanManager(object):
         # build deps graph and install it
         builder = DepsBuilder(remote_proxy, self._user_io.out, loader)
         t1 = time.time()
+        pr = cProfile.Profile()
+        pr.enable()
         deps_graph = builder.load(reference, conanfile)
+        pr.disable()
+        s = cStringIO.StringIO()
+        sortby = 'cumulative'
+        ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+        ps.print_stats()
+        print s.getvalue()
         logger.debug("Time to build graph = %s" % (time.time() - t1))
+        exit()
         registry = RemoteRegistry(self._paths.registry, self._user_io.out)
         if info:
             graph_updates_info = builder.get_graph_updates_info(deps_graph)

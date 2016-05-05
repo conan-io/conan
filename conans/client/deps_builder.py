@@ -7,6 +7,9 @@ from conans.model.ref import PackageReference
 from conans.model.info import ConanInfo
 from conans.errors import ConanException
 from conans.client.output import ScopedOutput
+import time
+from conans.util.log import logger
+from collections import defaultdict
 
 
 class Edge(namedtuple("Edge", "src dst")):
@@ -59,30 +62,32 @@ class DepsGraph(object):
     """
     def __init__(self):
         self.nodes = set()
-        self.edges = set()
+        self._edges = set()
+        self._neighbors = defaultdict(set)
+        self._inverse_neighbors = defaultdict(set)
 
-    def get_nodes(self, name):
-        """ return all the nodes matching a particular name. Could be >1 in case
-        that private requirements embed different versions
-        """
-        return [n for n in self.nodes if n.conanfile.name == name]
+    @property
+    def edges(self):
+        return self._edges
 
     def add_node(self, node):
         self.nodes.add(node)
 
     def add_edge(self, src, dst):
         assert src in self.nodes and dst in self.nodes
-        self.edges.add(Edge(src, dst))
+        self._edges.add(Edge(src, dst))
+        self._neighbors[src].add(dst)
+        self._inverse_neighbors[dst].add(src)
 
     def neighbors(self, node):
         """ return all connected nodes (directionally) to the parameter one
         """
-        return [edge.dst for edge in self.edges if edge.src == node]
+        return self._neighbors[node]
 
     def inverse_neighbors(self, node):
         """ return all the nodes which has param node has dependency
         """
-        return [edge.src for edge in self.edges if edge.dst == node]
+        return self._inverse_neighbors[node]
 
     def public_neighbors(self, node):
         """ return nodes with direct reacheability by public dependencies
@@ -112,9 +117,7 @@ class DepsGraph(object):
 
     def __repr__(self):
         return "\n".join(["Nodes:\n    ",
-                          "\n    ".join(repr(n) for n in self.nodes),
-                          "\nEdges:\n    ",
-                          "\n    ".join(repr(n) for n in self.edges)])
+                          "\n    ".join(repr(n) for n in self.nodes)])
 
     def propagate_buildinfo(self):
         """ takes the exports from upper level and updates the imports
@@ -202,7 +205,8 @@ class DepsGraph(object):
         while opened:
             current = opened.copy()
             for o in opened:
-                if not any(o == edge.src and edge.dst in opened for edge in self.edges):
+                o_neighs = self._neighbors[o]
+                if not any(n in opened for n in o_neighs):
                     current_level.append(o)
                     current.discard(o)
             current_level.sort()
@@ -225,7 +229,8 @@ class DepsGraph(object):
         while opened:
             current = opened.copy()
             for o in opened:
-                if not any(o == edge.dst and edge.src in opened for edge in self.edges):
+                o_neighs = self._inverse_neighbors[o]
+                if not any(n in opened for n in o_neighs):
                     current_level.append(o)
                     current.discard(o)
             current_level.sort()
@@ -277,7 +282,8 @@ class DepsBuilder(object):
 
     def get_graph_updates_info(self, deps_graph):
         """
-        returns a dict of conan_reference: 1 if there is an update, 0 if don't and -1 if local is newer
+        returns a dict of conan_reference: 1 if there is an update,
+        0 if don't and -1 if local is newer
         """
         return {conan_reference: self._retriever.update_available(conan_reference)
                 for conan_reference, _ in deps_graph.nodes}
@@ -293,8 +299,12 @@ class DepsBuilder(object):
         dep_graph.add_node(root_node)
         public_deps = {}  # {name: Node} dict with public nodes, so they are not added again
         # enter recursive computation
+        t1 = time.time()
         self._load_deps(root_node, Requirements(), dep_graph, public_deps, conan_ref, None)
+        logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
+        t1 = time.time()
         dep_graph.propagate_info()
+        logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options):
@@ -310,7 +320,6 @@ class DepsBuilder(object):
         """
         # basic node configuration
         conanref, conanfile = node
-
         new_reqs, new_options = self._config_node(conanfile, conanref, down_reqs, down_ref,
                                                   down_options)
 

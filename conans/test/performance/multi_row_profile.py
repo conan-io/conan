@@ -4,19 +4,15 @@ from conans.util.files import save_files
 from conans.test.utils.test_files import temp_folder
 import os
 import time
-
-
-def run(command):
-    retcode = os.system(command)
-    if retcode != 0:
-        raise Exception("Error while executing:\n\t %s" % command)
+from conans.test.tools import TestClient
 
 
 class PerformanceTest(unittest.TestCase):
 
     def deep_deps_test(self):
+        client = TestClient()
         num = 250
-        deep = False
+        deep = True
         for i in range(num):
             if i == 0:
                 files = cpp_hello_conan_files("Hello0", "0.1")
@@ -28,14 +24,8 @@ class PerformanceTest(unittest.TestCase):
                     files = cpp_hello_conan_files("Hello%d" % i, "0.1",
                                                   ["Hello%s/0.1@lasote/stable" % (i-1)])
             files["conanfile.py"] = files["conanfile.py"].replace("build(", "build2(")
-            t_folder = temp_folder()
-            save_files(t_folder, files)
-            try:
-                old_folder = os.getcwd()
-                os.chdir(t_folder)
-                run("conan export lasote/stable > null")
-            finally:
-                os.chdir(old_folder)
+            client.save(files, clean_first=True)
+            client.run("export lasote/stable")
 
         # Now lets depend on it
         if deep:
@@ -45,16 +35,11 @@ class PerformanceTest(unittest.TestCase):
             files = cpp_hello_conan_files("HelloFinal", "0.1",
                                           ["Hello%s/0.1@lasote/stable" % (i) for i in range(num)])
         files["conanfile.py"] = files["conanfile.py"].replace("build(", "build2(")
-        t_folder = temp_folder()
-        save_files(t_folder, files)
-        try:
-            old_folder = os.getcwd()
-            os.chdir(t_folder)
-            t1 = time.time()
-            run("conan install --build")
-            print("Final time with build %s" % (time.time() - t1))
-            t1 = time.time()
-            run("conan install")
-        finally:
-            print("Final time %s" % (time.time() - t1))
-            os.chdir(old_folder)
+
+        client.save(files, clean_first=True)
+        t1 = time.time()
+        client.run("install --build")
+        print("Final time with build %s" % (time.time() - t1))
+        t1 = time.time()
+        client.run("install")
+        print("Final time %s" % (time.time() - t1))
