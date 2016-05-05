@@ -234,6 +234,8 @@ path to the CMake binary directory, like this:
                             help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("--all", action='store_true', default=False,
                             help='Install all packages from the specified package recipe')
+        parser.add_argument("--integrity", "-i", action='store_true', default=False,
+                            help='Check that the stored recipe or package manifests are correct')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="update with new upstream packages")
@@ -267,7 +269,8 @@ path to the CMake binary directory, like this:
                                   settings=settings,
                                   build_mode=args.build,
                                   filename=args.file,
-                                  update=args.update)
+                                  update=args.update,
+                                  integrity=args.integrity)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -287,6 +290,10 @@ path to the CMake binary directory, like this:
         parser.add_argument("--settings", "-s",
                             help='load settings to build the package, -s compiler:gcc',
                             nargs=1, action=Extender)
+        parser.add_argument("--integrity", "-i", action='store_true', default=False,
+                            help='Check that the stored recipe or package manifests are correct')
+        parser.add_argument("--update", "-u", action='store_true', default=False,
+                            help="check updates exist from upstream remotes")
 
         args = parser.parse_args(*args)
 
@@ -305,6 +312,8 @@ path to the CMake binary directory, like this:
                               settings=settings,
                               build_mode=False,
                               info=True,
+                              check_updates=args.update,
+                              integrity=args.integrity,
                               filename=args.file)
 
     def build(self, *args):

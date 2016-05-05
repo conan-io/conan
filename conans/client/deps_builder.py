@@ -4,7 +4,6 @@ point, which could be both a user conanfile or an installed one
 from conans.model.requires import Requirements
 from collections import namedtuple
 from conans.model.ref import PackageReference
-from conans.model.build_info import DepsCppInfo
 from conans.model.info import ConanInfo
 from conans.errors import ConanException
 from conans.client.output import ScopedOutput
@@ -27,7 +26,6 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
     def __repr__(self):
         return "%s => %s" % (repr(self.conan_ref), repr(self.conanfile)[:100].replace("\n", " "))
 
-
     def __cmp__(self, other):
         if other is None:
             return -1
@@ -35,14 +33,14 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
             return 0 if other.conan_ref is None else -1
         elif other.conan_ref is None:
             return 1
-        
+
         if self.conan_ref == other.conan_ref:
             return 0
         if self.conan_ref < other.conan_ref:
             return -1
-        
+
         return 1
-    
+
     def __gt__(self, other):
         return self.__cmp__(other) == 1
 
@@ -54,6 +52,7 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
 
     def __ge__(self, other):
         return self.__cmp__(other) in [0, 1]
+
 
 class DepsGraph(object):
     """ DAG of dependencies
@@ -294,9 +293,7 @@ class DepsBuilder(object):
         dep_graph.add_node(root_node)
         public_deps = {}  # {name: Node} dict with public nodes, so they are not added again
         # enter recursive computation
-        print "Enter load deps"
         self._load_deps(root_node, Requirements(), dep_graph, public_deps, conan_ref, None)
-        print "Exist load deps"
         dep_graph.propagate_info()
         return dep_graph
 

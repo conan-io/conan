@@ -41,7 +41,7 @@ class CMake(object):
             base = "Visual Studio %s" % _visuals.get(str_ver, "UnknownVersion %s" % str_ver)
             if arch == "x86_64":
                 return base + " Win64"
-            elif arch == "arm":
+            elif "arm" in str(arch):
                 return base + " ARM"
             else:
                 return base

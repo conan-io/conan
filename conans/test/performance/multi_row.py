@@ -15,7 +15,7 @@ def run(command):
 class PerformanceTest(unittest.TestCase):
 
     def deep_deps_test(self):
-        num = 5
+        num = 50
         for i in range(num):
             if i == 0:
                 files = cpp_hello_conan_files("Hello0", "0.1")
