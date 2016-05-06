@@ -29,6 +29,7 @@ from conans.client.output import ScopedOutput
 from conans.client.proxy import ConanProxy
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.file_copier import report_copied_files
+import time
 
 
 def get_user_channel(text):
@@ -131,7 +132,8 @@ class ConanManager(object):
             remote_proxy.download_packages(reference, list(info[reference].keys()))
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
-                build_mode=False, info=None, filename=None, update=False):
+                build_mode=False, info=None, filename=None, update=False, check_updates=False,
+                integrity=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -147,9 +149,9 @@ class ConanManager(object):
 
         loader = self._loader(current_path, settings, options)
         # Not check for updates for info command, it'll be checked when dep graph is built
-        check_updates = not info
         remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager,
-                                  remote, update, check_updates)
+                                  remote, update=update, check_updates=check_updates,
+                                  check_integrity=integrity)
 
         if reference_given:
             project_reference = None
@@ -176,7 +178,9 @@ class ConanManager(object):
 
         # build deps graph and install it
         builder = DepsBuilder(remote_proxy, self._user_io.out, loader)
+        t1 = time.time()
         deps_graph = builder.load(reference, conanfile)
+        logger.debug("Time to build graph = %s" % (time.time() - t1))
         registry = RemoteRegistry(self._paths.registry, self._user_io.out)
         if info:
             graph_updates_info = builder.get_graph_updates_info(deps_graph)

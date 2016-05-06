@@ -89,7 +89,7 @@ class MyConan(ConanFile):
 
         # And try to do the same without regenerate manifest
         save(os.path.join(package_path, "newfile2.txt"), "new content")
-        self.client.run("install %s" % str(conan_reference), ignore_error=True)
+        self.client.run("install %s -i" % str(conan_reference), ignore_error=True)
         self.assertIn("Bad package", self.client.user_io.out)
 
         # Try to do it specifying the package (without --all)

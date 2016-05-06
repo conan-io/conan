@@ -14,14 +14,15 @@ class ConanProxy(object):
     It uses the RemoteRegistry to control where the packages come from.
     """
     def __init__(self, paths, user_io, remote_manager, remote_name,
-                 update=False, check_updates=True):
+                 update=False, check_updates=False, check_integrity=False):
         self._paths = paths
         self._out = user_io.out
         self._remote_manager = remote_manager
         self._registry = RemoteRegistry(self._paths.registry, self._out)
         self._remote_name = remote_name
         self._update = update
-        self._check_updates = check_updates
+        self._check_updates = check_updates or update  # Update forces check
+        self._check_integrity = check_integrity
 
     @property
     def registry(self):
@@ -33,15 +34,18 @@ class ConanProxy(object):
         """
         output = ScopedOutput(str(package_reference.conan), self._out)
         package_folder = self._paths.package(package_reference)
-        # Check if package is corrupted
-        read_manifest, expected_manifest = self._paths.package_manifests(package_reference)
-        if read_manifest is not None:  # Package exists
-            if read_manifest.file_sums != expected_manifest.file_sums:
-                # If not valid package, ensure empty folder
-                output.warn("Bad package '%s' detected! Removing "
-                            "package directory... " % str(package_reference.package_id))
-                rmdir(package_folder)
-            else:
+
+        # Check current package status
+        if path_exists(package_folder, self._paths.store):
+            if self._check_integrity:  # Check if package is corrupted
+                read_manifest, expected_manifest = self._paths.package_manifests(package_reference)
+                if read_manifest.file_sums != expected_manifest.file_sums:
+                    # If not valid package, ensure empty folder
+                    output.warn("Bad package '%s' detected! Removing "
+                                "package directory... " % str(package_reference.package_id))
+                    rmdir(package_folder)
+
+            if self._check_updates:
                 try:  # get_conan_digest can fail, not in server
                     upstream_manifest = self.get_package_digest(package_reference)
                     if upstream_manifest.file_sums != read_manifest.file_sums:
@@ -83,11 +87,11 @@ class ConanProxy(object):
         # check if it is in disk
         conanfile_path = self._paths.conanfile(conan_reference)
         if path_exists(conanfile_path, self._paths.store):
-            # Check manifest integrity
-            read_manifest, expected_manifest = self._paths.conan_manifests(conan_reference)
-            if read_manifest.file_sums != expected_manifest.file_sums:
-                output.warn("Bad conanfile detected! Removing export directory... ")
-                _refresh()
+            if self._check_integrity:  # Check if package is corrupted
+                read_manifest, expected_manifest = self._paths.conan_manifests(conan_reference)
+                if read_manifest.file_sums != expected_manifest.file_sums:
+                    output.warn("Bad conanfile detected! Removing export directory... ")
+                    _refresh()
             else:  # Check for updates
                 if self._check_updates:
                     ret = self.update_available(conan_reference)
@@ -123,7 +127,7 @@ class ConanProxy(object):
         return conanfile_path
 
     def update_available(self, conan_reference):
-        """Returns 0 if the conanfiles are equal, 1 if there is an update and -1 if 
+        """Returns 0 if the conanfiles are equal, 1 if there is an update and -1 if
         the local is newer than the remote"""
         if not conan_reference:
             return 0
