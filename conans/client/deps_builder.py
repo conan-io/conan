@@ -12,15 +12,6 @@ from conans.util.log import logger
 from collections import defaultdict
 
 
-class Edge(namedtuple("Edge", "src dst")):
-    """ Simple edge of the dependencies graph src=>dst
-    """
-    def __repr__(self):
-        return ("%s => %s IDs: %s => %s"
-                % (repr(self.src.conan_ref), repr(self.dst.conan_ref),
-                   str(id(self.src)), str(id(self.dst))))
-
-
 class Node(namedtuple("Node", "conan_ref conanfile")):
     """ The Node of the dependencies graph is defined by:
     ref: ConanFileReference, if it is a user space one, user=channel=none
@@ -62,20 +53,14 @@ class DepsGraph(object):
     """
     def __init__(self):
         self.nodes = set()
-        self._edges = set()
         self._neighbors = defaultdict(set)
         self._inverse_neighbors = defaultdict(set)
-
-    @property
-    def edges(self):
-        return self._edges
 
     def add_node(self, node):
         self.nodes.add(node)
 
     def add_edge(self, src, dst):
         assert src in self.nodes and dst in self.nodes
-        self._edges.add(Edge(src, dst))
         self._neighbors[src].add(dst)
         self._inverse_neighbors[dst].add(src)
 
