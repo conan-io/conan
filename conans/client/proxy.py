@@ -37,8 +37,10 @@ class ConanProxy(object):
 
         # Check current package status
         if path_exists(package_folder, self._paths.store):
-            if self._check_integrity:  # Check if package is corrupted
+            if self._check_integrity or self._check_updates:
                 read_manifest, expected_manifest = self._paths.package_manifests(package_reference)
+
+            if self._check_integrity:  # Check if package is corrupted
                 if read_manifest.file_sums != expected_manifest.file_sums:
                     # If not valid package, ensure empty folder
                     output.warn("Bad package '%s' detected! Removing "
