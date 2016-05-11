@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import platform
 import subprocess
@@ -30,11 +31,11 @@ def pyinstall(source_folder):
     try:
         shutil.rmtree(os.path.join(pyinstaller_path, 'conan'))
     except Exception as e:
-        print "Unable to remove old folder", e
+        print("Unable to remove old folder", e)
     try:
         shutil.rmtree(os.path.join(pyinstaller_path, 'conan_server'))
     except Exception as e:
-        print "Unable to remove old server folder", e
+        print("Unable to remove old server folder", e)
 
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
