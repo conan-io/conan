@@ -53,18 +53,15 @@ class MultiRemotesTest(unittest.TestCase):
         client_a.run("upload Hello0/0.0@lasote/stable -r local")
 
         # Execute info method in client_b, should advise that there is an update
-        client_b.run("info Hello0/0.0@lasote/stable")
+        client_b.run("info Hello0/0.0@lasote/stable -u")
         self.assertIn("Updates: There is a newer version (local)", str(client_b.user_io.out))
-        client_b.run("install Hello0/0.0@lasote/stable")
-        self.assertIn("There is a new conanfile in 'local' remote", str(client_b.user_io.out))
-        client_b.run("install Hello0/0.0@lasote/stable")
-        self.assertIn("There is a new conanfile in 'local' remote", str(client_b.user_io.out))
 
         # Now try to update the package with install -u
         client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
         client_b.run("install Hello0/0.0@lasote/stable -u --build")
-        self.assertIn("Hello0/0.0@lasote/stable: Retrieving from remote 'local'", str(client_b.user_io.out))
+        self.assertIn("Hello0/0.0@lasote/stable: Retrieving from remote 'local'",
+                      str(client_b.user_io.out))
         client_b.run("remote list_ref")
         self.assertIn("Hello0/0.0@lasote/stable: local", str(client_b.user_io.out))
 

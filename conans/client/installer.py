@@ -10,6 +10,7 @@ from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 import fnmatch
 from conans.client.output import ScopedOutput
+import time
 
 
 def init_cpp_info(deps_graph, paths):
@@ -44,9 +45,15 @@ class ConanInstaller(object):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
+        t1 = time.time()
         nodes_by_level = self._process_buildinfo(deps_graph)
+        logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
+        t1 = time.time()
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
+        logger.debug("Install-Process private %s" % (time.time() - t1))
+        t1 = time.time()
         self._build(nodes_by_level, skip_private_nodes, build_mode)
+        logger.debug("Install-build %s" % (time.time() - t1))
 
     def _process_buildinfo(self, deps_graph):
         """ once we have a dependency graph of conans, we have to propagate the build

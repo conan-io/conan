@@ -14,7 +14,7 @@ class ManifestValidationTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.conan = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
+        self.conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
         # Export and upload the conanfile
         self.conan_reference = ConanFileReference.loads("hello0/0.1@lasote/stable")
@@ -37,7 +37,7 @@ class ManifestValidationTest(unittest.TestCase):
         file_path = os.path.join(export_path, list(self.files.keys())[0])
         save(file_path, "BAD CONTENT")
 
-        self.conan.run("install %s --build missing" % str(self.conan_reference))
+        self.conan.run("install %s --build missing --integrity" % str(self.conan_reference))
         self.assertIn("Bad conanfile detected!", str(self.conan.user_io.out))
         self.assertIn("%s: Retrieving from remote 'default'"
                       % str(self.conan_reference),
@@ -62,6 +62,6 @@ class ManifestValidationTest(unittest.TestCase):
         file_path = os.path.join(package_path, "hello0/hello.go")
         save(file_path, "BAD CONTENT")
 
-        self.conan.run("install %s --build missing" % str(self.conan_reference))
+        self.conan.run("install %s --build missing -i" % str(self.conan_reference))
         self.assertIn("%s: WARN: Bad package" % str(self.conan_reference),
                       self.conan.user_io.out)
