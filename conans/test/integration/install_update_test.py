@@ -7,6 +7,7 @@ from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
 from conans.util.files import load
+from time import sleep
 
 
 class InstallUpdateTest(unittest.TestCase):
@@ -31,7 +32,8 @@ class InstallUpdateTest(unittest.TestCase):
         client2.run("install Hello0/1.0@lasote/stable")
 
         files["helloHello0.h"] = "//EMPTY!"
-        self.client.save(files)
+        self.client.save(files, clean_first=True)
+        sleep(1)
         self.client.run("export lasote/stable")
         self.client.run("install Hello0/1.0@lasote/stable --build")
         self.client.run("upload Hello0/1.0@lasote/stable --all")
