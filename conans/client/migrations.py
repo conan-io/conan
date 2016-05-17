@@ -3,8 +3,6 @@ from conans.util.files import rmdir, load, save
 from conans.model.version import Version
 import os
 from conans.client.conf import default_settings_yml
-from conans.server.store.disk_adapter import DiskAdapter
-from conans.server.store.file_manager import FileManager
 
 
 class ClientMigrator(Migrator):
@@ -14,6 +12,19 @@ class ClientMigrator(Migrator):
         self.manager = manager
         super(ClientMigrator, self).__init__(paths.conan_folder, paths.store,
                                              current_version, out)
+
+    def _update_settings_yml(self, old_settings):
+        self.out.warn("Migration: Updating settings.yml")
+
+        current_settings = load(self.paths.settings_path)
+        if current_settings != old_settings:
+            backup_path = self.paths.settings_path + ".backup"
+            save(backup_path, current_settings)
+            self.out.warn("*" * 40)
+            self.out.warn("A new settings.yml has been defined")
+            self.out.warn("Your old settings.yml has been backup'd to: %s" % backup_path)
+            self.out.warn("*" * 40)
+        save(self.paths.settings_path, default_settings_yml)
 
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
@@ -34,7 +45,6 @@ class ClientMigrator(Migrator):
                                     'version: ["4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3"]')
             save(self.paths.settings_path, default_settings)
         elif old_version < Version("0.7"):
-            self.out.warn("Migration: Updating settings.yml")
             old_settings = """
 os: [Windows, Linux, Macos, Android]
 arch: [x86, x86_64, armv]
@@ -51,15 +61,7 @@ compiler:
 
 build_type: [None, Debug, Release]
 """
-            current_settings = load(self.paths.settings_path)
-            if current_settings != old_settings:
-                backup_path = self.paths.settings_path + ".backup"
-                save(backup_path, current_settings)
-                self.out.warn("*" * 40)
-                self.out.warn("A new settings.yml has been defined")
-                self.out.warn("Your old settings.yml has been backup'd to: %s" % backup_path)
-                self.out.warn("*" * 40)
-            save(self.paths.settings_path, default_settings_yml)
+            self._update_settings_yml(old_settings)
         elif old_version < Version("0.8"):
             self.out.info("**** Migrating to conan 0.8 *****")
             settings_backup_path = self.paths.settings_path + ".backup"
@@ -115,4 +117,24 @@ build_type: [None, Debug, Release]
                                     'version: ["5.0", "5.1", "6.0", "6.1", "7.0"]',
                                     'version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]')
             save(self.paths.settings_path, default_settings)
+        elif old_version < Version("0.10"):
+            old_settings = """
+os: [Windows, Linux, Macos, Android, iOS]
+arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
+compiler:
+    gcc:
+        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "6.1"]
+        libcxx: [libstdc++, libstdc++11]
+    Visual Studio:
+        runtime: [MD, MT, MTd, MDd]
+        version: ["8", "9", "10", "11", "12", "14"]
+    clang:
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8"]
+        libcxx: [libstdc++, libstdc++11, libc++]
+    apple-clang:
+        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]
+        libcxx: [libstdc++, libc++]
 
+build_type: [None, Debug, Release]
+"""
+            self._update_settings_yml(old_settings)
