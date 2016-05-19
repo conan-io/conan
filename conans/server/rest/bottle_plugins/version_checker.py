@@ -44,8 +44,8 @@ class VersionCheckerPlugin(object):
 
     def fill_response(self, client_version, resp):
         try:
-            client_version = Version(client_version)
             if client_version is not None:
+                client_version = Version(client_version)
                 if client_version < self.min_client_compatible_version:
                     check = 'deprecated'
                 elif client_version < self.server_version:
