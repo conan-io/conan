@@ -38,7 +38,7 @@ class InfoTest(unittest.TestCase):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("info")
+        self.client.run("info -u")
         expected_output = textwrap.dedent(
             """\
             Hello2/0.1@PROJECT
