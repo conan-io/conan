@@ -81,8 +81,9 @@ class Printer(object):
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
 
             if isinstance(ref, ConanFileReference):  # Excludes PROJECT fake reference
-                update = graph_updates_info.get(ref, 0)
+                update = graph_updates_info.get(ref)
                 update_messages = {
+                 None: ("Version not checked", Color.WHITE),
                  0: ("You have the latest version (%s)" % remote_name, Color.BRIGHT_GREEN),
                  1: ("There is a newer version (%s)" % remote_name, Color.BRIGHT_YELLOW),
                  -1: ("The local file is newer than remote's one (%s)" % remote_name, Color.BRIGHT_RED)

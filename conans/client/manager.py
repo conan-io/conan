@@ -180,7 +180,10 @@ class ConanManager(object):
         deps_graph = builder.load(reference, conanfile)
         registry = RemoteRegistry(self._paths.registry, self._user_io.out)
         if info:
-            graph_updates_info = builder.get_graph_updates_info(deps_graph)
+            if check_updates:
+                graph_updates_info = builder.get_graph_updates_info(deps_graph)
+            else:
+                graph_updates_info = {}
             Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                                   info, registry, graph_updates_info,
                                                   remote)

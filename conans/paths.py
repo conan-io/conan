@@ -143,11 +143,11 @@ class StorePaths(SimplePaths):
     def conan_manifests(self, conan_reference):
         digest_path = self.digestfile_conanfile(conan_reference)
         return self._digests(digest_path)
-    
+
     def package_manifests(self, package_reference):
         digest_path = self.digestfile_package(package_reference)
         return self._digests(digest_path)
-        
+
     def _digests(self, digest_path):
         if not path_exists(digest_path, self.store):
             return None, None
