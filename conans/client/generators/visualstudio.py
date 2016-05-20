@@ -8,7 +8,9 @@ class VisualStudioGenerator(Generator):
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup />
+  <PropertyGroup>
+    <ExecutablePath>{bin_dirs}$(ExecutablePath)</ExecutablePath>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <AdditionalIncludeDirectories>{include_dirs}%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -26,6 +28,8 @@ class VisualStudioGenerator(Generator):
 
     def __init__(self, deps_cpp_info, cpp_info):
         super(VisualStudioGenerator, self).__init__(deps_cpp_info, cpp_info)
+        self.bin_dirs = "".join('%s;'  % p.replace("\\", "/")
+                                    for p in deps_cpp_info.bin_paths)
         self.include_dirs = "".join('%s;' % p.replace("\\", "/")
                                     for p in deps_cpp_info.include_paths)
         self.lib_dirs = "".join('%s;' % p.replace("\\", "/")
