@@ -84,7 +84,11 @@ class CMakeGenerator(Generator):
 endmacro()
 
 macro(conan_flags_setup)
-    include_directories(SYSTEM ${CONAN_INCLUDE_DIRS})
+    if(CONAN_SYSTEM_INCLUDES)
+        include_directories(SYSTEM ${CONAN_INCLUDE_DIRS})
+    else()
+        include_directories(${CONAN_INCLUDE_DIRS})
+    endif()
     link_directories(${CONAN_LIB_DIRS})
     add_definitions(${CONAN_DEFINES})
 
