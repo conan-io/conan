@@ -291,7 +291,8 @@ class TestClient(object):
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.paths = ConanPaths(self.base_folder, self.storage_folder, TestBufferConanOutput())
         self.default_settings(get_env("CONAN_COMPILER", "gcc"),
-                              get_env("CONAN_COMPILER_VERSION", "4.8"))
+                              get_env("CONAN_COMPILER_VERSION", "4.8"),
+                              get_env("CONAN_LIBCXX", "libstdc++"))
 
         self.init_dynamic_vars()
 
@@ -303,7 +304,7 @@ class TestClient(object):
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder()
 
-    def default_settings(self, compiler, compiler_version):
+    def default_settings(self, compiler, compiler_version, libcxx):
         """ allows to change the default settings in the file, to change compiler, version
         """
         # Set default settings in global defined
@@ -318,7 +319,7 @@ class TestClient(object):
             text += "\ncompiler=%s" % compiler
             text += "\ncompiler.version=%s" % compiler_version
             if compiler != "Visual Studio":
-                text += "\ncompiler.libcxx=libstdc++"
+                text += "\ncompiler.libcxx=%s" % libcxx
     
             save(self.paths.conan_conf_path, text)
 
