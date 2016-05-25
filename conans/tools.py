@@ -11,11 +11,18 @@ import requests
 from conans.client.output import ConanOutput
 
 
+def vcvars(settings):
+    param = "x86" if settings.arch == "x86" else "amd64"
+    command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
+               % (settings.compiler.version, param))
+    return command
+
+
 def human_size(size_bytes):
     """
     format a size in bytes into a 'human' file size, e.g. bytes, KB, MB, GB, TB, PB
-    Note that bytes/KB will be reported in whole numbers but MB and above will have greater precision
-    e.g. 1 byte, 43 bytes, 443 KB, 4.3 MB, 4.43 GB, etc
+    Note that bytes/KB will be reported in whole numbers but MB and above will have
+    greater precision.  e.g. 1 byte, 43 bytes, 443 KB, 4.3 MB, 4.43 GB, etc
     """
     if size_bytes == 1:
         return "1 byte"
