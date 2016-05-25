@@ -23,10 +23,17 @@ class InfoTest(unittest.TestCase):
                 It is recommended to add the package license as attribute""")
             self.assertIn(expected_output, self.client.user_io.out)
 
-        files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
+        if number != "Hello2":
+            files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
                                                     'version = "0.1"\n'
                                                     '    url= "myurl"\n'
                                                     '    license = "MIT"')
+        else:
+            files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
+                                                    'version = "0.1"\n'
+                                                    '    url= "myurl"\n'
+                                                    '    license = "MIT", "GPL"')
+
         self.client.save(files)
         if export:
             self.client.run("export lasote/stable")
@@ -43,7 +50,7 @@ class InfoTest(unittest.TestCase):
             """\
             Hello2/0.1@PROJECT
                 URL: myurl
-                License: MIT
+                Licenses: MIT, GPL
                 Requires:
                     Hello1/0.1@lasote/stable
             Hello0/0.1@lasote/stable
