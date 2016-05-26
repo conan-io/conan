@@ -76,7 +76,10 @@ class Printer(object):
             if url:
                 self._out.writeln("    URL: %s" % url, Color.BRIGHT_GREEN)
             if license_:
-                self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
+                if isinstance(license_, (list, tuple, set)):
+                    self._out.writeln("    Licenses: %s" % ", ".join(license_), Color.BRIGHT_GREEN)
+                else:
+                    self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
             if author:
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
 
