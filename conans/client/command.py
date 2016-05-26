@@ -290,6 +290,8 @@ path to the CMake binary directory, like this:
         parser.add_argument("--settings", "-s",
                             help='load settings to build the package, -s compiler:gcc',
                             nargs=1, action=Extender)
+        parser.add_argument("--only", "-n",
+                            help='show fields only')
         parser.add_argument("--integrity", "-i", action='store_true', default=False,
                             help='Check that the stored recipe or package manifests are correct')
         parser.add_argument("--update", "-u", action='store_true', default=False,
@@ -311,7 +313,7 @@ path to the CMake binary directory, like this:
                               options=options,
                               settings=settings,
                               build_mode=False,
-                              info=True,
+                              info=args.only or True,
                               check_updates=args.update,
                               integrity=args.integrity,
                               filename=args.file)
