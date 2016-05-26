@@ -11,7 +11,7 @@ import requests
 from conans.client.output import ConanOutput
 
 
-def vcvars(settings):
+def vcvars_command(settings):
     param = "x86" if settings.arch == "x86" else "amd64"
     command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
                % (settings.compiler.version, param))
