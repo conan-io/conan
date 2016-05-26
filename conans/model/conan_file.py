@@ -3,6 +3,7 @@ from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.errors import ConanException
+from conans.model.scope import Scope
 
 
 def create_options(conanfile):
@@ -98,6 +99,8 @@ class ConanFile(object):
         self.output = output
         # something that can run commands, as os.sytem
         self._runner = runner
+        
+        self.scope = Scope()
 
         self._conanfile_directory = conanfile_directory
 

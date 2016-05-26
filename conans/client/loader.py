@@ -16,7 +16,7 @@ from conans.client.generators import _save_generator
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, options):
+    def __init__(self, runner, settings, options, scopes=None):
         '''
         param settings: Settings object, to assign to ConanFile at load time
         param options: OptionsValues, necessary so the base conanfile loads the options
@@ -27,6 +27,7 @@ class ConanFileLoader(object):
         assert isinstance(options, OptionsValues)
         self._settings = settings
         self._options = options
+        self._scopes = scopes or {}
 
     def _create_check_conan(self, conan_file, consumer, conan_file_path, output, filename):
         """ Check the integrity of a given conanfile
@@ -102,7 +103,12 @@ class ConanFileLoader(object):
         try:
             result = self._create_check_conan(loaded, consumer, conan_file_path, output, filename)
             if consumer:
+                result.scope.add("dev")
                 result.options.initialize_upstream(self._options)
+                scopes = self._scopes.get(None, [])
+            else:
+                scopes = self._scopes.get(result.name, [])
+            result.scope.update(scopes)
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conan_file_path, str(e)))

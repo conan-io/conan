@@ -53,7 +53,8 @@ class ConanManager(object):
         self._runner = runner
         self._remote_manager = remote_manager
 
-    def _loader(self, current_path=None, user_settings_values=None, user_options_values=None):
+    def _loader(self, current_path=None, user_settings_values=None, user_options_values=None,
+                scopes=None):
         # The disk settings definition, already including the default disk values
         settings = self._paths.settings
         options = OptionsValues()
@@ -74,7 +75,7 @@ class ConanManager(object):
             # into account, just those from CONANFILE + user command line
             options = OptionsValues.from_list(user_options_values)
 
-        return ConanFileLoader(self._runner, settings, options=options)
+        return ConanFileLoader(self._runner, settings, options=options, scopes=scopes)
 
     def export(self, user, conan_file_path, keep_source=False):
         """ Export the conans
@@ -132,7 +133,7 @@ class ConanManager(object):
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, info=None, filename=None, update=False, check_updates=False,
-                integrity=False):
+                integrity=False, scopes=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -146,7 +147,7 @@ class ConanManager(object):
             reference_given = False
             reference = None
 
-        loader = self._loader(current_path, settings, options)
+        loader = self._loader(current_path, settings, options, scopes)
         # Not check for updates for info command, it'll be checked when dep graph is built
         remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager,
                                   remote, update=update, check_updates=check_updates,
