@@ -83,8 +83,12 @@ class Printer(object):
             author = getattr(conan, "author", None)
             if url and show("url"):
                 self._out.writeln("    URL: %s" % url, Color.BRIGHT_GREEN)
+
             if license_ and show("license"):
-                self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
+                if isinstance(license_, (list, tuple, set)):
+                    self._out.writeln("    Licenses: %s" % ", ".join(license_), Color.BRIGHT_GREEN)
+                else:
+                    self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
             if author and show("author"):
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
 
