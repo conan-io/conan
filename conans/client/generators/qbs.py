@@ -26,6 +26,10 @@ class DepsCppQbs(object):
 
 class QbsGenerator(Generator):
     @property
+    def filename(self):
+        return BUILD_INFO_QBS
+
+    @property
     def content(self):
         deps = DepsCppQbs(self.deps_build_info)
 
