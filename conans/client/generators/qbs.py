@@ -3,8 +3,7 @@ from conans.paths import BUILD_INFO_QBS
 
 
 class DepsCppQbs(object):
-    def __init__(self, deps_cpp_info, cpp_info):
-        super(DepsCppQbs, self).__init__(deps_cpp_info, cpp_info)
+    def __init__(self, deps_cpp_info):
         delimiter = ",\n                "
         self.include_paths = delimiter.join('"%s"' % p.replace("\\", "/") 
                                             for p in deps_cpp_info.include_paths)
@@ -25,6 +24,10 @@ class DepsCppQbs(object):
 
 
 class QbsGenerator(Generator):
+    @property
+    def filename(self):
+        return BUILD_INFO_QBS
+
     @property
     def content(self):
         deps = DepsCppQbs(self.deps_build_info)
