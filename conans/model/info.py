@@ -1,10 +1,11 @@
 from conans.util.sha import sha1
-from conans.model.ref import  PackageReference
+from conans.model.ref import PackageReference
 from conans.errors import ConanException
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.model.values import Values
 from conans.model.options import OptionsValues
+from conans.model.scope import Scopes
 
 
 class RequirementInfo(object):
@@ -129,12 +130,13 @@ class ConanInfo(object):
         result.options.clear_indirect()
         result.full_requires = RequirementsList(requires)
         result.requires = RequirementsInfo(requires)
+        result.scope = None
         return result
 
     @staticmethod
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
-                                     "requires", "full_requires"])
+                                     "requires", "full_requires", "scope"])
 
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
@@ -144,6 +146,7 @@ class ConanInfo(object):
         result.full_requires = RequirementsList.loads(parser.full_requires)
         result.requires = RequirementsInfo(result.full_requires)
         # TODO: Missing handling paring of requires, but not necessary now
+        result.scope = Scopes.loads(parser.scope)
         return result
 
     def dumps(self):
@@ -163,6 +166,9 @@ class ConanInfo(object):
         result.append(indent(self.full_requires.dumps()))
         result.append("\n[full_options]")
         result.append(indent(self.full_options.dumps()))
+        result.append("\n[scope]")
+        if self.scope:
+            result.append(indent(self.scope.dumps()))
         return '\n'.join(result)
 
     def __eq__(self, other):

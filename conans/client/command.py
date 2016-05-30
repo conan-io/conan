@@ -27,6 +27,7 @@ import re
 from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
 from collections import defaultdict
+from conans.model.scope import Scopes
 
 
 class Extender(argparse.Action):
@@ -95,20 +96,6 @@ class Command(object):
             if len(chunks) != 2:
                 raise ConanException("Invalid input '%s', use 'name=value'" % item)
         return [(item[0], item[1]) for item in [item.split("=") for item in items]]
-
-    def _get_scopes(self, items):
-        if not items:
-            return {}
-        result = defaultdict(set)
-        for item in items:
-            chunks = item.split(":")
-            if len(chunks) == 2:
-                result[chunks[0]].add(chunks[1])
-            elif len(chunks) == 1:
-                result[None].add(item)
-            else:
-                raise ConanException("Bad scope %s" % item)
-        return dict(result)
 
     def _detect_tested_library_name(self):
         conanfile_content = load(CONANFILE)
@@ -278,7 +265,7 @@ path to the CMake binary directory, like this:
             args.build = self._get_build_sources_parameter(args.build)
             options = self._get_tuples_list_from_extender_arg(args.options)
             settings = self._get_tuples_list_from_extender_arg(args.settings)
-            scopes = self._get_scopes(args.scope)
+            scopes = Scopes.from_list(args.scope) if args.scope else None
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,

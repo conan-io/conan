@@ -29,6 +29,7 @@ from conans.client.output import ScopedOutput
 from conans.client.proxy import ConanProxy
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.file_copier import report_copied_files
+from conans.model.scope import Scopes
 
 
 def get_user_channel(text):
@@ -52,12 +53,14 @@ class ConanManager(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
+        self._current_scopes = None
 
     def _loader(self, current_path=None, user_settings_values=None, user_options_values=None,
                 scopes=None):
         # The disk settings definition, already including the default disk values
         settings = self._paths.settings
         options = OptionsValues()
+        exiting_scope = None
 
         if current_path:
             conan_info_path = os.path.join(current_path, CONANINFO)
@@ -65,6 +68,7 @@ class ConanManager(object):
                 existing_info = ConanInfo.load_file(conan_info_path)
                 settings.values = existing_info.full_settings
                 options = existing_info.full_options  # Take existing options from conaninfo.txt
+                exiting_scope = existing_info.scope
 
         if user_settings_values:
             aux_values = Values.from_list(user_settings_values)
@@ -75,6 +79,12 @@ class ConanManager(object):
             # into account, just those from CONANFILE + user command line
             options = OptionsValues.from_list(user_options_values)
 
+        if scopes is None:
+            if exiting_scope:
+                scopes = exiting_scope
+            else:
+                scopes = Scopes()
+        self._current_scopes = scopes
         return ConanFileLoader(self._runner, settings, options=options, scopes=scopes)
 
     def export(self, user, conan_file_path, keep_source=False):
@@ -200,6 +210,7 @@ class ConanManager(object):
             # Just in case the current package is header only, we still store the full settings
             # for reference and compiler checks
             conanfile.info.full_settings = loader._settings.values
+            conanfile.info.scope = self._current_scopes
             content = normalize(conanfile.info.dumps())
             save(os.path.join(current_path, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)

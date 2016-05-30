@@ -13,10 +13,11 @@ from conans.model.settings import Settings
 import sys
 from conans.model.conan_generator import Generator
 from conans.client.generators import _save_generator
+from conans.model.scope import Scopes
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, options, scopes=None):
+    def __init__(self, runner, settings, options, scopes):
         '''
         param settings: Settings object, to assign to ConanFile at load time
         param options: OptionsValues, necessary so the base conanfile loads the options
@@ -25,9 +26,10 @@ class ConanFileLoader(object):
         self._runner = runner
         assert isinstance(settings, Settings)
         assert isinstance(options, OptionsValues)
+        assert isinstance(scopes, Scopes)
         self._settings = settings
         self._options = options
-        self._scopes = scopes or {}
+        self._scopes = scopes
 
     def _create_check_conan(self, conan_file, consumer, conan_file_path, output, filename):
         """ Check the integrity of a given conanfile
@@ -103,12 +105,10 @@ class ConanFileLoader(object):
         try:
             result = self._create_check_conan(loaded, consumer, conan_file_path, output, filename)
             if consumer:
-                result.scope.add("dev")
                 result.options.initialize_upstream(self._options)
-                scopes = self._scopes.get(None, [])
+                result.scope = self._scopes[None]
             else:
-                scopes = self._scopes.get(result.name, [])
-            result.scope.update(scopes)
+                result.scope = self._scopes[result.name]
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conan_file_path, str(e)))
@@ -138,7 +138,7 @@ class ConanFileLoader(object):
         # imports method
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
                                                                parser.import_parameters)
-
+        conanfile.scope = self._scopes[None]
         return conanfile
 
 

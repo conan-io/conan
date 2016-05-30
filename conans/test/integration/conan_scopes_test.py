@@ -1,5 +1,7 @@
 import unittest
 from conans.test.tools import TestClient
+from conans.util.files import load
+import os
 
 
 class ConanScopeTest(unittest.TestCase):
@@ -50,29 +52,39 @@ class HelloConan(ConanFile):
         self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
         self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
-        error = client.run("install --build -sc other")
-        self.assertFalse(error)
-        self.assertNotIn("WARN: DEP DEV", client.user_io.out)
-        self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
-        self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
-        self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
-        self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
-        self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+        for command in ("install --build -sc other", "install --build"):
+            error = client.run(command)
+            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+            self.assertIn("[scope]    dev    other", "".join(conaninfo.splitlines()))
+            self.assertFalse(error)
+            self.assertNotIn("WARN: DEP DEV", client.user_io.out)
+            self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
-        error = client.run("install --build -sc Hello:dev")
-        self.assertFalse(error)
-        self.assertIn("WARN: DEP DEV", client.user_io.out)
-        self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
-        self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
-        self.assertNotIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
-        self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
-        self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+        for command in ("install --build -sc Hello:dev", "install --build"):
+            error = client.run(command)
+            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+            self.assertIn("[scope]    dev    Hello:dev", "".join(conaninfo.splitlines()))
+            self.assertFalse(error)
+            self.assertIn("WARN: DEP DEV", client.user_io.out)
+            self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
-        error = client.run("install --build -sc Hello:dev -sc Hello:other")
-        self.assertFalse(error)
-        self.assertIn("WARN: DEP DEV", client.user_io.out)
-        self.assertIn("WARN: DEP OTHER", client.user_io.out)
-        self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
-        self.assertNotIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
-        self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
-        self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+        for command in ("install --build -sc Hello:dev -sc Hello:other", "install --build"):
+            error = client.run(command)
+            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+            self.assertIn("[scope]    dev    Hello:dev    Hello:other",
+                          "".join(conaninfo.splitlines()))
+            self.assertFalse(error)
+            self.assertIn("WARN: DEP DEV", client.user_io.out)
+            self.assertIn("WARN: DEP OTHER", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)

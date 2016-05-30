@@ -15,6 +15,7 @@ from conans.model.values import Values
 from conans.model.config_dict import undefined_field, bad_value_msg
 from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
+from conans.model.scope import Scopes
 
 
 class Retriever(object):
@@ -121,7 +122,7 @@ class ConanRequirementsTest(unittest.TestCase):
     def setUp(self):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, Settings.loads(""),
-                                      OptionsValues.loads(""))
+                                      OptionsValues.loads(""), Scopes())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsBuilder(self.retriever, self.output, self.loader)
 
@@ -1193,7 +1194,7 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, full_settings, options)
+        loader = ConanFileLoader(None, full_settings, options, Scopes())
         retriever = Retriever(loader, self.output)
         builder = DepsBuilder(retriever, self.output, loader)
         root_conan = retriever.root(content)
@@ -1407,7 +1408,8 @@ class ChatConan(ConanFile):
         loader = ConanFileLoader(None, Settings.loads(""),
                                       OptionsValues.loads("Say:myoption_say=123\n"
                                                           "Hello:myoption_hello=True\n"
-                                                          "myoption_chat=on"))
+                                                          "myoption_chat=on"),
+                                 Scopes())
         retriever = Retriever(loader, output)
         builder = DepsBuilder(retriever, output, loader)
         retriever.conan(say_ref, say_content)
