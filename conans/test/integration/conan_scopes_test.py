@@ -6,7 +6,62 @@ import os
 
 class ConanScopeTest(unittest.TestCase):
 
-    def conan_test_test(self):
+    def conan_scopes_deps_test(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    def build(self):
+        if self.scope.dev:
+            self.output.warn("DEP DEV")
+        if self.scope.other:
+            self.output.warn("DEP OTHER")
+        '''
+        files = {}
+        files["conanfile.py"] = conanfile
+        client.save(files)
+        client.run("export lasote/stable")
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello2"
+    version = "0.1"
+    def config(self):
+        if self.scope.other:
+            self.requires("Hello/0.1@lasote/stable", dev=True)
+        '''
+        files["conanfile.py"] = conanfile
+        client.save(files, clean_first=True)
+        error = client.run("install --build")
+        self.assertFalse(error)
+        self.assertNotIn("Hello/0.1@lasote/stable", client.user_io.out)
+
+        error = client.run("install -sc=other --build")
+        self.assertFalse(error)
+        self.assertIn("Hello/0.1@lasote/stable", client.user_io.out)
+        client.run("export lasote/stable")
+
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    requires = "Hello2/0.1@lasote/stable"
+        '''
+        files["conanfile.py"] = conanfile
+        client.save(files, clean_first=True)
+        error = client.run("install --build")
+        self.assertFalse(error)
+        #print client.user_io.out
+
+        error = client.run("install -sc=Hello2:other --build")
+        self.assertFalse(error)
+        #print client.user_io.out
+
+    def conan_scopes_test(self):
         client = TestClient()
         conanfile = '''
 from conans import ConanFile

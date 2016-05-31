@@ -124,8 +124,8 @@ class Requirements(OrderedDict):
             new_reqs[name] = req
         return new_reqs
 
-    def __call__(self, conan_reference, private=False, override=False):
-        self.add(conan_reference, private, override)
+    def __call__(self, conan_reference, private=False, override=False, dev=False):
+        self.add(conan_reference, private, override, dev)
 
     def __repr__(self):
         result = []
