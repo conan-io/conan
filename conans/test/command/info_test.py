@@ -70,3 +70,27 @@ class InfoTest(unittest.TestCase):
                 Requires:
                     Hello0/0.1@lasote/stable""")
         self.assertIn(expected_output, self.client.user_io.out)
+
+        self.client.run("info -u --only=url")
+        expected_output = textwrap.dedent(
+            """\
+            Hello2/0.1@PROJECT
+                URL: myurl
+            Hello0/0.1@lasote/stable
+                URL: myurl
+            Hello1/0.1@lasote/stable
+                URL: myurl""")
+        self.assertIn(expected_output, self.client.user_io.out)
+        self.client.run("info -u --only=url,license")
+        expected_output = textwrap.dedent(
+            """\
+            Hello2/0.1@PROJECT
+                URL: myurl
+                Licenses: MIT, GPL
+            Hello0/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+            Hello1/0.1@lasote/stable
+                URL: myurl
+                License: MIT""")
+        self.assertIn(expected_output, self.client.user_io.out)
