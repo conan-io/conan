@@ -58,6 +58,9 @@ class CMake(object):
             if compiler in ["gcc", "clang", "apple-clang"]:
                 return "Unix Makefiles"
 
+        if compiler == "arm-none-eabi-gcc":
+            return "Unix Makefiles"
+
         raise ConanException("Unknown cmake generator for these settings")
 
     @property
