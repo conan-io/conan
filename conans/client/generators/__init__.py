@@ -41,7 +41,7 @@ def write_generators(conanfile, path, output):
                         (generator_name, ", ".join(registered_generators.available)))
         else:
             generator_class = registered_generators[generator_name]
-            generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
+            generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info, conanfile.name)
             output.info("Generated %s created %s" % (generator_name, generator.filename))
             content = normalize(generator.content)
             save(join(path, generator.filename), content)
