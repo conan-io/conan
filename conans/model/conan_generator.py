@@ -9,8 +9,6 @@ class Generator(object):
         self.conanfile = conanfile
         self._deps_build_info = conanfile.deps_cpp_info
         self._build_info = conanfile.cpp_info
-        self.name = conanfile.name
-        self.version = conanfile.version
 
     @property
     def deps_build_info(self):
