@@ -5,10 +5,12 @@ from abc import ABCMeta, abstractproperty
 class Generator(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self, deps_build_info, build_info, name):
-        self._deps_build_info = deps_build_info
-        self._build_info = build_info
-        self.name = name
+    def __init__(self, conanfile):
+        self.conanfile = conanfile
+        self._deps_build_info = conanfile.deps_cpp_info
+        self._build_info = conanfile.cpp_info
+        self.name = conanfile.name
+        self.version = conanfile.version
 
     @property
     def deps_build_info(self):
