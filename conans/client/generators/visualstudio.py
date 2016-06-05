@@ -26,19 +26,19 @@ class VisualStudioGenerator(Generator):
   <ItemGroup />
 </Project>'''
 
-    def __init__(self, deps_cpp_info, cpp_info):
-        super(VisualStudioGenerator, self).__init__(deps_cpp_info, cpp_info)
+    def __init__(self, conanfile):
+        super(VisualStudioGenerator, self).__init__(conanfile)
         self.bin_dirs = "".join('%s;'  % p.replace("\\", "/")
-                                    for p in deps_cpp_info.bin_paths)
+                                    for p in conanfile.deps_cpp_info.bin_paths)
         self.include_dirs = "".join('%s;' % p.replace("\\", "/")
-                                    for p in deps_cpp_info.include_paths)
+                                    for p in conanfile.deps_cpp_info.include_paths)
         self.lib_dirs = "".join('%s;' % p.replace("\\", "/")
-                                for p in deps_cpp_info.lib_paths)
+                                for p in conanfile.deps_cpp_info.lib_paths)
         self.libs = "".join(['%s.lib;' % lib if not lib.endswith(".lib")
-                             else '%s;' % lib for lib in deps_cpp_info.libs])
-        self.definitions = "".join("%s;" % d for d in deps_cpp_info.defines)
-        self.compiler_flags = " ".join(deps_cpp_info.cppflags + deps_cpp_info.cflags)
-        self.linker_flags = " ".join(deps_cpp_info.sharedlinkflags)
+                             else '%s;' % lib for lib in conanfile.deps_cpp_info.libs])
+        self.definitions = "".join("%s;" % d for d in conanfile.deps_cpp_info.defines)
+        self.compiler_flags = " ".join(conanfile.deps_cpp_info.cppflags + conanfile.deps_cpp_info.cflags)
+        self.linker_flags = " ".join(conanfile.deps_cpp_info.sharedlinkflags)
 
     @property
     def filename(self):

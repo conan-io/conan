@@ -14,16 +14,16 @@ OTHER_CFLAGS = $(inherited)
 OTHER_CPLUSPLUSFLAGS = $(inherited)
 '''
 
-    def __init__(self, deps_cpp_info, cpp_info):
-        super(XCodeGenerator, self).__init__(deps_cpp_info, cpp_info)
+    def __init__(self, conanfile):
+        super(XCodeGenerator, self).__init__(conanfile)
         self.include_dirs = " ".join('"%s"' % p.replace("\\", "/")
-                                     for p in deps_cpp_info.include_paths)
+                                     for p in conanfile.deps_cpp_info.include_paths)
         self.lib_dirs = " ".join('"%s"' % p.replace("\\", "/")
-                                 for p in deps_cpp_info.lib_paths)
-        self.libs = " ".join(['-l%s' % lib for lib in deps_cpp_info.libs])
-        self.definitions = " ".join('"%s"' % d for d in deps_cpp_info.defines)
-        self.compiler_flags = " ".join(deps_cpp_info.cppflags + deps_cpp_info.cflags)
-        self.linker_flags = " ".join(deps_cpp_info.sharedlinkflags)
+                                 for p in conanfile.deps_cpp_info.lib_paths)
+        self.libs = " ".join(['-l%s' % lib for lib in conanfile.deps_cpp_info.libs])
+        self.definitions = " ".join('"%s"' % d for d in conanfile.deps_cpp_info.defines)
+        self.compiler_flags = " ".join(conanfile.deps_cpp_info.cppflags + conanfile.deps_cpp_info.cflags)
+        self.linker_flags = " ".join(conanfile.deps_cpp_info.sharedlinkflags)
 
     @property
     def filename(self):
