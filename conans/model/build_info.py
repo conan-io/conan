@@ -84,7 +84,10 @@ class DepsCppInfo(_CppInfo):
         return self._dependencies[item]
 
     def __repr__(self):
-        return TXTGenerator(self, None).content
+        dummy_conanfile = type('',(object,),{
+            'deps_cpp_info':self,
+            'cpp_info':None})()
+        return TXTGenerator(dummy_conanfile).content
 
     @staticmethod
     def loads(text):
