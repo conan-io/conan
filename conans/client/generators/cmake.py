@@ -50,7 +50,9 @@ class CMakeGenerator(Generator):
         # GENERAL VARIABLES
         deps = DepsCppCmake(self.deps_build_info)
 
-        template = ('set(CONAN_DEPENDENCIES {dependencies})\n'
+        template = ('set(CONAN_PACKAGE_NAME {name})\n'
+                    'set(CONAN_PACKAGE_VERSION {version})\n'
+                    'set(CONAN_DEPENDENCIES {dependencies})\n'
                     'set(CONAN_INCLUDE_DIRS {deps.include_paths} ${{CONAN_INCLUDE_DIRS}})\n'
                     'set(CONAN_LIB_DIRS {deps.lib_paths} ${{CONAN_LIB_DIRS}})\n'
                     'set(CONAN_BIN_DIRS {deps.bin_paths} ${{CONAN_BIN_DIRS}})\n'
@@ -66,7 +68,8 @@ class CMakeGenerator(Generator):
                      in self.deps_build_info.dependencies]
         module_paths = " ".join(rootpaths)
         all_flags = template.format(deps=deps, module_paths=module_paths,
-                                    dependencies=" ".join(self.deps_build_info.deps))
+                                    dependencies=" ".join(self.deps_build_info.deps),
+                                    name=self.conanfile.name, version=self.conanfile.version)
         sections.append(all_flags)
 
         # MACROS

@@ -26,10 +26,11 @@ class VisualStudioGenerator(Generator):
   <ItemGroup />
 </Project>'''
 
-    def __init__(self, deps_cpp_info, cpp_info):
-        super(VisualStudioGenerator, self).__init__(deps_cpp_info, cpp_info)
-        self.bin_dirs = "".join('%s;'  % p.replace("\\", "/")
-                                    for p in deps_cpp_info.bin_paths)
+    def __init__(self, conanfile):
+        super(VisualStudioGenerator, self).__init__(conanfile)
+        deps_cpp_info = conanfile.deps_cpp_info
+        self.bin_dirs = "".join('%s;' % p.replace("\\", "/")
+                                for p in deps_cpp_info.bin_paths)
         self.include_dirs = "".join('%s;' % p.replace("\\", "/")
                                     for p in deps_cpp_info.include_paths)
         self.lib_dirs = "".join('%s;' % p.replace("\\", "/")
