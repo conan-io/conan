@@ -1,7 +1,6 @@
 import os
 import re
 from conans.errors import ConanException
-from conans.client.generators import TXTGenerator
 from conans.util.log import logger
 import traceback
 from collections import OrderedDict
@@ -82,12 +81,6 @@ class DepsCppInfo(_CppInfo):
 
     def __getitem__(self, item):
         return self._dependencies[item]
-
-    def __repr__(self):
-        dummy_conanfile = type('',(object,),{
-            'deps_cpp_info':self,
-            'cpp_info':None})()
-        return TXTGenerator(dummy_conanfile).content
 
     @staticmethod
     def loads(text):

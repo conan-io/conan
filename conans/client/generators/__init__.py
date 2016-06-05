@@ -41,7 +41,12 @@ def write_generators(conanfile, path, output):
                         (generator_name, ", ".join(registered_generators.available)))
         else:
             generator_class = registered_generators[generator_name]
-            generator = generator_class(conanfile)
+            try:
+                generator = generator_class(conanfile)
+            except TypeError:
+                # To allow old-style generator packages to work (e.g. premake)
+                output.warn("Generator %s failed with new __init__(), trying old one")
+                generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
             output.info("Generated %s created %s" % (generator_name, generator.filename))
             content = normalize(generator.content)
             save(join(path, generator.filename), content)
