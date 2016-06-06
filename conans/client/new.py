@@ -48,11 +48,13 @@ class {name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package"
+    # No settings/options are necessary, this is header only
 
     def source(self):
         '''retrieval of the source code here. Remember you can also put the code in the folder and
         use exports instead of retrieving it with this source() method
         '''
+        #self.run("git clone ...") or
         #tools.download("url", "file.zip")
         #tools.unzip("file.zip" )
 
