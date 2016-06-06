@@ -106,7 +106,8 @@ class ConanFileLoader(object):
             result = self._create_check_conan(loaded, consumer, conan_file_path, output, filename)
             if consumer:
                 result.options.initialize_upstream(self._options)
-                result.scope = self._scopes[None]
+                # If this is the consumer project, it has no name
+                result.scope = self._scopes.root
             else:
                 result.scope = self._scopes[result.name]
             return result
@@ -138,7 +139,7 @@ class ConanFileLoader(object):
         # imports method
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
                                                                parser.import_parameters)
-        conanfile.scope = self._scopes[None]
+        conanfile.scope = self._scopes.root
         return conanfile
 
 
