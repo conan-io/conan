@@ -1,7 +1,6 @@
 
 import unittest
-from conans.client.loader import ConanFileTextLoader,\
-    ConanFileLoader
+from conans.client.loader import ConanFileTextLoader, ConanFileLoader
 from conans.errors import ConanException
 from conans.util.files import save
 import os
@@ -13,6 +12,18 @@ from conans.test.utils.test_files import temp_folder
 
 
 class ConanLoaderTest(unittest.TestCase):
+
+    def conanfile_txt_errors_test(self):
+        # Valid content
+        file_content = '''[requires}
+OpenCV/2.4.10@phil/stable # My requirement for CV
+'''
+        with self.assertRaisesRegexp(ConanException, "Bad syntax"):
+            ConanFileTextLoader(file_content)
+
+        file_content = '{hello}'
+        with self.assertRaisesRegexp(ConanException, "Unexpected line"):
+            ConanFileTextLoader(file_content)
 
     def plain_text_parser_test(self):
         # Valid content
