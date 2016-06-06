@@ -21,8 +21,8 @@ ycm
         client = TestClient()
         client.save(files)
         client.run("install --build")
-        self.assertItemsEqual(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
-                               'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
-                               'conanbuildinfo.txt', 'conanbuildinfo.props',
-                               'conanbuildinfo.xcconfig', '.ycm_extra_conf.py'],
-                              os.listdir(client.current_folder))
+        self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
+                                 'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
+                                 'conanbuildinfo.txt', 'conanbuildinfo.props',
+                                 'conanbuildinfo.xcconfig', '.ycm_extra_conf.py']),
+                         sorted(os.listdir(client.current_folder)))
