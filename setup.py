@@ -50,7 +50,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=load_version(),  # + ".rc5",
+    version="0.0.1rc11", #load_version(),  # + ".rc5",
 
     description='Conan C/C++ package manager',
     # long_description="An open source, decentralized package manager, to automate building and sharing of packages",

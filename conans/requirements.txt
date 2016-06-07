@@ -8,3 +8,6 @@ PyYAML>=3.11, <3.12.0
 patch==1.16
 fasteners>=0.14.1
 six>=1.10.0
+pyOpenSSL
+ndg-httpsclient
+pyasn
