@@ -75,6 +75,7 @@ Thumbs.db
 ########
 .metadata
 .idea
+.history/
 
 conan.conf
 *default_package_folder

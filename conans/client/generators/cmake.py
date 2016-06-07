@@ -82,8 +82,15 @@ class CMakeGenerator(Generator):
     conan_check_compiler()
     conan_output_dirs_setup()
     conan_flags_setup()
+    conan_set_find_paths()
+endmacro()
+
+macro(conan_set_find_paths)
     # CMake can find findXXX.cmake files in the root of packages
     set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
+
+    # Make find_package() to work
+    set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
 endmacro()
 
 macro(conan_flags_setup)
