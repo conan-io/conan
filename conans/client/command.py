@@ -164,6 +164,8 @@ path to the CMake binary directory, like this:
                             help='Create test_package skeleton to test package')
         parser.add_argument("-i", "--header", action='store_true', default=False,
                             help='Create a headers only package')
+        parser.add_argument("-c", "--pure_c", action='store_true', default=False,
+                            help='Create a C language package only package (non-headers)')
 
         args = parser.parse_args(*args)
 
@@ -179,6 +181,9 @@ path to the CMake binary directory, like this:
             files = {"conanfile.py": conanfile_header.format(name=name, version=version)}
         else:
             files = {"conanfile.py": conanfile.format(name=name, version=version)}
+            if args.pure_c:
+                config = "\n    def config(self):\n        del self.settings.compiler.libcxx"
+                files["conanfile.py"] = files["conanfile.py"] + config
         if args.test:
             files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
                                                                        user=user, channel=channel)
