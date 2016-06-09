@@ -44,7 +44,7 @@ def human_size(size_bytes):
 
 
 def unzip(filename, destination="."):
-    if ".tar.gz" in filename or ".tgz" in filename:
+    if ".tar.gz" in filename or ".tgz" in filename or "tzb2" in filename or "tar.bz2" in filename:
         return untargz(filename, destination)
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
@@ -66,7 +66,7 @@ def unzip(filename, destination="."):
 
 def untargz(filename, destination="."):
     import tarfile
-    with tarfile.TarFile.open(filename, 'r:gz') as tarredgzippedFile:
+    with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
         tarredgzippedFile.extractall(destination)
 
 
