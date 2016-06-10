@@ -57,6 +57,8 @@ def unzip(filename, destination="."):
             txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
             print(txt_msg, end='')
             try:
+                # the limit is 200 to account for 40 chars of SHA in build/sha_xxx
+                # and 20 chars for build system extra subfolders (cmake mytarget.dir/debug, etc)
                 if len(file_.filename) + len(full_path) > 200:
                     raise ValueError("Filename too long")
                 z.extract(file_, full_path)
