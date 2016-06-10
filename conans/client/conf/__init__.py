@@ -9,43 +9,11 @@ import urllib
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.6.0'
 
-default_settings_yml = """
-os: [Windows, Linux, Macos, Android, iOS]
-arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
-compiler:
-    gcc:
-        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "6.1"]
-        libcxx: [libstdc++, libstdc++11]
-    Visual Studio:
-        runtime: [MD, MT, MTd, MDd]
-        version: ["8", "9", "10", "11", "12", "14"]
-    clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8"]
-        libcxx: [libstdc++, libstdc++11, libc++]
-    apple-clang:
-        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]
-        libcxx: [libstdc++, libc++]
-
-build_type: [None, Debug, Release]
-"""
-
-
-default_client_conf = '''
-[storage]
-# This is the default path, but you can write your own
-path: ~/.conan/data
-
-[proxies]
-# Empty section will try to use system proxies.
-# If don't want proxy at all, remove section [proxies]
-# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
-# http: http://user:pass@10.10.1.10:3128/
-# http: http://10.10.1.10:3128
-# https: http://10.10.1.10:1080
-
-[settings_defaults]
-'''
-
+cur_dir = os.path.dirname(os.path.abspath(__file__))
+default_settings_yml_file = open(os.path.join(cur_dir, "settings.yml"))
+default_settings_yml = default_settings_yml_file.read()
+default_client_conf_file = open(os.path.join(cur_dir, "client.conf"))
+default_client_conf = default_client_conf_file.read()
 
 class ConanClientConfigParser(ConfigParser):
 
