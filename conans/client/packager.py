@@ -31,6 +31,7 @@ def create_package(conanfile, build_folder, package_folder, output):
     conanfile.copy_bins = wrap(DEFAULT_BIN)
     conanfile.copy_res = wrap(DEFAULT_RES)
     try:
+        conanfile.package_folder = package_folder
         conanfile.package()
         package_output = ScopedOutput("%s package()" % output.scope, output)
         conanfile.copy.report(package_output, warn=True)
