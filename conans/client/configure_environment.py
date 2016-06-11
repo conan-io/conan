@@ -31,8 +31,8 @@ class ConfigureEnvironment(object):
             archflag = "-m32" if self.arch == "x86" else ""
             ldflags = 'LDFLAGS="%s %s"' % (" ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths]), archflag)
             debug = "-g" if self.build_type == "Debug" else "-s -DNDEBUG"
-            cflags = 'CFLAGS="%s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cflags), debug)
-            cpp_flags = 'CPPFLAGS="%s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cppflags), debug)
+            cflags = 'CFLAGS="%s %s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cflags), debug, " ".join(['-I%s' % i for i in self._deps_cpp_info.include_paths]))
+            cpp_flags = 'CPPFLAGS="%s %s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cppflags), debug, " ".join(['-I%s' % i for i in self._deps_cpp_info.include_paths]))
 
             # Append the definition for libcxx
             all_cpp_flags = copy.copy(self._deps_cpp_info.cppflags)
