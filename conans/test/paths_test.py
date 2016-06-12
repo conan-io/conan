@@ -1,13 +1,26 @@
 import unittest
-from conans.paths import BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, StorePaths
+from conans.paths import (BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, StorePaths,
+                          conan_expand_user)
 from conans.model.ref import ConanFileReference, PackageReference
 import os
 from conans.server.store.disk_adapter import DiskAdapter
 from conans.server.store.file_manager import FileManager
 from conans.test.utils.test_files import temp_folder
+import platform
 
 
 class PathsTest(unittest.TestCase):
+
+    def expand_user_test(self):
+        if platform.system() == "Windows":
+            old_env = dict(os.environ)
+            try:
+                os.environ["HOME"] = "%USERPROFILE%"
+                user_home = conan_expand_user("~")
+            finally:
+                os.environ.clear()
+                os.environ.update(old_env)
+            self.assertTrue(os.path.exists(user_home))
 
     def basic_test(self):
         folder = temp_folder()
@@ -16,7 +29,7 @@ class PathsTest(unittest.TestCase):
         conan_ref = ConanFileReference.loads("opencv/2.4.10 @ lasote /testing")
         package_ref = PackageReference(conan_ref, "456fa678eae68")
         expected_base = os.path.join(paths.store, os.path.sep.join(["opencv", "2.4.10",
-                                                           "lasote", "testing"]))
+                                                                    "lasote", "testing"]))
         self.assertEqual(paths.conan(conan_ref),
                          os.path.join(paths.store, expected_base))
         self.assertEqual(paths.export(conan_ref),
@@ -24,7 +37,8 @@ class PathsTest(unittest.TestCase):
         self.assertEqual(paths.build(package_ref),
                          os.path.join(paths.store, expected_base, BUILD_FOLDER,  "456fa678eae68"))
         self.assertEqual(paths.package(package_ref),
-                         os.path.join(paths.store, expected_base, PACKAGES_FOLDER,  "456fa678eae68"))
+                         os.path.join(paths.store, expected_base, PACKAGES_FOLDER,
+                                      "456fa678eae68"))
 
     def basic_test2(self):
         # FIXME, for searches now uses file_service, not paths. So maybe move test to another place

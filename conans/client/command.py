@@ -13,7 +13,7 @@ from conans.client.store.localdb import LocalDB
 from conans.util.log import logger
 from conans.model.ref import ConanFileReference
 from conans.client.manager import ConanManager
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, conan_expand_user
 import requests
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans import __version__ as CLIENT_VERSION
@@ -647,7 +647,7 @@ def get_command():
     out = ConanOutput(sys.stdout, color)
     user_io = UserIO(out=out)
 
-    user_folder = os.getenv("CONAN_USER_HOME", os.path.expanduser("~"))
+    user_folder = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
     try:
         # To capture exceptions in conan.conf parsing
         paths = ConanPaths(user_folder, None, out)

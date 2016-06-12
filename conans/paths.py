@@ -4,6 +4,7 @@ from conans.util.files import load, relative_dirs, path_exists
 from os.path import isfile
 from os.path import join, normpath
 from conans.model.manifest import FileTreeManifest
+import platform
 
 
 EXPORT_FOLDER = "export"
@@ -28,6 +29,27 @@ SYSTEM_REQS = "system_reqs.txt"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
+
+
+def conan_expand_user(path):
+    """ wrapper to the original expanduser function, to workaround python returning
+    verbatim %USERPROFILE% when some other app (git for windows) sets HOME envvar
+    """
+    if platform.system() == "Windows":
+        # In win these variables should exist and point to user directory, which
+        # must exist. Using context to avoid permanent modification of os.environ
+        old_env = dict(os.environ)
+        try:
+            home = os.environ.get("HOME")
+            if home and not os.path.exists(home):
+                del os.environ["HOME"]
+            result = os.path.expanduser(path)
+        finally:
+            os.environ.clear()
+            os.environ.update(old_env)
+        return result
+
+    return os.path.expanduser(path)
 
 
 class SimplePaths(object):
