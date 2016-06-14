@@ -1,10 +1,11 @@
 from conans.util.sha import sha1
-from conans.model.ref import  PackageReference
+from conans.model.ref import PackageReference
 from conans.errors import ConanException
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.model.values import Values
 from conans.model.options import OptionsValues
+from conans.model.scope import Scopes
 
 
 class RequirementInfo(object):
@@ -46,8 +47,9 @@ class RequirementInfo(object):
 
 
 class RequirementsInfo(object):
-    def __init__(self, requires):
+    def __init__(self, requires, non_devs_requirements):
         # {PackageReference: RequirementInfo}
+        self._non_devs_requirements = non_devs_requirements
         self._data = {r: RequirementInfo(str(r)) for r in requires}
 
     def add(self, indirect_reqs):
@@ -79,7 +81,9 @@ class RequirementsInfo(object):
     def sha(self):
         result = []
         for key in sorted(self._data):
-            result.append(self._data[key].sha)
+            non_dev = key.conan.name in self._non_devs_requirements
+            if non_dev:
+                result.append(self._data[key].sha)
         return sha1('\n'.join(result).encode())
 
     def dumps(self):
@@ -87,6 +91,9 @@ class RequirementsInfo(object):
         for ref in sorted(self._data):
             dumped = self._data[ref].dumps()
             if dumped:
+                dev = ref.conan.name not in self._non_devs_requirements
+                if dev:
+                    dumped += " DEV"
                 result.append(dumped)
         return "\n".join(result)
 
@@ -95,7 +102,7 @@ class RequirementsInfo(object):
 
     @staticmethod
     def deserialize(data):
-        ret = RequirementsInfo({})
+        ret = RequirementsInfo({}, set())
         for ref, requinfo in data.items():
             ret._data[ref] = RequirementInfo.deserialize(requinfo)
         return ret
@@ -120,7 +127,7 @@ class RequirementsList(list):
 class ConanInfo(object):
 
     @staticmethod
-    def create(settings, options, requires):
+    def create(settings, options, requires, indirect_requires, non_devs_requirements):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
@@ -128,13 +135,17 @@ class ConanInfo(object):
         result.options = options.copy()
         result.options.clear_indirect()
         result.full_requires = RequirementsList(requires)
-        result.requires = RequirementsInfo(requires)
+        result.requires = RequirementsInfo(requires, non_devs_requirements)
+        result.scope = None
+        result.requires.add(indirect_requires)
+        result.full_requires.extend(indirect_requires)
+        result._non_devs_requirements = non_devs_requirements
         return result
 
     @staticmethod
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
-                                     "requires", "full_requires"])
+                                     "requires", "full_requires", "scope"])
 
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
@@ -142,8 +153,9 @@ class ConanInfo(object):
         result.options = OptionsValues.loads(parser.options)
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = RequirementsList.loads(parser.full_requires)
-        result.requires = RequirementsInfo(result.full_requires)
+        result.requires = RequirementsInfo(result.full_requires, set())
         # TODO: Missing handling paring of requires, but not necessary now
+        result.scope = Scopes.loads(parser.scope)
         return result
 
     def dumps(self):
@@ -163,6 +175,9 @@ class ConanInfo(object):
         result.append(indent(self.full_requires.dumps()))
         result.append("\n[full_options]")
         result.append(indent(self.full_options.dumps()))
+        result.append("\n[scope]")
+        if self.scope:
+            result.append(indent(self.scope.dumps()))
         return '\n'.join(result)
 
     def __eq__(self, other):
@@ -193,7 +208,7 @@ class ConanInfo(object):
             return computed_id
         result = []
         result.append(self.settings.sha)
-        result.append(self.options.sha)
+        result.append(self.options.sha(self._non_devs_requirements))
         result.append(self.requires.sha)
         self._package_id = sha1('\n'.join(result).encode())
         return self._package_id

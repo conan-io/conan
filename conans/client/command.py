@@ -26,6 +26,8 @@ from argparse import RawTextHelpFormatter
 import re
 from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
+from collections import defaultdict
+from conans.model.scope import Scopes
 
 
 class Extender(argparse.Action):
@@ -278,6 +280,8 @@ path to the CMake binary directory, like this:
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="update with new upstream packages")
+        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                            help='Define scopes for packages')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -300,7 +304,7 @@ path to the CMake binary directory, like this:
             args.build = self._get_build_sources_parameter(args.build)
             options = self._get_tuples_list_from_extender_arg(args.options)
             settings = self._get_tuples_list_from_extender_arg(args.settings)
-
+            scopes = Scopes.from_list(args.scope) if args.scope else None
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,
@@ -309,7 +313,8 @@ path to the CMake binary directory, like this:
                                   build_mode=args.build,
                                   filename=args.file,
                                   update=args.update,
-                                  integrity=args.integrity)
+                                  integrity=args.integrity,
+                                  scopes=scopes)
 
     def info(self, *args):
         """ Prints information about the requirements.

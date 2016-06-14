@@ -10,6 +10,7 @@ from conans.util.files import save
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans.client.installer import init_cpp_info
+from conans.model.scope import Scopes
 
 
 class Retriever(object):
@@ -72,11 +73,9 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""),
-                                      OptionsValues.loads(""))
+        self.loader = ConanFileLoader(None, Settings.loads(""), OptionsValues.loads(""), Scopes())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsBuilder(self.retriever, self.output, self.loader)
-
 
     def test_diamond_no_conflict(self):
         self.retriever.conan("ZLib")
