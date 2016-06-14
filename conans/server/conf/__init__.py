@@ -10,7 +10,7 @@ import string
 from conans.errors import ConanException
 from conans.util.files import save, mkdir
 from six.moves.configparser import ConfigParser, NoSectionError
-from conans.paths import SimplePaths
+from conans.paths import SimplePaths, conan_expand_user
 from conans.server.store.disk_adapter import DiskAdapter
 from conans.server.store.file_manager import FileManager
 from conans.util.log import logger
@@ -112,7 +112,7 @@ class ConanServerConfigParser(ConfigParser):
             ret = self.env_config["disk_storage_path"]
         else:
             try:
-                ret = os.path.expanduser(self._get_file_conf("server", "disk_storage_path"))
+                ret = conan_expand_user(self._get_file_conf("server", "disk_storage_path"))
             except ConanException:
                 # If storage_path is not defined in file, use the current dir
                 # So tests use test folder instead of user/.conan_server
