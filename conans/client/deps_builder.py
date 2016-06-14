@@ -353,6 +353,11 @@ class DepsBuilder(object):
             new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
+        except Exception as e:
+            import traceback
+            tr = traceback.format_exc()
+            self._output.warn(tr)
+            raise ConanException("%s: conanfile.py: %s" % (conanref or "Conanfile", str(e)))
         return new_down_reqs, new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req):
