@@ -21,7 +21,7 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.model.version import Version
 from conans.client.migrations import ClientMigrator
 import hashlib
-from conans.util.files import rmdir, load
+from conans.util.files import rmdir, load, save_files
 from argparse import RawTextHelpFormatter
 import re
 from conans.client.runner import ConanRunner
@@ -153,6 +153,45 @@ path to the CMake binary directory, like this:
    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 
  """ % (test_folder_name))
+
+    def new(self, *args):
+        """ create a new package template conanfile.py and other optional files
+        """
+        parser = argparse.ArgumentParser(description=self.new.__doc__, prog="conan new",
+                                         formatter_class=RawTextHelpFormatter)
+        parser.add_argument("name", help='Package name, e.g.: Poco/1.7.3@user/testing')
+        parser.add_argument("-t", "--test", action='store_true', default=False,
+                            help='Create test_package skeleton to test package')
+        parser.add_argument("-i", "--header", action='store_true', default=False,
+                            help='Create a headers only package')
+        parser.add_argument("-c", "--pure_c", action='store_true', default=False,
+                            help='Create a C language package only package (non-headers)')
+
+        args = parser.parse_args(*args)
+
+        root_folder = os.getcwd()
+        try:
+            name, version, user, channel = ConanFileReference.loads(args.name)
+        except:
+            raise ConanException("Bad parameter, please use full package name,"
+                                 "e.g: MyLib/1.2.3@user/testing")
+        from conans.client.new import (conanfile, conanfile_header, test_conanfile, test_cmake,
+                                       test_main)
+        if args.header:
+            files = {"conanfile.py": conanfile_header.format(name=name, version=version)}
+        else:
+            files = {"conanfile.py": conanfile.format(name=name, version=version)}
+            if args.pure_c:
+                config = "\n    def config(self):\n        del self.settings.compiler.libcxx"
+                files["conanfile.py"] = files["conanfile.py"] + config
+        if args.test:
+            files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
+                                                                       user=user, channel=channel)
+            files["test_package/CMakeLists.txt"] = test_cmake
+            files["test_package/example.cpp"] = test_main
+        save_files(root_folder, files)
+        for f in sorted(files):
+            self._user_io.out.success("File saved: %s" % f)
 
     def test_package(self, *args):
         """ build and run your package test. Must have conanfile.py with "test"
