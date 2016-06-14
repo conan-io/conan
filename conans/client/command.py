@@ -493,7 +493,15 @@ path to the CMake binary directory, like this:
         parser.add_argument("-p", "--password", help='User password. Use double quotes '
                             'if password with spacing, and escape quotes if existing')
         parser.add_argument("--remote", "-r", help='look for in the remote storage')
+        parser.add_argument('-c', '--clean', default=False,
+                            action='store_true', help='Remove user and tokens for all remotes')
         args = parser.parse_args(*parameters)  # To enable -h
+
+        if args.clean:
+            localdb = LocalDB(self._conan_paths.localdb)
+            localdb.init(clean=True)
+            self._user_io.out.success("Deleted user data")
+            return
         self._manager.user(args.remote, args.name, args.password)
 
     def search(self, *args):
