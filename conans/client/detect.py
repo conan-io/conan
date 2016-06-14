@@ -133,6 +133,7 @@ def _detect_compiler_version(result, output):
 
 def _detect_os_arch(result, output):
     architectures = {'i386': 'x86',
+                     'i686': 'x86',
                      'amd64': 'x86_64'}
 
     systems = {'Darwin': 'Macos'}
