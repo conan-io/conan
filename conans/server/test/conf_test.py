@@ -4,6 +4,7 @@ import os
 from conans.server.conf import ConanServerConfigParser
 from datetime import timedelta
 from conans.test.utils.test_files import temp_folder
+from conans.paths import conan_expand_user
 
 
 fileconfig = '''
@@ -61,7 +62,7 @@ class ServerConfTest(unittest.TestCase):
         config = ConanServerConfigParser(self.file_path, environment=self.environ)
         self.assertEquals(config.jwt_secret,  "newkey")
         self.assertEquals(config.jwt_expire_time, timedelta(minutes=123))
-        self.assertEquals(config.disk_storage_path, os.path.expanduser(tmp_storage))
+        self.assertEquals(config.disk_storage_path, conan_expand_user(tmp_storage))
         self.assertFalse(config.ssl_enabled)
         self.assertEquals(config.port, 1233)
         self.assertEquals(config.write_permissions, [("openssl/2.0.1@lasote/testing", "pepe")])

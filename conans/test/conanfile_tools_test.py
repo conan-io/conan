@@ -5,6 +5,7 @@ from conans.client.loader import ConanFileLoader
 from conans.model.settings import Settings
 from conans.model.options import OptionsValues
 from conans.test.utils.test_files import temp_folder
+from conans.model.scope import Scopes
 
 
 class ConanfileToolsTest(unittest.TestCase):
@@ -32,7 +33,7 @@ class ConanFileToolsTest(ConanFile):
         other_file = os.path.join(tmp_dir, "otherfile.txt")
         save(file_path, file_content)
         save(other_file, "ONE TWO THREE")
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
         ret = loader.load_conan(file_path, None)
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
@@ -75,7 +76,7 @@ class ConanFileToolsTest(ConanFile):
         save(file_path, file_content)
         save(text_file, "ONE TWO THREE")
         save(patch_file, patch_content)
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
         ret = loader.load_conan(file_path, None)
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
@@ -115,7 +116,7 @@ class ConanFileToolsTest(ConanFile):
         text_file = os.path.join(tmp_dir, "text.txt")
         save(file_path, file_content)
         save(text_file, "ONE TWO THREE")
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
         ret = loader.load_conan(file_path, None)
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)

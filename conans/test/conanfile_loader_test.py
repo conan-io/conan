@@ -9,6 +9,7 @@ from conans.model.options import OptionsValues
 from mock import Mock
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
+from conans.model.scope import Scopes
 
 
 class ConanLoaderTest(unittest.TestCase):
@@ -65,7 +66,7 @@ OpenCV2:other_option=Cosa
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
         ret = loader.load_conan_txt(file_path, None)
         options1 = OptionsValues.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
@@ -92,7 +93,7 @@ OpenCV/2.4.104phil/stable <- use_python:True, other_option:False
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
         with self.assertRaisesRegexp(ConanException, "Wrong package recipe reference(.*)"):
             loader.load_conan_txt(file_path, None)
 
@@ -104,6 +105,6 @@ OpenCV/bin/* - ./bin
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
         with self.assertRaisesRegexp(ConanException, "is too long. Valid names must contain"):
             loader.load_conan_txt(file_path, None)

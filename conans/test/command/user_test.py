@@ -1,5 +1,6 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
 
 class UserTest(unittest.TestCase):
@@ -42,7 +43,7 @@ class UserTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         servers = {"default": test_server}
-        conan = TestClient(servers=servers, users={"default":[("lasote", "mypass")]})  # Mocked userio
+        conan = TestClient(servers=servers, users={"default":[("lasote", "mypass")]})
         conan.run('user dummy -p ping_pong2', ignore_error=True)
         self.assertIn("ERROR: Wrong user or password", conan.user_io.out)
         conan.run('user lasote -p mypass')
@@ -63,7 +64,7 @@ class UserTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": 'my "password'})
         servers = {"default": test_server}
-        conan = TestClient(servers=servers, users={"default":[("lasote", "mypass")]})
+        conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conan.run(r'user lasote -p="my \"password"')
         self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
         self.assertIn("Change 'default' user from None (anonymous) to lasote", conan.user_io.out)
@@ -71,3 +72,31 @@ class UserTest(unittest.TestCase):
         conan.run(r'user lasote -p "my \"password"')
         self.assertNotIn("ERROR: Wrong user or password", conan.user_io.out)
         self.assertIn("Change 'default' user from None (anonymous) to lasote", conan.user_io.out)
+
+    def test_clean(self):
+        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
+                                 [],  # write permissions
+                                 users={"lasote": "mypass"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        base = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+'''
+
+        files = {"conanfile.py": base}
+        client.save(files)
+        client.run("export lasote/stable")
+        client.run("upload lib/0.1@lasote/stable")
+        client.run("user")
+        self.assertIn("Current 'default' user: lasote", client.user_io.out)
+        client.run("user --clean")
+        client.run("user")
+        self.assertNotIn("lasote", client.user_io.out)
+        self.assertEqual("Current 'default' user: None (anonymous)\n", client.user_io.out)
+        client.run("upload lib/0.1@lasote/stable")
+        client.run("user")
+        self.assertIn("Current 'default' user: lasote", client.user_io.out)
