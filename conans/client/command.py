@@ -26,7 +26,6 @@ from argparse import RawTextHelpFormatter
 import re
 from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
-from collections import defaultdict
 from conans.model.scope import Scopes
 
 
@@ -99,7 +98,7 @@ class Command(object):
 
     def _detect_tested_library_name(self):
         conanfile_content = load(CONANFILE)
-        match = re.search('^\s*name\s*=\s*"(.*)"', conanfile_content, re.MULTILINE)
+        match = re.search('^\s*name\s*=\s*[\'"](.*)[\'"]', conanfile_content, re.MULTILINE)
         if match:
             return "%s*" % match.group(1)
 

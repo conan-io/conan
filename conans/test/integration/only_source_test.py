@@ -136,3 +136,28 @@ class DefaultNameConan(ConanFile):
 
         other_conan.run("install %s" % str(conan_reference))
         self.assertNotIn("Copying sources to build folder", other_conan.user_io.out)
+
+    def detect_name_quotes_test(self):
+        base = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    name = 'lib'
+    version = "0.1"
+'''
+        test = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    requires = "lib/0.1@user/channel"
+    def build(self):
+        self.conanfile_directory
+    def test(self):
+        pass
+'''
+        files = {"conanfile.py": base,
+                 "test/conanfile.py": test}
+        client = TestClient()
+        client.save(files)
+        client.run("export user/channel")
+        client.run("test_package")

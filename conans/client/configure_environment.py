@@ -29,10 +29,13 @@ class ConfigureEnvironment(object):
         if self.os == "Linux" or self.os == "Macos":
             libs = 'LIBS="%s"' % " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
             archflag = "-m32" if self.arch == "x86" else ""
-            ldflags = 'LDFLAGS="%s %s"' % (" ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths]), archflag)
+            ldflags = 'LDFLAGS="%s %s"' % (" ".join(["-L%s" % lib
+                                                     for lib in self._deps_cpp_info.lib_paths]),
+                                           archflag)
             debug = "-g" if self.build_type == "Debug" else "-s -DNDEBUG"
-            cflags = 'CFLAGS="%s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cflags), debug)
-            cpp_flags = 'CPPFLAGS="%s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cppflags), debug)
+            include_flags = " ".join(['-I%s' % i for i in self._deps_cpp_info.include_paths])
+            cflags = 'CFLAGS="%s %s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cflags),
+                                               debug, include_flags)
 
             # Append the definition for libcxx
             all_cpp_flags = copy.copy(self._deps_cpp_info.cppflags)
@@ -48,10 +51,10 @@ class ConfigureEnvironment(object):
                     else:
                         all_cpp_flags.append("-stdlib=libstdc++")
 
-            cpp_flags = 'CPPFLAGS="%s %s"' % (archflag, " ".join(all_cpp_flags))
+            cpp_flags = 'CPPFLAGS="%s %s %s %s"' % (archflag, " ".join(all_cpp_flags),
+                                                    debug, include_flags)
             include_paths = ":".join(['"%s"' % lib for lib in self._deps_cpp_info.include_paths])
             headers_flags = 'C_INCLUDE_PATH=%s CPP_INCLUDE_PATH=%s' % (include_paths, include_paths)
-
             command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
         elif self.os == "Windows" and self.compiler == "Visual Studio":
             cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
