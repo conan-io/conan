@@ -1,6 +1,6 @@
 from conans.errors import ConanException
 from conans.model.settings import Settings
-
+import os
 
 class CMake(object):
 
@@ -29,6 +29,9 @@ class CMake(object):
         operating_system = str(self._settings.os) if self._settings.os else None
         compiler = str(self._settings.compiler) if self._settings.compiler else None
         arch = str(self._settings.arch) if self._settings.arch else None
+
+        if "CONAN_CMAKE_GENERATOR" in os.environ:
+            return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if compiler == "Visual Studio":
             _visuals = {'8': '8 2005',
