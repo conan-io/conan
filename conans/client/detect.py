@@ -167,6 +167,7 @@ def detect_defaults_settings(output):
     _detect_os_arch(result, output)
     _detect_compiler_version(result, output)
     result.append(("build_type", "Release"))
+    result.append(("target", "native"))
 
     output.writeln("Default conan.conf settings", Color.BRIGHT_YELLOW)
     output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in result]), Color.BRIGHT_YELLOW)

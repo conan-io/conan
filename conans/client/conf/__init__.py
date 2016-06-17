@@ -28,8 +28,27 @@ compiler:
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0"]
         libcxx: [libstdc++, libc++]
+    arm-none-eabi-gcc:
+        version: ["5.2"]
+    avr-gcc:
+        version: ["4.9"]
 
 build_type: [None, Debug, Release]
+
+target:
+    native:
+    mcu:
+        mcu: [
+            stm32f407vg,
+            atmega2560,
+            atmega328p,
+        ]
+    board:
+        board: [
+            "STM32F4-Discovery",
+            "Arduino Mega",
+            "Arduino Uno",
+        ]
 """
 
 
