@@ -27,11 +27,12 @@ class ConfigureEnvironment(object):
         """
         command = ""
         if self.os == "Linux" or self.os == "Macos":
-            libs = 'LIBS="%s"' % " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
+            libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
+            libs = 'LIBS="%s"' % libflags
             archflag = "-m32" if self.arch == "x86" else ""
-            ldflags = 'LDFLAGS="%s %s"' % (" ".join(["-L%s" % lib
+            ldflags = 'LDFLAGS="%s %s %s"' % (" ".join(["-L%s" % lib
                                                      for lib in self._deps_cpp_info.lib_paths]),
-                                           archflag)
+                                             libflags, archflag)
             debug = "-g" if self.build_type == "Debug" else "-s -DNDEBUG"
             include_flags = " ".join(['-I%s' % i for i in self._deps_cpp_info.include_paths])
             cflags = 'CFLAGS="%s %s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cflags),
