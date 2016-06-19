@@ -61,7 +61,7 @@ class ConanManager(object):
         # The disk settings definition, already including the default disk values
         settings = self._paths.settings
         options = OptionsValues()
-        exiting_scope = None
+        current_scope = Scopes()
 
         if current_path:
             conan_info_path = os.path.join(current_path, CONANINFO)
@@ -69,7 +69,7 @@ class ConanManager(object):
                 existing_info = ConanInfo.load_file(conan_info_path)
                 settings.values = existing_info.full_settings
                 options = existing_info.full_options  # Take existing options from conaninfo.txt
-                exiting_scope = existing_info.scope
+                current_scope = existing_info.scope
 
         if user_settings_values:
             aux_values = Values.from_list(user_settings_values)
@@ -80,13 +80,11 @@ class ConanManager(object):
             # into account, just those from CONANFILE + user command line
             options = OptionsValues.from_list(user_options_values)
 
-        if scopes is None:
-            if exiting_scope:
-                scopes = exiting_scope
-            else:
-                scopes = Scopes()
-        self._current_scopes = scopes
-        return ConanFileLoader(self._runner, settings, options=options, scopes=scopes)
+        if scopes:
+            current_scope.update(scopes)
+
+        self._current_scopes = current_scope
+        return ConanFileLoader(self._runner, settings, options=options, scopes=current_scope)
 
     def export(self, user, conan_file_path, keep_source=False):
         """ Export the conans
