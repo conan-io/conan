@@ -15,9 +15,13 @@ class Scope(dict):
     def __setattr__(self, field, value):
         self[field] = value
 
+    def __repr__(self):
+        return ", ".join("%s=%s" % (k, v) for k, v in sorted(self.items()))
+
 
 # This is necessary, as None cannot be ordered in Py3
-_root = "CONAN_ROOT*"
+_root = "0CONAN_ROOT*"
+_all = "ALL"
 
 
 class Scopes(defaultdict):
@@ -36,6 +40,11 @@ class Scopes(defaultdict):
     def __init__(self):
         super(Scopes, self).__init__(Scope)
         self[_root].dev = True
+
+    def match_scope(self, name):
+        scope = Scope(self.get(_all, {}))
+        scope.update(self[name])
+        return scope
 
     @staticmethod
     def from_list(items):
@@ -70,7 +79,9 @@ class Scopes(defaultdict):
 
     @property
     def root(self):
-        return self[_root]
+        scope = Scope(self.get(_all, {}))
+        scope.update(self[_root])
+        return scope
 
     @staticmethod
     def loads(text):

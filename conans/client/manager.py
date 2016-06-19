@@ -81,7 +81,7 @@ class ConanManager(object):
             options = OptionsValues.from_list(user_options_values)
 
         if scopes:
-            current_scope.update(scopes)
+            current_scope.update_scope(scopes)
 
         self._current_scopes = current_scope
         return ConanFileLoader(self._runner, settings, options=options, scopes=current_scope)

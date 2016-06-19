@@ -109,7 +109,7 @@ class ConanFileLoader(object):
                 # If this is the consumer project, it has no name
                 result.scope = self._scopes.root
             else:
-                result.scope = self._scopes[result.name]
+                result.scope = self._scopes.match_scope(result.name)
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conan_file_path, str(e)))

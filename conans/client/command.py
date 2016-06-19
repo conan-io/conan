@@ -203,6 +203,8 @@ path to the CMake binary directory, like this:
         parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
         parser.add_argument("-f", "--folder", help='alternative test folder name')
+        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                            help='Define scopes for packages')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -244,13 +246,15 @@ path to the CMake binary directory, like this:
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         settings = self._get_tuples_list_from_extender_arg(args.settings)
+        scopes = Scopes.from_list(args.scope) if args.scope else None
 
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
                               remote=args.remote,
                               options=options,
                               settings=settings,
-                              build_mode=args.build)
+                              build_mode=args.build,
+                              scopes=scopes)
         self._test_check(test_folder, test_folder_name)
         self._manager.build(test_folder, build_folder, test=True)
 

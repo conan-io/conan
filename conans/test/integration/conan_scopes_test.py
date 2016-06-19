@@ -55,13 +55,126 @@ class HelloConan(ConanFile):
         client.save(files, clean_first=True)
         error = client.run("install --build")
         self.assertFalse(error)
-        #print client.user_io.out
 
         error = client.run("install -sc=Hello2:other=True --build")
         self.assertFalse(error)
-        #print client.user_io.out
 
     def conan_scopes_test(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    def build(self):
+        if self.scope.dev:
+            self.output.warn("DEP DEV")
+        if self.scope.other:
+            self.output.warn("DEP OTHER")
+        '''
+        files = {}
+        files["conanfile.py"] = conanfile
+        client.save(files)
+        client.run("export lasote/stable")
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    requires = "Hello/0.1@lasote/stable"
+    def config(self):
+        self.output.info(self.scope)
+        if self.scope.dev:
+            self.output.warn("CONFIG_CONSUMER DEV")
+        if self.scope.other:
+            self.output.warn("CONFIG_CONSUMER OTHER")
+    def build(self):
+        if self.scope.dev:
+            self.output.warn("BUILD_CONSUMER DEV")
+        if self.scope.other:
+            self.output.warn("BUILD_CONSUMER OTHER")
+        '''
+        files["conanfile.py"] = conanfile
+        client.save(files, clean_first=True)
+
+        error = client.run("install --build")
+        self.assertFalse(error)
+        self.assertNotIn("WARN: DEP DEV", client.user_io.out)
+        self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
+        self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
+        self.assertNotIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+        self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
+        self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+
+        for command in ("install --build -sc other=True", "install --build"):
+            error = client.run(command)
+            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+            self.assertIn("[scope]    dev=True    other=True", "".join(conaninfo.splitlines()))
+            self.assertFalse(error)
+            self.assertIn("dev=True, other=True", client.user_io.out)
+            self.assertNotIn("WARN: DEP DEV", client.user_io.out)
+            self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+
+        for command in ("install --build -sc Hello:dev=True", "install --build"):
+            error = client.run(command)
+            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+            self.assertIn("[scope]    dev=True    other=True    Hello:dev=True",
+                          "".join(conaninfo.splitlines()))
+            self.assertFalse(error)
+            self.assertIn("WARN: DEP DEV", client.user_io.out)
+            self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+
+        for command in ("install --build -sc Hello:other=True", "install --build"):
+            error = client.run(command)
+            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+            self.assertIn("[scope]    dev=True    other=True"
+                          "    Hello:dev=True    Hello:other=True",
+                          "".join(conaninfo.splitlines()))
+            self.assertFalse(error)
+            self.assertIn("WARN: DEP DEV", client.user_io.out)
+            self.assertIn("WARN: DEP OTHER", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+
+        for command in ("install --build -sc Hello:other=False", "install --build"):
+            error = client.run(command)
+            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+            self.assertIn("[scope]    dev=True    other=True"
+                          "    Hello:dev=True    Hello:other=False",
+                          "".join(conaninfo.splitlines()))
+            self.assertFalse(error)
+            self.assertIn("WARN: DEP DEV", client.user_io.out)
+            self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+
+        for command in ("build", ):
+            error = client.run(command)
+            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+            self.assertIn("[scope]    dev=True    other=True"
+                          "    Hello:dev=True    Hello:other=False",
+                          "".join(conaninfo.splitlines()))
+            self.assertFalse(error)
+            self.assertNotIn("WARN: DEP DEV", client.user_io.out)
+            self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
+            self.assertNotIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
+            self.assertNotIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+            self.assertIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
+            self.assertIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+
+    def conan_scopes_pattern_test(self):
         client = TestClient()
         conanfile = '''
 from conans import ConanFile
@@ -107,39 +220,15 @@ class HelloConan(ConanFile):
         self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
         self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
-        for command in ("install --build -sc other=True", "install --build"):
+        for command in ("install --build -sc ALL:other=True", "install --build"):
             error = client.run(command)
             conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-            self.assertIn("[scope]    dev=True    other=True", "".join(conaninfo.splitlines()))
-            self.assertFalse(error)
-            self.assertNotIn("WARN: DEP DEV", client.user_io.out)
-            self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
-            self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
-            self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
-            self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
-            self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
-
-        for command in ("install --build -sc Hello:dev=True", "install --build"):
-            error = client.run(command)
-            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-            self.assertIn("[scope]    dev=True    Hello:dev", "".join(conaninfo.splitlines()))
-            self.assertFalse(error)
-            self.assertIn("WARN: DEP DEV", client.user_io.out)
-            self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
-            self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
-            self.assertNotIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
-            self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
-            self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
-
-        for command in ("install --build -sc Hello:dev=True -sc Hello:other=True", "install --build"):
-            error = client.run(command)
-            conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-            self.assertIn("[scope]    dev=True    Hello:dev=True    Hello:other=True",
+            self.assertIn("[scope]    dev=True    ALL:other=True",
                           "".join(conaninfo.splitlines()))
             self.assertFalse(error)
-            self.assertIn("WARN: DEP DEV", client.user_io.out)
+            self.assertNotIn("WARN: DEP DEV", client.user_io.out)
             self.assertIn("WARN: DEP OTHER", client.user_io.out)
             self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
-            self.assertNotIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
+            self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
             self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
             self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
