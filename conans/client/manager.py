@@ -24,6 +24,7 @@ import re
 from conans.info import SearchInfo
 from conans.model.build_info import DepsCppInfo
 from conans.client import packager
+from conans.client.detect import detected_os
 from conans.client.package_copier import PackageCopier
 from conans.client.output import ScopedOutput
 from conans.client.proxy import ConanProxy
@@ -109,7 +110,6 @@ class ConanManager(object):
                                    "It is recommended to add the package license as attribute")
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
-
         conan_ref_str = str(conan_ref)
         # Maybe a platform check could be added, but depends on disk partition
         info = self.file_manager.search(conan_ref_str, ignorecase=True)
@@ -200,6 +200,17 @@ class ConanManager(object):
                                                   remote)
             return
         Printer(self._user_io.out).print_graph(deps_graph, registry)
+
+        # Warn if os doesn't match
+        os_setting = getattr(conanfile.settings, "os", None)
+        if os_setting and detected_os() != os_setting:
+            self._user_io.out.warn('''You are building this package with settings.os='%s' on a '%s' system.
+If this is your intention, you can ignore this message.
+If not:
+ - Check the passed settings (-s)
+ - Check your global settings in ~/.conan/conan.conf
+ - Remove conaninfo.txt to avoid bad cached settings
+''' % (os_setting, detected_os()))
 
         installer = ConanInstaller(self._paths, self._user_io, remote_proxy)
         installer.install(deps_graph, build_mode)
