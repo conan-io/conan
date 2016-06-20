@@ -7,7 +7,7 @@ from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
 import platform
-from conan.conans.client.detect import detected_os
+from conans.client.detect import detected_os
 
 
 class InstallTest(unittest.TestCase):

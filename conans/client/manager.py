@@ -202,15 +202,18 @@ class ConanManager(object):
         Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         # Warn if os doesn't match
-        os_setting = getattr(conanfile.settings, "os", None)
-        if os_setting and detected_os() != os_setting:
-            self._user_io.out.warn('''You are building this package with settings.os='%s' on a '%s' system.
+        try:
+            if detected_os() != conanfile.settings.os:
+                message = '''You are building this package with settings.os='%s' on a '%s' system.
 If this is your intention, you can ignore this message.
 If not:
- - Check the passed settings (-s)
- - Check your global settings in ~/.conan/conan.conf
- - Remove conaninfo.txt to avoid bad cached settings
-''' % (os_setting, detected_os()))
+     - Check the passed settings (-s)
+     - Check your global settings in ~/.conan/conan.conf
+     - Remove conaninfo.txt to avoid bad cached settings
+''' % (conanfile.settings.os, detected_os())
+                self._user_io.out.warn(message)
+        except ConanException:  # Setting os doesn't exist
+            pass
 
         installer = ConanInstaller(self._paths, self._user_io, remote_proxy)
         installer.install(deps_graph, build_mode)
