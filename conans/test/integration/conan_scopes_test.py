@@ -36,12 +36,12 @@ class HelloConan(ConanFile):
         '''
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
-        error = client.run("install --build")
-        self.assertFalse(error)
+        client.run("install --build")
+
         self.assertNotIn("Hello/0.1@lasote/stable", client.user_io.out)
 
-        error = client.run("install -sc=other=True --build")
-        self.assertFalse(error)
+        client.run("install -sc=other=True --build")
+
         self.assertIn("Hello/0.1@lasote/stable", client.user_io.out)
         client.run("export lasote/stable")
 
@@ -53,11 +53,8 @@ class HelloConan(ConanFile):
         '''
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
-        error = client.run("install --build")
-        self.assertFalse(error)
-
-        error = client.run("install -sc=Hello2:other=True --build")
-        self.assertFalse(error)
+        client.run("install --build")
+        client.run("install -sc=Hello2:other=True --build")
 
     def conan_scopes_test(self):
         client = TestClient()
@@ -97,8 +94,8 @@ class HelloConan(ConanFile):
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
 
-        error = client.run("install --build")
-        self.assertFalse(error)
+        client.run("install --build")
+
         self.assertNotIn("WARN: DEP DEV", client.user_io.out)
         self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
         self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
@@ -107,10 +104,9 @@ class HelloConan(ConanFile):
         self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
         for command in ("install --build -sc other=True", "install --build"):
-            error = client.run(command)
+            client.run(command)
             conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
             self.assertIn("[scope]    dev=True    other=True", "".join(conaninfo.splitlines()))
-            self.assertFalse(error)
             self.assertIn("dev=True, other=True", client.user_io.out)
             self.assertNotIn("WARN: DEP DEV", client.user_io.out)
             self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
@@ -120,11 +116,10 @@ class HelloConan(ConanFile):
             self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
         for command in ("install --build -sc Hello:dev=True", "install --build"):
-            error = client.run(command)
+            client.run(command)
             conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
             self.assertIn("[scope]    dev=True    other=True    Hello:dev=True",
                           "".join(conaninfo.splitlines()))
-            self.assertFalse(error)
             self.assertIn("WARN: DEP DEV", client.user_io.out)
             self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
             self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
@@ -133,12 +128,11 @@ class HelloConan(ConanFile):
             self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
         for command in ("install --build -sc Hello:other=True", "install --build"):
-            error = client.run(command)
+            client.run(command)
             conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
             self.assertIn("[scope]    dev=True    other=True"
                           "    Hello:dev=True    Hello:other=True",
                           "".join(conaninfo.splitlines()))
-            self.assertFalse(error)
             self.assertIn("WARN: DEP DEV", client.user_io.out)
             self.assertIn("WARN: DEP OTHER", client.user_io.out)
             self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
@@ -147,12 +141,11 @@ class HelloConan(ConanFile):
             self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
         for command in ("install --build -sc Hello:other=False", "install --build"):
-            error = client.run(command)
+            client.run(command)
             conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
             self.assertIn("[scope]    dev=True    other=True"
                           "    Hello:dev=True    Hello:other=False",
                           "".join(conaninfo.splitlines()))
-            self.assertFalse(error)
             self.assertIn("WARN: DEP DEV", client.user_io.out)
             self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
             self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
@@ -161,12 +154,11 @@ class HelloConan(ConanFile):
             self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
         for command in ("build", ):
-            error = client.run(command)
+            client.run(command)
             conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
             self.assertIn("[scope]    dev=True    other=True"
                           "    Hello:dev=True    Hello:other=False",
                           "".join(conaninfo.splitlines()))
-            self.assertFalse(error)
             self.assertNotIn("WARN: DEP DEV", client.user_io.out)
             self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
             self.assertNotIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
@@ -211,8 +203,8 @@ class HelloConan(ConanFile):
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
 
-        error = client.run("install --build")
-        self.assertFalse(error)
+        client.run("install --build")
+
         self.assertNotIn("WARN: DEP DEV", client.user_io.out)
         self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
         self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
@@ -221,14 +213,59 @@ class HelloConan(ConanFile):
         self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
         for command in ("install --build -sc ALL:other=True", "install --build"):
-            error = client.run(command)
+            client.run(command)
             conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
             self.assertIn("[scope]    dev=True    ALL:other=True",
                           "".join(conaninfo.splitlines()))
-            self.assertFalse(error)
             self.assertNotIn("WARN: DEP DEV", client.user_io.out)
             self.assertIn("WARN: DEP OTHER", client.user_io.out)
             self.assertIn("WARN: CONFIG_CONSUMER DEV", client.user_io.out)
             self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
             self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
             self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
+
+    def conan_dev_requires_test(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Base"
+    version = "0.1"
+'''
+        files = {}
+        files["conanfile.py"] = conanfile
+        client.save(files)
+        client.run("export lasote/stable")
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    dev_requires = "Base/0.1@lasote/stable"
+    name = "Hello"
+    version = "0.1"
+'''
+        files = {}
+        files["conanfile.py"] = conanfile
+        client.save(files)
+        client.run("export lasote/stable")
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    dev_requires = "Hello/0.1@lasote/stable"
+        '''
+        files["conanfile.py"] = conanfile
+        client.save(files, clean_first=True)
+
+        client.run("install --build")
+        self.assertIn("Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                      client.user_io.out)
+        self.assertNotIn("Base/0.1@lasote/stable", client.user_io.out)
+        client.run("install --build -sc dev=False")
+        self.assertNotIn("Hello/0.1@lasote/stable", client.user_io.out)
+        self.assertNotIn("Base/0.1@lasote/stable", client.user_io.out)
+        client.run("install --build -sc dev=True -sc Hello:dev=True")
+        self.assertIn("Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                      client.user_io.out)
+        self.assertIn("Base/0.1@lasote/stable", client.user_io.out)

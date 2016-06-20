@@ -1,5 +1,5 @@
 from conans.errors import ConanException, NotFoundException
-from conans.model.conan_file import ConanFile
+from conans.model.conan_file import ConanFile, load_dev_requirements
 from conans.util.files import rmdir
 import inspect
 import uuid
@@ -110,6 +110,11 @@ class ConanFileLoader(object):
                 result.scope = self._scopes.root
             else:
                 result.scope = self._scopes.match_scope(result.name)
+            if result.scope.dev:
+                # Necessary to set the Requirements.scope, so user adding "dev" requirements are
+                # discarded if not scope.dev
+                result.requires.scope = result.scope
+                load_dev_requirements(result)
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conan_file_path, str(e)))

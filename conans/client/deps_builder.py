@@ -255,6 +255,9 @@ class DepsGraph(object):
         return result
 
     def non_dev_nodes(self, root):
+        if not root.conanfile.scope.dev:
+            # Optimization. This allow not to check it for most packages, which dev=False
+            return None
         open_nodes = set([root])
         result = set()
         expanded = set()

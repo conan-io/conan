@@ -29,7 +29,7 @@ def create_options(conanfile):
 
 def create_requirements(conanfile):
     try:
-        # Actual requirements of this conans
+        # Actual requirements of this package
         if not hasattr(conanfile, "requires"):
             return Requirements()
         else:
@@ -39,6 +39,18 @@ def create_requirements(conanfile):
                 return Requirements(conanfile.requires, )
     except Exception as e:
         raise ConanException("Error while initializing requirements. %s" % str(e))
+
+
+def load_dev_requirements(conanfile):
+    try:
+        # Dev requires
+        if hasattr(conanfile, "dev_requires"):
+            if isinstance(conanfile.dev_requires, tuple):
+                conanfile.requires.add_dev(*conanfile.dev_requires)
+            else:
+                conanfile.requires.add_dev(conanfile.dev_requires, )
+    except Exception as e:
+        raise ConanException("Error while initializing dev_requirements. %s" % str(e))
 
 
 def create_settings(conanfile, settings):
