@@ -47,6 +47,14 @@ def write_generators(conanfile, path, output):
                 # To allow old-style generator packages to work (e.g. premake)
                 output.warn("Generator %s failed with new __init__(), trying old one")
                 generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
-            output.info("Generated %s created %s" % (generator_name, generator.filename))
             content = normalize(generator.content)
-            save(join(path, generator.filename), content)
+            if isinstance(content, basestring) and not generator.filename is None:
+                output.info("Generated %s created %s" % (generator_name, generator.filename))
+                save(join(path, generator.filename), content)
+            elif isinstance(content, dict):
+                for k, v in content.iteritems():
+                    output.info("Generated %s created %s" % (generator_name, k))
+                    save(join(path, k), v)
+            else:
+                output.warn("Generator %s didn't generate anything" % generator_name)
+
