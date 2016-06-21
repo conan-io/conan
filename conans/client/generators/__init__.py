@@ -9,7 +9,6 @@ from .qbs import QbsGenerator
 from .visualstudio import VisualStudioGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
-from six import string_types
 
 
 def _save_generator(name, klass):
@@ -48,14 +47,21 @@ def write_generators(conanfile, path, output):
                 # To allow old-style generator packages to work (e.g. premake)
                 output.warn("Generator %s failed with new __init__(), trying old one")
                 generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
-            content = normalize(generator.content)
-            if isinstance(content, string_types) and not generator.filename is None:
-                output.info("Generated %s created %s" % (generator_name, generator.filename))
-                save(join(path, generator.filename), content)
-            elif isinstance(content, dict):
-                for k, v in content.iteritems():
-                    output.info("Generated %s created %s" % (generator_name, k))
-                    save(join(path, k), v)
-            else:
-                output.warn("Generator %s didn't generate anything" % generator_name)
 
+            try:
+                content = generator.content
+                if isinstance(content, dict):
+                    if generator.filename:
+                        output.warn("Generator %s is multifile. Property 'filename' not used"
+                                    % (generator_name,))
+                    for k, v in content.items():
+                        v = normalize(v)
+                        output.info("Generated %s created %s" % (generator_name, k))
+                        save(join(path, k), v)
+                else:
+                    content = normalize(content)
+                    output.info("Generated %s created %s" % (generator_name, generator.filename))
+                    save(join(path, generator.filename), content)
+            except Exception as e:
+                output.error("Generator %s(file:%s) failed\n%s"
+                             % (generator_name, generator.filename, str(e)))
