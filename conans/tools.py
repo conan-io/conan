@@ -10,7 +10,6 @@ from conans.client.rest.uploader_downloader import Downloader
 import requests
 from conans.client.output import ConanOutput
 
-
 def vcvars_command(settings):
     param = "x86" if settings.arch == "x86" else "amd64"
     command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
@@ -134,4 +133,6 @@ def patch(base_path=None, patch_file=None, patch_string=None):
     else:
         patchset = fromstring(patch_string.encode())
 
-    patchset.apply(root=base_path)
+    if not patchset.apply(root=base_path):
+        raise Exception("Failed to apply patch: %s" % patch_file)
+
