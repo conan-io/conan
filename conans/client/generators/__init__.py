@@ -9,6 +9,7 @@ from .qbs import QbsGenerator
 from .visualstudio import VisualStudioGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
+from six import string_types
 
 
 def _save_generator(name, klass):
@@ -48,7 +49,7 @@ def write_generators(conanfile, path, output):
                 output.warn("Generator %s failed with new __init__(), trying old one")
                 generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
             content = normalize(generator.content)
-            if isinstance(content, basestring) and not generator.filename is None:
+            if isinstance(content, string_types) and not generator.filename is None:
                 output.info("Generated %s created %s" % (generator_name, generator.filename))
                 save(join(path, generator.filename), content)
             elif isinstance(content, dict):
