@@ -41,9 +41,13 @@ class Scopes(defaultdict):
         super(Scopes, self).__init__(Scope)
         self[_root].dev = True
 
-    def match_scope(self, name):
+    def package_scope(self, name=None):
+        """ return the scopes for the given package which are the scopes set
+        for ALL, updated (high priority) with the specific package scopes
+        if the package name is None, then it is the ROOT package/consumer
+        """
         scope = Scope(self.get(_all, {}))
-        scope.update(self[name])
+        scope.update(self[name or _root])
         return scope
 
     @staticmethod
@@ -76,12 +80,6 @@ class Scopes(defaultdict):
     def update_scope(self, other):
         for name, scopes in other.items():
             self[name].update(scopes)
-
-    @property
-    def root(self):
-        scope = Scope(self.get(_all, {}))
-        scope.update(self[_root])
-        return scope
 
     @staticmethod
     def loads(text):
