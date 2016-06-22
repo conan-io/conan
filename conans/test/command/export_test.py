@@ -155,7 +155,7 @@ class OpenSSLConan(ConanFile):
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest3.file_sums)
 
-        #for f in file_list:
+        # for f in file_list:
         #    self.assertFalse(os.path.exists(f))
 
     def _create_packages_and_builds(self):

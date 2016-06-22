@@ -18,7 +18,7 @@ class SynchronizeTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def upload_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
@@ -83,7 +83,8 @@ class SynchronizeTest(unittest.TestCase):
         self.assertTrue(os.path.exists(package_server_path))
 
         # Add a new file to package (artificially), upload again and check
-        new_file_source_path = os.path.join(self.client.paths.package(package_reference), "newlib.lib")
+        new_file_source_path = os.path.join(self.client.paths.package(package_reference),
+                                            "newlib.lib")
         save(new_file_source_path, "newlib")
         self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
 

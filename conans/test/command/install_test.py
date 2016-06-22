@@ -74,7 +74,7 @@ class InstallTest(unittest.TestCase):
         conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
         hello0 = self.client.paths.package(PackageReference(conan_ref,
-                                                    "8b964e421a5b7e48b7bc19b94782672be126be8b"))
+                                           "8b964e421a5b7e48b7bc19b94782672be126be8b"))
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         self.assertEqual(1, hello0_conan_info.options.language)
@@ -101,7 +101,7 @@ class InstallTest(unittest.TestCase):
         conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
         hello0 = self.client.paths.package(PackageReference(conan_ref,
-                                                    "2e38bbc2c3ef1425197c8e2ffa8532894c347d26"))
+                                           "2e38bbc2c3ef1425197c8e2ffa8532894c347d26"))
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         self.assertEqual("language=0\nstatic=True", hello0_conan_info.options.dumps())
@@ -135,7 +135,7 @@ class InstallTest(unittest.TestCase):
         conan_ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
 
         hello0 = self.client.paths.package(PackageReference(conan_ref,
-                                                    "8b964e421a5b7e48b7bc19b94782672be126be8b"))
+                                           "8b964e421a5b7e48b7bc19b94782672be126be8b"))
         hello0_info = os.path.join(hello0, CONANINFO)
         hello0_conan_info = ConanInfo.load_file(hello0_info)
         self.assertEqual(1, hello0_conan_info.options.language)
@@ -190,5 +190,6 @@ class InstallTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, ignore_error=True)
         self.assertIn(message, self.client.user_io.out)
 
-        self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % detected_os(), ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % detected_os(),
+                        ignore_error=True)
         self.assertNotIn("You are building this package with settings.os", self.client.user_io.out)

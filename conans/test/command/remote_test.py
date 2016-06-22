@@ -72,4 +72,3 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list_ref")
         self.assertIn("Hello/0.1@user/testing: remote0", self.client.user_io.out)
         self.assertIn("Hello1/0.1@user/testing: remote2", self.client.user_io.out)
- 
