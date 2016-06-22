@@ -41,10 +41,10 @@ class Requirements(OrderedDict):
     # auxiliary class variable so output messages when overriding requirements
     # FIXME: A more elegant solution
     output = None
-    scope = None
 
     def __init__(self, *args):
         super(Requirements, self).__init__()
+        self.allow_dev = False
         for v in args:
             if isinstance(v, tuple):
                 override = private = dev = False
@@ -54,8 +54,6 @@ class Requirements(OrderedDict):
                         override = True
                     elif elem == "private":
                         private = True
-                    elif elem == "dev":
-                        dev = True
                     else:
                         raise ConanException("Unknown requirement config %s" % elem)
                 self.add(ref, private=private, override=override, dev=dev)
@@ -94,7 +92,7 @@ class Requirements(OrderedDict):
         """ to define requirements by the user in text, prior to any propagation
         """
         assert isinstance(reference, six.string_types)
-        if dev and not self.scope.dev:
+        if dev and not self.allow_dev:
             return
         try:
             conan_reference = ConanFileReference.loads(reference)
