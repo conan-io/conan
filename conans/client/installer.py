@@ -149,12 +149,17 @@ class ConanInstaller(object):
         build_allowed = force_build or build_mode is True
 
         if build_allowed:
-            rmdir(build_folder)
-            rmdir(package_folder)
+            try:
+                rmdir(build_folder)
+                rmdir(package_folder)
+            except Exception as e:
+                raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
+                                     "Close any app using it, and retry" % str(e))
             if force_build:
                 output.warn('Forced build from source')
 
-            self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
+            self._build_package(export_folder, src_folder, build_folder, package_folder,
+                                conan_file, output)
 
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
@@ -231,7 +236,8 @@ Package configuration:
                     output.warn("**** Please delete it manually ****")
                 raise ConanException("%s: %s" % (conan_file.name, str(e)))
 
-    def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file, output):
+    def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file,
+                       output):
         """ builds the package, creating the corresponding build folder if necessary
         and copying there the contents from the src folder. The code is duplicated
         in every build, as some configure processes actually change the source
