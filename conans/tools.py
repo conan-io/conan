@@ -134,5 +134,5 @@ def patch(base_path=None, patch_file=None, patch_string=None):
         patchset = fromstring(patch_string.encode())
 
     if not patchset.apply(root=base_path):
-        raise Exception("Failed to apply patch: %s" % patch_file)
+        raise ConanException("Failed to apply patch: %s" % patch_file)
 
