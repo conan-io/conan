@@ -2,7 +2,7 @@ from collections import defaultdict
 from conans.errors import ConanException
 
 
-class Scope(set):
+class Scope(dict):
     """ the set of possible scopes than a package can have, by name(string):
     "dev", "test", "myscope"...
     it is just a set, but with syntax to be queried as:
@@ -10,13 +10,18 @@ class Scope(set):
     """
 
     def __getattr__(self, field):
-        if field in self:
-            return True
-        return False
+        return self.get(field)
+
+    def __setattr__(self, field, value):
+        self[field] = value
+
+    def __repr__(self):
+        return ", ".join("%s=%s" % (k, v) for k, v in sorted(self.items()))
 
 
 # This is necessary, as None cannot be ordered in Py3
-_root = "CONAN_ROOT*"
+_root = "0CONAN_ROOT*"
+_all = "ALL"
 
 
 class Scopes(defaultdict):
@@ -31,12 +36,19 @@ class Scopes(defaultdict):
     This will be stored in memory as {Package1: Scopes(set[dev, test]),
                                       Package2: Scopes(...),
                                       None: Scopes(set[dev, other])
-    To be able to remove the "dev" scope from the root package (set by default), the "!dev"
-    syntax is provided
     """
     def __init__(self):
         super(Scopes, self).__init__(Scope)
-        self[_root].add("dev")
+        self[_root].dev = True
+
+    def package_scope(self, name=None):
+        """ return the scopes for the given package which are the scopes set
+        for ALL, updated (high priority) with the specific package scopes
+        if the package name is None, then it is the ROOT package/consumer
+        """
+        scope = Scope(self.get(_all, {}))
+        scope.update(self[name or _root])
+        return scope
 
     @staticmethod
     def from_list(items):
@@ -44,19 +56,30 @@ class Scopes(defaultdict):
         for item in items:
             chunks = item.split(":")
             if len(chunks) == 2:
-                result[chunks[0]].add(chunks[1])
+                root = chunks[0]
+                scope = chunks[1]
             elif len(chunks) == 1:
-                result[_root].add(item)
+                root = _root
+                scope = chunks[0]
             else:
                 raise ConanException("Bad scope %s" % item)
-        if "!dev" in result[_root]:
-            result[_root].remove("!dev")
-            result[_root].remove("dev")
+            try:
+                key, value = scope.split("=")
+            except:
+                raise ConanException("Bad scope %s" % item)
+            v = value.upper()
+            if v == "TRUE":
+                value = True
+            elif v == "FALSE":
+                value = False
+            elif v == "NONE":
+                value = None
+            result[root][key] = value
         return result
 
-    @property
-    def root(self):
-        return self[_root]
+    def update_scope(self, other):
+        for name, scopes in other.items():
+            self[name].update(scopes)
 
     @staticmethod
     def loads(text):
@@ -66,7 +89,7 @@ class Scopes(defaultdict):
         result = []
         for name, scopes in sorted(self.items()):
             if name != _root:
-                result.extend("%s:%s" % (name, s) for s in sorted(scopes))
+                result.extend("%s:%s=%s" % (name, k, v) for (k, v) in sorted(scopes.items()))
             else:
-                result.extend(sorted(scopes))
+                result.extend("%s=%s" % (k, v) for (k, v) in sorted(scopes.items()))
         return "\n".join(result)

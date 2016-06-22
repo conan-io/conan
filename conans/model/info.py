@@ -80,10 +80,14 @@ class RequirementsInfo(object):
     @property
     def sha(self):
         result = []
-        for key in sorted(self._data):
-            non_dev = key.conan.name in self._non_devs_requirements
-            if non_dev:
+        if self._non_devs_requirements is None:
+            for key in sorted(self._data):
                 result.append(self._data[key].sha)
+        else:
+            for key in sorted(self._data):
+                non_dev = key.conan.name in self._non_devs_requirements
+                if non_dev:
+                    result.append(self._data[key].sha)
         return sha1('\n'.join(result).encode())
 
     def dumps(self):
@@ -91,7 +95,8 @@ class RequirementsInfo(object):
         for ref in sorted(self._data):
             dumped = self._data[ref].dumps()
             if dumped:
-                dev = ref.conan.name not in self._non_devs_requirements
+                dev = (self._non_devs_requirements is not None and
+                       ref.conan.name not in self._non_devs_requirements)
                 if dev:
                     dumped += " DEV"
                 result.append(dumped)
@@ -139,7 +144,7 @@ class ConanInfo(object):
         result.scope = None
         result.requires.add(indirect_requires)
         result.full_requires.extend(indirect_requires)
-        result._non_devs_requirements = non_devs_requirements
+        result._non_devs_requirements = non_devs_requirements  # Can be None
         return result
 
     @staticmethod
