@@ -1,4 +1,7 @@
 from conans.errors import ConanException, ConanConnectionError
+from conans.util.log import logger
+import traceback
+from conans.util.files import save
 
 
 class Uploader(object):
@@ -23,7 +26,7 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url):
+    def download(self, url, file_path=None):
         ret = bytearray()
         response = self.requester.get(url, stream=True, verify=self.verify)
         if not response.ok:
@@ -33,14 +36,22 @@ class Downloader(object):
             total_length = response.headers.get('content-length')
 
             if total_length is None:  # no content length header
-                ret += response.content
+                if not file_path:
+                    ret += response.content
+                else:
+                    save(file_path, response.content, append=True)
             else:
                 dl = 0
                 total_length = int(total_length)
                 last_progress = None
-                for data in response.iter_content(chunk_size=1024):
+                chunk_size = 1024 if not file_path else 1024 * 100
+                for data in response.iter_content(chunk_size=chunk_size):
                     dl += len(data)
-                    ret.extend(data)
+                    if not file_path:
+                        ret.extend(data)
+                    else:
+                        save(file_path, data, append=True)
+
                     units = progress_units(dl, total_length)
                     if last_progress != units:  # Avoid screen refresh if nothing has change
                         if self.output:
@@ -49,6 +60,8 @@ class Downloader(object):
 
             return bytes(ret)
         except Exception as e:
+            logger.debug(e.__class__)
+            logger.debug(traceback.format_exc())
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))
