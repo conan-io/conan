@@ -41,7 +41,7 @@ from conans.model import Generator
 from conans.paths import BUILD_INFO
 from conans import ConanFile, CMake
 
-class MyCustomGenerator(Generator):
+class MyCustomMultiGenerator(Generator):
     @property
     def filename(self):
         return "customfile.gen"
@@ -52,7 +52,7 @@ class MyCustomGenerator(Generator):
                 "file2.gen": "CustomContent2"}
 
 
-class MyCustomGeneratorPackage(ConanFile):
+class NoMatterTheName(ConanFile):
     name = "MyCustomGen"
     version = "0.2"
 """
@@ -62,7 +62,7 @@ consumer_multi = """
 MyCustomGen/0.2@lasote/stable
 
 [generators]
-MyCustomGenerator
+MyCustomMultiGenerator
 """
 
 
@@ -118,7 +118,8 @@ class CustomGeneratorTest(unittest.TestCase):
         files = {CONANFILE_TXT: consumer_multi}
         client.save(files, clean_first=True)
         client.run("install --build")
-        self.assertIn("Generator MyCustomGenerator is multifile. Property 'filename' not used",
+        self.assertIn("Generator MyCustomMultiGenerator is multifile. "
+                      "Property 'filename' not used",
                       client.user_io.out)
         for i in (1, 2):
             generated = load(os.path.join(client.current_folder, "file%d.gen" % i))
