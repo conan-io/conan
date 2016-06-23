@@ -56,9 +56,10 @@ def unzip(filename, destination="."):
             txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
             print(txt_msg, end='')
             try:
-                # the limit is 200 to account for 40 chars of SHA in build/sha_xxx
+                # the limit is 230 to account for 10 chars of SHA in b/xxxx (in shorted paths)
                 # and 20 chars for build system extra subfolders (cmake mytarget.dir/debug, etc)
-                if len(file_.filename) + len(full_path) > 200:
+                # Win limit is 260
+                if len(file_.filename) + len(full_path) > 230:
                     raise ValueError("Filename too long")
                 z.extract(file_, full_path)
             except Exception as e:
@@ -87,9 +88,9 @@ def download(url, filename, verify=True):
         import conans.client.rest.cacert as cacert
         verify = cacert.file_path
     downloader = Downloader(requests, out, verify=verify)
-    content = downloader.download(url)
+    downloader.download(url, filename)
     out.writeln("")
-    save(filename, content)
+#     save(filename, content)
 
 
 def replace_in_file(file_path, search, replace):

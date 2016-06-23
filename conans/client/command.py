@@ -703,6 +703,7 @@ def get_command():
     user_io = UserIO(out=out)
 
     user_folder = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
+
     try:
         # To capture exceptions in conan.conf parsing
         paths = ConanPaths(user_folder, None, out)
