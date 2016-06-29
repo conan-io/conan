@@ -14,8 +14,9 @@ OTHER_CFLAGS = $(inherited)
 OTHER_CPLUSPLUSFLAGS = $(inherited)
 '''
 
-    def __init__(self, deps_cpp_info, cpp_info):
-        super(XCodeGenerator, self).__init__(deps_cpp_info, cpp_info)
+    def __init__(self, conanfile):
+        super(XCodeGenerator, self).__init__(conanfile)
+        deps_cpp_info = conanfile.deps_cpp_info
         self.include_dirs = " ".join('"%s"' % p.replace("\\", "/")
                                      for p in deps_cpp_info.include_paths)
         self.lib_dirs = " ".join('"%s"' % p.replace("\\", "/")

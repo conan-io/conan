@@ -23,10 +23,17 @@ class InfoTest(unittest.TestCase):
                 It is recommended to add the package license as attribute""")
             self.assertIn(expected_output, self.client.user_io.out)
 
-        files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
+        if number != "Hello2":
+            files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
                                                     'version = "0.1"\n'
                                                     '    url= "myurl"\n'
                                                     '    license = "MIT"')
+        else:
+            files[CONANFILE] = files[CONANFILE].replace('version = "0.1"',
+                                                    'version = "0.1"\n'
+                                                    '    url= "myurl"\n'
+                                                    '    license = "MIT", "GPL"')
+
         self.client.save(files)
         if export:
             self.client.run("export lasote/stable")
@@ -38,12 +45,12 @@ class InfoTest(unittest.TestCase):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("info")
+        self.client.run("info -u")
         expected_output = textwrap.dedent(
             """\
             Hello2/0.1@PROJECT
                 URL: myurl
-                License: MIT
+                Licenses: MIT, GPL
                 Requires:
                     Hello1/0.1@lasote/stable
             Hello0/0.1@lasote/stable
@@ -62,4 +69,28 @@ class InfoTest(unittest.TestCase):
                     Hello2/0.1@PROJECT
                 Requires:
                     Hello0/0.1@lasote/stable""")
+        self.assertIn(expected_output, self.client.user_io.out)
+
+        self.client.run("info -u --only=url")
+        expected_output = textwrap.dedent(
+            """\
+            Hello2/0.1@PROJECT
+                URL: myurl
+            Hello0/0.1@lasote/stable
+                URL: myurl
+            Hello1/0.1@lasote/stable
+                URL: myurl""")
+        self.assertIn(expected_output, self.client.user_io.out)
+        self.client.run("info -u --only=url,license")
+        expected_output = textwrap.dedent(
+            """\
+            Hello2/0.1@PROJECT
+                URL: myurl
+                Licenses: MIT, GPL
+            Hello0/0.1@lasote/stable
+                URL: myurl
+                License: MIT
+            Hello1/0.1@lasote/stable
+                URL: myurl
+                License: MIT""")
         self.assertIn(expected_output, self.client.user_io.out)

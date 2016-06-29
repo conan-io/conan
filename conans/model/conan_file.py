@@ -29,7 +29,7 @@ def create_options(conanfile):
 
 def create_requirements(conanfile):
     try:
-        # Actual requirements of this conans
+        # Actual requirements of this package
         if not hasattr(conanfile, "requires"):
             return Requirements()
         else:
@@ -69,8 +69,9 @@ class ConanFile(object):
     name = None
     version = None  # Any str, can be "1.1" or whatever
     url = None  # The URL where this File is located, as github, to collaborate in package
-    license = None  # The license of the PACKAGE, just a shortcut, does not replace or
-                    # change the actual license of the source code
+    # The license of the PACKAGE, just a shortcut, does not replace or
+    # change the actual license of the source code
+    license = None
     author = None  # Main maintainer/responsible for the package, any format
 
     def __init__(self, output, runner, settings, conanfile_directory):
@@ -80,8 +81,8 @@ class ConanFile(object):
 
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
-        self.generators = [self.generators] if isinstance(self.generators, str) \
-                                            else self.generators
+        if isinstance(self.generators, str):
+            self.generators = [self.generators]
 
         # User defined options
         self.options = create_options(self)
@@ -100,6 +101,25 @@ class ConanFile(object):
         self._runner = runner
 
         self._conanfile_directory = conanfile_directory
+        self._scope = None
+
+    @property
+    def scope(self):
+        return self._scope
+
+    @scope.setter
+    def scope(self, value):
+        self._scope = value
+        if value.dev:
+            self.requires.allow_dev = True
+            try:
+                if hasattr(self, "dev_requires"):
+                    if isinstance(self.dev_requires, tuple):
+                        self.requires.add_dev(*self.dev_requires)
+                    else:
+                        self.requires.add_dev(self.dev_requires, )
+            except Exception as e:
+                raise ConanException("Error while initializing dev_requirements. %s" % str(e))
 
     @property
     def conanfile_directory(self):

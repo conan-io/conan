@@ -4,16 +4,16 @@ from conans.server.conf import get_file_manager
 from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
-import os
 from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
 from conans.model.version import Version
 from conans.server.migrate import migrate_and_get_server_config
 from conans import __version__ as SERVER_VERSION
+from conans.paths import conan_expand_user
 
 
 class ServerLauncher(object):
     def __init__(self):
-        user_folder = os.path.expanduser("~")
+        user_folder = conan_expand_user("~")
 
         server_config = migrate_and_get_server_config(user_folder)
 

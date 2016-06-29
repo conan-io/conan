@@ -42,16 +42,15 @@ class QmakeGenerator(Generator):
         template_all = template
         all_flags = template_all.format(dep_name="", deps=deps)
         sections.append(all_flags)
-        
+
         template_deps = template + 'CONAN{dep_name}_ROOT = {deps.rootpath}\n'
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             deps = DepsCppQmake(dep_cpp_info)
             dep_flags = template_deps.format(dep_name="_" + dep_name.upper(), deps=deps)
             sections.append(dep_flags)
-            
+
         output = "\n".join(sections)
-        
         output += ('\nCONFIG(conan_basic_setup) {\n'
                    '    INCLUDEPATH += $$CONAN_INCLUDEPATH\n'
                    '    LIBS += $$CONAN_LIBS\n'

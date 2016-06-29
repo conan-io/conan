@@ -24,11 +24,13 @@ import re
 from conans.info import SearchInfo
 from conans.model.build_info import DepsCppInfo
 from conans.client import packager
+from conans.client.detect import detected_os
 from conans.client.package_copier import PackageCopier
 from conans.client.output import ScopedOutput
 from conans.client.proxy import ConanProxy
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.file_copier import report_copied_files
+from conans.model.scope import Scopes
 
 
 def get_user_channel(text):
@@ -52,11 +54,14 @@ class ConanManager(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
+        self._current_scopes = None
 
-    def _loader(self, current_path=None, user_settings_values=None, user_options_values=None):
+    def _loader(self, current_path=None, user_settings_values=None, user_options_values=None,
+                scopes=None):
         # The disk settings definition, already including the default disk values
         settings = self._paths.settings
         options = OptionsValues()
+        conaninfo_scopes = Scopes()
 
         if current_path:
             conan_info_path = os.path.join(current_path, CONANINFO)
@@ -64,6 +69,7 @@ class ConanManager(object):
                 existing_info = ConanInfo.load_file(conan_info_path)
                 settings.values = existing_info.full_settings
                 options = existing_info.full_options  # Take existing options from conaninfo.txt
+                conaninfo_scopes = existing_info.scope
 
         if user_settings_values:
             aux_values = Values.from_list(user_settings_values)
@@ -74,7 +80,11 @@ class ConanManager(object):
             # into account, just those from CONANFILE + user command line
             options = OptionsValues.from_list(user_options_values)
 
-        return ConanFileLoader(self._runner, settings, options=options)
+        if scopes:
+            conaninfo_scopes.update_scope(scopes)
+
+        self._current_scopes = conaninfo_scopes
+        return ConanFileLoader(self._runner, settings, options=options, scopes=conaninfo_scopes)
 
     def export(self, user, conan_file_path, keep_source=False):
         """ Export the conans
@@ -98,7 +108,6 @@ class ConanManager(object):
                                    "It is recommended to add the package license as attribute")
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
-
         conan_ref_str = str(conan_ref)
         # Maybe a platform check could be added, but depends on disk partition
         info = self.file_manager.search(conan_ref_str, ignorecase=True)
@@ -132,7 +141,7 @@ class ConanManager(object):
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, info=None, filename=None, update=False, check_updates=False,
-                integrity=False):
+                integrity=False, scopes=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -146,7 +155,7 @@ class ConanManager(object):
             reference_given = False
             reference = None
 
-        loader = self._loader(current_path, settings, options)
+        loader = self._loader(current_path, settings, options, scopes)
         # Not check for updates for info command, it'll be checked when dep graph is built
         remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager,
                                   remote, update=update, check_updates=check_updates,
@@ -180,12 +189,29 @@ class ConanManager(object):
         deps_graph = builder.load(reference, conanfile)
         registry = RemoteRegistry(self._paths.registry, self._user_io.out)
         if info:
-            graph_updates_info = builder.get_graph_updates_info(deps_graph)
+            if check_updates:
+                graph_updates_info = builder.get_graph_updates_info(deps_graph)
+            else:
+                graph_updates_info = {}
             Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                                   info, registry, graph_updates_info,
                                                   remote)
             return
         Printer(self._user_io.out).print_graph(deps_graph, registry)
+
+        # Warn if os doesn't match
+        try:
+            if detected_os() != conanfile.settings.os:
+                message = '''You are building this package with settings.os='%s' on a '%s' system.
+If this is your intention, you can ignore this message.
+If not:
+     - Check the passed settings (-s)
+     - Check your global settings in ~/.conan/conan.conf
+     - Remove conaninfo.txt to avoid bad cached settings
+''' % (conanfile.settings.os, detected_os())
+                self._user_io.out.warn(message)
+        except ConanException:  # Setting os doesn't exist
+            pass
 
         installer = ConanInstaller(self._paths, self._user_io, remote_proxy)
         installer.install(deps_graph, build_mode)
@@ -196,6 +222,7 @@ class ConanManager(object):
             # Just in case the current package is header only, we still store the full settings
             # for reference and compiler checks
             conanfile.info.full_settings = loader._settings.values
+            conanfile.info.scope = self._current_scopes
             content = normalize(conanfile.info.dumps())
             save(os.path.join(current_path, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)

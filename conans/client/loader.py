@@ -13,10 +13,11 @@ from conans.model.settings import Settings
 import sys
 from conans.model.conan_generator import Generator
 from conans.client.generators import _save_generator
+from conans.model.scope import Scopes
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, options):
+    def __init__(self, runner, settings, options, scopes):
         '''
         param settings: Settings object, to assign to ConanFile at load time
         param options: OptionsValues, necessary so the base conanfile loads the options
@@ -25,8 +26,10 @@ class ConanFileLoader(object):
         self._runner = runner
         assert isinstance(settings, Settings)
         assert isinstance(options, OptionsValues)
+        assert isinstance(scopes, Scopes)
         self._settings = settings
         self._options = options
+        self._scopes = scopes
 
     def _create_check_conan(self, conan_file, consumer, conan_file_path, output, filename):
         """ Check the integrity of a given conanfile
@@ -103,6 +106,10 @@ class ConanFileLoader(object):
             result = self._create_check_conan(loaded, consumer, conan_file_path, output, filename)
             if consumer:
                 result.options.initialize_upstream(self._options)
+                # If this is the consumer project, it has no name
+                result.scope = self._scopes.package_scope()
+            else:
+                result.scope = self._scopes.package_scope(result.name)
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conan_file_path, str(e)))
@@ -132,7 +139,7 @@ class ConanFileLoader(object):
         # imports method
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
                                                                parser.import_parameters)
-
+        conanfile.scope = self._scopes.package_scope()
         return conanfile
 
 

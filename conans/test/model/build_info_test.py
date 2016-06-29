@@ -1,5 +1,7 @@
 import unittest
 from conans.model.build_info import DepsCppInfo
+from conans.client.generators import TXTGenerator
+from collections import namedtuple
 
 
 class BuildInfoTest(unittest.TestCase):
@@ -10,15 +12,16 @@ class BuildInfoTest(unittest.TestCase):
                              getattr(item2, field))
 
     def help_test(self):
-        imports = DepsCppInfo()
-        imports.includedirs.append("C:/whatever")
-        imports.includedirs.append("C:/whenever")
-        imports.libdirs.append("C:/other")
-        imports.libs.extend(["math", "winsock", "boost"])
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.includedirs.append("C:/whatever")
+        deps_cpp_info.includedirs.append("C:/whenever")
+        deps_cpp_info.libdirs.append("C:/other")
+        deps_cpp_info.libs.extend(["math", "winsock", "boost"])
         child = DepsCppInfo()
         child.includedirs.append("F:/ChildrenPath")
         child.cppflags.append("cxxmyflag")
-        imports._dependencies["Boost"] = child
-        output = repr(imports)
-        imports2 = DepsCppInfo.loads(output)
-        self._equal(imports, imports2)
+        deps_cpp_info._dependencies["Boost"] = child
+        fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info")
+        output = TXTGenerator(fakeconan(deps_cpp_info, None)).content
+        deps_cpp_info2 = DepsCppInfo.loads(output)
+        self._equal(deps_cpp_info, deps_cpp_info2)

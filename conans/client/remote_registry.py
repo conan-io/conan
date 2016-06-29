@@ -5,7 +5,6 @@ from collections import OrderedDict, namedtuple
 import fasteners
 
 
-
 default_remotes = """conan.io https://server.conan.io
 local http://localhost:9300
 """
@@ -154,7 +153,7 @@ class RemoteRegistry(object):
             if remote_name not in remotes:
                 raise ConanException("%s not found in remotes" % remote_name)
             del remotes[remote_name]
-            refs = {k: v for k, v in refs.items() if v!=remote_name}
+            refs = {k: v for k, v in refs.items() if v != remote_name}
             self._save(remotes, refs)
 
     def update(self, remote_name, remote):
