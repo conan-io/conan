@@ -260,7 +260,7 @@ path to the CMake binary directory, like this:
 
     # Alias to test
     def test(self, *args):
-        """ (deprecated). Alias to test_pkg, use it instead
+        """ (deprecated). Alias to test_package, use it instead
         """
         self.test_package(*args)
 
