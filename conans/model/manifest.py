@@ -49,8 +49,9 @@ class FileTreeManifest(object):
         file_dict.pop(CONAN_MANIFEST, None)  # Exclude the MANIFEST itself
         file_dict.pop(CONANFILE + "c", None)  # Exclude the CONANFILE.pyc
         file_dict.pop(".DS_Store", None)  # Exclude tmp in mac
-        
-        file_dict = {key:value for key, value in file_dict.items() if not key.startswith("__pycache__")}
+
+        file_dict = {key: value for key, value in file_dict.items()
+                     if not key.startswith("__pycache__")}
 
         return cls(date, file_dict)
 

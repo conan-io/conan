@@ -3,28 +3,31 @@ from conans.paths import BUILD_INFO_QBS
 
 
 class DepsCppQbs(object):
-    def __init__(self, deps_cpp_info, cpp_info):
-        super(DepsCppQbs, self).__init__(deps_cpp_info, cpp_info)
+    def __init__(self, deps_cpp_info):
         delimiter = ",\n                "
-        self.include_paths = delimiter.join('"%s"' % p.replace("\\", "/") 
+        self.include_paths = delimiter.join('"%s"' % p.replace("\\", "/")
                                             for p in deps_cpp_info.include_paths)
-        self.lib_paths = delimiter.join('"%s"' % p.replace("\\", "/") 
+        self.lib_paths = delimiter.join('"%s"' % p.replace("\\", "/")
                                         for p in deps_cpp_info.lib_paths)
         self.libs = delimiter.join('"%s"' % l for l in deps_cpp_info.libs)
         self.defines = delimiter.join('"%s"' % d for d in deps_cpp_info.defines)
         self.cppflags = delimiter.join('"%s"' % d
                                        for d in deps_cpp_info.cppflags)
         self.cflags = delimiter.join('"%s"' % d for d in deps_cpp_info.cflags)
-        self.sharedlinkflags = delimiter.join('"%s"' % d 
+        self.sharedlinkflags = delimiter.join('"%s"' % d
                                               for d in deps_cpp_info.sharedlinkflags)
-        self.sharedlinkflags += delimiter.join('"%s"' % d 
+        self.sharedlinkflags += delimiter.join('"%s"' % d
                                                for d in deps_cpp_info.exelinkflags)
-        self.bin_paths = delimiter.join('"%s"' % p.replace("\\", "/") 
+        self.bin_paths = delimiter.join('"%s"' % p.replace("\\", "/")
                                         for p in deps_cpp_info.bin_paths)
         self.rootpath = '%s' % deps_cpp_info.rootpath.replace("\\", "/")
 
 
 class QbsGenerator(Generator):
+    @property
+    def filename(self):
+        return BUILD_INFO_QBS
+
     @property
     def content(self):
         deps = DepsCppQbs(self.deps_build_info)

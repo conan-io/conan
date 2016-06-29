@@ -149,18 +149,22 @@ class ConanInstaller(object):
         build_allowed = force_build or build_mode is True
 
         if build_allowed:
-            rmdir(build_folder)
-            rmdir(package_folder)
+            try:
+                rmdir(build_folder)
+                rmdir(package_folder)
+            except Exception as e:
+                raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
+                                     "Close any app using it, and retry" % str(e))
             if force_build:
                 output.warn('Forced build from source')
 
-            self._build_package(export_folder, src_folder, build_folder, conan_file, output)
+            self._build_package(export_folder, src_folder, build_folder, package_folder,
+                                conan_file, output)
 
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
             output.info("Generated %s" % CONANINFO)
-            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file.deps_cpp_info,
-                                                                      conan_file.cpp_info).content)
+            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
             output.info("Generated %s" % BUILD_INFO)
 
             os.chdir(build_folder)
@@ -232,7 +236,8 @@ Package configuration:
                     output.warn("**** Please delete it manually ****")
                 raise ConanException("%s: %s" % (conan_file.name, str(e)))
 
-    def _build_package(self, export_folder, src_folder, build_folder, conan_file, output):
+    def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file,
+                       output):
         """ builds the package, creating the corresponding build folder if necessary
         and copying there the contents from the src folder. The code is duplicated
         in every build, as some configure processes actually change the source
@@ -260,6 +265,7 @@ Package configuration:
             # This is necessary because it is different for user projects
             # than for packages
             conan_file._conanfile_directory = build_folder
+            conan_file.package_folder = package_folder
             conan_file.build()
             self._out.writeln("")
             output.success("Package '%s' built" % os.path.basename(build_folder))

@@ -68,7 +68,7 @@ def _generic_algorithm_sum(file_path, algorithm_name):
         return m.hexdigest()
 
 
-def save(path, content):
+def save(path, content, append=False):
     '''
     Saves a file with given content
     Params:
@@ -83,7 +83,8 @@ def save(path, content):
     if six.PY3:
         if not isinstance(content, bytes):
             content = bytes(content, "utf-8")
-    with open(path, 'wb') as handle:
+    mode = 'wb' if not append else 'ab'
+    with open(path, mode) as handle:
         handle.write(content)
 
 

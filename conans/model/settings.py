@@ -34,7 +34,7 @@ class Settings(ConfigDict):
                     values_to_remove.append(value)
                 else:  # recursion
                     if (not config_item.is_final and isinstance(other_field_def, dict) and
-                        other_field_def[value] is not None):
+                            other_field_def[value] is not None):
                         config_item[value].constraint(other_field_def[value])
 
             # Sanity check of input constraint values

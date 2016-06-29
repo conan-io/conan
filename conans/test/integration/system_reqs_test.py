@@ -98,8 +98,8 @@ class SystemReqsTest(unittest.TestCase):
 
     def wrong_output_test(self):
         client = TestClient()
-        files = {'conanfile.py': base_conanfile.replace("%GLOBAL%", "").
-                                                replace('"Installed my stuff"', 'None')}
+        files = {'conanfile.py':
+                 base_conanfile.replace("%GLOBAL%", "").replace('"Installed my stuff"', 'None')}
         client.save(files)
         client.run("export user/testing")
         client.run("install Test/0.1@user/testing --build missing")

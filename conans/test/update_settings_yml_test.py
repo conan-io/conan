@@ -34,10 +34,10 @@ compiler:
         runtime: [None, MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14"]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
-        version: ["5.0", "5.1", "6.0", "6.1", "7.0"]
+        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.1", "7.2", "7.3"]
         libcxx: [libstdc++, libc++]
 
 """

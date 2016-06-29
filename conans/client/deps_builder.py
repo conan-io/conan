@@ -153,11 +153,12 @@ class DepsGraph(object):
                 # There might be options that are not upstream
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
+                non_devs = self.non_dev_nodes(node)
                 conanfile.info = ConanInfo.create(conanfile.settings.values,
                                                   conanfile.options.values,
-                                                  direct_reqs)
-                conanfile.info.requires.add(indirect_reqs)
-                conanfile.info.full_requires.extend(indirect_reqs)
+                                                  direct_reqs,
+                                                  indirect_reqs,
+                                                  non_devs)
 
                 # Once we are done, call conan_info() to narrow and change possible values
                 conanfile.conan_info()
@@ -253,6 +254,28 @@ class DepsGraph(object):
             result.append((node, self.private_inverse_neighbors(node)))
         return result
 
+    def non_dev_nodes(self, root):
+        if not root.conanfile.scope.dev:
+            # Optimization. This allow not to check it for most packages, which dev=False
+            return None
+        open_nodes = set([root])
+        result = set()
+        expanded = set()
+        while open_nodes:
+            new_open_nodes = set()
+            for node in open_nodes:
+                neighbors = self.neighbors(node)
+                requires = node.conanfile.requires
+                for n in neighbors:
+                    requirement = requires[n.conan_ref.name]
+                    if not requirement.dev and n not in expanded:
+                        result.add(n.conan_ref.name)
+                        new_open_nodes.add(n)
+                        expanded.add(n)
+
+            open_nodes = new_open_nodes
+        return result
+
 
 class DepsBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
@@ -338,6 +361,7 @@ class DepsBuilder(object):
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
+            conanfile.requires.output = self._output
             conanfile.config()
             conanfile.options.propagate_upstream(down_options, down_ref, conanref, self._output)
             conanfile.config()
@@ -348,11 +372,15 @@ class DepsBuilder(object):
             conanfile.options.validate()
 
             # Update requirements (overwrites), computing new upstream
-            conanfile.requires.output = self._output
             conanfile.requirements()
             new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
+        except Exception as e:
+            import traceback
+            tr = traceback.format_exc()
+            self._output.warn(tr)
+            raise ConanException("%s: conanfile.py: %s" % (conanref or "Conanfile", str(e)))
         return new_down_reqs, new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req):

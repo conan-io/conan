@@ -17,7 +17,7 @@ class PrivateDepsTest(unittest.TestCase):
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
+        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def _export_upload(self, name=0, version=None, deps=None, msg=None, static=True):
         dll_export = self.client.default_compiler_visual_studio and not static
@@ -36,9 +36,9 @@ class PrivateDepsTest(unittest.TestCase):
         self._export_upload("Hello2", "0.1", deps=[("Hello00/0.2@lasote/stable", "private")],
                             static=False)
 
-        client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})  # Mocked userio
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files3 = cpp_hello_conan_files("Hello3", "0.1", ["Hello1/0.1@lasote/stable",
-                                                        "Hello2/0.1@lasote/stable"])
+                                                         "Hello2/0.1@lasote/stable"])
 
         # WE need to copy the DLLs and dylib
         client.save(files3)
@@ -70,9 +70,9 @@ class PrivateDepsTest(unittest.TestCase):
         client.run("upload Hello2/0.1@lasote/stable --all")
         self.assertEqual(str(client.user_io.out).count("Uploading package"), 1)
 
-        client2 = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files2 = cpp_hello_conan_files("Hello3", "0.1", ["Hello1/0.1@lasote/stable",
-                                                          "Hello2/0.1@lasote/stable"])
+                                                         "Hello2/0.1@lasote/stable"])
 
         # WE need to copy the DLLs
         client2.save(files2)
@@ -93,7 +93,7 @@ class PrivateDepsTest(unittest.TestCase):
                           'Hello #'],
                          str(client2.user_io.out).splitlines()[-5:])
         files3 = cpp_hello_conan_files("Hello3", "0.2", ["Hello1/0.1@lasote/stable",
-                                                          "Hello2/0.1@lasote/stable"], language=1)
+                                                         "Hello2/0.1@lasote/stable"], language=1)
 
         client2.save(files3)
         client2.run('install -o language=1 --build missing')
