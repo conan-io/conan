@@ -13,7 +13,7 @@ from conans.client.store.localdb import LocalDB
 from conans.util.log import logger
 from conans.model.ref import ConanFileReference
 from conans.client.manager import ConanManager
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, conan_expand_user
 import requests
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans import __version__ as CLIENT_VERSION
@@ -21,11 +21,12 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.model.version import Version
 from conans.client.migrations import ClientMigrator
 import hashlib
-from conans.util.files import rmdir, load
+from conans.util.files import rmdir, load, save_files
 from argparse import RawTextHelpFormatter
 import re
 from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
+from conans.model.scope import Scopes
 
 
 class Extender(argparse.Action):
@@ -97,7 +98,7 @@ class Command(object):
 
     def _detect_tested_library_name(self):
         conanfile_content = load(CONANFILE)
-        match = re.search('^\s*name\s*=\s*"(.*)"', conanfile_content, re.MULTILINE)
+        match = re.search('^\s*name\s*=\s*[\'"](.*)[\'"]', conanfile_content, re.MULTILINE)
         if match:
             return "%s*" % match.group(1)
 
@@ -154,6 +155,45 @@ path to the CMake binary directory, like this:
 
  """ % (test_folder_name))
 
+    def new(self, *args):
+        """ create a new package template conanfile.py and other optional files
+        """
+        parser = argparse.ArgumentParser(description=self.new.__doc__, prog="conan new",
+                                         formatter_class=RawTextHelpFormatter)
+        parser.add_argument("name", help='Package name, e.g.: Poco/1.7.3@user/testing')
+        parser.add_argument("-t", "--test", action='store_true', default=False,
+                            help='Create test_package skeleton to test package')
+        parser.add_argument("-i", "--header", action='store_true', default=False,
+                            help='Create a headers only package')
+        parser.add_argument("-c", "--pure_c", action='store_true', default=False,
+                            help='Create a C language package only package (non-headers)')
+
+        args = parser.parse_args(*args)
+
+        root_folder = os.getcwd()
+        try:
+            name, version, user, channel = ConanFileReference.loads(args.name)
+        except:
+            raise ConanException("Bad parameter, please use full package name,"
+                                 "e.g: MyLib/1.2.3@user/testing")
+        from conans.client.new import (conanfile, conanfile_header, test_conanfile, test_cmake,
+                                       test_main)
+        if args.header:
+            files = {"conanfile.py": conanfile_header.format(name=name, version=version)}
+        else:
+            files = {"conanfile.py": conanfile.format(name=name, version=version)}
+            if args.pure_c:
+                config = "\n    def config(self):\n        del self.settings.compiler.libcxx"
+                files["conanfile.py"] = files["conanfile.py"] + config
+        if args.test:
+            files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
+                                                                       user=user, channel=channel)
+            files["test_package/CMakeLists.txt"] = test_cmake
+            files["test_package/example.cpp"] = test_main
+        save_files(root_folder, files)
+        for f in sorted(files):
+            self._user_io.out.success("File saved: %s" % f)
+
     def test_package(self, *args):
         """ build and run your package test. Must have conanfile.py with "test"
         method and "test_package" subfolder with package consumer test project
@@ -163,6 +203,8 @@ path to the CMake binary directory, like this:
         parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
         parser.add_argument("-f", "--folder", help='alternative test folder name')
+        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                            help='Define scopes for packages')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -204,19 +246,21 @@ path to the CMake binary directory, like this:
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         settings = self._get_tuples_list_from_extender_arg(args.settings)
+        scopes = Scopes.from_list(args.scope) if args.scope else None
 
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
                               remote=args.remote,
                               options=options,
                               settings=settings,
-                              build_mode=args.build)
+                              build_mode=args.build,
+                              scopes=scopes)
         self._test_check(test_folder, test_folder_name)
         self._manager.build(test_folder, build_folder, test=True)
 
     # Alias to test
     def test(self, *args):
-        """ (deprecated). Alias to test_pkg, use it instead
+        """ (deprecated). Alias to test_package, use it instead
         """
         self.test_package(*args)
 
@@ -239,6 +283,8 @@ path to the CMake binary directory, like this:
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="update with new upstream packages")
+        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                            help='Define scopes for packages')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -261,7 +307,7 @@ path to the CMake binary directory, like this:
             args.build = self._get_build_sources_parameter(args.build)
             options = self._get_tuples_list_from_extender_arg(args.options)
             settings = self._get_tuples_list_from_extender_arg(args.settings)
-
+            scopes = Scopes.from_list(args.scope) if args.scope else None
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,
@@ -270,7 +316,8 @@ path to the CMake binary directory, like this:
                                   build_mode=args.build,
                                   filename=args.file,
                                   update=args.update,
-                                  integrity=args.integrity)
+                                  integrity=args.integrity,
+                                  scopes=scopes)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -290,6 +337,8 @@ path to the CMake binary directory, like this:
         parser.add_argument("--settings", "-s",
                             help='load settings to build the package, -s compiler:gcc',
                             nargs=1, action=Extender)
+        parser.add_argument("--only", "-n",
+                            help='show fields only')
         parser.add_argument("--integrity", "-i", action='store_true', default=False,
                             help='Check that the stored recipe or package manifests are correct')
         parser.add_argument("--update", "-u", action='store_true', default=False,
@@ -311,7 +360,7 @@ path to the CMake binary directory, like this:
                               options=options,
                               settings=settings,
                               build_mode=False,
-                              info=True,
+                              info=args.only or True,
                               check_updates=args.update,
                               integrity=args.integrity,
                               filename=args.file)
@@ -447,7 +496,15 @@ path to the CMake binary directory, like this:
         parser.add_argument("-p", "--password", help='User password. Use double quotes '
                             'if password with spacing, and escape quotes if existing')
         parser.add_argument("--remote", "-r", help='look for in the remote storage')
+        parser.add_argument('-c', '--clean', default=False,
+                            action='store_true', help='Remove user and tokens for all remotes')
         args = parser.parse_args(*parameters)  # To enable -h
+
+        if args.clean:
+            localdb = LocalDB(self._conan_paths.localdb)
+            localdb.init(clean=True)
+            self._user_io.out.success("Deleted user data")
+            return
         self._manager.user(args.remote, args.name, args.password)
 
     def search(self, *args):
@@ -645,7 +702,8 @@ def get_command():
     out = ConanOutput(sys.stdout, color)
     user_io = UserIO(out=out)
 
-    user_folder = os.getenv("CONAN_USER_HOME", os.path.expanduser("~"))
+    user_folder = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
+
     try:
         # To capture exceptions in conan.conf parsing
         paths = ConanPaths(user_folder, None, out)

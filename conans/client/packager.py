@@ -40,8 +40,7 @@ def create_package(conanfile, build_folder, package_folder, output):
         try:
             rmdir(package_folder)
         except Exception as e_rm:
-            output.error("Unable to remove package folder %s\n%s"
-                                    % (package_folder, str(e_rm)))
+            output.error("Unable to remove package folder %s\n%s" % (package_folder, str(e_rm)))
             output.warn("**** Please delete it manually ****")
         raise ConanException("%s: %s" % (conanfile.name, str(e)))
 

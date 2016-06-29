@@ -12,19 +12,26 @@ class ConfigParser(object):
         self._sections = {}
         self._allowed_fields = allowed_fields or []
         pattern = re.compile("^\[([a-z_]{2,50})\]")
-        current_lines = []
+        current_lines = None
         for line in text.splitlines():
             line = line.strip()
             if not line or line[0] == '#':
                 continue
-            m = pattern.match(line)
-            if m:
-                group = m.group(1)
-                if self._allowed_fields and group not in self._allowed_fields:
-                    raise ConanException("ConfigParser: Unrecognized field '%s'" % group)
+            field = None
+            if line[0] == '[':
+                m = pattern.match(line)
+                if m:
+                    field = m.group(1)
+                else:
+                    raise ConanException("ConfigParser: Bad syntax '%s'" % line)
+            if field:
+                if self._allowed_fields and field not in self._allowed_fields:
+                    raise ConanException("ConfigParser: Unrecognized field '%s'" % field)
                 current_lines = []
-                self._sections[group] = current_lines
+                self._sections[field] = current_lines
             else:
+                if current_lines is None:
+                    raise ConanException("ConfigParser: Unexpected line '%s'" % line)
                 if parse_lines:
                     line = line.split('#')[0]
                     line = line.strip()

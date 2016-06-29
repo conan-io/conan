@@ -86,8 +86,11 @@ class CompileHelpersTest(unittest.TestCase):
 
         env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
         self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
-                                            '-Lpath/to/lib2 -m32" CFLAGS="-m32 cflag1 -s -DNDEBUG" '
-                                            'CPPFLAGS="-m32 cppflag1" '
+                                            '-Lpath/to/lib2 -llib1 -llib2 -m32" '
+                                            'CFLAGS="-m32 cflag1 -s -DNDEBUG '
+                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
+                                            'CPPFLAGS="-m32 cppflag1 -s -DNDEBUG '
+                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
                                             'C_INCLUDE_PATH="path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
                                             'CPP_INCLUDE_PATH="path/to/includes/lib1":'

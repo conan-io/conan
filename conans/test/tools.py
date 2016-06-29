@@ -33,6 +33,7 @@ from collections import Counter
 from conans.client.paths import ConanPaths
 import six
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.short_paths_conf import ShortPathsReferences
 
 
 class TestingResponse(object):
@@ -289,9 +290,11 @@ class TestClient(object):
         self.base_folder = base_folder or temp_folder()
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
-        self.paths = ConanPaths(self.base_folder, self.storage_folder, TestBufferConanOutput())
+        self.paths = ConanPaths(self.base_folder, self.storage_folder,
+                                TestBufferConanOutput())
         self.default_settings(get_env("CONAN_COMPILER", "gcc"),
-                              get_env("CONAN_COMPILER_VERSION", "4.8"))
+                              get_env("CONAN_COMPILER_VERSION", "4.8"),
+                              get_env("CONAN_LIBCXX", "libstdc++"))
 
         self.init_dynamic_vars()
 
@@ -303,7 +306,7 @@ class TestClient(object):
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder()
 
-    def default_settings(self, compiler, compiler_version):
+    def default_settings(self, compiler, compiler_version, libcxx):
         """ allows to change the default settings in the file, to change compiler, version
         """
         # Set default settings in global defined
@@ -318,8 +321,7 @@ class TestClient(object):
             text += "\ncompiler=%s" % compiler
             text += "\ncompiler.version=%s" % compiler_version
             if compiler != "Visual Studio":
-                text += "\ncompiler.libcxx=libstdc++"
-    
+                text += "\ncompiler.libcxx=%s" % libcxx
             save(self.paths.conan_conf_path, text)
 
     @property
@@ -353,6 +355,7 @@ class TestClient(object):
         self._init_collaborators(user_io)
 
         # Migration system
+        self.short_paths_refs = ShortPathsReferences(self.base_folder)
         self.paths = migrate_and_get_paths(self.base_folder, TestBufferConanOutput(),
                                            manager=self.remote_manager,
                                            storage_folder=self.storage_folder)
