@@ -45,9 +45,9 @@ target:
         ]
     board:
         board: [
-            "STM32F4-Discovery",
-            "Arduino Mega",
-            "Arduino Uno",
+            stm32f4_discovery,
+            arduino_mega,
+            arduino_uno,
         ]
 """
 
