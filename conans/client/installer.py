@@ -263,6 +263,7 @@ Package configuration:
                     # it seems that "/" is counted as "\\" so it counts double
                     if len(dest_path) + (Counter(dest_path)[os.path.sep]) >= 260:
                         filtered_files.append(the_file)
+                        output.warn("Filename too long, file excluded: %s" % dest_path)
                 return filtered_files
             shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
         os.chdir(build_folder)
