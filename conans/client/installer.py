@@ -1,16 +1,19 @@
 import os
+import time
+import platform
+import fnmatch
+import shutil
+
 from conans.paths import CONANINFO, BUILD_INFO
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import ConanException
 from conans.client.packager import create_package
-import shutil
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
-import fnmatch
 from conans.client.output import ScopedOutput
-import time
+from collections import Counter
 
 
 def init_cpp_info(deps_graph, paths):
@@ -247,7 +250,21 @@ Package configuration:
         if not os.path.exists(build_folder):
             self._config_source(export_folder, src_folder, conan_file, output)
             output.info('Copying sources to build folder')
-            shutil.copytree(src_folder, build_folder, symlinks=True)
+
+            def check_max_path_len(src, files):
+                if platform.system() != "Windows":
+                    return []
+                filtered_files = []
+                for the_file in files:
+                    source_path = os.path.join(src, the_file)
+                    # Without storage path, just relative
+                    rel_path = os.path.relpath(source_path, src_folder)
+                    dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
+                    # it seems that "/" is counted as "\\" so it counts double
+                    if len(dest_path) + (Counter(dest_path)[os.path.sep]) >= 260:
+                        filtered_files.append(the_file)
+                return filtered_files
+            shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
         os.chdir(build_folder)
         conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files
