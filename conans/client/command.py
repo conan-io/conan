@@ -343,7 +343,11 @@ path to the CMake binary directory, like this:
                             help='Check that the stored recipe or package manifests are correct')
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="check updates exist from upstream remotes")
-
+        parser.add_argument("--build_order", "-bo",
+                            help='given a modified reference, return ordered list to build (CI)',
+                            nargs=1, action=Extender)
+        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                            help='Define scopes for packages')
         args = parser.parse_args(*args)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
@@ -353,17 +357,18 @@ path to the CMake binary directory, like this:
             reference = ConanFileReference.loads(args.reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, args.reference))
-
-        self._manager.install(reference=reference,
-                              current_path=current_path,
-                              remote=args.remote,
-                              options=options,
-                              settings=settings,
-                              build_mode=False,
-                              info=args.only or True,
-                              check_updates=args.update,
-                              integrity=args.integrity,
-                              filename=args.file)
+        scopes = Scopes.from_list(args.scope) if args.scope else None
+        self._manager.info(reference=reference,
+                           current_path=current_path,
+                           remote=args.remote,
+                           options=options,
+                           settings=settings,
+                           info=args.only or True,
+                           check_updates=args.update,
+                           integrity=args.integrity,
+                           filename=args.file,
+                           build_order=args.build_order,
+                           scopes=scopes)
 
     def build(self, *args):
         """ calls your project conanfile.py "build" method.
@@ -391,7 +396,8 @@ path to the CMake binary directory, like this:
             e.g. conan package OpenSSL/1.0.2e@lasote/stable 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("reference", help='package recipe reference name. e.g., openssl/1.0.2@lasote/testing')
+        parser.add_argument("reference", help='package recipe reference name. '
+                            'e.g., openssl/1.0.2@lasote/testing')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3')
@@ -406,7 +412,8 @@ path to the CMake binary directory, like this:
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
-            raise ConanException("Invalid package recipe reference. e.g., OpenSSL/1.0.2e@lasote/stable")
+            raise ConanException("Invalid package recipe reference. "
+                                 "e.g., OpenSSL/1.0.2e@lasote/stable")
 
         if not args.all and not args.package:
             raise ConanException("'conan package': Please specify --all or a package ID")
@@ -573,13 +580,17 @@ path to the CMake binary directory, like this:
         parser_upd = subparsers.add_parser('update', help='update the remote url')
         parser_upd.add_argument('remote',  help='name of the remote')
         parser_upd.add_argument('url',  help='url')
-        subparsers.add_parser('list_ref', help='list the package recipes and its associated remotes')
-        parser_padd = subparsers.add_parser('add_ref', help="associate a recipe's reference to a remote")
+        subparsers.add_parser('list_ref',
+                              help='list the package recipes and its associated remotes')
+        parser_padd = subparsers.add_parser('add_ref',
+                                            help="associate a recipe's reference to a remote")
         parser_padd.add_argument('reference',  help='package recipe reference')
         parser_padd.add_argument('remote',  help='name of the remote')
-        parser_prm = subparsers.add_parser('remove_ref', help="dissociate a recipe's reference and its remote")
+        parser_prm = subparsers.add_parser('remove_ref',
+                                           help="dissociate a recipe's reference and its remote")
         parser_prm.add_argument('reference',  help='package recipe reference')
-        parser_pupd = subparsers.add_parser('update_ref', help="update the remote associated with a package recipe")
+        parser_pupd = subparsers.add_parser('update_ref', help="update the remote associated "
+                                            "with a package recipe")
         parser_pupd.add_argument('reference',  help='package recipe reference')
         parser_pupd.add_argument('remote',  help='name of the remote')
         args = parser.parse_args(*args)
