@@ -5,7 +5,7 @@ to the local store, as an initial step before building or uploading to remotes
 import shutil
 import os
 from conans.util.files import save, load, rmdir
-from conans.paths import CONAN_MANIFEST, CONANFILE
+from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE
 from conans.errors import ConanException
 from conans.client.file_copier import FileCopier
 from conans.model.manifest import FileTreeManifest
@@ -27,10 +27,18 @@ def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, kee
         output.info("The stored package has not changed")
     else:
         output.success('A new %s version was exported' % CONANFILE)
-        if not keep_source:
-            rmdir(paths.source(conan_ref))
+        source = paths.source(conan_ref)
+        if not keep_source and os.path.exists(source):
+            output.info("Removing 'source' folder, this can take a while for big packages")
+            output.info("Use the --keep-source, -k option to skip it")
+            try:
+                rmdir(source)
+            except Exception as e:
+                output.warn("Unable to delete source folder. Will be marked as dirty for deletion")
+                output.warn(str(e))
+                save(os.path.join(source, DIRTY_FILE), "")
         output.success('%s exported to local storage' % CONANFILE)
-        output.success('Folder: %s' % destination_folder)
+        output.info('Folder: %s' % destination_folder)
 
 
 def _init_export_folder(destination_folder):
