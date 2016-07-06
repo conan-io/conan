@@ -2,7 +2,7 @@ conanfile = """from conans import ConanFile, CMake, tools
 import os
 
 
-class {name}Conan(ConanFile):
+class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
@@ -43,7 +43,7 @@ conanfile_header = """from conans import ConanFile, tools
 import os
 
 
-class {name}Conan(ConanFile):
+class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
@@ -71,7 +71,7 @@ channel = os.getenv("CONAN_CHANNEL", "{channel}")
 username = os.getenv("CONAN_USERNAME", "{user}")
 
 
-class {name}TestConan(ConanFile):
+class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     requires = "{name}/{version}@%s/%s" % (username, channel)
     generators = "cmake"
