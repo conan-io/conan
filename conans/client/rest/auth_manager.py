@@ -37,14 +37,14 @@ def input_credentials_if_unauthorized(func):
                 # token is None when you change user with user command
                 # Anonymous is not enough, ask for a user
                 self._user_io.out.info('Please log in to perform this action. '
-                                      'Execute "conan user" command. '
-                                      'If you don\'t have an account sign up here: '
-                                      'http://www.conan.io')
+                                       'Execute "conan user" command. '
+                                       'If you don\'t have an account sign up here: '
+                                       'http://www.conan.io')
                 return retry_with_new_token(self, *args, **kwargs)
             else:
                 # If our user receives a ForbiddenException propagate it, not
                 # log with other user
-                raise ForbiddenException("Unauthorized user: '%s')" % self.user)
+                raise ForbiddenException("Permission denied for user: '%s')" % self.user)
         except AuthenticationException:
             # Token expired or not valid, so clean the token and repeat the call
             # (will be anonymous call but exporting who is calling)
@@ -165,11 +165,11 @@ class ConanApiAuthManager(object):
         remote_url = self._remote.url
         prev_user = self._localdb.get_username(remote_url)
         prev_username = prev_user or "None (anonymous)"
-        if not user:       
+        if not user:
             self._user_io.out.info("Current '%s' user: %s" % (self._remote.name, prev_username))
         else:
             user = None if user.lower() == 'none' else user
-            if user and password is not None:     
+            if user and password is not None:
                 token = self._remote_auth(user, password)
             else:
                 token = None
@@ -182,10 +182,9 @@ class ConanApiAuthManager(object):
                                        % (self._remote.name, prev_username, username))
             self._localdb.set_login((user, token), remote_url)
             return token
-    
+
     def _remote_auth(self, user, password):
         try:
             return self._rest_client.authenticate(user, password)
         except UnicodeDecodeError:
             raise ConanException("Password contains not allowed symbols")
-
