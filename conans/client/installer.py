@@ -228,11 +228,11 @@ Package configuration:
             output.warn("This can take a while for big packages")
             try:
                 rmdir(src_folder)
-            except Exception as e_rm:
+            except BaseException as e_rm:
                 save(dirty, "")  # Creation of DIRTY flag
                 output.error("Unable to remove source folder %s\n%s" % (src_folder, str(e_rm)))
                 output.warn("**** Please delete it manually ****")
-                if raise_error:
+                if raise_error or isinstance(e_rm, KeyboardInterrupt):
                     raise ConanException("Unable to remove source folder")
 
         if os.path.exists(dirty):
