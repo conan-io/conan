@@ -32,7 +32,7 @@ from conans.model.scope import Scopes
 class Extender(argparse.Action):
     '''Allows to use the same flag several times in a command and creates a list with the values.
        For example:
-           conans install OpenSSL/1.0.2e@lasote/stable -o qt:value -o mode:2 -s cucumber:true
+           conans install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
            It creates:
            options = ['qt:value', 'mode:2']
            settings = ['cucumber:true']
@@ -273,7 +273,7 @@ path to the CMake binary directory, like this:
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("reference", nargs='?', default="",
                             help='package recipe reference'
-                            'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
+                            'e.g., MyPackage/1.2@user/channel or ./my_project/')
         parser.add_argument("--package", "-p", nargs=1, action=Extender,
                             help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("--all", action='store_true', default=False,
@@ -300,7 +300,7 @@ path to the CMake binary directory, like this:
                 args.package = []
             if not args.reference or not isinstance(reference, ConanFileReference):
                 raise ConanException("Invalid package recipe reference. "
-                                     "e.g., OpenSSL/1.0.2e@lasote/stable")
+                                     "e.g., MyPackage/1.2@user/channel")
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
             # Get False or a list of patterns to check
@@ -328,7 +328,7 @@ path to the CMake binary directory, like this:
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("reference", nargs='?', default="",
                             help='reference name or path to conanfile file, '
-                            'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
+                            'e.g., MyPackage/1.2@user/channel or ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("-r", "--remote", help='look for in the remote storage')
         parser.add_argument("--options", "-o",
@@ -393,11 +393,11 @@ path to the CMake binary directory, like this:
             regenerates the existing package's manifest.
             Intended for package creators, for regenerating a package without
             recompiling the source.
-            e.g. conan package OpenSSL/1.0.2e@lasote/stable 9cf83afd07b678da9c1645f605875400847ff3
+            e.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("reference", help='package recipe reference name. '
-                            'e.g., openssl/1.0.2@lasote/testing')
+                            'e.g., MyPackage/1.2@user/channel')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3')
@@ -413,7 +413,7 @@ path to the CMake binary directory, like this:
             reference = ConanFileReference.loads(args.reference)
         except:
             raise ConanException("Invalid package recipe reference. "
-                                 "e.g., OpenSSL/1.0.2e@lasote/stable")
+                                 "e.g., MyPackage/1.2@user/channel")
 
         if not args.all and not args.package:
             raise ConanException("'conan package': Please specify --all or a package ID")
@@ -472,7 +472,7 @@ path to the CMake binary directory, like this:
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
         parser.add_argument("reference", default="",
                             help='package recipe reference'
-                            'e.g., OpenSSL/1.0.2e@lasote/stable')
+                            'e.g., MyPackage/1.2@user/channel')
         parser.add_argument("user_channel", default="",
                             help='Destination user/channel'
                             'e.g., lasote/testing')
@@ -543,7 +543,7 @@ path to the CMake binary directory, like this:
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
         parser.add_argument("reference",
-                            help='package recipe reference, e.g., OpenSSL/1.0.2e@lasote/stable')
+                            help='package recipe reference, e.g., MyPackage/1.2@user/channel')
         # TODO: packageparser.add_argument('package', help='user name')
         parser.add_argument("--package", "-p", default=None, help='package ID to upload')
         parser.add_argument("--remote", "-r", help='upload to this specific remote')
