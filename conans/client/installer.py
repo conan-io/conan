@@ -224,7 +224,8 @@ Package configuration:
         dirty = os.path.join(src_folder, DIRTY_FILE)
 
         def remove_source(raise_error=False):
-            output.warning("Trying to remove dirty source folder")
+            output.warn("Trying to remove dirty source folder")
+            output.warn("This can take a while for big packages")
             try:
                 rmdir(src_folder)
             except Exception as e_rm:
