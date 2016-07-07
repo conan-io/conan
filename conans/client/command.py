@@ -173,21 +173,26 @@ path to the CMake binary directory, like this:
         root_folder = os.getcwd()
         try:
             name, version, user, channel = ConanFileReference.loads(args.name)
+            pattern = re.compile('[\W_]+')
+            package_name = pattern.sub('', name).capitalize()
         except:
             raise ConanException("Bad parameter, please use full package name,"
                                  "e.g: MyLib/1.2.3@user/testing")
         from conans.client.new import (conanfile, conanfile_header, test_conanfile, test_cmake,
                                        test_main)
         if args.header:
-            files = {"conanfile.py": conanfile_header.format(name=name, version=version)}
+            files = {"conanfile.py": conanfile_header.format(name=name, version=version,
+                                                             package_name=package_name)}
         else:
-            files = {"conanfile.py": conanfile.format(name=name, version=version)}
+            files = {"conanfile.py": conanfile.format(name=name, version=version,
+                                                      package_name=package_name)}
             if args.pure_c:
                 config = "\n    def config(self):\n        del self.settings.compiler.libcxx"
                 files["conanfile.py"] = files["conanfile.py"] + config
         if args.test:
             files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
-                                                                       user=user, channel=channel)
+                                                                       user=user, channel=channel,
+                                                                       package_name=package_name)
             files["test_package/CMakeLists.txt"] = test_cmake
             files["test_package/example.cpp"] = test_main
         save_files(root_folder, files)
