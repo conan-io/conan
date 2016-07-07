@@ -4,6 +4,7 @@ from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.tools import TestClient
+import platform
 
 
 class ExportDirtyTest(unittest.TestCase):
@@ -13,6 +14,8 @@ class ExportDirtyTest(unittest.TestCase):
     """
 
     def setUp(self):
+        if platform.system() != "Windows":
+            return
         self.client = TestClient()
         files = cpp_hello_conan_files("Hello0", "0.1")
         files[CONANFILE] = files[CONANFILE].replace("build(", "build2(")
@@ -38,6 +41,8 @@ class ExportDirtyTest(unittest.TestCase):
     def test_export_remove(self):
         """ The export is able to remove dirty source folders
         """
+        if platform.system() != "Windows":
+            return
         self.f.close()
         self.client.run("export lasote/stable")
         self.assertIn("Source folder is dirty, forcing removal", self.client.user_io.out)
@@ -47,6 +52,8 @@ class ExportDirtyTest(unittest.TestCase):
     def test_install_remove(self):
         """ The install is also able to remove dirty source folders
         """
+        if platform.system() != "Windows":
+            return
         # Now, release the handle to the file
         self.f.close()
         err = self.client.run("install Hello0/0.1@lasote/stable --build")
