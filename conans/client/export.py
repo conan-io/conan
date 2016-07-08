@@ -5,7 +5,7 @@ to the local store, as an initial step before building or uploading to remotes
 import shutil
 import os
 from conans.util.files import save, load, rmdir
-from conans.paths import CONAN_MANIFEST, CONANFILE
+from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE
 from conans.errors import ConanException
 from conans.client.file_copier import FileCopier
 from conans.model.manifest import FileTreeManifest
@@ -25,12 +25,31 @@ def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, kee
     if previous_digest and previous_digest.file_sums == digest.file_sums:
         digest = previous_digest
         output.info("The stored package has not changed")
+        modified_recipe = False
     else:
         output.success('A new %s version was exported' % CONANFILE)
-        if not keep_source:
-            rmdir(paths.source(conan_ref))
-        output.success('%s exported to local storage' % CONANFILE)
-        output.success('Folder: %s' % destination_folder)
+        output.info('Folder: %s' % destination_folder)
+        modified_recipe = True
+
+    source = paths.source(conan_ref)
+    dirty = os.path.join(source, DIRTY_FILE)
+    remove = False
+    if os.path.exists(dirty):
+        output.info("Source folder is dirty, forcing removal")
+        remove = True
+    elif modified_recipe and not keep_source and os.path.exists(source):
+        output.info("Package recipe modified in export, forcing source folder removal")
+        output.info("Use the --keep-source, -k option to skip it")
+        remove = True
+    if remove:
+        output.info("Removing 'source' folder, this can take a while for big packages")
+        try:
+            rmdir(source)
+        except BaseException as e:
+            output.error("Unable to delete source folder. "
+                         "Will be marked as dirty for deletion")
+            output.warn(str(e))
+            save(os.path.join(source, DIRTY_FILE), "")
 
 
 def _init_export_folder(destination_folder):
