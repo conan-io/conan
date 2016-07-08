@@ -237,8 +237,10 @@ path to the CMake binary directory, like this:
         loader = manager._loader(None, settings, options, scopes)
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
-            first_dep = conanfile.requires.items()[0][1].conan_reference
-        except Exception:
+            reqs = list(conanfile.requires.items())  # convert to list from ItemViews required for python3
+            first_dep = reqs[0][1].conan_reference
+        except Exception as exc:
+            print(exc)
             raise ConanException("Unable to retrieve first requirement of test conanfile.py")
 
         # Forcing an export!
