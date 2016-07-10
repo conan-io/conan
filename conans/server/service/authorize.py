@@ -163,7 +163,7 @@ class BasicAuthorizer(Authorizer):
             ret = self._check_rule_ok(username, rule, *args, **kwargs)
             if ret:  # A rule is applied ok, if not apply keep looking
                 return True
-        raise ForbiddenException("Unauthorized")
+        raise ForbiddenException("Permission denied")
 
     def _check_rule_ok(self, username, rule, conan_reference):
         """Checks if a rule specified in config file applies to current conans
@@ -184,7 +184,7 @@ class BasicAuthorizer(Authorizer):
             if authorized_users[0] == "*" or username in authorized_users:
                 return True  # Ok, applies and match username
             else:
-                raise ForbiddenException("Unauthorized")
+                raise ForbiddenException("Permission denied")
 
         return False
 

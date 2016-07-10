@@ -139,33 +139,24 @@ class ConanManager(object):
 
             remote_proxy.download_packages(reference, list(info[reference].keys()))
 
-    def install(self, reference, current_path, remote=None, options=None, settings=None,
-                build_mode=False, info=None, filename=None, update=False, check_updates=False,
-                integrity=False, scopes=None):
-        """ Fetch and build all dependencies for the given reference
-        @param reference: ConanFileReference or path to user space conanfile
-        @param current_path: where the output files will be saved
-        @param remote: install only from that remote
-        @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
-        @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
-        """
+    def _get_graph(self, reference, current_path, remote, options, settings, filename, update,
+                   check_updates, integrity, scopes):
         reference_given = True
         if not isinstance(reference, ConanFileReference):
             conanfile_path = reference
             reference_given = False
             reference = None
-
         loader = self._loader(current_path, settings, options, scopes)
-        # Not check for updates for info command, it'll be checked when dep graph is built
-        remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager,
-                                  remote, update=update, check_updates=check_updates,
+    # Not check for updates for info command, it'll be checked when dep graph is built
+        remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote,
+                                  update=update, check_updates=check_updates,
                                   check_integrity=integrity)
-
         if reference_given:
             project_reference = None
             conanfile_path = remote_proxy.get_conanfile(reference)
             output = ScopedOutput(str(reference), self._user_io.out)
             conanfile = loader.load_conan(conanfile_path, output, consumer=True)
+            is_txt = None
         else:
             project_reference = "PROJECT"
             output = ScopedOutput(project_reference, self._user_io.out)
@@ -175,7 +166,6 @@ class ConanManager(object):
                 conan_file_path = os.path.join(conanfile_path, filename or CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
                 is_txt = False
-
                 if conanfile.name is not None and conanfile.version is not None:
                     project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
                     project_reference += "PROJECT"
@@ -183,22 +173,56 @@ class ConanManager(object):
                 conan_path = os.path.join(conanfile_path, filename or CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
                 is_txt = True
-
-        # build deps graph and install it
+    # build deps graph and install it
         builder = DepsBuilder(remote_proxy, self._user_io.out, loader)
         deps_graph = builder.load(reference, conanfile)
         registry = RemoteRegistry(self._paths.registry, self._user_io.out)
-        if info:
-            if check_updates:
-                graph_updates_info = builder.get_graph_updates_info(deps_graph)
-            else:
-                graph_updates_info = {}
-            Printer(self._user_io.out).print_info(deps_graph, project_reference,
-                                                  info, registry, graph_updates_info,
-                                                  remote)
-            return
-        Printer(self._user_io.out).print_graph(deps_graph, registry)
+        return (check_updates, builder, deps_graph, project_reference, registry, conanfile,
+                remote_proxy, reference_given, is_txt, loader, output)
 
+    def info(self, reference, current_path, remote=None, options=None, settings=None,
+             info=None, filename=None, update=False, check_updates=False,
+             integrity=False, scopes=None, build_order=None):
+        """ Fetch and build all dependencies for the given reference
+        @param reference: ConanFileReference or path to user space conanfile
+        @param current_path: where the output files will be saved
+        @param remote: install only from that remote
+        @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
+        @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
+        """
+        objects = self._get_graph(reference, current_path, remote, options, settings, filename,
+                                  update, check_updates, integrity, scopes)
+        (check_updates, builder, deps_graph, project_reference, registry,
+         _, _, _, _, _, _) = objects
+
+        if build_order:
+            result = deps_graph.build_order(build_order)
+            self._user_io.out.info(", ".join(str(s) for s in result))
+            return
+        if check_updates:
+            graph_updates_info = builder.get_graph_updates_info(deps_graph)
+        else:
+            graph_updates_info = {}
+        Printer(self._user_io.out).print_info(deps_graph, project_reference,
+                                              info, registry, graph_updates_info,
+                                              remote)
+
+    def install(self, reference, current_path, remote=None, options=None, settings=None,
+                build_mode=False, filename=None, update=False, check_updates=False,
+                integrity=False, scopes=None):
+        """ Fetch and build all dependencies for the given reference
+        @param reference: ConanFileReference or path to user space conanfile
+        @param current_path: where the output files will be saved
+        @param remote: install only from that remote
+        @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
+        @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
+        """
+        objects = self._get_graph(reference, current_path, remote, options, settings, filename,
+                                  update, check_updates, integrity, scopes)
+        (check_updates, _, deps_graph, _, registry, conanfile,
+         remote_proxy, reference_given, is_txt, loader, output) = objects
+
+        Printer(self._user_io.out).print_graph(deps_graph, registry)
         # Warn if os doesn't match
         try:
             if detected_os() != conanfile.settings.os:

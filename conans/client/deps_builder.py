@@ -115,7 +115,12 @@ class DepsGraph(object):
         defines export relative to its folder
         """
         ordered = self.by_levels()
-        flat = self.inverse_levels()
+        inverse = self._inverse_levels()
+        flat = []
+        for level in inverse:
+            level = sorted(level, key=lambda x: x.conan_ref)
+            flat.extend(level)
+
         for level in ordered[1:]:
             for node in level:
                 node_order = self.ordered_closure(node, flat)
@@ -179,6 +184,30 @@ class DepsGraph(object):
         result = [n for n in flat if n in closure]
         return result
 
+    def _inverse_closure(self, references):
+        closure = set()
+        current = [n for n in self.nodes if str(n.conan_ref) in references or "ALL" in references]
+        closure.update(current)
+        while current:
+            new_current = set()
+            for n in current:
+                closure.add(n)
+                new_neighs = self.inverse_neighbors(n)
+                to_add = set(new_neighs).difference(current)
+                new_current.update(to_add)
+            current = new_current
+        return closure
+
+    def build_order(self, references):
+        levels = self._inverse_levels()
+        closure = self._inverse_closure(references)
+        result = []
+        for level in reversed(levels):
+            new_level = [n.conan_ref or "PROJECT" for n in level if n in closure]
+            if new_level:
+                result.append(new_level)
+        return result
+
     def by_levels(self):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
@@ -203,7 +232,7 @@ class DepsGraph(object):
                 result.append(current_level)
         return result
 
-    def inverse_levels(self):
+    def _inverse_levels(self):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
@@ -226,11 +255,7 @@ class DepsGraph(object):
                 current_level = []
                 result.append(current_level)
 
-        flat = []
-        for level in result:
-            level = sorted(level, key=lambda x: x.conan_ref)
-            flat.extend(level)
-        return flat
+        return result
 
     def private_nodes(self):
         """ computes a list of nodes living in the private zone of the deps graph,

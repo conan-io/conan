@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO
+from conans.paths import CONANINFO, BUILD_INFO, DIRTY_FILE
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -221,22 +221,37 @@ Package configuration:
         """ creates src folder and retrieve, calling source() from conanfile
         the necessary source code
         """
+        dirty = os.path.join(src_folder, DIRTY_FILE)
+
+        def remove_source(raise_error=False):
+            output.warn("Trying to remove dirty source folder")
+            output.warn("This can take a while for big packages")
+            try:
+                rmdir(src_folder)
+            except BaseException as e_rm:
+                save(dirty, "")  # Creation of DIRTY flag
+                output.error("Unable to remove source folder %s\n%s" % (src_folder, str(e_rm)))
+                output.warn("**** Please delete it manually ****")
+                if raise_error or isinstance(e_rm, KeyboardInterrupt):
+                    raise ConanException("Unable to remove source folder")
+
+        if os.path.exists(dirty):
+            remove_source(raise_error=True)
+
         if not os.path.exists(src_folder):
             output.info('Configuring sources in %s' % src_folder)
             shutil.copytree(export_folder, src_folder)
+            save(dirty, "")  # Creation of DIRTY flag
             os.chdir(src_folder)
             try:
                 conan_file.source()
+                os.remove(dirty)  # Everything went well, remove DIRTY flag
             except Exception as e:
+                os.chdir(export_folder)
                 output.error("Error while executing source(): %s" % str(e))
                 # in case source() fails (user error, typically), remove the src_folder
                 # and raise to interrupt any other processes (build, package)
-                os.chdir(export_folder)
-                try:
-                    rmdir(src_folder)
-                except Exception as e_rm:
-                    output.error("Unable to remove src folder %s\n%s" % (src_folder, str(e_rm)))
-                    output.warn("**** Please delete it manually ****")
+                remove_source()
                 raise ConanException("%s: %s" % (conan_file.name, str(e)))
 
     def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file,
