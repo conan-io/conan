@@ -26,6 +26,7 @@ from argparse import RawTextHelpFormatter
 from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
 from conans.model.scope import Scopes
+import re
 
 
 class Extender(argparse.Action):
