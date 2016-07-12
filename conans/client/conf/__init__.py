@@ -17,6 +17,8 @@ compiler:
     gcc:
         version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "6.1"]
         libcxx: [libstdc++, libstdc++11]
+        threads: [None, posix, win32] #  Windows MinGW
+        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14"]
