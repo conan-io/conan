@@ -23,10 +23,10 @@ from conans.client.migrations import ClientMigrator
 import hashlib
 from conans.util.files import rmdir, load, save_files
 from argparse import RawTextHelpFormatter
-import re
 from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
 from conans.model.scope import Scopes
+import re
 
 
 class Extender(argparse.Action):
@@ -95,15 +95,6 @@ class Command(object):
             if len(chunks) != 2:
                 raise ConanException("Invalid input '%s', use 'name=value'" % item)
         return [(item[0], item[1]) for item in [item.split("=") for item in items]]
-
-    def _detect_tested_library_name(self):
-        conanfile_content = load(CONANFILE)
-        match = re.search('^\s*name\s*=\s*[\'"](.*)[\'"]', conanfile_content, re.MULTILINE)
-        if match:
-            return "%s*" % match.group(1)
-
-        self._user_io.out.warn("Cannot detect a valid conanfile in current directory")
-        return None
 
     def _get_build_sources_parameter(self, build_param):
         # returns True if we want to build the missing libraries
@@ -203,13 +194,17 @@ path to the CMake binary directory, like this:
         """ build and run your package test. Must have conanfile.py with "test"
         method and "test_package" subfolder with package consumer test project
         """
-        parser = argparse.ArgumentParser(description=self.test_package.__doc__, prog="conan test",
+        parser = argparse.ArgumentParser(description=self.test_package.__doc__, prog="conan test_package",
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
+        parser.add_argument("-ne", "--not-export", default=False, action='store_true', help='Do not export the conanfile before test execution')
         parser.add_argument("-f", "--folder", help='alternative test folder name')
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Define scopes for packages')
+        parser.add_argument('--keep-source', '-k', default=False, action='store_true',
+                            help='Optional. Do not remove the source folder in local store. '
+                                 'Use for testing purposes only')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -233,14 +228,6 @@ path to the CMake binary directory, like this:
                 raise ConanException("test folder 'test_package' not available, "
                                      "or it doesn't have a conanfile.py")
 
-        lib_to_test = self._detect_tested_library_name()
-
-        # Get False or a list of patterns to check
-        if args.build is None and lib_to_test:  # Not specified, force build the tested library
-            args.build = [lib_to_test]
-        else:
-            args.build = self._get_build_sources_parameter(args.build)
-
         options = args.options or []
         settings = args.settings or []
 
@@ -252,6 +239,29 @@ path to the CMake binary directory, like this:
         options = self._get_tuples_list_from_extender_arg(args.options)
         settings = self._get_tuples_list_from_extender_arg(args.settings)
         scopes = Scopes.from_list(args.scope) if args.scope else None
+
+        manager = self._manager
+        loader = manager._loader(None, settings, options, scopes)
+        conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
+        try:
+            # convert to list from ItemViews required for python3
+            reqs = list(conanfile.requires.items())
+            first_dep = reqs[0][1].conan_reference
+        except Exception:
+            raise ConanException("Unable to retrieve first requirement of test conanfile.py")
+
+        # Forcing an export!
+        if not args.not_export:
+            self._user_io.out.info("Exporting package recipe")
+            user_channel = "%s/%s" % (first_dep.user, first_dep.channel)
+            self._manager.export(user_channel, root_folder, keep_source=args.keep_source)
+
+        lib_to_test = first_dep.name + "*"
+        # Get False or a list of patterns to check
+        if args.build is None and lib_to_test:  # Not specified, force build the tested library
+            args.build = [lib_to_test]
+        else:
+            args.build = self._get_build_sources_parameter(args.build)
 
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
