@@ -107,8 +107,9 @@ class RequirementsInfo(object):
 
     @staticmethod
     def deserialize(data):
-        ret = RequirementsInfo({}, set())
+        ret = RequirementsInfo({}, None)
         for ref, requinfo in data.items():
+            ref = PackageReference.loads(ref)
             ret._data[ref] = RequirementInfo.deserialize(requinfo)
         return ret
 
@@ -158,7 +159,7 @@ class ConanInfo(object):
         result.options = OptionsValues.loads(parser.options)
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = RequirementsList.loads(parser.full_requires)
-        result.requires = RequirementsInfo(result.full_requires, set())
+        result.requires = RequirementsInfo(result.full_requires, None)
         # TODO: Missing handling paring of requires, but not necessary now
         result.scope = Scopes.loads(parser.scope)
         return result
