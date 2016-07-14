@@ -4,36 +4,16 @@ from conans.server.conf import get_file_manager
 from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
-import os
-
-from conans.server.conf import ConanServerConfigParser
-from conans import __version__ as SERVER_VERSION
 from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
 from conans.model.version import Version
-from conans.server.migrations import ServerMigrator
-from conans.util.log import logger
-
-
-def migrate_and_get_server_config(base_folder, storage_folder=None):
-    server_config = ConanServerConfigParser(base_folder, storage_folder=storage_folder)
-
-    if server_config.store_adapter == "disk":
-        storage_path = server_config.disk_storage_path
-    else:
-        storage_path = None
-
-    migrator = ServerMigrator(server_config.conan_folder, storage_path,
-                              Version(SERVER_VERSION), logger)
-    migrator.migrate()
-
-    # Init again server_config, migrator could change something
-    server_config = ConanServerConfigParser(base_folder, storage_folder=storage_folder)
-    return server_config
+from conans.server.migrate import migrate_and_get_server_config
+from conans import __version__ as SERVER_VERSION
+from conans.paths import conan_expand_user
 
 
 class ServerLauncher(object):
     def __init__(self):
-        user_folder = os.path.expanduser("~")
+        user_folder = conan_expand_user("~")
 
         server_config = migrate_and_get_server_config(user_folder)
 

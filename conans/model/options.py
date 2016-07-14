@@ -211,6 +211,7 @@ class OptionsValues(object):
             line = line.strip()
             if not line:
                 continue
+            # To avoid problems with values containing ":" as URLs
             name, value = line.split("=")
             tokens = name.split(":")
             if len(tokens) == 2:
@@ -223,12 +224,17 @@ class OptionsValues(object):
             current.add(option)
         return result
 
-    @property
-    def sha(self):
+    def sha(self, non_dev_requirements):
         result = []
         result.append(self._options.sha)
-        for key in sorted(list(self._reqs_options.keys())):
-            result.append(self._reqs_options[key].sha)
+        if non_dev_requirements is None:  # Not filtering
+            for key in sorted(list(self._reqs_options.keys())):
+                result.append(self._reqs_options[key].sha)
+        else:
+            for key in sorted(list(self._reqs_options.keys())):
+                non_dev = key in non_dev_requirements
+                if non_dev:
+                    result.append(self._reqs_options[key].sha)
         return sha1('\n'.join(result).encode())
 
     def serialize(self):

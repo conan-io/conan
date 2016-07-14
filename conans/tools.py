@@ -10,12 +10,18 @@ from conans.client.rest.uploader_downloader import Downloader
 import requests
 from conans.client.output import ConanOutput
 
+def vcvars_command(settings):
+    param = "x86" if settings.arch == "x86" else "amd64"
+    command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
+               % (settings.compiler.version, param))
+    return command
+
 
 def human_size(size_bytes):
     """
     format a size in bytes into a 'human' file size, e.g. bytes, KB, MB, GB, TB, PB
-    Note that bytes/KB will be reported in whole numbers but MB and above will have greater precision
-    e.g. 1 byte, 43 bytes, 443 KB, 4.3 MB, 4.43 GB, etc
+    Note that bytes/KB will be reported in whole numbers but MB and above will have
+    greater precision.  e.g. 1 byte, 43 bytes, 443 KB, 4.3 MB, 4.43 GB, etc
     """
     if size_bytes == 1:
         return "1 byte"
@@ -37,7 +43,7 @@ def human_size(size_bytes):
 
 
 def unzip(filename, destination="."):
-    if ".tar.gz" in filename or ".tgz" in filename:
+    if ".tar.gz" in filename or ".tgz" in filename or "tzb2" in filename or "tar.bz2" in filename:
         return untargz(filename, destination)
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
@@ -50,7 +56,10 @@ def unzip(filename, destination="."):
             txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
             print(txt_msg, end='')
             try:
-                if len(file_.filename) + len(full_path) > 200:
+                # the limit is 230 to account for 10 chars of SHA in b/xxxx (in shorted paths)
+                # and 20 chars for build system extra subfolders (cmake mytarget.dir/debug, etc)
+                # Win limit is 260
+                if len(file_.filename) + len(full_path) > 230:
                     raise ValueError("Filename too long")
                 z.extract(file_, full_path)
             except Exception as e:
@@ -59,7 +68,7 @@ def unzip(filename, destination="."):
 
 def untargz(filename, destination="."):
     import tarfile
-    with tarfile.TarFile.open(filename, 'r:gz') as tarredgzippedFile:
+    with tarfile.TarFile.open(filename, 'r:*') as tarredgzippedFile:
         tarredgzippedFile.extractall(destination)
 
 
@@ -79,9 +88,9 @@ def download(url, filename, verify=True):
         import conans.client.rest.cacert as cacert
         verify = cacert.file_path
     downloader = Downloader(requests, out, verify=verify)
-    content = downloader.download(url)
+    downloader.download(url, filename)
     out.writeln("")
-    save(filename, content)
+#     save(filename, content)
 
 
 def replace_in_file(file_path, search, replace):
@@ -125,4 +134,6 @@ def patch(base_path=None, patch_file=None, patch_string=None):
     else:
         patchset = fromstring(patch_string.encode())
 
-    patchset.apply(root=base_path)
+    if not patchset.apply(root=base_path):
+        raise ConanException("Failed to apply patch: %s" % patch_file)
+

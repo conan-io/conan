@@ -2,7 +2,7 @@ import unittest
 from conans.test.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os
-from conans.client.deps_builder import DepsBuilder, Edge
+from conans.client.deps_builder import DepsBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues
 from conans.client.loader import ConanFileLoader
@@ -14,6 +14,8 @@ from conans.client.conf import default_settings_yml
 from conans.model.values import Values
 from conans.model.config_dict import undefined_field, bad_value_msg
 from conans.test.utils.test_files import temp_folder
+from collections import namedtuple
+from conans.model.scope import Scopes
 
 
 class Retriever(object):
@@ -97,12 +99,30 @@ chat_ref = ConanFileReference.loads("Chat/2.3@diego/testing")
 bye_ref = ConanFileReference.loads("Bye/0.2@diego/testing")
 
 
+def _get_nodes(graph, name):
+    """ return all the nodes matching a particular name. Could be >1 in case
+    that private requirements embed different versions
+    """
+    return [n for n in graph.nodes if n.conanfile.name == name]
+
+
+Edge = namedtuple("Edge", "src dst")
+
+
+def _get_edges(graph):
+
+    edges = set()
+    for n in graph.nodes:
+        edges.update([Edge(n, neigh) for neigh in graph.neighbors(n)])
+    return edges
+
+
 class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, Settings.loads(""),
-                                      OptionsValues.loads(""))
+                                      OptionsValues.loads(""), Scopes())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsBuilder(self.retriever, self.output, self.loader)
 
@@ -113,9 +133,9 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def test_basic(self):
         deps_graph = self.root(say_content)
-        self.assertEqual(deps_graph.edges, set())
+        self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
-        node = deps_graph.get_nodes("Say")[0]
+        node = _get_nodes(deps_graph, "Say")[0]
         self.assertEqual(node.conan_ref, None)
         self._check_say(node.conanfile)
 
@@ -139,9 +159,9 @@ class ConanRequirementsTest(unittest.TestCase):
         self.retriever.conan(say_ref, say_content)
         deps_graph = self.root(hello_content)
         self.assertEqual(2, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say)})
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say)})
 
         self.assertEqual(say.conan_ref, say_ref)
         self._check_say(say.conanfile)
@@ -170,10 +190,10 @@ class ConanRequirementsTest(unittest.TestCase):
         deps_graph = self.root(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello)})
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello)})
 
         self.assertEqual(hello.conan_ref, hello_ref)
         self.assertEqual(say.conan_ref, say_ref)
@@ -215,11 +235,11 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content)
 
         self.assertEqual(4, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello),
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
                                             Edge(bye, say), Edge(chat, bye)})
 
         self.assertEqual(hello.conan_ref, hello_ref)
@@ -267,10 +287,10 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello)})
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello)})
 
         self._check_say(say.conanfile, version="0.2")
         self._check_hello(hello, say_ref2)
@@ -316,10 +336,10 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello)})
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello)})
 
         self._check_say(say.conanfile, version="0.1")
         self._check_hello(hello, say_ref)
@@ -362,11 +382,11 @@ class ChatConan(ConanFile):
     Keeping Say/0.1@diego/testing
     To change it, override it in your base requirements""", self.output)
         self.assertEqual(4, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello),
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
                                             Edge(bye, say), Edge(chat, bye)})
 
         self.assertEqual(hello.conan_ref, hello_ref)
@@ -416,11 +436,11 @@ class ChatConan(ConanFile):
                       "your conanfile to Say/0.2@diego/testing", self.output)
         self.assertNotIn("Conflict", self.output)
         self.assertEqual(4, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello),
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
                                             Edge(bye, say), Edge(chat, bye)})
 
         self.assertEqual(hello.conan_ref, hello_ref)
@@ -463,8 +483,8 @@ class SayConan(ConanFile):
 """
         deps_graph = self.root(say_content)
         self.assertEqual(1, len(deps_graph.nodes))
-        say = deps_graph.get_nodes("Say")[0]
-        self.assertEqual(deps_graph.edges, set())
+        say = _get_nodes(deps_graph, "Say")[0]
+        self.assertEqual(_get_edges(deps_graph), set())
 
         self._check_say(say.conanfile, options="myoption=123")
 
@@ -484,9 +504,9 @@ class SayConan(ConanFile):
             deps_graph = self.root(conanfile_content)
     
             self.assertEqual(2, len(deps_graph.nodes))
-            hello = deps_graph.get_nodes("Hello")[0]
-            say = deps_graph.get_nodes("Say")[0]
-            self.assertEqual(deps_graph.edges, {Edge(hello, say)})
+            hello = _get_nodes(deps_graph, "Hello")[0]
+            say = _get_nodes(deps_graph, "Say")[0]
+            self.assertEqual(_get_edges(deps_graph), {Edge(hello, say)})
     
             self.assertEqual(say.conan_ref, say_ref)
             self._check_say(say.conanfile, options="myoption=234")
@@ -563,10 +583,10 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content)
 
         self.assertEqual(3, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello)})
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello)})
 
         self.assertEqual(hello.conan_ref, hello_ref)
         self.assertEqual(say.conan_ref, say_ref)
@@ -702,11 +722,11 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content)
 
         self.assertEqual(4, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello),
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
                                             Edge(bye, say), Edge(chat, bye)})
 
         self._check_say(say.conanfile, options="myoption=234")
@@ -771,11 +791,11 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content)
 
         self.assertEqual(4, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello),
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
                                             Edge(bye, say), Edge(chat, bye)})
 
         self._check_say(say.conanfile, options="myoption=234")
@@ -783,11 +803,11 @@ class ChatConan(ConanFile):
                       "option myoption to 123 but it was already assigned to 234 "
                       "by Hello/1.2@diego/testing", str(self.output).replace("\n", " "))
         self.assertEqual(4, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello),
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
                                             Edge(bye, say), Edge(chat, bye)})
 
         self._check_say(say.conanfile, options="myoption=234")
@@ -855,11 +875,11 @@ class ChatConan(ConanFile):
 
         self.assertEqual(self.output, "")
         self.assertEqual(4, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello),
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
                                             Edge(bye, say), Edge(chat, bye)})
         self._check_say(say.conanfile, options="myoption=123")
 
@@ -938,12 +958,12 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content)
         self.assertEqual(self.output, "")
         self.assertEqual(5, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        zlib = deps_graph.get_nodes("Zlib")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello),
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        zlib = _get_nodes(deps_graph, "Zlib")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
                                             Edge(bye, say), Edge(chat, bye), Edge(say, zlib)})
 
         conanfile = say.conanfile
@@ -975,11 +995,11 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content2)
         self.assertEqual(self.output, "")
         self.assertEqual(4, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello),
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
                                             Edge(bye, say), Edge(chat, bye)})
 
         conanfile = say.conanfile
@@ -1049,13 +1069,13 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content)
 
         self.assertEqual(5, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say_nodes = sorted(deps_graph.get_nodes("Say"))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say_nodes = sorted(_get_nodes(deps_graph, "Say"))
         say1 = say_nodes[0]
         say2 = say_nodes[1]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say1), Edge(chat, hello),
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say1), Edge(chat, hello),
                                             Edge(bye, say2), Edge(chat, bye)})
         self.assertEqual(hello.conanfile.name, "Hello")
         self.assertEqual(hello.conan_ref, hello_ref)
@@ -1121,16 +1141,16 @@ class ChatConan(ConanFile):
         deps_graph = self.root(chat_content)
 
         self.assertEqual(5, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        bye = deps_graph.get_nodes("Bye")[0]
-        say_nodes = sorted(deps_graph.get_nodes("Say"))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say_nodes = sorted(_get_nodes(deps_graph, "Say"))
         say1 = say_nodes[0]
         say2 = say_nodes[1]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertTrue((deps_graph.edges == {Edge(hello, say1), Edge(chat, hello),
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertTrue((_get_edges(deps_graph) == {Edge(hello, say1), Edge(chat, hello),
                                             Edge(bye, say2), Edge(chat, bye)})
                         or
-                        (deps_graph.edges == {Edge(hello, say2), Edge(chat, hello),
+                        (_get_edges(deps_graph) == {Edge(hello, say2), Edge(chat, hello),
                                             Edge(bye, say1), Edge(chat, bye)})
                         )
         self.assertEqual(hello.conanfile.name, "Hello")
@@ -1174,7 +1194,7 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, full_settings, options)
+        loader = ConanFileLoader(None, full_settings, options, Scopes())
         retriever = Retriever(loader, self.output)
         builder = DepsBuilder(retriever, self.output, loader)
         root_conan = retriever.root(content)
@@ -1196,9 +1216,9 @@ class SayConan(ConanFile):
         self.info.options.myoption = "1,2,3"
 """
         deps_graph = self.root(content, options="myoption=2", settings="os=Windows")
-        self.assertEqual(deps_graph.edges, set())
+        self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
-        node = deps_graph.get_nodes("Say")[0]
+        node = _get_nodes(deps_graph, "Say")[0]
         self.assertEqual(node.conan_ref, None)
         conanfile = node.conanfile
 
@@ -1223,9 +1243,9 @@ class SayConan(ConanFile):
         check(conanfile, "myoption=2", "os=Windows")
 
         deps_graph = self.root(content, options="myoption=1", settings="os=Linux")
-        self.assertEqual(deps_graph.edges, set())
+        self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
-        node = deps_graph.get_nodes("Say")[0]
+        node = _get_nodes(deps_graph, "Say")[0]
 
         conanfile = node.conanfile
         check(conanfile, "myoption=1", "os=Linux")
@@ -1254,9 +1274,9 @@ class SayConan(ConanFile):
             self.options.clear()
 """
         deps_graph = self.root(content, options="myoption=2", settings="os=Windows")
-        self.assertEqual(deps_graph.edges, set())
+        self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
-        node = deps_graph.get_nodes("Say")[0]
+        node = _get_nodes(deps_graph, "Say")[0]
         self.assertEqual(node.conan_ref, None)
         conanfile = node.conanfile
 
@@ -1279,9 +1299,9 @@ class SayConan(ConanFile):
         check(conanfile, "myoption=2", "os=Windows")
 
         deps_graph = self.root(content, options="myoption=1", settings="os=Linux")
-        self.assertEqual(deps_graph.edges, set())
+        self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
-        node = deps_graph.get_nodes("Say")[0]
+        node = _get_nodes(deps_graph, "Say")[0]
 
         conanfile = node.conanfile
         check(conanfile, "", "os=Linux")
@@ -1302,9 +1322,9 @@ class SayConan(ConanFile):
             self.settings.os.remove("Linux")
 """
         deps_graph = self.root(content, options="arch_independent=True", settings="os=Windows")
-        self.assertEqual(deps_graph.edges, set())
+        self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
-        node = deps_graph.get_nodes("Say")[0]
+        node = _get_nodes(deps_graph, "Say")[0]
         self.assertEqual(node.conan_ref, None)
         conanfile = node.conanfile
 
@@ -1344,9 +1364,9 @@ class SayConan(ConanFile):
         del self.settings.compiler.version
 """
         deps_graph = self.root(content, settings="os=Windows\n compiler=gcc\narch=x86\ncompiler.libcxx=libstdc++")
-        self.assertEqual(deps_graph.edges, set())
+        self.assertEqual(_get_edges(deps_graph), set())
         self.assertEqual(1, len(deps_graph.nodes))
-        node = deps_graph.get_nodes("Say")[0]
+        node = _get_nodes(deps_graph, "Say")[0]
         self.assertEqual(node.conan_ref, None)
         conanfile = node.conanfile
 
@@ -1388,7 +1408,8 @@ class ChatConan(ConanFile):
         loader = ConanFileLoader(None, Settings.loads(""),
                                       OptionsValues.loads("Say:myoption_say=123\n"
                                                           "Hello:myoption_hello=True\n"
-                                                          "myoption_chat=on"))
+                                                          "myoption_chat=on"),
+                                 Scopes())
         retriever = Retriever(loader, output)
         builder = DepsBuilder(retriever, output, loader)
         retriever.conan(say_ref, say_content)
@@ -1398,10 +1419,10 @@ class ChatConan(ConanFile):
         deps_graph = builder.load(None, root_conan)
 
         self.assertEqual(3, len(deps_graph.nodes))
-        hello = deps_graph.get_nodes("Hello")[0]
-        say = deps_graph.get_nodes("Say")[0]
-        chat = deps_graph.get_nodes("Chat")[0]
-        self.assertEqual(deps_graph.edges, {Edge(hello, say), Edge(chat, hello)})
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello)})
 
         self.assertEqual(hello.conan_ref, hello_ref)
         self.assertEqual(say.conan_ref, say_ref)

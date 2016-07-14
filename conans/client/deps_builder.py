@@ -4,19 +4,12 @@ point, which could be both a user conanfile or an installed one
 from conans.model.requires import Requirements
 from collections import namedtuple
 from conans.model.ref import PackageReference
-from conans.model.build_info import DepsCppInfo
 from conans.model.info import ConanInfo
 from conans.errors import ConanException
 from conans.client.output import ScopedOutput
-
-
-class Edge(namedtuple("Edge", "src dst")):
-    """ Simple edge of the dependencies graph src=>dst
-    """
-    def __repr__(self):
-        return ("%s => %s IDs: %s => %s"
-                % (repr(self.src.conan_ref), repr(self.dst.conan_ref),
-                   str(id(self.src)), str(id(self.dst))))
+import time
+from conans.util.log import logger
+from collections import defaultdict
 
 
 class Node(namedtuple("Node", "conan_ref conanfile")):
@@ -27,7 +20,6 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
     def __repr__(self):
         return "%s => %s" % (repr(self.conan_ref), repr(self.conanfile)[:100].replace("\n", " "))
 
-
     def __cmp__(self, other):
         if other is None:
             return -1
@@ -35,14 +27,14 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
             return 0 if other.conan_ref is None else -1
         elif other.conan_ref is None:
             return 1
-        
+
         if self.conan_ref == other.conan_ref:
             return 0
         if self.conan_ref < other.conan_ref:
             return -1
-        
+
         return 1
-    
+
     def __gt__(self, other):
         return self.__cmp__(other) == 1
 
@@ -55,35 +47,32 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
     def __ge__(self, other):
         return self.__cmp__(other) in [0, 1]
 
+
 class DepsGraph(object):
     """ DAG of dependencies
     """
     def __init__(self):
         self.nodes = set()
-        self.edges = set()
-
-    def get_nodes(self, name):
-        """ return all the nodes matching a particular name. Could be >1 in case
-        that private requirements embed different versions
-        """
-        return [n for n in self.nodes if n.conanfile.name == name]
+        self._neighbors = defaultdict(set)
+        self._inverse_neighbors = defaultdict(set)
 
     def add_node(self, node):
         self.nodes.add(node)
 
     def add_edge(self, src, dst):
         assert src in self.nodes and dst in self.nodes
-        self.edges.add(Edge(src, dst))
+        self._neighbors[src].add(dst)
+        self._inverse_neighbors[dst].add(src)
 
     def neighbors(self, node):
         """ return all connected nodes (directionally) to the parameter one
         """
-        return [edge.dst for edge in self.edges if edge.src == node]
+        return self._neighbors[node]
 
     def inverse_neighbors(self, node):
         """ return all the nodes which has param node has dependency
         """
-        return [edge.src for edge in self.edges if edge.dst == node]
+        return self._inverse_neighbors[node]
 
     def public_neighbors(self, node):
         """ return nodes with direct reacheability by public dependencies
@@ -113,9 +102,7 @@ class DepsGraph(object):
 
     def __repr__(self):
         return "\n".join(["Nodes:\n    ",
-                          "\n    ".join(repr(n) for n in self.nodes),
-                          "\nEdges:\n    ",
-                          "\n    ".join(repr(n) for n in self.edges)])
+                          "\n    ".join(repr(n) for n in self.nodes)])
 
     def propagate_buildinfo(self):
         """ takes the exports from upper level and updates the imports
@@ -128,7 +115,12 @@ class DepsGraph(object):
         defines export relative to its folder
         """
         ordered = self.by_levels()
-        flat = self.inverse_levels()
+        inverse = self._inverse_levels()
+        flat = []
+        for level in inverse:
+            level = sorted(level, key=lambda x: x.conan_ref)
+            flat.extend(level)
+
         for level in ordered[1:]:
             for node in level:
                 node_order = self.ordered_closure(node, flat)
@@ -166,11 +158,12 @@ class DepsGraph(object):
                 # There might be options that are not upstream
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
+                non_devs = self.non_dev_nodes(node)
                 conanfile.info = ConanInfo.create(conanfile.settings.values,
                                                   conanfile.options.values,
-                                                  direct_reqs)
-                conanfile.info.requires.add(indirect_reqs)
-                conanfile.info.full_requires.extend(indirect_reqs)
+                                                  direct_reqs,
+                                                  indirect_reqs,
+                                                  non_devs)
 
                 # Once we are done, call conan_info() to narrow and change possible values
                 conanfile.conan_info()
@@ -191,6 +184,30 @@ class DepsGraph(object):
         result = [n for n in flat if n in closure]
         return result
 
+    def _inverse_closure(self, references):
+        closure = set()
+        current = [n for n in self.nodes if str(n.conan_ref) in references or "ALL" in references]
+        closure.update(current)
+        while current:
+            new_current = set()
+            for n in current:
+                closure.add(n)
+                new_neighs = self.inverse_neighbors(n)
+                to_add = set(new_neighs).difference(current)
+                new_current.update(to_add)
+            current = new_current
+        return closure
+
+    def build_order(self, references):
+        levels = self._inverse_levels()
+        closure = self._inverse_closure(references)
+        result = []
+        for level in reversed(levels):
+            new_level = [n.conan_ref or "PROJECT" for n in level if n in closure]
+            if new_level:
+                result.append(new_level)
+        return result
+
     def by_levels(self):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
@@ -203,7 +220,8 @@ class DepsGraph(object):
         while opened:
             current = opened.copy()
             for o in opened:
-                if not any(o == edge.src and edge.dst in opened for edge in self.edges):
+                o_neighs = self._neighbors[o]
+                if not any(n in opened for n in o_neighs):
                     current_level.append(o)
                     current.discard(o)
             current_level.sort()
@@ -214,7 +232,7 @@ class DepsGraph(object):
                 result.append(current_level)
         return result
 
-    def inverse_levels(self):
+    def _inverse_levels(self):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
@@ -226,7 +244,8 @@ class DepsGraph(object):
         while opened:
             current = opened.copy()
             for o in opened:
-                if not any(o == edge.dst and edge.src in opened for edge in self.edges):
+                o_neighs = self._inverse_neighbors[o]
+                if not any(n in opened for n in o_neighs):
                     current_level.append(o)
                     current.discard(o)
             current_level.sort()
@@ -236,11 +255,7 @@ class DepsGraph(object):
                 current_level = []
                 result.append(current_level)
 
-        flat = []
-        for level in result:
-            level = sorted(level, key=lambda x: x.conan_ref)
-            flat.extend(level)
-        return flat
+        return result
 
     def private_nodes(self):
         """ computes a list of nodes living in the private zone of the deps graph,
@@ -264,6 +279,28 @@ class DepsGraph(object):
             result.append((node, self.private_inverse_neighbors(node)))
         return result
 
+    def non_dev_nodes(self, root):
+        if not root.conanfile.scope.dev:
+            # Optimization. This allow not to check it for most packages, which dev=False
+            return None
+        open_nodes = set([root])
+        result = set()
+        expanded = set()
+        while open_nodes:
+            new_open_nodes = set()
+            for node in open_nodes:
+                neighbors = self.neighbors(node)
+                requires = node.conanfile.requires
+                for n in neighbors:
+                    requirement = requires[n.conan_ref.name]
+                    if not requirement.dev and n not in expanded:
+                        result.add(n.conan_ref.name)
+                        new_open_nodes.add(n)
+                        expanded.add(n)
+
+            open_nodes = new_open_nodes
+        return result
+
 
 class DepsBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
@@ -278,7 +315,8 @@ class DepsBuilder(object):
 
     def get_graph_updates_info(self, deps_graph):
         """
-        returns a dict of conan_reference: 1 if there is an update, 0 if don't and -1 if local is newer
+        returns a dict of conan_reference: 1 if there is an update,
+        0 if don't and -1 if local is newer
         """
         return {conan_reference: self._retriever.update_available(conan_reference)
                 for conan_reference, _ in deps_graph.nodes}
@@ -294,8 +332,12 @@ class DepsBuilder(object):
         dep_graph.add_node(root_node)
         public_deps = {}  # {name: Node} dict with public nodes, so they are not added again
         # enter recursive computation
+        t1 = time.time()
         self._load_deps(root_node, Requirements(), dep_graph, public_deps, conan_ref, None)
+        logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
+        t1 = time.time()
         dep_graph.propagate_info()
+        logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options):
@@ -311,7 +353,6 @@ class DepsBuilder(object):
         """
         # basic node configuration
         conanref, conanfile = node
-
         new_reqs, new_options = self._config_node(conanfile, conanref, down_reqs, down_ref,
                                                   down_options)
 
@@ -345,6 +386,7 @@ class DepsBuilder(object):
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
+            conanfile.requires.output = self._output
             conanfile.config()
             conanfile.options.propagate_upstream(down_options, down_ref, conanref, self._output)
             conanfile.config()
@@ -355,11 +397,15 @@ class DepsBuilder(object):
             conanfile.options.validate()
 
             # Update requirements (overwrites), computing new upstream
-            conanfile.requires.output = self._output
             conanfile.requirements()
             new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
+        except Exception as e:
+            import traceback
+            tr = traceback.format_exc()
+            self._output.warn(tr)
+            raise ConanException("%s: conanfile.py: %s" % (conanref or "Conanfile", str(e)))
         return new_down_reqs, new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req):

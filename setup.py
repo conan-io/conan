@@ -11,6 +11,7 @@ from codecs import open
 from os import path
 import os
 import re
+import platform
 
 
 here = path.abspath(path.dirname(__file__))
@@ -18,21 +19,24 @@ here = path.abspath(path.dirname(__file__))
 
 def get_requires(filename):
     requirements = []
-    with open(filename) as req_file:
+    with open(filename, "rt") as req_file:
         for line in req_file.read().splitlines():
             if not line.strip().startswith("#"):
                 requirements.append(line)
     return requirements
 
 project_requirements = get_requires("conans/requirements.txt")
+if platform.system() == "Darwin":
+    project_requirements.extend(get_requires("conans/requirements_osx.txt"))
 project_requirements.extend(get_requires("conans/requirements_server.txt"))
 dev_requirements = get_requires("conans/requirements_dev.txt")
 
 
 def load_version():
     '''Loads a file content'''
-    filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "conans", "__init__.py"))
-    with open(filename) as version_file:
+    filename = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                            "conans", "__init__.py"))
+    with open(filename, "rt") as version_file:
         conan_init = version_file.read()
         version = re.search("__version__ = '([0-9a-z.]+)'", conan_init).group(1)
         return version
@@ -40,7 +44,7 @@ def load_version():
 
 # def generate_long_description_file():
 #     import pypandoc
-# 
+#
 #     output = pypandoc.convert('README.md', 'rst')
 #     return output
 

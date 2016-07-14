@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import platform
 import subprocess
@@ -10,7 +11,7 @@ def _install_pyintaller(pyinstaller_path):
     if not os.path.exists(pyinstaller_path):
         subprocess.call('git clone https://github.com/pyinstaller/pyinstaller.git',
                         cwd=os.path.curdir, shell=True)
-        subprocess.call('git checkout v2.1', cwd=pyinstaller_path, shell=True)
+        subprocess.call('git checkout v3.1.1', cwd=pyinstaller_path, shell=True)
 
 
 def _run_bin(pyinstaller_path):
@@ -30,11 +31,11 @@ def pyinstall(source_folder):
     try:
         shutil.rmtree(os.path.join(pyinstaller_path, 'conan'))
     except Exception as e:
-        print "Unable to remove old folder", e
+        print("Unable to remove old folder", e)
     try:
         shutil.rmtree(os.path.join(pyinstaller_path, 'conan_server'))
     except Exception as e:
-        print "Unable to remove old server folder", e
+        print("Unable to remove old server folder", e)
 
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')

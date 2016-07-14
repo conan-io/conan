@@ -154,7 +154,7 @@ class ConfigItem(object):
         return result
 
     def validate(self):
-        if self._value is None:
+        if self._value is None and "None" not in self._definition:
             raise ConanException(undefined_value(self._name))
 
         if isinstance(self._definition, dict):

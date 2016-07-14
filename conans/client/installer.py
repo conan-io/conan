@@ -1,15 +1,19 @@
 import os
-from conans.paths import CONANINFO, BUILD_INFO
+import time
+import platform
+import fnmatch
+import shutil
+
+from conans.paths import CONANINFO, BUILD_INFO, DIRTY_FILE
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import ConanException
 from conans.client.packager import create_package
-import shutil
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
-import fnmatch
 from conans.client.output import ScopedOutput
+from collections import Counter
 
 
 def init_cpp_info(deps_graph, paths):
@@ -44,9 +48,15 @@ class ConanInstaller(object):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
+        t1 = time.time()
         nodes_by_level = self._process_buildinfo(deps_graph)
+        logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
+        t1 = time.time()
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
+        logger.debug("Install-Process private %s" % (time.time() - t1))
+        t1 = time.time()
         self._build(nodes_by_level, skip_private_nodes, build_mode)
+        logger.debug("Install-build %s" % (time.time() - t1))
 
     def _process_buildinfo(self, deps_graph):
         """ once we have a dependency graph of conans, we have to propagate the build
@@ -142,18 +152,22 @@ class ConanInstaller(object):
         build_allowed = force_build or build_mode is True
 
         if build_allowed:
-            rmdir(build_folder)
-            rmdir(package_folder)
+            try:
+                rmdir(build_folder)
+                rmdir(package_folder)
+            except Exception as e:
+                raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
+                                     "Close any app using it, and retry" % str(e))
             if force_build:
                 output.warn('Forced build from source')
 
-            self._build_package(export_folder, src_folder, build_folder, conan_file, output)
+            self._build_package(export_folder, src_folder, build_folder, package_folder,
+                                conan_file, output)
 
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
             output.info("Generated %s" % CONANINFO)
-            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file.deps_cpp_info,
-                                                                      conan_file.cpp_info).content)
+            save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
             output.info("Generated %s" % BUILD_INFO)
 
             os.chdir(build_folder)
@@ -207,25 +221,41 @@ Package configuration:
         """ creates src folder and retrieve, calling source() from conanfile
         the necessary source code
         """
+        dirty = os.path.join(src_folder, DIRTY_FILE)
+
+        def remove_source(raise_error=False):
+            output.warn("Trying to remove dirty source folder")
+            output.warn("This can take a while for big packages")
+            try:
+                rmdir(src_folder)
+            except BaseException as e_rm:
+                save(dirty, "")  # Creation of DIRTY flag
+                output.error("Unable to remove source folder %s\n%s" % (src_folder, str(e_rm)))
+                output.warn("**** Please delete it manually ****")
+                if raise_error or isinstance(e_rm, KeyboardInterrupt):
+                    raise ConanException("Unable to remove source folder")
+
+        if os.path.exists(dirty):
+            remove_source(raise_error=True)
+
         if not os.path.exists(src_folder):
             output.info('Configuring sources in %s' % src_folder)
             shutil.copytree(export_folder, src_folder)
+            save(dirty, "")  # Creation of DIRTY flag
             os.chdir(src_folder)
             try:
                 conan_file.source()
+                os.remove(dirty)  # Everything went well, remove DIRTY flag
             except Exception as e:
+                os.chdir(export_folder)
                 output.error("Error while executing source(): %s" % str(e))
                 # in case source() fails (user error, typically), remove the src_folder
                 # and raise to interrupt any other processes (build, package)
-                os.chdir(export_folder)
-                try:
-                    rmdir(src_folder)
-                except Exception as e_rm:
-                    output.error("Unable to remove src folder %s\n%s" % (src_folder, str(e_rm)))
-                    output.warn("**** Please delete it manually ****")
+                remove_source()
                 raise ConanException("%s: %s" % (conan_file.name, str(e)))
 
-    def _build_package(self, export_folder, src_folder, build_folder, conan_file, output):
+    def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file,
+                       output):
         """ builds the package, creating the corresponding build folder if necessary
         and copying there the contents from the src folder. The code is duplicated
         in every build, as some configure processes actually change the source
@@ -235,7 +265,22 @@ Package configuration:
         if not os.path.exists(build_folder):
             self._config_source(export_folder, src_folder, conan_file, output)
             output.info('Copying sources to build folder')
-            shutil.copytree(src_folder, build_folder, symlinks=True)
+
+            def check_max_path_len(src, files):
+                if platform.system() != "Windows":
+                    return []
+                filtered_files = []
+                for the_file in files:
+                    source_path = os.path.join(src, the_file)
+                    # Without storage path, just relative
+                    rel_path = os.path.relpath(source_path, src_folder)
+                    dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
+                    # it seems that "/" is counted as "\\" so it counts double
+                    if len(dest_path) + (Counter(dest_path)[os.path.sep]) >= 260:
+                        filtered_files.append(the_file)
+                        output.warn("Filename too long, file excluded: %s" % dest_path)
+                return filtered_files
+            shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
         os.chdir(build_folder)
         conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files
@@ -253,6 +298,7 @@ Package configuration:
             # This is necessary because it is different for user projects
             # than for packages
             conan_file._conanfile_directory = build_folder
+            conan_file.package_folder = package_folder
             conan_file.build()
             self._out.writeln("")
             output.success("Package '%s' built" % os.path.basename(build_folder))

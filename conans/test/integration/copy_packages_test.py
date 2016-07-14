@@ -28,7 +28,8 @@ class CopyPackagesTest(unittest.TestCase):
     def _export_some_packages(self, client):
         files = cpp_hello_conan_files("Hello0", "0.1")
         # No build.
-        files[CONANFILE] = files[CONANFILE].replace("def build(self):", "def build(self):\n        return\n")
+        files[CONANFILE] = files[CONANFILE].replace("def build(self):",
+                                                    "def build(self):\n        return\n")
         client.save(files)
         client.run("export lasote/stable")
         client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")

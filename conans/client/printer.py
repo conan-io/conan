@@ -38,7 +38,8 @@ class Printer(object):
             self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
         self._out.writeln("")
 
-    def print_info(self, deps_graph, project_reference, _info, registry, graph_updates_info=None, remote=None):
+    def print_info(self, deps_graph, project_reference, _info, registry, graph_updates_info=None,
+                   remote=None):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -47,8 +48,16 @@ class Printer(object):
                                        file for a project on the path. This may be None,
                                        in which case the project itself will not be part
                                        of the printed dependencies.
-                remote: Remote specified in install command. Could be different from the registry one.
+                remote: Remote specified in install command.
+                        Could be different from the registry one.
         """
+        def show(field):
+            if _info is True:
+                return True
+            if field in [s.lower() for s in _info.split(",")]:
+                return True
+            return False
+
         graph_updates_info = graph_updates_info or {}
         for node in sorted(deps_graph.nodes):
             ref, conan = node
@@ -61,46 +70,56 @@ class Printer(object):
                     ref = project_reference
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             reg_remote = registry.get_ref(ref)
-            if isinstance(ref, ConanFileReference):  # Excludes PROJECT fake reference
+            # Excludes PROJECT fake reference
+            remote_name = remote
+            if reg_remote and not remote:
+                remote_name = reg_remote.name
+
+            if isinstance(ref, ConanFileReference) and show("remote"):
                 if reg_remote:
-                    remote_name = remote or reg_remote.name
                     self._out.writeln("    Remote: %s=%s" % (reg_remote.name, reg_remote.url),
                                       Color.BRIGHT_GREEN)
                 else:
                     self._out.writeln("    Remote: None", Color.BRIGHT_GREEN)
-                    remote_name = remote
-
             url = getattr(conan, "url", None)
             license_ = getattr(conan, "license", None)
             author = getattr(conan, "author", None)
-            if url:
+            if url and show("url"):
                 self._out.writeln("    URL: %s" % url, Color.BRIGHT_GREEN)
-            if license_:
-                self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
-            if author:
+
+            if license_ and show("license"):
+                if isinstance(license_, (list, tuple, set)):
+                    self._out.writeln("    Licenses: %s" % ", ".join(license_), Color.BRIGHT_GREEN)
+                else:
+                    self._out.writeln("    License: %s" % license_, Color.BRIGHT_GREEN)
+            if author and show("author"):
                 self._out.writeln("    Author: %s" % author, Color.BRIGHT_GREEN)
 
-            if isinstance(ref, ConanFileReference):  # Excludes PROJECT fake reference
-                update = graph_updates_info.get(ref, 0)
+            if isinstance(ref, ConanFileReference) and show("update"):  # Excludes PROJECT
+                update = graph_updates_info.get(ref)
                 update_messages = {
+                 None: ("Version not checked", Color.WHITE),
                  0: ("You have the latest version (%s)" % remote_name, Color.BRIGHT_GREEN),
                  1: ("There is a newer version (%s)" % remote_name, Color.BRIGHT_YELLOW),
-                 -1: ("The local file is newer than remote's one (%s)" % remote_name, Color.BRIGHT_RED)
+                 -1: ("The local file is newer than remote's one (%s)" % remote_name,
+                      Color.BRIGHT_RED)
                 }
-                self._out.writeln("    Updates: %s" % update_messages[update][0], update_messages[update][1])
+                self._out.writeln("    Updates: %s" % update_messages[update][0],
+                                  update_messages[update][1])
 
             dependants = deps_graph.inverse_neighbors(node)
-            if isinstance(ref, ConanFileReference):  # Excludes PROJECT fake reference
+            if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
                     ref = repr(d.conan_ref) if d.conan_ref else project_reference
                     self._out.writeln("        %s" % ref, Color.BRIGHT_YELLOW)
 
-            depends = deps_graph.neighbors(node)
-            if depends:
-                self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
-                for d in depends:
-                    self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
+            if show("requires"):
+                depends = deps_graph.neighbors(node)
+                if depends:
+                    self._out.writeln("    Requires:", Color.BRIGHT_GREEN)
+                    for d in depends:
+                        self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
 
     def print_search(self, info, pattern=None, verbose=False, extra_verbose=False):
         """ Print all the exported conans information
@@ -139,9 +158,9 @@ class Printer(object):
                                 self._print_colored_line(str(name), indent=3)
                     else:
                         if conan_info.settings:
-                            settings_line = [values[1] for values in
-                                             [setting.split("=")
-                                              for setting in conan_info.settings.dumps().splitlines()]]
+                            lines = conan_info.settings.dumps().splitlines()
+                            settings_list = [s.split("=") for s in lines]
+                            settings_line = [values[1] for values in settings_list]
                             settings_line = "(%s)" % ", ".join(settings_line)
                             self._print_colored_line(settings_line, indent=3)
 

@@ -89,4 +89,4 @@ if __name__ == "__main__":
     for tmp in iter(get_response_chunk(paths)):
         allt += tmp
 
-    print allt
+    print(allt)

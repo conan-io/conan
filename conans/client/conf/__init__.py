@@ -6,6 +6,7 @@ from conans.util.files import save, load
 from six.moves.configparser import ConfigParser, NoSectionError
 from conans.model.values import Values
 import urllib
+from conans.paths import conan_expand_user
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.6.0'
 
@@ -14,13 +15,15 @@ os: [Windows, Linux, Macos, Android, iOS]
 arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
 compiler:
     gcc:
-        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3"]
+        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "6.1"]
         libcxx: [libstdc++, libstdc++11]
+        threads: [None, posix, win32] #  Windows MinGW
+        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14"]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]
@@ -35,10 +38,6 @@ default_client_conf = '''
 # This is the default path, but you can write your own
 path: ~/.conan/data
 
-[remotes]
-conan.io: https://server.conan.io
-local: http://localhost:9300
-
 [proxies]
 # Empty section will try to use system proxies.
 # If don't want proxy at all, remove section [proxies]
@@ -48,7 +47,6 @@ local: http://localhost:9300
 # https: http://10.10.1.10:1080
 
 [settings_defaults]
-
 '''
 
 
@@ -79,7 +77,7 @@ class ConanClientConfigParser(ConfigParser):
                     storage = storage[2:]
                 result = os.path.join(conan_user_home, storage)
             else:
-                result = os.path.expanduser(self.storage["path"])
+                result = conan_expand_user(self.storage["path"])
         except KeyError:
             result = None
         result = get_env('CONAN_STORAGE_PATH', result)

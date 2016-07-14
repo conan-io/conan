@@ -121,7 +121,8 @@ class OptionsValuesTest(unittest.TestCase):
                                                       "Poco:deps_bundled=True"]))
 
     def test_sha_constant(self):
-        self.assertEqual(self.sut.sha, "7e406fc70a1c40b597353b39a0c0a605e9f95332")
+        self.assertEqual(self.sut.sha({"Boost", "Poco"}),
+                         "7e406fc70a1c40b597353b39a0c0a605e9f95332")
         self.sut.new_option = False
         self.sut["Boost"].new_option = "off"
         self.sut["Poco"].new_option = 0
@@ -135,4 +136,6 @@ class OptionsValuesTest(unittest.TestCase):
                                                       "Boost:thread.multi=off",
                                                       "Poco:deps_bundled=True",
                                                       "Poco:new_option=0"]))
-        self.assertEqual(self.sut.sha, "7e406fc70a1c40b597353b39a0c0a605e9f95332")
+        self.assertEqual(self.sut.sha({"Boost", "Poco"}),
+                         "7e406fc70a1c40b597353b39a0c0a605e9f95332")
+

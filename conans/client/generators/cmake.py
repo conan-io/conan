@@ -50,21 +50,26 @@ class CMakeGenerator(Generator):
         # GENERAL VARIABLES
         deps = DepsCppCmake(self.deps_build_info)
 
-        template = ('set(CONAN_INCLUDE_DIRS {deps.include_paths} ${{CONAN_INCLUDE_DIRS}})\n'
-            'set(CONAN_LIB_DIRS {deps.lib_paths} ${{CONAN_LIB_DIRS}})\n'
-            'set(CONAN_BIN_DIRS {deps.bin_paths} ${{CONAN_BIN_DIRS}})\n'
-            'set(CONAN_LIBS {deps.libs} ${{CONAN_LIBS}})\n'
-            'set(CONAN_DEFINES {deps.defines} ${{CONAN_DEFINES}})\n'
-            'set(CONAN_CXX_FLAGS "{deps.cppflags} ${{CONAN_CXX_FLAGS}}")\n'
-            'set(CONAN_SHARED_LINKER_FLAGS "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS}}")\n'
-            'set(CONAN_EXE_LINKER_FLAGS "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS}}")\n'
-            'set(CONAN_C_FLAGS "{deps.cflags} ${{CONAN_C_FLAGS}}")\n'
-            'set(CONAN_CMAKE_MODULE_PATH {module_paths} ${{CONAN_CMAKE_MODULE_PATH}})')
+        template = ('set(CONAN_PACKAGE_NAME {name})\n'
+                    'set(CONAN_PACKAGE_VERSION {version})\n'
+                    'set(CONAN_DEPENDENCIES {dependencies})\n'
+                    'set(CONAN_INCLUDE_DIRS {deps.include_paths} ${{CONAN_INCLUDE_DIRS}})\n'
+                    'set(CONAN_LIB_DIRS {deps.lib_paths} ${{CONAN_LIB_DIRS}})\n'
+                    'set(CONAN_BIN_DIRS {deps.bin_paths} ${{CONAN_BIN_DIRS}})\n'
+                    'set(CONAN_LIBS {deps.libs} ${{CONAN_LIBS}})\n'
+                    'set(CONAN_DEFINES {deps.defines} ${{CONAN_DEFINES}})\n'
+                    'set(CONAN_CXX_FLAGS "{deps.cppflags} ${{CONAN_CXX_FLAGS}}")\n'
+                    'set(CONAN_SHARED_LINKER_FLAGS "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS}}")\n'
+                    'set(CONAN_EXE_LINKER_FLAGS "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS}}")\n'
+                    'set(CONAN_C_FLAGS "{deps.cflags} ${{CONAN_C_FLAGS}}")\n'
+                    'set(CONAN_CMAKE_MODULE_PATH {module_paths} ${{CONAN_CMAKE_MODULE_PATH}})')
 
         rootpaths = [DepsCppCmake(dep_cpp_info).rootpath for _, dep_cpp_info
                      in self.deps_build_info.dependencies]
         module_paths = " ".join(rootpaths)
-        all_flags = template.format(deps=deps, module_paths=module_paths)
+        all_flags = template.format(deps=deps, module_paths=module_paths,
+                                    dependencies=" ".join(self.deps_build_info.deps),
+                                    name=self.conanfile.name, version=self.conanfile.version)
         sections.append(all_flags)
 
         # MACROS
@@ -77,12 +82,23 @@ class CMakeGenerator(Generator):
     conan_check_compiler()
     conan_output_dirs_setup()
     conan_flags_setup()
+    conan_set_find_paths()
+endmacro()
+
+macro(conan_set_find_paths)
     # CMake can find findXXX.cmake files in the root of packages
     set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
+
+    # Make find_package() to work
+    set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
 endmacro()
 
 macro(conan_flags_setup)
-    include_directories(SYSTEM ${CONAN_INCLUDE_DIRS})
+    if(CONAN_SYSTEM_INCLUDES)
+        include_directories(SYSTEM ${CONAN_INCLUDE_DIRS})
+    else()
+        include_directories(${CONAN_INCLUDE_DIRS})
+    endif()
     link_directories(${CONAN_LIB_DIRS})
     add_definitions(${CONAN_DEFINES})
 
@@ -199,7 +215,7 @@ function(check_compiler_version)
             (CONAN_COMPILER_VERSION STREQUAL "6" AND NOT VERSION_MAJOR STREQUAL "12") )
             conan_error_compiler_version()
         endif()
-    elseif(CONAN_COMPILER STREQUAL "gcc" OR CONAN_COMPILER MATCHES "Clang")
+    elseif(CONAN_COMPILER STREQUAL "gcc" OR CONAN_COMPILER MATCHES "clang")
         if(NOT ${VERSION_MAJOR}.${VERSION_MINOR} VERSION_EQUAL CONAN_COMPILER_VERSION)
            conan_error_compiler_version()
         endif()

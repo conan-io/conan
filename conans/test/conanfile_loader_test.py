@@ -1,7 +1,6 @@
 
 import unittest
-from conans.client.loader import ConanFileTextLoader,\
-    ConanFileLoader
+from conans.client.loader import ConanFileTextLoader, ConanFileLoader
 from conans.errors import ConanException
 from conans.util.files import save
 import os
@@ -10,9 +9,22 @@ from conans.model.options import OptionsValues
 from mock import Mock
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
+from conans.model.scope import Scopes
 
 
 class ConanLoaderTest(unittest.TestCase):
+
+    def conanfile_txt_errors_test(self):
+        # Valid content
+        file_content = '''[requires}
+OpenCV/2.4.10@phil/stable # My requirement for CV
+'''
+        with self.assertRaisesRegexp(ConanException, "Bad syntax"):
+            ConanFileTextLoader(file_content)
+
+        file_content = '{hello}'
+        with self.assertRaisesRegexp(ConanException, "Unexpected line"):
+            ConanFileTextLoader(file_content)
 
     def plain_text_parser_test(self):
         # Valid content
@@ -54,7 +66,7 @@ OpenCV2:other_option=Cosa
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
         ret = loader.load_conan_txt(file_path, None)
         options1 = OptionsValues.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
@@ -81,7 +93,7 @@ OpenCV/2.4.104phil/stable <- use_python:True, other_option:False
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
         with self.assertRaisesRegexp(ConanException, "Wrong package recipe reference(.*)"):
             loader.load_conan_txt(file_path, None)
 
@@ -93,6 +105,6 @@ OpenCV/bin/* - ./bin
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""))
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
         with self.assertRaisesRegexp(ConanException, "is too long. Valid names must contain"):
             loader.load_conan_txt(file_path, None)

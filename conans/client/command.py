@@ -13,7 +13,7 @@ from conans.client.store.localdb import LocalDB
 from conans.util.log import logger
 from conans.model.ref import ConanFileReference
 from conans.client.manager import ConanManager
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, conan_expand_user
 import requests
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans import __version__ as CLIENT_VERSION
@@ -21,17 +21,18 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.model.version import Version
 from conans.client.migrations import ClientMigrator
 import hashlib
-from conans.util.files import rmdir, load
+from conans.util.files import rmdir, load, save_files
 from argparse import RawTextHelpFormatter
-import re
 from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
+from conans.model.scope import Scopes
+import re
 
 
 class Extender(argparse.Action):
     '''Allows to use the same flag several times in a command and creates a list with the values.
        For example:
-           conans install OpenSSL/1.0.2e@lasote/stable -o qt:value -o mode:2 -s cucumber:true
+           conans install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
            It creates:
            options = ['qt:value', 'mode:2']
            settings = ['cucumber:true']
@@ -95,15 +96,6 @@ class Command(object):
                 raise ConanException("Invalid input '%s', use 'name=value'" % item)
         return [(item[0], item[1]) for item in [item.split("=") for item in items]]
 
-    def _detect_tested_library_name(self):
-        conanfile_content = load(CONANFILE)
-        match = re.search('^\s*name\s*=\s*"(.*)"', conanfile_content, re.MULTILINE)
-        if match:
-            return "%s*" % match.group(1)
-
-        self._user_io.out.warn("Cannot detect a valid conanfile in current directory")
-        return None
-
     def _get_build_sources_parameter(self, build_param):
         # returns True if we want to build the missing libraries
         #         False if building is forbidden
@@ -122,32 +114,119 @@ class Command(object):
         else:
             return False  # Nothing is built
 
-    def test(self, *args):
-        """ build and run your package test. Must have conanfile.py with "test"
-        method and "test" subfolder with package consumer test project
+    def _test_check(self, test_folder, test_folder_name):
+        """ To ensure that the 0.9 version new layout is detected and users warned
         """
-        parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test",
+        # Check old tests, format
+        test_conanfile = os.path.join(test_folder, "conanfile.py")
+        if not os.path.exists(test_conanfile):
+            raise ConanException("Test conanfile.py does not exist")
+        test_conanfile_content = load(test_conanfile)
+        if ".conanfile_directory" not in test_conanfile_content:
+            self._user_io.out.error("""******* conan test command layout has changed *******
+
+In your "%s" folder 'conanfile.py' you should use the
+path to the conanfile_directory, something like:
+
+    self.run('cmake %%s %%s' %% (self.conanfile_directory, cmake.command_line))
+
+ """ % (test_folder_name))
+
+        # Test the CMakeLists, if existing
+        test_cmake = os.path.join(test_folder, "CMakeLists.txt")
+        if os.path.exists(test_cmake):
+            test_cmake_content = load(test_cmake)
+            if "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" not in test_cmake_content:
+                self._user_io.out.error("""******* conan test command layout has changed *******
+
+In your "%s" folder 'CMakeLists.txt' you should use the
+path to the CMake binary directory, like this:
+
+   include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+
+ """ % (test_folder_name))
+
+    def new(self, *args):
+        """ create a new package template conanfile.py and other optional files
+        """
+        parser = argparse.ArgumentParser(description=self.new.__doc__, prog="conan new",
+                                         formatter_class=RawTextHelpFormatter)
+        parser.add_argument("name", help='Package name, e.g.: Poco/1.7.3@user/testing')
+        parser.add_argument("-t", "--test", action='store_true', default=False,
+                            help='Create test_package skeleton to test package')
+        parser.add_argument("-i", "--header", action='store_true', default=False,
+                            help='Create a headers only package')
+        parser.add_argument("-c", "--pure_c", action='store_true', default=False,
+                            help='Create a C language package only package (non-headers)')
+
+        args = parser.parse_args(*args)
+
+        root_folder = os.getcwd()
+        try:
+            name, version, user, channel = ConanFileReference.loads(args.name)
+            pattern = re.compile('[\W_]+')
+            package_name = pattern.sub('', name).capitalize()
+        except:
+            raise ConanException("Bad parameter, please use full package name,"
+                                 "e.g: MyLib/1.2.3@user/testing")
+        from conans.client.new import (conanfile, conanfile_header, test_conanfile, test_cmake,
+                                       test_main)
+        if args.header:
+            files = {"conanfile.py": conanfile_header.format(name=name, version=version,
+                                                             package_name=package_name)}
+        else:
+            files = {"conanfile.py": conanfile.format(name=name, version=version,
+                                                      package_name=package_name)}
+            if args.pure_c:
+                config = "\n    def config(self):\n        del self.settings.compiler.libcxx"
+                files["conanfile.py"] = files["conanfile.py"] + config
+        if args.test:
+            files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
+                                                                       user=user, channel=channel,
+                                                                       package_name=package_name)
+            files["test_package/CMakeLists.txt"] = test_cmake
+            files["test_package/example.cpp"] = test_main
+        save_files(root_folder, files)
+        for f in sorted(files):
+            self._user_io.out.success("File saved: %s" % f)
+
+    def test_package(self, *args):
+        """ build and run your package test. Must have conanfile.py with "test"
+        method and "test_package" subfolder with package consumer test project
+        """
+        parser = argparse.ArgumentParser(description=self.test_package.__doc__, prog="conan test_package",
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
+        parser.add_argument("-ne", "--not-export", default=False, action='store_true', help='Do not export the conanfile before test execution')
         parser.add_argument("-f", "--folder", help='alternative test folder name')
+        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                            help='Define scopes for packages')
+        parser.add_argument('--keep-source', '-k', default=False, action='store_true',
+                            help='Optional. Do not remove the source folder in local store. '
+                                 'Use for testing purposes only')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
-        test_folder_name = args.folder or "test"
 
         root_folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
-        test_folder = os.path.join(root_folder, test_folder_name)
-        if not os.path.exists(test_folder):
-            raise ConanException("test folder not available")
-
-        lib_to_test = self._detect_tested_library_name()
-
-        # Get False or a list of patterns to check
-        if args.build is None and lib_to_test:  # Not specified, force build the tested library
-            args.build = [lib_to_test]
+        if args.folder:
+            test_folder_name = args.folder
+            test_folder = os.path.join(root_folder, test_folder_name)
+            test_conanfile = os.path.join(test_folder, "conanfile.py")
+            if not os.path.exists(test_conanfile):
+                raise ConanException("test folder '%s' not available, "
+                                     "or it doesn't have a conanfile.py" % args.folder)
         else:
-            args.build = self._get_build_sources_parameter(args.build)
+            for name in ["test_package", "test"]:
+                test_folder_name = name
+                test_folder = os.path.join(root_folder, test_folder_name)
+                test_conanfile = os.path.join(test_folder, "conanfile.py")
+                if os.path.exists(test_conanfile):
+                    break
+            else:
+                raise ConanException("test folder 'test_package' not available, "
+                                     "or it doesn't have a conanfile.py")
 
         options = args.options or []
         settings = args.settings or []
@@ -159,14 +238,46 @@ class Command(object):
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         settings = self._get_tuples_list_from_extender_arg(args.settings)
+        scopes = Scopes.from_list(args.scope) if args.scope else None
+
+        manager = self._manager
+        loader = manager._loader(None, settings, options, scopes)
+        conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
+        try:
+            # convert to list from ItemViews required for python3
+            reqs = list(conanfile.requires.items())
+            first_dep = reqs[0][1].conan_reference
+        except Exception:
+            raise ConanException("Unable to retrieve first requirement of test conanfile.py")
+
+        # Forcing an export!
+        if not args.not_export:
+            self._user_io.out.info("Exporting package recipe")
+            user_channel = "%s/%s" % (first_dep.user, first_dep.channel)
+            self._manager.export(user_channel, root_folder, keep_source=args.keep_source)
+
+        lib_to_test = first_dep.name + "*"
+        # Get False or a list of patterns to check
+        if args.build is None and lib_to_test:  # Not specified, force build the tested library
+            args.build = [lib_to_test]
+        else:
+            args.build = self._get_build_sources_parameter(args.build)
 
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
                               remote=args.remote,
                               options=options,
                               settings=settings,
-                              build_mode=args.build)
+                              build_mode=args.build,
+                              scopes=scopes)
+        self._test_check(test_folder, test_folder_name)
         self._manager.build(test_folder, build_folder, test=True)
+
+    # Alias to test
+    def test(self, *args):
+        """ (deprecated). Alias to test_package, use it instead
+        """
+        self.test_package(*args)
 
     def install(self, *args):
         """ install in the local store the given requirements.
@@ -177,14 +288,18 @@ class Command(object):
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("reference", nargs='?', default="",
                             help='package recipe reference'
-                            'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
+                            'e.g., MyPackage/1.2@user/channel or ./my_project/')
         parser.add_argument("--package", "-p", nargs=1, action=Extender,
                             help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("--all", action='store_true', default=False,
                             help='Install all packages from the specified package recipe')
+        parser.add_argument("--integrity", "-i", action='store_true', default=False,
+                            help='Check that the stored recipe or package manifests are correct')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="update with new upstream packages")
+        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                            help='Define scopes for packages')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -200,14 +315,14 @@ class Command(object):
                 args.package = []
             if not args.reference or not isinstance(reference, ConanFileReference):
                 raise ConanException("Invalid package recipe reference. "
-                                     "e.g., OpenSSL/1.0.2e@lasote/stable")
+                                     "e.g., MyPackage/1.2@user/channel")
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
             # Get False or a list of patterns to check
             args.build = self._get_build_sources_parameter(args.build)
             options = self._get_tuples_list_from_extender_arg(args.options)
             settings = self._get_tuples_list_from_extender_arg(args.settings)
-
+            scopes = Scopes.from_list(args.scope) if args.scope else None
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,
@@ -215,7 +330,9 @@ class Command(object):
                                   settings=settings,
                                   build_mode=args.build,
                                   filename=args.file,
-                                  update=args.update)
+                                  update=args.update,
+                                  integrity=args.integrity,
+                                  scopes=scopes)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -226,7 +343,7 @@ class Command(object):
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("reference", nargs='?', default="",
                             help='reference name or path to conanfile file, '
-                            'e.g., OpenSSL/1.0.2e@lasote/stable or ./my_project/')
+                            'e.g., MyPackage/1.2@user/channel or ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("-r", "--remote", help='look for in the remote storage')
         parser.add_argument("--options", "-o",
@@ -235,7 +352,17 @@ class Command(object):
         parser.add_argument("--settings", "-s",
                             help='load settings to build the package, -s compiler:gcc',
                             nargs=1, action=Extender)
-
+        parser.add_argument("--only", "-n",
+                            help='show fields only')
+        parser.add_argument("--integrity", "-i", action='store_true', default=False,
+                            help='Check that the stored recipe or package manifests are correct')
+        parser.add_argument("--update", "-u", action='store_true', default=False,
+                            help="check updates exist from upstream remotes")
+        parser.add_argument("--build_order", "-bo",
+                            help='given a modified reference, return ordered list to build (CI)',
+                            nargs=1, action=Extender)
+        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                            help='Define scopes for packages')
         args = parser.parse_args(*args)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
@@ -245,15 +372,18 @@ class Command(object):
             reference = ConanFileReference.loads(args.reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, args.reference))
-
-        self._manager.install(reference=reference,
-                              current_path=current_path,
-                              remote=args.remote,
-                              options=options,
-                              settings=settings,
-                              build_mode=False,
-                              info=True,
-                              filename=args.file)
+        scopes = Scopes.from_list(args.scope) if args.scope else None
+        self._manager.info(reference=reference,
+                           current_path=current_path,
+                           remote=args.remote,
+                           options=options,
+                           settings=settings,
+                           info=args.only or True,
+                           check_updates=args.update,
+                           integrity=args.integrity,
+                           filename=args.file,
+                           build_order=args.build_order,
+                           scopes=scopes)
 
     def build(self, *args):
         """ calls your project conanfile.py "build" method.
@@ -278,10 +408,11 @@ class Command(object):
             regenerates the existing package's manifest.
             Intended for package creators, for regenerating a package without
             recompiling the source.
-            e.g. conan package OpenSSL/1.0.2e@lasote/stable 9cf83afd07b678da9c1645f605875400847ff3
+            e.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("reference", help='package recipe reference name. e.g., openssl/1.0.2@lasote/testing')
+        parser.add_argument("reference", help='package recipe reference name. '
+                            'e.g., MyPackage/1.2@user/channel')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3')
@@ -296,7 +427,8 @@ class Command(object):
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
-            raise ConanException("Invalid package recipe reference. e.g., OpenSSL/1.0.2e@lasote/stable")
+            raise ConanException("Invalid package recipe reference. "
+                                 "e.g., MyPackage/1.2@user/channel")
 
         if not args.all and not args.package:
             raise ConanException("'conan package': Please specify --all or a package ID")
@@ -355,7 +487,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
         parser.add_argument("reference", default="",
                             help='package recipe reference'
-                            'e.g., OpenSSL/1.0.2e@lasote/stable')
+                            'e.g., MyPackage/1.2@user/channel')
         parser.add_argument("user_channel", default="",
                             help='Destination user/channel'
                             'e.g., lasote/testing')
@@ -386,7 +518,15 @@ class Command(object):
         parser.add_argument("-p", "--password", help='User password. Use double quotes '
                             'if password with spacing, and escape quotes if existing')
         parser.add_argument("--remote", "-r", help='look for in the remote storage')
+        parser.add_argument('-c', '--clean', default=False,
+                            action='store_true', help='Remove user and tokens for all remotes')
         args = parser.parse_args(*parameters)  # To enable -h
+
+        if args.clean:
+            localdb = LocalDB(self._conan_paths.localdb)
+            localdb.init(clean=True)
+            self._user_io.out.success("Deleted user data")
+            return
         self._manager.user(args.remote, args.name, args.password)
 
     def search(self, *args):
@@ -418,7 +558,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
         parser.add_argument("reference",
-                            help='package recipe reference, e.g., OpenSSL/1.0.2e@lasote/stable')
+                            help='package recipe reference, e.g., MyPackage/1.2@user/channel')
         # TODO: packageparser.add_argument('package', help='user name')
         parser.add_argument("--package", "-p", default=None, help='package ID to upload')
         parser.add_argument("--remote", "-r", help='upload to this specific remote')
@@ -455,13 +595,17 @@ class Command(object):
         parser_upd = subparsers.add_parser('update', help='update the remote url')
         parser_upd.add_argument('remote',  help='name of the remote')
         parser_upd.add_argument('url',  help='url')
-        subparsers.add_parser('list_ref', help='list the package recipes and its associated remotes')
-        parser_padd = subparsers.add_parser('add_ref', help="associate a recipe's reference to a remote")
+        subparsers.add_parser('list_ref',
+                              help='list the package recipes and its associated remotes')
+        parser_padd = subparsers.add_parser('add_ref',
+                                            help="associate a recipe's reference to a remote")
         parser_padd.add_argument('reference',  help='package recipe reference')
         parser_padd.add_argument('remote',  help='name of the remote')
-        parser_prm = subparsers.add_parser('remove_ref', help="dissociate a recipe's reference and its remote")
+        parser_prm = subparsers.add_parser('remove_ref',
+                                           help="dissociate a recipe's reference and its remote")
         parser_prm.add_argument('reference',  help='package recipe reference')
-        parser_pupd = subparsers.add_parser('update_ref', help="update the remote associated with a package recipe")
+        parser_pupd = subparsers.add_parser('update_ref', help="update the remote associated "
+                                            "with a package recipe")
         parser_pupd.add_argument('reference',  help='package recipe reference')
         parser_pupd.add_argument('remote',  help='name of the remote')
         args = parser.parse_args(*args)
@@ -584,7 +728,8 @@ def get_command():
     out = ConanOutput(sys.stdout, color)
     user_io = UserIO(out=out)
 
-    user_folder = os.getenv("CONAN_USER_HOME", os.path.expanduser("~"))
+    user_folder = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
+
     try:
         # To capture exceptions in conan.conf parsing
         paths = ConanPaths(user_folder, None, out)
