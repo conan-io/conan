@@ -106,14 +106,14 @@ class InfoTest(unittest.TestCase):
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
         self.client.run("info -bo=Hello0/0.1@lasote/stable")
-        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable], ['PROJECT']",
+        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
                       self.client.user_io.out)
 
         self.client.run("info -bo=Hello1/0.1@lasote/stable")
-        self.assertIn("[Hello1/0.1@lasote/stable], ['PROJECT']", self.client.user_io.out)
+        self.assertIn("[Hello1/0.1@lasote/stable]", self.client.user_io.out)
 
         self.client.run("info -bo=Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
-        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable], ['PROJECT']",
+        self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
                       self.client.user_io.out)
 
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
@@ -137,37 +137,35 @@ class InfoTest(unittest.TestCase):
                      export=False)
 
         self.client.run("info -bo=LibA/0.1@lasote/stable")
-        self.assertIn("[LibA/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable],"
-                      " ['PROJECT']",
+        self.assertIn("[LibA/0.1@lasote/stable], "
+                      "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
         self.client.run("info -bo=LibB/0.1@lasote/stable")
-        self.assertIn("[LibB/0.1@lasote/stable], ['PROJECT']",
-                      self.client.user_io.out)
+        self.assertIn("[LibB/0.1@lasote/stable]", self.client.user_io.out)
         self.client.run("info -bo=LibE/0.1@lasote/stable")
-        self.assertIn("[LibE/0.1@lasote/stable], [LibB/0.1@lasote/stable], ['PROJECT']",
+        self.assertIn("[LibE/0.1@lasote/stable], [LibB/0.1@lasote/stable]",
                       self.client.user_io.out)
         self.client.run("info -bo=LibF/0.1@lasote/stable")
-        self.assertIn("[LibF/0.1@lasote/stable], [LibC/0.1@lasote/stable], ['PROJECT']",
+        self.assertIn("[LibF/0.1@lasote/stable], [LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
         self.client.run("info -bo=Dev1/0.1@lasote/stable")
         self.assertEqual("\n", self.client.user_io.out)
         self.client.run("info --scope=LibE:dev=True -bo=Dev1/0.1@lasote/stable")
         self.assertIn("[Dev1/0.1@lasote/stable], [LibE/0.1@lasote/stable], "
-                      "[LibB/0.1@lasote/stable], ['PROJECT']", self.client.user_io.out)
+                      "[LibB/0.1@lasote/stable]", self.client.user_io.out)
         self.client.run("info -bo=LibG/0.1@lasote/stable")
         self.assertEqual("\n", self.client.user_io.out)
         self.client.run("info --scope=LibC:dev=True -bo=LibG/0.1@lasote/stable")
         self.assertIn("[LibG/0.1@lasote/stable], [Dev2/0.1@lasote/stable], "
-                      "[LibC/0.1@lasote/stable], ['PROJECT']", self.client.user_io.out)
+                      "[LibC/0.1@lasote/stable]", self.client.user_io.out)
 
         self.client.run("info --build_order=ALL")
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "
-                      "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable], ['PROJECT']",
+                      "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
 
         self.client.run("info --build_order=ALL --scope=ALL:dev=True")
         self.assertIn("[Dev1/0.1@lasote/stable, LibG/0.1@lasote/stable], "
                       "[Dev2/0.1@lasote/stable, LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, "
-                      "LibF/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable], "
-                      "['PROJECT']",
+                      "LibF/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
