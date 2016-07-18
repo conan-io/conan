@@ -150,7 +150,7 @@ class ConanManager(object):
 
         if isinstance(reference, ConanFileReference):
             project_reference = None
-            conanfile = loader.load_virtual(reference)
+            conanfile = loader.load_virtual(reference, current_path)
             is_txt = True
         else:
             conanfile_path = reference
@@ -209,7 +209,7 @@ class ConanManager(object):
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
-                integrity=False, scopes=None):
+                integrity=False, scopes=None, generators=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -217,6 +217,7 @@ class ConanManager(object):
         @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
         @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
         """
+        generators = generators or []
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, integrity, scopes)
         (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
@@ -239,12 +240,19 @@ If not:
         installer = ConanInstaller(self._paths, self._user_io, remote_proxy)
         installer.install(deps_graph, build_mode)
 
+        scope_prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
+        output = ScopedOutput(scope_prefix, self._user_io.out)
+
+        # Write generators
+        tmp = list(conanfile.generators)  # Add the command line specified generators
+        tmp.extend(generators)
+        conanfile.generators = tmp
+        write_generators(conanfile, current_path, output)
+
         if not isinstance(reference, ConanFileReference):
             content = normalize(conanfile.info.dumps())
             save(os.path.join(current_path, CONANINFO), content)
-            output = ScopedOutput("PROJECT", self._user_io.out)
             output.info("Generated %s" % CONANINFO)
-            write_generators(conanfile, current_path, output)
             local_installer = FileImporter(deps_graph, self._paths, current_path)
             conanfile.copy = local_installer
             conanfile.imports()

@@ -3,6 +3,7 @@ from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.errors import ConanException
+from conans.model.env_info import DepsEnvInfo
 
 
 def create_options(conanfile):
@@ -93,6 +94,11 @@ class ConanFile(object):
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
+
+        # environment variables declared in the package_info
+        self.env_info = None  # Will be initialized at processing time
+        self.deps_env_info = DepsEnvInfo()
+
         self.copy = None  # initialized at runtime
 
         # an output stream (writeln, info, warn error)
