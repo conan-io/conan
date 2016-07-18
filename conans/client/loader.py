@@ -14,6 +14,7 @@ import sys
 from conans.model.conan_generator import Generator
 from conans.client.generators import _save_generator
 from conans.model.scope import Scopes
+from conans.client.output import ScopedOutput
 
 
 class ConanFileLoader(object):
@@ -140,6 +141,28 @@ class ConanFileLoader(object):
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
                                                                parser.import_parameters)
         conanfile.scope = self._scopes.package_scope()
+        return conanfile
+
+    def load_virtual(self, reference):
+        fixed_options = []
+        # If user don't specify namespace in options, assume that it's for the reference (keep compatibility)
+        for option_name, option_value in self._options.as_list():
+            if ":" not in option_name:
+                tmp = ("%s:%s" % (reference.name, option_name), option_value)
+            else:
+                tmp = (option_name, option_value)
+            fixed_options.append(tmp)
+        options = OptionsValues.from_list(fixed_options)
+
+        conanfile = ConanFile(None, self._runner, self._settings.copy(), None)
+
+        conanfile.requires.add(str(reference))  # Convert to string necessary
+        # conanfile.options.values = options
+        conanfile.options.initialize_upstream(options)
+
+        conanfile.generators = ["txt"]
+        conanfile.scope = self._scopes.package_scope()
+
         return conanfile
 
 

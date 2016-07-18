@@ -141,23 +141,19 @@ class ConanManager(object):
 
     def _get_graph(self, reference, current_path, remote, options, settings, filename, update,
                    check_updates, integrity, scopes):
-        reference_given = True
-        if not isinstance(reference, ConanFileReference):
-            conanfile_path = reference
-            reference_given = False
-            reference = None
+
         loader = self._loader(current_path, settings, options, scopes)
-    # Not check for updates for info command, it'll be checked when dep graph is built
+        # Not check for updates for info command, it'll be checked when dep graph is built
         remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote,
                                   update=update, check_updates=check_updates,
                                   check_integrity=integrity)
-        if reference_given:
+
+        if isinstance(reference, ConanFileReference):
             project_reference = None
-            conanfile_path = remote_proxy.get_conanfile(reference)
-            output = ScopedOutput(str(reference), self._user_io.out)
-            conanfile = loader.load_conan(conanfile_path, output, consumer=True)
-            is_txt = None
+            conanfile = loader.load_virtual(reference)
+            is_txt = True
         else:
+            conanfile_path = reference
             project_reference = "PROJECT"
             output = ScopedOutput(project_reference, self._user_io.out)
             try:
@@ -173,12 +169,17 @@ class ConanManager(object):
                 conan_path = os.path.join(conanfile_path, filename or CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
                 is_txt = True
-    # build deps graph and install it
+        # build deps graph and install it
         builder = DepsBuilder(remote_proxy, self._user_io.out, loader)
-        deps_graph = builder.load(reference, conanfile)
+        deps_graph = builder.load(None, conanfile)
+        # These lines are so the conaninfo stores the correct complete info
+        if is_txt:
+            conanfile.info.settings = loader._settings.values
+        conanfile.info.full_settings = loader._settings.values
+        conanfile.info.scope = self._current_scopes
         registry = RemoteRegistry(self._paths.registry, self._user_io.out)
-        return (check_updates, builder, deps_graph, project_reference, registry, conanfile,
-                remote_proxy, reference_given, is_txt, loader, output)
+        return (builder, deps_graph, project_reference, registry, conanfile,
+                remote_proxy, loader)
 
     def info(self, reference, current_path, remote=None, options=None, settings=None,
              info=None, filename=None, update=False, check_updates=False,
@@ -192,8 +193,7 @@ class ConanManager(object):
         """
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, integrity, scopes)
-        (check_updates, builder, deps_graph, project_reference, registry,
-         _, _, _, _, _, _) = objects
+        (builder, deps_graph, project_reference, registry, _, _, _) = objects
 
         if build_order:
             result = deps_graph.build_order(build_order)
@@ -219,20 +219,19 @@ class ConanManager(object):
         """
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, integrity, scopes)
-        (check_updates, _, deps_graph, _, registry, conanfile,
-         remote_proxy, reference_given, is_txt, loader, output) = objects
+        (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
 
         Printer(self._user_io.out).print_graph(deps_graph, registry)
         # Warn if os doesn't match
         try:
-            if detected_os() != conanfile.settings.os:
+            if detected_os() != loader._settings.os:
                 message = '''You are building this package with settings.os='%s' on a '%s' system.
 If this is your intention, you can ignore this message.
 If not:
      - Check the passed settings (-s)
      - Check your global settings in ~/.conan/conan.conf
      - Remove conaninfo.txt to avoid bad cached settings
-''' % (conanfile.settings.os, detected_os())
+''' % (loader._settings.os, detected_os())
                 self._user_io.out.warn(message)
         except ConanException:  # Setting os doesn't exist
             pass
@@ -240,15 +239,10 @@ If not:
         installer = ConanInstaller(self._paths, self._user_io, remote_proxy)
         installer.install(deps_graph, build_mode)
 
-        if not reference_given:
-            if is_txt:
-                conanfile.info.settings = loader._settings.values
-            # Just in case the current package is header only, we still store the full settings
-            # for reference and compiler checks
-            conanfile.info.full_settings = loader._settings.values
-            conanfile.info.scope = self._current_scopes
+        if not isinstance(reference, ConanFileReference):
             content = normalize(conanfile.info.dumps())
             save(os.path.join(current_path, CONANINFO), content)
+            output = ScopedOutput("PROJECT", self._user_io.out)
             output.info("Generated %s" % CONANINFO)
             write_generators(conanfile, current_path, output)
             local_installer = FileImporter(deps_graph, self._paths, current_path)

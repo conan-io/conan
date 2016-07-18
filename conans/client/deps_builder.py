@@ -203,7 +203,7 @@ class DepsGraph(object):
         closure = self._inverse_closure(references)
         result = []
         for level in reversed(levels):
-            new_level = [n.conan_ref or "PROJECT" for n in level if n in closure]
+            new_level = [n.conan_ref for n in level if (n in closure and n.conan_ref)]
             if new_level:
                 result.append(new_level)
         return result
