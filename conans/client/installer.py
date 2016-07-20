@@ -89,14 +89,19 @@ class ConanInstaller(object):
                     break
                 package_id = conan_file.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
-                force_build = self._force_build(conan_ref, build_mode)
-                if not self._remote_proxy.get_package(package_reference, force_build):
+                build_forced = self._build_forced(conan_ref, build_mode, conan_file)
+                if not self._remote_proxy.get_package(package_reference, build_forced):
                     break
             else:
                 skippable_nodes.append(private_node)
         return skippable_nodes
 
-    def _force_build(self, conan_ref, build_mode):
+    def _build_forced(self, conan_ref, build_mode, conan_file):
+        forced_by_conanfile = conan_file.build_policy_always
+
+        if forced_by_conanfile:
+            return True
+
         if build_mode is False:  # "never" option, default
             return False
 
@@ -113,6 +118,12 @@ class ConanInstaller(object):
         should be indpendent from each other, the next-second level should have
         dependencies only to first level conans.
         param nodes_by_level: list of lists [[nodeA, nodeB], [nodeC], [nodeD, ...], ...]
+
+        build_mode => ["*"] if user wrote "--build"
+                   => ["hello*", "bye*"] if user wrote "--build hello --build bye"
+                   => False if user wrote "never"
+                   => True if user wrote "missing"
+
         """
         # Now build each level, starting from the most independent one
         for level in nodes_by_level:
@@ -148,14 +159,14 @@ class ConanInstaller(object):
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
-        force_build = self._force_build(conan_ref, build_mode)
+        force_build = self._build_forced(conan_ref, build_mode, conan_file)
         if self._remote_proxy.get_package(package_reference, force_build):
             return
 
-        # Can we build? Only if we are forced or build_mode missing and package not exists
-        build_allowed = force_build or build_mode is True
+        # we need and can build? Only if we are forced or build_mode missing and package not exists
+        build = force_build or build_mode is True or conan_file.build_policy_missing
 
-        if build_allowed:
+        if build:
             try:
                 rmdir(build_folder)
                 rmdir(package_folder)
