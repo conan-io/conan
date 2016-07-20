@@ -14,7 +14,6 @@ import sys
 from conans.model.conan_generator import Generator
 from conans.client.generators import _save_generator
 from conans.model.scope import Scopes
-from conans.client.output import ScopedOutput
 
 
 class ConanFileLoader(object):
@@ -222,12 +221,3 @@ class ConanFileTextLoader(object):
             for import_params in parameters:
                 conan_file.copy(*import_params)
         return imports
-
-    @staticmethod
-    def get_txt_contents(requirements, generators, options):
-        return "[requires]%(nl)s%(requires)s%(nl)s[generators]%(nl)s%(generators)s%(nl)s\
-[options]%(nl)s%(options)s%(nl)s" % {"requires": os.linesep.join([str(req) for req in requirements]),
-                                     "generators": os.linesep.join(generators),
-                                     "options": os.linesep.join(["=".join(option) for option in options]),
-                                     "nl": os.linesep}
-
