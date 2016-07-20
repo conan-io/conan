@@ -14,9 +14,11 @@ from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
 from collections import Counter
+from conans.model.env_info import EnvInfo
+import six
 
 
-def init_cpp_info(deps_graph, paths):
+def init_info_objects(deps_graph, paths):
     """ Made external so it is independent of installer and can called
     in testing too
     """
@@ -27,7 +29,9 @@ def init_cpp_info(deps_graph, paths):
             package_id = conan_file.info.package_id()
             package_reference = PackageReference(conan_ref, package_id)
             package_folder = paths.package(package_reference)
+            conan_file.package_folder = package_folder
             conan_file.cpp_info = CppInfo(package_folder)
+            conan_file.env_info = EnvInfo(package_folder)
             try:
                 conan_file.package_info()
             except Exception as e:
@@ -66,10 +70,10 @@ class ConanInstaller(object):
         passes their exported build flags and included directories to the downstream
         imports flags
         """
-        init_cpp_info(deps_graph, self._paths)
+        init_info_objects(deps_graph, self._paths)
 
         # order by levels and propagate exports as download imports
-        nodes_by_level = deps_graph.propagate_buildinfo()
+        nodes_by_level = deps_graph.propagate_info_objects()
         return nodes_by_level
 
     def _compute_private_nodes(self, deps_graph, build_mode):
@@ -230,7 +234,10 @@ Package configuration:
                 rmdir(src_folder)
             except BaseException as e_rm:
                 save(dirty, "")  # Creation of DIRTY flag
-                output.error("Unable to remove source folder %s\n%s" % (src_folder, str(e_rm)))
+                msg = str(e_rm)
+                if six.PY2:
+                    msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1
+                output.error("Unable to remove source folder %s\n%s" % (src_folder, msg))
                 output.warn("**** Please delete it manually ****")
                 if raise_error or isinstance(e_rm, KeyboardInterrupt):
                     raise ConanException("Unable to remove source folder")

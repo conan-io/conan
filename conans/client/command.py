@@ -300,6 +300,8 @@ path to the CMake binary directory, like this:
                             help="update with new upstream packages")
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Define scopes for packages')
+        parser.add_argument("--generator", "-g", nargs=1, action=Extender,
+                            help='Generators to use')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -332,7 +334,8 @@ path to the CMake binary directory, like this:
                                   filename=args.file,
                                   update=args.update,
                                   integrity=args.integrity,
-                                  scopes=scopes)
+                                  scopes=scopes,
+                                  generators=args.generator)
 
     def info(self, *args):
         """ Prints information about the requirements.

@@ -2,6 +2,7 @@ import unittest
 from conans.model.build_info import DepsCppInfo
 from conans.client.generators import TXTGenerator
 from collections import namedtuple
+from conans.model.env_info import DepsEnvInfo
 
 
 class BuildInfoTest(unittest.TestCase):
@@ -12,6 +13,7 @@ class BuildInfoTest(unittest.TestCase):
                              getattr(item2, field))
 
     def help_test(self):
+        deps_env_info = DepsEnvInfo()
         deps_cpp_info = DepsCppInfo()
         deps_cpp_info.includedirs.append("C:/whatever")
         deps_cpp_info.includedirs.append("C:/whenever")
@@ -21,7 +23,7 @@ class BuildInfoTest(unittest.TestCase):
         child.includedirs.append("F:/ChildrenPath")
         child.cppflags.append("cxxmyflag")
         deps_cpp_info._dependencies["Boost"] = child
-        fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info")
-        output = TXTGenerator(fakeconan(deps_cpp_info, None)).content
+        fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info")
+        output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None)).content
         deps_cpp_info2 = DepsCppInfo.loads(output)
         self._equal(deps_cpp_info, deps_cpp_info2)

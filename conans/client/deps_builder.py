@@ -104,7 +104,7 @@ class DepsGraph(object):
         return "\n".join(["Nodes:\n    ",
                           "\n    ".join(repr(n) for n in self.nodes)])
 
-    def propagate_buildinfo(self):
+    def propagate_info_objects(self):
         """ takes the exports from upper level and updates the imports
         right now also the imports are propagated, but should be checked
         E.g. Conan A, depends on B.  A=>B
@@ -127,7 +127,7 @@ class DepsGraph(object):
                 _, conanfile = node
                 for n in node_order:
                     conanfile.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
-
+                    conanfile.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
         return ordered
 
     def propagate_info(self):
