@@ -100,6 +100,9 @@ class DefaultNameConan(ConanFile):
         self.assertNotIn("Building", client.user_io.out)
         self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
 
+        # Try now to upload all packages, should not crash because of the "missing" build policy
+        client.run("upload Hello0/1.0@lasote/stable --all", ignore_error=False)
+
         #  --- Build policy to always ---
         files[CONANFILE] = files[CONANFILE].replace("build_policy = 'missing'", "build_policy = 'always'")
         client.save(files, clean_first=True)
@@ -114,6 +117,10 @@ class DefaultNameConan(ConanFile):
         client.run("install Hello0/1.0@lasote/stable")
         self.assertIn("Building", client.user_io.out)
         self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
+
+        # Try now to upload all packages, should crash because of the "always" build policy
+        client.run("upload Hello0/1.0@lasote/stable --all", ignore_error=True)
+        self.assertIn("no packages can be uploaded", client.user_io.out)
 
     def reuse_test(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
