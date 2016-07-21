@@ -32,7 +32,7 @@ import re
 class Extender(argparse.Action):
     '''Allows to use the same flag several times in a command and creates a list with the values.
        For example:
-           conans install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
+           conan install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
            It creates:
            options = ['qt:value', 'mode:2']
            settings = ['cucumber:true']
@@ -56,7 +56,7 @@ class Extender(argparse.Action):
 
 
 class Command(object):
-    """ A single command of the conans application, with all the first level commands.
+    """ A single command of the conan application, with all the first level commands.
     Manages the parsing of parameters and delegates functionality in
     collaborators.
     It can also show help of the tool
@@ -282,7 +282,7 @@ path to the CMake binary directory, like this:
     def install(self, *args):
         """ install in the local store the given requirements.
         Requirements can be defined in the command line or in a conanfile.
-        EX: conans install opencv/2.4.10@lasote/testing
+        EX: conan install opencv/2.4.10@lasote/testing
         """
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install",
                                          formatter_class=RawTextHelpFormatter)
@@ -340,7 +340,7 @@ path to the CMake binary directory, like this:
     def info(self, *args):
         """ Prints information about the requirements.
         Requirements can be defined in the command line or in a conanfile.
-        EX: conans info opencv/2.4.10@lasote/testing
+        EX: conan info opencv/2.4.10@lasote/testing
         """
         parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info",
                                          formatter_class=RawTextHelpFormatter)
@@ -390,12 +390,12 @@ path to the CMake binary directory, like this:
 
     def build(self, *args):
         """ calls your project conanfile.py "build" method.
-            EX: conans build ./my_project
+            EX: conan build ./my_project
             Intended for package creators, requires a conanfile.py.
         """
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
         parser.add_argument("path", nargs="?",
-                            help='path to user conanfile.py, e.g., conans build .',
+                            help='path to user conanfile.py, e.g., conan build .',
                             default="")
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         args = parser.parse_args(*args)
@@ -569,7 +569,7 @@ path to the CMake binary directory, like this:
                             default=False, help='Upload both package recipe and packages')
         parser.add_argument("--force", action='store_true',
                             default=False,
-                            help='Do not check conans date, override remote with local')
+                            help='Do not check conan recipe date, override remote with local')
 
         args = parser.parse_args(*args)
 
@@ -577,7 +577,7 @@ path to the CMake binary directory, like this:
         package_id = args.package
 
         if not conan_ref and not package_id:
-            raise ConanException("Enter conans or package id")
+            raise ConanException("Enter conan reference or package id")
 
         self._manager.upload(conan_ref, package_id,
                              args.remote, all_packages=args.all, force=args.force)
@@ -751,7 +751,7 @@ def get_command():
 
 
 def main(args):
-    """ main entry point of the conans application, using a Command to
+    """ main entry point of the conan application, using a Command to
     parse parameters
     """
     command = get_command()
