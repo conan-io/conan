@@ -13,9 +13,7 @@ class SharedChainTest(unittest.TestCase):
 
     def setUp(self):
         self.static = False
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
 
     def _export_upload(self, name, version=None, deps=None):

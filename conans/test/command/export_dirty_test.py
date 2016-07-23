@@ -17,8 +17,8 @@ class ExportDirtyTest(unittest.TestCase):
         if platform.system() != "Windows":
             return
         self.client = TestClient()
-        files = cpp_hello_conan_files("Hello0", "0.1")
-        files[CONANFILE] = files[CONANFILE].replace("build(", "build2(")
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
+
         self.client.save(files)
         self.client.run("export lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build")

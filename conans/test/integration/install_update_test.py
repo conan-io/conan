@@ -1,11 +1,8 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANINFO
 import os
-from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE_TXT
 from conans.util.files import load
 from time import sleep
 
@@ -13,16 +10,13 @@ from time import sleep
 class InstallUpdateTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def reuse_test(self):
-        files = cpp_hello_conan_files("Hello0", "1.0")
-        # To avoid building
-        files[CONANFILE] = files[CONANFILE].replace("build(", "build2(")
+        files = cpp_hello_conan_files("Hello0", "1.0", build=False)
+
         self.client.save(files)
         self.client.run("export lasote/stable")
         self.client.run("install Hello0/1.0@lasote/stable --build")

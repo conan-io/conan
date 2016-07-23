@@ -1,6 +1,5 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
 
 class UserTest(unittest.TestCase):
@@ -39,11 +38,9 @@ class UserTest(unittest.TestCase):
         Useful for integrations as travis, that interactive password is not
         possible
         """
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         servers = {"default": test_server}
-        conan = TestClient(servers=servers, users={"default":[("lasote", "mypass")]})
+        conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conan.run('user dummy -p ping_pong2', ignore_error=True)
         self.assertIn("ERROR: Wrong user or password", conan.user_io.out)
         conan.run('user lasote -p mypass')
@@ -60,9 +57,7 @@ class UserTest(unittest.TestCase):
         Useful for integrations as travis, that interactive password is not
         possible
         """
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": 'my "password'})
+        test_server = TestServer(users={"lasote": 'my "password'})
         servers = {"default": test_server}
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conan.run(r'user lasote -p="my \"password"')
@@ -74,9 +69,7 @@ class UserTest(unittest.TestCase):
         self.assertIn("Change 'default' user from None (anonymous) to lasote", conan.user_io.out)
 
     def test_clean(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         base = '''

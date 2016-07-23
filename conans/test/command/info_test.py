@@ -8,9 +8,8 @@ import textwrap
 class InfoTest(unittest.TestCase):
 
     def _create(self, number, version, deps=None, deps_dev=None, export=True):
-        files = cpp_hello_conan_files(number, version, deps)
-        # To avoid building
-        files = {CONANFILE: files[CONANFILE].replace("build(", "build2(")}
+        files = cpp_hello_conan_files(number, version, deps, build=False)
+
         if deps_dev:
             files[CONANFILE] = files[CONANFILE].replace("exports = '*'", """exports = '*'
     dev_requires=%s

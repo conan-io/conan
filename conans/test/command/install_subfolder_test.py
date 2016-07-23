@@ -15,9 +15,8 @@ class InstallSubfolderTest(unittest.TestCase):
                          "-s arch=x86 -s compiler.runtime=MD")
 
     def _create(self, number, version, deps=None, export=True):
-        files = cpp_hello_conan_files(number, version, deps)
-        # To avoid building
-        files = {CONANFILE: files[CONANFILE].replace("build(", "build2(")}
+        files = cpp_hello_conan_files(number, version, deps, build=False)
+
         files[CONANFILE] = files[CONANFILE] + """    def build(self):
         self.output.info("Settings %s" % self.settings.values.dumps())
         self.output.info("Options %s" % self.options.values.dumps())

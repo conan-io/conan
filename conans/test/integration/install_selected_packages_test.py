@@ -9,9 +9,7 @@ from conans.model.ref import ConanFileReference
 class InstallSelectedPackagesTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
         self.package_ids = self._upload_some_packages(self.client)

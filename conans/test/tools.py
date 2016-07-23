@@ -179,13 +179,20 @@ class TestServer(object):
         # to determine where to call. Why? remote_manager just assing an url
         # to the rest_client, so rest_client doesn't know about object instances,
         # just urls, so testing framework performs a map between fake urls and instances
+        if read_permissions is None:
+            read_permissions = [("*/*@*/*", "*")]
+        if write_permissions is None:
+            write_permissions = []
+        if users is None:
+            users = {"lasote": "mypass"}
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
+        min_client_ver = min_client_compatible_version
         self.test_server = TestServerLauncher(base_path, read_permissions,
-                                      write_permissions, users,
-                                      base_url=self.fake_url + "/v1",
-                                      plugins=plugins,
-                                      server_version=server_version,
-                                      min_client_compatible_version=min_client_compatible_version)
+                                              write_permissions, users,
+                                              base_url=self.fake_url + "/v1",
+                                              plugins=plugins,
+                                              server_version=server_version,
+                                              min_client_compatible_version=min_client_ver)
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property

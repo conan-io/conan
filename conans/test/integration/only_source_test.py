@@ -10,16 +10,12 @@ from conans.util.files import load
 class OnlySourceTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
 
     def _create(self, client, number, version, deps=None, export=True):
-        files = cpp_hello_conan_files(number, version, deps)
-        # To avoid building
-        files = {CONANFILE: files[CONANFILE].replace("build(", "build2(").replace("config(",
-                                                                                  "config2(")}
+        files = cpp_hello_conan_files(number, version, deps, build=False, config=False)
+
         client.save(files, clean_first=True)
         if export:
             client.run("export lasote/stable")
@@ -81,10 +77,8 @@ class DefaultNameConan(ConanFile):
     def build_policies_in_conanfile_test(self):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        files = cpp_hello_conan_files("Hello0", "1.0", [])
-        # To avoid building
-        files = {CONANFILE: files[CONANFILE].replace("build(", "build2(").replace("config(",
-                                                                                  "config2(")}
+        files = cpp_hello_conan_files("Hello0", "1.0", [], config=False, build=False)
+
         #  --- Build policy to missing ---
         files[CONANFILE] = files[CONANFILE].replace("exports = '*'", "exports = '*'\n    build_policy = 'missing'")
         client.save(files, clean_first=True)

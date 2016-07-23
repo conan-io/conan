@@ -18,11 +18,8 @@ class InstallTest(unittest.TestCase):
                          "-s arch=x86 -s compiler.runtime=MD")
 
     def _create(self, number, version, deps=None, export=True, no_config=False):
-        files = cpp_hello_conan_files(number, version, deps)
-        # To avoid building
-        files = {CONANFILE: files[CONANFILE].replace("build(", "build2(")}
-        if no_config:
-            files[CONANFILE] = files[CONANFILE].replace("config(", "config2(")
+        files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config)
+
         self.client.save(files, clean_first=True)
         if export:
             self.client.run("export lasote/stable")
