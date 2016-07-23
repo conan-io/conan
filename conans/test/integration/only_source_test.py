@@ -74,6 +74,35 @@ class DefaultNameConan(ConanFile):
         self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
                       client.user_io.out)
 
+    def build_policies_update_test(self):
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        conanfile = """
+from conans import ConanFile
+
+class MyPackage(ConanFile):
+    name = "test"
+    version = "1.9"
+    build_policy = 'always'
+
+    def source(self):
+        self.output.info("Getting sources")
+    def build(self):
+        self.output.info("Building sources")
+    def package(self):
+        self.output.info("Packaging this test package")
+        """
+
+        files = {CONANFILE: conanfile}
+        client.save(files, clean_first=True)
+        client.run("export lasote/stable")
+        client.run("install test/1.9@lasote/stable")
+        self.assertIn("Getting sources", client.user_io.out)
+        self.assertIn("Building sources", client.user_io.out)
+        self.assertIn("Packaging this test package", client.user_io.out)
+        self.assertIn("Building package from source as defined by build_policy='always'",
+                      client.user_io.out)
+        client.run("upload test/1.9@lasote/stable")
+
     def build_policies_in_conanfile_test(self):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
