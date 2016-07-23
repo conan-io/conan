@@ -74,6 +74,7 @@ class ConanFile(object):
     # change the actual license of the source code
     license = None
     author = None  # Main maintainer/responsible for the package, any format
+    build_policy = None
 
     def __init__(self, output, runner, settings, conanfile_directory):
         '''
@@ -130,6 +131,14 @@ class ConanFile(object):
     @property
     def conanfile_directory(self):
         return self._conanfile_directory
+
+    @property
+    def build_policy_missing(self):
+        return self.build_policy == "missing"
+
+    @property
+    def build_policy_always(self):
+        return self.build_policy == "always"
 
     def source(self):
         pass

@@ -345,6 +345,17 @@ If not:
         remote_proxy = ConanProxy(self._paths, self._user_io, self._remote_manager, remote)
         uploader = ConanUploader(self._paths, self._user_io, remote_proxy)
 
+        # Load conanfile to check if the build policy is set to always
+        try:
+            conanfile_path = self._paths.conanfile(conan_reference)
+            output = ScopedOutput(str(conan_reference), self._user_io.out)
+            conan_file = self._loader().load_conan(conanfile_path, output, consumer=False)
+        except NotFoundException:
+            raise NotFoundException("There is no local conanfile exported as %s" % str(conan_reference))
+
+        if conan_file.build_policy_always and (all_packages or package_id):
+            raise ConanException("Conanfile has build_policy='always', no packages can be uploaded")
+
         if package_id:  # Upload package
             uploader.upload_package(PackageReference(conan_reference, package_id))
         else:  # Upload conans

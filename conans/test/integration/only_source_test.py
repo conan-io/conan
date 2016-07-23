@@ -78,6 +78,50 @@ class DefaultNameConan(ConanFile):
         self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
                       client.user_io.out)
 
+    def build_policies_in_conanfile_test(self):
+
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        files = cpp_hello_conan_files("Hello0", "1.0", [])
+        # To avoid building
+        files = {CONANFILE: files[CONANFILE].replace("build(", "build2(").replace("config(",
+                                                                                  "config2(")}
+        #  --- Build policy to missing ---
+        files[CONANFILE] = files[CONANFILE].replace("exports = '*'", "exports = '*'\n    build_policy = 'missing'")
+        client.save(files, clean_first=True)
+        client.run("export lasote/stable")
+
+        # Install, it will build automatically if missing (without the --build missing option)
+        client.run("install Hello0/1.0@lasote/stable")
+        self.assertIn("Building", client.user_io.out)
+        self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
+
+        # Try to do it again, now we have the package, so not build is done
+        client.run("install Hello0/1.0@lasote/stable")
+        self.assertNotIn("Building", client.user_io.out)
+        self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
+
+        # Try now to upload all packages, should not crash because of the "missing" build policy
+        client.run("upload Hello0/1.0@lasote/stable --all", ignore_error=False)
+
+        #  --- Build policy to always ---
+        files[CONANFILE] = files[CONANFILE].replace("build_policy = 'missing'", "build_policy = 'always'")
+        client.save(files, clean_first=True)
+        client.run("export lasote/stable")
+
+        # Install, it will build automatically if missing (without the --build missing option)
+        client.run("install Hello0/1.0@lasote/stable")
+        self.assertIn("Building", client.user_io.out)
+        self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
+
+        # Try to do it again, now we have the package, but we build again
+        client.run("install Hello0/1.0@lasote/stable")
+        self.assertIn("Building", client.user_io.out)
+        self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
+
+        # Try now to upload all packages, should crash because of the "always" build policy
+        client.run("upload Hello0/1.0@lasote/stable --all", ignore_error=True)
+        self.assertIn("no packages can be uploaded", client.user_io.out)
+
     def reuse_test(self):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")

@@ -36,7 +36,7 @@ class UploadTest(unittest.TestCase):
         self.conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         reg_folder = self.client.paths.export(self.conan_ref)
 
-        self.client.run('upload %s' % str(self.conan_ref))
+        self.client.run('upload %s' % str(self.conan_ref), ignore_error=True)
         self.assertIn("There is no local conanfile exported as %s" % str(self.conan_ref),
                       self.client.user_io.out)
 
