@@ -387,11 +387,14 @@ class DepsBuilder(object):
         """
         try:
             conanfile.requires.output = self._output
-            conanfile.config()
+            if hasattr(conanfile, "config"):
+                self._output.warn("config() has been deprecated. Use config_options and configure")
+                conanfile.config()
             conanfile.config_options()
             conanfile.options.propagate_upstream(down_options, down_ref, conanref, self._output)
-            conanfile.config()
-            conanfile.config_settings()
+            if hasattr(conanfile, "config"):
+                conanfile.config()
+            conanfile.configure()
 
             new_options = conanfile.options.values
 
