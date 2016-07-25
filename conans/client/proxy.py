@@ -272,7 +272,8 @@ class ConanProxy(object):
         if remote is None:
             remote = self._registry.get_ref(package_reference.conan)
         if not remote:
-            output.error("Package doesn't have a remote defined")
+            output.warn("Package doesn't have a remote defined. "
+                        "Probably created locally and not uploaded")
             return False
         package_id = str(package_reference.package_id)
         try:

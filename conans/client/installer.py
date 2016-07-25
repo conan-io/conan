@@ -97,9 +97,9 @@ class ConanInstaller(object):
         return skippable_nodes
 
     def _build_forced(self, conan_ref, build_mode, conan_file):
-        forced_by_conanfile = conan_file.build_policy_always
-
-        if forced_by_conanfile:
+        if conan_file.build_policy_always:
+            out = ScopedOutput(str(conan_ref), self._out)
+            out.info("Building package from source as defined by build_policy='always'")
             return True
 
         if build_mode is False:  # "never" option, default
@@ -167,6 +167,8 @@ class ConanInstaller(object):
         build = force_build or build_mode is True or conan_file.build_policy_missing
 
         if build:
+            if not force_build and not build_mode:
+                output.info("Building package from source as defined by build_policy='missing'")
             try:
                 rmdir(build_folder)
                 rmdir(package_folder)
