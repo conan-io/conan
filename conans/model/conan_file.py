@@ -156,7 +156,20 @@ class ConanFile(object):
 
     def config(self):
         """ override this method to define custom options,
-        delete non relevant ones
+        delete non relevant ones. Deprecated: use config_options() and config_settings()
+        """
+
+    def config_options(self):
+        """ modify options, probably conditioned to some settings. This call is executed
+        before config_settings. E.g.
+        if self.settings.os == "Windows":
+            del self.options.shared  # shared/static not supported in win
+        """
+    def config_settings(self):
+        """ modify settings, probably conditioned to some options. This call is executed
+        after config_options. E.g.
+        if self.options.header_only:
+            self.settings.clear()
         """
 
     def imports(self):

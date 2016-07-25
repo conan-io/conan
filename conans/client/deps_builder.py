@@ -388,8 +388,10 @@ class DepsBuilder(object):
         try:
             conanfile.requires.output = self._output
             conanfile.config()
+            conanfile.config_options()
             conanfile.options.propagate_upstream(down_options, down_ref, conanref, self._output)
             conanfile.config()
+            conanfile.config_settings()
 
             new_options = conanfile.options.values
 
