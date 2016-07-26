@@ -241,7 +241,6 @@ Package configuration:
         dirty = os.path.join(src_folder, DIRTY_FILE)
 
         def remove_source(raise_error=False):
-            output.warn("Trying to remove dirty source folder")
             output.warn("This can take a while for big packages")
             try:
                 rmdir(src_folder)
@@ -256,6 +255,10 @@ Package configuration:
                     raise ConanException("Unable to remove source folder")
 
         if os.path.exists(dirty):
+            output.warn("Trying to remove dirty source folder")
+            remove_source(raise_error=True)
+        elif conan_file.build_policy_always:
+            output.warn("Detected build_policy 'always', trying to remove source folder")
             remove_source(raise_error=True)
 
         if not os.path.exists(src_folder):
