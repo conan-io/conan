@@ -64,7 +64,7 @@ class VirtualEnvGenerator(Generator):
             deactivate_lines.append("SET PROMPT=%s" % os.environ.get("PROMPT", ""))
             deactivate_lines.append("SET _CONAN_VENV=")
         else:
-            deactivate_lines.append(r"export PS1=\"\[\e]0;\u@\h: \w\a\]${debian_chroot:+($debian_chroot)}\u@\h:\w\$ \"")
+            deactivate_lines.append(r'export PS1="\w\$ "')
             deactivate_lines.append("export _CONAN_VENV=")
 
         activate_lines = ["@echo off"] if platform.system() == "Windows" else []
