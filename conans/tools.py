@@ -4,11 +4,15 @@ from __future__ import print_function
 import sys
 import os
 from conans.errors import ConanException
-from conans.util.files import _generic_algorithm_sum, save
+from conans.util.files import _generic_algorithm_sum
 from patch import fromfile, fromstring
 from conans.client.rest.uploader_downloader import Downloader
 import requests
 from conans.client.output import ConanOutput
+import platform
+from conans.model.version import Version
+from conans.util.log import logger
+
 
 def vcvars_command(settings):
     param = "x86" if settings.arch == "x86" else "amd64"
@@ -137,3 +141,143 @@ def patch(base_path=None, patch_file=None, patch_string=None):
     if not patchset.apply(root=base_path):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
+
+# DETECT OS, VERSION AND DISTRIBUTIONS
+
+class OSInfo(object):
+    ''' Usage:
+        print(os_info.is_linux) # True/False
+        print(os_info.is_windows) # True/False
+        print(os_info.is_macos) # True/False
+
+        print(os_info.linux_distro)  # debian, ubuntu, fedora, centos...
+
+        print(os_info.os_version) # 5.1
+        print(os_info.os_version_name) # Windows 7, El Capitan
+
+        if os_info.os_version > "10.1":
+            pass
+        if os_info.os_version == "10.1.0":
+            pass
+    '''
+
+    def __init__(self):
+        self.os_version = None
+        self.os_version_name = None
+        self.is_linux = platform.system() == "Linux"
+        self.linux_distro = None
+        self.is_windows = platform.system() == "Windows"
+        self.is_macos = platform.system() == "Darwin"
+
+        if self.is_linux:
+            tmp = platform.linux_distribution()
+            self.linux_distro = None
+            self.linux_distro = tmp[0].lower()
+            self.os_version = Version(tmp[1])
+            self.os_version_name = tmp[2]
+            if not self.os_version_name and self.linux_distro == "debian":
+                self.os_version_name = self.get_debian_version_name(self.os_version)
+        elif self.is_windows:
+            self.os_version = self.get_win_os_version()
+            self.os_version_name = self.get_win_version_name(self.os_version)
+        elif self.is_macos:
+            self.os_version = Version(platform.mac_ver()[0])
+            self.os_version_name = self.get_osx_version_name(self.os_version)
+
+    def get_win_os_version(self):
+        """
+        Get's the OS major and minor versions.  Returns a tuple of
+        (OS_MAJOR, OS_MINOR).
+        """
+        import ctypes
+
+        class _OSVERSIONINFOEXW(ctypes.Structure):
+            _fields_ = [('dwOSVersionInfoSize', ctypes.c_ulong),
+                        ('dwMajorVersion', ctypes.c_ulong),
+                        ('dwMinorVersion', ctypes.c_ulong),
+                        ('dwBuildNumber', ctypes.c_ulong),
+                        ('dwPlatformId', ctypes.c_ulong),
+                        ('szCSDVersion', ctypes.c_wchar*128),
+                        ('wServicePackMajor', ctypes.c_ushort),
+                        ('wServicePackMinor', ctypes.c_ushort),
+                        ('wSuiteMask', ctypes.c_ushort),
+                        ('wProductType', ctypes.c_byte),
+                        ('wReserved', ctypes.c_byte)]
+
+        os_version = _OSVERSIONINFOEXW()
+        os_version.dwOSVersionInfoSize = ctypes.sizeof(os_version)
+        retcode = ctypes.windll.Ntdll.RtlGetVersion(ctypes.byref(os_version))
+        if retcode != 0:
+            return None
+
+        return Version("%d.%d" % (os_version.dwMajorVersion, os_version.dwMinorVersion))
+
+    def get_debian_version_name(self, version):
+        if not version:
+            return None
+        elif version.major() == "8.Y.Z":
+            return "jessie"
+        elif version.major() == "7.Y.Z":
+            return "wheezy"
+        elif version.major() == "6.Y.Z":
+            return "squeeze"
+        elif version.major() == "5.Y.Z":
+            return "lenny"
+        elif version.major() == "4.Y.Z":
+            return "etch"
+        elif version.minor() == "3.1.Z":
+            return "sarge"
+        elif version.minor() == "3.0.Z":
+            return "woody"
+
+    def get_win_version_name(self, version):
+        if not version:
+            return None
+        elif version.major() == "5.Y.Z":
+            return "Windows XP"
+        elif version.minor() == "6.0.Z":
+            return "Windows Vista"
+        elif version.minor() == "6.1.Z":
+            return "Windows 7"
+        elif version.minor() == "6.2.Z":
+            return "Windows 8"
+        elif version.minor() == "6.3.Z":
+            return "Windows 8.1"
+        elif version.minor() == "10.0.Z":
+            return "Windows 10"
+
+    def get_osx_version_name(self, version):
+        if not version:
+            return None
+        elif version.minor() == "10.12.Z":
+            return "Sierra"
+        elif version.minor() == "10.11.Z":
+            return "El Capitan"
+        elif version.minor() == "10.10.Z":
+            return "Yosemite"
+        elif version.minor() == "10.9.Z":
+            return "Mavericks"
+        elif version.minor() == "10.8.Z":
+            return "Mountain Lion"
+        elif version.minor() == "10.7.Z":
+            return "Lion"
+        elif version.minor() == "10.6.Z":
+            return "Snow Leopard"
+        elif version.minor() == "10.5.Z":
+            return "Leopard"
+        elif version.minor() == "10.4.Z":
+            return "Tiger"
+        elif version.minor() == "10.3.Z":
+            return "Panther"
+        elif version.minor() == "10.2.Z":
+            return "Jaguar"
+        elif version.minor() == "10.1.Z":
+            return "Puma"
+        elif version.minor() == "10.0.Z":
+            return "Cheetha"
+
+try:
+    os_info = OSInfo()
+except Exception as exc:
+    logger.error(exc)
+    print("Error detecting os_info")
