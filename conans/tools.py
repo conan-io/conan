@@ -184,6 +184,12 @@ class OSInfo(object):
             self.os_version = Version(platform.mac_ver()[0])
             self.os_version_name = self.get_osx_version_name(self.os_version)
 
+    def with_apt(self):
+        return self.is_linux and self.linux_distro in ("debian", "ubuntu", "knoppix")
+
+    def with_yum(self):
+        return self.is_linux and self.linux_distro in ("centos", "redhat", "fedora")
+
     def get_win_os_version(self):
         """
         Get's the OS major and minor versions.  Returns a tuple of
@@ -281,3 +287,34 @@ try:
 except Exception as exc:
     logger.error(exc)
     print("Error detecting os_info")
+
+
+def spt_update_command(sudo=True):
+    """
+        Get the system package tool update command
+    """
+    sudo_str = "sudo " if sudo else ""
+    if os_info.with_apt:
+        return "%sapt-get update" % sudo_str
+    elif os_info.with_yum:
+        return "%syum check-update" % sudo_str
+    elif os_info.is_macos:
+        return "brew update"
+
+
+def spt_install_command(package_name, sudo=True):
+    '''
+        Get the system package tool install command.
+        Use in conanfile.py:
+            self.run(sys_install_command("xorg"))
+    '''
+    sudo_str = "sudo " if sudo else ""
+    if os_info.with_apt:
+        return "%sapt-get install -y %s" % (sudo_str, package_name)
+    elif os_info.with_yum:
+        return "%syum install -y %s" % (sudo_str, package_name)
+    elif os_info.is_macos:
+        return "brew install %s" % package_name
+    else:
+        print("Warn: Only available for linux with apt-get or yum or OSx with brew")
+        return None
