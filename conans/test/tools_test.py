@@ -9,7 +9,7 @@ class RunnerMock(object):
     def __init__(self):
         self.command_called = None
 
-    def __call__(self, command):
+    def __call__(self, command, output):
         self.command_called = command
 
 

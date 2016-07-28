@@ -306,11 +306,11 @@ class SystemPackageTool(object):
         """
         sudo_str = "sudo " if self._sudo else ""
         if self._os_info.with_apt:
-            return self._runner("%sapt-get update" % sudo_str)
+            return self._runner("%sapt-get update" % sudo_str, True)
         elif self._os_info.with_yum:
-            return self._runner("%syum check-update" % sudo_str)
+            return self._runner("%syum check-update" % sudo_str, True)
         elif self._os_info.is_macos:
-            return self._runner("brew update")
+            return self._runner("brew update", True)
 
     def install(self, package_name):
         '''
@@ -318,11 +318,11 @@ class SystemPackageTool(object):
         '''
         sudo_str = "sudo " if self._sudo else ""
         if self._os_info.with_apt:
-            return self._runner("%sapt-get install -y %s" % (sudo_str, package_name))
+            return self._runner("%sapt-get install -y %s" % (sudo_str, package_name), True)
         elif self._os_info.with_yum:
-            return self._runner("%syum install -y %s" % (sudo_str, package_name))
+            return self._runner("%syum install -y %s" % (sudo_str, package_name), True)
         elif self._os_info.is_macos:
-            return self._runner("brew install %s" % package_name)
+            return self._runner("brew install %s" % package_name, True)
         else:
             print("Warn: Only available for linux with apt-get or yum or OSx with brew")
             return None
