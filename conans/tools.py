@@ -12,6 +12,7 @@ from conans.client.output import ConanOutput
 import platform
 from conans.model.version import Version
 from conans.util.log import logger
+from conans.client.runner import ConanRunner
 
 
 def vcvars_command(settings):
@@ -184,9 +185,11 @@ class OSInfo(object):
             self.os_version = Version(platform.mac_ver()[0])
             self.os_version_name = self.get_osx_version_name(self.os_version)
 
+    @property
     def with_apt(self):
         return self.is_linux and self.linux_distro in ("debian", "ubuntu", "knoppix")
 
+    @property
     def with_yum(self):
         return self.is_linux and self.linux_distro in ("centos", "redhat", "fedora")
 
@@ -289,32 +292,37 @@ except Exception as exc:
     print("Error detecting os_info")
 
 
-def spt_update_command(sudo=True):
-    """
-        Get the system package tool update command
-    """
-    sudo_str = "sudo " if sudo else ""
-    if os_info.with_apt:
-        return "%sapt-get update" % sudo_str
-    elif os_info.with_yum:
-        return "%syum check-update" % sudo_str
-    elif os_info.is_macos:
-        return "brew update"
+class SystemPackageTool(object):
 
+    def __init__(self, runner=None):
+        self._runner = runner or ConanRunner()
+        env_sudo = os.environ.get("CONAN_SYSREQUIRES_SUDO", None)
+        self._sudo = (env_sudo != "False" and env_sudo != "0")
+        self._os_info = OSInfo()
 
-def spt_install_command(package_name, sudo=True):
-    '''
-        Get the system package tool install command.
-        Use in conanfile.py:
-            self.run(sys_install_command("xorg"))
-    '''
-    sudo_str = "sudo " if sudo else ""
-    if os_info.with_apt:
-        return "%sapt-get install -y %s" % (sudo_str, package_name)
-    elif os_info.with_yum:
-        return "%syum install -y %s" % (sudo_str, package_name)
-    elif os_info.is_macos:
-        return "brew install %s" % package_name
-    else:
-        print("Warn: Only available for linux with apt-get or yum or OSx with brew")
-        return None
+    def update(self):
+        """
+            Get the system package tool update command
+        """
+        sudo_str = "sudo " if self._sudo else ""
+        if self._os_info.with_apt:
+            return self._runner("%sapt-get update" % sudo_str)
+        elif self._os_info.with_yum:
+            return self._runner("%syum check-update" % sudo_str)
+        elif self._os_info.is_macos:
+            return self._runner("brew update")
+
+    def install(self, package_name):
+        '''
+            Get the system package tool install command.
+        '''
+        sudo_str = "sudo " if self._sudo else ""
+        if self._os_info.with_apt:
+            return self._runner("%sapt-get install -y %s" % (sudo_str, package_name))
+        elif self._os_info.with_yum:
+            return self._runner("%syum install -y %s" % (sudo_str, package_name))
+        elif self._os_info.is_macos:
+            return self._runner("brew install %s" % package_name)
+        else:
+            print("Warn: Only available for linux with apt-get or yum or OSx with brew")
+            return None
