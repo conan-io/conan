@@ -70,6 +70,9 @@ class Options(object):
             return super(Options, self).__setattr__(attr, value)
         return setattr(self._options, attr, value)
 
+    def __delattr__(self, field):
+        self._options.__delattr__(field)
+
     @property
     def values(self):
         result = OptionsValues()

@@ -214,6 +214,11 @@ class ConfigDict(object):
         self._check_field(field)
         return self._data[field]
 
+    def __delattr__(self, field):
+        assert field[0] != "_", "ERROR %s" % field
+        self._check_field(field)
+        del self._data[field]
+
     def __setattr__(self, field, value):
         if field[0] == "_" or field.startswith("values"):
             return super(ConfigDict, self).__setattr__(field, value)
