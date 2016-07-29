@@ -147,8 +147,8 @@ class ConanInstaller(object):
 
         conan_ref = package_reference.conan
         package_folder = self._paths.package(package_reference)
-        build_folder = self._paths.build(package_reference)
-        src_folder = self._paths.source(conan_ref)
+        build_folder = self._paths.build(package_reference, conan_file.short_paths)
+        src_folder = self._paths.source(conan_ref, conan_file.short_paths)
         export_folder = self._paths.export(conan_ref)
 
         # If already exists do not dirt the output, the common situation

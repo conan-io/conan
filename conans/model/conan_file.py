@@ -109,6 +109,7 @@ class ConanFile(object):
 
         self._conanfile_directory = conanfile_directory
         self._scope = None
+        self.short_paths = False
 
     @property
     def scope(self):

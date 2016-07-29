@@ -12,7 +12,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
 
 
-def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, keep_source=False):
+def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, shorten, keep_source):
     destination_folder = paths.export(conan_ref)
 
     previous_digest = _init_export_folder(destination_folder)
@@ -31,7 +31,7 @@ def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, kee
         output.info('Folder: %s' % destination_folder)
         modified_recipe = True
 
-    source = paths.source(conan_ref)
+    source = paths.source(conan_ref, shorten)
     dirty = os.path.join(source, DIRTY_FILE)
     remove = False
     if os.path.exists(dirty):

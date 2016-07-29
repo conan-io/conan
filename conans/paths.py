@@ -1,10 +1,11 @@
 import os
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import load, relative_dirs, path_exists
+from conans.util.files import load, relative_dirs, path_exists, save
 from os.path import isfile
 from os.path import join, normpath
 from conans.model.manifest import FileTreeManifest
 import platform
+import uuid
 
 
 EXPORT_FOLDER = "export"
@@ -63,6 +64,18 @@ def conan_expand_user(path):
     return os.path.expanduser(path)
 
 
+def shortener(path, shorten):
+    if not shorten:
+        return path
+    link = os.path.join(path, ".conan_link")
+    if os.path.exists(link):
+        return load(link)
+
+    redirect = os.path.join("F:/Aconantmp", str(uuid.uuid4()))
+    save(link, redirect)
+    return redirect
+
+
 class SimplePaths(object):
     """
     Generate Conan paths. Handles the conan domain path logic. NO DISK ACCESS, just
@@ -71,6 +84,10 @@ class SimplePaths(object):
     def __init__(self, store_folder, short_path_refs=None):
         self.short_path_refs = short_path_refs or {}
         self._store_folder = store_folder
+        if platform.system() == "Windows":
+            self._shortener = shortener
+        else:
+            self._shortener = lambda x, _: x
 
     @property
     def store(self):
@@ -92,20 +109,19 @@ class SimplePaths(object):
         folder = EXPORT_FOLDER if conan_reference not in self.short_path_refs else MIN_EXPORT_FOLDER
         return normpath(join(self.conan(conan_reference), folder))
 
-    def source(self, conan_reference):
+    def source(self, conan_reference, shorten=False):
         assert isinstance(conan_reference, ConanFileReference)
         folder = SRC_FOLDER if conan_reference not in self.short_path_refs else MIN_SRC_FOLDER
-        return normpath(join(self.conan(conan_reference), folder))
+        p = normpath(join(self.conan(conan_reference), folder))
+        return self._shortener(p, shorten)
 
     def conanfile(self, conan_reference):
-        assert isinstance(conan_reference, ConanFileReference)
-        folder = EXPORT_FOLDER if conan_reference not in self.short_path_refs else MIN_EXPORT_FOLDER
-        return normpath(join(self.conan(conan_reference), folder, CONANFILE))
+        export = self.export(conan_reference)
+        return normpath(join(export, CONANFILE))
 
     def digestfile_conanfile(self, conan_reference):
-        assert isinstance(conan_reference, ConanFileReference)
-        folder = EXPORT_FOLDER if conan_reference not in self.short_path_refs else MIN_EXPORT_FOLDER
-        return normpath(join(self.conan(conan_reference), folder, CONAN_MANIFEST))
+        export = self.export(conan_reference)
+        return normpath(join(export, CONAN_MANIFEST))
 
     def digestfile_package(self, package_reference):
         assert isinstance(package_reference, PackageReference)
@@ -116,13 +132,14 @@ class SimplePaths(object):
         folder = BUILD_FOLDER if conan_reference not in self.short_path_refs else MIN_BUILD_FOLDER
         return normpath(join(self.conan(conan_reference), folder))
 
-    def build(self, package_reference):
+    def build(self, package_reference, shorten=False):
         assert isinstance(package_reference, PackageReference)
         ref = package_reference.conan
         folder = BUILD_FOLDER if ref not in self.short_path_refs else MIN_BUILD_FOLDER
         pid = package_reference.package_id
         package_id = pid if ref not in self.short_path_refs else self._short_sha(pid)
-        return normpath(join(self.conan(package_reference.conan), folder, package_id))
+        p = normpath(join(self.conan(package_reference.conan), folder, package_id))
+        return self._shortener(p, shorten)
 
     def system_reqs(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
