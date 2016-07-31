@@ -64,7 +64,7 @@ def unzip(filename, destination="."):
                 # the limit is 230 to account for 10 chars of SHA in b/xxxx (in shorted paths)
                 # and 20 chars for build system extra subfolders (cmake mytarget.dir/debug, etc)
                 # Win limit is 260
-                if len(file_.filename) + len(full_path) > 230:
+                if len(file_.filename) + len(full_path) >= 260:
                     raise ValueError("Filename too long")
                 z.extract(file_, full_path)
             except Exception as e:

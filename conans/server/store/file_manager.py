@@ -141,11 +141,6 @@ class FileManager(object):
             result = SearchInfo()
             # Conan references in main storage
             conans = self._exported_conans(pattern, ignorecase)
-            # Conans references in custom storage
-            possible_conans = {ref: self.paths.conan(ref) for ref in self.paths.short_path_refs}
-            custom_conans = [ref for ref, path in possible_conans.items()
-                             if self._file_adapter.list_folder_subdirs(path)]
-            conans.extend(custom_conans)
             for conan_reference in conans:
                 result[conan_reference] = self._single_conan_search(conan_reference)
         else:

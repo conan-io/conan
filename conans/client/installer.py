@@ -13,7 +13,6 @@ from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
-from collections import Counter
 from conans.model.env_info import EnvInfo
 import six
 
@@ -170,7 +169,7 @@ class ConanInstaller(object):
             if not force_build and not build_mode:
                 output.info("Building package from source as defined by build_policy='missing'")
             try:
-                rmdir(build_folder)
+                rmdir(build_folder, conan_file.short_paths)
                 rmdir(package_folder)
             except Exception as e:
                 raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
@@ -243,7 +242,7 @@ Package configuration:
         def remove_source(raise_error=False):
             output.warn("This can take a while for big packages")
             try:
-                rmdir(src_folder)
+                rmdir(src_folder, conan_file.short_paths)
             except BaseException as e_rm:
                 save(dirty, "")  # Creation of DIRTY flag
                 msg = str(e_rm)
@@ -299,7 +298,7 @@ Package configuration:
                     rel_path = os.path.relpath(source_path, src_folder)
                     dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
                     # it seems that "/" is counted as "\\" so it counts double
-                    if len(dest_path) + (Counter(dest_path)[os.path.sep]) >= 260:
+                    if len(dest_path) >= 260:
                         filtered_files.append(the_file)
                         output.warn("Filename too long, file excluded: %s" % dest_path)
                 return filtered_files

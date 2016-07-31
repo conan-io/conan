@@ -3,12 +3,31 @@ from conans.errors import ConanException
 from conans.model.ref import PackageReference
 from conans.paths import SYSTEM_REQS
 import os
-from conans.util.files import rmdir
+from conans.util.files import rmdir, load
+import platform
 
 
 class DiskRemover(object):
     def __init__(self, paths):
         self._paths = paths
+
+    def _remove_source_short_paths(self, path, conan_ref):
+        if platform.system() != "Windows":
+            return
+
+        link = os.path.join(path, "source/.conan_link")
+        if os.path.exists(link):
+            self._remove(load(link), conan_ref)
+
+    def _remove_builds_short_paths(self, path, conan_ref):
+        if platform.system() != "Windows":
+            return
+
+        build = os.path.join(path, "build")
+        for f in os.listdir(build):
+            link = os.path.join(build, f, ".conan_link")
+            if os.path.exists(link):
+                self._remove(load(link), conan_ref)
 
     def _remove(self, path, conan_ref, msg=""):
         try:
@@ -26,13 +45,20 @@ class DiskRemover(object):
             raise ConanException("Unable to remove %s %s\n\t%s" % (repr(conan_ref), msg, str(e)))
 
     def remove(self, conan_ref):
-        self._remove(self._paths.conan(conan_ref), conan_ref)
+        path = self._paths.conan(conan_ref)
+        self._remove_source_short_paths(path, conan_ref)
+        self._remove_builds_short_paths(path, conan_ref)
+        self._remove(path, conan_ref)
 
     def remove_src(self, conan_ref):
+        path = self._paths.conan(conan_ref)
+        self._remove_source_short_paths(path, conan_ref)
         self._remove(self._paths.source(conan_ref), conan_ref, "src folder")
 
     def remove_builds(self, conan_ref, ids=None):
         if not ids:
+            path = self._paths.conan(conan_ref)
+            self._remove_builds_short_paths(path, conan_ref)
             self._remove(self._paths.builds(conan_ref), conan_ref, "builds")
         else:
             for id_ in ids:
