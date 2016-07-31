@@ -12,6 +12,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client = TestClient()
         base = '''
 from conans import ConanFile
+from conans.util.files import load, save
 import os
 
 class ConanLib(ConanFile):
@@ -24,15 +25,13 @@ class ConanLib(ConanFile):
         os.makedirs(extra_path)
         myfile = os.path.join(extra_path, "myfile.txt")
         # print("File length ", len(myfile))
-        with open(myfile, "wb") as handle:
-            handle.write("Hello extra path length")
+        save(myfile, "Hello extra path length")
 
     def build(self):
         extra_path = "123456789/" * 22
         myfile = os.path.join(extra_path, "myfile2.txt")
         # print("File length ", len(myfile))
-        with open(myfile, "wb") as handle:
-            handle.write("Hello2 extra path length")
+        save(myfile, "Hello2 extra path length")
 
     def package(self):
         self.copy("*.txt", keep_path=False)
