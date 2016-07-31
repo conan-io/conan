@@ -5,7 +5,7 @@ from os.path import isfile
 from os.path import join, normpath
 from conans.model.manifest import FileTreeManifest
 import platform
-import uuid
+import tempfile
 
 
 EXPORT_FOLDER = "export"
@@ -71,7 +71,8 @@ def shortener(path, shorten):
     if os.path.exists(link):
         return load(link)
 
-    redirect = os.path.join("F:/Aconantmp", str(uuid.uuid4()))
+    redirect = tempfile.mkdtemp(dir="F:/Bconantmp")
+    print "REDIRECT ", redirect
     save(link, redirect)
     return redirect
 
