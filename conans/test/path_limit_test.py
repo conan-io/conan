@@ -21,14 +21,14 @@ class ConanLib(ConanFile):
     short_paths = True
 
     def source(self):
-        extra_path = "1/" * 109
+        extra_path = "1/" * 108
         os.makedirs(extra_path)
         myfile = os.path.join(extra_path, "myfile.txt")
         # print("File length ", len(myfile))
         save(myfile, "Hello extra path length")
 
     def build(self):
-        extra_path = "1/" * 109
+        extra_path = "1/" * 108
         myfile = os.path.join(extra_path, "myfile2.txt")
         # print("File length ", len(myfile))
         save(myfile, "Hello2 extra path length")

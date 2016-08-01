@@ -24,10 +24,11 @@ class DiskRemover(object):
             return
 
         build = os.path.join(path, "build")
-        for f in os.listdir(build):
-            link = os.path.join(build, f, ".conan_link")
-            if os.path.exists(link):
-                self._remove(load(link), conan_ref)
+        if os.path.exists(build):
+            for f in os.listdir(build):
+                link = os.path.join(build, f, ".conan_link")
+                if os.path.exists(link):
+                    self._remove(load(link), conan_ref)
 
     def _remove(self, path, conan_ref, msg=""):
         try:
