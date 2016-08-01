@@ -13,7 +13,6 @@ from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
-from collections import Counter
 from conans.model.env_info import EnvInfo
 import six
 
@@ -298,8 +297,9 @@ Package configuration:
                     # Without storage path, just relative
                     rel_path = os.path.relpath(source_path, src_folder)
                     dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
-                    # it seems that "/" is counted as "\\" so it counts double
-                    if len(dest_path) + (Counter(dest_path)[os.path.sep]) >= 260:
+                    # it is NOT that "/" is counted as "\\" so it counts double
+                    # seems a bug in python, overflows paths near the limit of 260,
+                    if len(dest_path) >= 249:
                         filtered_files.append(the_file)
                         output.warn("Filename too long, file excluded: %s" % dest_path)
                 return filtered_files
