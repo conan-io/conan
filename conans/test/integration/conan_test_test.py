@@ -44,9 +44,9 @@ conan_basic_setup()
 ADD_EXECUTABLE(greet main.cpp)
 TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
 """
-        files["test/CMakeLists.txt"] = cmakelist
-        files["test/conanfile.py"] = test_conanfile
-        files["test/main.cpp"] = files["main.cpp"]
+        files["test_package/CMakeLists.txt"] = cmakelist
+        files["test_package/conanfile.py"] = test_conanfile
+        files["test_package/main.cpp"] = files["main.cpp"]
         client.save(files)
         client.run("export lasote/stable")
         error = client.run("test -s build_type=Release")
