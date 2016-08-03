@@ -56,19 +56,27 @@ def unzip(filename, destination="."):
         uncompress_size = sum((file_.file_size for file_ in z.infolist()))
         print("Unzipping %s, this can take a while" % human_size(uncompress_size))
         extracted_size = 0
-        for file_ in z.infolist():
-            extracted_size += file_.file_size
-            txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
-            print(txt_msg, end='')
-            try:
-                # the limit is 230 to account for 10 chars of SHA in b/xxxx (in shorted paths)
-                # and 20 chars for build system extra subfolders (cmake mytarget.dir/debug, etc)
-                # Win limit is 260
-                if len(file_.filename) + len(full_path) > 230:
-                    raise ValueError("Filename too long")
-                z.extract(file_, full_path)
-            except Exception as e:
-                print("Error extract %s\n%s" % (file_.filename, str(e)))
+        if platform.system() == "Windows":
+            for file_ in z.infolist():
+                extracted_size += file_.file_size
+                txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
+                print(txt_msg, end='')
+                try:
+                    # Win path limit is 260 chars
+                    if len(file_.filename) + len(full_path) >= 260:
+                        raise ValueError("Filename too long")
+                    z.extract(file_, full_path)
+                except Exception as e:
+                    print("Error extract %s\n%s" % (file_.filename, str(e)))
+        else:  # duplicated for, to avoid a platform check for each zipped file
+            for file_ in z.infolist():
+                extracted_size += file_.file_size
+                txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
+                print(txt_msg, end='')
+                try:
+                    z.extract(file_, full_path)
+                except Exception as e:
+                    print("Error extract %s\n%s" % (file_.filename, str(e)))
 
 
 def untargz(filename, destination="."):

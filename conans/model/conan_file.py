@@ -75,6 +75,7 @@ class ConanFile(object):
     license = None
     author = None  # Main maintainer/responsible for the package, any format
     build_policy = None
+    short_paths = False
 
     def __init__(self, output, runner, settings, conanfile_directory):
         '''

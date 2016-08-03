@@ -5,7 +5,6 @@ from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
 from conans.client.detect import detect_defaults_settings
-from conans.client.short_paths_conf import ShortPathsReferences
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -23,14 +22,7 @@ class ConanPaths(StorePaths):
         self._settings = None
         self._output = output
         self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
-        self._short_paths_refs = None
-        StorePaths.__init__(self, self._store_folder, self.short_paths_refs)
-
-    @property
-    def short_paths_refs(self):
-        if self._short_paths_refs is None:
-            self._short_paths_refs = ShortPathsReferences(self.conan_folder)
-        return self._short_paths_refs
+        StorePaths.__init__(self, self._store_folder)
 
     @property
     def registry(self):

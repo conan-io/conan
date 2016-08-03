@@ -33,7 +33,6 @@ from collections import Counter
 from conans.client.paths import ConanPaths
 import six
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.short_paths_conf import ShortPathsReferences
 
 
 class TestingResponse(object):
@@ -362,7 +361,6 @@ class TestClient(object):
         self._init_collaborators(user_io)
 
         # Migration system
-        self.short_paths_refs = ShortPathsReferences(self.base_folder)
         self.paths = migrate_and_get_paths(self.base_folder, TestBufferConanOutput(),
                                            manager=self.remote_manager,
                                            storage_folder=self.storage_folder)
