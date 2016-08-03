@@ -284,6 +284,10 @@ If not:
             if not only_manifest:
                 self._user_io.out.info("Packaging %s" % package_reference.package_id)
                 build_folder = self._paths.build(package_reference)
+                # Small fix to package for short paths, without messing with the whole thing
+                link = os.path.join(build_folder, ".conan_link")
+                if os.path.exists(link):
+                    build_folder = load(link)
                 loader = self._loader(build_folder)
                 conanfile = loader.load_conan(conan_file_path, self._user_io.out)
                 rmdir(package_folder)
