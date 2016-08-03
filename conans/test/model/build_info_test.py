@@ -33,9 +33,11 @@ class BuildInfoTest(unittest.TestCase):
     def cpp_info_test(self):
         folder = temp_folder()
         info = CppInfo(folder)
-        info.abs_includedirs.append("/usr/include")
-        info.abs_libdirs.append("/usr/lib")
-        info.abs_bindirs.append("/usr/bin")
+        info.includedirs.append("/usr/include")
+        info.libdirs.append("/usr/lib")
+        info.bindirs.append("C:/usr/bin")
+        info.bindirs.append("local_bindir")
         self.assertEqual(info.include_paths, [os.path.join(folder, "include"), "/usr/include"])
         self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), "/usr/lib"])
-        self.assertEqual(info.bin_paths, [os.path.join(folder, "bin"), "/usr/bin"])
+        self.assertEqual(info.bin_paths, [os.path.join(folder, "bin"), "C:/usr/bin",
+                                          os.path.join(folder, "local_bindir")])

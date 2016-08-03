@@ -44,21 +44,21 @@ class CppInfo(_CppInfo):
         self.libdirs.append(DEFAULT_LIB)
         self.bindirs.append(DEFAULT_BIN)
         self.resdirs.append(DEFAULT_RES)
-        self.abs_includedirs = []
-        self.abs_libdirs = []
-        self.abs_bindirs = []
 
     @property
     def include_paths(self):
-        return [os.path.join(self.rootpath, p) for p in self.includedirs] + self.abs_includedirs
+        return [os.path.join(self.rootpath, p)
+                if not os.path.isabs(p) else p for p in self.includedirs]
 
     @property
     def lib_paths(self):
-        return [os.path.join(self.rootpath, p) for p in self.libdirs] + self.abs_libdirs
+        return [os.path.join(self.rootpath, p)
+                if not os.path.isabs(p) else p for p in self.libdirs]
 
     @property
     def bin_paths(self):
-        return [os.path.join(self.rootpath, p) for p in self.bindirs] + self.abs_bindirs
+        return [os.path.join(self.rootpath, p)
+                if not os.path.isabs(p) else p for p in self.bindirs]
 
 
 class DepsCppInfo(_CppInfo):
