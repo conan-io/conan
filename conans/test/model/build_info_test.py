@@ -5,6 +5,7 @@ from conans.client.generators import TXTGenerator
 from collections import namedtuple
 from conans.model.env_info import DepsEnvInfo
 from conans.test.utils.test_files import temp_folder
+import platform
 
 
 class BuildInfoTest(unittest.TestCase):
@@ -35,9 +36,10 @@ class BuildInfoTest(unittest.TestCase):
         info = CppInfo(folder)
         info.includedirs.append("/usr/include")
         info.libdirs.append("/usr/lib")
-        info.bindirs.append("C:/usr/bin")
+        bin_abs_dir = "C:/usr/bin" if platform.system() == "Windows" else "/tmp"
+        info.bindirs.append(bin_abs_dir)
         info.bindirs.append("local_bindir")
         self.assertEqual(info.include_paths, [os.path.join(folder, "include"), "/usr/include"])
         self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), "/usr/lib"])
-        self.assertEqual(info.bin_paths, [os.path.join(folder, "bin"), "C:/usr/bin",
+        self.assertEqual(info.bin_paths, [os.path.join(folder, "bin"), bin_abs_dir,
                                           os.path.join(folder, "local_bindir")])
