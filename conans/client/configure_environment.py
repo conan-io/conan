@@ -59,9 +59,10 @@ class ConfigureEnvironment(object):
             libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
             libs = 'LIBS="%s"' % libflags
             archflag = "-m32" if self.arch == "x86" else ""
-            ldflags = 'LDFLAGS="%s %s %s"' % (" ".join(["-L%s" % lib
-                                                     for lib in self._deps_cpp_info.lib_paths]),
-                                             libflags, archflag)
+            exe_linker_flags = " ".join(self._deps_cpp_info.exelinkflags)
+            shared_linker_flags = " ".join(self._deps_cpp_info.sharedlinkflags)
+            lib_paths = " ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths])
+            ldflags = 'LDFLAGS="%s %s %s %s %s"' % (lib_paths, libflags, archflag, exe_linker_flags, shared_linker_flags)
             debug = "-g" if self.build_type == "Debug" else "-s -DNDEBUG"
             include_flags = " ".join(['-I%s' % i for i in self._deps_cpp_info.include_paths])
             cflags = 'CFLAGS="%s %s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cflags),
