@@ -10,5 +10,5 @@ class DetectTest(unittest.TestCase):
         output = TestBufferConanOutput()
         detect_defaults_settings(output)
         self.assertIn("It seems to be the first time you run conan", output)
-        if platform.system() != "Darwin":
+        if platform.system() == "Linux":
             self.assertIn("Found gcc", output)
