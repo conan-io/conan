@@ -47,15 +47,18 @@ class CppInfo(_CppInfo):
 
     @property
     def include_paths(self):
-        return [os.path.join(self.rootpath, p) for p in self.includedirs]
+        return [os.path.join(self.rootpath, p)
+                if not os.path.isabs(p) else p for p in self.includedirs]
 
     @property
     def lib_paths(self):
-        return [os.path.join(self.rootpath, p) for p in self.libdirs]
+        return [os.path.join(self.rootpath, p)
+                if not os.path.isabs(p) else p for p in self.libdirs]
 
     @property
     def bin_paths(self):
-        return [os.path.join(self.rootpath, p) for p in self.bindirs]
+        return [os.path.join(self.rootpath, p)
+                if not os.path.isabs(p) else p for p in self.bindirs]
 
 
 class DepsCppInfo(_CppInfo):
