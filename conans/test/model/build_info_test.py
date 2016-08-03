@@ -1,8 +1,10 @@
 import unittest
-from conans.model.build_info import DepsCppInfo
+import os
+from conans.model.build_info import DepsCppInfo, CppInfo
 from conans.client.generators import TXTGenerator
 from collections import namedtuple
 from conans.model.env_info import DepsEnvInfo
+from conans.test.utils.test_files import temp_folder
 
 
 class BuildInfoTest(unittest.TestCase):
@@ -27,3 +29,15 @@ class BuildInfoTest(unittest.TestCase):
         output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None)).content
         deps_cpp_info2 = DepsCppInfo.loads(output)
         self._equal(deps_cpp_info, deps_cpp_info2)
+
+    def cpp_info_test(self):
+        folder = temp_folder()
+        info = CppInfo(folder)
+        info.includedirs.append("/usr/include")
+        info.libdirs.append("/usr/lib")
+        info.bindirs.append("C:/usr/bin")
+        info.bindirs.append("local_bindir")
+        self.assertEqual(info.include_paths, [os.path.join(folder, "include"), "/usr/include"])
+        self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), "/usr/lib"])
+        self.assertEqual(info.bin_paths, [os.path.join(folder, "bin"), "C:/usr/bin",
+                                          os.path.join(folder, "local_bindir")])
