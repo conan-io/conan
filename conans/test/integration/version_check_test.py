@@ -79,8 +79,8 @@ class VersionCheckTest(unittest.TestCase):
                                 users={"normal_server": [("lasote", "mypass")],
                                        "the_last_server": [("lasote", "mypass")]},
                                 client_version=4)
-        files = cpp_hello_conan_files("Hello0", "0.1")
-        files[CONANFILE] = files[CONANFILE].replace("build(", "build2(")
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
+
         tmp_client.save(files)
         tmp_client.run("export lasote/stable")
         errors = tmp_client.run("upload Hello0/0.1@lasote/stable -r normal_server --all")
@@ -106,7 +106,7 @@ class VersionCheckTest(unittest.TestCase):
     def _get_server(self, server_version, min_client_compatible_version):
         server_version = str(server_version)
         min_client_compatible_version = str(min_client_compatible_version)
-        return TestServer([("*/*@*/*", "*")],  # read permissions
+        return TestServer(
                           [],  # write permissions
                           users={"lasote": "mypass"},
                           server_version=Version(server_version),

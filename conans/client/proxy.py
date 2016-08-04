@@ -77,7 +77,7 @@ class ConanProxy(object):
         def _refresh():
             conan_dir_path = self._paths.export(conan_reference)
             rmdir(conan_dir_path)
-            rmdir(self._paths.source(conan_reference))
+            rmdir(self._paths.source(conan_reference), True)  # It might need to remove shortpath
             current_remote, _ = self._get_remote(conan_reference)
             output.info("Retrieving from remote '%s'..." % current_remote.name)
             self._remote_manager.get_conanfile(conan_reference, current_remote)
@@ -88,11 +88,8 @@ class ConanProxy(object):
 
         # check if it is in disk
         conanfile_path = self._paths.conanfile(conan_reference)
-        is_min_path = conan_reference in self._paths.short_path_refs
-        if not is_min_path:
-            path_exist = path_exists(conanfile_path, self._paths.store)
-        else:  # Directory doesn't contain the reference, so we don't need to compare the cases
-            path_exist = os.path.exists(conanfile_path)
+
+        path_exist = path_exists(conanfile_path, self._paths.store)
 
         if path_exist:
             if self._check_integrity:  # Check if package is corrupted
@@ -140,12 +137,13 @@ class ConanProxy(object):
         if not conan_reference:
             return 0
         read_manifest, _ = self._paths.conan_manifests(conan_reference)
-        try:  # get_conan_digest can fail, not in server
-            upstream_manifest = self.get_conan_digest(conan_reference)
-            if upstream_manifest.file_sums != read_manifest.file_sums:
-                return 1 if upstream_manifest.time > read_manifest.time else -1
-        except ConanException:
-            pass
+        if read_manifest:
+            try:  # get_conan_digest can fail, not in server
+                upstream_manifest = self.get_conan_digest(conan_reference)
+                if upstream_manifest.file_sums != read_manifest.file_sums:
+                    return 1 if upstream_manifest.time > read_manifest.time else -1
+            except ConanException:
+                pass
 
         return 0
 
@@ -272,7 +270,8 @@ class ConanProxy(object):
         if remote is None:
             remote = self._registry.get_ref(package_reference.conan)
         if not remote:
-            output.error("Package doesn't have a remote defined")
+            output.warn("Package doesn't have a remote defined. "
+                        "Probably created locally and not uploaded")
             return False
         package_id = str(package_reference.package_id)
         try:

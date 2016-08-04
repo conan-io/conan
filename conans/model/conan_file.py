@@ -3,6 +3,7 @@ from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.errors import ConanException
+from conans.model.env_info import DepsEnvInfo
 
 
 def create_options(conanfile):
@@ -73,6 +74,8 @@ class ConanFile(object):
     # change the actual license of the source code
     license = None
     author = None  # Main maintainer/responsible for the package, any format
+    build_policy = None
+    short_paths = False
 
     def __init__(self, output, runner, settings, conanfile_directory):
         '''
@@ -93,6 +96,11 @@ class ConanFile(object):
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
+
+        # environment variables declared in the package_info
+        self.env_info = None  # Will be initialized at processing time
+        self.deps_env_info = DepsEnvInfo()
+
         self.copy = None  # initialized at runtime
 
         # an output stream (writeln, info, warn error)
@@ -125,6 +133,14 @@ class ConanFile(object):
     def conanfile_directory(self):
         return self._conanfile_directory
 
+    @property
+    def build_policy_missing(self):
+        return self.build_policy == "missing"
+
+    @property
+    def build_policy_always(self):
+        return self.build_policy == "always"
+
     def source(self):
         pass
 
@@ -132,16 +148,26 @@ class ConanFile(object):
         pass
 
     def system_requirements(self):
-        """ this method can be overriden to implement logic for system package
+        """ this method can be overwritten to implement logic for system package
         managers, as apt-get
 
         You can define self.global_system_requirements = True, if you want the installation
         to be for all packages (not depending on settings/options/requirements)
         """
 
-    def config(self):
-        """ override this method to define custom options,
-        delete non relevant ones
+    def config_options(self):
+        """ modify options, probably conditioned to some settings. This call is executed
+        before config_settings. E.g.
+        if self.settings.os == "Windows":
+            del self.options.shared  # shared/static not supported in win
+        """
+
+    def configure(self):
+        """ modify settings, probably conditioned to some options. This call is executed
+        after config_options. E.g.
+        if self.options.header_only:
+            self.settings.clear()
+        This is also the place for conditional requirements
         """
 
     def imports(self):

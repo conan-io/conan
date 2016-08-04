@@ -11,9 +11,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.servers = OrderedDict()
         self.users = {}
         for i in range(3):
-            test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                     [],  # write permissions
-                                     users={"lasote": "mypass"})  # exported users and passwords
+            test_server = TestServer()
             self.servers["remote%d" % i] = test_server
             self.users["remote%d" % i] = [("lasote", "mypass")]
 

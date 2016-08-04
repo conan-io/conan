@@ -12,9 +12,7 @@ from conans.test.utils.test_files import uncompress_packaged_files
 class CompleteFlowTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 

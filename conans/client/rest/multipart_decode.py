@@ -53,7 +53,7 @@ def decode_body(content_type, response):
         raise ValueError("Invalid content type")
 
     boundary = content_type.split("boundary=")[1]
-    #charset = _parse_value_in_header(content_type, "charset")
+    # charset = _parse_value_in_header(content_type, "charset")
 
     body_content = []
     for content in response.iter_content(2 * (1024 ** 2)):

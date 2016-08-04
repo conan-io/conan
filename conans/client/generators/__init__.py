@@ -1,4 +1,5 @@
 from conans.model import registered_generators
+from conans.model.env_info import EnvInfo
 from conans.util.files import save, normalize
 from os.path import join
 from .text import TXTGenerator
@@ -9,6 +10,7 @@ from .qbs import QbsGenerator
 from .visualstudio import VisualStudioGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
+from .virtualenv import VirtualEnvGenerator
 
 
 def _save_generator(name, klass):
@@ -23,6 +25,7 @@ _save_generator("qbs", QbsGenerator)
 _save_generator("visual_studio", VisualStudioGenerator)
 _save_generator("xcode", XCodeGenerator)
 _save_generator("ycm", YouCompleteMeGenerator)
+_save_generator("virtualenv", VirtualEnvGenerator)
 
 
 def write_generators(conanfile, path, output):
@@ -33,6 +36,8 @@ def write_generators(conanfile, path, output):
 
     conanfile.cpp_info = CppInfo(path)
     conanfile.cpp_info.dependencies = []
+
+    conanfile.env_info = EnvInfo(path)
     conanfile.package_info()
 
     for generator_name in conanfile.generators:

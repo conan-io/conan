@@ -13,7 +13,7 @@ from conans.paths import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE
 class DiamondTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
+        test_server = TestServer(
                                  [],  # write permissions
                                  users={"lasote": "mypass"})  # exported users and passwords
         self.servers = {"default": test_server}

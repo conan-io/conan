@@ -33,7 +33,6 @@ from collections import Counter
 from conans.client.paths import ConanPaths
 import six
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.short_paths_conf import ShortPathsReferences
 
 
 class TestingResponse(object):
@@ -179,13 +178,20 @@ class TestServer(object):
         # to determine where to call. Why? remote_manager just assing an url
         # to the rest_client, so rest_client doesn't know about object instances,
         # just urls, so testing framework performs a map between fake urls and instances
+        if read_permissions is None:
+            read_permissions = [("*/*@*/*", "*")]
+        if write_permissions is None:
+            write_permissions = []
+        if users is None:
+            users = {"lasote": "mypass"}
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
+        min_client_ver = min_client_compatible_version
         self.test_server = TestServerLauncher(base_path, read_permissions,
-                                      write_permissions, users,
-                                      base_url=self.fake_url + "/v1",
-                                      plugins=plugins,
-                                      server_version=server_version,
-                                      min_client_compatible_version=min_client_compatible_version)
+                                              write_permissions, users,
+                                              base_url=self.fake_url + "/v1",
+                                              plugins=plugins,
+                                              server_version=server_version,
+                                              min_client_compatible_version=min_client_ver)
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property
@@ -355,7 +361,6 @@ class TestClient(object):
         self._init_collaborators(user_io)
 
         # Migration system
-        self.short_paths_refs = ShortPathsReferences(self.base_folder)
         self.paths = migrate_and_get_paths(self.base_folder, TestBufferConanOutput(),
                                            manager=self.remote_manager,
                                            storage_folder=self.storage_folder)

@@ -15,7 +15,7 @@ def _execute(command):
         if not line:
             break
         # output.write(line)
-        output_buffer.append(line)
+        output_buffer.append(str(line))
 
     proc.communicate()
     return proc.returncode, "".join(output_buffer)

@@ -9,21 +9,16 @@ from time import sleep
 class MultiRemotesTest(unittest.TestCase):
 
     def setUp(self):
-        default_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                    [],  # write permissions
-                                    users={"lasote": "mypass"})  # exported users and passwords
-        local_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                  [],  # write permissions
-                                  users={"lasote": "mypass"})  # exported users and passwords
+        default_server = TestServer()
+        local_server = TestServer()
         self.servers = OrderedDict()
         self.servers["default"] = default_server
         self.servers["local"] = local_server
 
     def _create(self, client, number, version, deps=None, export=True, modifier=""):
-        files = cpp_hello_conan_files(number, version, deps)
+        files = cpp_hello_conan_files(number, version, deps, build=False)
         # To avoid building
-        files = {CONANFILE: files[CONANFILE].replace("build(", "build2(").replace("config(",
-                                                                                  "config2(") + modifier}
+        files = {CONANFILE: files[CONANFILE].replace("config(", "config2(") + modifier}
         client.save(files, clean_first=True)
         if export:
             client.run("export lasote/stable")
@@ -85,6 +80,8 @@ class MultiRemotesTest(unittest.TestCase):
 
         # Well, now try to update the package with -r default -u
         client_b.run("install Hello0/0.0@lasote/stable -r default -u --build")
-        self.assertIn("Hello0/0.0@lasote/stable: Retrieving from remote 'default'", str(client_b.user_io.out))
+        self.assertIn("Hello0/0.0@lasote/stable: Retrieving from remote 'default'",
+                      str(client_b.user_io.out))
         client_b.run("info Hello0/0.0@lasote/stable -u")
-        self.assertIn("Updates: The local file is newer than remote's one (local)", str(client_b.user_io.out))
+        self.assertIn("Updates: The local file is newer than remote's one (local)",
+                      str(client_b.user_io.out))

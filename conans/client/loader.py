@@ -114,18 +114,24 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conan_file_path, str(e)))
 
-    def load_conan_txt(self, conan_requirements_path, output):
+    def load_conan_txt(self, conan_txt_path, output):
 
-        if not os.path.exists(conan_requirements_path):
+        if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
-        conanfile = ConanFile(output, self._runner, self._settings.copy(),
-                              os.path.dirname(conan_requirements_path))
+        contents = load(conan_txt_path)
+        path = os.path.dirname(conan_txt_path)
+
+        conanfile = self.parse_conan_txt(contents, path, output)
+        return conanfile
+
+    def parse_conan_txt(self, contents, path, output):
+        conanfile = ConanFile(output, self._runner, self._settings.copy(), path)
 
         try:
-            parser = ConanFileTextLoader(load(conan_requirements_path))
+            parser = ConanFileTextLoader(contents)
         except Exception as e:
-            raise ConanException("%s:\n%s" % (conan_requirements_path, str(e)))
+            raise ConanException("%s:\n%s" % (path, str(e)))
         for requirement_text in parser.requirements:
             ConanFileReference.loads(requirement_text)  # Raise if invalid
             conanfile.requires.add(requirement_text)
@@ -140,6 +146,28 @@ class ConanFileLoader(object):
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
                                                                parser.import_parameters)
         conanfile.scope = self._scopes.package_scope()
+        return conanfile
+
+    def load_virtual(self, reference, path):
+        fixed_options = []
+        # If user don't specify namespace in options, assume that it's for the reference (keep compatibility)
+        for option_name, option_value in self._options.as_list():
+            if ":" not in option_name:
+                tmp = ("%s:%s" % (reference.name, option_name), option_value)
+            else:
+                tmp = (option_name, option_value)
+            fixed_options.append(tmp)
+        options = OptionsValues.from_list(fixed_options)
+
+        conanfile = ConanFile(None, self._runner, self._settings.copy(), path)
+
+        conanfile.requires.add(str(reference))  # Convert to string necessary
+        # conanfile.options.values = options
+        conanfile.options.initialize_upstream(options)
+
+        conanfile.generators = ["txt"]
+        conanfile.scope = self._scopes.package_scope()
+
         return conanfile
 
 

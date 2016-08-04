@@ -20,9 +20,7 @@ class PathExistsTest(unittest.TestCase):
     def test_conanfile_not_found(self):
         """If package is OpenSSL is not openssl"""
 
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default":[("lasote", "mypass")]})
 

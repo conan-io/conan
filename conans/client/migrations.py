@@ -117,7 +117,7 @@ build_type: [None, Debug, Release]
                                     'version: ["5.0", "5.1", "6.0", "6.1", "7.0"]',
                                     'version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]')
             save(self.paths.settings_path, default_settings)
-        elif old_version < Version("0.10"):
+        elif old_version < Version("0.11"):
             old_settings = """
 os: [Windows, Linux, Macos, Android, iOS]
 arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]

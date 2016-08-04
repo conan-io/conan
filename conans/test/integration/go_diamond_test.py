@@ -10,9 +10,7 @@ from conans.test.utils.test_files import hello_conan_files
 class GoDiamondTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
         self.conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 

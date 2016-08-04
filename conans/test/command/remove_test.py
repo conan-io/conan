@@ -1,24 +1,26 @@
 import unittest
 from conans.test.tools import TestClient, TestBufferConanOutput, TestServer
-from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER
+from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE
 import os
 from mock import Mock
 from conans.client.userio import UserIO
 from conans.test.utils.test_files import temp_folder
 import six
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
 
 class RemoveTest(unittest.TestCase):
 
     def setUp(self):
+        hello_files = cpp_hello_conan_files("Hello")
+        test_conanfile_contents = hello_files[CONANFILE]
+
         self.server_folder = temp_folder()
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"fenix": "mypass"},
+        test_server = TestServer(users={"fenix": "mypass"},
                                  base_path=self.server_folder)  # exported users and passwords
         self.server = test_server
         servers = {"default": test_server}
-        client = TestClient(servers=servers, users={"default":[("fenix", "mypass")]})
+        client = TestClient(servers=servers, users={"default": [("fenix", "mypass")]})
 
         # Conans with and without packages created
         self.root_folder = {"H1": 'Hello/1.4.10/fenix/testing',
@@ -28,7 +30,7 @@ class RemoveTest(unittest.TestCase):
 
         files = {}
         for key, folder in self.root_folder.items():
-            files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = ""
+            files["%s/%s/conanfile.py" % (folder, EXPORT_FOLDER)] = test_conanfile_contents
             files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = ""
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
             for pack_id in (1, 2):

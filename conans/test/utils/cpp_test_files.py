@@ -144,7 +144,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
     param dll_export: Adds __declspec(dllexport) to the .h declaration
                       (to be exported to lib with a dll)
     param need_patch: It will generated wrong CMakeLists and main.cpp files,
-                      so they will need to be fixed/patched in the source() method. 
+                      so they will need to be fixed/patched in the source() method.
                       Such method just have to replace_in_file in those two files to have a
                       correct "source" directory. This was introduced to be sure that the
                       source and build methods are executed using their respective folders
@@ -180,7 +180,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
                                                               "project(MyHello C)")
     if need_patch:
         ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project", "projct")
-        ret["main%s" % ext] = ret["main%s" % ext].replace("return", "retunr") 
+        ret["main%s" % ext] = ret["main%s" % ext].replace("return", "retunr")
     ret["executable"] = executable
 
     return ret
@@ -188,7 +188,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
 
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
-                          pure_c=False):
+                          pure_c=False, config=True, build=True):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -223,10 +223,14 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                         pure_c=pure_c)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
     conanfile = conanfile_template.format(name=name,
-                                      version=version,
-                                      requires=requires,
-                                      language=language,
-                                      static=static,
-                                      libcxx_remove=libcxx_remove)
+                                          version=version,
+                                          requires=requires,
+                                          language=language,
+                                          static=static,
+                                          libcxx_remove=libcxx_remove)
+    if not build:
+        conanfile = conanfile.replace("build(", "build2(")
+    if not config:
+        conanfile = conanfile.replace("config(", "config2(")
     base_files[CONANFILE] = conanfile
     return base_files

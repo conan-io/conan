@@ -69,7 +69,7 @@ class SayConan(ConanFile):
     def invalid_settings_test(self):
         '''Test wrong values and wrong constraints'''
         default_conf = load(self.client.paths.conan_conf_path)
-        new_conf = default_conf.replace("build_type=Release", "")
+        new_conf = default_conf.replace("os=", "# os=")
         save(self.client.paths.conan_conf_path, new_conf)
         # MISSING VALUE FOR A SETTING
         content = """
@@ -83,7 +83,7 @@ class SayConan(ConanFile):
 
         self.client.save({CONANFILE: content})
         self.client.run("install --build missing", ignore_error=True)
-        self.assertIn(undefined_value("settings.build_type"), str(self.client.user_io.out))
+        self.assertIn(undefined_value("settings.os"), str(self.client.user_io.out))
 
     def invalid_settings_test2(self):
         # MISSING A DEFAULT VALUE BECAUSE ITS RESTRICTED TO OTHER, SO ITS REQUIRED

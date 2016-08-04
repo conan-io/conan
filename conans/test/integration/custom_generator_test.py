@@ -69,15 +69,13 @@ MyCustomMultiGenerator
 class CustomGeneratorTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
 
     def reuse_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-        files = cpp_hello_conan_files("Hello0", "0.1")
-        files[CONANFILE] = files[CONANFILE].replace("build(", "build2(")
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
+
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
         client.run("export lasote/stable")

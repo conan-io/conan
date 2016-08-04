@@ -64,7 +64,7 @@ class RemoteManager(object):
         export_folder = self._paths.export(conan_reference)
         uncompress_files(export_files, export_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
-        rmdir(self._paths.source(conan_reference))
+        rmdir(self._paths.source(conan_reference), True)
 #       TODO: Download only the CONANFILE file and only download the rest of files
 #       in install if needed (not found remote package)
 

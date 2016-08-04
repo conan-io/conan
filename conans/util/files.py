@@ -133,13 +133,19 @@ def _change_permissions(func, path, exc_info):
         raise
 
 
-def rmdir(path, raise_if_not_exist=False):
+def rmdir(path, shorten=False):
     '''Recursive rm of a directory. If dir not exists
     only raise exception if raise_if_not_exist'''
+    if shorten and platform.system() == "Windows":
+        link = os.path.join(path, ".conan_link")
+        if os.path.exists(link):
+            short_path = load(link)
+            rmdir(short_path)
+
     try:
         shutil.rmtree(path, onerror=_change_permissions)
     except OSError as err:
-        if err.errno == ENOENT and not raise_if_not_exist:
+        if err.errno == ENOENT:
             return
         raise
 

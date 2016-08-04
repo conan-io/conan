@@ -10,9 +10,7 @@ from conans.model.ref import PackageReference
 class ManifestValidationTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer([("*/*@*/*", "*")],  # read permissions
-                                 [],  # write permissions
-                                 users={"lasote": "mypass"})  # exported users and passwords
+        test_server = TestServer()
         self.servers = {"default": test_server}
         self.conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 

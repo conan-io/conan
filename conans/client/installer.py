@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO
+from conans.paths import CONANINFO, BUILD_INFO, DIRTY_FILE
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -13,10 +13,11 @@ from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
-from collections import Counter
+from conans.model.env_info import EnvInfo
+import six
 
 
-def init_cpp_info(deps_graph, paths):
+def init_info_objects(deps_graph, paths):
     """ Made external so it is independent of installer and can called
     in testing too
     """
@@ -27,7 +28,9 @@ def init_cpp_info(deps_graph, paths):
             package_id = conan_file.info.package_id()
             package_reference = PackageReference(conan_ref, package_id)
             package_folder = paths.package(package_reference)
+            conan_file.package_folder = package_folder
             conan_file.cpp_info = CppInfo(package_folder)
+            conan_file.env_info = EnvInfo(package_folder)
             try:
                 conan_file.package_info()
             except Exception as e:
@@ -66,10 +69,10 @@ class ConanInstaller(object):
         passes their exported build flags and included directories to the downstream
         imports flags
         """
-        init_cpp_info(deps_graph, self._paths)
+        init_info_objects(deps_graph, self._paths)
 
         # order by levels and propagate exports as download imports
-        nodes_by_level = deps_graph.propagate_buildinfo()
+        nodes_by_level = deps_graph.propagate_info_objects()
         return nodes_by_level
 
     def _compute_private_nodes(self, deps_graph, build_mode):
@@ -85,14 +88,19 @@ class ConanInstaller(object):
                     break
                 package_id = conan_file.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
-                force_build = self._force_build(conan_ref, build_mode)
-                if not self._remote_proxy.get_package(package_reference, force_build):
+                build_forced = self._build_forced(conan_ref, build_mode, conan_file)
+                if not self._remote_proxy.get_package(package_reference, build_forced):
                     break
             else:
                 skippable_nodes.append(private_node)
         return skippable_nodes
 
-    def _force_build(self, conan_ref, build_mode):
+    def _build_forced(self, conan_ref, build_mode, conan_file):
+        if conan_file.build_policy_always:
+            out = ScopedOutput(str(conan_ref), self._out)
+            out.info("Building package from source as defined by build_policy='always'")
+            return True
+
         if build_mode is False:  # "never" option, default
             return False
 
@@ -109,6 +117,12 @@ class ConanInstaller(object):
         should be indpendent from each other, the next-second level should have
         dependencies only to first level conans.
         param nodes_by_level: list of lists [[nodeA, nodeB], [nodeC], [nodeD, ...], ...]
+
+        build_mode => ["*"] if user wrote "--build"
+                   => ["hello*", "bye*"] if user wrote "--build hello --build bye"
+                   => False if user wrote "never"
+                   => True if user wrote "missing"
+
         """
         # Now build each level, starting from the most independent one
         for level in nodes_by_level:
@@ -132,8 +146,8 @@ class ConanInstaller(object):
 
         conan_ref = package_reference.conan
         package_folder = self._paths.package(package_reference)
-        build_folder = self._paths.build(package_reference)
-        src_folder = self._paths.source(conan_ref)
+        build_folder = self._paths.build(package_reference, conan_file.short_paths)
+        src_folder = self._paths.source(conan_ref, conan_file.short_paths)
         export_folder = self._paths.export(conan_ref)
 
         # If already exists do not dirt the output, the common situation
@@ -144,16 +158,18 @@ class ConanInstaller(object):
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
-        force_build = self._force_build(conan_ref, build_mode)
+        force_build = self._build_forced(conan_ref, build_mode, conan_file)
         if self._remote_proxy.get_package(package_reference, force_build):
             return
 
-        # Can we build? Only if we are forced or build_mode missing and package not exists
-        build_allowed = force_build or build_mode is True
+        # we need and can build? Only if we are forced or build_mode missing and package not exists
+        build = force_build or build_mode is True or conan_file.build_policy_missing
 
-        if build_allowed:
+        if build:
+            if not force_build and not build_mode:
+                output.info("Building package from source as defined by build_policy='missing'")
             try:
-                rmdir(build_folder)
+                rmdir(build_folder, conan_file.short_paths)
                 rmdir(package_folder)
             except Exception as e:
                 raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
@@ -221,22 +237,43 @@ Package configuration:
         """ creates src folder and retrieve, calling source() from conanfile
         the necessary source code
         """
+        dirty = os.path.join(src_folder, DIRTY_FILE)
+
+        def remove_source(raise_error=False):
+            output.warn("This can take a while for big packages")
+            try:
+                rmdir(src_folder, conan_file.short_paths)
+            except BaseException as e_rm:
+                save(dirty, "")  # Creation of DIRTY flag
+                msg = str(e_rm)
+                if six.PY2:
+                    msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1
+                output.error("Unable to remove source folder %s\n%s" % (src_folder, msg))
+                output.warn("**** Please delete it manually ****")
+                if raise_error or isinstance(e_rm, KeyboardInterrupt):
+                    raise ConanException("Unable to remove source folder")
+
+        if os.path.exists(dirty):
+            output.warn("Trying to remove dirty source folder")
+            remove_source(raise_error=True)
+        elif conan_file.build_policy_always:
+            output.warn("Detected build_policy 'always', trying to remove source folder")
+            remove_source(raise_error=True)
+
         if not os.path.exists(src_folder):
             output.info('Configuring sources in %s' % src_folder)
             shutil.copytree(export_folder, src_folder)
+            save(dirty, "")  # Creation of DIRTY flag
             os.chdir(src_folder)
             try:
                 conan_file.source()
+                os.remove(dirty)  # Everything went well, remove DIRTY flag
             except Exception as e:
+                os.chdir(export_folder)
                 output.error("Error while executing source(): %s" % str(e))
                 # in case source() fails (user error, typically), remove the src_folder
                 # and raise to interrupt any other processes (build, package)
-                os.chdir(export_folder)
-                try:
-                    rmdir(src_folder)
-                except Exception as e_rm:
-                    output.error("Unable to remove src folder %s\n%s" % (src_folder, str(e_rm)))
-                    output.warn("**** Please delete it manually ****")
+                remove_source()
                 raise ConanException("%s: %s" % (conan_file.name, str(e)))
 
     def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file,
@@ -260,8 +297,9 @@ Package configuration:
                     # Without storage path, just relative
                     rel_path = os.path.relpath(source_path, src_folder)
                     dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
-                    # it seems that "/" is counted as "\\" so it counts double
-                    if len(dest_path) + (Counter(dest_path)[os.path.sep]) >= 260:
+                    # it is NOT that "/" is counted as "\\" so it counts double
+                    # seems a bug in python, overflows paths near the limit of 260,
+                    if len(dest_path) >= 249:
                         filtered_files.append(the_file)
                         output.warn("Filename too long, file excluded: %s" % dest_path)
                 return filtered_files

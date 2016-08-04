@@ -70,6 +70,9 @@ class Options(object):
             return super(Options, self).__setattr__(attr, value)
         return setattr(self._options, attr, value)
 
+    def __delattr__(self, field):
+        self._options.__delattr__(field)
+
     @property
     def values(self):
         result = OptionsValues()
@@ -201,18 +204,26 @@ class OptionsValues(object):
 
     @staticmethod
     def loads(text):
+        """ parses a multiline text in the form
+        Package:option=value
+        other_option=3
+        OtherPack:opt3=12.1
+        """
         result = OptionsValues()
         for line in text.splitlines():
             line = line.strip()
             if not line:
                 continue
-            tokens = line.split(":")
+            # To avoid problems with values containing ":" as URLs
+            name, value = line.split("=")
+            tokens = name.split(":")
             if len(tokens) == 2:
                 package, option = tokens
                 current = result._reqs_options.setdefault(package.strip(), Values())
             else:
                 option = tokens[0].strip()
                 current = result._options
+            option = "%s=%s" % (option, value)
             current.add(option)
         return result
 

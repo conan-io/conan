@@ -11,11 +11,12 @@ def report_copied_files(copied, output, warn=False):
         ext_files[ext].append(os.path.basename(f))
 
     for ext, files in ext_files.items():
-        files_str = (": " + ", ".join(files)) if len(files)<5 else ""
+        files_str = (": " + ", ".join(files)) if len(files) < 5 else ""
         output.info("Copied %d '%s' files%s" % (len(files), ext, files_str))
 
     if warn and not ext_files:
         output.warn("No files copied!")
+
 
 class FileCopier(object):
     """ main responsible of copying files from place to place:
@@ -35,7 +36,7 @@ class FileCopier(object):
         self._base_src = root_source_folder
         self._base_dst = root_destination_folder
         self._copied = []
- 
+
     def report(self, output, warn=False):
         report_copied_files(self._copied, output, warn)
 
@@ -61,13 +62,19 @@ class FileCopier(object):
         copied_files = []
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
-        for root, subfolders, files in os.walk(src,followlinks=True):
-            # do the copy
-            relative_path = os.path.relpath(root, src)
+        for root, subfolders, files in os.walk(src, followlinks=True):
+            basename = os.path.basename(root)
             # Skip git or svn subfolders
-            if os.path.basename(root) in [".git", ".svn"]:
+            if basename in [".git", ".svn"]:
                 subfolders[:] = []
                 continue
+            if basename == "test_package":  # DO NOT export test_package/build folder
+                try:
+                    subfolders.remove("build")
+                except:
+                    pass
+
+            relative_path = os.path.relpath(root, src)
             for f in files:
                 relative_name = os.path.normpath(os.path.join(relative_path, f))
                 if fnmatch.fnmatch(relative_name, pattern):
