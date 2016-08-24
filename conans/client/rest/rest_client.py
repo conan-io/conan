@@ -22,7 +22,7 @@ def handle_return_deserializer(deserializer=None):
         def inner(*argc, **argv):
             ret = method(*argc, **argv)
             if ret.status_code != 200:
-                ret.charset = "utf-8" # To be able to access ret.text (ret.content are bytes)
+                ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
                 raise get_exception_from_error(ret.status_code)(ret.text)
             return deserializer(ret.content) if deserializer else decode_text(ret.content)
         return inner
@@ -87,7 +87,8 @@ class RestApiClient(object):
 
         # Get the digest
         contents = self.download_files(urls)
-        contents = {key: decode_text(value) for key, value in dict(contents).items()}  # Unroll generator and decode shas (plain text)
+        # Unroll generator and decode shas (plain text)
+        contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
     def get_package_digest(self, package_reference):
@@ -101,7 +102,8 @@ class RestApiClient(object):
 
         # Get the digest
         contents = self.download_files(urls)
-        contents = {key: decode_text(value) for key, value in dict(contents).items()}  # Unroll generator and decode shas (plain text)
+        # Unroll generator and decode shas (plain text)
+        contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
     def get_conanfile(self, conan_reference):
@@ -146,15 +148,17 @@ class RestApiClient(object):
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
 
-        files_to_upload = {filename.replace("\\", "/"): the_files[filename] for filename in new + modified}
+        files_to_upload = {filename.replace("\\", "/"): the_files[filename]
+                           for filename in new + modified}
         if files_to_upload:
             # Get the upload urls
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
-            filesizes = {filename.replace("\\", "/"): len(content) for filename, content in files_to_upload.items()}
+            filesizes = {filename.replace("\\", "/"): len(content)
+                         for filename, content in files_to_upload.items()}
             urls = self._get_json(url, data=filesizes)
             self.upload_files(urls, files_to_upload, self._output)
         if deleted:
-            self.remove_conanfile_files(conan_reference, deleted)
+            self._remove_conanfile_files(conan_reference, deleted)
 
     def upload_package(self, package_reference, the_files):
         """
@@ -185,7 +189,7 @@ class RestApiClient(object):
             self._output.rewrite_line("Package is up to date.")
             self._output.writeln("")
         if deleted:
-            self.remove_package_files(package_reference, deleted)
+            self._remove_package_files(package_reference, deleted)
 
     @handle_return_deserializer()
     def authenticate(self, user, password):
@@ -249,7 +253,7 @@ class RestApiClient(object):
         return response
 
     @handle_return_deserializer()
-    def remove_conanfile_files(self, conan_reference, files):
+    def _remove_conanfile_files(self, conan_reference, files):
         """ Remove any conans
         """
         self.check_credentials()
@@ -263,7 +267,7 @@ class RestApiClient(object):
         return response
 
     @handle_return_deserializer()
-    def remove_package_files(self, package_reference, files):
+    def _remove_package_files(self, package_reference, files):
         """ Remove any conans
         """
         self.check_credentials()
@@ -312,8 +316,8 @@ class RestApiClient(object):
             response = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                           verify=self.VERIFY_SSL,
                                           stream=True)
-        if response.status_code != 200: # Error message is text
-            response.charset = "utf-8" # To be able to access ret.text (ret.content are bytes)
+        if response.status_code != 200:  # Error message is text
+            response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
             raise get_exception_from_error(response.status_code)(response.text)
 
         return json.loads(decode_text(response.content))

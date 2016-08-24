@@ -55,14 +55,16 @@ class ConfigureEnvironment(object):
             self.run(command)
         """
         command = ""
-        if self.os == "Linux" or self.os == "Macos" or (self.os == "Windows" and self.compiler == "gcc"):
+        if self.os == "Linux" or self.os == "Macos" or (self.os == "Windows" and
+                                                        self.compiler == "gcc"):
             libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
             libs = 'LIBS="%s"' % libflags
             archflag = "-m32" if self.arch == "x86" else ""
             exe_linker_flags = " ".join(self._deps_cpp_info.exelinkflags)
             shared_linker_flags = " ".join(self._deps_cpp_info.sharedlinkflags)
             lib_paths = " ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths])
-            ldflags = 'LDFLAGS="%s %s %s %s %s"' % (lib_paths, libflags, archflag, exe_linker_flags, shared_linker_flags)
+            ldflags = 'LDFLAGS="%s %s %s %s %s"' % (lib_paths, libflags, archflag,
+                                                    exe_linker_flags, shared_linker_flags)
             debug = "-g" if self.build_type == "Debug" else "-s -DNDEBUG"
             include_flags = " ".join(['-I%s' % i for i in self._deps_cpp_info.include_paths])
             cflags = 'CFLAGS="%s %s %s %s"' % (archflag, " ".join(self._deps_cpp_info.cflags),
@@ -85,7 +87,7 @@ class ConfigureEnvironment(object):
             cpp_flags = 'CPPFLAGS="%s %s %s %s"' % (archflag, " ".join(all_cpp_flags),
                                                     debug, include_flags)
             include_paths = ":".join(['"%s"' % lib for lib in self._deps_cpp_info.include_paths])
-            headers_flags = 'C_INCLUDE_PATH=%s CPP_INCLUDE_PATH=%s' % (include_paths, include_paths)
+            headers_flags = 'C_INCLUDE_PATH={0} CPP_INCLUDE_PATH={0}'.format(include_paths)
             command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
         elif self.os == "Windows" and self.compiler == "Visual Studio":
             cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
@@ -93,5 +95,6 @@ class ConfigureEnvironment(object):
             command = "SET LIB=%s;%%LIB%% && SET CL=%s" % (lib_paths, cl_args)
 
         # Add the rest of env variables from deps_env_info
-        command += " ".join(get_setenv_variables_commands(self._deps_env_info, "" if self.os != "Windows" else "SET"))
+        command += " ".join(get_setenv_variables_commands(self._deps_env_info,
+                                                          "" if self.os != "Windows" else "SET"))
         return command

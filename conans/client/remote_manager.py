@@ -5,7 +5,7 @@ from conans.util.log import logger
 import traceback
 import os
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
-from io import StringIO, BytesIO
+from io import BytesIO
 import tarfile
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch

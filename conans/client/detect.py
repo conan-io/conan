@@ -54,7 +54,7 @@ def _visual_compiler(output, version):
 
     try:
         hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                                r"SOFTWARE\Microsoft\Windows\CurrentVersion")
+                              r"SOFTWARE\Microsoft\Windows\CurrentVersion")
         winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
         is_64bits = True
     except EnvironmentError:

@@ -29,5 +29,5 @@ def get_env(env_key, default=None, environment=os.environ):
             return env_var.split(",")
         elif isinstance(default, bool):
             return env_var == "1"
-    
+
     return env_var

@@ -194,11 +194,13 @@ path to the CMake binary directory, like this:
         """ build and run your package test. Must have conanfile.py with "test"
         method and "test_package" subfolder with package consumer test project
         """
-        parser = argparse.ArgumentParser(description=self.test_package.__doc__, prog="conan test_package",
+        parser = argparse.ArgumentParser(description=self.test_package.__doc__,
+                                         prog="conan test_package",
                                          formatter_class=RawTextHelpFormatter)
         parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
-        parser.add_argument("-ne", "--not-export", default=False, action='store_true', help='Do not export the conanfile before test execution')
+        parser.add_argument("-ne", "--not-export", default=False, action='store_true',
+                            help='Do not export the conanfile before test execution')
         parser.add_argument("-f", "--folder", help='alternative test folder name')
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Define scopes for packages')
