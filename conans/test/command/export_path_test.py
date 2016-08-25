@@ -98,7 +98,6 @@ class ExportPathTest(unittest.TestCase):
                          'conanfile.py': 'c0bb94a3da6eb978cb94f5faff037ed3',
                          'source/executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'source/helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
-        print manif.file_sums
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_combined(self):
