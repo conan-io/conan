@@ -454,7 +454,7 @@ path to the CMake binary directory, like this:
                                  'Use for testing purposes only')
         args = parser.parse_args(*args)
 
-        current_path = args.path or os.getcwd()
+        current_path = os.path.abspath(args.path or os.getcwd())
         keep_source = args.keep_source
         self._manager.export(args.user, current_path, keep_source)
 
