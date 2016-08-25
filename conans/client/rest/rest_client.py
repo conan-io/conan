@@ -316,7 +316,10 @@ class RestApiClient(object):
             response.charset = "utf-8" # To be able to access ret.text (ret.content are bytes)
             raise get_exception_from_error(response.status_code)(response.text)
 
-        return json.loads(decode_text(response.content))
+        result = json.loads(decode_text(response.content))
+        if not isinstance(result, dict):
+            raise ConanException("Unexpected server response %s" % result)
+        return result
 
     @property
     def _remote_api_url(self):
