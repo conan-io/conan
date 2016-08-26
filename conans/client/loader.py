@@ -150,7 +150,8 @@ class ConanFileLoader(object):
 
     def load_virtual(self, reference, path):
         fixed_options = []
-        # If user don't specify namespace in options, assume that it's for the reference (keep compatibility)
+        # If user don't specify namespace in options, assume that it is
+        # for the reference (keep compatibility)
         for option_name, option_value in self._options.as_list():
             if ":" not in option_name:
                 tmp = ("%s:%s" % (reference.name, option_name), option_value)
