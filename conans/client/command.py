@@ -27,7 +27,6 @@ from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
 from conans.model.scope import Scopes
 import re
-import six
 
 
 class Extender(argparse.Action):
@@ -682,9 +681,9 @@ path to the CMake binary directory, like this:
             logger.error(exc)
             errors = True
         except ConanException as exc:
-            if six.PY2:
+            try:
                 msg = unicode(exc)
-            else:
+            except:
                 msg = str(exc)
 #             import traceback
 #             logger.debug(traceback.format_exc())
