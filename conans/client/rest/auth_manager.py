@@ -44,7 +44,7 @@ def input_credentials_if_unauthorized(func):
             else:
                 # If our user receives a ForbiddenException propagate it, not
                 # log with other user
-                raise ForbiddenException("Permission denied for user: '%s')" % self.user)
+                raise ForbiddenException("Permission denied for user: '%s'" % self.user)
         except AuthenticationException:
             # Token expired or not valid, so clean the token and repeat the call
             # (will be anonymous call but exporting who is calling)

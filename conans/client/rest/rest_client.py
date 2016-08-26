@@ -306,7 +306,9 @@ class RestApiClient(object):
 
     def _get_json(self, url, data=None):
         if data:  # POST request
-            headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+            headers = {'Content-type': 'application/json',
+                       'Accept': 'text/plain',
+                       'Accept': 'application/json'}
             headers.update(self.custom_headers)
             response = self.requester.post(url, auth=self.auth, headers=headers,
                                            verify=self.VERIFY_SSL,
