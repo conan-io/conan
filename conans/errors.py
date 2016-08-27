@@ -10,6 +10,20 @@
 '''
 
 
+def format_conanfile_exception(scope, method, exception):
+    import sys
+    import traceback
+    msg = "%s: Error in %s() method" % (scope, method)
+    try:
+        tb = sys.exc_info()[2]
+        _, line, _, contents = traceback.extract_tb(tb, 2)[1]
+        msg += ", line %d\n\t%s" % (line, contents)
+    except:
+        pass
+    msg += "\n\t%s" % str(exception)
+    return msg
+
+
 class ConanException(Exception):
     """
          Generic conans exception
