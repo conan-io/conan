@@ -22,10 +22,11 @@ MIN_CLIENT_COMPATIBLE_VERSION = '0.8.0'
 class ConanServerConfigParser(ConfigParser):
     """ defines the configuration of the server. It can load
     values from environment variables or from file.
-    Environment variables have PREDECENDENCE over file values
+    Environment variables have PRECEDENCE over file values
     """
     def __init__(self, base_folder, storage_folder=None, environment=os.environ):
         ConfigParser.__init__(self)
+        self.optionxform = str  # This line keeps the case of the key, important for users case
         self.conan_folder = os.path.join(base_folder, '.conan_server')
         self.config_filename = os.path.join(self.conan_folder, 'server.conf')
         self._loaded = False
