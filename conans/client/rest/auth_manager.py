@@ -36,10 +36,12 @@ def input_credentials_if_unauthorized(func):
             if self.user is None or self._rest_client.token is None:
                 # token is None when you change user with user command
                 # Anonymous is not enough, ask for a user
-                self._user_io.out.info('Please log in to perform this action. '
-                                       'Execute "conan user" command. '
-                                       'If you don\'t have an account sign up here: '
-                                       'http://www.conan.io')
+                remote = self.remote
+                self._user_io.out.info('Please log in to "%s" to perform this action. '
+                                       'Execute "conan user" command.' % remote.name)
+                if remote.name == "conan.io":
+                    self._user_io.out.info('If you don\'t have an account sign up here: '
+                                           'http://www.conan.io')
                 return retry_with_new_token(self, *args, **kwargs)
             else:
                 # If our user receives a ForbiddenException propagate it, not
