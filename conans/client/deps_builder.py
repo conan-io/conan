@@ -5,7 +5,7 @@ from conans.model.requires import Requirements
 from collections import namedtuple
 from conans.model.ref import PackageReference
 from conans.model.info import ConanInfo
-from conans.errors import ConanException
+from conans.errors import ConanException, format_conanfile_exception
 from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
@@ -409,10 +409,9 @@ class DepsBuilder(object):
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
         except Exception as e:
-            import traceback
-            tr = traceback.format_exc()
-            self._output.warn(tr)
-            raise ConanException("%s: conanfile.py: %s" % (conanref or "Conanfile", str(e)))
+            msg = format_conanfile_exception(str(conanref or "Conanfile"),
+                                             "config, config_options or configure", e)
+            raise ConanException(msg)
         return new_down_reqs, new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req):

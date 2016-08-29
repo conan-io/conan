@@ -8,7 +8,7 @@ from conans.paths import CONANINFO, BUILD_INFO, DIRTY_FILE
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
-from conans.errors import ConanException
+from conans.errors import ConanException, format_conanfile_exception
 from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
@@ -34,8 +34,8 @@ def init_info_objects(deps_graph, paths):
             try:
                 conan_file.package_info()
             except Exception as e:
-                raise ConanException("Error in %s\n\tpackage_info()\n\t%s"
-                                     % (conan_ref, str(e)))
+                msg = format_conanfile_exception(str(conan_ref), "package_info", e)
+                raise ConanException(msg)
 
 
 class ConanInstaller(object):
@@ -270,11 +270,12 @@ Package configuration:
                 os.remove(dirty)  # Everything went well, remove DIRTY flag
             except Exception as e:
                 os.chdir(export_folder)
-                output.error("Error while executing source(): %s" % str(e))
                 # in case source() fails (user error, typically), remove the src_folder
                 # and raise to interrupt any other processes (build, package)
+                output.warn("Trying to remove dirty source folder")
                 remove_source()
-                raise ConanException("%s: %s" % (conan_file.name, str(e)))
+                msg = format_conanfile_exception(output.scope, "source", e)
+                raise ConanException(msg)
 
     def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file,
                        output):
