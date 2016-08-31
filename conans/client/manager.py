@@ -240,8 +240,8 @@ If not:
         installer = ConanInstaller(self._paths, self._user_io, remote_proxy)
         installer.install(deps_graph, build_mode)
 
-        scope_prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
-        output = ScopedOutput(scope_prefix, self._user_io.out)
+        prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
+        output = ScopedOutput(prefix, self._user_io.out)
 
         # Write generators
         tmp = list(conanfile.generators)  # Add the command line specified generators

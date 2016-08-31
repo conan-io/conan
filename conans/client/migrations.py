@@ -117,14 +117,16 @@ build_type: [None, Debug, Release]
                                     'version: ["5.0", "5.1", "6.0", "6.1", "7.0"]',
                                     'version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]')
             save(self.paths.settings_path, default_settings)
-        elif old_version < Version("0.11"):
+        elif old_version < Version("0.12"):
             old_settings = """
 os: [Windows, Linux, Macos, Android, iOS]
 arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
 compiler:
     gcc:
-        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "6.1"]
+        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1"]
         libcxx: [libstdc++, libstdc++11]
+        threads: [None, posix, win32] #  Windows MinGW
+        exception: [None, dwarf2, sjlj, seh] # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14"]
@@ -132,7 +134,7 @@ compiler:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
-        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]
+        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0"]
         libcxx: [libstdc++, libc++]
 
 build_type: [None, Debug, Release]

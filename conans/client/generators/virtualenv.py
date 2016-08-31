@@ -47,7 +47,8 @@ class VirtualEnvGenerator(Generator):
     def content(self):
         old_venv = os.environ.get("_CONAN_VENV", None)
         if old_venv:
-            raise ConanException("Deactivate the current virtual environment (or close the console) and then execute conan install again: %s" % old_venv)
+            raise ConanException("Deactivate the current virtual environment (or close the "
+                                 "console) and then execute conan install again: %s" % old_venv)
         multiple_to_set, simple_to_set = get_dict_values(self.deps_env_info)
         all_vars = copy.copy(multiple_to_set)
         all_vars.update(simple_to_set)

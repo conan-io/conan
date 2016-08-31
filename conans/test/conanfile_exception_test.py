@@ -22,5 +22,7 @@ class ConanLib(ConanFile):
         client.save(files)
         client.run("export user/channel")
         client.run("install lib/0.1@user/channel", ignore_error=True)
-        self.assertIn("ERROR: lib/0.1@user/channel: conanfile.py: Something went wrong!",
+        self.assertIn("ERROR: lib/0.1@user/channel: Error in config, config_options "
+                      "or configure() method, line 9",
                       client.user_io.out)
+        self.assertIn('raise Exception("Something went wrong!")', client.user_io.out)

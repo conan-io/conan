@@ -2,7 +2,7 @@ from conans.util.files import mkdir, save, rmdir
 import os
 from conans.util.log import logger
 from conans.paths import CONANINFO, CONAN_MANIFEST
-from conans.errors import ConanException
+from conans.errors import ConanException, format_conanfile_exception
 from conans.model.build_info import DEFAULT_RES, DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE
 import shutil
 from conans.client.file_copier import FileCopier
@@ -42,7 +42,9 @@ def create_package(conanfile, build_folder, package_folder, output):
         except Exception as e_rm:
             output.error("Unable to remove package folder %s\n%s" % (package_folder, str(e_rm)))
             output.warn("**** Please delete it manually ****")
-        raise ConanException("%s: %s" % (conanfile.name, str(e)))
+
+        msg = format_conanfile_exception(output.scope, "package", e)
+        raise ConanException(msg)
 
     _create_aux_files(build_folder, package_folder)
     output.success("Package '%s' created" % os.path.basename(package_folder))

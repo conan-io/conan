@@ -255,4 +255,3 @@ class OptionsValues(object):
         for name, data_values in data["req_options"].items():
             result._reqs_options[name] = Values.deserialize(data_values)
         return result
-

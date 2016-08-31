@@ -16,7 +16,7 @@ class EnvInfo(object):
     def __init__(self, root_folder=None):
         self._root_folder_ = root_folder
         self._values_ = {}
-        
+
     def __getattr__(self, name):
         if name.startswith("_") and name.endswith("_"):
             return super(EnvInfo, self).__getattr__(name)
@@ -74,4 +74,4 @@ class DepsEnvInfo(EnvInfo):
                 else:
                     self.vars[varname].append(value)
             else:
-                logger.warn("DISCARDED variable %s=%s from %s" % (varname, value, str(conan_ref))) 
+                logger.warn("DISCARDED variable %s=%s from %s" % (varname, value, str(conan_ref)))

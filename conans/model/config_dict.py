@@ -4,8 +4,12 @@ from conans.model.values import Values
 
 
 def bad_value_msg(name, value, value_range):
-    return ("'%s' is not a valid '%s' value.\nPossible values are %s"
-                                 % (value, name, value_range))
+    tip = ""
+    if "settings" in name:
+        tip = "\nCheck your settings ~/.conan/settings.yml or read the docs FAQ"
+
+    return ("'%s' is not a valid '%s' value.\nPossible values are %s%s"
+            % (value, name, value_range, tip))
 
 
 def undefined_field(name, field, fields=None, value=None):
