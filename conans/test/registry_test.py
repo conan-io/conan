@@ -12,8 +12,11 @@ class RegistryTest(unittest.TestCase):
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")
         registry = RemoteRegistry(f, TestBufferConanOutput())
+
+        # Add
+        registry.add("local", "http://localhost:9300")
         self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io"),
-                                           ("local", "http://localhost:9300")])
+                                            ("local", "http://localhost:9300")])
         # Add
         registry.add("new", "new_url")
         self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io"),
@@ -21,7 +24,7 @@ class RegistryTest(unittest.TestCase):
                                             ("new", "new_url")])
         with self.assertRaises(ConanException):
             registry.add("new", "new_url")
-        #Update
+        # Update
         registry.update("new", "other_url")
         self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io"),
                                             ("local", "http://localhost:9300"),

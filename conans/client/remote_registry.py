@@ -6,7 +6,6 @@ import fasteners
 
 
 default_remotes = """conan.io https://server.conan.io
-local http://localhost:9300
 """
 
 Remote = namedtuple("Remote", "name url")
