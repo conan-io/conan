@@ -155,9 +155,13 @@ def compress_files(files, name, excluded):
 
 
 def uncompress_files(files, folder, name):
-    for file_name, content in files:
-        if os.path.basename(file_name) != name:
-            save(os.path.join(folder, file_name), content)
-        else:
-            #  Unzip the file
-            tar_extract(BytesIO(content), folder)
+    try:
+        for file_name, content in files:
+            if os.path.basename(file_name) != name:
+                save(os.path.join(folder, file_name), content)
+            else:
+                #  Unzip the file
+                tar_extract(BytesIO(content), folder)
+    except (OSError, IOError) as e:
+        raise ConanException("Can't extract the package, check '%s'"
+                             " folder permissions: %s" % (folder, e))
