@@ -1,6 +1,5 @@
 from conans.errors import ConanException
 from conans.operations import DiskRemover
-from conans.util.files import delete_empty_dirs
 
 
 class ConanRemover(object):
@@ -30,6 +29,7 @@ class ConanRemover(object):
             self._user_io.out.warn("No package recipe reference matches with %s pattern" % pattern)
             return
 
+        deleted_refs = []
         for conan_ref in search_info:
             if self._ask_permission(conan_ref, src, build_ids, package_ids_filter, force):
                 if has_remote:
@@ -38,6 +38,7 @@ class ConanRemover(object):
                     else:
                         self._remote_proxy.remove_packages(conan_ref, package_ids_filter)
                 else:
+                    deleted_refs.append(conan_ref)
                     remover = DiskRemover(self._file_manager.paths)
                     if src:
                         remover.remove_src(conan_ref)
@@ -51,7 +52,7 @@ class ConanRemover(object):
                         registry.remove_ref(conan_ref, quiet=True)
 
         if not has_remote:
-            delete_empty_dirs(self._file_manager.paths.store)
+            self._file_manager.delete_empty_dirs(deleted_refs)
 
     def _ask_permission(self, conan_ref, src, build_ids, package_ids_filter, force):
         if force:

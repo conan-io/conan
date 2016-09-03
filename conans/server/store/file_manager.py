@@ -9,7 +9,6 @@ from abc import ABCMeta, abstractmethod
 from conans.util.log import logger
 from conans.errors import ConanException
 import traceback
-from conans.util.files import delete_empty_dirs
 
 
 class StorageAdapter:
@@ -54,6 +53,17 @@ class FileManager(object):
         # If search_engine is specified, conans will be searched
         # using the search engine
         self._search_engine = search_engine
+
+    def delete_empty_dirs(self, deleted_refs):
+        for ref in deleted_refs:
+            ref_path = self.paths.conan(ref)
+            for _ in range(4):
+                if os.path.exists(ref_path):
+                    try:  # Take advantage that os.rmdir does not delete non-empty dirs
+                        os.rmdir(ref_path)
+                    except OSError:
+                        break  # not empty
+                ref_path = os.path.dirname(ref_path)
 
     # ############ SNAPSHOTS
     def get_conanfile_snapshot(self, reference):
@@ -101,7 +111,7 @@ class FileManager(object):
     def remove_conanfile(self, reference):
         assert isinstance(reference, ConanFileReference)
         result = self._file_adapter.delete_folder(self.paths.conan(reference))
-        delete_empty_dirs(self.paths.store)
+        self.delete_empty_dirs([reference])
         return result
 
     def remove_packages(self, reference, package_ids_filter):
@@ -116,7 +126,7 @@ class FileManager(object):
                 package_ref = PackageReference(reference, package_id)
                 package_folder = self.paths.package(package_ref)
                 self._file_adapter.delete_folder(package_folder)
-        delete_empty_dirs(self.paths.store)
+        self.delete_empty_dirs([reference])
         return
 
     def remove_conanfile_files(self, reference, files):
