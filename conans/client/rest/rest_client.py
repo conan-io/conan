@@ -357,7 +357,7 @@ class RestApiClient(object):
         for filename, resource_url in file_urls.items():
             output.rewrite_line("Uploading %s" % filename)
             auth = self._get_updown_auth(resource_url)
-            response = uploader.post(resource_url, files[filename], auth=auth)
+            response = uploader.upload(resource_url, files[filename], auth=auth)
             output.writeln("")
             if not response.ok:
                 output.error("\nError uploading file: %s" % filename)

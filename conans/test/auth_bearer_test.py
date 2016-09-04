@@ -24,7 +24,7 @@ class AuthorizationHeaderSpy(object):
 
     def apply(self, callback, context):  # @UnusedVariable
         auth = request.headers.get("Authorization")
-        name = callback.func_name
+        name = callback.__name__
         self.auths.append((name, auth))
         return callback
 

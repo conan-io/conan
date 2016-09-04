@@ -12,7 +12,7 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def post(self, url, content, auth=None):
+    def upload(self, url, content, auth=None):
         self.output.info("")
         it = upload_in_chunks(content, self.chunk_size, self.output)
         return self.requester.put(url, data=IterableToFileAdapter(it), verify=self.verify,
