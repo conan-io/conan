@@ -21,9 +21,10 @@ class VersionCheckerRequester(object):
         self._handle_ret(ret)
         return ret
 
-    def put(self, url, data, verify=None):
-        headers = {'X-Conan-Client-Version': str(self.client_version)}
-        ret = self.requester.put(url, data=data, headers=headers, verify=verify)
+    def put(self, url, data, headers=None, verify=None, auth=None):
+        headers = headers or {}
+        headers['X-Conan-Client-Version'] = str(self.client_version)
+        ret = self.requester.put(url, data=data, headers=headers, verify=verify, auth=auth)
         self._handle_ret(ret)
         return ret
 
