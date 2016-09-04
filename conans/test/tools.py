@@ -17,7 +17,7 @@ from mock import Mock
 import uuid
 from webtest.app import TestApp
 from conans.client.rest.rest_client import RestApiClient
-from six.moves.urllib.parse import urlsplit, urlunsplit, urlparse, urlencode
+from six.moves.urllib.parse import urlsplit, urlunsplit
 from conans.server.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
                                                       TestServerLauncher)
@@ -106,8 +106,9 @@ class TestRequester(object):
         else:
             return requests.get(url, headers=headers)
 
-    def put(self, url, data, headers=None, verify=None):
-        app, url = self._prepare_call(url, {}, None)
+    def put(self, url, data, headers=None, verify=None, auth=None):
+        headers = headers or {}
+        app, url = self._prepare_call(url, headers, auth=auth)
         if app:
             if isinstance(data, IterableToFileAdapter):
                 data_accum = b""

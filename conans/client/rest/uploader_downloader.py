@@ -12,10 +12,11 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def post(self, url, content):
+    def post(self, url, content, auth=None):
         self.output.info("")
         it = upload_in_chunks(content, self.chunk_size, self.output)
-        return self.requester.put(url, data=IterableToFileAdapter(it), verify=self.verify)
+        return self.requester.put(url, data=IterableToFileAdapter(it), verify=self.verify,
+                                  auth=auth)
 
 
 class Downloader(object):
@@ -26,9 +27,9 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None):
+    def download(self, url, file_path=None, auth=None):
         ret = bytearray()
-        response = self.requester.get(url, stream=True, verify=self.verify)
+        response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
         if not response.ok:
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
