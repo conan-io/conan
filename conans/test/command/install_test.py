@@ -63,8 +63,8 @@ class InstallTest(unittest.TestCase):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False, no_config=True)
 
-        self.client.run("install -o language=1 -o Hello1:language=0 -o Hello0:language=1 %s "
-                        "--build missing" % self.settings)
+        self.client.run("install -o Hello2:language=1 -o Hello1:language=0 -o Hello0:language=1 %s"
+                        " --build missing" % self.settings)
         info_path = os.path.join(self.client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("language=1\nstatic=True", conan_info.options.dumps())

@@ -105,7 +105,7 @@ class ConanFileLoader(object):
         try:
             result = self._create_check_conan(loaded, consumer, conan_file_path, output, filename)
             if consumer:
-                result.options.initialize_upstream(self._options)
+                result.options.initialize_upstream(self._options, result.name)
                 # If this is the consumer project, it has no name
                 result.scope = self._scopes.package_scope()
             else:
@@ -140,7 +140,7 @@ class ConanFileLoader(object):
 
         options = OptionsValues.loads(parser.options)
         conanfile.options.values = options
-        conanfile.options.initialize_upstream(self._options)
+        conanfile.options.initialize_upstream(self._options, conanfile.name)
 
         # imports method
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
