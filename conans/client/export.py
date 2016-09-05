@@ -7,9 +7,9 @@ import os
 from conans.util.files import save, load, rmdir
 from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE
 from conans.errors import ConanException
-from conans.client.file_copier import FileCopier
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
+from conans.client.file_copier import FileCopier
 
 
 def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, shorten, keep_source):

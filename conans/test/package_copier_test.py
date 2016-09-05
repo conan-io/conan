@@ -3,11 +3,11 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.tools import TestBufferConanOutput
 from conans.client.userio import UserIO
 import sys
-from conans.client.package_copier import PackageCopier
 from conans.util.files import mkdir, save, load
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import SimplePaths
 import os
+from conans.client.package_copier import PackageCopier
 
 
 class MockedBooleanUserIO(UserIO):

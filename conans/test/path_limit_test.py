@@ -43,7 +43,7 @@ class ConanLib(ConanFile):
         client.run("install lib/0.1@user/channel --build")
         package_ref = PackageReference.loads("lib/0.1@user/channel:"
                                              "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-        package_folder = client.paths.package(package_ref)
+        package_folder = client.client_cache.package(package_ref)
         file1 = load(os.path.join(package_folder, "myfile.txt"))
         self.assertEqual("Hello extra path length", file1)
         file2 = load(os.path.join(package_folder, "myfile2.txt"))
@@ -51,11 +51,11 @@ class ConanLib(ConanFile):
 
         if platform.system() == "Windows":
             conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
-            source_folder = client.paths.source(conan_ref)
+            source_folder = client.client_cache.source(conan_ref)
             link_source = load(os.path.join(source_folder, ".conan_link"))
             self.assertTrue(os.path.exists(link_source))
 
-            build_folder = client.paths.build(package_ref)
+            build_folder = client.client_cache.build(package_ref)
             link_build = load(os.path.join(build_folder, ".conan_link"))
             self.assertTrue(os.path.exists(link_build))
 

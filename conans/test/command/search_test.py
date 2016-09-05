@@ -12,6 +12,23 @@ conan_vars1 = '''
     use_Qt=True
 '''
 
+conan_vars1b = '''
+[settings]
+    arch=x86
+    version=4.3
+[options]
+    use_Qt=True
+'''
+
+conan_vars1c = '''
+[settings]
+    os=Linux
+    arch=x86
+    version=4.5
+[options]
+    use_Qt=False
+'''
+
 conan_vars2 = '''
 [options]
     use_OpenGL=True
@@ -44,12 +61,12 @@ conan_vars4 = """[settings]
 
 class SearchTest(unittest.TestCase):
 
-    def local_test(self):
-        client = TestClient()
+    def setUp(self):
+        self.client = TestClient()
 
         # No conans created
-        client.run("search")
-        output = client.user_io.out
+        self.client.run("search")
+        output = self.client.user_io.out
         self.assertIn('There are no packages', output)
 
         # Conans with and without packages created
@@ -59,136 +76,80 @@ class SearchTest(unittest.TestCase):
         root_folder4 = 'NodeInfo/1.0.2/fenix/stable'
         root_folder5 = 'MissFile/1.0.2/fenix/stable'
 
-        client.save({"Empty/1.10/fake/test/reg/fake.txt": "//",
-                     "%s/%s/d91960d4c06b38/%s" % (root_folder1,
-                                                  PACKAGES_FOLDER,
-                                                  CONANINFO): conan_vars1,
-                     "%s/%s/a44f541cd44w57/%s" % (root_folder2,
-                                                  PACKAGES_FOLDER,
-                                                  CONANINFO): conan_vars2,
-                     "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder3,
-                                                  PACKAGES_FOLDER,
-                                                  CONANINFO): conan_vars3,
-                     "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder4,
-                                                  PACKAGES_FOLDER,
-                                                  CONANINFO): conan_vars4,
-                     "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder5,
-                                                  PACKAGES_FOLDER,
-                                                  "hello.txt"): "Hello"}, client.paths.store)
+        self.client.save({"Empty/1.10/fake/test/reg/fake.txt": "//",
+                          "%s/%s/WindowsPackageSHA/%s" % (root_folder1,
+                                                       PACKAGES_FOLDER,
+                                                       CONANINFO): conan_vars1,
+                          "%s/%s/PlatformIndependantSHA/%s" % (root_folder1,
+                                                        PACKAGES_FOLDER,
+                                                        CONANINFO): conan_vars1b,
+                          "%s/%s/LinuxPackageSHA/%s" % (root_folder1,
+                                                        PACKAGES_FOLDER,
+                                                        CONANINFO): conan_vars1c,
+                          "%s/%s/a44f541cd44w57/%s" % (root_folder2,
+                                                       PACKAGES_FOLDER,
+                                                       CONANINFO): conan_vars2,
+                          "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder3,
+                                                       PACKAGES_FOLDER,
+                                                       CONANINFO): conan_vars3,
+                          "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder4,
+                                                       PACKAGES_FOLDER,
+                                                       CONANINFO): conan_vars4,
+                          "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder5,
+                                                       PACKAGES_FOLDER,
+                                                       "hello.txt"): "Hello"}, 
+                         self.client.paths.store)
 
-        client.run("search -x")
-        self.assertEqual("""Existing packages info:
+    def recipe_search_test(self):
+        self.client.run("search Hello*")
+        self.assertEquals("Existing package recipes:\n    Hello/1.4.10@fenix/testing\n    helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
-Bye/0.14@fenix/testing
-    Package_ID: e4f7vdwcv4w55d
-        [options]
-            HAVE_TESTS=True
-            USE_CONFIG=False
-        [settings]
-            os=Darwin
-        [requirements]
-Empty/1.10@fake/test
-    There are no packages
-Hello/1.4.10@fenix/testing
-    Package_ID: d91960d4c06b38
-        [options]
-            use_Qt=True
-        [settings]
-            arch=x64
-            os=Windows
-            version=8.1
-        [requirements]
-MissFile/1.0.2@fenix/stable
-    There are no packages
-NodeInfo/1.0.2@fenix/stable
-    Package_ID: e4f7vdwcv4w55d
-        [options]
-            language=1
-        [settings]
-            arch=x86_64
-            compiler=gcc
-            os=Windows
-        [requirements]
-helloTest/1.4.10@fenix/stable
-    Package_ID: a44f541cd44w57
-        [options]
-            use_OpenGL=True
-        [settings]
-            arch=x64
-            os=Ubuntu
-            version=15.04
-        [requirements]
-""", client.user_io.out)
+        self.client.run("search Hello* --case-sensitive")
+        self.assertEquals("Existing package recipes:\n    Hello/1.4.10@fenix/testing\n", self.client.user_io.out)
 
-        client.run("search -v")
-        self.assertEqual("""Existing packages info:
+        self.client.run("search *fenix* --case-sensitive")
+        self.assertEquals("Existing package recipes:\n    "
+                          "Bye/0.14@fenix/testing\n    "
+                          "Hello/1.4.10@fenix/testing\n    "
+                          "MissFile/1.0.2@fenix/stable\n    "
+                          "NodeInfo/1.0.2@fenix/stable\n    "
+                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
-Bye/0.14@fenix/testing
-    Package_ID: e4f7vdwcv4w55d
-            (Darwin)
-Empty/1.10@fake/test
-    There are no packages
-Hello/1.4.10@fenix/testing
-    Package_ID: d91960d4c06b38
-            (x64, Windows, 8.1)
-MissFile/1.0.2@fenix/stable
-    There are no packages
-NodeInfo/1.0.2@fenix/stable
-    Package_ID: e4f7vdwcv4w55d
-            (x86_64, gcc, Windows)
-helloTest/1.4.10@fenix/stable
-    Package_ID: a44f541cd44w57
-            (x64, Ubuntu, 15.04)
-""", client.user_io.out)
+    def package_search_with_invalid_reference_test(self):
+        self.client.run("search Hello -q 'a=1'", ignore_error=True)
+        self.assertIn("-q parameter only allowed with a valid recipe", str(self.client.user_io.out))
 
-        client.run("search ")
-        self.assertEqual("""Existing packages info:
+    def package_search_with_empty_query_test(self):
+        self.client.run("search Hello/1.4.10/fenix/testing")
+        self.assertIn("WindowsPackageSHA", self.client.user_io.out)
+        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
 
-Bye/0.14@fenix/testing
-Empty/1.10@fake/test
-Hello/1.4.10@fenix/testing
-MissFile/1.0.2@fenix/stable
-NodeInfo/1.0.2@fenix/stable
-helloTest/1.4.10@fenix/stable
-""", client.user_io.out)
+    def package_search_with_invalid_query_test(self):
+        self.client.run("search Hello/1.4.10/fenix/testing -q 'invalid'", ignore_error=True)
+        self.assertIn("Invalid package query: invalid", self.client.user_io.out)
 
-        client.run("search Bye/* -x")
-        self.assertEqual("""Existing packages info:
+    def package_search_properties_filter_test(self):
 
-Bye/0.14@fenix/testing
-    Package_ID: e4f7vdwcv4w55d
-        [options]
-            HAVE_TESTS=True
-            USE_CONFIG=False
-        [settings]
-            os=Darwin
-        [requirements]
-""", client.user_io.out)
+        # All packages without filter
+        self.client.run("search Hello/1.4.10/fenix/testing -q ''")
 
-        # bad pattern
-        client.run("search OpenCV/* -v")
-        self.assertIn("There are no packages matching the OpenCV/* pattern", client.user_io.out)
+        self.assertIn("WindowsPackageSHA", self.client.user_io.out)
+        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
 
-        # pattern case-sensitive
-        client.run("search hello* --case-sensitive -v")
-        self.assertIn("helloTest/1.4.10@fenix/stable", client.user_io.out)
-        self.assertNotIn("Empty/1.10@fake/test", client.user_io.out)
-        self.assertNotIn("Hello/1.4.10@fenix/testing", client.user_io.out)
-        self.assertNotIn("NodeInfo/1.0.2@fenix/stable", client.user_io.out)
+        self.client.run('search Hello/1.4.10/fenix/testing -q os=Windows')
+        self.assertIn("WindowsPackageSHA", self.client.user_io.out)
+        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertNotIn("LinuxPackageSHA", self.client.user_io.out)
 
-        # Package search
-        client.run("search -p e4* -v")
-        self.assertIn('''Bye/0.14@fenix/testing
-    Package_ID: e4f7vdwcv4w55d
-            (Darwin)
-NodeInfo/1.0.2@fenix/stable
-    Package_ID: e4f7vdwcv4w55d
-            (x86_64, gcc, Windows)''', client.user_io.out)
+        self.client.run('search Hello/1.4.10/fenix/testing -q "os=Windows AND version=4.5"')
+        self.assertIn("There are no packages for pattern 'Hello/1.4.10/fenix/testing'", self.client.user_io.out)
 
-        client.run("search -p d9 -v")
-        self.assertIn('''Hello/1.4.10@fenix/testing
-    Package_ID: d91960d4c06b38
-            (x64, Windows, 8.1)''', client.user_io.out)
+        self.client.run('search Hello/1.4.10/fenix/testing -q "os=Linux AND version=4.5"')
+        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
 
-        client.run("search Bye/0.14@fenix/testing -p e4* -v")
-        self.assertNotIn('''NodeInfo/1.0.2@fenix/stable''', client.user_io.out)
+        self.client.run('search Hello/1.4.10/fenix/testing -q "version=1.0"')
+        self.assertIn("There are no packages for reference 'Hello/1.4.10/fenix/testing' matching the query 'version=1.0'", self.client.user_io.out)

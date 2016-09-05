@@ -1,5 +1,5 @@
 from conans.client.output import ConanOutput
-from conans.client.command import Command
+from conans.client.command import Command, migrate_and_get_client_cache
 from io import StringIO
 import shlex
 from conans.util.files import save_files, load, save
@@ -26,13 +26,13 @@ from conans import __version__ as CLIENT_VERSION
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans.model.version import Version
-from conans.client.command import migrate_and_get_paths
 from conans.test.utils.test_files import temp_folder
 from conans.client.remote_registry import RemoteRegistry
 from collections import Counter
-from conans.client.paths import ConanPaths
 import six
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.client_cache import ClientCache
+from conans.search import DiskSearchManager
 
 
 class TestingResponse(object):
@@ -296,16 +296,17 @@ class TestClient(object):
         self.base_folder = base_folder or temp_folder()
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
-        self.paths = ConanPaths(self.base_folder, self.storage_folder,
-                                TestBufferConanOutput())
+        self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
+        self.paths = self.client_cache # FIXME: Trick to keep tests compatibilty doing test_client.paths
+        self.search_manager = DiskSearchManager(self.client_cache)
         self.default_settings(get_env("CONAN_COMPILER", "gcc"),
                               get_env("CONAN_COMPILER_VERSION", "4.8"),
                               get_env("CONAN_LIBCXX", "libstdc++"))
 
         self.init_dynamic_vars()
 
-        save(self.paths.registry, "")
-        registry = RemoteRegistry(self.paths.registry, TestBufferConanOutput())
+        save(self.client_cache.registry, "")
+        registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
         for name, server in self.servers.items():
             registry.add(name, server.fake_url)
 
@@ -316,8 +317,8 @@ class TestClient(object):
         """ allows to change the default settings in the file, to change compiler, version
         """
         # Set default settings in global defined
-        self.paths.conan_config  # For create the default file if not existing
-        text = load(self.paths.conan_conf_path)
+        self.client_cache.conan_config  # For create the default file if not existing
+        text = load(self.client_cache.conan_conf_path)
         # prevent TestClient instances with reused paths to write again the compiler
         if compiler != "Visual Studio":
             text = text.replace("compiler.runtime=MD", "")
@@ -328,11 +329,11 @@ class TestClient(object):
             text += "\ncompiler.version=%s" % compiler_version
             if compiler != "Visual Studio":
                 text += "\ncompiler.libcxx=%s" % libcxx
-            save(self.paths.conan_conf_path, text)
+            save(self.client_cache.conan_conf_path, text)
 
     @property
     def default_compiler_visual_studio(self):
-        text = load(self.paths.conan_conf_path)
+        text = load(self.client_cache.conan_conf_path)
         return "compiler=Visual Studio" in text
 
     def _init_collaborators(self, user_io=None):
@@ -350,20 +351,20 @@ class TestClient(object):
 
         self.rest_api_client = RestApiClient(output, requester=self.requester)
         # To store user and token
-        self.localdb = LocalDB(self.paths.localdb)
+        self.localdb = LocalDB(self.client_cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(self.rest_api_client, self.user_io, self.localdb)
         # Handle remote connections
-        self.remote_manager = RemoteManager(self.paths, auth_manager, self.user_io.out)
+        self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
     def init_dynamic_vars(self, user_io=None):
 
         self._init_collaborators(user_io)
 
         # Migration system
-        self.paths = migrate_and_get_paths(self.base_folder, TestBufferConanOutput(),
-                                           manager=self.remote_manager,
-                                           storage_folder=self.storage_folder)
+        self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
+                                                         manager=self.remote_manager,
+                                                         storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations
         self._init_collaborators(user_io)
@@ -375,7 +376,7 @@ class TestClient(object):
         """
         self.init_dynamic_vars(user_io)
 
-        command = Command(self.paths, self.user_io, self.runner, self.remote_manager)
+        command = Command(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)

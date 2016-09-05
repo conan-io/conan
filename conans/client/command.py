@@ -1,6 +1,3 @@
-from conans.client.paths import ConanPaths
-import sys
-import os
 from conans.client.output import ConanOutput, Color
 import argparse
 from conans.errors import ConanException
@@ -27,6 +24,10 @@ from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
 from conans.model.scope import Scopes
 import re
+from conans.search import DiskSearchManager
+import sys
+import os
+from conans.client.client_cache import ClientCache
 
 
 class Extender(argparse.Action):
@@ -61,13 +62,13 @@ class Command(object):
     collaborators.
     It can also show help of the tool
     """
-    def __init__(self, paths, user_io, runner, remote_manager):
+    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager):
         assert isinstance(user_io, UserIO)
-        assert isinstance(paths, ConanPaths)
-        self._conan_paths = paths
+        assert isinstance(client_cache, ClientCache)
+        self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
-        self._manager = ConanManager(paths, user_io, runner, remote_manager)
+        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
 
     def _parse_args(self, parser):
         parser.add_argument("-r", "--remote", help='look for in the remote storage')
@@ -528,7 +529,7 @@ path to the CMake binary directory, like this:
         args = parser.parse_args(*parameters)  # To enable -h
 
         if args.clean:
-            localdb = LocalDB(self._conan_paths.localdb)
+            localdb = LocalDB(self._client_cache.localdb)
             localdb.init(clean=True)
             self._user_io.out.success("Deleted user data")
             return
@@ -538,23 +539,27 @@ path to the CMake binary directory, like this:
         """ show local/remote packages
         """
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
-        parser.add_argument('pattern', nargs='?', help='Pattern name, e.g., openssl/*')
+        parser.add_argument('pattern', nargs='?', help='Pattern name, e.g. openssl/* or package recipe reference if "-q" is used. e.g. MyPackage/1.2@user/channel')
         parser.add_argument('--case-sensitive', default=False,
                             action='store_true', help='Make a case-sensitive search')
         parser.add_argument('-r', '--remote', help='Remote origin')
-        parser.add_argument('-v', '--verbose', default=False,
-                            action='store_true', help='Show packages')
-        parser.add_argument('-x', '--extra-verbose', default=False,
-                            action='store_true', help='Show packages options and settings')
-        parser.add_argument('-p', '--package', help='Package ID pattern. EX: 23*', default=None)
+        parser.add_argument('-q', '--query', default=None, help='Packages query: "os=Windows AND arch=x86". The "pattern" parameter has to be a package recipe reference: MyPackage/1.2@user/channel')
         args = parser.parse_args(*args)
 
-        self._manager.search(args.pattern,
+        reference = None
+        if args.pattern:
+            try:
+                reference = ConanFileReference.loads(args.pattern)
+            except ConanException:
+                if args.query is not None:
+                    raise ConanException("-q parameter only allowed with a valid recipe "
+                                         "reference as search pattern. e.j conan search "
+                                         "MyPackage/1.2@user/channel -q \"os=Windows\"")
+
+        self._manager.search(reference or args.pattern,
                              args.remote,
                              ignorecase=not args.case_sensitive,
-                             verbose=args.verbose,
-                             extra_verbose=args.extra_verbose,
-                             package_pattern=args.package)
+                             packages_query=args.query)
 
     def upload(self, *args):
         """ uploads a conanfile or binary packages from the local store to any remote.
@@ -615,7 +620,7 @@ path to the CMake binary directory, like this:
         parser_pupd.add_argument('remote',  help='name of the remote')
         args = parser.parse_args(*args)
 
-        registry = RemoteRegistry(self._conan_paths.registry, self._user_io.out)
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         if args.subcommand == "list":
             for r in registry.remotes:
                 self._user_io.out.info("%s: %s" % (r.name, r.url))
@@ -695,24 +700,24 @@ path to the CMake binary directory, like this:
         return errors
 
 
-def migrate_and_get_paths(base_folder, out, manager, storage_folder=None):
+def migrate_and_get_client_cache(base_folder, out, manager, storage_folder=None):
     # Init paths
-    paths = ConanPaths(base_folder, storage_folder, out)
+    client_cache = ClientCache(base_folder, storage_folder, out)
 
     # Migration system
-    migrator = ClientMigrator(paths, Version(CLIENT_VERSION), out, manager)
+    migrator = ClientMigrator(client_cache, Version(CLIENT_VERSION), out, manager)
     migrator.migrate()
 
     # Init again paths, migration could change config
-    paths = ConanPaths(base_folder, storage_folder, out)
-    return paths
+    client_cache = ClientCache(base_folder, storage_folder, out)
+    return client_cache
 
 
 def get_command():
 
-    def instance_remote_manager(paths):
+    def instance_remote_manager(client_cache):
         requester = requests.Session()
-        requester.proxies = paths.conan_config.proxies
+        requester.proxies = client_cache.conan_config.proxies
         # Verify client version against remotes
         version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
                                                             Version(MIN_SERVER_COMPATIBLE_VERSION),
@@ -720,11 +725,11 @@ def get_command():
         # To handle remote connections
         rest_api_client = RestApiClient(out, requester=version_checker_requester)
         # To store user and token
-        localdb = LocalDB(paths.localdb)
+        localdb = LocalDB(client_cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
         auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
         # Handle remote connections
-        remote_manager = RemoteManager(paths, auth_manager, out)
+        remote_manager = RemoteManager(client_cache, auth_manager, out)
         return remote_manager
 
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
@@ -740,18 +745,24 @@ def get_command():
 
     try:
         # To capture exceptions in conan.conf parsing
-        paths = ConanPaths(user_folder, None, out)
+        client_cache = ClientCache(user_folder, None, out)
         # obtain a temp ConanManager instance to execute the migrations
-        remote_manager = instance_remote_manager(paths)
-        manager = ConanManager(paths, user_io, ConanRunner(), remote_manager)
-        paths = migrate_and_get_paths(user_folder, out, manager)
+        remote_manager = instance_remote_manager(client_cache)
+        # Get a SearchManager
+        search_manager = DiskSearchManager(client_cache)
+        manager = ConanManager(client_cache, user_io, ConanRunner(), remote_manager, search_manager)
+        
+        client_cache = migrate_and_get_client_cache(user_folder, out, manager)
     except Exception as e:
         out.error(str(e))
         sys.exit(True)
 
     # Get the new command instance after migrations have been done
-    manager = instance_remote_manager(paths)
-    command = Command(paths, user_io, ConanRunner(), manager)
+    remote_manager = instance_remote_manager(client_cache)
+
+    # Get a search manager
+    search_manager = DiskSearchManager(client_cache)
+    command = Command(client_cache, user_io, ConanRunner(), remote_manager, search_manager)
     return command
 
 

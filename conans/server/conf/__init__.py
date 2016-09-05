@@ -11,7 +11,7 @@ from conans.errors import ConanException
 from conans.util.files import save, mkdir
 from six.moves.configparser import ConfigParser, NoSectionError
 from conans.paths import SimplePaths, conan_expand_user
-from conans.server.store.disk_adapter import DiskAdapter
+from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.server.store.file_manager import FileManager
 from conans.util.log import logger
 from conans.server.conf.default_server_conf import default_server_conf
@@ -203,11 +203,11 @@ def get_file_manager(config, public_url=None, updown_auth_manager=None):
         disk_controller_url = "%s/%s" % (public_url, "files")
         if not updown_auth_manager:
             raise Exception("Updown auth manager needed for disk controller (not s3)")
-        adapter = DiskAdapter(disk_controller_url, config.disk_storage_path, updown_auth_manager)
+        adapter = ServerDiskAdapter(disk_controller_url, config.disk_storage_path, updown_auth_manager)
         paths = SimplePaths(config.disk_storage_path)
     else:
-        # Want to develop new adapter? create a subclass of 
-        # conans.server.store.file_manager.StorageAdapter and implement the abstract methods
+        # Want to develop new adapter? create a subclass of
+        # conans.server.store.file_manager.ServerStorageAdapter and implement the abstract methods
         raise Exception("Store adapter not implemented! Change 'store_adapter' "
                         "variable in server.conf file to one of the available options: 'disk' ")
     return FileManager(paths, adapter)
