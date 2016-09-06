@@ -13,16 +13,20 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, content, auth=None):
+    def upload(self, url, content, auth=None, dedup=False):
+        if dedup:
+            headers = {"X-Checksum-Deploy": "true",
+                       "X-Checksum-Sha1": sha1(content)}
+            response = self.requester.put(url, data="", verify=self.verify, headers=headers,
+                                          auth=auth)
+            if response.status_code != 404:
+                return response
+
         self.output.info("")
-        headers = {"X-Checksum-Deploy": "true",
-                   "X-Checksum-Sha1": sha1(content)}
-        response = self.requester.put(url, data="", verify=self.verify, headers=headers, auth=auth)
-        if response.status_code == 404:
-            it = upload_in_chunks(content, self.chunk_size, self.output)
-            return self.requester.put(url, data=IterableToFileAdapter(it), verify=self.verify,
-                                      headers=None, auth=auth)
-        return response
+        # Actual transfer of the real content
+        it = upload_in_chunks(content, self.chunk_size, self.output)
+        return self.requester.put(url, data=IterableToFileAdapter(it), verify=self.verify,
+                                  headers=None, auth=auth)
 
 
 class Downloader(object):

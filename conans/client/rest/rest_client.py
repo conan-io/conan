@@ -330,14 +330,17 @@ class RestApiClient(object):
     def _remote_api_url(self):
         return "%s/v1" % self.remote_url
 
-    def _get_updown_auth(self, resource_url):
+    def _file_server_capabilities(self, resource_url):
         auth = None
+        dedup = False
         if resource_url.startswith(self._remote_api_url):
-            query_string = urlsplit(resource_url)[2]
+            urltokens = urlsplit(resource_url)
+            query_string = urltokens[3]
             if "signature" not in parse_qs(query_string):
-                # We don't need signed URLs, use the same token
+                # If monolithic server, we can use same auth, and server understand dedup
                 auth = self.auth
-        return auth
+                dedup = True
+        return auth, dedup
 
     def download_files(self, file_urls, output=None):
         """
@@ -349,7 +352,7 @@ class RestApiClient(object):
         for filename, resource_url in file_urls.items():
             if output:
                 output.writeln("Downloading %s" % filename)
-            auth = self._get_updown_auth(resource_url)
+            auth, _ = self._file_server_capabilities(resource_url)
             contents = downloader.download(resource_url, auth=auth)
             if output:
                 output.writeln("")
@@ -361,8 +364,8 @@ class RestApiClient(object):
         uploader = Uploader(self.requester, output, self.VERIFY_SSL)
         for filename, resource_url in file_urls.items():
             output.rewrite_line("Uploading %s" % filename)
-            auth = self._get_updown_auth(resource_url)
-            response = uploader.upload(resource_url, files[filename], auth=auth)
+            auth, dedup = self._file_server_capabilities(resource_url)
+            response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup)
             output.writeln("")
             if not response.ok:
                 output.error("\nError uploading file: %s" % filename)
