@@ -15,7 +15,7 @@ from time import sleep
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
 from conans.server.store.disk_adapter import ServerDiskAdapter
-from conans.search import DiskSearchManager, SearchAdapter, DiskSearchAdapter
+from conans.search import DiskSearchManager, DiskSearchAdapter
 
 
 class MockFileSaver():
