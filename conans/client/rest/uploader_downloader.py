@@ -2,6 +2,7 @@ from conans.errors import ConanException, ConanConnectionError
 from conans.util.log import logger
 import traceback
 from conans.util.files import save
+from conans.util.sha import sha1
 
 
 class Uploader(object):
@@ -12,10 +13,16 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def post(self, url, content):
+    def upload(self, url, content, auth=None):
         self.output.info("")
-        it = upload_in_chunks(content, self.chunk_size, self.output)
-        return self.requester.put(url, data=IterableToFileAdapter(it), verify=self.verify)
+        headers = {"X-Checksum-Deploy": "true",
+                   "X-Checksum-Sha1": sha1(content)}
+        response = self.requester.put(url, data="", verify=self.verify, headers=headers, auth=auth)
+        if response.status_code == 404:
+            it = upload_in_chunks(content, self.chunk_size, self.output)
+            return self.requester.put(url, data=IterableToFileAdapter(it), verify=self.verify,
+                                      headers=None, auth=auth)
+        return response
 
 
 class Downloader(object):
@@ -26,9 +33,9 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None):
+    def download(self, url, file_path=None, auth=None):
         ret = bytearray()
-        response = self.requester.get(url, stream=True, verify=self.verify)
+        response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
         if not response.ok:
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
