@@ -1,6 +1,7 @@
 from conans.client.output import Color
 from conans.model.ref import PackageReference
 from conans.model.ref import ConanFileReference
+from collections import OrderedDict
 
 
 class Printer(object):
@@ -152,6 +153,7 @@ class Printer(object):
                 key_values = properties.get(section, [])
                 if key_values:
                     self._print_colored_line("[%s]" % section, indent=2)
+                    key_values = OrderedDict(sorted(key_values.items()))
                     for key, value in key_values.items():
                         self._print_colored_line(key, value=value, indent=3)
             self._out.writeln("")

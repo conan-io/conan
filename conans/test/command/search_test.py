@@ -169,17 +169,17 @@ class SearchTest(unittest.TestCase):
         [options]
             use_Qt: False
         [settings]
-            compiler.version: 4.5
             arch: x86
-            os: Linux
             compiler: gcc
+            compiler.version: 4.5
+            os: Linux
 
     Package_ID: PlatformIndependantSHA
         [options]
             use_Qt: True
         [settings]
-            compiler.version: 4.3
             arch: x86
             compiler: gcc
+            compiler.version: 4.3
 
 """, self.client.user_io.out)
