@@ -9,7 +9,7 @@ from conans.util.log import logger
 from conans.util.files import mkdir
 from conans.test.utils.test_files import temp_folder
 from conans.server.migrate import migrate_and_get_server_config
-from conans.search import DiskSearchManager
+from conans.search import DiskSearchAdapter, DiskSearchManager
 from conans.paths import SimplePaths
 
 
@@ -47,7 +47,8 @@ class TestServerLauncher(object):
         self.file_manager = get_file_manager(server_config, public_url=base_url,
                                              updown_auth_manager=updown_auth_manager)
 
-        self.search_manager = DiskSearchManager(SimplePaths(server_config.disk_storage_path))
+        search_adapter = DiskSearchAdapter()
+        self.search_manager = DiskSearchManager(SimplePaths(server_config.disk_storage_path), search_adapter)
         # Prepare some test users
         if not read_permissions:
             read_permissions = server_config.read_permissions

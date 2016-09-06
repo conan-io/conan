@@ -24,7 +24,7 @@ from conans.client.runner import ConanRunner
 from conans.client.remote_registry import RemoteRegistry
 from conans.model.scope import Scopes
 import re
-from conans.search import DiskSearchManager
+from conans.search import DiskSearchManager, DiskSearchAdapter
 import sys
 import os
 from conans.client.client_cache import ClientCache
@@ -748,10 +748,12 @@ def get_command():
         client_cache = ClientCache(user_folder, None, out)
         # obtain a temp ConanManager instance to execute the migrations
         remote_manager = instance_remote_manager(client_cache)
-        # Get a SearchManager
-        search_manager = DiskSearchManager(client_cache)
+
+        # Get a DiskSearchManager
+        search_adapter = DiskSearchAdapter()
+        search_manager = DiskSearchManager(client_cache, search_adapter)
         manager = ConanManager(client_cache, user_io, ConanRunner(), remote_manager, search_manager)
-        
+
         client_cache = migrate_and_get_client_cache(user_folder, out, manager)
     except Exception as e:
         out.error(str(e))
@@ -761,7 +763,8 @@ def get_command():
     remote_manager = instance_remote_manager(client_cache)
 
     # Get a search manager
-    search_manager = DiskSearchManager(client_cache)
+    search_adapter = DiskSearchAdapter()
+    search_manager = DiskSearchManager(client_cache, search_adapter)
     command = Command(client_cache, user_io, ConanRunner(), remote_manager, search_manager)
     return command
 

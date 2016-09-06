@@ -32,7 +32,7 @@ from collections import Counter
 import six
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.client_cache import ClientCache
-from conans.search import DiskSearchManager
+from conans.search import DiskSearchManager, DiskSearchAdapter
 
 
 class TestingResponse(object):
@@ -298,7 +298,10 @@ class TestClient(object):
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
-        self.search_manager = DiskSearchManager(self.client_cache)
+
+        search_adapter = DiskSearchAdapter()
+        self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
+
         self.default_settings(get_env("CONAN_COMPILER", "gcc"),
                               get_env("CONAN_COMPILER_VERSION", "4.8"),
                               get_env("CONAN_LIBCXX", "libstdc++"))
