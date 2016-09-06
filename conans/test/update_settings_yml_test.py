@@ -48,7 +48,6 @@ compiler:
         conf = conf.replace("build_type=Release", "")
         self.assertNotIn("build_type", conf)
         save(client.paths.conan_conf_path, conf)
-        client = TestClient(client.base_folder)
         self.assertNotIn("build_type", client.paths.conan_config.settings_defaults.dumps())
         client.save(files)
         client.run("export lasote/testing")

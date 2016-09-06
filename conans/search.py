@@ -70,7 +70,6 @@ class DiskSearchManager(SearchManager):
                     raise ConanException("Invalid package query: %s" % query)
 
         logger.debug("SEARCH PACKAGE PROPERTIES: %s" % properties)
-        # TODO: FILTER WITH PROPERTIES OR WITH ITS ABSENCE!
         result = {}
         packages_path = self._paths.packages(reference)
         subdirs = list_folder_subdirs(packages_path, level=1)

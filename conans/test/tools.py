@@ -298,7 +298,6 @@ class TestClient(object):
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
-        self.paths = self.client_cache # FIXME: Trick to keep tests compatibilty doing test_client.paths
         self.search_manager = DiskSearchManager(self.client_cache)
         self.default_settings(get_env("CONAN_COMPILER", "gcc"),
                               get_env("CONAN_COMPILER_VERSION", "4.8"),
@@ -313,6 +312,10 @@ class TestClient(object):
 
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder()
+
+    @property
+    def paths(self):
+        return self.client_cache
 
     def default_settings(self, compiler, compiler_version, libcxx):
         """ allows to change the default settings in the file, to change compiler, version

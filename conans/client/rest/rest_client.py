@@ -225,7 +225,10 @@ class RestApiClient(object):
         return [ConanFileReference.loads(ref) for ref in response]
 
     def search_packages(self, reference, query):
-        url = "%s/conans/%s/search?q=%s" % (self._remote_api_url, "/".join(reference), query)
+        url = "%s/conans/%s/search" % (self._remote_api_url, "/".join(reference))
+        if query:
+            url += "?q=%s" % query
+
         references = self._get_json(url)
         return references
 
