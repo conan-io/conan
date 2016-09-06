@@ -7,7 +7,8 @@ conan_vars1 = '''
 [settings]
     arch=x64
     os=Windows
-    version=8.1
+    compiler=Visual Studio
+    compiler.version=8.1
 [options]
     use_Qt=True
 '''
@@ -15,7 +16,8 @@ conan_vars1 = '''
 conan_vars1b = '''
 [settings]
     arch=x86
-    version=4.3
+    compiler=gcc
+    compiler.version=4.3
 [options]
     use_Qt=True
 '''
@@ -24,7 +26,8 @@ conan_vars1c = '''
 [settings]
     os=Linux
     arch=x86
-    version=4.5
+    compiler=gcc
+    compiler.version=4.5
 [options]
     use_Qt=False
 '''
@@ -133,23 +136,50 @@ class SearchTest(unittest.TestCase):
 
         # All packages without filter
         self.client.run("search Hello/1.4.10/fenix/testing -q ''")
-
+ 
         self.assertIn("WindowsPackageSHA", self.client.user_io.out)
         self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
-
+ 
         self.client.run('search Hello/1.4.10/fenix/testing -q os=Windows')
         self.assertIn("WindowsPackageSHA", self.client.user_io.out)
         self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertNotIn("LinuxPackageSHA", self.client.user_io.out)
 
-        self.client.run('search Hello/1.4.10/fenix/testing -q "os=Windows AND version=4.5"')
-        self.assertIn("There are no packages for pattern 'Hello/1.4.10/fenix/testing'", self.client.user_io.out)
+        self.client.run('search Hello/1.4.10/fenix/testing -q "os=Windows AND compiler.version=4.5"')
+        self.assertIn("There are no packages for reference 'Hello/1.4.10@fenix/testing' matching the query 'os=Windows AND compiler.version=4.5'", self.client.user_io.out)
 
-        self.client.run('search Hello/1.4.10/fenix/testing -q "os=Linux AND version=4.5"')
+        self.client.run('search Hello/1.4.10/fenix/testing -q "os=Linux AND compiler.version=4.5"')
         self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
 
-        self.client.run('search Hello/1.4.10/fenix/testing -q "version=1.0"')
-        self.assertIn("There are no packages for reference 'Hello/1.4.10/fenix/testing' matching the query 'version=1.0'", self.client.user_io.out)
+        self.client.run('search Hello/1.4.10/fenix/testing -q "compiler.version=1.0"')
+        self.assertIn("There are no packages for reference 'Hello/1.4.10@fenix/testing' matching the query 'compiler.version=1.0'", self.client.user_io.out)
+
+        self.client.run('search Hello/1.4.10/fenix/testing -q "compiler=gcc AND compiler.version=4.5"')
+        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
+
+        self.client.run('search Hello/1.4.10/fenix/testing -q "arch=x86"')
+        self.assertEquals("""Existing packages for recipe Hello/1.4.10@fenix/testing:
+
+Hello/1.4.10@fenix/testing
+    Package_ID: LinuxPackageSHA
+        [options]
+            use_Qt: False
+        [settings]
+            compiler.version: 4.5
+            arch: x86
+            os: Linux
+            compiler: gcc
+Hello/1.4.10@fenix/testing
+    Package_ID: PlatformIndependantSHA
+        [options]
+            use_Qt: True
+        [settings]
+            compiler.version: 4.3
+            arch: x86
+            compiler: gcc
+""", self.client.user_io.out)
