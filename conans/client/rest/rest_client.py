@@ -2,7 +2,6 @@ from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
     ConanException
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
-from conans.info import SearchInfo
 import json
 from conans.paths import CONANFILE, CONAN_MANIFEST
 import time
@@ -11,6 +10,7 @@ from conans.util.files import md5, decode_text
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
+from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs
 
 
@@ -203,14 +203,13 @@ class RestApiClient(object):
 
     @handle_return_deserializer()
     def check_credentials(self):
-        """If token is not valid will raise ForbiddenException or AuthenticationException.
+        """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
         url = "%s/users/check_credentials" % self._remote_api_url
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.VERIFY_SSL)
         return ret
 
-    @handle_return_deserializer(SearchInfo.deserialize)
     def search(self, pattern=None, ignorecase=True):
         """
         the_files: dict with relative_path: content
@@ -222,11 +221,16 @@ class RestApiClient(object):
             query = "?%s%s" % (pattern, case_sensitive)
 
         url = "%s/conans/search%s" % (self._remote_api_url, query)
-        response = self.requester.get(url,
-                                      auth=self.auth,
-                                      headers=self.custom_headers,
-                                      verify=self.VERIFY_SSL)
-        return response
+        response = self._get_json(url)["results"]
+        return [ConanFileReference.loads(ref) for ref in response]
+
+    def search_packages(self, reference, query):
+        url = "%s/conans/%s/search" % (self._remote_api_url, "/".join(reference))
+        if query:
+            url += "?q=%s" % query
+
+        references = self._get_json(url)
+        return references
 
     @handle_return_deserializer()
     def remove_conanfile(self, conan_reference):
@@ -240,6 +244,7 @@ class RestApiClient(object):
                                          verify=self.VERIFY_SSL)
         return response
 
+    @handle_return_deserializer()
     def remove_packages(self, conan_reference, package_ids=None):
         """ Remove any conans
         """

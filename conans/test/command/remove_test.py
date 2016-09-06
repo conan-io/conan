@@ -38,7 +38,7 @@ class RemoveTest(unittest.TestCase):
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
 
-        client.save(files, client.paths.store)
+        client.save(files, client.client_cache.store)
         self.client = client
 
         for folder in self.root_folder.values():

@@ -15,6 +15,7 @@ class ApiV1(Bottle):
     def __init__(self, credentials_manager, updown_auth_manager,
                  ssl_enabled, server_version, min_client_compatible_version,
                  *argc, **argv):
+
         self.credentials_manager = credentials_manager
         self.updown_auth_manager = updown_auth_manager
         self.ssl_enabled = ssl_enabled

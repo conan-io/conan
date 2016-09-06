@@ -5,9 +5,9 @@ from conans.paths import CONANINFO, CONAN_MANIFEST
 from conans.errors import ConanException, format_conanfile_exception
 from conans.model.build_info import DEFAULT_RES, DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE
 import shutil
-from conans.client.file_copier import FileCopier
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
+from conans.client.file_copier import FileCopier
 
 
 def create_package(conanfile, build_folder, package_folder, output):

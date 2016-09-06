@@ -1,13 +1,13 @@
 import unittest
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.server.service.service import ConanService, FileUploadDownloadService
+from conans.server.service.service import ConanService, FileUploadDownloadService,\
+    SearchService
 from conans.paths import CONAN_MANIFEST, CONANINFO, SimplePaths
 from conans.util.files import save_files, save, mkdir, load, md5sum
 from conans.server.service.authorize import BasicAuthorizer
 import os
 from conans.errors import NotFoundException, RequestErrorException
 from conans.test.utils.test_files import hello_source_files
-from conans.server.store.disk_adapter import DiskAdapter
 from conans.server.store.file_manager import FileManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from datetime import timedelta
@@ -15,6 +15,8 @@ from time import sleep
 from conans.model.info import ConanInfo
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import temp_folder
+from conans.server.store.disk_adapter import ServerDiskAdapter
+from conans.search import DiskSearchManager
 
 
 class MockFileSaver():
@@ -86,11 +88,13 @@ class ConanServiceTest(unittest.TestCase):
         self.fake_url = "http://url"
         updown_auth_manager = JWTUpDownAuthManager("secret",
                                                    timedelta(seconds=200))
-        adapter = DiskAdapter(self.fake_url, self.tmp_dir, updown_auth_manager)
+        adapter = ServerDiskAdapter(self.fake_url, self.tmp_dir, updown_auth_manager)
         self.paths = SimplePaths(self.tmp_dir)
         self.file_manager = FileManager(self.paths, adapter)
+        self.search_manager = DiskSearchManager(self.paths)
 
         self.service = ConanService(authorizer, self.file_manager, "lasote")
+        self.search_service = SearchService(authorizer, self.search_manager, "lasote")
 
         files = hello_source_files("test")
         save_files(self.paths.export(self.conan_reference), files)
@@ -198,17 +202,22 @@ class ConanServiceTest(unittest.TestCase):
         save_files(self.paths.package(package_ref3), {CONANINFO: conan_vars3})
         save_files(self.paths.export(conan_ref4), {"dummy.txt": "//"})
 
-        info = self.service.search()
-        expected = {self.conan_reference: {"123123123": ConanInfo.loads("[options]\nuse_Qt=True")},
-                    conan_ref2: {"12345587754": ConanInfo.loads("[options]\nuse_Qt=False")},
-                    conan_ref3: {"77777777777": ConanInfo.loads("[options]\nuse_Qt=True")},
-                    conan_ref4: {}}
-
+        info = self.search_service.search()
+        expected = [conan_ref3, conan_ref4, self.conan_reference, conan_ref2]
         self.assertEqual(expected, info)
 
-        info = self.service.search(pattern="Assimp*", ignorecase=False)
-        self.assertEqual(info, {conan_ref3: {"77777777777":
-                                           ConanInfo.loads("[options]\nuse_Qt=True")}})
+        info = self.search_service.search(pattern="Assimp*", ignorecase=False)
+        self.assertEqual(info, [conan_ref3])
+
+        info = self.search_service.search_packages(conan_ref2, None)
+        self.assertEqual(info, {'12345587754': {'full_requires': [],
+                                                'options': {'use_Qt': 'False'},
+                                                'settings': {}}})
+
+        info = self.search_service.search_packages(conan_ref3, None)
+        self.assertEqual(info, {'77777777777': {'full_requires': [],
+                                                'options': {'use_Qt': 'True'},
+                                                'settings': {}}})
 
     def remove_test(self):
         conan_ref2 = ConanFileReference("OpenCV", "3.0", "lasote", "stable")

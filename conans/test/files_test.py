@@ -1,9 +1,10 @@
 import unittest
 import os
 from conans.util.files import save, load
-from conans.client.file_copier import FileCopier
 from conans.test.utils.test_files import temp_folder
 import platform
+from conans.client.file_copier import FileCopier
+
 
 class FileCopierTest(unittest.TestCase):
 

@@ -8,7 +8,8 @@ from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
 from conans.model.version import Version
 from conans.server.migrate import migrate_and_get_server_config
 from conans import __version__ as SERVER_VERSION
-from conans.paths import conan_expand_user
+from conans.paths import conan_expand_user, SimplePaths
+from conans.search import DiskSearchManager
 
 
 class ServerLauncher(object):
@@ -28,10 +29,10 @@ class ServerLauncher(object):
                                                    server_config.authorize_timeout)
 
         file_manager = get_file_manager(server_config, updown_auth_manager=updown_auth_manager)
-
+        search_manager = DiskSearchManager(SimplePaths(server_config.disk_storage_path))
         self.ra = ConanServer(server_config.port, server_config.ssl_enabled,
                               credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, file_manager,
+                              authorizer, authenticator, file_manager, search_manager,
                               Version(SERVER_VERSION), Version(MIN_CLIENT_COMPATIBLE_VERSION))
 
     def launch(self):

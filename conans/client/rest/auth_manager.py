@@ -156,6 +156,10 @@ class ConanApiAuthManager(object):
         return self._rest_client.search(pattern, ignorecase)
 
     @input_credentials_if_unauthorized
+    def search_packages(self, reference, query):
+        return self._rest_client.search_packages(reference, query)
+
+    @input_credentials_if_unauthorized
     def remove(self, conan_refernce):
         return self._rest_client.remove_conanfile(conan_refernce)
 
