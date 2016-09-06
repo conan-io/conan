@@ -11,6 +11,10 @@ conan_vars1 = '''
     compiler.version=8.1
 [options]
     use_Qt=True
+[full_requires]
+  Hello2/0.1@lasote/stable:11111
+  OpenSSL/2.10@lasote/testing:2222
+  HelloInfo1/0.45@fenix/testing:33333
 '''
 
 conan_vars1b = '''
@@ -30,6 +34,10 @@ conan_vars1c = '''
     compiler.version=4.5
 [options]
     use_Qt=False
+[full_requires]
+  Hello2/0.1@lasote/stable:11111
+  OpenSSL/2.10@lasote/testing:2222
+  HelloInfo1/0.45@fenix/testing:33333
 '''
 
 conan_vars2 = '''
@@ -55,10 +63,10 @@ conan_vars4 = """[settings]
   compiler=gcc
 [options]
   language=1
-[requires]
-  Hello2/0.1@lasote/stable
-  OpenSSL/2.10@lasote/testing
-  HelloInfo1/0.45@fenix/testing
+[full_requires]
+  Hello2/0.1@lasote/stable:11111
+  OpenSSL/2.10@lasote/testing:2222
+  HelloInfo1/0.45@fenix/testing:33333
 """
 
 
@@ -81,11 +89,11 @@ class SearchTest(unittest.TestCase):
 
         self.client.save({"Empty/1.10/fake/test/reg/fake.txt": "//",
                           "%s/%s/WindowsPackageSHA/%s" % (root_folder1,
-                                                       PACKAGES_FOLDER,
-                                                       CONANINFO): conan_vars1,
+                                                          PACKAGES_FOLDER,
+                                                          CONANINFO): conan_vars1,
                           "%s/%s/PlatformIndependantSHA/%s" % (root_folder1,
-                                                        PACKAGES_FOLDER,
-                                                        CONANINFO): conan_vars1b,
+                                                               PACKAGES_FOLDER,
+                                                               CONANINFO): conan_vars1b,
                           "%s/%s/LinuxPackageSHA/%s" % (root_folder1,
                                                         PACKAGES_FOLDER,
                                                         CONANINFO): conan_vars1c,
@@ -100,22 +108,22 @@ class SearchTest(unittest.TestCase):
                                                        CONANINFO): conan_vars4,
                           "%s/%s/e4f7vdwcv4w55d/%s" % (root_folder5,
                                                        PACKAGES_FOLDER,
-                                                       "hello.txt"): "Hello"}, 
+                                                       "hello.txt"): "Hello"},
                          self.client.paths.store)
 
     def recipe_search_test(self):
         self.client.run("search Hello*")
-        self.assertEquals("Existing package recipes:\n    Hello/1.4.10@fenix/testing\n    helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+        self.assertEquals("Existing package recipes:\n\nHello/1.4.10@fenix/testing\nhelloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
         self.client.run("search Hello* --case-sensitive")
-        self.assertEquals("Existing package recipes:\n    Hello/1.4.10@fenix/testing\n", self.client.user_io.out)
+        self.assertEquals("Existing package recipes:\n\nHello/1.4.10@fenix/testing\n", self.client.user_io.out)
 
         self.client.run("search *fenix* --case-sensitive")
-        self.assertEquals("Existing package recipes:\n    "
-                          "Bye/0.14@fenix/testing\n    "
-                          "Hello/1.4.10@fenix/testing\n    "
-                          "MissFile/1.0.2@fenix/stable\n    "
-                          "NodeInfo/1.0.2@fenix/stable\n    "
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Bye/0.14@fenix/testing\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "MissFile/1.0.2@fenix/stable\n"
+                          "NodeInfo/1.0.2@fenix/stable\n"
                           "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
     def package_search_with_invalid_reference_test(self):
@@ -173,6 +181,10 @@ class SearchTest(unittest.TestCase):
             compiler: gcc
             compiler.version: 4.5
             os: Linux
+        [full_requires]
+            Hello2/0.1@lasote/stable:11111
+            HelloInfo1/0.45@fenix/testing:33333
+            OpenSSL/2.10@lasote/testing:2222
 
     Package_ID: PlatformIndependantSHA
         [options]

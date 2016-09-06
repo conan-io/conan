@@ -132,9 +132,9 @@ class Printer(object):
             self._out.info(warn_msg + pattern_msg if pattern else warn_msg)
             return
 
-        self._out.info("Existing package recipes:")
+        self._out.info("Existing package recipes:\n")
         for conan_ref in sorted(references):
-            self._print_colored_line(str(conan_ref), indent=1)
+            self._print_colored_line(str(conan_ref), indent=0)
 
     def print_search_packages(self, packages_props, reference, packages_query):
         if not packages_props:
@@ -150,12 +150,16 @@ class Printer(object):
         for package_id, properties in sorted(packages_props.items()):
             self._print_colored_line("Package_ID", package_id, 1)
             for section in ("options", "settings", "full_requires"):
-                key_values = properties.get(section, [])
-                if key_values:
+                attrs = properties.get(section, [])
+                if attrs:
                     self._print_colored_line("[%s]" % section, indent=2)
-                    key_values = OrderedDict(sorted(key_values.items()))
-                    for key, value in key_values.items():
-                        self._print_colored_line(key, value=value, indent=3)
+                    if isinstance(attrs, dict):  # options, settings
+                        attrs = OrderedDict(sorted(attrs.items()))
+                        for key, value in attrs.items():
+                            self._print_colored_line(key, value=value, indent=3)
+                    elif isinstance(attrs, list):  # full requires
+                        for key in sorted(attrs):
+                            self._print_colored_line(key, indent=3)
             self._out.writeln("")
 
     def _print_colored_line(self, text, value=None, indent=0):
