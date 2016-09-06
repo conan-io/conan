@@ -147,15 +147,14 @@ class Printer(object):
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         # Each package
         for package_id, properties in sorted(packages_props.items()):
-            self._print_colored_line(str(reference), indent=0) 
-            self._print_colored_line("Package_ID", package_id, 1)   
+            self._print_colored_line("Package_ID", package_id, 1)
             for section in ("options", "settings", "full_requires"):
                 key_values = properties.get(section, [])
                 if key_values:
-                   self._print_colored_line("[%s]" % section, indent=2)
-                   for key, value in key_values.items():
-                       self._print_colored_line(key, value=value, indent=3)
-
+                    self._print_colored_line("[%s]" % section, indent=2)
+                    for key, value in key_values.items():
+                        self._print_colored_line(key, value=value, indent=3)
+            self._out.writeln("")
 
     def _print_colored_line(self, text, value=None, indent=0):
         """ Print a colored line depending on its indentation level

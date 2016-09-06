@@ -136,11 +136,11 @@ class SearchTest(unittest.TestCase):
 
         # All packages without filter
         self.client.run("search Hello/1.4.10/fenix/testing -q ''")
- 
+
         self.assertIn("WindowsPackageSHA", self.client.user_io.out)
         self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
- 
+
         self.client.run('search Hello/1.4.10/fenix/testing -q os=Windows')
         self.assertIn("WindowsPackageSHA", self.client.user_io.out)
         self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
@@ -165,7 +165,6 @@ class SearchTest(unittest.TestCase):
         self.client.run('search Hello/1.4.10/fenix/testing -q "arch=x86"')
         self.assertEquals("""Existing packages for recipe Hello/1.4.10@fenix/testing:
 
-Hello/1.4.10@fenix/testing
     Package_ID: LinuxPackageSHA
         [options]
             use_Qt: False
@@ -174,7 +173,7 @@ Hello/1.4.10@fenix/testing
             arch: x86
             os: Linux
             compiler: gcc
-Hello/1.4.10@fenix/testing
+
     Package_ID: PlatformIndependantSHA
         [options]
             use_Qt: True
@@ -182,4 +181,5 @@ Hello/1.4.10@fenix/testing
             compiler.version: 4.3
             arch: x86
             compiler: gcc
+
 """, self.client.user_io.out)

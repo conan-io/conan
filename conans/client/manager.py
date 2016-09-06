@@ -27,6 +27,7 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.client.file_copier import report_copied_files
 from conans.model.scope import Scopes
 from conans.client.client_cache import ClientCache
+from collections import OrderedDict
 
 
 def get_user_channel(text):
@@ -381,7 +382,8 @@ If not:
             adapter = self._search_manager
         if isinstance(pattern_or_reference, ConanFileReference):
             packages_props = adapter.search_packages(pattern_or_reference, packages_query)
-            printer.print_search_packages(packages_props, pattern_or_reference, packages_query)
+            ordered_packages = OrderedDict(sorted(packages_props.items()))
+            printer.print_search_packages(ordered_packages, pattern_or_reference, packages_query)
         else:
             references = adapter.search(pattern_or_reference, ignorecase)
             printer.print_search_recipes(references, pattern_or_reference)
