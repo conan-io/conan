@@ -5,7 +5,7 @@ from conans.paths import (BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, conan_ex
                           SimplePaths, CONANINFO)
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import temp_folder
-from conans.search import DiskSearchManager
+from conans.search import DiskSearchManager, SearchAdapter, DiskSearchAdapter
 from conans.util.files import save
 from conans.model.info import ConanInfo
 
@@ -44,7 +44,8 @@ class PathsTest(unittest.TestCase):
     def basic_test2(self):
         folder = temp_folder()
         paths = SimplePaths(folder)
-        search_manager = DiskSearchManager(paths)
+        search_adapter = DiskSearchAdapter()
+        search_manager = DiskSearchManager(paths, search_adapter)
 
         os.chdir(paths.store)
 
@@ -92,7 +93,8 @@ class PathsTest(unittest.TestCase):
         os.makedirs("%s/%s" % (root_folder5, EXPORT_FOLDER))
 
         # Case insensitive searches
-        search_manager = DiskSearchManager(paths)
+        search_adapter = DiskSearchAdapter()
+        search_manager = DiskSearchManager(paths, search_adapter)
 
         reg_conans = sorted([str(_reg) for _reg in search_manager.search("*")])
         self.assertEqual(reg_conans, [str(conan_ref5),

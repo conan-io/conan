@@ -131,8 +131,7 @@ class ConanManager(object):
         else:  # Not specified packages, download all
             packages_props = remote_proxy.search_packages(reference, None)  # No filter by properties
             if not packages_props:
-                remote = remote or self._remote_manager.default_remote
-                raise ConanException("'%s' not found in remote '%s'" % (str(reference), remote))
+                raise ConanException("'%s' not found in remote" % str(reference))
 
             remote_proxy.download_packages(reference, list(packages_props.keys()))
 
