@@ -181,7 +181,7 @@ class SearchTest(unittest.TestCase):
             compiler: gcc
             compiler.version: 4.5
             os: Linux
-        [full_requires]
+        [requires]
             Hello2/0.1@lasote/stable:11111
             HelloInfo1/0.45@fenix/testing:33333
             OpenSSL/2.10@lasote/testing:2222

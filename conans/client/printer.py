@@ -152,7 +152,8 @@ class Printer(object):
             for section in ("options", "settings", "full_requires"):
                 attrs = properties.get(section, [])
                 if attrs:
-                    self._print_colored_line("[%s]" % section, indent=2)
+                    section_name = {"full_requires": "requires"}.get(section, section)
+                    self._print_colored_line("[%s]" % section_name, indent=2)
                     if isinstance(attrs, dict):  # options, settings
                         attrs = OrderedDict(sorted(attrs.items()))
                         for key, value in attrs.items():
