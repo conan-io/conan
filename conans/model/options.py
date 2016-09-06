@@ -143,6 +143,9 @@ class OptionsValues(object):
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, Values())
 
+    def __setitem__(self, item, value):
+        self._reqs_options[item] = value
+
     def pop(self, item):
         return self._reqs_options.pop(item, None)
 
