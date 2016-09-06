@@ -29,8 +29,6 @@ class FileUploadDownloadController(Controller):
         @app.route(self.route + '/<filepath:path>', method=["PUT"])
         def put(filepath):
             token = request.query.get("signature", None)
-            if request.headers.get("X-Checksum-Sha1"):
-                raise NotFoundException()
             file_saver = ConanFileUpload(request.body, None,
                                          filename=os.path.basename(filepath),
                                          headers=request.headers)
