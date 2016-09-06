@@ -6,7 +6,7 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
-    url = "<Package recipe repository url here, for issues about the package"
+    url = "<Package recipe repository url here, for issues about the package>"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -47,7 +47,7 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     license = "<Put the package license here>"
-    url = "<Package recipe repository url here, for issues about the package"
+    url = "<Package recipe repository url here, for issues about the package>"
     # No settings/options are necessary, this is header only
 
     def source(self):

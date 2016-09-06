@@ -103,11 +103,14 @@ class Options(object):
                                                                                  output,
                                                                                  name)
 
-    def initialize_upstream(self, values):
+    def initialize_upstream(self, values, base_name=None):
         """ used to propagate from downstream the options to the upper requirements
         """
         if values is not None:
             assert isinstance(values, OptionsValues)
+            package_options = values._reqs_options.pop(base_name, None)
+            if package_options:
+                values._options.update(package_options)
             self._options.values = values._options
             for name, option_values in values._reqs_options.items():
                 self._reqs_options.setdefault(name, Values()).update(option_values)
