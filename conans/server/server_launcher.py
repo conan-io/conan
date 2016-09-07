@@ -9,7 +9,7 @@ from conans.model.version import Version
 from conans.server.migrate import migrate_and_get_server_config
 from conans import __version__ as SERVER_VERSION
 from conans.paths import conan_expand_user, SimplePaths
-from conans.search import DiskSearchManager, SearchAdapter
+from conans.search import DiskSearchManager, DiskSearchAdapter
 
 
 class ServerLauncher(object):

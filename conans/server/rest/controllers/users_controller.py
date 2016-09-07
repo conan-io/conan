@@ -27,5 +27,5 @@ class UsersController(Controller):
             """Just check if valid token. It not exception
             is raised from Bottle plugin"""
             if not auth_user:
-                raise ForbiddenException("Logged user needed!")
+                raise AuthenticationException("Logged user needed!")
             return auth_user
