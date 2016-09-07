@@ -94,8 +94,7 @@ class ConanManager(object):
         assert conan_file_path
         logger.debug("Exporting %s" % conan_file_path)
         user_name, channel = get_user_channel(user)
-        conan_file = self._loader().load_conan(os.path.join(conan_file_path, CONANFILE),
-                                               self._user_io.out)
+        conan_file = self._loader().load_class(os.path.join(conan_file_path, CONANFILE))
         url = getattr(conan_file, "url", None)
         license_ = getattr(conan_file, "license", None)
         if not url:
@@ -114,8 +113,8 @@ class ConanManager(object):
                                  "You exported '%s' but already existing '%s'"
                                  % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
-        export_conanfile(output, self._client_cache, conan_file.exports, conan_file_path, conan_ref,
-                         conan_file.short_paths, keep_source)
+        export_conanfile(output, self._client_cache, conan_file.exports, conan_file_path,
+                         conan_ref, conan_file.short_paths, keep_source)
 
     def download(self, reference, package_ids, remote=None):
         """ Download conanfile and specified packages to local repository
@@ -129,8 +128,8 @@ class ConanManager(object):
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
         else:  # Not specified packages, download all
-            packages_props = remote_proxy.search_packages(reference, None)  # No filter by properties
-            if not packages_props:
+            packages_props = remote_proxy.search_packages(reference, None)
+            if not packages_props:  # No filter by properties
                 raise ConanException("'%s' not found in remote" % str(reference))
 
             remote_proxy.download_packages(reference, list(packages_props.keys()))
@@ -370,12 +369,14 @@ If not:
             Attributes:
                 pattern = string to match packages
                 remote = search on another origin to get packages info
-                packages_pattern = String query with binary packages properties: "arch=x86 AND os=Windows"
+                packages_pattern = String query with binary
+                                   packages properties: "arch=x86 AND os=Windows"
         """
         printer = Printer(self._user_io.out)
 
         if remote:
-            remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
+            remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
+                                      remote)
             adapter = remote_proxy
         else:
             adapter = self._search_manager
@@ -413,7 +414,8 @@ If not:
         @param force: if True, it will be deleted without requesting anything
         """
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-        remover = ConanRemover(self._client_cache, self._search_manager, self._user_io, remote_proxy)
+        remover = ConanRemover(self._client_cache, self._search_manager, self._user_io,
+                               remote_proxy)
         remover.remove(pattern, src, build_ids, package_ids_filter, force=force)
 
     def user(self, remote=None, name=None, password=None):
