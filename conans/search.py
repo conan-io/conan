@@ -99,16 +99,7 @@ class DiskSearchManager(SearchManagerABC):
         param conan_ref: ConanFileReference object
         """
         # GET PROPERTIES FROM QUERY
-        properties = {}
-        if query:
-            query = query.replace("AND", "and").replace("and", ",").replace(" ", "")
-            for pair in query.split(","):
-                try:
-                    name, value = pair.split("=")
-                    properties[name] = value
-                except ValueError as exc:
-                    logger.error(exc)
-                    raise ConanException("Invalid package query: %s" % query)
+        properties = get_properties_from_query(query)
 
         logger.debug("SEARCH PACKAGE PROPERTIES: %s" % properties)
         result = {}
@@ -156,3 +147,18 @@ class DiskSearchManager(SearchManagerABC):
                 if getattr(conan_vars_info.options, prop_name) == prop_value:
                     return True
         return False
+
+
+def get_properties_from_query(query):
+    properties = {}
+    if query:
+        query = query.replace("AND", "and").replace("and", ",").replace(" ", "")
+        for pair in query.split(","):
+            try:
+                name, value = pair.split("=")
+                properties[name] = value
+            except ValueError as exc:
+                logger.error(exc)
+                raise ConanException("Invalid package query: %s" % query)
+    return properties
+

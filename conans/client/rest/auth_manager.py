@@ -32,6 +32,8 @@ def input_credentials_if_unauthorized(func):
             ret = func(self, *args, **kwargs)
             return ret
         except ForbiddenException:
+            raise ForbiddenException("Permission denied for user: '%s'" % self.user)
+        except AuthenticationException:
             # User valid but not enough permissions
             if self.user is None or self._rest_client.token is None:
                 # token is None when you change user with user command
@@ -44,17 +46,13 @@ def input_credentials_if_unauthorized(func):
                                            'http://www.conan.io')
                 return retry_with_new_token(self, *args, **kwargs)
             else:
-                # If our user receives a ForbiddenException propagate it, not
-                # log with other user
-                raise ForbiddenException("Permission denied for user: '%s'" % self.user)
-        except AuthenticationException:
-            # Token expired or not valid, so clean the token and repeat the call
-            # (will be anonymous call but exporting who is calling)
-            self._store_login((self.user, None))
-            self._rest_client.token = None
-            # Set custom headers of mac_digest and username
-            self.set_custom_headers(self.user)
-            return wrapper(self, *args, **kwargs)
+                # Token expired or not valid, so clean the token and repeat the call
+                # (will be anonymous call but exporting who is calling)
+                self._store_login((self.user, None))
+                self._rest_client.token = None
+                # Set custom headers of mac_digest and username
+                self.set_custom_headers(self.user)
+                return wrapper(self, *args, **kwargs)
 
     def retry_with_new_token(self, *args, **kwargs):
         """Try LOGIN_RETRIES to obtain a password from user input for which
