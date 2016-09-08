@@ -28,6 +28,7 @@ from conans.search import DiskSearchManager, DiskSearchAdapter
 import sys
 import os
 from conans.client.client_cache import ClientCache
+from conans.util.env_reader import get_env
 
 
 class Extender(argparse.Action):
@@ -732,7 +733,8 @@ def get_command():
         remote_manager = RemoteManager(client_cache, auth_manager, out)
         return remote_manager
 
-    if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+    use_color = get_env("CONAN_COLOR_DISPLAY", 1)
+    if use_color and hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         import colorama
         colorama.init()
         color = True
