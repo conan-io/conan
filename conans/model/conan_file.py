@@ -54,6 +54,10 @@ def create_settings(conanfile, settings):
         raise ConanException("Error while initializing settings. %s" % str(e))
 
 
+def create_build_policy(conanfile):
+    return getattr(conanfile, "build_policy", None)
+
+
 def create_exports(conanfile):
     if not hasattr(conanfile, "exports"):
         return None
@@ -92,6 +96,7 @@ class ConanFile(object):
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
         self.exports = create_exports(self)
+        self.build_policy = create_build_policy(self)
 
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
