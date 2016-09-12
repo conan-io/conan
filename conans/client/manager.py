@@ -347,13 +347,13 @@ If not:
         # Load conanfile to check if the build policy is set to always
         try:
             conanfile_path = self._client_cache.conanfile(conan_reference)
-            output = ScopedOutput(str(conan_reference), self._user_io.out)
-            conan_file = self._loader().load_conan(conanfile_path, output, consumer=False)
+            conan_file = self._loader().load_class(conanfile_path)
         except NotFoundException:
             raise NotFoundException("There is no local conanfile exported as %s"
                                     % str(conan_reference))
 
-        if conan_file.build_policy_always and (all_packages or package_id):
+        # Can't use build_policy_always here because it's not loaded (only load_class)
+        if conan_file.build_policy == "always" and (all_packages or package_id):
             raise ConanException("Conanfile has build_policy='always', "
                                  "no packages can be uploaded")
 
