@@ -97,8 +97,8 @@ class ConfigItem(object):
             elif self._definition != "ANY":
                 if v in self._definition:
                     self._definition.remove(v)
-            if self._value == v:
-                raise ConanException(bad_value_msg(self._name, v, self.values_range))
+        if self._value is not None and self._value not in self._definition:
+            raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
 
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
