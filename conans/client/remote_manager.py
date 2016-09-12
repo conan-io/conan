@@ -9,6 +9,7 @@ from io import BytesIO
 import tarfile
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
+import shutil
 
 
 class RemoteManager(object):
@@ -165,6 +166,13 @@ def uncompress_files(files, folder, name):
             else:
                 #  Unzip the file
                 tar_extract(BytesIO(content), folder)
-    except (OSError, IOError) as e:
-        raise ConanException("Can't extract the package, check '%s'"
-                             " folder permissions: %s" % (folder, e))
+    except Exception as e:
+        error_msg = "Error while downloading/extracting files to %s\n%s\n" % (folder, str(e))
+        # try to remove the files
+        try:
+            if os.path.exists(folder):
+                shutil.rmtree(folder)
+                error_msg += "Folder removed"
+        except Exception as e:
+            error_msg += "Folder not removed, files/package might be damaged, remove manually"
+        raise ConanException(error_msg)
