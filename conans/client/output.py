@@ -1,6 +1,7 @@
 from colorama import Fore, Back, Style
 import six
 from conans.util.files import decode_text
+from conans.util.env_reader import get_env
 
 
 class Color(object):
@@ -23,14 +24,15 @@ class Color(object):
     BRIGHT_WHITE = Style.BRIGHT + Fore.WHITE   # @UndefinedVariable
     BRIGHT_MAGENTA = Style.BRIGHT + Fore.MAGENTA   # @UndefinedVariable
 
-    BACK_YELLOW = Back.YELLOW  # @UndefinedVariable
-    BACK_BLUE = Back.BLUE  # @UndefinedVariable
-    BACK_BLACK = Back.BLACK  # @UndefinedVariable
-    BACK_MAGENTA = Back.MAGENTA  # @UndefinedVariable
-    BACK_CYAN = Back.CYAN  # @UndefinedVariable
-    BACK_GREEN = Back.GREEN  # @UndefinedVariable
-    BACK_RED = Back.RED  # @UndefinedVariable
-    BACK_WHITE = Back.WHITE   # @UndefinedVariable
+
+if get_env("CONAN_COLOR_DARK", 0):
+    Color.WHITE = Fore.BLACK
+    Color.CYAN = Fore.BLUE
+    Color.YELLOW = Fore.MAGENTA
+    Color.BRIGHT_WHITE = Fore.BLACK
+    Color.BRIGHT_CYAN = Fore.BLUE
+    Color.BRIGHT_YELLOW = Fore.MAGENTA
+    Color.BRIGHT_GREEN = Fore.GREEN
 
 
 class ConanOutput(object):
