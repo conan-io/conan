@@ -62,7 +62,7 @@ class VersionCheckerRequester(object):
                 # If we operate with a fixed remote (-r XXX) this exception will stop the execution
                 # but if not, remote_manager will continue with the next remote ignoring this.
                 raise ConanOutdatedClient(msg + "Upgrade conan client.")
-            elif ret_version_status == "server_oudated":
+            elif ret_version_status == "server_outdated":
                 if server_version < self.min_server_compatible_version:
                     msg = "Your conan's client is incompatible with this remote." \
                           " The server is deprecated. (v%s). "\

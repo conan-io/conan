@@ -53,7 +53,7 @@ class VersionCheckerPlugin(object):
                 elif client_version == self.server_version:
                     check = 'current'
                 elif client_version > self.server_version:
-                    check = 'server_oudated'
+                    check = 'server_outdated'
                 resp.headers['X-Conan-Client-Version-Check'] = check
                 resp.headers['X-Conan-Server-Version'] = str(self.server_version)
         except Exception:
