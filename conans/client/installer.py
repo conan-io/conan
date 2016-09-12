@@ -15,6 +15,7 @@ from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
 from conans.model.env_info import EnvInfo
 import six
+from conans.client.file_copier import report_copied_files
 
 
 def init_info_objects(deps_graph, paths):
@@ -317,6 +318,8 @@ Package configuration:
         conan_file.copy = local_installer
         conan_file.imports()
         copied_files = local_installer.execute()
+        import_output = ScopedOutput("%s imports()" % output.scope, output)
+        report_copied_files(copied_files, import_output)
 
         try:
             # This is necessary because it is different for user projects
@@ -338,6 +341,7 @@ Package configuration:
             # Now remove all files that were imported with imports()
             for f in copied_files:
                 try:
-                    os.remove(f)
+                    if(f.startswith(build_folder)):
+                        os.remove(f)
                 except Exception:
                     self._out.warn("Unable to remove imported file from build: %s" % f)
