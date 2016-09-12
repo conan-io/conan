@@ -66,6 +66,23 @@ class UploadTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.server_reg_folder))
         self.assertFalse(os.path.exists(self.server_pack_folder))
 
+    def upload_with_no_valid_settings_test(self):
+        '''Check if upload is still working even if the specified setting is not valid.
+        If this test fails, will fail in Linux/OSx'''
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    settings = {"os": ["Windows"]}
+"""
+        files = {CONANFILE: conanfile}
+        self.client.save(files)
+        self.client.run("export lasote/stable")
+        self.assertIn("WARN: Conanfile doesn't have a 'license'", self.client.user_io.out)
+        self.client.run("upload Hello/1.2@lasote/stable", ignore_error=False)
+        self.assertIn("Uploading conan_export.tgz", self.client.user_io.out)
+
     def simple_test(self):
         """ basic installation of a new conans
         """
