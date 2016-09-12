@@ -78,7 +78,7 @@ def input_credentials_if_unauthorized(func):
                 self._store_login((user, token))
                 # Set custom headers of mac_digest and username
                 self.set_custom_headers(user)
-                return func(self, *args, **kwargs)
+                return wrapper(self, *args, **kwargs)
 
         raise AuthenticationException("Too many failed login attempts, bye!")
     return wrapper
