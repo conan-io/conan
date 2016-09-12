@@ -38,10 +38,12 @@ class ConanProxy(object):
         # Check current package status
         if path_exists(package_folder, self._client_cache.store):
             if self._check_integrity or self._check_updates:
-                read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
+                manifests = self._client_cache.package_manifests(package_reference)
+                read_manifest, expected_manifest = manifests
 
             if self._check_integrity:  # Check if package is corrupted
-                if read_manifest.file_sums != expected_manifest.file_sums:
+                if (read_manifest is None or
+                        read_manifest.file_sums != expected_manifest.file_sums):
                     # If not valid package, ensure empty folder
                     output.warn("Bad package '%s' detected! Removing "
                                 "package directory... " % str(package_reference.package_id))
@@ -77,7 +79,8 @@ class ConanProxy(object):
         def _refresh():
             conan_dir_path = self._client_cache.export(conan_reference)
             rmdir(conan_dir_path)
-            rmdir(self._client_cache.source(conan_reference), True)  # It might need to remove shortpath
+            # It might need to remove shortpath
+            rmdir(self._client_cache.source(conan_reference), True)
             current_remote, _ = self._get_remote(conan_reference)
             output.info("Retrieving from remote '%s'..." % current_remote.name)
             self._remote_manager.get_conanfile(conan_reference, current_remote)
@@ -93,8 +96,10 @@ class ConanProxy(object):
 
         if path_exist:
             if self._check_integrity:  # Check if package is corrupted
-                read_manifest, expected_manifest = self._client_cache.conan_manifests(conan_reference)
-                if read_manifest.file_sums != expected_manifest.file_sums:
+                manifests = self._client_cache.conan_manifests(conan_reference)
+                read_manifest, expected_manifest = manifests
+                if (read_manifest is None or
+                        read_manifest.file_sums != expected_manifest.file_sums):
                     output.warn("Bad conanfile detected! Removing export directory... ")
                     _refresh()
             else:  # Check for updates
