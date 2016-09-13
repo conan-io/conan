@@ -8,7 +8,7 @@ from conans.model.values import Values
 import urllib
 from conans.paths import conan_expand_user
 
-MIN_SERVER_COMPATIBLE_VERSION = '0.12.0-dev'
+MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
 default_settings_yml = """
 os: [Windows, Linux, Macos, Android, iOS]
