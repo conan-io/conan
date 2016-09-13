@@ -1,9 +1,8 @@
 import os
+from abc import abstractmethod, ABCMeta
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import load, relative_dirs, path_exists, save
-from os.path import isfile
+from conans.util.files import load, save, path_exists
 from os.path import join, normpath
-from conans.model.manifest import FileTreeManifest
 import platform
 import tempfile
 
@@ -144,48 +143,3 @@ class SimplePaths(object):
         return normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                              package_reference.package_id))
 
-
-# FIXME: Move to client, Should not be necessary in server anymore. Replaced with disk_adapter
-class StorePaths(SimplePaths):
-    """ Disk storage of conans and binary packages. Useful both in client and
-    in server. Accesses to real disk and reads/write things.
-    """
-
-    def export_paths(self, conan_reference):
-        ''' Returns all file paths for a conans (relative to conans directory)'''
-        return relative_dirs(self.export(conan_reference))
-
-    def package_paths(self, package_reference):
-        ''' Returns all file paths for a package (relative to conans directory)'''
-        return relative_dirs(self.package(package_reference))
-
-    def conan_packages(self, conan_reference):
-        """ Returns a list of package_id from a conans """
-        assert isinstance(conan_reference, ConanFileReference)
-        packages_dir = self.packages(conan_reference)
-        try:
-            packages = [dirname for dirname in os.listdir(packages_dir)
-                        if not isfile(os.path.join(packages_dir, dirname))]
-        except:  # if there isn't any package folder
-            packages = []
-        return packages
-
-    def load_digest(self, conan_reference):
-        '''conan_id = sha(zip file)'''
-        filename = os.path.join(self.export(conan_reference), CONAN_MANIFEST)
-        return FileTreeManifest.loads(load(filename))
-
-    def conan_manifests(self, conan_reference):
-        digest_path = self.digestfile_conanfile(conan_reference)
-        return self._digests(digest_path)
-
-    def package_manifests(self, package_reference):
-        digest_path = self.digestfile_package(package_reference)
-        return self._digests(digest_path)
-
-    def _digests(self, digest_path):
-        if not path_exists(digest_path, self.store):
-            return None, None
-        readed_digest = FileTreeManifest.loads(load(digest_path))
-        expected_digest = FileTreeManifest.create(os.path.dirname(digest_path))
-        return readed_digest, expected_digest

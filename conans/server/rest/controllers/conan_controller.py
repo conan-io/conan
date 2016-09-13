@@ -1,7 +1,7 @@
 from conans.server.rest.controllers.controller import Controller
 from bottle import request
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.server.service.service import ConanService
+from conans.server.service.service import ConanService, SearchService
 from conans.errors import NotFoundException
 import json
 from conans.paths import CONAN_MANIFEST
@@ -129,9 +129,17 @@ class ConanController(Controller):
             ignorecase = request.params.get("ignorecase", True)
             if isinstance(ignorecase, str):
                 ignorecase = False if 'false' == ignorecase.lower() else True
-            conan_service = ConanService(app.authorizer, app.file_manager, auth_user)
-            info = conan_service.search(pattern, ignorecase)
-            return info.serialize()
+            search_service = SearchService(app.authorizer, app.search_manager, auth_user)
+            references = [str(ref) for ref in search_service.search(pattern, ignorecase)]
+            return {"results": references}
+
+        @app.route('%s/search' % conan_route, method=["GET"])
+        def search_packages(conanname, version, username, channel, auth_user):
+            query = request.params.get("q", None)
+            search_service = SearchService(app.authorizer, app.search_manager, auth_user)
+            conan_reference = ConanFileReference(conanname, version, username, channel)
+            info = search_service.search_packages(conan_reference, query)
+            return info
 
         @app.route(conan_route, method="DELETE")
         def remove_conanfile(conanname, version, username, channel, auth_user):

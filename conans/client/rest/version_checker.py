@@ -21,9 +21,10 @@ class VersionCheckerRequester(object):
         self._handle_ret(ret)
         return ret
 
-    def put(self, url, data, verify=None):
-        headers = {'X-Conan-Client-Version': str(self.client_version)}
-        ret = self.requester.put(url, data=data, headers=headers, verify=verify)
+    def put(self, url, data, headers=None, verify=None, auth=None):
+        headers = headers or {}
+        headers['X-Conan-Client-Version'] = str(self.client_version)
+        ret = self.requester.put(url, data=data, headers=headers, verify=verify, auth=auth)
         self._handle_ret(ret)
         return ret
 
@@ -61,7 +62,7 @@ class VersionCheckerRequester(object):
                 # If we operate with a fixed remote (-r XXX) this exception will stop the execution
                 # but if not, remote_manager will continue with the next remote ignoring this.
                 raise ConanOutdatedClient(msg + "Upgrade conan client.")
-            elif ret_version_status == "server_oudated":
+            elif ret_version_status == "server_outdated":
                 if server_version < self.min_server_compatible_version:
                     msg = "Your conan's client is incompatible with this remote." \
                           " The server is deprecated. (v%s). "\

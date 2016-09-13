@@ -9,20 +9,21 @@ from io import BytesIO
 import tarfile
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
+import shutil
 
 
 class RemoteManager(object):
     """ Will handle the remotes to get conans, packages etc """
 
-    def __init__(self, paths, remote_client, output):
-        self._paths = paths
+    def __init__(self, client_cache, remote_client, output):
+        self._client_cache = client_cache
         self._output = output
         self._remote_client = remote_client
 
     def upload_conan(self, conan_reference, remote):
         """Will upload the conans to the first remote"""
-        basedir = self._paths.export(conan_reference)
-        rel_files = self._paths.export_paths(conan_reference)
+        basedir = self._client_cache.export(conan_reference)
+        rel_files = self._client_cache.export_paths(conan_reference)
 
         the_files = build_files_set(basedir, rel_files)
         the_files = compress_export_files(the_files)
@@ -30,8 +31,8 @@ class RemoteManager(object):
 
     def upload_package(self, package_reference, remote):
         """Will upload the package to the first remote"""
-        basedir = self._paths.package(package_reference)
-        rel_files = self._paths.package_paths(package_reference)
+        basedir = self._client_cache.package(package_reference)
+        rel_files = self._client_cache.package_paths(package_reference)
 
         the_files = build_files_set(basedir, rel_files)
         self._output.rewrite_line("Compressing package...")
@@ -61,10 +62,10 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:content , remote_name)"""
         export_files = self._call_remote(remote, "get_conanfile", conan_reference)
-        export_folder = self._paths.export(conan_reference)
+        export_folder = self._client_cache.export(conan_reference)
         uncompress_files(export_files, export_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
-        rmdir(self._paths.source(conan_reference), True)
+        rmdir(self._client_cache.source(conan_reference), True)
 #       TODO: Download only the CONANFILE file and only download the rest of files
 #       in install if needed (not found remote package)
 
@@ -75,7 +76,7 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:content , remote_name)"""
         package_files = self._call_remote(remote, "get_package", package_reference)
-        destination_dir = self._paths.package(package_reference)
+        destination_dir = self._client_cache.package(package_reference)
         uncompress_files(package_files, destination_dir, PACKAGE_TGZ_NAME)
 
         # Issue #214 https://github.com/conan-io/conan/issues/214
@@ -89,6 +90,9 @@ class RemoteManager(object):
 
         returns (dict str(conan_ref): {packages_info}"""
         return self._call_remote(remote, "search", pattern, ignorecase)
+
+    def search_packages(self, remote, reference, query):
+        return self._call_remote(remote, "search_packages", reference, query)
 
     def remove(self, conan_ref, remote):
         """
@@ -155,9 +159,20 @@ def compress_files(files, name, excluded):
 
 
 def uncompress_files(files, folder, name):
-    for file_name, content in files:
-        if os.path.basename(file_name) != name:
-            save(os.path.join(folder, file_name), content)
-        else:
-            #  Unzip the file
-            tar_extract(BytesIO(content), folder)
+    try:
+        for file_name, content in files:
+            if os.path.basename(file_name) != name:
+                save(os.path.join(folder, file_name), content)
+            else:
+                #  Unzip the file
+                tar_extract(BytesIO(content), folder)
+    except Exception as e:
+        error_msg = "Error while downloading/extracting files to %s\n%s\n" % (folder, str(e))
+        # try to remove the files
+        try:
+            if os.path.exists(folder):
+                shutil.rmtree(folder)
+                error_msg += "Folder removed"
+        except Exception as e:
+            error_msg += "Folder not removed, files/package might be damaged, remove manually"
+        raise ConanException(error_msg)

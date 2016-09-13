@@ -28,7 +28,7 @@ os: [Windows, Linux, Macos, Android]
 arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
 compiler:
     gcc:
-        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3"]
+        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3"]
         libcxx: [libstdc++, libstdc++11]
     Visual Studio:
         runtime: [None, MD, MT, MTd, MDd]
@@ -64,8 +64,8 @@ compiler:
         client = TestClient()
         client.save(files)
         client.run("export lasote/testing")
-        self.assertIn("build_type", load(client.paths.settings_path))
 
         client.run("install test/1.9@lasote/testing --build -s compiler=gcc "
                    "-s compiler.version=4.9 -s os=Windows -s build_type=None -s compiler.libcxx=libstdc++")
+        self.assertIn("build_type", load(client.paths.settings_path))
         self.assertIn("390146894f59dda18c902ee25e649ef590140732", client.user_io.out)

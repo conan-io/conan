@@ -1,6 +1,6 @@
 
 import unittest
-from conan.conans.tools import SystemPackageTool
+from conans.tools import SystemPackageTool
 import os
 
 

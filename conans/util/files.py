@@ -27,14 +27,6 @@ def touch(fname, times=None):
         os.utime(fname, times)
 
 
-def delete_empty_dirs(folder):
-    for root, _, _ in os.walk(folder, topdown=False):
-        try:  # Take advantage that os.rmdir does not delete non-empty dirs
-            os.rmdir(root)
-        except OSError:
-            pass  # not empty
-
-
 def normalize(text):
     if platform.system() == "Windows":
         return re.sub("\r?\n", "\r\n", text)
@@ -246,3 +238,19 @@ def tar_extract(fileobj, destination_dir):
     the_tar = tarfile.open(fileobj=fileobj)
     the_tar.extractall(path=destination_dir, members=safemembers(the_tar))
     the_tar.close()
+
+
+def list_folder_subdirs(basedir="", level=None):
+    ret = []
+    for root, dirs, _ in os.walk(basedir):
+        rel_path = os.path.relpath(root, basedir)
+        if rel_path == ".":
+            continue
+        dir_split = rel_path.split(os.sep)
+        if level is not None:
+            if len(dir_split) == level:
+                ret.append("/".join(dir_split))
+                dirs[:] = []  # Stop iterate subdirs
+        else:
+            ret.append("/".join(dir_split))
+    return ret

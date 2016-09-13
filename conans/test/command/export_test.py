@@ -8,6 +8,26 @@ from conans.model.manifest import FileTreeManifest
 from conans.test.tools import TestClient
 
 
+class ExportSettingsTest(unittest.TestCase):
+
+    def test_basic(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    settings = {"os": ["Linux"]}
+"""
+        files = {CONANFILE: conanfile}
+        client.save(files)
+        client.run("export lasote/stable")
+        self.assertIn("WARN: Conanfile doesn't have a 'license'", client.user_io.out)
+        client.run("install Hello/1.2@lasote/stable -s os=Windows", ignore_error=True)
+        self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
+        self.assertIn("Possible values are ['Linux']", client.user_io.out)
+
+
 class ExportTest(unittest.TestCase):
 
     def setUp(self):

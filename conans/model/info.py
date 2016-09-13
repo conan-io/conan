@@ -52,6 +52,13 @@ class RequirementsInfo(object):
         self._non_devs_requirements = non_devs_requirements
         self._data = {r: RequirementInfo(str(r)) for r in requires}
 
+    def clear(self):
+        self._data = {}
+
+    def remove(self, *args):
+        for name in args:
+            del self._data[self._get_key(name)]
+
     def add(self, indirect_reqs):
         """ necessary to propagate from upstream the real
         package requirements
@@ -64,18 +71,18 @@ class RequirementsInfo(object):
         """
         return list(self._data.keys())
 
+    def _get_key(self, item):
+        for reference in self._data:
+            if reference.conan.name == item:
+                return reference
+        raise ConanException("No requirement matching for %s" % (item))
+
     def __getitem__(self, item):
-        """Approximate search by key
+        """get by package name
         Necessary to access from conaninfo
         self.requires["Boost"].version = "2.X"
         """
-        matches = []
-        for v in self._data:
-            if str(v).startswith(item):
-                matches.append(v)
-        if len(matches) == 1:
-            return self._data[matches[0]]
-        raise ConanException("No match for %s: %s" % (item, matches))
+        return self._data[self._get_key(item)]
 
     @property
     def sha(self):
@@ -238,3 +245,12 @@ class ConanInfo(object):
         res.requires = RequirementsInfo.deserialize(data["requires"])
         res.full_requires = RequirementsList.deserialize(data["full_requires"])
         return res
+
+    def serialize_min(self):
+        """
+        This info will be shown in search results.
+        """
+        conan_info_json = {"settings": dict(self.settings.serialize()),
+                           "options": dict(self.options.serialize()["options"]),
+                           "full_requires": self.full_requires.serialize()}
+        return conan_info_json

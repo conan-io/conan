@@ -6,9 +6,29 @@ from conans.model.settings import Settings
 from conans.model.options import OptionsValues
 from conans.test.utils.test_files import temp_folder
 from conans.model.scope import Scopes
+from conans import tools
 
 
 class ConanfileToolsTest(unittest.TestCase):
+
+    def test_untar(self):
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "example.txt")
+        save(file_path, "Hello world!")
+        tar_path = os.path.join(tmp_dir, "sample.tar")
+        try:
+            old_path = os.getcwd()
+            os.chdir(tmp_dir)
+            import tarfile
+            tar = tarfile.open(tar_path, "w")
+            tar.add("example.txt")
+            tar.close()
+        finally:
+            os.chdir(old_path)
+        output_dir = os.path.join(tmp_dir, "output_dir")
+        tools.unzip(tar_path, output_dir)
+        content = load(os.path.join(output_dir, "example.txt"))
+        self.assertEqual(content, "Hello world!")
 
     def test_replace_in_file(self):
         file_content = '''

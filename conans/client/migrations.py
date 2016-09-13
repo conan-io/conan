@@ -7,24 +7,25 @@ from conans.client.conf import default_settings_yml
 
 class ClientMigrator(Migrator):
 
-    def __init__(self, paths, current_version, out, manager):
-        self.paths = paths
+    def __init__(self, client_cache, current_version, out, manager):
+        self.client_cache = client_cache
         self.manager = manager
-        super(ClientMigrator, self).__init__(paths.conan_folder, paths.store,
+        super(ClientMigrator, self).__init__(client_cache.conan_folder, 
+                                             client_cache.store,
                                              current_version, out)
 
     def _update_settings_yml(self, old_settings):
         self.out.warn("Migration: Updating settings.yml")
 
-        current_settings = load(self.paths.settings_path)
+        current_settings = load(self.client_cache.settings_path)
         if current_settings != old_settings:
-            backup_path = self.paths.settings_path + ".backup"
+            backup_path = self.client_cache.settings_path + ".backup"
             save(backup_path, current_settings)
             self.out.warn("*" * 40)
             self.out.warn("A new settings.yml has been defined")
             self.out.warn("Your old settings.yml has been backup'd to: %s" % backup_path)
             self.out.warn("*" * 40)
-        save(self.paths.settings_path, default_settings_yml)
+        save(self.client_cache.settings_path, default_settings_yml)
 
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
@@ -39,11 +40,11 @@ class ClientMigrator(Migrator):
                 rmdir(self.store_path)
         elif old_version < Version("0.5"):
             self.out.warn("Migration: Updating settings.yml with new gcc versions")
-            default_settings = load(self.paths.settings_path)
+            default_settings = load(self.client_cache.settings_path)
             default_settings = default_settings.replace(
                                     'version: ["4.6", "4.7", "4.8", "4.9", "5.0"]',
                                     'version: ["4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3"]')
-            save(self.paths.settings_path, default_settings)
+            save(self.client_cache.settings_path, default_settings)
         elif old_version < Version("0.7"):
             old_settings = """
 os: [Windows, Linux, Macos, Android]
@@ -64,27 +65,27 @@ build_type: [None, Debug, Release]
             self._update_settings_yml(old_settings)
         elif old_version < Version("0.8"):
             self.out.info("**** Migrating to conan 0.8 *****")
-            settings_backup_path = self.paths.settings_path + ".backup"
-            save(settings_backup_path, load(self.paths.settings_path))
+            settings_backup_path = self.client_cache.settings_path + ".backup"
+            save(settings_backup_path, load(self.client_cache.settings_path))
             # Save new settings
-            save(self.paths.settings_path, default_settings_yml)
+            save(self.client_cache.settings_path, default_settings_yml)
             self.out.info("- A new settings.yml has been defined")
             self.out.info("  Your old file has been backup'd to: %s" % settings_backup_path)
 
-            old_conanconf = load(self.paths.conan_conf_path)
-            conf = dict(self.paths.conan_config.get_conf("settings_defaults"))
+            old_conanconf = load(self.client_cache.conan_conf_path)
+            conf = dict(self.client_cache.conan_config.get_conf("settings_defaults"))
             if conf.get("os", None) in ("Linux", "Macos") and \
                conf.get("compiler", None) in ("gcc", "clang", "apple-clang"):
 
                 # Backup the old config and append the new setting
-                config_backup_path = self.paths.conan_conf_path + ".backup"
+                config_backup_path = self.client_cache.conan_conf_path + ".backup"
                 save(config_backup_path, old_conanconf)
                 new_setting = "libstdc++"
                 if conf.get("compiler", None) == "apple-clang":
                     new_setting = "libc++"
-                self.paths.conan_config.set("settings_defaults", "compiler.libcxx", new_setting)
-                with open(self.paths.conan_conf_path, 'wb') as configfile:
-                    self.paths.conan_config.write(configfile)
+                self.client_cache.conan_config.set("settings_defaults", "compiler.libcxx", new_setting)
+                with open(self.client_cache.conan_conf_path, 'wb') as configfile:
+                    self.client_cache.conan_config.write(configfile)
 
                 self.out.info("- A new conan.conf has been defined")
                 self.out.info("  Your old file has been backup'd to: %s" % config_backup_path)
@@ -112,11 +113,11 @@ build_type: [None, Debug, Release]
                 self.out.info("   ")
         elif old_version < Version("0.8.3"):
             self.out.warn("Migration: Updating settings.yml with new Apple clang 7.3 version")
-            default_settings = load(self.paths.settings_path)
+            default_settings = load(self.client_cache.settings_path)
             default_settings = default_settings.replace(
                                     'version: ["5.0", "5.1", "6.0", "6.1", "7.0"]',
                                     'version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3"]')
-            save(self.paths.settings_path, default_settings)
+            save(self.client_cache.settings_path, default_settings)
         elif old_version < Version("0.12"):
             old_settings = """
 os: [Windows, Linux, Macos, Android, iOS]

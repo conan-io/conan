@@ -1,6 +1,7 @@
 from conans.client.output import Color
 from conans.model.ref import PackageReference
 from conans.model.ref import ConanFileReference
+from collections import OrderedDict
 
 
 class Printer(object):
@@ -121,48 +122,46 @@ class Printer(object):
                     for d in depends:
                         self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
 
-    def print_search(self, info, pattern=None, verbose=False, extra_verbose=False):
+    def print_search_recipes(self, references, pattern):
         """ Print all the exported conans information
         param pattern: wildcards, e.g., "opencv/*"
         """
-        if not info:
+        if not references:
             warn_msg = "There are no packages"
             pattern_msg = " matching the %s pattern" % pattern
             self._out.info(warn_msg + pattern_msg if pattern else warn_msg)
             return
 
-        self._out.info("Existing packages info:\n")
-        for conan_ref, packages in sorted(info.items()):
+        self._out.info("Existing package recipes:\n")
+        for conan_ref in sorted(references):
             self._print_colored_line(str(conan_ref), indent=0)
-            if extra_verbose or verbose:
-                if not packages:
-                    self._out.writeln('    There are no packages', Color.RED)
-                for package_id, conan_info in packages.items():
-                    self._print_colored_line("Package_ID", package_id, 1)
-                    if extra_verbose:
-                        # Printing the Package information (settings, options, requires, ...)
-                        # Options
-                        if conan_info.options:
-                            self._print_colored_line("[options]", indent=2)
-                            for option in conan_info.options.dumps().splitlines():
-                                self._print_colored_line(option, indent=3)
-                        # Settings
-                        if conan_info.settings:
-                            self._print_colored_line("[settings]", indent=2)
-                            for settings in conan_info.settings.dumps().splitlines():
-                                self._print_colored_line(settings, indent=3)
-                        # Requirements
-                        if conan_info.requires:
-                            self._print_colored_line("[requirements]", indent=2)
-                            for name in conan_info.requires.dumps().splitlines():
-                                self._print_colored_line(str(name), indent=3)
-                    else:
-                        if conan_info.settings:
-                            lines = conan_info.settings.dumps().splitlines()
-                            settings_list = [s.split("=") for s in lines]
-                            settings_line = [values[1] for values in settings_list]
-                            settings_line = "(%s)" % ", ".join(settings_line)
-                            self._print_colored_line(settings_line, indent=3)
+
+    def print_search_packages(self, packages_props, reference, packages_query):
+        if not packages_props:
+            if packages_query:
+                warn_msg = "There are no packages for reference '%s' matching the query '%s'" % (str(reference), packages_query)
+            else:
+                warn_msg = "There are no packages for pattern '%s'" % str(reference)
+            self._out.info(warn_msg)
+            return
+
+        self._out.info("Existing packages for recipe %s:\n" % str(reference))
+        # Each package
+        for package_id, properties in sorted(packages_props.items()):
+            self._print_colored_line("Package_ID", package_id, 1)
+            for section in ("options", "settings", "full_requires"):
+                attrs = properties.get(section, [])
+                if attrs:
+                    section_name = {"full_requires": "requires"}.get(section, section)
+                    self._print_colored_line("[%s]" % section_name, indent=2)
+                    if isinstance(attrs, dict):  # options, settings
+                        attrs = OrderedDict(sorted(attrs.items()))
+                        for key, value in attrs.items():
+                            self._print_colored_line(key, value=value, indent=3)
+                    elif isinstance(attrs, list):  # full requires
+                        for key in sorted(attrs):
+                            self._print_colored_line(key, indent=3)
+            self._out.writeln("")
 
     def _print_colored_line(self, text, value=None, indent=0):
         """ Print a colored line depending on its indentation level

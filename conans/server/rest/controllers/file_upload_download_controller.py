@@ -2,9 +2,9 @@ from conans.server.rest.controllers.controller import Controller
 from bottle import request, static_file, FileUpload, cached_property
 from conans.server.service.service import FileUploadDownloadService
 import os
-import sys
 from unicodedata import normalize
 import six
+from conans.errors import NotFoundException
 
 
 class FileUploadDownloadController(Controller):
@@ -30,7 +30,8 @@ class FileUploadDownloadController(Controller):
         def put(filepath):
             token = request.query.get("signature", None)
             file_saver = ConanFileUpload(request.body, None,
-                                    filename=os.path.basename(filepath), headers=request.headers)
+                                         filename=os.path.basename(filepath),
+                                         headers=request.headers)
             abs_path = os.path.abspath(os.path.join(storage_path, os.path.normpath(filepath)))
             # Body is a stringIO (generator)
             service.put_file(file_saver, abs_path, token, request.content_length)

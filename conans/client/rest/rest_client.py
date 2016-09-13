@@ -2,7 +2,6 @@ from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
     ConanException
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
-from conans.info import SearchInfo
 import json
 from conans.paths import CONANFILE, CONAN_MANIFEST
 import time
@@ -11,6 +10,8 @@ from conans.util.files import md5, decode_text
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
+from conans.model.ref import ConanFileReference
+from six.moves.urllib.parse import urlsplit, parse_qs
 
 
 def handle_return_deserializer(deserializer=None):
@@ -202,14 +203,13 @@ class RestApiClient(object):
 
     @handle_return_deserializer()
     def check_credentials(self):
-        """If token is not valid will raise ForbiddenException or AuthenticationException.
+        """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
         url = "%s/users/check_credentials" % self._remote_api_url
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.VERIFY_SSL)
         return ret
 
-    @handle_return_deserializer(SearchInfo.deserialize)
     def search(self, pattern=None, ignorecase=True):
         """
         the_files: dict with relative_path: content
@@ -221,11 +221,16 @@ class RestApiClient(object):
             query = "?%s%s" % (pattern, case_sensitive)
 
         url = "%s/conans/search%s" % (self._remote_api_url, query)
-        response = self.requester.get(url,
-                                      auth=self.auth,
-                                      headers=self.custom_headers,
-                                      verify=self.VERIFY_SSL)
-        return response
+        response = self._get_json(url)["results"]
+        return [ConanFileReference.loads(ref) for ref in response]
+
+    def search_packages(self, reference, query):
+        url = "%s/conans/%s/search" % (self._remote_api_url, "/".join(reference))
+        if query:
+            url += "?q=%s" % query
+
+        references = self._get_json(url)
+        return references
 
     @handle_return_deserializer()
     def remove_conanfile(self, conan_reference):
@@ -239,18 +244,14 @@ class RestApiClient(object):
                                          verify=self.VERIFY_SSL)
         return response
 
+    @handle_return_deserializer()
     def remove_packages(self, conan_reference, package_ids=None):
         """ Remove any conans
         """
         self.check_credentials()
         payload = {"package_ids": package_ids}
         url = "%s/conans/%s/packages/delete" % (self._remote_api_url, '/'.join(conan_reference))
-        response = self.requester.post(url,
-                                       auth=self.auth,
-                                       headers=self.custom_headers,
-                                       verify=self.VERIFY_SSL,
-                                       json=payload)
-        return response
+        return self._post_json(url, payload)
 
     @handle_return_deserializer()
     def _remove_conanfile_files(self, conan_reference, files):
@@ -259,12 +260,7 @@ class RestApiClient(object):
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
         url = "%s/conans/%s/remove_files" % (self._remote_api_url, '/'.join(conan_reference))
-        response = self.requester.post(url,
-                                       auth=self.auth,
-                                       headers=self.custom_headers,
-                                       verify=self.VERIFY_SSL,
-                                       json=payload)
-        return response
+        return self._post_json(url, payload)
 
     @handle_return_deserializer()
     def _remove_package_files(self, package_reference, files):
@@ -275,12 +271,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/remove_files" % (self._remote_api_url,
                                                          "/".join(package_reference.conan),
                                                          package_reference.package_id)
-        response = self.requester.post(url,
-                                       auth=self.auth,
-                                       headers=self.custom_headers,
-                                       verify=self.VERIFY_SSL,
-                                       json=payload)
-        return response
+        return self._post_json(url, payload)
 
     def _get_conan_snapshot(self, reference):
         url = "%s/conans/%s" % (self._remote_api_url, '/'.join(reference))
@@ -303,6 +294,14 @@ class RestApiClient(object):
         norm_snapshot = {os.path.normpath(filename): the_md5
                          for filename, the_md5 in snapshot.items()}
         return norm_snapshot
+
+    def _post_json(self, url, payload):
+        response = self.requester.post(url,
+                                       auth=self.auth,
+                                       headers=self.custom_headers,
+                                       verify=self.VERIFY_SSL,
+                                       json=payload)
+        return response
 
     def _get_json(self, url, data=None):
         if data:  # POST request
@@ -331,6 +330,18 @@ class RestApiClient(object):
     def _remote_api_url(self):
         return "%s/v1" % self.remote_url
 
+    def _file_server_capabilities(self, resource_url):
+        auth = None
+        dedup = False
+        if resource_url.startswith(self._remote_api_url):
+            urltokens = urlsplit(resource_url)
+            query_string = urltokens[3]
+            if "signature" not in parse_qs(query_string):
+                # If monolithic server, we can use same auth, and server understand dedup
+                auth = self.auth
+                dedup = True
+        return auth, dedup
+
     def download_files(self, file_urls, output=None):
         """
         :param: file_urls is a dict with {filename: url}
@@ -341,7 +352,8 @@ class RestApiClient(object):
         for filename, resource_url in file_urls.items():
             if output:
                 output.writeln("Downloading %s" % filename)
-            contents = downloader.download(resource_url)
+            auth, _ = self._file_server_capabilities(resource_url)
+            contents = downloader.download(resource_url, auth=auth)
             if output:
                 output.writeln("")
             yield os.path.normpath(filename), contents
@@ -352,7 +364,8 @@ class RestApiClient(object):
         uploader = Uploader(self.requester, output, self.VERIFY_SSL)
         for filename, resource_url in file_urls.items():
             output.rewrite_line("Uploading %s" % filename)
-            response = uploader.post(resource_url, files[filename])
+            auth, dedup = self._file_server_capabilities(resource_url)
+            response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup)
             output.writeln("")
             if not response.ok:
                 output.error("\nError uploading file: %s" % filename)

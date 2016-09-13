@@ -8,6 +8,8 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
 import platform
 from conans.client.detect import detected_os
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import load
 
 
 class InstallTest(unittest.TestCase):
@@ -23,6 +25,44 @@ class InstallTest(unittest.TestCase):
         self.client.save(files, clean_first=True)
         if export:
             self.client.run("export lasote/stable")
+
+    def imports_test(self):
+        """ Ensure that when importing files in a global path, outside the package build,
+        they are not deleted
+        """
+        dst_global_folder = temp_folder().replace("\\", "/")
+        conanfile = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports = "*"
+
+    def package(self):
+        self.copy("*", dst="files")
+'''
+        conanfile2 = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    name = "Say"
+    version = "0.1"
+    requires = "Hello/0.1@lasote/stable"
+
+    def imports(self):
+        self.copy("*file.txt", dst="%s", src="files")
+''' % dst_global_folder
+
+        self.client.save({CONANFILE: conanfile, "other/folder/file.txt": "My file content"})
+        self.client.run("export lasote/stable")
+        self.client.save({CONANFILE: conanfile2}, clean_first=True)
+        self.client.run("export lasote/stable")
+
+        self.client.current_folder = temp_folder()
+        self.client.run("install Say/0.1@lasote/stable --build=missing")
+        content = load(os.path.join(dst_global_folder, "other/folder/file.txt"))
+        self.assertTrue(content, "My file content")
 
     def reuse_test(self):
         self._create("Hello0", "0.1")
@@ -63,8 +103,8 @@ class InstallTest(unittest.TestCase):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False, no_config=True)
 
-        self.client.run("install -o language=1 -o Hello1:language=0 -o Hello0:language=1 %s "
-                        "--build missing" % self.settings)
+        self.client.run("install -o Hello2:language=1 -o Hello1:language=0 -o Hello0:language=1 %s"
+                        " --build missing" % self.settings)
         info_path = os.path.join(self.client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("language=1\nstatic=True", conan_info.options.dumps())
