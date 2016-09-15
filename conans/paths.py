@@ -1,7 +1,6 @@
 import os
-from abc import abstractmethod, ABCMeta
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import load, save, path_exists
+from conans.util.files import load, save
 from os.path import join, normpath
 import platform
 import tempfile
