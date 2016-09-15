@@ -1,4 +1,6 @@
 import os
+import shutil
+
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
@@ -254,6 +256,38 @@ If not:
             copied_files = local_installer.execute()
             import_output = ScopedOutput("%s imports()" % output.scope, output)
             report_copied_files(copied_files, import_output)
+
+    def source(self, reference, force):
+        assert(isinstance(reference, ConanFileReference))
+
+        conan_file_path = self._client_cache.conanfile(reference)
+        conanfile = self._loader().load_conan(conan_file_path, self._user_io.out)
+        src_folder = self._client_cache.source(reference)
+        export_folder = self._client_cache.export(reference)
+
+        if force or not os.path.exists(src_folder):
+            if os.path.exists(src_folder):
+                try:
+                    shutil.rmtree(src_folder)
+                except Exception as e:
+                    raise ConanException("%s: %s" % (conanfile.name, str(e)))
+
+            self._user_io.out.info('Configuring sources in %s' % src_folder)
+            shutil.copytree(export_folder, src_folder)
+            os.chdir(src_folder)
+            try:
+                conanfile.source()
+            except Exception as e:
+                self._user_io.out.error("Error while executing source(): %s" % str(e))
+                # in case source() fails (user error, typically), remove the src_folder
+                # and raise to interrupt any other processes (build, package)
+                os.chdir(export_folder)
+                try:
+                    rmdir(src_folder)
+                except Exception as e_rm:
+                    self._user_io.out.error("Unable to remove src folder %s\n%s" % (src_folder, str(e_rm)))
+                    self._user_io.out.warn("**** Please delete it manually ****")
+                raise ConanException("%s: %s" % (conanfile.name, str(e)))
 
     def package(self, reference, package_id, only_manifest, package_all):
         assert(isinstance(reference, ConanFileReference))
