@@ -398,13 +398,12 @@ class DepsBuilder(object):
                 conanfile.config()
             conanfile.configure()
 
-            new_options = conanfile.options.values
-
             conanfile.settings.validate()  # All has to be ok!
             conanfile.options.validate()
 
             # Update requirements (overwrites), computing new upstream
             conanfile.requirements()
+            new_options = conanfile.options.values
             new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
