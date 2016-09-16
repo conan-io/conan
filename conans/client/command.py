@@ -209,6 +209,8 @@ path to the CMake binary directory, like this:
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local store. '
                                  'Use for testing purposes only')
+        parser.add_argument("--update", "-u", action='store_true', default=False,
+                            help="update with new upstream packages")
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -273,7 +275,8 @@ path to the CMake binary directory, like this:
                               options=options,
                               settings=settings,
                               build_mode=args.build,
-                              scopes=scopes)
+                              scopes=scopes,
+                              update=args.update)
         self._test_check(test_folder, test_folder_name)
         self._manager.build(test_folder, build_folder, test=True)
 
