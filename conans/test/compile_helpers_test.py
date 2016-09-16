@@ -3,6 +3,12 @@ import unittest
 from conans.client.configure_environment import ConfigureEnvironment
 from conans.model.settings import Settings
 from conans.client.gcc import GCC
+import platform
+import os
+from conans.client.runner import ConanRunner
+from conans.client.output import ConanOutput
+import sys
+from conans.test.tools import TestBufferConanOutput
 
 
 class MockWinSettings(Settings):
@@ -122,3 +128,41 @@ class CompileHelpersTest(unittest.TestCase):
 
         gcc = GCC(MockLinuxSettings("Debug"))
         self.assertEquals(gcc.command_line, "-g -m32 ")
+
+    def append_variables_test(self):
+        output = TestBufferConanOutput()
+        runner = ConanRunner()
+        if platform.system() != "Windows":
+            os.environ["LDFLAGS"] = "ldflag=23 otherldflag=33"
+            os.environ["CPPFLAGS"] = "-cppflag -othercppflag"
+            os.environ["CFLAGS"] = "-cflag"
+            os.environ["C_INCLUDE_PATH"] = "/path/to/c_include_path:/anotherpath"
+            os.environ["CPP_INCLUDE_PATH"] = "/path/to/cpp_include_path:/anotherpathpp"
+
+            env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
+            command = "%s" % env.command_line
+            runner(command, output=output)
+            self.assertIn("LDFLAGS=ldflag=23 otherldflag=33 -Lpath/to/lib1 -Lpath/to/lib2 -llib1 -llib2 -m32 -framework thing -framework thing2\n", output)
+            self.assertIn("CPPFLAGS=-cppflag -othercppflag -m32 cppflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2\n", output)
+            self.assertIn("CFLAGS=-cflag -m32 cflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2\n", output)
+            self.assertIn("C_INCLUDE_PATH=/path/to/c_include_path:/anotherpath:path/to/includes/lib1:path/to/includes/lib2\n", output)
+            self.assertIn("CPP_INCLUDE_PATH=/path/to/cpp_include_path:/anotherpathpp:path/to/includes/lib1:path/to/includes/lib2\n", output)
+
+            # Reset env vars to not mess with other tests
+            os.environ["LDFLAGS"] = ""
+            os.environ["CPPFLAGS"] = ""
+            os.environ["CFLAGS"] = ""
+            os.environ["C_INCLUDE_PATH"] = ""
+            os.environ["CPP_INCLUDE_PATH"] = ""
+        else:
+            os.environ["LIB"] = "/path/to/lib.a"
+            os.environ["CL"] = "cl1;cl2"
+
+            env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
+            command = "%s" % env.command_line
+            runner(command, output=output)
+            self.assertIn("LIB=\n", output)
+            self.assertIn("CL=\n", output)
+
+            os.environ["LIB"] = ""
+            os.environ["CL"] = ""
