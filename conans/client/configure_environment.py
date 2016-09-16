@@ -92,7 +92,7 @@ class ConfigureEnvironment(object):
         elif self.os == "Windows" and self.compiler == "Visual Studio":
             cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
             lib_paths = ";".join(['"%s"' % lib for lib in self._deps_cpp_info.lib_paths])
-            command = "SET LIB=%%LIB%%;%s && SET CL=%%CL%%;%s" % (lib_paths, cl_args)
+            command = "SET LIB=%%LIB%%;%s && SET CL=%%CL%% %s" % (lib_paths, cl_args)
 
         # Add the rest of env variables from deps_env_info
         command += " ".join(get_setenv_variables_commands(self._deps_env_info,

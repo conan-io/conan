@@ -6,8 +6,6 @@ from conans.client.gcc import GCC
 import platform
 import os
 from conans.client.runner import ConanRunner
-from conans.client.output import ConanOutput
-import sys
 from conans.test.tools import TestBufferConanOutput
 
 
@@ -140,8 +138,7 @@ class CompileHelpersTest(unittest.TestCase):
             os.environ["CPP_INCLUDE_PATH"] = "/path/to/cpp_include_path:/anotherpathpp"
 
             env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
-            command = "%s" % env.command_line
-            runner(command, output=output)
+            runner(env.command_line, output=output)
             self.assertIn("LDFLAGS=ldflag=23 otherldflag=33 -Lpath/to/lib1 -Lpath/to/lib2 -llib1 -llib2 -m32 -framework thing -framework thing2\n", output)
             self.assertIn("CPPFLAGS=-cppflag -othercppflag -m32 cppflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2\n", output)
             self.assertIn("CFLAGS=-cflag -m32 cflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2\n", output)
@@ -155,14 +152,14 @@ class CompileHelpersTest(unittest.TestCase):
             os.environ["C_INCLUDE_PATH"] = ""
             os.environ["CPP_INCLUDE_PATH"] = ""
         else:
-            os.environ["LIB"] = "/path/to/lib.a"
-            os.environ["CL"] = "cl1;cl2"
+            os.environ["LIB"] = '"/path/to/lib.a"'
+            os.environ["CL"] = '/I"path/to/cl1" /I"path/to/cl2"'
 
             env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
-            command = "%s" % env.command_line
+            command = "%s && SET" % env.command_line
             runner(command, output=output)
-            self.assertIn("LIB=\n", output)
-            self.assertIn("CL=\n", output)
+            self.assertIn('LIB="/path/to/lib.a";"path/to/lib1";"path/to/lib2"', output)
+            self.assertIn('CL=/I"path/to/cl1" /I"path/to/cl2" /I"path/to/includes/lib1" /I"path/to/includes/lib2"' , output)
 
             os.environ["LIB"] = ""
             os.environ["CL"] = ""
