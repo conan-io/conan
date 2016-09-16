@@ -88,32 +88,32 @@ class CompileHelpersTest(unittest.TestCase):
 
     def configure_environment_test(self):
         env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
-        self.assertEquals(env.command_line, 'SET LIB="path/to/lib1";"path/to/lib2";%LIB% && '
-                                            'SET CL=/I"path/to/includes/lib1" '
+        self.assertEquals(env.command_line, 'SET LIB=%LIB%;"path/to/lib1";"path/to/lib2" && '
+                                            'SET CL=%CL%;/I"path/to/includes/lib1" '
                                             '/I"path/to/includes/lib2"')
 
         env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
-        self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
+        self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="$LDFLAGS -Lpath/to/lib1 '
                                             '-Lpath/to/lib2 -llib1 -llib2 -m32 -framework thing -framework thing2" '
-                                            'CFLAGS="-m32 cflag1 -s -DNDEBUG '
+                                            'CFLAGS="$CFLAGS -m32 cflag1 -s -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
-                                            'CPPFLAGS="-m32 cppflag1 -s -DNDEBUG '
+                                            'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -s -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
-                                            'C_INCLUDE_PATH="path/to/includes/lib1":'
+                                            'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
-                                            'CPP_INCLUDE_PATH="path/to/includes/lib1":'
+                                            'CPP_INCLUDE_PATH=$CPP_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2"')
         # Not supported yet
         env = ConfigureEnvironment(BuildInfoMock(), MockWinGccSettings())
-        self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
+        self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="$LDFLAGS -Lpath/to/lib1 '
                                             '-Lpath/to/lib2 -llib1 -llib2 -m32 -framework thing -framework thing2" '
-                                            'CFLAGS="-m32 cflag1 -s -DNDEBUG '
+                                            'CFLAGS="$CFLAGS -m32 cflag1 -s -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
-                                            'CPPFLAGS="-m32 cppflag1 -s -DNDEBUG '
+                                            'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -s -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
-                                            'C_INCLUDE_PATH="path/to/includes/lib1":'
+                                            'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
-                                            'CPP_INCLUDE_PATH="path/to/includes/lib1":'
+                                            'CPP_INCLUDE_PATH=$CPP_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2"')
 
     def gcc_test(self):
