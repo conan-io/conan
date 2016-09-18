@@ -30,6 +30,7 @@ from conans.client.file_copier import report_copied_files
 from conans.model.scope import Scopes
 from conans.client.client_cache import ClientCache
 from collections import OrderedDict
+from conans.client.source import config_source
 
 
 def get_user_channel(text):
@@ -260,34 +261,12 @@ If not:
     def source(self, reference, force):
         assert(isinstance(reference, ConanFileReference))
 
+        output = ScopedOutput(str(reference), self._user_io.out)
         conan_file_path = self._client_cache.conanfile(reference)
-        conanfile = self._loader().load_conan(conan_file_path, self._user_io.out)
-        src_folder = self._client_cache.source(reference)
+        conanfile = self._loader().load_conan(conan_file_path, output)
+        src_folder = self._client_cache.source(reference, conanfile.short_paths)
         export_folder = self._client_cache.export(reference)
-
-        if force or not os.path.exists(src_folder):
-            if os.path.exists(src_folder):
-                try:
-                    shutil.rmtree(src_folder)
-                except Exception as e:
-                    raise ConanException("%s: %s" % (conanfile.name, str(e)))
-
-            self._user_io.out.info('Configuring sources in %s' % src_folder)
-            shutil.copytree(export_folder, src_folder)
-            os.chdir(src_folder)
-            try:
-                conanfile.source()
-            except Exception as e:
-                self._user_io.out.error("Error while executing source(): %s" % str(e))
-                # in case source() fails (user error, typically), remove the src_folder
-                # and raise to interrupt any other processes (build, package)
-                os.chdir(export_folder)
-                try:
-                    rmdir(src_folder)
-                except Exception as e_rm:
-                    self._user_io.out.error("Unable to remove src folder %s\n%s" % (src_folder, str(e_rm)))
-                    self._user_io.out.warn("**** Please delete it manually ****")
-                raise ConanException("%s: %s" % (conanfile.name, str(e)))
+        config_source(export_folder, src_folder, conanfile, output, force)
 
     def package(self, reference, package_id, only_manifest, package_all):
         assert(isinstance(reference, ConanFileReference))
