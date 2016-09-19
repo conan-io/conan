@@ -24,9 +24,25 @@ class RemoteManager(object):
         """Will upload the conans to the first remote"""
         basedir = self._client_cache.export(conan_reference)
         rel_files = self._client_cache.export_paths(conan_reference)
-
         the_files = build_files_set(basedir, rel_files)
-        the_files = compress_export_files(the_files)
+
+        # FIXME: Check modified exports by hand?
+
+        if EXPORT_TGZ_NAME not in the_files:
+            self._output.rewrite_line("Compressing exported files...")
+            the_files = compress_export_files(the_files)
+            export_tgz_path = os.path.join(basedir, EXPORT_TGZ_NAME)
+            save(export_tgz_path, the_files[EXPORT_TGZ_NAME])
+        else:
+            # Prepare files.
+            # FIXME: Should check if exits conanfile and manifest???
+            # If we should check it, we should check it in compress_export_files too
+            tmp = {EXPORT_TGZ_NAME: the_files[EXPORT_TGZ_NAME]["contents"]}
+            if CONANFILE in the_files:
+                tmp[CONANFILE] = the_files[CONANFILE]["contents"]
+            if CONAN_MANIFEST in the_files:
+                tmp[CONAN_MANIFEST] = the_files[CONAN_MANIFEST]["contents"]
+            the_files = tmp
         return self._call_remote(remote, "upload_conan", conan_reference, the_files)
 
     def upload_package(self, package_reference, remote):
@@ -188,10 +204,9 @@ def compress_files(files, name, excluded):
 def uncompress_files(files, folder, name):
     try:
         for file_name, content in files:
-            if os.path.basename(file_name) != name:
-                save(os.path.join(folder, file_name), content)
-            else:
-                #  Unzip the file
+            save(os.path.join(folder, file_name), content)
+            if os.path.basename(file_name) == name:
+                #  Unzip the file and keep the tgz
                 tar_extract(BytesIO(content), folder)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (folder, str(e))
