@@ -311,7 +311,10 @@ class TestClient(object):
         save(self.client_cache.registry, "")
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
         for name, server in self.servers.items():
-            registry.add(name, server.fake_url)
+            if isinstance(server, TestServer):
+                registry.add(name, server.fake_url)
+            else:
+                registry.add(name, server)
 
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder()
@@ -350,7 +353,16 @@ class TestClient(object):
 
         self.runner = TestRunner(output)
 
-        requester = TestRequester(self.servers)
+        # Check if servers are real
+        real_servers = False
+        for server in self.servers:
+            if isinstance(server, str):  #  Just URI
+                real_servers = True
+
+        if real_servers:
+            requester = requests
+        else:
+            requester = TestRequester(self.servers)
 
         # Verify client version against remotes
         self.requester = VersionCheckerRequester(requester, self.client_version,
