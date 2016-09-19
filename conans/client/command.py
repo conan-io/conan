@@ -445,6 +445,23 @@ path to the CMake binary directory, like this:
 
         self._manager.package(reference, args.package, args.only_manifest, args.all)
 
+    def source(self, *args):
+        """ Calls your conanfile.py "source" method to configure the source directory.
+            I.e., downloads and unzip the package source.
+        """
+        parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
+        parser.add_argument("reference", help="package recipe reference name. e.g., zlib-ng/1.2.8@plex/stable")
+        parser.add_argument("-f", "--force", default=False, action="store_true", help="force remove the source directory and run again.")
+
+        args = parser.parse_args(*args)
+
+        try:
+            reference = ConanFileReference.loads(args.reference)
+        except:
+            raise ConanException("Invalid package recipe reference. e.g., zlib-ng/1.2.8@plex/stable")
+
+        self._manager.source(reference, args.force)
+
     def export(self, *args):
         """ copies the package recipe (conanfile.py and associated files) to your local store,
         where it can be shared and reused in other projects.

@@ -1,4 +1,6 @@
 import os
+import shutil
+
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
@@ -28,6 +30,7 @@ from conans.client.file_copier import report_copied_files
 from conans.model.scope import Scopes
 from conans.client.client_cache import ClientCache
 from collections import OrderedDict
+from conans.client.source import config_source
 
 
 def get_user_channel(text):
@@ -254,6 +257,16 @@ If not:
             copied_files = local_installer.execute()
             import_output = ScopedOutput("%s imports()" % output.scope, output)
             report_copied_files(copied_files, import_output)
+
+    def source(self, reference, force):
+        assert(isinstance(reference, ConanFileReference))
+
+        output = ScopedOutput(str(reference), self._user_io.out)
+        conan_file_path = self._client_cache.conanfile(reference)
+        conanfile = self._loader().load_conan(conan_file_path, output)
+        src_folder = self._client_cache.source(reference, conanfile.short_paths)
+        export_folder = self._client_cache.export(reference)
+        config_source(export_folder, src_folder, conanfile, output, force)
 
     def package(self, reference, package_id, only_manifest, package_all):
         assert(isinstance(reference, ConanFileReference))
