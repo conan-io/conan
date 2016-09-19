@@ -355,8 +355,8 @@ class TestClient(object):
 
         # Check if servers are real
         real_servers = False
-        for server in self.servers:
-            if isinstance(server, str):  #  Just URI
+        for server in self.servers.values():
+            if isinstance(server, str):  # Just URI
                 real_servers = True
 
         if real_servers:

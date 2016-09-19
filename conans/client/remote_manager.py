@@ -33,10 +33,37 @@ class RemoteManager(object):
         """Will upload the package to the first remote"""
         basedir = self._client_cache.package(package_reference)
         rel_files = self._client_cache.package_paths(package_reference)
-
         the_files = build_files_set(basedir, rel_files)
-        self._output.rewrite_line("Compressing package...")
-        the_files = compress_package_files(the_files)
+        tgz_path = os.path.join(basedir, PACKAGE_TGZ_NAME)
+
+        # If package has been modified remove tgz to regenerate it
+        # FIXME: Should we raise or let user upload what he want to?
+        read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
+        if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
+            if PACKAGE_TGZ_NAME in the_files:
+                del the_files[PACKAGE_TGZ_NAME]
+                try:
+                    os.unlink(tgz_path)
+                except Exception:
+                    pass
+            raise Exception("Can't upload corrupted package '%s'" % str(package_reference))
+
+        # Check if conan_package.tgz is present
+        if PACKAGE_TGZ_NAME not in the_files:
+            self._output.rewrite_line("Compressing package...")
+            the_files = compress_package_files(the_files)
+            save(tgz_path, the_files[PACKAGE_TGZ_NAME])
+        else:
+            # Prepare files.
+            # FIXME: Should check if exits conaninfo and manifest???
+            # If we should check it, we should check it in compress_package_files too
+            tmp = {PACKAGE_TGZ_NAME: the_files[PACKAGE_TGZ_NAME]["contents"]}
+            if CONANINFO in the_files:
+                tmp[CONANINFO] = the_files[CONANINFO]["contents"]
+            if CONAN_MANIFEST in the_files:
+                tmp[CONAN_MANIFEST] = the_files[CONAN_MANIFEST]["contents"]
+            the_files = tmp
+
         return self._call_remote(remote, "upload_package", package_reference, the_files)
 
     def get_conan_digest(self, conan_reference, remote):

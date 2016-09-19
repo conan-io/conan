@@ -40,10 +40,10 @@ class DownloadTest(unittest.TestCase):
         files = hello_source_files()
         client.save(files, path=reg_folder)
         client.save({CONANFILE: myconan1,
-                       CONAN_MANIFEST: str(conan_digest),
-                      "include/math/lib1.h": "//copy",
-                      "my_lib/debug/libd.a": "//copy",
-                      "my_data/readme.txt": "//copy"}, path=reg_folder)
+                     CONAN_MANIFEST: str(conan_digest),
+                     "include/math/lib1.h": "//copy",
+                     "my_lib/debug/libd.a": "//copy",
+                     "my_data/readme.txt": "//copy"}, path=reg_folder)
 
         package_ref = PackageReference(conan_ref, "fakeid")
         package_folder = client.paths.package(package_ref)
@@ -51,6 +51,10 @@ class DownloadTest(unittest.TestCase):
         save(os.path.join(package_folder, "lib", "my_lib", "libd.a"), "//lib")
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
              "//res")
+
+        digest_path = client.client_cache.digestfile_package(package_ref)
+        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+        save(os.path.join(package_folder, CONAN_MANIFEST), str(expected_manifest))
 
         client.run("upload %s" % str(conan_ref))
         client.run("upload %s -p %s" % (str(conan_ref), package_ref.package_id))

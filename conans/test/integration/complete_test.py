@@ -42,6 +42,17 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload package
         self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.assertIn("Compressing package", str(self.client.user_io.out))
+
+        # Not needed to tgz again
+        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.assertNotIn("Compressing package", str(self.client.user_io.out))
+
+        # If we install the package again will be removed and re tgz
+        self.client.run("install %s --build missing" % str(conan_reference))
+        # Upload package
+        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.assertNotIn("Compressing package", str(self.client.user_io.out))
 
         # Check library on server
         self._assert_library_exists_in_server(package_ref, server_paths)

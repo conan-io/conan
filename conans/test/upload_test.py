@@ -62,9 +62,26 @@ class UploadTest(unittest.TestCase):
                  os.stat(os.path.join(package_folder, "bin", "my_bin", "executable")).st_mode |
                  stat.S_IRWXU)
 
+        digest_path = self.client.client_cache.digestfile_package(self.package_ref)
+        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+        save(os.path.join(package_folder, CONAN_MANIFEST), str(expected_manifest))
+
         self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
         self.assertFalse(os.path.exists(self.server_reg_folder))
         self.assertFalse(os.path.exists(self.server_pack_folder))
+
+    def upload_same_package_dont_compress_test(self):
+        # Create a manifest for the faked package
+        pack_path = self.client.paths.package(self.package_ref)
+        digest_path = self.client.client_cache.digestfile_package(self.package_ref)
+        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+        save(os.path.join(pack_path, CONAN_MANIFEST), str(expected_manifest))
+
+        self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
+        self.assertIn("Compressing package", str(self.client.user_io.out))
+
+        self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
+        self.assertNotIn("Compressing package", str(self.client.user_io.out))
 
     def upload_with_no_valid_settings_test(self):
         '''Check if upload is still working even if the specified setting is not valid.
