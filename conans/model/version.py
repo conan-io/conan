@@ -1,5 +1,10 @@
+import re
+
+
 class Version(str):
-    SEP = '.'
+    """ This is NOT an implementation of semver, as users may use any pattern in their versions.
+    It is just a helper to parse .-, and compare taking into account integers when possible
+    """
 
     def __new__(cls, content):
         return str.__new__(cls, content.strip())
@@ -7,7 +12,8 @@ class Version(str):
     @property
     def as_list(self):
         result = []
-        for item in self.split(Version.SEP):
+        tokens = re.split('[.-]', self)
+        for item in tokens:
             result.append(int(item) if item.isdigit() else item)
         return result
 
@@ -50,21 +56,24 @@ class Version(str):
         if not isinstance(other, Version):
             other = Version(other)
 
+        other_list = other.as_list
         for ind, el in enumerate(self.as_list):
-            if ind + 1 > len(other.as_list):
-                return 1
-            if not isinstance(el, int) and isinstance(other.as_list[ind], int):
+            if ind + 1 > len(other_list):
+                if isinstance(el, int):
+                    return 1
+                return -1
+            if not isinstance(el, int) and isinstance(other_list[ind], int):
                 # Version compare with 1.4.rc2
                 return -1
-            elif not isinstance(other.as_list[ind], int) and isinstance(el, int):
+            elif not isinstance(other_list[ind], int) and isinstance(el, int):
                 return 1
-            elif el == other.as_list[ind]:
+            elif el == other_list[ind]:
                 continue
-            elif el > other.as_list[ind]:
+            elif el > other_list[ind]:
                 return 1
             else:
                 return -1
-        if len(other.as_list) > len(self.as_list):
+        if len(other_list) > len(self.as_list):
             return -1
         else:
             return 0
