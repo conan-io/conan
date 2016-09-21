@@ -45,6 +45,30 @@ class RequirementInfo(object):
         ret = RequirementInfo(data)
         return ret
 
+    def semver(self):
+        self.name = self.full_name
+        self.version = self.full_version.stable()
+        self.user = self.channel = self.package_id = None
+
+    def full_version(self):
+        self.name = self.full_name
+        self.version = self.full_version
+        self.user = self.channel = self.package_id = None
+
+    def full_recipe(self):
+        self.name = self.full_name
+        self.version = self.full_version
+        self.user = self.full_user
+        self.channel = self.full_channel
+        self.package_id = None
+
+    def full_package(self):
+        self.name = self.full_name
+        self.version = self.full_version
+        self.user = self.full_user
+        self.channel = self.full_channel
+        self.package_id = self.full_package_id
+
 
 class RequirementsInfo(object):
     def __init__(self, requires, non_devs_requirements):
@@ -87,14 +111,16 @@ class RequirementsInfo(object):
     @property
     def sha(self):
         result = []
+        # Remove requirements without a name, i.e. indirect transitive requirements
+        data = {k: v for k, v in self._data.items() if v.name}
         if self._non_devs_requirements is None:
-            for key in sorted(self._data):
-                result.append(self._data[key].sha)
+            for key in sorted(data):
+                result.append(data[key].sha)
         else:
-            for key in sorted(self._data):
+            for key in sorted(data):
                 non_dev = key.conan.name in self._non_devs_requirements
                 if non_dev:
-                    result.append(self._data[key].sha)
+                    result.append(data[key].sha)
         return sha1('\n'.join(result).encode())
 
     def dumps(self):

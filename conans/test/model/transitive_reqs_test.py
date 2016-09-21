@@ -362,6 +362,53 @@ class ChatConan(ConanFile):
                          "Hello/1.2@diego/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
                          "Say/0.1@diego/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
+    def test_version_requires2_change(self):
+        chat_content = """
+from conans import ConanFile
+
+class ChatConan(ConanFile):
+    name = "Chat"
+    version = "2.3"
+    requires = "Hello/1.2@diego/testing"
+
+    def conan_info(self):
+        self.info.requires["Hello"].full_package()
+        self.info.requires["Say"].semver()
+"""
+
+        self.retriever.conan(say_ref, say_content)
+        self.retriever.conan(hello_ref, hello_content)
+        deps_graph = self.root(chat_content)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello)})
+
+        self._check_say(say.conanfile, version="0.1")
+        self._check_hello(hello, say_ref)
+
+        conanfile = chat.conanfile
+        self.assertEqual(conanfile.version, "2.3")
+        self.assertEqual(conanfile.name, "Chat")
+        self.assertEqual(conanfile.options.values.dumps(), "")
+        self.assertEqual(conanfile.settings.fields, [])
+        self.assertEqual(conanfile.settings.values.dumps(), "")
+        self.assertEqual(conanfile.requires, Requirements(str(hello_ref)))
+
+        conaninfo = conanfile.info
+        self.assertEqual(conaninfo.settings.dumps(), "")
+        self.assertEqual(conaninfo.full_settings.dumps(), "")
+        self.assertEqual(conaninfo.options.dumps(), "")
+        self.assertEqual(conaninfo.full_options.dumps(), "")
+        self.assertEqual(conaninfo.requires.dumps(),
+                         "Hello/1.2/diego/testing/0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
+                         "Say/0.1")
+        self.assertEqual(conaninfo.full_requires.dumps(),
+                         "Hello/1.2@diego/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
+                         "Say/0.1@diego/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+
     def test_diamond_conflict(self):
         chat_content = """
 from conans import ConanFile
