@@ -12,8 +12,6 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import uncompress_packaged_files
 from conans.tools import untargz
-from conans.errors import ConanException
-
 
 myconan1 = """
 from conans import ConanFile
@@ -98,6 +96,7 @@ class UploadTest(unittest.TestCase):
 
         self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
         self.assertNotIn("Compressing package", str(self.client.user_io.out))
+        self.assertIn("Package is up to date", str(self.client.user_io.out))
 
     def upload_with_no_valid_settings_test(self):
         '''Check if upload is still working even if the specified setting is not valid.

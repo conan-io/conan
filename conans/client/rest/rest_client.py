@@ -6,7 +6,7 @@ import json
 from conans.paths import CONANFILE, CONAN_MANIFEST
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import md5, decode_text
+from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -144,7 +144,7 @@ class RestApiClient(object):
 
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
-        local_snapshot = {filename: md5(content) for filename, content in the_files.items()}
+        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -171,7 +171,7 @@ class RestApiClient(object):
         t1 = time.time()
         # Get the remote snapshot
         remote_snapshot = self._get_package_snapshot(package_reference)
-        local_snapshot = {filename: md5(content) for filename, content in the_files.items()}
+        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)

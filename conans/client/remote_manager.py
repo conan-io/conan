@@ -64,7 +64,9 @@ class RemoteManager(object):
                     os.unlink(tgz_path)
                 except Exception:
                     pass
-        self._output.rewrite_line("Package integrity OK!")
+            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
+        else:
+            self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
         logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
 
