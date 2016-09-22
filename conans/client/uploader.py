@@ -1,6 +1,8 @@
 import os
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference
+from conans.util.log import logger
+import time
 
 
 class ConanUploader(object):
@@ -31,8 +33,10 @@ class ConanUploader(object):
     def upload_package(self, package_ref, index=1, total=1):
         """Uploads the package identified by package_id"""
         msg = ("Uploading package %d/%d: %s" % (index, total, str(package_ref.package_id)))
+        t1 = time.time()
         self._user_io.out.info(msg)
         self._remote_proxy.upload_package(package_ref)
+        logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
 
     def _check_package_date(self, conan_ref):
         try:

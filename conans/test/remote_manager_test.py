@@ -8,6 +8,10 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.client.remote_registry import Remote
 from conans.client.client_cache import ClientCache
+from conans.util.files import save
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
+import os
+from conans.model.manifest import FileTreeManifest
 
 
 class MockRemoteClient(object):
@@ -50,19 +54,25 @@ class RemoteManagerTest(unittest.TestCase):
         self.assertIn("ERROR: No default remote defined", client.user_io.out)
 
     def remote_selection_test(self):
+        save(os.path.join(self.client_cache.export(self.conan_reference), CONANFILE), "asdasd")
+        save(os.path.join(self.client_cache.export(self.conan_reference), CONAN_MANIFEST), "asdasd")
+
         # If no remote is specified will look to first
-        self.assertRaises(NotFoundException, self.manager.upload_conan, self.conan_reference,
-                          Remote("other", "url"))
+        self.assertRaises(NotFoundException, self.manager.upload_conan, self.conan_reference, None)
 
         # If remote is specified took it
         self.assertRaises(NotFoundException,
                           self.manager.upload_conan, self.conan_reference, Remote("other", "url"))
 
     def method_called_test(self):
-#        Not easy possible to test this due to the new package contents checks
-#         self.assertFalse(self.remote_client.upload_package.called)
-#         self.manager.upload_package(self.package_reference, Remote("other", "url"))
-#         self.assertTrue(self.remote_client.upload_package.called)
+
+        save(os.path.join(self.client_cache.package(self.package_reference), CONANINFO), "asdasd")
+        manifest = FileTreeManifest.create(self.client_cache.package(self.package_reference))
+        save(os.path.join(self.client_cache.package(self.package_reference), CONAN_MANIFEST), str(manifest))
+
+        self.assertFalse(self.remote_client.upload_package.called)
+        self.manager.upload_package(self.package_reference, Remote("other", "url"))
+        self.assertTrue(self.remote_client.upload_package.called)
 
         self.assertFalse(self.remote_client.get_conan_digest.called)
         self.manager.get_conan_digest(self.conan_reference, Remote("other", "url"))
