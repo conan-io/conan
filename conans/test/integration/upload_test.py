@@ -14,7 +14,7 @@ class CompleteFlowTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-    def reuse_downloaded_tgz_test(self):
+    def reuse_uploaded_tgz_test(self):
         '''Download packages from a remote, then copy to another channel
         and reupload them. Because they have not changed, the tgz is not created
         again'''
@@ -43,6 +43,30 @@ class CompleteFlowTest(unittest.TestCase):
         self.client.run("upload Hello0/0.1@lasote/stable --all")
         self.assertNotIn("Compressing exported files", self.client.user_io.out)
         self.assertNotIn("Compressing package", self.client.user_io.out)
+
+    def reuse_downloaded_tgz_test(self):
+        '''Download packages from a remote, then copy to another channel
+        and reupload them. It needs to compress it again, not tgz is kept'''
+
+        # UPLOAD A PACKAGE
+        conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+        files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
+        files["another_export_file.lib"] = "to compress"
+        self.client.save(files)
+        self.client.run("export lasote/stable")
+        self.client.run("install %s --build missing" % str(conan_reference))
+        self.client.run("upload %s --all" % str(conan_reference))
+        self.assertIn("Compressing exported files", self.client.user_io.out)
+        self.assertIn("Compressing package", self.client.user_io.out)
+
+        # Other user downloads the package
+        # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS COMPRESSING AGAIN
+        # BECAUSE ONLY TGZ IS KEPT WHEN UPLOADING
+        other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        other_client.run("install Hello0/0.1@lasote/stable --all")
+        other_client.run("upload Hello0/0.1@lasote/stable --all")
+        self.assertIn("Compressing exported files", self.client.user_io.out)
+        self.assertIn("Compressing package", self.client.user_io.out)
 
     def upload_only_tgz_if_needed_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")

@@ -179,28 +179,29 @@ def compress_files(files, name, excluded, dest_dir):
     only with the conanXX files and the compressed file"""
 
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
-    tgz_contents = BytesIO()
-    tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_contents)
+    tgz_path = os.path.join(dest_dir, name)
+    with open(tgz_path, "wb") as tgz_handle:
+        # tgz_contents = BytesIO()
+        tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
-    def addfile(name, abs_path, tar):
-        info = tarfile.TarInfo(name=name)
-        info.size = os.stat(abs_path).st_size
-        info.mode = os.stat(abs_path).st_mode
-        with open(abs_path, 'rb') as file_handler:
-            tar.addfile(tarinfo=info, fileobj=file_handler)
+        def addfile(name, abs_path, tar):
+            info = tarfile.TarInfo(name=name)
+            info.size = os.stat(abs_path).st_size
+            info.mode = os.stat(abs_path).st_mode
+            with open(abs_path, 'rb') as file_handler:
+                tar.addfile(tarinfo=info, fileobj=file_handler)
 
-    for filename, abs_path in files.items():
-        if filename not in excluded:
-            addfile(filename, abs_path, tgz)
+        for filename, abs_path in files.items():
+            if filename not in excluded:
+                addfile(filename, abs_path, tgz)
 
-    tgz.close()
-    ret = {}
-    for e in excluded:
-        if e in files:
-            ret[e] = files[e]
+        tgz.close()
+        ret = {}
+        for e in excluded:
+            if e in files:
+                ret[e] = files[e]
 
-    ret[name] = os.path.join(dest_dir, name)
-    save(ret[name], tgz_contents.getvalue())
+        ret[name] = tgz_path
 
     return ret
 
@@ -208,10 +209,11 @@ def compress_files(files, name, excluded, dest_dir):
 def uncompress_files(files, folder, name):
     try:
         for file_name, content in files:
-            save(os.path.join(folder, file_name), content)
             if os.path.basename(file_name) == name:
-                #  Unzip the file and keep the tgz
+                #  Unzip the file and not keep the tgz
                 tar_extract(BytesIO(content), folder)
+            else:
+                save(os.path.join(folder, file_name), content)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (folder, str(e))
         # try to remove the files
