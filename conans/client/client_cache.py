@@ -94,9 +94,14 @@ class ClientCache(SimplePaths):
             packages = []
         return packages
 
-    def load_digest(self, conan_reference):
+    def load_manifest(self, conan_reference):
         '''conan_id = sha(zip file)'''
-        filename = os.path.join(self.export(conan_reference), CONAN_MANIFEST)
+        filename = self.digestfile_conanfile(conan_reference)
+        return FileTreeManifest.loads(load(filename))
+
+    def load_package_manifest(self, package_reference):
+        '''conan_id = sha(zip file)'''
+        filename = self.digestfile_package(package_reference)
         return FileTreeManifest.loads(load(filename))
 
     def conan_manifests(self, conan_reference):

@@ -84,10 +84,6 @@ class ConanClientConfigParser(ConfigParser):
         return result
 
     @property
-    def deprecated_remotes(self):
-        return self.get_conf("remotes")
-
-    @property
     def proxies(self):
         """ optional field, might not exist
         """

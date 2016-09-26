@@ -191,7 +191,7 @@ class TestConan(ConanFile):
 
         # Fake datetime from exported date and upload again
         digest_path = os.path.join(self.client.paths.export(self.conan_ref), CONAN_MANIFEST)
-        old_digest = self.client.paths.load_digest(self.conan_ref)
+        old_digest = self.client.paths.load_manifest(self.conan_ref)
         fake_digest = FileTreeManifest(2, old_digest.file_sums)
         save(digest_path, str(fake_digest))
 
