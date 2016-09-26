@@ -36,14 +36,6 @@ class CompleteFlowTest(unittest.TestCase):
         self.assertNotIn("Compressing exported files", self.client.user_io.out)
         self.assertNotIn("Compressing package", self.client.user_io.out)
 
-        # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS
-        # WITHOUT COMPRESSING AGAIN
-        other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        other_client.run("install Hello0/0.1@lasote/stable --all")
-        self.client.run("upload Hello0/0.1@lasote/stable --all")
-        self.assertNotIn("Compressing exported files", self.client.user_io.out)
-        self.assertNotIn("Compressing package", self.client.user_io.out)
-
     def reuse_downloaded_tgz_test(self):
         '''Download packages from a remote, then copy to another channel
         and reupload them. It needs to compress it again, not tgz is kept'''

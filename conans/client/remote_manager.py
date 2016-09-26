@@ -31,14 +31,8 @@ class RemoteManager(object):
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
 
         # FIXME: Check modified exports by hand?
+        the_files = compress_export_files(the_files, basedir, self._output)
 
-        if EXPORT_TGZ_NAME not in the_files:
-            self._output.rewrite_line("Compressing exported files...")
-            the_files = compress_export_files(the_files, basedir)
-        else:
-            the_files = {EXPORT_TGZ_NAME: the_files[EXPORT_TGZ_NAME],
-                         CONANFILE: the_files[CONANFILE],
-                         CONAN_MANIFEST: the_files[CONAN_MANIFEST]}
         return self._call_remote(remote, "upload_conan", conan_reference, the_files)
 
     def upload_package(self, package_reference, remote):
@@ -58,7 +52,6 @@ class RemoteManager(object):
         read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
         if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
             if PACKAGE_TGZ_NAME in the_files:
-                del the_files[PACKAGE_TGZ_NAME]
                 try:
                     tgz_path = os.path.join(basedir, PACKAGE_TGZ_NAME)
                     os.unlink(tgz_path)
@@ -70,14 +63,7 @@ class RemoteManager(object):
         self._output.writeln("")
         logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
 
-        # Check if conan_package.tgz is present
-        if PACKAGE_TGZ_NAME not in the_files:
-            self._output.rewrite_line("Compressing package...")
-            the_files = compress_package_files(the_files, basedir)
-        else:
-            the_files = {PACKAGE_TGZ_NAME: the_files[PACKAGE_TGZ_NAME],
-                         CONANINFO: the_files[CONANINFO],
-                         CONAN_MANIFEST: the_files[CONAN_MANIFEST]}
+        the_files = compress_package_files(the_files, basedir, self._output)
 
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files)
         logger.debug("====> Time remote_manager upload_package: %f" % (time.time() - t1))
@@ -166,12 +152,31 @@ class RemoteManager(object):
             raise ConanException(exc)
 
 
-def compress_package_files(files, pkg_base_path):
-    return compress_files(files, PACKAGE_TGZ_NAME, excluded=(CONANINFO, CONAN_MANIFEST), dest_dir=pkg_base_path)
+def compress_package_files(files, pkg_base_path, output):
+    # Check if conan_package.tgz is present
+    if PACKAGE_TGZ_NAME not in files:
+        output.rewrite_line("Compressing package...")
+        return compress_files(files, PACKAGE_TGZ_NAME, 
+                              excluded=(CONANINFO, CONAN_MANIFEST), dest_dir=pkg_base_path)
+    else:
+        the_files = {PACKAGE_TGZ_NAME: files[PACKAGE_TGZ_NAME],
+                     CONANINFO: files[CONANINFO],
+                     CONAN_MANIFEST: files[CONAN_MANIFEST]}
+
+        return the_files
 
 
-def compress_export_files(files, export_base_path):
-    return compress_files(files, EXPORT_TGZ_NAME, excluded=(CONANFILE, CONAN_MANIFEST), dest_dir=export_base_path)
+def compress_export_files(files, export_base_path, output):
+    if EXPORT_TGZ_NAME not in files:
+        output.rewrite_line("Compressing exported files...")
+        return compress_files(files, EXPORT_TGZ_NAME, 
+                              excluded=(CONANFILE, CONAN_MANIFEST), dest_dir=export_base_path)
+    else:
+        the_files = {EXPORT_TGZ_NAME: files[EXPORT_TGZ_NAME],
+                     CONANFILE: files[CONANFILE],
+                     CONAN_MANIFEST: files[CONAN_MANIFEST]}
+        return the_files
+    return
 
 
 def compress_files(files, name, excluded, dest_dir):
