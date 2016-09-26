@@ -12,6 +12,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs
+import tempfile
 
 
 def handle_return_deserializer(deserializer=None):
@@ -118,9 +119,10 @@ class RestApiClient(object):
 
         # TODO: Get fist an snapshot and compare files and download only required?
 
-        # Download the resources
-        contents = self.download_files(urls, self._output)
-        return contents
+        # Download the resources to a temp folder
+        temp_folder = tempfile.mkdtemp(suffix='conan_download')
+        file_paths = self.download_files_to_folder(urls, temp_folder, self._output)
+        return file_paths
 
     def get_package(self, package_reference):
         """Gets a dict of filename:contents from package"""
@@ -133,8 +135,9 @@ class RestApiClient(object):
         # TODO: Get fist an snapshot and compare files and download only required?
 
         # Download the resources
-        contents = self.download_files(urls, self._output)
-        return contents
+        temp_folder = tempfile.mkdtemp(suffix='conan_download')
+        file_paths = self.download_files_to_folder(urls, temp_folder, self._output)
+        return file_paths
 
     def upload_conan(self, conan_reference, the_files):
         """
@@ -360,6 +363,25 @@ class RestApiClient(object):
             if output:
                 output.writeln("")
             yield os.path.normpath(filename), contents
+
+    def download_files_to_folder(self, file_urls, to_folder, output=None):
+        """
+        :param: file_urls is a dict with {filename: abs_path}
+
+        It writes downloaded files to disk (appending to file, only keeps chunks in memory)
+        """
+        downloader = Downloader(self.requester, output, self.VERIFY_SSL)
+        ret = {}
+        for filename, resource_url in file_urls.items():
+            if output:
+                output.writeln("Downloading %s" % filename)
+            auth, _ = self._file_server_capabilities(resource_url)
+            abs_path = os.path.join(to_folder, filename)
+            downloader.download(resource_url, abs_path, auth=auth)
+            if output:
+                output.writeln("")
+            ret[filename] = abs_path
+        return ret
 
     def upload_files(self, file_urls, files, output):
         t1 = time.time()

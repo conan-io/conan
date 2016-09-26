@@ -125,8 +125,10 @@ class Downloader(object):
                         if self.output:
                             print_progress(self.output, units)
                         last_progress = units
-
-            return bytes(ret)
+            if not file_path:
+                return bytes(ret)
+            else:
+                return
         except Exception as e:
             logger.debug(e.__class__)
             logger.debug(traceback.format_exc())

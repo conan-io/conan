@@ -12,6 +12,7 @@ from conans.util.files import save
 from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
 import os
 from conans.model.manifest import FileTreeManifest
+import tempfile
 
 
 class MockRemoteClient(object):
@@ -19,8 +20,13 @@ class MockRemoteClient(object):
     def __init__(self):
         self.upload_package = Mock()
         self.get_conan_digest = Mock()
-        self.get_conanfile = Mock(return_value=[("one.txt", "ONE")])
-        self.get_package = Mock(return_value=[("one.txt", "ONE")])
+        tmp_folder = tempfile.mkdtemp(suffix='conan_download')
+        save(os.path.join(tmp_folder, "one.txt"), "ONE")
+        self.get_conanfile = Mock(return_value={"one.txt": os.path.join(tmp_folder, "one.txt")})
+
+        tmp_folder = tempfile.mkdtemp(suffix='conan_download')
+        save(os.path.join(tmp_folder, "one.txt"), "ONE")
+        self.get_package = Mock(return_value={"one.txt":  os.path.join(tmp_folder, "one.txt")})
         self.remote_url = None
 
         self.raise_count = 0
