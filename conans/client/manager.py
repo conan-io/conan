@@ -31,6 +31,7 @@ from conans.model.scope import Scopes
 from conans.client.client_cache import ClientCache
 from collections import OrderedDict
 from conans.client.source import config_source
+import time
 
 
 def get_user_channel(text):
@@ -354,6 +355,7 @@ If not:
     def upload(self, conan_reference, package_id=None, remote=None, all_packages=None,
                force=False):
 
+        t1 = time.time()
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
         uploader = ConanUploader(self._client_cache, self._user_io, remote_proxy)
 
@@ -374,6 +376,8 @@ If not:
             uploader.upload_package(PackageReference(conan_reference, package_id))
         else:  # Upload conans
             uploader.upload_conan(conan_reference, all_packages=all_packages, force=force)
+
+        logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 
     def search(self, pattern_or_reference=None, remote=None, ignorecase=True, packages_query=None):
         """ Print the single information saved in conan.vars about all the packages

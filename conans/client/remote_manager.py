@@ -1,6 +1,6 @@
 from conans.errors import ConanException, ConanConnectionError
 from requests.exceptions import ConnectionError
-from conans.util.files import build_files_set, save, tar_extract, rmdir
+from conans.util.files import save, tar_extract, rmdir
 from conans.util.log import logger
 import traceback
 import os
@@ -10,6 +10,7 @@ import tarfile
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
 import shutil
+import time
 
 
 class RemoteManager(object):
@@ -24,20 +25,49 @@ class RemoteManager(object):
         """Will upload the conans to the first remote"""
         basedir = self._client_cache.export(conan_reference)
         rel_files = self._client_cache.export_paths(conan_reference)
+        the_files = {filename: os.path.join(basedir, filename) for filename in rel_files}
 
-        the_files = build_files_set(basedir, rel_files)
-        the_files = compress_export_files(the_files)
+        if CONANFILE not in rel_files or CONAN_MANIFEST not in rel_files:
+            raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
+
+        # FIXME: Check modified exports by hand?
+        the_files = compress_export_files(the_files, basedir, self._output)
+
         return self._call_remote(remote, "upload_conan", conan_reference, the_files)
 
     def upload_package(self, package_reference, remote):
         """Will upload the package to the first remote"""
+        t1 = time.time()
         basedir = self._client_cache.package(package_reference)
         rel_files = self._client_cache.package_paths(package_reference)
 
-        the_files = build_files_set(basedir, rel_files)
-        self._output.rewrite_line("Compressing package...")
-        the_files = compress_package_files(the_files)
-        return self._call_remote(remote, "upload_package", package_reference, the_files)
+        self._output.rewrite_line("Checking package integrity...")
+        if CONANINFO not in rel_files or CONAN_MANIFEST not in rel_files:
+            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
+
+        the_files = {filename: os.path.join(basedir, filename) for filename in rel_files}
+        logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
+
+        # If package has been modified remove tgz to regenerate it
+        read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
+        if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
+            if PACKAGE_TGZ_NAME in the_files:
+                try:
+                    tgz_path = os.path.join(basedir, PACKAGE_TGZ_NAME)
+                    os.unlink(tgz_path)
+                except Exception:
+                    pass
+            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
+        else:
+            self._output.rewrite_line("Package integrity OK!")
+        self._output.writeln("")
+        logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
+
+        the_files = compress_package_files(the_files, basedir, self._output)
+
+        tmp = self._call_remote(remote, "upload_package", package_reference, the_files)
+        logger.debug("====> Time remote_manager upload_package: %f" % (time.time() - t1))
+        return tmp
 
     def get_conan_digest(self, conan_reference, remote):
         """
@@ -122,38 +152,61 @@ class RemoteManager(object):
             raise ConanException(exc)
 
 
-def compress_package_files(files):
-    return compress_files(files, PACKAGE_TGZ_NAME, excluded=(CONANINFO, CONAN_MANIFEST))
+def compress_package_files(files, pkg_base_path, output):
+    # Check if conan_package.tgz is present
+    if PACKAGE_TGZ_NAME not in files:
+        output.rewrite_line("Compressing package...")
+        return compress_files(files, PACKAGE_TGZ_NAME, 
+                              excluded=(CONANINFO, CONAN_MANIFEST), dest_dir=pkg_base_path)
+    else:
+        the_files = {PACKAGE_TGZ_NAME: files[PACKAGE_TGZ_NAME],
+                     CONANINFO: files[CONANINFO],
+                     CONAN_MANIFEST: files[CONAN_MANIFEST]}
+
+        return the_files
 
 
-def compress_export_files(files):
-    return compress_files(files, EXPORT_TGZ_NAME, excluded=(CONANFILE, CONAN_MANIFEST))
+def compress_export_files(files, export_base_path, output):
+    if EXPORT_TGZ_NAME not in files:
+        output.rewrite_line("Compressing exported files...")
+        return compress_files(files, EXPORT_TGZ_NAME, 
+                              excluded=(CONANFILE, CONAN_MANIFEST), dest_dir=export_base_path)
+    else:
+        the_files = {EXPORT_TGZ_NAME: files[EXPORT_TGZ_NAME],
+                     CONANFILE: files[CONANFILE],
+                     CONAN_MANIFEST: files[CONAN_MANIFEST]}
+        return the_files
+    return
 
 
-def compress_files(files, name, excluded):
+def compress_files(files, name, excluded, dest_dir):
     """Compress the package and returns the new dict (name => content) of files,
     only with the conanXX files and the compressed file"""
 
-    tgz_contents = BytesIO()
-    tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_contents)
+    # FIXME, better write to disk sequentially and not keep tgz contents in memory
+    tgz_path = os.path.join(dest_dir, name)
+    with open(tgz_path, "wb") as tgz_handle:
+        # tgz_contents = BytesIO()
+        tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
-    def addfile(name, file_info, tar):
-        info = tarfile.TarInfo(name=name)
-        the_str = BytesIO(file_info["contents"])
-        info.size = len(file_info["contents"])
-        info.mode = file_info["mode"]
-        tar.addfile(tarinfo=info, fileobj=the_str)
+        def addfile(name, abs_path, tar):
+            info = tarfile.TarInfo(name=name)
+            info.size = os.stat(abs_path).st_size
+            info.mode = os.stat(abs_path).st_mode
+            with open(abs_path, 'rb') as file_handler:
+                tar.addfile(tarinfo=info, fileobj=file_handler)
 
-    for the_file, info in files.items():
-        if the_file not in excluded:
-            addfile(the_file, info, tgz)
+        for filename, abs_path in files.items():
+            if filename not in excluded:
+                addfile(filename, abs_path, tgz)
 
-    tgz.close()
-    ret = {}
-    for e in excluded:
-        if e in files:
-            ret[e] = files[e]["contents"]
-    ret[name] = tgz_contents.getvalue()
+        tgz.close()
+        ret = {}
+        for e in excluded:
+            if e in files:
+                ret[e] = files[e]
+
+        ret[name] = tgz_path
 
     return ret
 
@@ -161,11 +214,11 @@ def compress_files(files, name, excluded):
 def uncompress_files(files, folder, name):
     try:
         for file_name, content in files:
-            if os.path.basename(file_name) != name:
-                save(os.path.join(folder, file_name), content)
-            else:
-                #  Unzip the file
+            if os.path.basename(file_name) == name:
+                #  Unzip the file and not keep the tgz
                 tar_extract(BytesIO(content), folder)
+            else:
+                save(os.path.join(folder, file_name), content)
     except Exception as e:
         error_msg = "Error while downloading/extracting files to %s\n%s\n" % (folder, str(e))
         # try to remove the files

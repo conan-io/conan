@@ -4,7 +4,7 @@ from conans.test.utils.test_files import hello_source_files
 from conans.client.manager import CONANFILE
 import os
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONAN_MANIFEST
+from conans.paths import CONAN_MANIFEST, CONANINFO
 from conans.util.files import save
 from conans.model.manifest import FileTreeManifest
 from conans.client.proxy import ConanProxy
@@ -40,17 +40,23 @@ class DownloadTest(unittest.TestCase):
         files = hello_source_files()
         client.save(files, path=reg_folder)
         client.save({CONANFILE: myconan1,
-                       CONAN_MANIFEST: str(conan_digest),
-                      "include/math/lib1.h": "//copy",
-                      "my_lib/debug/libd.a": "//copy",
-                      "my_data/readme.txt": "//copy"}, path=reg_folder)
+                     CONAN_MANIFEST: str(conan_digest),
+                     "include/math/lib1.h": "//copy",
+                     "my_lib/debug/libd.a": "//copy",
+                     "my_data/readme.txt": "//copy"}, path=reg_folder)
 
         package_ref = PackageReference(conan_ref, "fakeid")
         package_folder = client.paths.package(package_ref)
+        save(os.path.join(package_folder, CONANINFO), "info")
+        save(os.path.join(package_folder, CONAN_MANIFEST), "manifest")
         save(os.path.join(package_folder, "include", "lib1.h"), "//header")
         save(os.path.join(package_folder, "lib", "my_lib", "libd.a"), "//lib")
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
              "//res")
+
+        digest_path = client.client_cache.digestfile_package(package_ref)
+        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+        save(os.path.join(package_folder, CONAN_MANIFEST), str(expected_manifest))
 
         client.run("upload %s" % str(conan_ref))
         client.run("upload %s -p %s" % (str(conan_ref), package_ref.package_id))

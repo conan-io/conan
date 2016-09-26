@@ -6,7 +6,7 @@ import json
 from conans.paths import CONANFILE, CONAN_MANIFEST
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import md5, decode_text
+from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -144,7 +144,7 @@ class RestApiClient(object):
 
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
-        local_snapshot = {filename: md5(content) for filename, content in the_files.items()}
+        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -154,8 +154,8 @@ class RestApiClient(object):
         if files_to_upload:
             # Get the upload urls
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
-            filesizes = {filename.replace("\\", "/"): len(content)
-                         for filename, content in files_to_upload.items()}
+            filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
+                         for filename, abs_path in files_to_upload.items()}
             urls = self._get_json(url, data=filesizes)
             self.upload_files(urls, files_to_upload, self._output)
         if deleted:
@@ -168,9 +168,10 @@ class RestApiClient(object):
         """
         self.check_credentials()
 
+        t1 = time.time()
         # Get the remote snapshot
         remote_snapshot = self._get_package_snapshot(package_reference)
-        local_snapshot = {filename: md5(content) for filename, content in the_files.items()}
+        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -180,7 +181,7 @@ class RestApiClient(object):
             url = "%s/conans/%s/packages/%s/upload_urls" % (self._remote_api_url,
                                                             "/".join(package_reference.conan),
                                                             package_reference.package_id)
-            filesizes = {filename: len(content) for filename, content in files_to_upload.items()}
+            filesizes = {filename: os.stat(abs_path).st_size for filename, abs_path in files_to_upload.items()}
             self._output.rewrite_line("Requesting upload permissions...")
             urls = self._get_json(url, data=filesizes)
             self._output.rewrite_line("Requesting upload permissions...Done!")
@@ -191,6 +192,8 @@ class RestApiClient(object):
             self._output.writeln("")
         if deleted:
             self._remove_package_files(package_reference, deleted)
+
+        logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
 
     @handle_return_deserializer()
     def authenticate(self, user, password):
