@@ -2,6 +2,7 @@ from conans.model.config_dict import ConfigDict
 from conans.model.values import Values
 from conans.util.sha import sha1
 from collections import defaultdict
+from conans.errors import ConanException
 
 
 class PackageOptions(ConfigDict):
@@ -71,7 +72,10 @@ class Options(object):
         return setattr(self._options, attr, value)
 
     def __delattr__(self, field):
-        self._options.__delattr__(field)
+        try:
+            self._options.__delattr__(field)
+        except ConanException:
+            pass
 
     @property
     def values(self):
