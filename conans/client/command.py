@@ -300,8 +300,6 @@ path to the CMake binary directory, like this:
                             help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("--all", action='store_true', default=False,
                             help='Install all packages from the specified package recipe')
-        parser.add_argument("--integrity", "-i", action='store_true', default=False,
-                            help='Check that the stored recipe or package manifests are correct')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="update with new upstream packages")
@@ -309,6 +307,20 @@ path to the CMake binary directory, like this:
                             help='Define scopes for packages')
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
+
+        # Manifests arguments
+        default_manifest_folder = '.conan_manifests'
+        parser.add_argument("--manifests", "-m", const=default_manifest_folder, nargs="?",
+                            help='Install dependencies manifests in folder for later verify.'
+                            ' Default folder is .conan_manifests, but can be changed')
+        parser.add_argument("--manifests-interactive", "-mi", const=default_manifest_folder,
+                            nargs="?",
+                            help='Install dependencies manifests in folder for later verify, '
+                            'asking user for confirmation. '
+                            'Default folder is .conan_manifests, but can be changed')
+        parser.add_argument("--verify", "-v", const=default_manifest_folder, nargs="?",
+                            help='Verify dependencies manifests against stored ones')
+
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -332,6 +344,23 @@ path to the CMake binary directory, like this:
             options = self._get_tuples_list_from_extender_arg(args.options)
             settings = self._get_tuples_list_from_extender_arg(args.settings)
             scopes = Scopes.from_list(args.scope) if args.scope else None
+            if args.manifests and args.manifests_interactive:
+                raise ConanException("Do not specify both manifests and "
+                                     "manifests-interactive arguments")
+            if args.verify and (args.manifests or args.manifests_interactive):
+                raise ConanException("Do not specify both 'verify' and "
+                                     "'manifests' or 'manifests-interactive' arguments")
+            manifest_folder = args.verify or args.manifests or args.manifests_interactive
+            if manifest_folder:
+                if not os.path.isabs(manifest_folder):
+                    if isinstance(reference, ConanFileReference):
+                        manifest_folder = os.path.join(current_path, manifest_folder)
+                    else:
+                        manifest_folder = os.path.join(reference, manifest_folder)
+                manifest_verify = args.verify is not None
+                manifest_interactive = args.manifests_interactive is not None
+            else:
+                manifest_verify = manifest_interactive = False
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,
@@ -340,7 +369,9 @@ path to the CMake binary directory, like this:
                                   build_mode=args.build,
                                   filename=args.file,
                                   update=args.update,
-                                  integrity=args.integrity,
+                                  manifest_folder=manifest_folder,
+                                  manifest_verify=manifest_verify,
+                                  manifest_interactive=manifest_interactive,
                                   scopes=scopes,
                                   generators=args.generator)
 
@@ -364,8 +395,6 @@ path to the CMake binary directory, like this:
                             nargs=1, action=Extender)
         parser.add_argument("--only", "-n",
                             help='show fields only')
-        parser.add_argument("--integrity", "-i", action='store_true', default=False,
-                            help='Check that the stored recipe or package manifests are correct')
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="check updates exist from upstream remotes")
         parser.add_argument("--build_order", "-bo",
@@ -390,7 +419,6 @@ path to the CMake binary directory, like this:
                            settings=settings,
                            info=args.only or True,
                            check_updates=args.update,
-                           integrity=args.integrity,
                            filename=args.file,
                            build_order=args.build_order,
                            scopes=scopes)
