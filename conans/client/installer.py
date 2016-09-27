@@ -189,6 +189,7 @@ class ConanInstaller(object):
 
             os.chdir(build_folder)
             create_package(conan_file, build_folder, package_folder, output)
+            self._remote_proxy.handle_package_manifest(package_reference, installed=True)
         else:
             self._raise_package_not_found_error(conan_ref, conan_file)
 

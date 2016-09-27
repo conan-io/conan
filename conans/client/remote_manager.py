@@ -1,16 +1,17 @@
-from conans.errors import ConanException, ConanConnectionError
-from requests.exceptions import ConnectionError
-from conans.util.files import save, tar_extract, rmdir, mkdir, relative_dirs
-from conans.util.log import logger
-import traceback
 import os
-from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
-from io import BytesIO
+import shutil
 import tarfile
+import time
+import traceback
+
+from requests.exceptions import ConnectionError
+
+from conans.errors import ConanException, ConanConnectionError
+from conans.util.files import tar_extract, rmdir, relative_dirs, mkdir
+from conans.util.log import logger
+from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
-import shutil
-import time
 
 
 class RemoteManager(object):

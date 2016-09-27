@@ -44,7 +44,7 @@ class ConanUploader(object):
         except NotFoundException:
             return  # First upload
 
-        local_digest = self._paths.load_digest(conan_ref)
+        local_digest = self._paths.load_manifest(conan_ref)
 
         if remote_conan_digest.time > local_digest.time:
             raise ConanException("Remote conans is newer than local conans: "

@@ -19,7 +19,6 @@ class CompleteFlowTest(unittest.TestCase):
     def reuse_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True)
-        files["another_export_file.txt"] = "to compress"
         self.client.save(files)
         self.client.run("export lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))

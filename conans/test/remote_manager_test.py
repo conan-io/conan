@@ -1,18 +1,20 @@
+import os
+import tempfile
 import unittest
-from conans.client.remote_manager import RemoteManager
+
 from mock import Mock
+
+from conans.client.client_cache import ClientCache
+from conans.client.remote_manager import RemoteManager
+from conans.client.remote_registry import Remote
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.manifest import FileTreeManifest
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
 from conans.test.tools import TestBufferConanOutput, TestClient
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.client.remote_registry import Remote
-from conans.client.client_cache import ClientCache
 from conans.util.files import save
-from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
-import os
-from conans.model.manifest import FileTreeManifest
-import tempfile
 
 
 class MockRemoteClient(object):
