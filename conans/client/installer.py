@@ -18,7 +18,7 @@ from conans.client.file_copier import report_copied_files
 from conans.client.source import config_source
 
 
-def init_info_objects(deps_graph, paths):
+def init_package_info(deps_graph, paths):
     """ Made external so it is independent of installer and can called
     in testing too
     """
@@ -37,6 +37,33 @@ def init_info_objects(deps_graph, paths):
             except Exception as e:
                 msg = format_conanfile_exception(str(conan_ref), "package_info", e)
                 raise ConanException(msg)
+
+
+def propagate_package_info(deps_graph):
+    """ takes the exports from upper level and updates the imports
+    right now also the imports are propagated, but should be checked
+    E.g. Conan A, depends on B.  A=>B
+    B exports an include directory "my_dir", with root "/...../0123efe"
+    A imports are the exports of B, plus any other conans it depends on
+    A.imports.include_dirs = B.export.include_paths.
+    Note the difference, include_paths used to compute full paths as the user
+    defines export relative to its folder
+    """
+    ordered = deps_graph.by_levels()
+    inverse = deps_graph.inverse_levels()
+    flat = []
+    for level in inverse:
+        level = sorted(level, key=lambda x: x.conan_ref)
+        flat.extend(level)
+
+    for level in ordered[1:]:
+        for node in level:
+            node_order = deps_graph.ordered_closure(node, flat)
+            _, conanfile = node
+            for n in node_order:
+                conanfile.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
+                conanfile.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
+    return ordered
 
 
 class ConanInstaller(object):
@@ -70,10 +97,10 @@ class ConanInstaller(object):
         passes their exported build flags and included directories to the downstream
         imports flags
         """
-        init_info_objects(deps_graph, self._paths)
+        init_package_info(deps_graph, self._paths)
 
         # order by levels and propagate exports as download imports
-        nodes_by_level = deps_graph.propagate_info_objects()
+        nodes_by_level = propagate_package_info(deps_graph)
         return nodes_by_level
 
     def _compute_private_nodes(self, deps_graph, build_mode):

@@ -9,7 +9,7 @@ from conans.client.loader import ConanFileLoader
 from conans.util.files import save
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.client.installer import init_info_objects
+from conans.client.installer import init_package_info, propagate_package_info
 from conans.model.scope import Scopes
 
 
@@ -86,12 +86,9 @@ class ConanRequirementsTest(unittest.TestCase):
         self.retriever.conan("SDL2_ttf", ["freeType", "SDL2"])
         root = self.retriever.root("MyProject", ["SDL2_ttf"])
         deps_graph = self.builder.load(None, root)
-        init_info_objects(deps_graph, self.retriever)
-        bylevel = deps_graph.propagate_info_objects()
+        init_package_info(deps_graph, self.retriever)
+        bylevel = propagate_package_info(deps_graph)
         E = bylevel[-1][0]
         self.assertEqual(E.conanfile.deps_cpp_info.libs,
                          ['SDL2_ttf', 'SDL2', 'rt', 'pthread', 'dl', 'freeType',
                           'BZip2', 'LibPNG', 'm', 'ZLib'])
-
-
-

@@ -104,32 +104,6 @@ class DepsGraph(object):
         return "\n".join(["Nodes:\n    ",
                           "\n    ".join(repr(n) for n in self.nodes)])
 
-    def propagate_info_objects(self):
-        """ takes the exports from upper level and updates the imports
-        right now also the imports are propagated, but should be checked
-        E.g. Conan A, depends on B.  A=>B
-        B exports an include directory "my_dir", with root "/...../0123efe"
-        A imports are the exports of B, plus any other conans it depends on
-        A.imports.include_dirs = B.export.include_paths.
-        Note the difference, include_paths used to compute full paths as the user
-        defines export relative to its folder
-        """
-        ordered = self.by_levels()
-        inverse = self._inverse_levels()
-        flat = []
-        for level in inverse:
-            level = sorted(level, key=lambda x: x.conan_ref)
-            flat.extend(level)
-
-        for level in ordered[1:]:
-            for node in level:
-                node_order = self.ordered_closure(node, flat)
-                _, conanfile = node
-                for n in node_order:
-                    conanfile.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
-                    conanfile.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
-        return ordered
-
     def propagate_info(self):
         """ takes the exports from upper level and updates the imports
         right now also the imports are propagated, but should be checked
@@ -202,7 +176,7 @@ class DepsGraph(object):
         return closure
 
     def build_order(self, references):
-        levels = self._inverse_levels()
+        levels = self.inverse_levels()
         closure = self._inverse_closure(references)
         result = []
         for level in reversed(levels):
@@ -235,7 +209,7 @@ class DepsGraph(object):
                 result.append(current_level)
         return result
 
-    def _inverse_levels(self):
+    def inverse_levels(self):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
