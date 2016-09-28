@@ -155,6 +155,9 @@ class DepsGraph(object):
                     conanfile.options.propagate_downstream(nref, nconan.info.full_options)
                     # Might be never used, but update original requirement, just in case
                     conanfile.requires[nref.name].conan_reference = nref
+
+                # Make sure not duplicated
+                indirect_reqs.difference_update(direct_reqs)
                 # There might be options that are not upstream
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 

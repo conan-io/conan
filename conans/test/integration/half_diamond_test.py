@@ -1,6 +1,8 @@
 import unittest
 from conans.test.tools import TestClient
 from conans.paths import CONANFILE
+from conans.util.files import load
+import os
 
 
 class HalfDiamondTest(unittest.TestCase):
@@ -37,3 +39,14 @@ class HelloReuseConan(ConanFile):
 
         self.client.run("install . --build missing")
         self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
+
+    def check_duplicated_full_requires_test(self):
+        self._export("Hello0")
+        self._export("Hello1", ["Hello0/0.1@lasote/stable"])
+        self._export("Hello2", ["Hello1/0.1@lasote/stable", "Hello0/0.1@lasote/stable"],
+                     export=False)
+
+        self.client.run("install . --build missing")
+        self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
+        conaninfo = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        self.assertEqual(1, conaninfo.count("Hello0/0.1@lasote/stable"))
