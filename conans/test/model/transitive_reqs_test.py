@@ -36,7 +36,7 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         save(conan_path, content)
 
-    def get_conanfile(self, conan_ref):
+    def get_recipe(self, conan_ref):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         return conan_path
 

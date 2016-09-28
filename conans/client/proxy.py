@@ -70,17 +70,17 @@ class ConanProxy(object):
             remote = self._registry.get_ref(package_reference.conan)
             self._manifest_manager.check_package(package_reference, remote)
 
-    def get_conanfile(self, conan_reference):
+    def get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
 
         def _refresh():
-            conan_dir_path = self._client_cache.export(conan_reference)
-            rmdir(conan_dir_path)
+            export_path = self._client_cache.export(conan_reference)
+            rmdir(export_path)
             # It might need to remove shortpath
             rmdir(self._client_cache.source(conan_reference), True)
             current_remote, _ = self._get_remote(conan_reference)
             output.info("Retrieving from remote '%s'..." % current_remote.name)
-            self._remote_manager.get_conanfile(conan_reference, current_remote)
+            self._remote_manager.get_recipe(conan_reference, export_path, current_remote)
             if self._update:
                 output.info("Updated!")
             else:
@@ -88,7 +88,6 @@ class ConanProxy(object):
 
         # check if it is in disk
         conanfile_path = self._client_cache.conanfile(conan_reference)
-
         path_exist = path_exists(conanfile_path, self._client_cache.store)
 
         if path_exist:
@@ -122,7 +121,7 @@ class ConanProxy(object):
                                          "to replace it." % (remote.name, conan_reference))
 
         else:
-            self._retrieve_conanfile(conan_reference, output)
+            self._retrieve_recipe(conan_reference, output)
 
         if self._manifest_manager:
             remote = self._registry.get_ref(conan_reference)
@@ -146,13 +145,14 @@ class ConanProxy(object):
 
         return 0
 
-    def _retrieve_conanfile(self, conan_reference, output):
+    def _retrieve_recipe(self, conan_reference, output):
         """ returns the requested conanfile object, retrieving it from
         remotes if necessary. Can raise NotFoundException
         """
         def _retrieve_from_remote(remote):
             output.info("Trying with '%s'..." % remote.name)
-            result = self._remote_manager.get_conanfile(conan_reference, remote)
+            export_path = self._client_cache.export(conan_reference)
+            result = self._remote_manager.get_recipe(conan_reference, export_path, remote)
             self._registry.set_ref(conan_reference, remote)
             return result
 
@@ -261,7 +261,8 @@ class ConanProxy(object):
     def download_packages(self, reference, package_ids):
         assert(isinstance(package_ids, list))
         remote, _ = self._get_remote(reference)
-        self._remote_manager.get_conanfile(reference, remote)
+        export_path = self._client_cache.export(reference)
+        self._remote_manager.get_recipe(reference, export_path, remote)
         self._registry.set_ref(reference, remote)
         output = ScopedOutput(str(reference), self._out)
         for package_id in package_ids:
@@ -280,7 +281,8 @@ class ConanProxy(object):
         try:
             output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
             # Will raise if not found NotFoundException
-            self._remote_manager.get_package(package_reference, remote)
+            package_path = self._client_cache.package(package_reference)
+            self._remote_manager.get_package(package_reference, package_path, remote)
             output.success('Package installed %s' % package_id)
             return True
         except ConanConnectionError:

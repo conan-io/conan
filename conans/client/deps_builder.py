@@ -416,7 +416,7 @@ class DepsBuilder(object):
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req):
         """ creates and adds a new node to the dependency graph
         """
-        conanfile_path = self._retriever.get_conanfile(requirement.conan_reference)
+        conanfile_path = self._retriever.get_recipe(requirement.conan_reference)
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output)
         if dep_conanfile:

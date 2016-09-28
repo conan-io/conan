@@ -108,7 +108,7 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
-    def get_conanfile(self, conan_reference):
+    def get_recipe(self, conan_reference, dest_folder):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
@@ -118,13 +118,10 @@ class RestApiClient(object):
             raise NotFoundException("Conan '%s' doesn't have a %s!" % (conan_reference, CONANFILE))
 
         # TODO: Get fist an snapshot and compare files and download only required?
-
-        # Download the resources to a temp folder
-        temp_folder = tempfile.mkdtemp(suffix='conan_download')
-        file_paths = self.download_files_to_folder(urls, temp_folder, self._output)
+        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def get_package(self, package_reference):
+    def get_package(self, package_reference, dest_folder):
         """Gets a dict of filename:contents from package"""
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
@@ -135,8 +132,7 @@ class RestApiClient(object):
         # TODO: Get fist an snapshot and compare files and download only required?
 
         # Download the resources
-        temp_folder = tempfile.mkdtemp(suffix='conan_download')
-        file_paths = self.download_files_to_folder(urls, temp_folder, self._output)
+        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
     def upload_conan(self, conan_reference, the_files):

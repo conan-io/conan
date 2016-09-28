@@ -86,36 +86,30 @@ class RemoteManager(object):
         returns (ConanDigest, remote_name)"""
         return self._call_remote(remote, "get_package_digest", package_reference)
 
-    def get_conanfile(self, conan_reference, remote):
+    def get_recipe(self, conan_reference, dest_folder, remote):
         """
         Read the conans from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
-        tmp_export_files = self._call_remote(remote, "get_conanfile", conan_reference)
-        export_folder = self._client_cache.export(conan_reference)
-
-        files = move_and_unzip_to(tmp_export_files, export_folder, EXPORT_TGZ_NAME)
-
+        zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
+        files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
         rmdir(self._client_cache.source(conan_reference), True)
 #       TODO: Download only the CONANFILE file and only download the rest of files
 #       in install if needed (not found remote package)
         return files
 
-    def get_package(self, package_reference, remote):
+    def get_package(self, package_reference, dest_folder, remote):
         """
         Read the conans package from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
-        tmp_package_files = self._call_remote(remote, "get_package", package_reference)
-        destination_dir = self._client_cache.package(package_reference)
-
-        files = move_and_unzip_to(tmp_package_files, destination_dir, PACKAGE_TGZ_NAME)
-
+        zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
+        files = unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
         # Issue #214 https://github.com/conan-io/conan/issues/214
-        for dirname, _, files in os.walk(destination_dir):
+        for dirname, _, files in os.walk(dest_folder):
             for fname in files:
                 touch(os.path.join(dirname, fname))
 
@@ -218,19 +212,14 @@ def compress_files(files, name, excluded, dest_dir):
     return ret
 
 
-def move_and_unzip_to(package_files, destination_dir, tgz_name):
+def unzip_and_get_files(files, destination_dir, tgz_name):
     '''Moves all files from package_files, {relative_name: tmp_abs_path}
     to destination_dir, unzipping the "tgz_name" if found'''
 
-    tgz_file = package_files.get(tgz_name, None)
+    tgz_file = files.get(tgz_name, None)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir)
-        del package_files[tgz_name]
-
-    for file_name, tmp_file_path in package_files.items():
-        dest = os.path.join(destination_dir, file_name)
-        mkdir(os.path.dirname(dest))
-        os.rename(tmp_file_path, dest)
+        del files[tgz_name]
 
     return relative_dirs(destination_dir)
 
