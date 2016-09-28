@@ -216,10 +216,9 @@ def unzip_and_get_files(files, destination_dir, tgz_name):
     '''Moves all files from package_files, {relative_name: tmp_abs_path}
     to destination_dir, unzipping the "tgz_name" if found'''
 
-    tgz_file = files.get(tgz_name, None)
+    tgz_file = files.pop(tgz_name, None)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir)
-        del files[tgz_name]
 
     return relative_dirs(destination_dir)
 
