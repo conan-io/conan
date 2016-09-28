@@ -20,7 +20,7 @@ from conans.client.remover import ConanRemover
 from conans.model.info import ConanInfo
 from conans.model.values import Values
 from conans.model.options import OptionsValues
-from conans.model.build_info import DepsCppInfo
+from conans.model.build_info import DepsCppInfo, CppInfo
 from conans.client import packager
 from conans.client.detect import detected_os
 from conans.client.package_copier import PackageCopier
@@ -32,6 +32,7 @@ from conans.model.scope import Scopes
 from conans.client.client_cache import ClientCache
 from conans.client.source import config_source
 from conans.client.manifest_manager import ManifestManager
+from conans.model.env_info import EnvInfo
 
 
 def get_user_channel(text):
@@ -177,6 +178,8 @@ class ConanManager(object):
             conanfile.info.settings = loader._settings.values
         conanfile.info.full_settings = loader._settings.values
         conanfile.info.scope = self._current_scopes
+        conanfile.cpp_info = CppInfo(current_path)
+        conanfile.env_info = EnvInfo(current_path)
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         return (builder, deps_graph, project_reference, registry, conanfile,
                 remote_proxy, loader)
