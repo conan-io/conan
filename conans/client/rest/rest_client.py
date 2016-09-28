@@ -12,6 +12,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs
+import tempfile
 
 
 def handle_return_deserializer(deserializer=None):
@@ -107,7 +108,7 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
-    def get_conanfile(self, conan_reference):
+    def get_recipe(self, conan_reference, dest_folder):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
@@ -117,12 +118,10 @@ class RestApiClient(object):
             raise NotFoundException("Conan '%s' doesn't have a %s!" % (conan_reference, CONANFILE))
 
         # TODO: Get fist an snapshot and compare files and download only required?
+        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
+        return file_paths
 
-        # Download the resources
-        contents = self.download_files(urls, self._output)
-        return contents
-
-    def get_package(self, package_reference):
+    def get_package(self, package_reference, dest_folder):
         """Gets a dict of filename:contents from package"""
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
@@ -133,8 +132,8 @@ class RestApiClient(object):
         # TODO: Get fist an snapshot and compare files and download only required?
 
         # Download the resources
-        contents = self.download_files(urls, self._output)
-        return contents
+        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
+        return file_paths
 
     def upload_conan(self, conan_reference, the_files):
         """
@@ -360,6 +359,25 @@ class RestApiClient(object):
             if output:
                 output.writeln("")
             yield os.path.normpath(filename), contents
+
+    def download_files_to_folder(self, file_urls, to_folder, output=None):
+        """
+        :param: file_urls is a dict with {filename: abs_path}
+
+        It writes downloaded files to disk (appending to file, only keeps chunks in memory)
+        """
+        downloader = Downloader(self.requester, output, self.VERIFY_SSL)
+        ret = {}
+        for filename, resource_url in file_urls.items():
+            if output:
+                output.writeln("Downloading %s" % filename)
+            auth, _ = self._file_server_capabilities(resource_url)
+            abs_path = os.path.join(to_folder, filename)
+            downloader.download(resource_url, abs_path, auth=auth)
+            if output:
+                output.writeln("")
+            ret[filename] = abs_path
+        return ret
 
     def upload_files(self, file_urls, files, output):
         t1 = time.time()

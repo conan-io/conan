@@ -1,16 +1,17 @@
-from conans.errors import ConanException, ConanConnectionError
-from requests.exceptions import ConnectionError
-from conans.util.files import save, tar_extract, rmdir
-from conans.util.log import logger
-import traceback
 import os
-from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
-from io import BytesIO
+import shutil
 import tarfile
+import time
+import traceback
+
+from requests.exceptions import ConnectionError
+
+from conans.errors import ConanException, ConanConnectionError
+from conans.util.files import tar_extract, rmdir, relative_dirs, mkdir
+from conans.util.log import logger
+from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
-import shutil
-import time
 
 
 class RemoteManager(object):
@@ -85,34 +86,34 @@ class RemoteManager(object):
         returns (ConanDigest, remote_name)"""
         return self._call_remote(remote, "get_package_digest", package_reference)
 
-    def get_conanfile(self, conan_reference, remote):
+    def get_recipe(self, conan_reference, dest_folder, remote):
         """
         Read the conans from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
-        returns (dict relative_filepath:content , remote_name)"""
-        export_files = self._call_remote(remote, "get_conanfile", conan_reference)
-        export_folder = self._client_cache.export(conan_reference)
-        uncompress_files(export_files, export_folder, EXPORT_TGZ_NAME)
+        returns (dict relative_filepath:abs_path , remote_name)"""
+        zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
+        files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
         rmdir(self._client_cache.source(conan_reference), True)
 #       TODO: Download only the CONANFILE file and only download the rest of files
 #       in install if needed (not found remote package)
+        return files
 
-    def get_package(self, package_reference, remote):
+    def get_package(self, package_reference, dest_folder, remote):
         """
         Read the conans package from remotes
         Will iterate the remotes to find the conans unless remote was specified
 
-        returns (dict relative_filepath:content , remote_name)"""
-        package_files = self._call_remote(remote, "get_package", package_reference)
-        destination_dir = self._client_cache.package(package_reference)
-        uncompress_files(package_files, destination_dir, PACKAGE_TGZ_NAME)
-
+        returns (dict relative_filepath:abs_path , remote_name)"""
+        zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
+        files = unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
         # Issue #214 https://github.com/conan-io/conan/issues/214
-        for dirname, _, files in os.walk(destination_dir):
+        for dirname, _, files in os.walk(dest_folder):
             for fname in files:
                 touch(os.path.join(dirname, fname))
+
+        return files
 
     def search(self, remote, pattern=None, ignorecase=True):
         """
@@ -211,20 +212,27 @@ def compress_files(files, name, excluded, dest_dir):
     return ret
 
 
-def uncompress_files(files, folder, name):
+def unzip_and_get_files(files, destination_dir, tgz_name):
+    '''Moves all files from package_files, {relative_name: tmp_abs_path}
+    to destination_dir, unzipping the "tgz_name" if found'''
+
+    tgz_file = files.pop(tgz_name, None)
+    if tgz_file:
+        uncompress_file(tgz_file, destination_dir)
+
+    return relative_dirs(destination_dir)
+
+
+def uncompress_file(src_path, dest_folder):
     try:
-        for file_name, content in files:
-            if os.path.basename(file_name) == name:
-                #  Unzip the file and not keep the tgz
-                tar_extract(BytesIO(content), folder)
-            else:
-                save(os.path.join(folder, file_name), content)
+        with open(src_path, 'rb') as file_handler:
+            tar_extract(file_handler, dest_folder)
     except Exception as e:
-        error_msg = "Error while downloading/extracting files to %s\n%s\n" % (folder, str(e))
+        error_msg = "Error while downloading/extracting files to %s\n%s\n" % (dest_folder, str(e))
         # try to remove the files
         try:
-            if os.path.exists(folder):
-                shutil.rmtree(folder)
+            if os.path.exists(dest_folder):
+                shutil.rmtree(dest_folder)
                 error_msg += "Folder removed"
         except Exception as e:
             error_msg += "Folder not removed, files/package might be damaged, remove manually"
