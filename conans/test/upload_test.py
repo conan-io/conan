@@ -179,6 +179,17 @@ class TestConan(ConanFile):
         '''Upload conans and package together'''
         # Try to upload all conans and packages
         self.client.run('upload %s --all' % str(self.conan_ref))
+        lines = [line.strip() for line in str(self.client.user_io.out).splitlines()
+                 if line.startswith("Uploading")]
+        self.assertEqual(lines, ["Uploading Hello/1.2.1@frodo/stable",
+                                 "Uploading conanmanifest.txt",
+                                 "Uploading conanfile.py",
+                                 "Uploading conan_export.tgz",
+                                 "Uploading package 1/1: myfakeid",
+                                 "Uploading conanmanifest.txt",
+                                 "Uploading conaninfo.txt",
+                                 "Uploading conan_package.tgz",
+                                 ])
         self.assertTrue(os.path.exists(self.server_reg_folder))
         self.assertTrue(os.path.exists(self.server_pack_folder))
 

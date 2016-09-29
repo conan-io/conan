@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient, TestServer, TestBufferConanOutput
+from conans.test.tools import TestClient, TestServer
 from conans.test.utils.test_files import hello_source_files
 from conans.client.manager import CONANFILE
 import os
@@ -64,13 +64,20 @@ class DownloadTest(unittest.TestCase):
         client2 = TestClient(servers=servers)
         client2.init_dynamic_vars()
 
-        installer = ConanProxy(client2.paths,
-                                     client2.user_io,
-                                     client2.remote_manager,
-                                     "default")
+        installer = ConanProxy(client2.paths, client2.user_io, client2.remote_manager, "default")
 
         installer.get_recipe(conan_ref)
         installer.get_package(package_ref, force_build=False)
+        # Check that the output is done in order
+        lines = [line.strip() for line in str(client2.user_io.out).splitlines()
+                 if line.startswith("Downloading")]
+        self.assertEqual(lines, ["Downloading conanmanifest.txt",
+                                 "Downloading conanfile.py",
+                                 "Downloading conan_export.tgz",
+                                 "Downloading conanmanifest.txt",
+                                 "Downloading conaninfo.txt",
+                                 "Downloading conan_package.tgz"
+                                 ])
 
         reg_path = client2.paths.export(ConanFileReference.loads("Hello/1.2.1/frodo/stable"))
         pack_folder = client2.paths.package(package_ref)
