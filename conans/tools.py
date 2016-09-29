@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import os
 from conans.errors import ConanException
-from conans.util.files import _generic_algorithm_sum, decode_text
+from conans.util.files import _generic_algorithm_sum, load, save
 from patch import fromfile, fromstring
 from conans.client.rest.uploader_downloader import Downloader
 import requests
@@ -109,12 +109,9 @@ def download(url, filename, verify=True):
 
 
 def replace_in_file(file_path, search, replace):
-    with open(file_path, 'rb') as content_file:
-        content = decode_text(content_file.read())
-        content = content.replace(search, replace)
-
-    with open(file_path, 'wb') as handle:
-        handle.write(content.encode("utf8", "ignore"))
+    content = load(file_path)
+    content = content.replace(search, replace)
+    save(file_path, content)
 
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
