@@ -65,7 +65,7 @@ class VirtualEnvGenerator(Generator):
             deactivate_lines.append("SET PROMPT=%s" % os.environ.get("PROMPT", ""))
             deactivate_lines.append("SET _CONAN_VENV=")
         else:
-            deactivate_lines.append(r'export PS1="\w\$ "')
+            deactivate_lines.append('export PS1="$OLD_PS1"')
             deactivate_lines.append("export _CONAN_VENV=")
 
         activate_lines = ["@echo off"] if platform.system() == "Windows" else []
@@ -77,6 +77,7 @@ class VirtualEnvGenerator(Generator):
         else:
             activate_lines.append('if [ -n "$_CONAN_VENV" ]; then echo "Deactivate current venv first with \'source $_CONAN_VENV\deactivate"; fi')
             activate_lines.append('if [ -n "$_CONAN_VENV" ]; then exit; fi')
+            activate_lines.append("export OLD_PS1=\"$PS1\"")
             activate_lines.append("export PS1=\"(%s) " % venv_name + "$PS1\"")
             activate_lines.append("export _CONAN_VENV=%s" % venv_dir)
 
