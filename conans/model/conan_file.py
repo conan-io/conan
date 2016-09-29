@@ -4,6 +4,7 @@ from conans.model.build_info import DepsCppInfo
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo
+import os
 
 
 def create_options(conanfile):
@@ -109,7 +110,25 @@ class ConanFile(object):
         self._runner = runner
 
         self._conanfile_directory = conanfile_directory
+        self.package_folder = None  # Assigned at runtime
         self._scope = None
+
+    def collect_libs(self, folder="lib"):
+        if not self.package_folder:
+            return []
+        lib_folder = os.path.join(self.package_folder, folder)
+        if not os.path.exists(lib_folder):
+            self.output.warn("Package folder doesn't exist, can't collect libraries")
+            return []
+        files = os.listdir(lib_folder)
+        result = []
+        for f in files:
+            name, ext = os.path.splitext(f)
+            if ext in (".so", ".lib", ".a", ".dylib"):
+                if ext != ".lib" and name.startswith("lib"):
+                    name = name[3:]
+                result.append(name)
+        return result
 
     @property
     def scope(self):
