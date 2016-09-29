@@ -27,8 +27,19 @@ class CollectLibsTest(unittest.TestCase):
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"],
                                        collect_libs=True)
 
+        # reusing the binary already in cache
         client.save(files3, clean_first=True)
         client.run('install')
+        client.run('build')
+
+        command = os.sep.join([".", "bin", "say_hello"])
+        client.runner(command, cwd=client.current_folder)
+        self.assertIn("Hello Hello1", client.user_io.out)
+        self.assertIn("Hello Hello0", client.user_io.out)
+
+        # rebuilding the binary in cache
+        client.run('remove "*" -p -f')
+        client.run('install --build')
         client.run('build')
 
         command = os.sep.join([".", "bin", "say_hello"])
