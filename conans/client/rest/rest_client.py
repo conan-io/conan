@@ -12,7 +12,6 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs
-import tempfile
 
 
 def handle_return_deserializer(deserializer=None):
@@ -180,7 +179,8 @@ class RestApiClient(object):
             url = "%s/conans/%s/packages/%s/upload_urls" % (self._remote_api_url,
                                                             "/".join(package_reference.conan),
                                                             package_reference.package_id)
-            filesizes = {filename: os.stat(abs_path).st_size for filename, abs_path in files_to_upload.items()}
+            filesizes = {filename: os.stat(abs_path).st_size for filename,
+                         abs_path in files_to_upload.items()}
             self._output.rewrite_line("Requesting upload permissions...")
             urls = self._get_json(url, data=filesizes)
             self._output.rewrite_line("Requesting upload permissions...Done!")
@@ -351,7 +351,9 @@ class RestApiClient(object):
         Its a generator, so it yields elements for memory performance
         """
         downloader = Downloader(self.requester, output, self.VERIFY_SSL)
-        for filename, resource_url in file_urls.items():
+        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
+        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
+        for filename, resource_url in sorted(file_urls.items(), reverse=True):
             if output:
                 output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
@@ -368,7 +370,9 @@ class RestApiClient(object):
         """
         downloader = Downloader(self.requester, output, self.VERIFY_SSL)
         ret = {}
-        for filename, resource_url in file_urls.items():
+        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
+        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
+        for filename, resource_url in sorted(file_urls.items(), reverse=True):
             if output:
                 output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
@@ -383,7 +387,9 @@ class RestApiClient(object):
         t1 = time.time()
         failed = {}
         uploader = Uploader(self.requester, output, self.VERIFY_SSL)
-        for filename, resource_url in file_urls.items():
+        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
+        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
+        for filename, resource_url in sorted(file_urls.items(), reverse=True):
             output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup)

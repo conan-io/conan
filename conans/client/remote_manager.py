@@ -7,7 +7,7 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError
-from conans.util.files import tar_extract, rmdir, relative_dirs, mkdir
+from conans.util.files import tar_extract, rmdir, relative_dirs
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
 from conans.util.files import gzopen_without_timestamps
@@ -157,7 +157,7 @@ def compress_package_files(files, pkg_base_path, output):
     # Check if conan_package.tgz is present
     if PACKAGE_TGZ_NAME not in files:
         output.rewrite_line("Compressing package...")
-        return compress_files(files, PACKAGE_TGZ_NAME, 
+        return compress_files(files, PACKAGE_TGZ_NAME,
                               excluded=(CONANINFO, CONAN_MANIFEST), dest_dir=pkg_base_path)
     else:
         the_files = {PACKAGE_TGZ_NAME: files[PACKAGE_TGZ_NAME],
@@ -170,7 +170,7 @@ def compress_package_files(files, pkg_base_path, output):
 def compress_export_files(files, export_base_path, output):
     if EXPORT_TGZ_NAME not in files:
         output.rewrite_line("Compressing exported files...")
-        return compress_files(files, EXPORT_TGZ_NAME, 
+        return compress_files(files, EXPORT_TGZ_NAME,
                               excluded=(CONANFILE, CONAN_MANIFEST), dest_dir=export_base_path)
     else:
         the_files = {EXPORT_TGZ_NAME: files[EXPORT_TGZ_NAME],
