@@ -12,7 +12,7 @@ MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
 default_settings_yml = """
 os: [Windows, Linux, Macos, Android, iOS]
-arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
+arch: [x86, x86_64, ppc64le, armv6, armv7, armv7hf, armv8]
 compiler:
     gcc:
         version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2"]
