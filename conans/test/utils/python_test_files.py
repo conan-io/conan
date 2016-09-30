@@ -1,9 +1,9 @@
 from conans.paths import CONANFILE
-from __builtin__ import file
 
 
 conanfile_template = r"""
-from conans import ConanFile
+from conans import ConanFile, tools
+import sys
 
 class {name}Conan(ConanFile):
     name = "{name}"
@@ -12,6 +12,11 @@ class {name}Conan(ConanFile):
     exports = '*'
     generators = "virtualenv"
     build_policy = "missing"
+
+    def build(self):
+        with tools.pythonpath(self):
+            pass
+{build}
 
     def package(self):
         self.copy('*.py')
@@ -26,6 +31,10 @@ hello = r'''
 def hello():
     print("Hello %NUMBER%")
 %OTHER CALLS%
+
+def build_helper(conanfile):
+    conanfile.output.info("Build stuff %NUMBER%")
+%OTHER_BUILD_HELPERS%
 
 '''
 
@@ -48,8 +57,10 @@ def py_hello_source_files(number=0, deps=None):
     other_includes = "\n".join(['from hello%s import hello as h%s' % (i, i) for i in deps_names])
     ret["main.py"] = main.replace("%NUMBER%", number)
     other_calls = "\n".join(["    h%s.hello()" % i for i in deps_names])
+    other_build_helpers = "\n".join(["    h%s.build_helper(conanfile)" % i for i in deps_names])
     hello_py = hello.replace("%NUMBER%", number)
     hello_py = hello_py.replace("%OTHER CALLS%", other_calls)
+    hello_py = hello_py.replace("%OTHER_BUILD_HELPERS%", other_build_helpers)
     hello_py = hello_py.replace("%INCLUDES%",  other_includes)
     ret["hello%s/hello.py" % number] = hello_py
     ret["hello%s/__init__.py" % number] = ""
@@ -63,7 +74,14 @@ def py_hello_conan_files(name, version, deps=None):
     for d in deps or []:
         requires.append(d)
     requires = ", ".join('"%s"' % r for r in requires)
-    conanfile = conanfile_template.format(name=name, version=version, requires=requires)
+    deps_names = [str(n).split("/", 1)[0] for n in deps or []]
+    if deps:
+        build = "\n".join(["            from hello%s import hello as h%s\n"
+                           "            h%s.build_helper(self)" % (i, i, i) for i in deps_names])
+    else:
+        build = ""
+    conanfile = conanfile_template.format(name=name, version=version, requires=requires,
+                                          build=build)
     base_files[CONANFILE] = conanfile
 
     return base_files

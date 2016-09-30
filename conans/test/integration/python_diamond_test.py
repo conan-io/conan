@@ -1,7 +1,7 @@
 import unittest
 from conans.test.tools import TestClient
-from conans.paths import CONANFILE
 from conans.test.utils.python_test_files import py_hello_conan_files
+import platform
 
 
 class PythonDiamondTest(unittest.TestCase):
@@ -22,17 +22,23 @@ class PythonDiamondTest(unittest.TestCase):
                                               "Hello2/0.1@lasote/stable"])
 
         files3 = py_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"])
-
-        # Add some stuff to base project conanfile to test further the individual
-        # flags in build_info (txt, cmake) files
-        content = files3[CONANFILE]
-        content = content.replace("generators =", 'generators = "txt",')
-        files3[CONANFILE] = content
         self.client.save(files3, clean_first=True)
 
         self.client.run("install .")
+        self.assertIn("Hello1/0.1@lasote/stable: Build stuff Hello0", self.client.user_io.out)
+        self.assertIn("Hello2/0.1@lasote/stable: Build stuff Hello0", self.client.user_io.out)
 
-        self.client.runner("activate && python main.py", cwd=self.client.current_folder)
+        self.assertIn(" ".join(["Hello3/0.1@lasote/stable: Build stuff Hello1",
+                                "Hello3/0.1@lasote/stable: Build stuff Hello0",
+                                "Hello3/0.1@lasote/stable: Build stuff Hello2",
+                                "Hello3/0.1@lasote/stable: Build stuff Hello0"]),
+                      " ".join(str(self.client.user_io.out).splitlines()))
+
+        if platform.system() == "Windows":
+            command = "activate && python main.py"
+        else:
+            command = "chmod +x activate.sh && ./activate.sh && python main.py"
+        self.client.runner(command, cwd=self.client.current_folder)
         self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                           'Hello Hello2', 'Hello Hello0'],
                          str(self.client.user_io.out).splitlines()[-6:])

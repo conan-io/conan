@@ -13,6 +13,15 @@ import platform
 from conans.model.version import Version
 from conans.util.log import logger
 from conans.client.runner import ConanRunner
+from contextlib import contextmanager
+
+
+@contextmanager
+def pythonpath(conanfile):
+    old_path = sys.path[:]
+    sys.path.extend(conanfile.deps_env_info.PYTHONPATH)
+    yield
+    sys.path = old_path
 
 
 def vcvars_command(settings):
