@@ -27,13 +27,18 @@ def get_setenv_variables_commands(deps_env_info, command_set=None):
 def get_dict_values(deps_env_info):
     def adjust_var_name(name):
         return "PATH" if name.lower() == "path" else name
-    separator = ";" if platform.system() == "Windows" else ":"
-    multiple_to_set = {adjust_var_name(name): separator.join('"%s"' % v for v in value_list)
-                       for name, value_list in deps_env_info.vars.items()
-                       if isinstance(value_list, list)}
-    simple_to_set = {adjust_var_name(name): value
-                     for name, value in deps_env_info.vars.items()
-                     if not isinstance(value, list)}
+    multiple_to_set = {}
+    simple_to_set = {}
+    for name, value in deps_env_info.vars.items():
+        name = adjust_var_name(name)
+        if isinstance(value, list):
+            # Allow path with spaces in non-windows platforms
+            if platform.system() != "Windows" and name in ["PATH", "PYTHONPATH"]:
+                value = ['"%s"' % v for v in value]
+            multiple_to_set[name] = os.pathsep.join(value)
+        else:
+            simple_to_set[name] = value
+
     return multiple_to_set, simple_to_set
 
 
