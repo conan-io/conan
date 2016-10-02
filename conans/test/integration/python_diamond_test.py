@@ -37,7 +37,7 @@ class PythonDiamondTest(unittest.TestCase):
         if platform.system() == "Windows":
             command = "activate && python main.py"
         else:
-            command = "chmod +x activate.sh && ./activate.sh && python main.py"
+            command = 'bash -c "source activate.sh && python main.py"'
         self.client.runner(command, cwd=self.client.current_folder)
         self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                           'Hello Hello2', 'Hello Hello0'],

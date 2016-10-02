@@ -28,7 +28,7 @@ def get_dict_values(deps_env_info):
     def adjust_var_name(name):
         return "PATH" if name.lower() == "path" else name
     separator = ";" if platform.system() == "Windows" else ":"
-    multiple_to_set = {adjust_var_name(name): separator.join(value_list)
+    multiple_to_set = {adjust_var_name(name): separator.join('"%s"' % v for v in value_list)
                        for name, value_list in deps_env_info.vars.items()
                        if isinstance(value_list, list)}
     simple_to_set = {adjust_var_name(name): value
