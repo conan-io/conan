@@ -19,7 +19,6 @@ class CompleteFlowTest(unittest.TestCase):
     def reuse_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True)
-
         self.client.save(files)
         self.client.run("export lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
@@ -34,6 +33,11 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload conans
         self.client.run("upload %s" % str(conan_reference))
+        self.assertIn("Compressing exported", str(self.client.user_io.out))
+
+        # Not needed to tgz again
+        self.client.run("upload %s" % str(conan_reference))
+        self.assertNotIn("Compressing exported", str(self.client.user_io.out))
 
         # Check that conans exists on server
         server_paths = self.servers["default"].paths
@@ -42,6 +46,17 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload package
         self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.assertIn("Compressing package", str(self.client.user_io.out))
+
+        # Not needed to tgz again
+        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.assertNotIn("Compressing package", str(self.client.user_io.out))
+
+        # If we install the package again will be removed and re tgz
+        self.client.run("install %s --build missing" % str(conan_reference))
+        # Upload package
+        self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
+        self.assertNotIn("Compressing package", str(self.client.user_io.out))
 
         # Check library on server
         self._assert_library_exists_in_server(package_ref, server_paths)

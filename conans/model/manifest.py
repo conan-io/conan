@@ -2,6 +2,7 @@ import os
 import calendar
 import time
 from conans.util.files import md5sum
+from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
 
 
 class FileTreeManifest(object):
@@ -46,6 +47,8 @@ class FileTreeManifest(object):
 
         date = calendar.timegm(time.gmtime())
         from conans.paths import CONAN_MANIFEST, CONANFILE
+        file_dict.pop(PACKAGE_TGZ_NAME, None)  # Exclude the PACKAGE_TGZ_NAME
+        file_dict.pop(EXPORT_TGZ_NAME, None)  # Exclude the EXPORT_TGZ_NAME
         file_dict.pop(CONAN_MANIFEST, None)  # Exclude the MANIFEST itself
         file_dict.pop(CONANFILE + "c", None)  # Exclude the CONANFILE.pyc
         file_dict.pop(".DS_Store", None)  # Exclude tmp in mac

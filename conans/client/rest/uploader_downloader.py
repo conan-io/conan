@@ -1,8 +1,8 @@
 from conans.errors import ConanException, ConanConnectionError
 from conans.util.log import logger
 import traceback
-from conans.util.files import save
-from conans.util.sha import sha1
+from conans.util.files import save, sha1sum
+import os
 
 
 class Uploader(object):
@@ -13,10 +13,10 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, content, auth=None, dedup=False):
+    def upload(self, url, abs_path, auth=None, dedup=False):
         if dedup:
             headers = {"X-Checksum-Deploy": "true",
-                       "X-Checksum-Sha1": sha1(content)}
+                       "X-Checksum-Sha1": sha1sum(abs_path)}
             response = self.requester.put(url, data="", verify=self.verify, headers=headers,
                                           auth=auth)
             if response.status_code != 404:
@@ -24,9 +24,66 @@ class Uploader(object):
 
         self.output.info("")
         # Actual transfer of the real content
-        it = upload_in_chunks(content, self.chunk_size, self.output)
-        return self.requester.put(url, data=IterableToFileAdapter(it), verify=self.verify,
-                                  headers=None, auth=auth)
+        it = load_in_chunks(abs_path, self.chunk_size)
+        # Now it is a chunked read file
+        file_size = os.stat(abs_path).st_size
+        it = upload_with_progress(file_size, it, self.chunk_size, self.output)
+        # Now it will print progress in each iteration
+        iterable_to_file = IterableToFileAdapter(it, file_size)
+        # Now it is prepared to work with request
+        ret = self.requester.put(url, data=iterable_to_file, verify=self.verify, headers=None, auth=auth)
+        return ret
+
+
+class IterableToFileAdapter(object):
+    def __init__(self, iterable, total_size):
+        self.iterator = iter(iterable)
+        self.total_size = total_size
+
+    def read(self, size=-1):  # @UnusedVariable
+        return next(self.iterator, b'')
+
+    def __len__(self):
+        return self.total_size
+
+    def __iter__(self):
+        return self.iterator.__iter__()
+
+
+class upload_with_progress(object):
+    def __init__(self, totalsize, iterator, chunk_size, output):
+        self.totalsize = totalsize
+        self.output = output
+        self.aprox_chunks = self.totalsize * 1.0 / chunk_size
+        self.groups = iterator
+
+    def __iter__(self):
+        last_progress = None
+        for index, chunk in enumerate(self.groups):
+            if self.aprox_chunks == 0:
+                index = self.aprox_chunks
+
+            units = progress_units(index, self.aprox_chunks)
+            if last_progress != units:  # Avoid screen refresh if nothing has change
+                print_progress(self.output, units)
+                last_progress = units
+            yield chunk
+
+        print_progress(self.output, progress_units(100, 100))
+
+    def __len__(self):
+        return self.totalsize
+
+
+def load_in_chunks(path, chunk_size=1024):
+    """Lazy function (generator) to read a file piece by piece.
+    Default chunk size: 1k."""
+    with open(path, 'rb') as file_object:
+        while True:
+            data = file_object.read(chunk_size)
+            if not data:
+                break
+            yield data
 
 
 class Downloader(object):
@@ -68,8 +125,10 @@ class Downloader(object):
                         if self.output:
                             print_progress(self.output, units)
                         last_progress = units
-
-            return bytes(ret)
+            if not file_path:
+                return bytes(ret)
+            else:
+                return
         except Exception as e:
             logger.debug(e.__class__)
             logger.debug(traceback.format_exc())
@@ -78,53 +137,9 @@ class Downloader(object):
                                        % str(e))
 
 
-class upload_in_chunks(object):
-    def __init__(self, content, chunksize, output):
-        self.totalsize = len(content)
-        self.output = output
-        self.aprox_chunks = self.totalsize * 1.0 / chunksize
-        self.groups = chunker(content, chunksize)
-
-    def __iter__(self):
-        last_progress = None
-        for index, chunk in enumerate(self.groups):
-            if self.aprox_chunks == 0:
-                index = self.aprox_chunks
-
-            units = progress_units(index, self.aprox_chunks)
-            if last_progress != units:  # Avoid screen refresh if nothing has change
-                print_progress(self.output, units)
-                last_progress = units
-            yield chunk
-
-        print_progress(self.output, progress_units(100, 100))
-
-    def __len__(self):
-        return self.totalsize
-
-
-def chunker(seq, size):
-    return (seq[pos:pos + size] for pos in range(0, len(seq), size))
-
-
 def progress_units(progress, total):
     return int(50 * progress / total)
 
 
 def print_progress(output, units):
     output.rewrite_line("[%s%s]" % ('=' * units, ' ' * (50 - units)))
-
-
-class IterableToFileAdapter(object):
-    def __init__(self, iterable):
-        self.iterator = iter(iterable)
-        self.length = len(iterable)
-
-    def read(self, size=-1):  # @UnusedVariable
-        return next(self.iterator, b'')
-
-    def __len__(self):
-        return self.length
-
-    def __iter__(self):
-        return self.iterator.__iter__()

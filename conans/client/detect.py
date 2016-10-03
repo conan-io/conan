@@ -140,7 +140,8 @@ def detected_os():
 def _detect_os_arch(result, output):
     architectures = {'i386': 'x86',
                      'i686': 'x86',
-                     'amd64': 'x86_64'}
+                     'amd64': 'x86_64',
+                     'aarch64': 'armv8'}
 
     result.append(("os", detected_os()))
     arch = architectures.get(platform.machine().lower(), platform.machine().lower())

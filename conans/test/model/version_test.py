@@ -26,3 +26,12 @@ class VersionTest(unittest.TestCase):
         v1 = Version("1.2.rc1")
         self.assertTrue(v1 < "1.2.0")
         self.assertFalse(v1 < "1.1.9")
+
+        self.assertTrue(Version("1.2.1-dev") < Version("1.2.1"))
+        self.assertTrue(Version("1.2.1-dev") < Version("1.2.2"))
+        self.assertTrue(Version("1.2.1-dev") < Version("1.3"))
+        self.assertTrue(Version("1.2.1-dev") < Version("1.3-alpha"))
+        self.assertTrue(Version("1.2.1-dev") > Version("1.2.0"))
+        self.assertTrue(Version("1.2.1-dev") > Version("1.2"))
+        self.assertTrue(Version("1.2.1-dev") > Version("1.2.alpha"))
+        self.assertTrue(Version("1.2.1-dev") > Version("1.2-alpha"))

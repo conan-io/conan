@@ -1,4 +1,4 @@
-from colorama import Fore, Back, Style
+from colorama import Fore, Style
 import six
 from conans.util.files import decode_text
 from conans.util.env_reader import get_env
@@ -81,8 +81,9 @@ class ConanOutput(object):
         tmp_color = self._color
         self._color = False
         TOTAL_SIZE = 70
+        LIMIT_SIZE = 32  # Hard coded instead of TOTAL_SIZE/2-3 that fails in Py3 float division
         if len(line) > TOTAL_SIZE:
-            line = line[0:TOTAL_SIZE / 2 - 3] + " ... " + line[TOTAL_SIZE / 2 + 3:]
+            line = line[0:LIMIT_SIZE] + " ... " + line[-LIMIT_SIZE:]
         self.write("\r%s%s" % (line, " " * (TOTAL_SIZE - len(line))))
         self._stream.flush()
         self._color = tmp_color

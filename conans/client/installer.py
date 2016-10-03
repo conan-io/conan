@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, DIRTY_FILE
+from conans.paths import CONANINFO, BUILD_INFO
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -14,11 +14,11 @@ from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
 from conans.model.env_info import EnvInfo
-import six
 from conans.client.file_copier import report_copied_files
+from conans.client.source import config_source
 
 
-def init_info_objects(deps_graph, paths):
+def init_package_info(deps_graph, paths):
     """ Made external so it is independent of installer and can called
     in testing too
     """
@@ -32,11 +32,6 @@ def init_info_objects(deps_graph, paths):
             conan_file.package_folder = package_folder
             conan_file.cpp_info = CppInfo(package_folder)
             conan_file.env_info = EnvInfo(package_folder)
-            try:
-                conan_file.package_info()
-            except Exception as e:
-                msg = format_conanfile_exception(str(conan_ref), "package_info", e)
-                raise ConanException(msg)
 
 
 class ConanInstaller(object):
@@ -53,7 +48,9 @@ class ConanInstaller(object):
         """
         self._deps_graph = deps_graph  # necessary for _build_package
         t1 = time.time()
-        nodes_by_level = self._process_buildinfo(deps_graph)
+        init_package_info(deps_graph, self._paths)
+        # order by levels and propagate exports as download imports
+        nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
         t1 = time.time()
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
@@ -61,20 +58,6 @@ class ConanInstaller(object):
         t1 = time.time()
         self._build(nodes_by_level, skip_private_nodes, build_mode)
         logger.debug("Install-build %s" % (time.time() - t1))
-
-    def _process_buildinfo(self, deps_graph):
-        """ once we have a dependency graph of conans, we have to propagate the build
-        flags exported from conans down the hierarchy. First step is to assign a new
-        BoxInfo object to each conans. Done here because we need the current
-        folder of the package, the place it will be located. Then, upstream conans
-        passes their exported build flags and included directories to the downstream
-        imports flags
-        """
-        init_info_objects(deps_graph, self._paths)
-
-        # order by levels and propagate exports as download imports
-        nodes_by_level = deps_graph.propagate_info_objects()
-        return nodes_by_level
 
     def _compute_private_nodes(self, deps_graph, build_mode):
         """ computes a list of nodes that are not required to be built, as they are
@@ -125,19 +108,38 @@ class ConanInstaller(object):
                    => True if user wrote "missing"
 
         """
+        inverse = self._deps_graph.inverse_levels()
+        flat = []
+        for level in inverse:
+            level = sorted(level, key=lambda x: x.conan_ref)
+            flat.extend(level)
+
         # Now build each level, starting from the most independent one
         for level in nodes_by_level:
             for node in level:
                 if node in skip_private_nodes:
                     continue
                 conan_ref, conan_file = node
+
+                # Get deps_cpp_info from upstream nodes
+                node_order = self._deps_graph.ordered_closure(node, flat)
+                for n in node_order:
+                    conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
+                    conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
+
                 # it is possible that the root conans
                 # is not inside the storage but in a user folder, and thus its
                 # treatment is different
-                if not conan_ref:
-                    continue
-                logger.debug("Building node %s" % repr(conan_ref))
-                self._build_node(conan_ref, conan_file, build_mode)
+                if conan_ref:
+                    logger.debug("Building node %s" % repr(conan_ref))
+                    self._build_node(conan_ref, conan_file, build_mode)
+                # Once the node is build, execute package info, so it has access to the
+                # package folder and artifacts
+                try:
+                    conan_file.package_info()
+                except Exception as e:
+                    msg = format_conanfile_exception(str(conan_ref), "package_info", e)
+                    raise ConanException(msg)
 
     def _build_node(self, conan_ref, conan_file, build_mode):
         # Compute conan_file package from local (already compiled) or from remote
@@ -189,6 +191,7 @@ class ConanInstaller(object):
 
             os.chdir(build_folder)
             create_package(conan_file, build_folder, package_folder, output)
+            self._remote_proxy.handle_package_manifest(package_reference, installed=True)
         else:
             self._raise_package_not_found_error(conan_ref, conan_file)
 
@@ -234,50 +237,6 @@ Package configuration:
         else:
             save(system_reqs_package_path, output)
 
-    def _config_source(self, export_folder, src_folder, conan_file, output):
-        """ creates src folder and retrieve, calling source() from conanfile
-        the necessary source code
-        """
-        dirty = os.path.join(src_folder, DIRTY_FILE)
-
-        def remove_source(raise_error=False):
-            output.warn("This can take a while for big packages")
-            try:
-                rmdir(src_folder, conan_file.short_paths)
-            except BaseException as e_rm:
-                save(dirty, "")  # Creation of DIRTY flag
-                msg = str(e_rm)
-                if six.PY2:
-                    msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1
-                output.error("Unable to remove source folder %s\n%s" % (src_folder, msg))
-                output.warn("**** Please delete it manually ****")
-                if raise_error or isinstance(e_rm, KeyboardInterrupt):
-                    raise ConanException("Unable to remove source folder")
-
-        if os.path.exists(dirty):
-            output.warn("Trying to remove dirty source folder")
-            remove_source(raise_error=True)
-        elif conan_file.build_policy_always:
-            output.warn("Detected build_policy 'always', trying to remove source folder")
-            remove_source(raise_error=True)
-
-        if not os.path.exists(src_folder):
-            output.info('Configuring sources in %s' % src_folder)
-            shutil.copytree(export_folder, src_folder)
-            save(dirty, "")  # Creation of DIRTY flag
-            os.chdir(src_folder)
-            try:
-                conan_file.source()
-                os.remove(dirty)  # Everything went well, remove DIRTY flag
-            except Exception as e:
-                os.chdir(export_folder)
-                # in case source() fails (user error, typically), remove the src_folder
-                # and raise to interrupt any other processes (build, package)
-                output.warn("Trying to remove dirty source folder")
-                remove_source()
-                msg = format_conanfile_exception(output.scope, "source", e)
-                raise ConanException(msg)
-
     def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file,
                        output):
         """ builds the package, creating the corresponding build folder if necessary
@@ -287,7 +246,7 @@ Package configuration:
         """
         output.info('Building your package in %s' % build_folder)
         if not os.path.exists(build_folder):
-            self._config_source(export_folder, src_folder, conan_file, output)
+            config_source(export_folder, src_folder, conan_file, output)
             output.info('Copying sources to build folder')
 
             def check_max_path_len(src, files):
@@ -325,7 +284,6 @@ Package configuration:
             # This is necessary because it is different for user projects
             # than for packages
             conan_file._conanfile_directory = build_folder
-            conan_file.package_folder = package_folder
             conan_file.build()
             self._out.writeln("")
             output.success("Package '%s' built" % os.path.basename(build_folder))

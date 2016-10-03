@@ -48,6 +48,10 @@ def md5sum(file_path):
     return _generic_algorithm_sum(file_path, "md5")
 
 
+def sha1sum(file_path):
+    return _generic_algorithm_sum(file_path, "sha1")
+
+
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
@@ -90,19 +94,6 @@ def load(path, binary=False):
     with open(path, 'rb') as handle:
         tmp = handle.read()
         return tmp if binary else decode_text(tmp)
-
-
-def build_files_set(basedir, rel_files):
-    '''Builds a file dict keeping the relative path'''
-    ret = {}
-    for filename in rel_files:
-        abs_path = os.path.join(basedir, filename)
-        ret[filename] = {
-            "contents": load(abs_path, binary=True),
-            "mode": os.stat(abs_path).st_mode
-        }
-
-    return ret
 
 
 def relative_dirs(path):

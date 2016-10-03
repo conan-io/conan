@@ -38,7 +38,7 @@ def load_version():
                                             "conans", "__init__.py"))
     with open(filename, "rt") as version_file:
         conan_init = version_file.read()
-        version = re.search("__version__ = '([0-9a-z.]+)'", conan_init).group(1)
+        version = re.search("__version__ = '([0-9a-z.-]+)'", conan_init).group(1)
         return version
 
 

@@ -188,7 +188,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
 
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
-                          pure_c=False, config=True, build=True):
+                          pure_c=False, config=True, build=True, collect_libs=False):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -232,5 +232,8 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
         conanfile = conanfile.replace("build(", "build2(")
     if not config:
         conanfile = conanfile.replace("config(", "config2(")
+    if collect_libs:
+        conanfile = conanfile.replace('["hello%s"]' % name,
+                                      "self.collect_libs()")
     base_files[CONANFILE] = conanfile
     return base_files
