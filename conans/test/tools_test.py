@@ -1,7 +1,9 @@
 
 import unittest
-from conans.tools import SystemPackageTool
+from conans.tools import SystemPackageTool, replace_in_file
 import os
+from conans.test.utils.test_files import temp_folder
+import codecs
 
 
 class RunnerMock(object):
@@ -11,6 +13,36 @@ class RunnerMock(object):
 
     def __call__(self, command, output):
         self.command_called = command
+
+
+class ReplaceInFileTest(unittest.TestCase):
+
+    def setUp(self):
+        text = u'J\xe2nis\xa7'
+        self.tmp_folder = temp_folder()
+
+        self.win_file = os.path.join(self.tmp_folder, "win_encoding.txt")
+        text = text.encode("Windows-1252", "ignore")
+        with open(self.win_file, "wb") as handler:
+            handler.write(text)
+
+        self.bytes_file = os.path.join(self.tmp_folder, "bytes_encoding.txt")
+        with open(self.bytes_file, "wb") as handler:
+            handler.write(text)
+
+    def test_replace_in_file(self):
+        replace_in_file(self.win_file, "nis", "nus")
+        replace_in_file(self.bytes_file, "nis", "nus")
+
+        with open(self.win_file, "rt") as handler:
+            content = handler.read()
+            self.assertNotIn("nis", content)
+            self.assertIn("nus", content)
+
+        with open(self.bytes_file, "rt") as handler:
+            content = handler.read()
+            self.assertNotIn("nis", content)
+            self.assertIn("nus", content)
 
 
 class ToolsTest(unittest.TestCase):

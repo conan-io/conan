@@ -120,7 +120,9 @@ def download(url, filename, verify=True):
 def replace_in_file(file_path, search, replace):
     content = load(file_path)
     content = content.replace(search, replace)
-    save(file_path, content)
+    content = content.encode("utf-8")
+    with open(file_path, "wb") as handle:
+        handle.write(content)
 
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
