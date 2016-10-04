@@ -44,6 +44,9 @@ class ConanOutput(object):
         self._stream = stream
         self._color = color
 
+    def is_terminal(self):
+        return hasattr(self._stream, "isatty") and self._stream.isatty()
+
     def writeln(self, data, front=None, back=None):
         self.write(data, front, back, True)
 
