@@ -89,12 +89,12 @@ class MyConan(ConanFile):
 
         # And try to do the same without regenerate manifest
         save(os.path.join(package_path, "newfile2.txt"), "new content")
-        self.client.run("install %s -i" % str(conan_reference), ignore_error=True)
-        self.assertIn("Bad package", self.client.user_io.out)
+        self.client.run("install %s -m" % str(conan_reference), ignore_error=True)
+        self.assertIn("local cache package is corrupted", self.client.user_io.out)
 
         # Try to do it specifying the package (without --all)
         save(os.path.join(package_path, "newfile3.txt"), "new content")
         self.client.run("package %s %s --only-manifest" % (str(conan_reference), package_id))
         self.assertIn("Creating manifest for", self.client.user_io.out)
         self.client.run("install %s" % str(conan_reference))
-        self.assertNotIn("Bad package", self.client.user_io.out)
+        self.assertNotIn("Bad manifest", self.client.user_io.out)

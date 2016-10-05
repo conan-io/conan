@@ -6,7 +6,7 @@ import json
 from conans.paths import CONANFILE, CONAN_MANIFEST
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import md5, decode_text
+from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -107,7 +107,7 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
-    def get_conanfile(self, conan_reference):
+    def get_recipe(self, conan_reference, dest_folder):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
@@ -117,12 +117,10 @@ class RestApiClient(object):
             raise NotFoundException("Conan '%s' doesn't have a %s!" % (conan_reference, CONANFILE))
 
         # TODO: Get fist an snapshot and compare files and download only required?
+        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
+        return file_paths
 
-        # Download the resources
-        contents = self.download_files(urls, self._output)
-        return contents
-
-    def get_package(self, package_reference):
+    def get_package(self, package_reference, dest_folder):
         """Gets a dict of filename:contents from package"""
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
@@ -133,8 +131,8 @@ class RestApiClient(object):
         # TODO: Get fist an snapshot and compare files and download only required?
 
         # Download the resources
-        contents = self.download_files(urls, self._output)
-        return contents
+        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
+        return file_paths
 
     def upload_conan(self, conan_reference, the_files):
         """
@@ -144,7 +142,7 @@ class RestApiClient(object):
 
         # Get the remote snapshot
         remote_snapshot = self._get_conan_snapshot(conan_reference)
-        local_snapshot = {filename: md5(content) for filename, content in the_files.items()}
+        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -154,8 +152,8 @@ class RestApiClient(object):
         if files_to_upload:
             # Get the upload urls
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
-            filesizes = {filename.replace("\\", "/"): len(content)
-                         for filename, content in files_to_upload.items()}
+            filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
+                         for filename, abs_path in files_to_upload.items()}
             urls = self._get_json(url, data=filesizes)
             self.upload_files(urls, files_to_upload, self._output)
         if deleted:
@@ -168,9 +166,10 @@ class RestApiClient(object):
         """
         self.check_credentials()
 
+        t1 = time.time()
         # Get the remote snapshot
         remote_snapshot = self._get_package_snapshot(package_reference)
-        local_snapshot = {filename: md5(content) for filename, content in the_files.items()}
+        local_snapshot = {filename: md5sum(abs_path) for filename, abs_path in the_files.items()}
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
@@ -180,7 +179,8 @@ class RestApiClient(object):
             url = "%s/conans/%s/packages/%s/upload_urls" % (self._remote_api_url,
                                                             "/".join(package_reference.conan),
                                                             package_reference.package_id)
-            filesizes = {filename: len(content) for filename, content in files_to_upload.items()}
+            filesizes = {filename: os.stat(abs_path).st_size for filename,
+                         abs_path in files_to_upload.items()}
             self._output.rewrite_line("Requesting upload permissions...")
             urls = self._get_json(url, data=filesizes)
             self._output.rewrite_line("Requesting upload permissions...Done!")
@@ -191,6 +191,8 @@ class RestApiClient(object):
             self._output.writeln("")
         if deleted:
             self._remove_package_files(package_reference, deleted)
+
+        logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
 
     @handle_return_deserializer()
     def authenticate(self, user, password):
@@ -349,7 +351,9 @@ class RestApiClient(object):
         Its a generator, so it yields elements for memory performance
         """
         downloader = Downloader(self.requester, output, self.VERIFY_SSL)
-        for filename, resource_url in file_urls.items():
+        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
+        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
+        for filename, resource_url in sorted(file_urls.items(), reverse=True):
             if output:
                 output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
@@ -358,11 +362,34 @@ class RestApiClient(object):
                 output.writeln("")
             yield os.path.normpath(filename), contents
 
+    def download_files_to_folder(self, file_urls, to_folder, output=None):
+        """
+        :param: file_urls is a dict with {filename: abs_path}
+
+        It writes downloaded files to disk (appending to file, only keeps chunks in memory)
+        """
+        downloader = Downloader(self.requester, output, self.VERIFY_SSL)
+        ret = {}
+        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
+        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
+        for filename, resource_url in sorted(file_urls.items(), reverse=True):
+            if output:
+                output.writeln("Downloading %s" % filename)
+            auth, _ = self._file_server_capabilities(resource_url)
+            abs_path = os.path.join(to_folder, filename)
+            downloader.download(resource_url, abs_path, auth=auth)
+            if output:
+                output.writeln("")
+            ret[filename] = abs_path
+        return ret
+
     def upload_files(self, file_urls, files, output):
         t1 = time.time()
         failed = {}
         uploader = Uploader(self.requester, output, self.VERIFY_SSL)
-        for filename, resource_url in file_urls.items():
+        # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
+        # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
+        for filename, resource_url in sorted(file_urls.items(), reverse=True):
             output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup)

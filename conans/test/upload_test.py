@@ -1,9 +1,10 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
-from conans.test.utils.test_files import hello_source_files, temp_folder
+from conans.test.utils.test_files import hello_source_files, temp_folder,\
+    hello_conan_files
 from conans.client.manager import CONANFILE
 import os
-from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME
+from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
 import platform
 import stat
 from conans.util.files import save
@@ -11,7 +12,6 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import uncompress_packaged_files
 from conans.tools import untargz
-
 
 myconan1 = """
 from conans import ConanFile
@@ -58,13 +58,45 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(package_folder, "res", "shares", "readme.txt"),
              "//res")
         save(os.path.join(package_folder, "bin", "my_bin", "executable"), "//bin")
+        save(os.path.join(package_folder, CONANINFO), "info")
+        save(os.path.join(package_folder, CONAN_MANIFEST), "manifest")
+
         os.chmod(os.path.join(package_folder, "bin", "my_bin", "executable"),
                  os.stat(os.path.join(package_folder, "bin", "my_bin", "executable")).st_mode |
                  stat.S_IRWXU)
 
+        digest_path = self.client.client_cache.digestfile_package(self.package_ref)
+        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+        save(os.path.join(package_folder, CONAN_MANIFEST), str(expected_manifest))
+
         self.server_reg_folder = self.test_server.paths.export(self.conan_ref)
         self.assertFalse(os.path.exists(self.server_reg_folder))
         self.assertFalse(os.path.exists(self.server_pack_folder))
+
+    def try_upload_bad_recipe_test(self):
+        files = hello_conan_files("Hello0", "1.2.1")
+        self.client.save(files)
+        self.client.run("export frodo/stable")
+        ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
+        os.unlink(os.path.join(self.client.client_cache.export(ref), CONAN_MANIFEST))
+        with self.assertRaisesRegexp(Exception, "Command failed"):
+            self.client.run("upload %s" % str(ref))
+
+        self.assertIn("Cannot upload corrupted recipe", self.client.user_io.out)
+
+    def upload_same_package_dont_compress_test(self):
+        # Create a manifest for the faked package
+        pack_path = self.client.paths.package(self.package_ref)
+        digest_path = self.client.client_cache.digestfile_package(self.package_ref)
+        expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+        save(os.path.join(pack_path, CONAN_MANIFEST), str(expected_manifest))
+
+        self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
+        self.assertIn("Compressing package", str(self.client.user_io.out))
+
+        self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
+        self.assertNotIn("Compressing package", str(self.client.user_io.out))
+        self.assertIn("Package is up to date", str(self.client.user_io.out))
 
     def upload_with_no_valid_settings_test(self):
         '''Check if upload is still working even if the specified setting is not valid.
@@ -147,6 +179,17 @@ class TestConan(ConanFile):
         '''Upload conans and package together'''
         # Try to upload all conans and packages
         self.client.run('upload %s --all' % str(self.conan_ref))
+        lines = [line.strip() for line in str(self.client.user_io.out).splitlines()
+                 if line.startswith("Uploading")]
+        self.assertEqual(lines, ["Uploading Hello/1.2.1@frodo/stable",
+                                 "Uploading conanmanifest.txt",
+                                 "Uploading conanfile.py",
+                                 "Uploading conan_export.tgz",
+                                 "Uploading package 1/1: myfakeid",
+                                 "Uploading conanmanifest.txt",
+                                 "Uploading conaninfo.txt",
+                                 "Uploading conan_package.tgz",
+                                 ])
         self.assertTrue(os.path.exists(self.server_reg_folder))
         self.assertTrue(os.path.exists(self.server_pack_folder))
 
@@ -159,7 +202,7 @@ class TestConan(ConanFile):
 
         # Fake datetime from exported date and upload again
         digest_path = os.path.join(self.client.paths.export(self.conan_ref), CONAN_MANIFEST)
-        old_digest = self.client.paths.load_digest(self.conan_ref)
+        old_digest = self.client.paths.load_manifest(self.conan_ref)
         fake_digest = FileTreeManifest(2, old_digest.file_sums)
         save(digest_path, str(fake_digest))
 

@@ -1,5 +1,4 @@
 from conans.model import registered_generators
-from conans.model.env_info import EnvInfo
 from conans.util.files import save, normalize
 from os.path import join
 from .text import TXTGenerator
@@ -31,14 +30,6 @@ _save_generator("virtualenv", VirtualEnvGenerator)
 def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
-
-    from conans.model.build_info import CppInfo
-
-    conanfile.cpp_info = CppInfo(path)
-    conanfile.cpp_info.dependencies = []
-
-    conanfile.env_info = EnvInfo(path)
-    conanfile.package_info()
 
     for generator_name in conanfile.generators:
         if generator_name not in registered_generators:

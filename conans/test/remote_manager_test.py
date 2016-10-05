@@ -1,13 +1,20 @@
+import os
+import tempfile
 import unittest
-from conans.client.remote_manager import RemoteManager
+
 from mock import Mock
+
+from conans.client.client_cache import ClientCache
+from conans.client.remote_manager import RemoteManager
+from conans.client.remote_registry import Remote
 from conans.errors import NotFoundException
 from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.manifest import FileTreeManifest
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
 from conans.test.tools import TestBufferConanOutput, TestClient
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.client.remote_registry import Remote
-from conans.client.client_cache import ClientCache
+from conans.util.files import save
 
 
 class MockRemoteClient(object):
@@ -15,8 +22,13 @@ class MockRemoteClient(object):
     def __init__(self):
         self.upload_package = Mock()
         self.get_conan_digest = Mock()
-        self.get_conanfile = Mock(return_value=[("one.txt", "ONE")])
-        self.get_package = Mock(return_value=[("one.txt", "ONE")])
+        tmp_folder = tempfile.mkdtemp(suffix='conan_download')
+        save(os.path.join(tmp_folder, "one.txt"), "ONE")
+        self.get_recipe = Mock(return_value={"one.txt": os.path.join(tmp_folder, "one.txt")})
+
+        tmp_folder = tempfile.mkdtemp(suffix='conan_download')
+        save(os.path.join(tmp_folder, "one.txt"), "ONE")
+        self.get_package = Mock(return_value={"one.txt":  os.path.join(tmp_folder, "one.txt")})
         self.remote_url = None
 
         self.raise_count = 0
@@ -50,15 +62,22 @@ class RemoteManagerTest(unittest.TestCase):
         self.assertIn("ERROR: No default remote defined", client.user_io.out)
 
     def remote_selection_test(self):
+        save(os.path.join(self.client_cache.export(self.conan_reference), CONANFILE), "asdasd")
+        save(os.path.join(self.client_cache.export(self.conan_reference), CONAN_MANIFEST), "asdasd")
+
         # If no remote is specified will look to first
-        self.assertRaises(NotFoundException, self.manager.upload_conan, self.conan_reference,
-                          Remote("other", "url"))
+        self.assertRaises(NotFoundException, self.manager.upload_conan, self.conan_reference, None)
 
         # If remote is specified took it
         self.assertRaises(NotFoundException,
                           self.manager.upload_conan, self.conan_reference, Remote("other", "url"))
 
     def method_called_test(self):
+
+        save(os.path.join(self.client_cache.package(self.package_reference), CONANINFO), "asdasd")
+        manifest = FileTreeManifest.create(self.client_cache.package(self.package_reference))
+        save(os.path.join(self.client_cache.package(self.package_reference), CONAN_MANIFEST), str(manifest))
+
         self.assertFalse(self.remote_client.upload_package.called)
         self.manager.upload_package(self.package_reference, Remote("other", "url"))
         self.assertTrue(self.remote_client.upload_package.called)
@@ -67,10 +86,10 @@ class RemoteManagerTest(unittest.TestCase):
         self.manager.get_conan_digest(self.conan_reference, Remote("other", "url"))
         self.assertTrue(self.remote_client.get_conan_digest.called)
 
-        self.assertFalse(self.remote_client.get_conanfile.called)
-        self.manager.get_conanfile(self.conan_reference, Remote("other", "url"))
-        self.assertTrue(self.remote_client.get_conanfile.called)
+        self.assertFalse(self.remote_client.get_recipe.called)
+        self.manager.get_recipe(self.conan_reference, temp_folder(), Remote("other", "url"))
+        self.assertTrue(self.remote_client.get_recipe.called)
 
         self.assertFalse(self.remote_client.get_package.called)
-        self.manager.get_package(self.package_reference, Remote("other", "url"))
+        self.manager.get_package(self.package_reference, temp_folder(), Remote("other", "url"))
         self.assertTrue(self.remote_client.get_package.called)

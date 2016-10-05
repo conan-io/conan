@@ -17,7 +17,7 @@ class FileManager(object):
         self._storage_adapter = storage_adapter
 
     # ############ SNAPSHOTS
-    def get_conanfile(self, conan_reference):
+    def get_recipe(self, conan_reference):
         conanfile_path = self.paths.conanfile(conan_reference)
         return self._storage_adapter.get_file(conanfile_path)
 
