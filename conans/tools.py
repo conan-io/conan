@@ -324,24 +324,34 @@ class SystemPackageTool(object):
             Get the system package tool update command
         """
         sudo_str = "sudo " if self._sudo else ""
+        update_command = None
         if self._os_info.with_apt:
-            return self._runner("%sapt-get update" % sudo_str, True)
+            update_command = "%sapt-get update" % sudo_str
         elif self._os_info.with_yum:
-            return self._runner("%syum check-update" % sudo_str, True)
+            update_command = "%syum check-update" % sudo_str
         elif self._os_info.is_macos:
-            return self._runner("brew update", True)
+            update_command = "brew update"
+
+        if update_command:
+            print("Running: %s" % update_command)
+            return self._runner(update_command, True)
 
     def install(self, package_name):
         '''
             Get the system package tool install command.
         '''
         sudo_str = "sudo " if self._sudo else ""
+        install_command = None
         if self._os_info.with_apt:
-            return self._runner("%sapt-get install -y %s" % (sudo_str, package_name), True)
+            install_command = "%sapt-get install -y %s" % (sudo_str, package_name)
         elif self._os_info.with_yum:
-            return self._runner("%syum install -y %s" % (sudo_str, package_name), True)
+            install_command = "%syum install -y %s" % (sudo_str, package_name)
         elif self._os_info.is_macos:
-            return self._runner("brew install %s" % package_name, True)
+            install_command = "brew install %s" % package_name
+
+        if install_command:
+            print("Running: %s" % install_command)
+            return self._runner(install_command, True)
         else:
             print("Warn: Only available for linux with apt-get or yum or OSx with brew")
             return None

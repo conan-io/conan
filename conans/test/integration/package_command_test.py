@@ -8,6 +8,14 @@ from conans.util.files import save
 
 class PackageCommandTest(unittest.TestCase):
 
+    def package_errors_test(self):
+        client = TestClient()
+        client.run("package whatever@user/channel --all", ignore_error=True)
+        self.assertIn("Invalid package recipe reference", client.user_io.out)
+
+        client.run("package whatever/1.0@user/channel --all", ignore_error=True)
+        self.assertIn("whatever/1.0@user/channel", client.user_io.out)
+
     def package_test(self):
         """Use 'conan package' command to repackage a generated package (without build it)"""
         self.client = TestClient(users={"default": [("lasote", "mypass")]})

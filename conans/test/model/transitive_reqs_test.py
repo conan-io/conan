@@ -409,6 +409,23 @@ class ChatConan(ConanFile):
                          "Hello/1.2@diego/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
                          "Say/0.1@diego/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
+    def test_diamond_conflict_error(self):
+        chat_content = """
+from conans import ConanFile
+
+class ChatConan(ConanFile):
+    name = "Chat"
+    version = "2.3"
+    requires = "Hello/1.2@diego/testing", "Bye/0.2@diego/testing"
+"""
+        self.retriever.conan(say_ref, say_content)
+        self.retriever.conan(say_ref2, say_content2)
+        self.retriever.conan(hello_ref, hello_content)
+        self.retriever.conan(bye_ref, bye_content2)
+        self.output.werror_active = True
+        with self.assertRaisesRegexp(ConanException, "Conflict in Bye/0.2@diego/testing"):
+            self.root(chat_content)
+
     def test_diamond_conflict(self):
         chat_content = """
 from conans import ConanFile
@@ -834,6 +851,12 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref, say_content)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content)
+
+        self.output.werror_active = True
+        with self.assertRaisesRegexp(ConanException, "tried to change"):
+            self.root(chat_content)
+
+        self.output.werror_active = False
         deps_graph = self.root(chat_content)
 
         self.assertEqual(4, len(deps_graph.nodes))

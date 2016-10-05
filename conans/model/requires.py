@@ -104,8 +104,8 @@ class Requirements(OrderedDict):
         new_requirement = Requirement(conan_reference, private, override, dev)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
-            self.output.warn("Duplicated requirement %s != %s"
-                             % (old_requirement, new_requirement))
+            self.output.werror("Duplicated requirement %s != %s"
+                               % (old_requirement, new_requirement))
         else:
             self[name] = new_requirement
 
