@@ -92,9 +92,12 @@ class CompileHelpersTest(unittest.TestCase):
 
     def configure_environment_test(self):
         env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
-        self.assertEquals(env.command_line, 'SET LIB=%LIB%;"path/to/lib1";"path/to/lib2" && '
-                                            'SET CL=%CL% /I"path/to/includes/lib1" '
-                                            '/I"path/to/includes/lib2"')
+
+        expected = ('(if defined LIB (SET LIB=%LIB%;"path/to/lib1";"path/to/lib2")'
+                    ' else (SET LIB="path/to/lib1";"path/to/lib2")) && '
+                    '(if defined CL (SET CL=%CL% /I"path/to/includes/lib1" /I"path/to/includes/lib2")'
+                    ' else (SET CL=/I"path/to/includes/lib1" /I"path/to/includes/lib2"))')
+        self.assertEquals(env.command_line, expected)
 
         env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
         self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
