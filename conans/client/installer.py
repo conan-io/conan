@@ -160,20 +160,26 @@ class ConanInstaller(object):
             output.info("Installing package %s" % package_id)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
-
+        output.info("Handled system requirements")
         force_build = self._build_forced(conan_ref, build_mode, conan_file)
+        output.info("Lets try remote get pacakge")
         if self._remote_proxy.get_package(package_reference, force_build):
             return
 
+        output.info("should we build?")
         # we need and can build? Only if we are forced or build_mode missing and package not exists
         build = force_build or build_mode is True or conan_file.build_policy_missing
 
         if build:
+            output.info("yes, we should")
             if not force_build and not build_mode:
                 output.info("Building package from source as defined by build_policy='missing'")
             try:
+                output.info("Remobing build...")
                 rmdir(build_folder, conan_file.short_paths)
+                output.info("Remobing package...")
                 rmdir(package_folder)
+                output.info("Done Removing")
             except Exception as e:
                 raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
                                      "Close any app using it, and retry" % str(e))
@@ -193,6 +199,7 @@ class ConanInstaller(object):
             create_package(conan_file, build_folder, package_folder, output)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
         else:
+            output.info("nop, lets raise error")
             self._raise_package_not_found_error(conan_ref, conan_file)
 
     def _raise_package_not_found_error(self, conan_ref, conan_file):

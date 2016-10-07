@@ -108,6 +108,7 @@ def relative_dirs(path):
 
 
 def _change_permissions(func, path, exc_info):
+    print "Changing parmissions ", path
     import stat
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR)
@@ -126,6 +127,7 @@ def rmdir(path, shorten=False):
             rmdir(short_path)
 
     try:
+        print "Calling shutil.rmtree"
         shutil.rmtree(path, onerror=_change_permissions)
     except OSError as err:
         if err.errno == ENOENT:

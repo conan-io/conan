@@ -2,7 +2,7 @@ from conans.model.settings import Settings
 import copy
 from conans.client.generators.virtualenv import get_setenv_variables_commands
 from conans.model.env_info import DepsEnvInfo
-
+from conans.util.files import save
 
 class ConfigureEnvironment(object):
 
@@ -93,12 +93,20 @@ class ConfigureEnvironment(object):
             command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
         elif self.os == "Windows" and self.compiler == "Visual Studio":
             cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
-            lib_paths = ";".join(['"%s"' % lib for lib in self._deps_cpp_info.lib_paths])
-            command = ("(if defined LIB (SET LIB=%LIB%;{lib_paths}) else (SET LIB={lib_paths}))"
-                       " && (if defined CL (SET CL=%CL% {cl_args}) else (SET CL={cl_args}))".
+            lib_paths = ";".join(['%s' % lib for lib in self._deps_cpp_info.lib_paths])
+            command = ('(if defined LIB (SET "LIB=%LIB%;{lib_paths}") else (SET "LIB={lib_paths}"))'
+                       ' && (if defined CL (SET "CL=%CL% {cl_args}") else (SET "CL={cl_args}"))'.
                        format(lib_paths=lib_paths, cl_args=cl_args))
 
         # Add the rest of env variables from deps_env_info
         command += " ".join(get_setenv_variables_commands(self._deps_env_info,
                                                           "" if self.os != "Windows" else "SET"))
+        
+        if self.os == "Windows" and self.compiler == "Visual Studio":
+            save("_conan_env.bat", command)
+            command = "call _conan_env.bat"
+            vcvars = vcvars_command(self._settings)
+            if vcvars:
+                command = vcvars + " && " + command
+                     
         return command
