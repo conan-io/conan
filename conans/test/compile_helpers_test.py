@@ -93,10 +93,10 @@ class CompileHelpersTest(unittest.TestCase):
     def configure_environment_test(self):
         env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
 
-        expected = ('(if defined LIB (SET LIB=%LIB%;"path/to/lib1";"path/to/lib2")'
-                    ' else (SET LIB="path/to/lib1";"path/to/lib2")) && '
-                    '(if defined CL (SET CL=%CL% /I"path/to/includes/lib1" /I"path/to/includes/lib2")'
-                    ' else (SET CL=/I"path/to/includes/lib1" /I"path/to/includes/lib2"))')
+        expected = ('SET LIB="path/to/lib1";"path/to/lib2";%LIB% && '
+                    'SET CL=/I"path/to/includes/lib1" '
+                    '/I"path/to/includes/lib2"')
+
         self.assertEquals(env.command_line, expected)
 
         env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
@@ -108,20 +108,11 @@ class CompileHelpersTest(unittest.TestCase):
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
-                                            'CPP_INCLUDE_PATH=$CPP_INCLUDE_PATH:"path/to/includes/lib1":'
+                                            'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2"')
         # Not supported yet
         env = ConfigureEnvironment(BuildInfoMock(), MockWinGccSettings())
-        self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
-                                            '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
-                                            'CFLAGS="$CFLAGS -m32 cflag1 -s -DNDEBUG '
-                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
-                                            'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -s -DNDEBUG '
-                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
-                                            'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
-                                            '"path/to/includes/lib2" '
-                                            'CPP_INCLUDE_PATH=$CPP_INCLUDE_PATH:"path/to/includes/lib1":'
-                                            '"path/to/includes/lib2"')
+        self.assertEquals(env.command_line_env, 'call _conan_env.bat')
 
     def gcc_test(self):
         gcc = GCC(MockLinuxSettings())
@@ -161,8 +152,9 @@ class CompileHelpersTest(unittest.TestCase):
             env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
             command = "%s && SET" % env.command_line
             runner(command, output=output)
-            self.assertIn('LIB="/path/to/lib.a";"path/to/lib1";"path/to/lib2"', output)
-            self.assertIn('CL=/I"path/to/cl1" /I"path/to/cl2" /I"path/to/includes/lib1" /I"path/to/includes/lib2"' , output)
+
+            self.assertIn('LIB="path/to/lib1";"path/to/lib2";"/path/to/lib.a"', output)
+            self.assertIn('CL=/I"path/to/includes/lib1" /I"path/to/includes/lib2"' , output)
 
             os.environ["LIB"] = ""
             os.environ["CL"] = ""

@@ -1,6 +1,68 @@
 from conans.paths import CONANFILE, BUILD_INFO_CMAKE
 
 
+conanfile_build_cmake = """    def build(self):
+        static_flags = "-DBUILD_SHARED_LIBS=ON" if not self.options.static else ""
+        lang = '-DCONAN_LANGUAGE=%s' % self.options.language
+        cmake = CMake(self.settings)
+        cmake_flags = cmake.command_line
+        cmd = 'cmake "%s" %s %s %s' % (self.conanfile_directory, cmake_flags, lang, static_flags)
+        #print "Executing command ", cmd
+        self.run(cmd)
+        self.run("cmake --build . %s" % cmake.build_config)"""
+
+conanfile_build_env = """
+    def build(self):
+        import os
+        from conans import ConfigureEnvironment
+
+        environment = ConfigureEnvironment(self)
+        env = environment.command_line_env
+        flags = environment.compiler_flags
+
+        if self.settings.compiler == "Visual Studio":
+            lang = '/DCONAN_LANGUAGE=%s' % self.options.language
+            if self.options.static:
+                self.run('{}  && cl /c /EHsc hello.cpp {}'.format(env, lang))
+                self.run('{} && lib hello.obj -OUT:hello{}.lib'.format(env, self.name))
+            else:
+                self.run('{} && cl /EHsc /LD hello.cpp {} {} /link /IMPLIB:hello{}.lib '
+                         '/link /OUT:hello{}.dll'.format(env, lang, flags, self.name, self.name))
+
+            command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(env, self.name, flags))
+            self.run(command)
+        elif self.settings.compiler == "gcc":
+            # libs = " ".join("-l%s" % lib for lib in self.deps_cpp_info.libs)
+            lang = '-DCONAN_LANGUAGE=%s' % self.options.language
+            if self.options.static:
+                self.run("g++ -c hello.cpp {} {}".format(lang, flags))
+                self.run("{} && ar rcs libhello{}.a hello.o".format(env, self.name))
+            else:
+                if self.settings.os == "Windows":
+                    self.run("{} && g++ -o libhello{}.dll -shared -fPIC hello.cpp {} {} "
+                             "-Wl,--out-implib,libhello{}.a".
+                             format(env, self.name, lang, flags, self.name))
+                else:
+                    self.run("{} && g++ -o libhello{}.so -shared -fPIC hello.cpp {} {}".
+                    format(env, self.name, flags, lang))
+            self.run('{} && g++ -o main main.cpp -L. -lhello{} {}'.format(env, self.name, flags))
+
+        try:
+            os.makedirs("bin")
+        except:
+            pass
+
+        try:
+            if self.settings.os == "Windows":
+                os.rename("main.exe", "bin/say_hello.exe")
+            else:
+                os.rename("main", "bin/say_hello")
+                if not self.options.static:
+                    os.rename("libhello.so", "bin/libhello.so")
+        except:
+            pass
+"""
+
 conanfile_template = """
 from conans import ConanFile, CMake
 from conans.tools import replace_in_file
@@ -34,15 +96,7 @@ class {name}Conan(ConanFile):
         except:
             pass
 
-    def build(self):
-        static_flags = "-DBUILD_SHARED_LIBS=ON" if not self.options.static else ""
-        lang = '-DCONAN_LANGUAGE=%s' % self.options.language
-        cmake = CMake(self.settings)
-        cmake_flags = cmake.command_line
-        cmd = 'cmake "%s" %s %s %s' % (self.conanfile_directory, cmake_flags, lang, static_flags)
-        #print "Executing command ", cmd
-        self.run(cmd)
-        self.run("cmake --build . %s" % cmake.build_config)
+{build}
 
     def package(self):
         self.copy(pattern="*.h", dst="include", keep_path=False)
@@ -188,7 +242,8 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
 
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
-                          pure_c=False, config=True, build=True, collect_libs=False):
+                          pure_c=False, config=True, build=True, collect_libs=False,
+                          use_cmake=True):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -222,12 +277,17 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                         dll_export=dll_export, need_patch=need_patch,
                                         pure_c=pure_c)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
+    build_env = conanfile_build_cmake if use_cmake else conanfile_build_env
     conanfile = conanfile_template.format(name=name,
                                           version=version,
                                           requires=requires,
                                           language=language,
                                           static=static,
-                                          libcxx_remove=libcxx_remove)
+                                          libcxx_remove=libcxx_remove,
+                                          build=build_env)
+    if pure_c:
+        conanfile = conanfile.replace("hello.cpp", "hello.c").replace("main.cpp", "main.c")
+        conanfile = conanfile.replace("g++", "gcc")
     if not build:
         conanfile = conanfile.replace("build(", "build2(")
     if not config:

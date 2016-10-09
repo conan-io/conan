@@ -7,6 +7,9 @@ from conans.model.build_info import DepsCppInfo
 from conans.util.files import load
 import os
 from conans.paths import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE
+import platform
+from conans.util.log import logger
+import time
 
 
 @attr("slow")
@@ -19,8 +22,8 @@ class DiamondTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-    def _export_upload(self, name, version=None, deps=None):
-        files = cpp_hello_conan_files(name, version, deps, need_patch=True)
+    def _export_upload(self, name, version=None, deps=None, use_cmake=True):
+        files = cpp_hello_conan_files(name, version, deps, need_patch=True, use_cmake=use_cmake)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.conan.save(files, clean_first=True)
         self.conan.run("export lasote/stable")
@@ -48,15 +51,32 @@ class DiamondTest(unittest.TestCase):
             self.assertIn("set(CONAN_INCLUDE_DIRS_%s " % dep.upper(), content)
             self.assertIn("set(CONAN_LIBS_%s hello%s)" % (dep.upper(), dep), content)
 
-    def reuse_test(self):
-        self._export_upload("Hello0", "0.1")
-        self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
-        self._export_upload("Hello2", "0.1", ["Hello0/0.1@lasote/stable"])
+    def diamond_cmake_test(self):
+        self._diamond_test(use_cmake=True)
+
+    def diamond_default_test(self):
+        self._diamond_test(use_cmake=False)
+
+    def diamond_mingw_test(self):
+        if platform.system() != "Windows":
+            return
+        not_env = os.system("g++ --version > nul")
+        if not_env != 0:
+            logger.error("This platform does not support G++ command")
+            return
+        install = "install -s compiler=gcc -s compiler.libcxx=libstdc++ -s compiler.version=4.9"
+        self._diamond_test(install=install, use_cmake=False)
+
+    def _diamond_test(self, install="install", use_cmake=True):
+        self._export_upload("Hello0", "0.1", use_cmake=use_cmake)
+        self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake)
+        self._export_upload("Hello2", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake)
         self._export_upload("Hello3", "0.1", ["Hello1/0.1@lasote/stable",
-                                              "Hello2/0.1@lasote/stable"])
+                                              "Hello2/0.1@lasote/stable"], use_cmake=use_cmake)
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"])
+        files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"],
+                                       use_cmake=use_cmake)
 
         # Add some stuff to base project conanfile to test further the individual
         # flags in build_info (txt, cmake) files
@@ -69,7 +89,7 @@ class DiamondTest(unittest.TestCase):
         files3[CONANFILE] = content
         client.save(files3)
 
-        client.run("install . --build missing")
+        client.run("%s . --build missing" % install)
         client.run("build .")
         self._check_individual_deps(client)
 
@@ -79,11 +99,14 @@ class DiamondTest(unittest.TestCase):
                           'Hello Hello2', 'Hello Hello0'],
                          str(client.user_io.out).splitlines()[-6:])
 
-        files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1)
+        files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1,
+                                       use_cmake=use_cmake)
+        files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         client.save(files3, clean_first=True)
-        client.run("install . --build missing")
+        client.run("%s . --build missing" % install)
         client.run("build .")
 
+        time.sleep(1)
         client.runner(command, cwd=client.current_folder)
         self.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
                           'Hola Hello2', 'Hola Hello0'],
@@ -100,28 +123,34 @@ class DiamondTest(unittest.TestCase):
         self.assertEqual(str(client.user_io.out).count("Uploading package"), 2)
 
         client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"])
+        files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"],
+                                       use_cmake=use_cmake)
+        files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         client2.save(files3)
-        client2.run("install . --build missing")
+        client2.run("%s . --build missing" % install)
         client2.run("build .")
 
         self.assertNotIn("libhello0.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
+        time.sleep(1)
         client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                           'Hello Hello2', 'Hello Hello0'],
                          str(client2.user_io.out).splitlines()[-6:])
 
-        files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1)
+        files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1,
+                                       use_cmake=use_cmake)
+        files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         client2.save(files3, clean_first=True)
-        client2.run("install . --build missing")
+        client2.run("%s . --build missing" % install)
         client2.run("build .")
         self.assertNotIn("libhello0.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
+        time.sleep(1)
         client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
                           'Hola Hello2', 'Hola Hello0'],
