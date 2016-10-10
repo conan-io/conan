@@ -32,7 +32,7 @@ from conans.model.scope import Scopes
 from conans.client.client_cache import ClientCache
 from conans.client.source import config_source
 from conans.client.manifest_manager import ManifestManager
-from conans.model.env_info import EnvInfo
+from conans.model.env_info import EnvInfo, DepsEnvInfo
 
 
 def get_user_channel(text):
@@ -354,6 +354,14 @@ If not:
                 try:
                     deps_cpp_info = DepsCppInfo.loads(load(build_info_file))
                     conan_file.deps_cpp_info = deps_cpp_info
+                except:
+                    pass
+
+            env_file = os.path.join(current_path, "conanenv.txt")
+            if os.path.exists(env_file):
+                try:
+                    deps_env_info = DepsEnvInfo.loads(load(env_file))
+                    conan_file.deps_env_info = deps_env_info
                 except:
                     pass
 

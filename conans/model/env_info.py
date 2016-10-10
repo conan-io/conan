@@ -1,5 +1,7 @@
 from collections import OrderedDict
 from conans.util.log import logger
+import os
+import re
 
 
 class EnvInfo(object):
@@ -20,20 +22,18 @@ class EnvInfo(object):
     def __getattr__(self, name):
         if name.startswith("_") and name.endswith("_"):
             return super(EnvInfo, self).__getattr__(name)
-        else:
-            if not self._values_.get(name):
-                self._values_[name] = []
-            elif not isinstance(self._values_[name], list):
-                tmp = self._values_[name]
-                self._values_[name] = [tmp]
-            return self._values_[name]
+
+        attr = self._values_.get(name)
+        if not attr:
+            self._values_[name] = []
+        elif not isinstance(attr, list):
+            self._values_[name] = [attr]
+        return self._values_[name]
 
     def __setattr__(self, name, value):
         if (name.startswith("_") and name.endswith("_")):
-            super(EnvInfo, self).__setattr__(name, value)
-        else:
-            self._values_[name] = value
-        return
+            return super(EnvInfo, self).__setattr__(name, value)
+        self._values_[name] = value
 
     @property
     def vars(self):
@@ -46,6 +46,40 @@ class DepsEnvInfo(EnvInfo):
     def __init__(self):
         super(DepsEnvInfo, self).__init__()
         self._dependencies_ = OrderedDict()
+
+    def dumps(self):
+        result = []
+
+        for var, values in self.vars.items():
+            result.append("[%s]" % var)
+            result.extend(values)
+        result.append("")
+
+        for name, env_info in self._dependencies_.items():
+            for var, values in env_info.vars.items():
+                result.append("[%s:%s]" % (name, var))
+                result.extend(values)
+            result.append("")
+
+        return os.linesep.join(result)
+
+    @staticmethod
+    def loads(text):
+        pattern = re.compile("^\[([a-zA-Z0-9_:-]+)\]([^\[]+)", re.MULTILINE)
+        result = DepsEnvInfo()
+
+        for m in pattern.finditer(text):
+            var_name = m.group(1)
+            lines = [line.strip() for line in m.group(2).splitlines() if line.strip()]
+            tokens = var_name.split(":")
+            if len(tokens) == 2:
+                library = tokens[0]
+                var_name = tokens[1]
+                result._dependencies_.setdefault(library, EnvInfo()).vars[var_name] = lines
+            else:
+                result.vars[var_name] = lines
+
+        return result
 
     @property
     def dependencies(self):
