@@ -14,6 +14,7 @@ from conans.model.version import Version
 from conans.util.log import logger
 from conans.client.runner import ConanRunner
 from contextlib import contextmanager
+import multiprocessing
 
 
 @contextmanager
@@ -29,6 +30,14 @@ def vcvars_command(settings):
     command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
                % (settings.compiler.version, param))
     return command
+
+
+def cpu_count():
+    try:
+        return multiprocessing.cpu_count()
+    except NotImplementedError:
+        print("WARN: multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
+    return 1  # Safe guess
 
 
 def human_size(size_bytes):

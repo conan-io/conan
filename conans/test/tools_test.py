@@ -1,9 +1,8 @@
-
 import unittest
 from conans.tools import SystemPackageTool, replace_in_file
 import os
 from conans.test.utils.test_files import temp_folder
-import codecs
+from conans import tools
 
 
 class RunnerMock(object):
@@ -46,6 +45,11 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+
+    def cpu_count_test(self):
+        cpus = tools.cpu_count()
+        self.assertIsInstance(cpus, int)
+        self.assertGreaterEqual(cpus, 1)
 
     def system_package_tool_test(self):
 
