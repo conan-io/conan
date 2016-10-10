@@ -72,6 +72,15 @@ def unzip(filename, destination="."):
         return untargz(filename, destination)
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
+
+    if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+        def print_progress(extracted_size, uncompress_size):
+            txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
+            print(txt_msg, end='')
+    else:
+        def print_progress(extracted_size, uncompress_size):
+            pass
+
     with zipfile.ZipFile(filename, "r") as z:
         uncompress_size = sum((file_.file_size for file_ in z.infolist()))
         print("Unzipping %s, this can take a while" % human_size(uncompress_size))
@@ -79,8 +88,7 @@ def unzip(filename, destination="."):
         if platform.system() == "Windows":
             for file_ in z.infolist():
                 extracted_size += file_.file_size
-                txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
-                print(txt_msg, end='')
+                print_progress(extracted_size, uncompress_size)
                 try:
                     # Win path limit is 260 chars
                     if len(file_.filename) + len(full_path) >= 260:
@@ -91,8 +99,7 @@ def unzip(filename, destination="."):
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in z.infolist():
                 extracted_size += file_.file_size
-                txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
-                print(txt_msg, end='')
+                print_progress(extracted_size, uncompress_size)
                 try:
                     z.extract(file_, full_path)
                 except Exception as e:
