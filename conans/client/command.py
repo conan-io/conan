@@ -307,6 +307,8 @@ path to the CMake binary directory, like this:
                             help='Define scopes for packages')
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
+        parser.add_argument("--werror", action='store_true', default=False,
+                            help='Error instead of warnings for graph inconsistencies')
 
         # Manifests arguments
         default_manifest_folder = '.conan_manifests'
@@ -324,6 +326,7 @@ path to the CMake binary directory, like this:
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
+        self._user_io.out.werror_active = args.werror
 
         current_path = os.getcwd()
         try:
