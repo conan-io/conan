@@ -10,6 +10,7 @@ from .visualstudio import VisualStudioGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
+from conans.client.generators.env import ConanEnvGenerator
 
 
 def _save_generator(name, klass):
@@ -25,6 +26,7 @@ _save_generator("visual_studio", VisualStudioGenerator)
 _save_generator("xcode", XCodeGenerator)
 _save_generator("ycm", YouCompleteMeGenerator)
 _save_generator("virtualenv", VirtualEnvGenerator)
+_save_generator("env", ConanEnvGenerator)
 
 
 def write_generators(conanfile, path, output):

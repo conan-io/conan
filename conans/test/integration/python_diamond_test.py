@@ -33,6 +33,10 @@ class PythonDiamondTest(unittest.TestCase):
                                 "Hello3/0.1@lasote/stable: Build stuff Hello2",
                                 "Hello3/0.1@lasote/stable: Build stuff Hello0"]),
                       " ".join(str(self.client.user_io.out).splitlines()))
+        self.assertNotIn("Project: Build stuff Hello3", self.client.user_io.out)
+
+        self.client.run("build")
+        self.assertIn("Project: Build stuff Hello3", self.client.user_io.out)
 
         if platform.system() == "Windows":
             command = "activate && python main.py"

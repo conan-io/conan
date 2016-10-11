@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import os
 from conans.errors import ConanException
-from conans.util.files import _generic_algorithm_sum, load, save
+from conans.util.files import _generic_algorithm_sum, load
 from patch import fromfile, fromstring
 from conans.client.rest.uploader_downloader import Downloader
 import requests
