@@ -33,6 +33,7 @@ from conans.client.client_cache import ClientCache
 from conans.client.source import config_source
 from conans.client.manifest_manager import ManifestManager
 from conans.model.env_info import EnvInfo, DepsEnvInfo
+import copy
 
 
 def get_user_channel(text):
@@ -61,8 +62,10 @@ class ConanManager(object):
 
     def _loader(self, current_path=None, user_settings_values=None, user_options_values=None,
                 scopes=None):
+
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
+
         options = OptionsValues()
         conaninfo_scopes = Scopes()
 
@@ -210,16 +213,32 @@ class ConanManager(object):
                                               info, registry, graph_updates_info,
                                               remote)
 
+    def _mix_settings_and_profile(self, settings, profile_name):
+        '''Mix the specified settings with the specified profile.
+        Specified settings are prioritized to profile'''
+        if profile_name:
+            try:
+                profile = self._client_cache.load_profile(profile_name)
+                profile.update_settings(dict(settings))
+                return profile.settings.items()
+            except Exception as exc:
+                current_profiles = ", ".join(self._client_cache.current_profiles()) or "[]"
+                raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
+                                     "%s" % (profile_name, current_profiles))
+
+        return settings
+
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                scopes=None, generators=None):
+                scopes=None, generators=None, profile_name=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
         @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
         @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
+        @param profile: name of the profile to use
         """
         generators = generators or []
 
@@ -231,6 +250,7 @@ class ConanManager(object):
         else:
             manifest_manager = None
 
+        settings = self._mix_settings_and_profile(settings, profile_name)
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, manifest_manager, scopes)
         (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects

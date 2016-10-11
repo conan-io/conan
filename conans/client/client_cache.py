@@ -1,5 +1,5 @@
 import os
-from conans.util.files import save, load, relative_dirs, path_exists
+from conans.util.files import save, load, relative_dirs, path_exists, mkdir
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
@@ -8,11 +8,13 @@ from conans.model.ref import ConanFileReference
 from conans.model.manifest import FileTreeManifest
 from conans.paths import SimplePaths
 from genericpath import isdir
+from conans.model.profile import Profile
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
+PROFILES_FOLDER = "profiles"
 
 
 class ClientCache(SimplePaths):
@@ -57,6 +59,10 @@ class ClientCache(SimplePaths):
         return os.path.join(self.conan_folder, CONAN_CONF)
 
     @property
+    def profiles_path(self):
+        return os.path.join(self.conan_folder, PROFILES_FOLDER)
+
+    @property
     def settings_path(self):
         return os.path.join(self.conan_folder, CONAN_SETTINGS)
 
@@ -65,6 +71,7 @@ class ClientCache(SimplePaths):
         """Returns {setting: [value, ...]} defining all the possible
            settings and their values"""
         if not self._settings:
+            # TODO: Read default environment settings
             if not os.path.exists(self.settings_path):
                 save(self.settings_path, default_settings_yml)
                 settings = Settings.loads(default_settings_yml)
@@ -140,3 +147,15 @@ class ClientCache(SimplePaths):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
+
+    def profile_path(self, name):
+        if not os.path.exists(self.profiles_path):
+            mkdir(self.profiles_path)
+        return os.path.join(self.profiles_path, name)
+
+    def load_profile(self, name):
+        text = load(self.profile_path(name))
+        return Profile.loads(text)
+
+    def current_profiles(self):
+        return [name for name in os.listdir(self.profiles_path) if not os.path.isdir(name)]

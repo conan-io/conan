@@ -305,6 +305,7 @@ path to the CMake binary directory, like this:
                             help="update with new upstream packages")
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Define scopes for packages')
+        parser.add_argument("--profile", "-pr", nargs="?", default=None, help='Define a profile')
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("--werror", action='store_true', default=False,
@@ -376,7 +377,8 @@ path to the CMake binary directory, like this:
                                   manifest_verify=manifest_verify,
                                   manifest_interactive=manifest_interactive,
                                   scopes=scopes,
-                                  generators=args.generator)
+                                  generators=args.generator,
+                                  profile_name=args.profile)
 
     def info(self, *args):
         """ Prints information about the requirements.
