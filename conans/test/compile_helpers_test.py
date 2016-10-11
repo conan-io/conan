@@ -129,7 +129,7 @@ class CompileHelpersTest(unittest.TestCase):
             os.environ["CPPFLAGS"] = "-cppflag -othercppflag"
             os.environ["CFLAGS"] = "-cflag"
             os.environ["C_INCLUDE_PATH"] = "/path/to/c_include_path:/anotherpath"
-            os.environ["CPP_INCLUDE_PATH"] = "/path/to/cpp_include_path:/anotherpathpp"
+            os.environ["CPLUS_INCLUDE_PATH"] = "/path/to/cpp_include_path:/anotherpathpp"
 
             env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
             runner(env.command_line, output=output)
@@ -137,14 +137,14 @@ class CompileHelpersTest(unittest.TestCase):
             self.assertIn("CPPFLAGS=-cppflag -othercppflag -m32 cppflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2\n", output)
             self.assertIn("CFLAGS=-cflag -m32 cflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2\n", output)
             self.assertIn("C_INCLUDE_PATH=/path/to/c_include_path:/anotherpath:path/to/includes/lib1:path/to/includes/lib2\n", output)
-            self.assertIn("CPP_INCLUDE_PATH=/path/to/cpp_include_path:/anotherpathpp:path/to/includes/lib1:path/to/includes/lib2\n", output)
+            self.assertIn("CPLUS_INCLUDE_PATH=/path/to/cpp_include_path:/anotherpathpp:path/to/includes/lib1:path/to/includes/lib2\n", output)
 
             # Reset env vars to not mess with other tests
             os.environ["LDFLAGS"] = ""
             os.environ["CPPFLAGS"] = ""
             os.environ["CFLAGS"] = ""
             os.environ["C_INCLUDE_PATH"] = ""
-            os.environ["CPP_INCLUDE_PATH"] = ""
+            os.environ["CPLUS_INCLUDE_PATH"] = ""
         else:
             os.environ["LIB"] = '"/path/to/lib.a"'
             os.environ["CL"] = '/I"path/to/cl1" /I"path/to/cl2"'
