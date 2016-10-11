@@ -18,7 +18,7 @@ conanfile_build_env = """
 
         environment = ConfigureEnvironment(self)
         env = environment.command_line_env
-        flags = environment.compiler_flags
+        flags = environment.compile_flags
 
         if self.settings.compiler == "Visual Studio":
             lang = '/DCONAN_LANGUAGE=%s' % self.options.language

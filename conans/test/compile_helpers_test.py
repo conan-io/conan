@@ -76,6 +76,10 @@ class BuildInfoMock(object):
         return ["path/to/includes/lib1", "path/to/includes/lib2"]
 
     @property
+    def defines(self):
+        return ["MYDEF1", "MYDEF2"]
+
+    @property
     def libs(self):
         return ["lib1", "lib2"]
 
@@ -103,9 +107,9 @@ class CompileHelpersTest(unittest.TestCase):
         self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
                                             '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
                                             'CFLAGS="$CFLAGS -m32 cflag1 -s -DNDEBUG '
-                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
+                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -s -DNDEBUG '
-                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2" '
+                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
                                             'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:"path/to/includes/lib1":'
@@ -134,8 +138,8 @@ class CompileHelpersTest(unittest.TestCase):
             env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
             runner(env.command_line, output=output)
             self.assertIn("LDFLAGS=-Lpath/to/lib1 -Lpath/to/lib2 -m32 -framework thing -framework thing2 ldflag=23 otherldflag=33\n", output)
-            self.assertIn("CPPFLAGS=-cppflag -othercppflag -m32 cppflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2\n", output)
-            self.assertIn("CFLAGS=-cflag -m32 cflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2\n", output)
+            self.assertIn("CPPFLAGS=-cppflag -othercppflag -m32 cppflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2\n", output)
+            self.assertIn("CFLAGS=-cflag -m32 cflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2\n", output)
             self.assertIn("C_INCLUDE_PATH=/path/to/c_include_path:/anotherpath:path/to/includes/lib1:path/to/includes/lib2\n", output)
             self.assertIn("CPLUS_INCLUDE_PATH=/path/to/cpp_include_path:/anotherpathpp:path/to/includes/lib1:path/to/includes/lib2\n", output)
 

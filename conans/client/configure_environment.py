@@ -56,45 +56,10 @@ class ConfigureEnvironment(object):
             command = '%s && nmake /f Makefile.msvc"' % env.command_line
             self.run(command)
         """
-        command = ""
+
         if self.os == "Linux" or self.os == "Macos":
-            libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
-            libs = 'LIBS="%s"' % libflags
-            archflag = "-m32" if self.arch == "x86" else ""
-            exe_linker_flags = " ".join(self._deps_cpp_info.exelinkflags)
-            shared_linker_flags = " ".join(self._deps_cpp_info.sharedlinkflags)
-            lib_paths = " ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths])
-            ldflags = 'LDFLAGS="%s %s %s %s $LDFLAGS"' % (lib_paths, archflag,
-                                                          exe_linker_flags, shared_linker_flags)
-            debug = "-g" if self.build_type == "Debug" else "-s -DNDEBUG"
-            include_flags = " ".join(['-I%s' % i for i in self._deps_cpp_info.include_paths])
-            cflags = 'CFLAGS="$CFLAGS %s %s %s %s"' % (archflag,
-                                                       " ".join(self._deps_cpp_info.cflags),
-                                                       debug, include_flags)
-
-            # Append the definition for libcxx
-            all_cpp_flags = copy.copy(self._deps_cpp_info.cppflags)
-            if self.libcxx:
-                if str(self.libcxx) == "libstdc++":
-                    all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
-                elif str(self.libcxx) == "libstdc++11":
-                    all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
-
-                if "clang" in str(self.compiler):
-                    if str(self.libcxx) == "libc++":
-                        all_cpp_flags.append("-stdlib=libc++")
-                    else:
-                        all_cpp_flags.append("-stdlib=libstdc++")
-
-            cpp_flags = 'CPPFLAGS="$CPPFLAGS %s %s %s %s"' % (archflag, " ".join(all_cpp_flags),
-                                                              debug, include_flags)
-            include_paths = ":".join(['"%s"' % lib for lib in self._deps_cpp_info.include_paths])
-            headers_flags = ('C_INCLUDE_PATH=$C_INCLUDE_PATH:{0} '
-                             'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:{0}'.format(include_paths))
-            command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
-            # Add the rest of env variables from deps_env_info, WITHOUT SET, not needed with ENV
-            command += " ".join(get_setenv_variables_commands(self._deps_env_info, ""))
-        elif self.os == "Windows":
+            return self._nix_env()
+        if self.os == "Windows":
             if self.compiler == "Visual Studio":
                 cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
                 lib_paths = ";".join(['"%s"' % lib for lib in self._deps_cpp_info.lib_paths])
@@ -106,9 +71,51 @@ class ConfigureEnvironment(object):
 
         return command
 
+    def _nix_env(self):
+        libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
+        libs = 'LIBS="%s"' % libflags
+        archflag = "-m32" if self.arch == "x86" else ""
+        exe_linker_flags = " ".join(self._deps_cpp_info.exelinkflags)
+        shared_linker_flags = " ".join(self._deps_cpp_info.sharedlinkflags)
+        lib_paths = " ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths])
+        ldflags = 'LDFLAGS="%s %s %s %s $LDFLAGS"' % (lib_paths, archflag,
+                                                      exe_linker_flags, shared_linker_flags)
+        debug = "-g" if self.build_type == "Debug" else "-s -DNDEBUG"
+        include_flags = " ".join(['-I%s' % i for i in self._deps_cpp_info.include_paths])
+        defines = " ".join(['-D%s' % i for i in self._deps_cpp_info.defines])
+        cflags = 'CFLAGS="$CFLAGS %s %s %s %s %s"' % (archflag,
+                                                      " ".join(self._deps_cpp_info.cflags),
+                                                      debug, include_flags, defines)
+
+        # Append the definition for libcxx
+        all_cpp_flags = copy.copy(self._deps_cpp_info.cppflags)
+        if self.libcxx:
+            if str(self.libcxx) == "libstdc++":
+                all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
+            elif str(self.libcxx) == "libstdc++11":
+                all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
+
+            if "clang" in str(self.compiler):
+                if str(self.libcxx) == "libc++":
+                    all_cpp_flags.append("-stdlib=libc++")
+                else:
+                    all_cpp_flags.append("-stdlib=libstdc++")
+
+        cpp_flags = 'CPPFLAGS="$CPPFLAGS %s %s %s %s %s"' % (archflag, " ".join(all_cpp_flags),
+                                                             debug, include_flags, defines)
+        include_paths = ":".join(['"%s"' % lib for lib in self._deps_cpp_info.include_paths])
+        headers_flags = ('C_INCLUDE_PATH=$C_INCLUDE_PATH:{0} '
+                         'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:{0}'.format(include_paths))
+        command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
+        # Add the rest of env variables from deps_env_info, WITHOUT SET, not needed with ENV
+        command += " ".join(get_setenv_variables_commands(self._deps_env_info, ""))
+        return command
+
     @property
     def command_line_env(self):
-        command = self.command_line
+        if self.os == "Linux" or self.os == "Macos":
+            return self._nix_env()
+
         if self.compiler == "Visual Studio":
             cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
             lib_paths = ";".join(['%s' % lib for lib in self._deps_cpp_info.lib_paths])
@@ -147,7 +154,7 @@ class ConfigureEnvironment(object):
         return command
 
     @property
-    def compiler_flags(self):
+    def compile_flags(self):
         if self.compiler == "gcc" or "clang" in str(self.compiler):
             flags = []
             flags.extend("-l%s" % lib for lib in self._deps_cpp_info.libs)
@@ -156,6 +163,7 @@ class ConfigureEnvironment(object):
             flags.extend(self._deps_cpp_info.exelinkflags)
             flags.extend(self._deps_cpp_info.sharedlinkflags)
             flags.append("-g" if self.build_type == "Debug" else "-s -DNDEBUG")
+            flags.extend('-D%s' % i for i in self._deps_cpp_info.defines)
             flags.extend('-I"%s"' % i for i in self._deps_cpp_info.include_paths)
             flags.extend('-L"%s"' % i for i in self._deps_cpp_info.lib_paths)
             flags.extend(self._deps_cpp_info.cppflags)
