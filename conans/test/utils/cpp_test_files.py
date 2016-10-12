@@ -31,7 +31,7 @@ conanfile_build_env = """
 
             command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(env, self.name, flags))
             self.run(command)
-        elif self.settings.compiler == "gcc":
+        elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
             # libs = " ".join("-l%s" % lib for lib in self.deps_cpp_info.libs)
             lang = '-DCONAN_LANGUAGE=%s' % self.options.language
             if self.options.static:
