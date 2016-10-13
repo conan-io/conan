@@ -195,3 +195,17 @@ class SearchTest(unittest.TestCase):
             compiler.version: 4.3
 
 """, self.client.user_io.out)
+
+        self.client.run('search helloTest/1.4.10@fenix/stable -q use_OpenGL=False')
+        self.assertIn("There are no packages for reference 'helloTest/1.4.10@fenix/stable' "
+                      "matching the query 'use_OpenGL=False'", self.client.user_io.out)
+
+        self.client.run('search helloTest/1.4.10@fenix/stable -q use_OpenGL=True')
+        self.assertIn("Existing packages for recipe helloTest/1.4.10@fenix/stable", self.client.user_io.out)
+
+        self.client.run('search helloTest/1.4.10@fenix/stable -q "use_OpenGL=True AND arch=x64"')
+        self.assertIn("Existing packages for recipe helloTest/1.4.10@fenix/stable", self.client.user_io.out)
+
+        self.client.run('search helloTest/1.4.10@fenix/stable -q "use_OpenGL=True AND arch=x86"')
+        self.assertIn("There are no packages for reference 'helloTest/1.4.10@fenix/stable' "
+                      "matching the query 'use_OpenGL=True AND arch=x86'", self.client.user_io.out)
