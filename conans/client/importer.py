@@ -43,7 +43,8 @@ class FileImporter(object):
                 continue
             package_id = conan_file.info.package_id()
             package_reference = PackageReference(conan_ref, package_id)
-            package_folders[conan_file.name] = self._paths.package(package_reference)
+            package_folders[conan_file.name] = self._paths.package(package_reference,
+                                                                   conan_file.short_paths)
         return package_folders
 
     def _get_paths(self, conan_name_pattern):

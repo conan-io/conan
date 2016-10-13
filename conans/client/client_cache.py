@@ -101,7 +101,7 @@ class ClientCache(SimplePaths):
 
     def load_package_manifest(self, package_reference):
         '''conan_id = sha(zip file)'''
-        filename = self.digestfile_package(package_reference)
+        filename = self.digestfile_package(package_reference, shorten=True)
         return FileTreeManifest.loads(load(filename))
 
     def conan_manifests(self, conan_reference):
@@ -109,7 +109,7 @@ class ClientCache(SimplePaths):
         return self._digests(digest_path)
 
     def package_manifests(self, package_reference):
-        digest_path = self.digestfile_package(package_reference)
+        digest_path = self.digestfile_package(package_reference, shorten=True)
         return self._digests(digest_path)
 
     def _digests(self, digest_path):

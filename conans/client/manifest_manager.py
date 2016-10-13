@@ -72,5 +72,5 @@ class ManifestManager(object):
         remote = "local cache" if not remote else "%s:%s" % (remote.name, remote.url)
         self._match_manifests(read_manifest, expected_manifest, package_reference)
 
-        path = self._paths.digestfile_package(package_reference)
+        path = self._paths.digestfile_package(package_reference, shorten=True)
         self._check(package_reference, read_manifest, remote, path)

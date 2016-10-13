@@ -75,7 +75,8 @@ class DiskRemover(object):
         else:
             for id_ in ids_filter:  # remove just the specified packages
                 package_ref = PackageReference(conan_ref, id_)
-                self._remove(self._paths.package(package_ref), conan_ref, "package:%s" % id_)
+                self._remove(self._paths.package(package_ref, shorten=True),
+                             conan_ref, "package:%s" % id_)
                 self._remove_file(self._paths.system_reqs_package(package_ref),
                                   conan_ref, "%s/%s" % (id_, SYSTEM_REQS))
 

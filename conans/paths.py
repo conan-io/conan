@@ -110,9 +110,9 @@ class SimplePaths(object):
         export = self.export(conan_reference)
         return normpath(join(export, CONAN_MANIFEST))
 
-    def digestfile_package(self, package_reference):
+    def digestfile_package(self, package_reference, shorten=False):
         assert isinstance(package_reference, PackageReference)
-        return normpath(join(self.package(package_reference), CONAN_MANIFEST))
+        return normpath(join(self.package(package_reference, shorten), CONAN_MANIFEST))
 
     def builds(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
@@ -137,8 +137,8 @@ class SimplePaths(object):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self.conan(conan_reference), PACKAGES_FOLDER))
 
-    def package(self, package_reference):
+    def package(self, package_reference, shorten=False):
         assert isinstance(package_reference, PackageReference)
-        return normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
-                             package_reference.package_id))
-
+        p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
+                          package_reference.package_id))
+        return self._shortener(p, shorten)
