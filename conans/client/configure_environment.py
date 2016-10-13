@@ -54,7 +54,7 @@ class ConfigureEnvironment(object):
             command = '%s && nmake /f Makefile.msvc"' % env.command_line
             self.run(command)
         """
-        command = ""
+        command = []
         if self.os == "Linux" or self.os == "Macos" or (self.os == "Windows" and
                                                         self.compiler == "gcc"):
             libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
@@ -90,15 +90,16 @@ class ConfigureEnvironment(object):
             include_paths = ":".join(['"%s"' % lib for lib in self._deps_cpp_info.include_paths])
             headers_flags = ('C_INCLUDE_PATH=$C_INCLUDE_PATH:{0} '
                              'CPP_INCLUDE_PATH=$CPP_INCLUDE_PATH:{0}'.format(include_paths))
-            command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
+            command = ["env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)]
         elif self.os == "Windows" and self.compiler == "Visual Studio":
             cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
             lib_paths = ";".join(['"%s"' % lib for lib in self._deps_cpp_info.lib_paths])
-            command = ("(if defined LIB (SET LIB=%LIB%;{lib_paths}) else (SET LIB={lib_paths}))"
+            command = ["(if defined LIB (SET LIB=%LIB%;{lib_paths}) else (SET LIB={lib_paths}))"
                        " && (if defined CL (SET CL=%CL% {cl_args}) else (SET CL={cl_args}))".
-                       format(lib_paths=lib_paths, cl_args=cl_args))
+                       format(lib_paths=lib_paths, cl_args=cl_args)]
 
         # Add the rest of env variables from deps_env_info
-        command += " ".join(get_setenv_variables_commands(self._deps_env_info,
-                                                          "" if self.os != "Windows" else "SET"))
-        return command
+        command.extend(get_setenv_variables_commands(self._deps_env_info,
+                                                     "" if self.os != "Windows" else "SET"))
+        separator = " " if self.os != "Windows" else " & "
+        return separator.join(command)
