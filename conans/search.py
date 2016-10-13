@@ -128,23 +128,32 @@ class DiskSearchManager(SearchManagerABC):
             return setting_value is None or prop_value == setting_value
 
         for prop_name, prop_value in properties.items():
-            if prop_name == "os" and not compatible_prop(conan_vars_info.settings.os, prop_value):
+            if prop_name == "os":
+                if compatible_prop(conan_vars_info.settings.os, prop_value):
+                    continue
                 return True
-            elif prop_name == "compiler" and not compatible_prop(conan_vars_info.settings.compiler,
-                                                                 prop_value):
+            elif prop_name == "compiler":
+                if compatible_prop(conan_vars_info.settings.compiler, prop_value):
+                    continue
                 return True
             elif prop_name.startswith("compiler."):
                 subsetting = prop_name[9:]
-                if not compatible_prop(getattr(conan_vars_info.settings.compiler, subsetting),
-                                       prop_value):
-                    return True
-            elif prop_name == "arch" and not compatible_prop(conan_vars_info.settings.arch, prop_value):
+                prop = getattr(conan_vars_info.settings.compiler, subsetting)
+                if compatible_prop(prop, prop_value):
+                    continue
                 return True
-            elif prop_name == "build_type" and not compatible_prop(conan_vars_info.settings.build_type,
-                                                                   prop_value):
+            elif prop_name == "arch":
+                if compatible_prop(conan_vars_info.settings.arch, prop_value):
+                    continue
+                return True
+            elif prop_name == "build_type":
+                if compatible_prop(conan_vars_info.settings.build_type, prop_value):
+                    continue
                 return True
             else:
-                if getattr(conan_vars_info.options, prop_name) == prop_value:
+                if hasattr(conan_vars_info.options, prop_name):
+                    if getattr(conan_vars_info.options, prop_name) == prop_value:
+                        continue
                     return True
         return False
 
