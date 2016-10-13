@@ -7,6 +7,7 @@ import platform
 import os
 from conans.client.runner import ConanRunner
 from conans.test.tools import TestBufferConanOutput
+from conans.test.utils.test_files import temp_folder
 
 
 class MockWinSettings(Settings):
@@ -94,6 +95,13 @@ class BuildInfoMock(object):
 
 class CompileHelpersTest(unittest.TestCase):
 
+    def setUp(self):
+        self.current = os.getcwd()
+        os.chdir(temp_folder())
+
+    def tearDown(self):
+        os.chdir(self.current)
+
     def configure_environment_test(self):
         env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
 
@@ -158,7 +166,7 @@ class CompileHelpersTest(unittest.TestCase):
             runner(command, output=output)
 
             self.assertIn('LIB="path/to/lib1";"path/to/lib2";"/path/to/lib.a"', output)
-            self.assertIn('CL=/I"path/to/includes/lib1" /I"path/to/includes/lib2"' , output)
+            self.assertIn('CL=/I"path/to/includes/lib1" /I"path/to/includes/lib2"', output)
 
             os.environ["LIB"] = ""
             os.environ["CL"] = ""
