@@ -3,6 +3,7 @@ from conans.test.tools import TestClient
 import random
 import string
 
+
 class ConanfileHelpersTest(unittest.TestCase):
 
     def test_replace_in_file(self):
