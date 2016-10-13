@@ -106,7 +106,7 @@ class DiamondTest(unittest.TestCase):
         client.run("%s . --build missing" % install)
         client.run("build .")
 
-        time.sleep(1)
+        time.sleep(2)
         client.runner(command, cwd=client.current_folder)
         self.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
                           'Hola Hello2', 'Hola Hello0'],
@@ -134,7 +134,7 @@ class DiamondTest(unittest.TestCase):
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
-        time.sleep(1)
+        time.sleep(2)
         client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                           'Hello Hello2', 'Hello Hello0'],
@@ -150,7 +150,7 @@ class DiamondTest(unittest.TestCase):
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
-        time.sleep(1)
+        time.sleep(2)
         client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
                           'Hola Hello2', 'Hola Hello0'],
