@@ -12,7 +12,7 @@ from conans.util.files import save, load, rmdir, normalize
 from conans.util.log import logger
 from conans.client.uploader import ConanUploader
 from conans.client.printer import Printer
-from conans.errors import NotFoundException, ConanException, format_conanfile_exception
+from conans.errors import NotFoundException, ConanException
 from conans.client.generators import write_generators
 from conans.client.importer import FileImporter
 from conans.model.ref import ConanFileReference, PackageReference
