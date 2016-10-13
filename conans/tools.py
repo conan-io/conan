@@ -26,8 +26,17 @@ def pythonpath(conanfile):
 
 def vcvars_command(settings):
     param = "x86" if settings.arch == "x86" else "amd64"
-    command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
-               % (settings.compiler.version, param))
+    existing_version = os.environ.get("VisualStudioVersion")
+    if existing_version:
+        command = ""
+        existing_version = existing_version.split(".")[0]
+        if existing_version != settings.compiler.version:
+            raise ConanException("Error, Visual environment already set to %s\n"
+                                 "Current settings visual version: %s"
+                                 % (existing_version, settings.compiler.version))
+    else:
+        command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
+                   % (settings.compiler.version, param))
     return command
 
 
