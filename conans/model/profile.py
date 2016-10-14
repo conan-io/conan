@@ -1,7 +1,7 @@
 import copy
 from collections import OrderedDict
 from conans.util.config_parser import ConfigParser
-from conans.model.scope import Scopes
+from conans.model.scope import Scopes, _root
 
 
 class Profile(object):
@@ -36,16 +36,18 @@ class Profile(object):
         return obj
 
     def dumps(self):
-        self._order()  # gets in order
+        self._order()  # gets in order the settings
 
         result = ["[settings]"]
         for name, value in self.settings.items():
             result.append("%s=%s" % (name, value))
 
         result.append("[scopes]")
-        scopes = self.scopes.dumps()
-        # FIXME: Don't want the root scope dev in the profile, but this replace is ugly
-        result.append(scopes.replace("dev=True\n", "").replace("dev=True", ""))
+        if self.scopes[_root].get("dev", None):
+            # FIXME: Ugly _root import
+            del self.scopes[_root]["dev"]  # Do not include dev
+        scopes_txt = self.scopes.dumps()
+        result.append(scopes_txt)
 
         result.append("[env]")
         for name, value in self.env.items():

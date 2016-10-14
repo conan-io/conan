@@ -30,7 +30,8 @@ def environment_append(env_vars):
     old_env = dict(os.environ)
     os.environ.update(env_vars)
     yield
-    os.environ = old_env
+    os.environ.clear()
+    os.environ.update(old_env)
 
 
 def vcvars_command(settings):
