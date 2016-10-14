@@ -33,7 +33,7 @@ from conans.client.client_cache import ClientCache
 from conans.client.source import config_source
 from conans.client.manifest_manager import ManifestManager
 from conans.model.env_info import EnvInfo, DepsEnvInfo
-import copy
+from conans.tools import environment_append
 
 
 def get_user_channel(text):
@@ -213,20 +213,38 @@ class ConanManager(object):
                                               info, registry, graph_updates_info,
                                               remote)
 
-    def _mix_settings_and_profile(self, settings, profile_name):
-        '''Mix the specified settings with the specified profile.
-        Specified settings are prioritized to profile'''
+    def _read_profile(self, profile_name):
         if profile_name:
             try:
                 profile = self._client_cache.load_profile(profile_name)
-                profile.update_settings(dict(settings))
-                return profile.settings.items()
-            except Exception as exc:
+                return profile
+            except Exception:
                 current_profiles = ", ".join(self._client_cache.current_profiles()) or "[]"
                 raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
                                      "%s" % (profile_name, current_profiles))
+        return None
 
+    def _mix_settings_and_profile(self, settings, profile_name):
+        '''Mix the specified settings with the specified profile.
+        Specified settings are prioritized to profile'''
+        profile = self._read_profile(profile_name)
+        if profile:
+            profile.update_settings(dict(settings))
+            return profile.settings.items()
         return settings
+
+    def _mix_scopes_and_profile(self, scopes, profile_name):
+        profile = self._read_profile(profile_name)
+        if profile:
+            profile.update_scopes(scopes)
+            return profile.scopes
+        return scopes
+
+    def _read_profile_env_vars(self, profile_name):
+        profile = self._read_profile(profile_name)
+        if profile:
+            return profile.env
+        return {}
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
@@ -251,50 +269,56 @@ class ConanManager(object):
             manifest_manager = None
 
         settings = self._mix_settings_and_profile(settings, profile_name)
-        objects = self._get_graph(reference, current_path, remote, options, settings, filename,
-                                  update, check_updates, manifest_manager, scopes)
-        (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
+        scopes = self._mix_scopes_and_profile(scopes, profile_name)
+        env_vars = self._read_profile_env_vars(profile_name)
 
-        Printer(self._user_io.out).print_graph(deps_graph, registry)
-        # Warn if os doesn't match
-        try:
-            if detected_os() != loader._settings.os:
-                message = '''You are building this package with settings.os='%s' on a '%s' system.
-If this is your intention, you can ignore this message.
-If not:
-     - Check the passed settings (-s)
-     - Check your global settings in ~/.conan/conan.conf
-     - Remove conaninfo.txt to avoid bad cached settings
-''' % (loader._settings.os, detected_os())
-                self._user_io.out.warn(message)
-        except ConanException:  # Setting os doesn't exist
-            pass
+        # Append env_vars to execution environment and clear when block code ends
+        with environment_append(env_vars):
 
-        installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
-        installer.install(deps_graph, build_mode)
+            objects = self._get_graph(reference, current_path, remote, options, settings, filename,
+                                      update, check_updates, manifest_manager, scopes)
+            (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
 
-        prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
-        output = ScopedOutput(prefix, self._user_io.out)
+            Printer(self._user_io.out).print_graph(deps_graph, registry)
+            # Warn if os doesn't match
+            try:
+                if detected_os() != loader._settings.os:
+                    message = '''You are building this package with settings.os='%s' on a '%s' system.
+    If this is your intention, you can ignore this message.
+    If not:
+         - Check the passed settings (-s)
+         - Check your global settings in ~/.conan/conan.conf
+         - Remove conaninfo.txt to avoid bad cached settings
+    ''' % (loader._settings.os, detected_os())
+                    self._user_io.out.warn(message)
+            except ConanException:  # Setting os doesn't exist
+                pass
 
-        # Write generators
-        tmp = list(conanfile.generators)  # Add the command line specified generators
-        tmp.extend(generators)
-        conanfile.generators = tmp
-        write_generators(conanfile, current_path, output)
+            installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
+            installer.install(deps_graph, build_mode)
 
-        if not isinstance(reference, ConanFileReference):
-            content = normalize(conanfile.info.dumps())
-            save(os.path.join(current_path, CONANINFO), content)
-            output.info("Generated %s" % CONANINFO)
-            local_installer = FileImporter(deps_graph, self._client_cache, current_path)
-            conanfile.copy = local_installer
-            conanfile.imports()
-            copied_files = local_installer.execute()
-            import_output = ScopedOutput("%s imports()" % output.scope, output)
-            report_copied_files(copied_files, import_output)
+            prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
+            output = ScopedOutput(prefix, self._user_io.out)
 
-        if manifest_manager:
-            manifest_manager.print_log()
+            # Write generators
+            tmp = list(conanfile.generators)  # Add the command line specified generators
+            tmp.extend(generators)
+            conanfile.generators = tmp
+            write_generators(conanfile, current_path, output)
+
+            if not isinstance(reference, ConanFileReference):
+                content = normalize(conanfile.info.dumps())
+                save(os.path.join(current_path, CONANINFO), content)
+                output.info("Generated %s" % CONANINFO)
+                local_installer = FileImporter(deps_graph, self._client_cache, current_path)
+                conanfile.copy = local_installer
+                conanfile.imports()
+                copied_files = local_installer.execute()
+                import_output = ScopedOutput("%s imports()" % output.scope, output)
+                report_copied_files(copied_files, import_output)
+
+            if manifest_manager:
+                manifest_manager.print_log()
 
     def source(self, reference, force):
         assert(isinstance(reference, ConanFileReference))
