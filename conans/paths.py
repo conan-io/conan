@@ -4,6 +4,7 @@ from conans.util.files import load, save
 from os.path import join, normpath
 import platform
 import tempfile
+from conans.errors import ConanException
 
 
 EXPORT_FOLDER = "export"
@@ -53,12 +54,23 @@ def conan_expand_user(path):
     return os.path.expanduser(path)
 
 
-def shortener(path, shorten):
-    if not shorten:
+def shortener(path, short_paths):
+    """ short_paths is 4-state:
+    False: Never shorten the path
+    True: Always shorten the path, create link if not existing
+    None: Use shorten path only if already exists, not create
+    Other: Integrity check. Consumer knows it should be short, but it isn't
+    """
+    if short_paths is False:
         return path
     link = os.path.join(path, ".conan_link")
     if os.path.exists(link):
         return load(link)
+    elif short_paths is None:
+        return path
+    elif short_paths is not True:
+        raise ConanException("This path should be short, but it isn't: %s\n"
+                             "Try to remove these packages and re-build them" % path)
 
     drive = os.path.splitdrive(path)[0]
     short_path = drive + "/.conan"
@@ -97,10 +109,10 @@ class SimplePaths(object):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self.conan(conan_reference), EXPORT_FOLDER))
 
-    def source(self, conan_reference, shorten=False):
+    def source(self, conan_reference, short_paths=False):
         assert isinstance(conan_reference, ConanFileReference)
         p = normpath(join(self.conan(conan_reference), SRC_FOLDER))
-        return self._shortener(p, shorten)
+        return self._shortener(p, short_paths)
 
     def conanfile(self, conan_reference):
         export = self.export(conan_reference)
@@ -110,19 +122,19 @@ class SimplePaths(object):
         export = self.export(conan_reference)
         return normpath(join(export, CONAN_MANIFEST))
 
-    def digestfile_package(self, package_reference, shorten=False):
+    def digestfile_package(self, package_reference, short_paths=False):
         assert isinstance(package_reference, PackageReference)
-        return normpath(join(self.package(package_reference, shorten), CONAN_MANIFEST))
+        return normpath(join(self.package(package_reference, short_paths), CONAN_MANIFEST))
 
     def builds(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self.conan(conan_reference), BUILD_FOLDER))
 
-    def build(self, package_reference, shorten=False):
+    def build(self, package_reference, short_paths=False):
         assert isinstance(package_reference, PackageReference)
         p = normpath(join(self.conan(package_reference.conan), BUILD_FOLDER,
                           package_reference.package_id))
-        return self._shortener(p, shorten)
+        return self._shortener(p, short_paths)
 
     def system_reqs(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
@@ -137,8 +149,8 @@ class SimplePaths(object):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self.conan(conan_reference), PACKAGES_FOLDER))
 
-    def package(self, package_reference, shorten=False):
+    def package(self, package_reference, short_paths=False):
         assert isinstance(package_reference, PackageReference)
         p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                           package_reference.package_id))
-        return self._shortener(p, shorten)
+        return self._shortener(p, short_paths)

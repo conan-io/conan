@@ -12,7 +12,7 @@ from conans.util.files import save, load, rmdir, normalize
 from conans.util.log import logger
 from conans.client.uploader import ConanUploader
 from conans.client.printer import Printer
-from conans.errors import NotFoundException, ConanException, format_conanfile_exception
+from conans.errors import NotFoundException, ConanException
 from conans.client.generators import write_generators
 from conans.client.importer import FileImporter
 from conans.model.ref import ConanFileReference, PackageReference
@@ -306,7 +306,7 @@ If not:
 
         for package_reference in packages:
             # The package already exist, we can use short_paths if they were defined
-            package_folder = self._client_cache.package(package_reference, shorten=True)
+            package_folder = self._client_cache.package(package_reference, short_paths=None)
             # Will read current conaninfo with specified options and load conanfile with them
             if not only_manifest:
                 self._user_io.out.info("Packaging %s" % package_reference.package_id)

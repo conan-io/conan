@@ -12,7 +12,8 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
-def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, shorten, keep_source):
+def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, short_paths,
+                     keep_source):
     destination_folder = paths.export(conan_ref)
 
     previous_digest = _init_export_folder(destination_folder)
@@ -31,7 +32,7 @@ def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, sho
         output.info('Folder: %s' % destination_folder)
         modified_recipe = True
 
-    source = paths.source(conan_ref, shorten)
+    source = paths.source(conan_ref, short_paths)
     dirty = os.path.join(source, DIRTY_FILE)
     remove = False
     if os.path.exists(dirty):
@@ -44,7 +45,7 @@ def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, sho
     if remove:
         output.info("Removing 'source' folder, this can take a while for big packages")
         try:
-            rmdir(source, shorten)
+            rmdir(source, short_paths)
         except BaseException as e:
             output.error("Unable to delete source folder. "
                          "Will be marked as dirty for deletion")

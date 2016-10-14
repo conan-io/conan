@@ -67,7 +67,7 @@ class DownloadTest(unittest.TestCase):
         installer = ConanProxy(client2.paths, client2.user_io, client2.remote_manager, "default")
 
         installer.get_recipe(conan_ref)
-        installer.get_package(package_ref, force_build=False)
+        installer.get_package(package_ref, force_build=False, short_paths=False)
         # Check that the output is done in order
         lines = [line.strip() for line in str(client2.user_io.out).splitlines()
                  if line.startswith("Downloading")]

@@ -33,7 +33,7 @@ class ConanProxy(object):
         and not necessary to build
         """
         output = ScopedOutput(str(package_reference.conan), self._out)
-        package_folder = self._client_cache.package(package_reference, shorten=short_paths)
+        package_folder = self._client_cache.package(package_reference, short_paths=short_paths)
 
         # Check current package status
         if path_exists(package_folder, self._client_cache.store):

@@ -288,12 +288,12 @@ Package configuration:
             conan_file._conanfile_directory = build_folder
             conan_file.build()
             self._out.writeln("")
-            output.success("Package '%s' built" % os.path.basename(build_folder))
+            output.success("Package '%s' built" % conan_file.info.package_id())
             output.info("Build folder %s" % build_folder)
         except Exception as e:
             os.chdir(src_folder)
             self._out.writeln("")
-            output.error("Package '%s' build failed" % os.path.basename(build_folder))
+            output.error("Package '%s' build failed" % conan_file.info.package_id())
             output.warn("Build folder %s" % build_folder)
             raise ConanException("%s: %s" % (conan_file.name, str(e)))
         finally:
