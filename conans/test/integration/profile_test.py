@@ -5,6 +5,7 @@ from conans.model.profile import Profile
 from conans.util.files import save, load
 import os
 from conans.model.scope import Scopes
+import platform
 
 
 conanfile_scope_env = """
@@ -80,8 +81,12 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("Scope myscope: 1", self.client.user_io.out)
         self.assertIn("Scope otherscope: 2", self.client.user_io.out)
         self.assertIn("Scope undefined: None", self.client.user_io.out)
-        self.assertIn("CC='/path/tomy/gcc'", self.client.user_io.out)
-        self.assertIn("CXX='/path/tomy/g++'", self.client.user_io.out)
+        if platform.system() == "Windows":
+            self.assertIn("CC=/path/tomy/gcc", self.client.user_io.out)
+            self.assertIn("CXX=/path/tomy/g++", self.client.user_io.out)
+        else:
+            self.assertIn("CC='/path/tomy/gcc'", self.client.user_io.out)
+            self.assertIn("CXX='/path/tomy/g++'", self.client.user_io.out)
 
         # The env variable shouldn't persist after install command
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
