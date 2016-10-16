@@ -23,8 +23,7 @@ def decode_text(text):
 
 
 def touch(fname, times=None):
-    with open(fname, 'a'):
-        os.utime(fname, times)
+    os.utime(fname, times)
 
 
 def normalize(text):
