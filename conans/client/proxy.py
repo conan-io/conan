@@ -28,12 +28,12 @@ class ConanProxy(object):
     def registry(self):
         return self._registry
 
-    def get_package(self, package_reference, force_build):
+    def get_package(self, package_reference, force_build, short_paths):
         """ obtain a package, either from disk or retrieve from remotes if necessary
         and not necessary to build
         """
         output = ScopedOutput(str(package_reference.conan), self._out)
-        package_folder = self._client_cache.package(package_reference)
+        package_folder = self._client_cache.package(package_reference, short_paths=short_paths)
 
         # Check current package status
         if path_exists(package_folder, self._client_cache.store):

@@ -28,7 +28,7 @@ def init_package_info(deps_graph, paths):
         if conan_ref:
             package_id = conan_file.info.package_id()
             package_reference = PackageReference(conan_ref, package_id)
-            package_folder = paths.package(package_reference)
+            package_folder = paths.package(package_reference, conan_file.short_paths)
             conan_file.package_folder = package_folder
             conan_file.cpp_info = CppInfo(package_folder)
             conan_file.env_info = EnvInfo(package_folder)
@@ -73,7 +73,8 @@ class ConanInstaller(object):
                 package_id = conan_file.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
                 build_forced = self._build_forced(conan_ref, build_mode, conan_file)
-                if not self._remote_proxy.get_package(package_reference, build_forced):
+                if not self._remote_proxy.get_package(package_reference, build_forced,
+                                                      short_paths=conan_file.short_paths):
                     break
             else:
                 skippable_nodes.append(private_node)
@@ -148,7 +149,7 @@ class ConanInstaller(object):
         package_reference = PackageReference(conan_ref, package_id)
 
         conan_ref = package_reference.conan
-        package_folder = self._paths.package(package_reference)
+        package_folder = self._paths.package(package_reference, conan_file.short_paths)
         build_folder = self._paths.build(package_reference, conan_file.short_paths)
         src_folder = self._paths.source(conan_ref, conan_file.short_paths)
         export_folder = self._paths.export(conan_ref)
@@ -162,7 +163,8 @@ class ConanInstaller(object):
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
         force_build = self._build_forced(conan_ref, build_mode, conan_file)
-        if self._remote_proxy.get_package(package_reference, force_build):
+        if self._remote_proxy.get_package(package_reference, force_build,
+                                          short_paths=conan_file.short_paths):
             return
 
         # we need and can build? Only if we are forced or build_mode missing and package not exists
@@ -286,12 +288,12 @@ Package configuration:
             conan_file._conanfile_directory = build_folder
             conan_file.build()
             self._out.writeln("")
-            output.success("Package '%s' built" % os.path.basename(build_folder))
+            output.success("Package '%s' built" % conan_file.info.package_id())
             output.info("Build folder %s" % build_folder)
         except Exception as e:
             os.chdir(src_folder)
             self._out.writeln("")
-            output.error("Package '%s' build failed" % os.path.basename(build_folder))
+            output.error("Package '%s' build failed" % conan_file.info.package_id())
             output.warn("Build folder %s" % build_folder)
             raise ConanException("%s: %s" % (conan_file.name, str(e)))
         finally:

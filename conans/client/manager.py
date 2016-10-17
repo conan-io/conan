@@ -305,7 +305,8 @@ If not:
             packages = [PackageReference(reference, package_id)]
 
         for package_reference in packages:
-            package_folder = self._client_cache.package(package_reference)
+            # The package already exist, we can use short_paths if they were defined
+            package_folder = self._client_cache.package(package_reference, short_paths=None)
             # Will read current conaninfo with specified options and load conanfile with them
             if not only_manifest:
                 self._user_io.out.info("Packaging %s" % package_reference.package_id)

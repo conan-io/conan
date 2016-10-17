@@ -108,7 +108,9 @@ class DiskSearchManager(SearchManagerABC):
         for package_id in subdirs:
             try:
                 package_reference = PackageReference(reference, package_id)
-                info_path = self._adapter.join_paths(self._paths.package(package_reference), CONANINFO)
+                info_path = self._adapter.join_paths(self._paths.package(package_reference,
+                                                                         short_paths=None),
+                                                     CONANINFO)
                 if not self._adapter.path_exists(info_path, self._paths.store):
                     raise NotFoundException("")
                 conan_info_content = self._adapter.load(info_path)
@@ -170,4 +172,3 @@ def get_properties_from_query(query):
                 logger.error(exc)
                 raise ConanException("Invalid package query: %s" % query)
     return properties
-

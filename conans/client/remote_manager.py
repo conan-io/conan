@@ -39,7 +39,8 @@ class RemoteManager(object):
     def upload_package(self, package_reference, remote):
         """Will upload the package to the first remote"""
         t1 = time.time()
-        basedir = self._client_cache.package(package_reference)
+        # existing package, will use short paths if defined
+        basedir = self._client_cache.package(package_reference, short_paths=None)
         rel_files = self._client_cache.package_paths(package_reference)
 
         self._output.rewrite_line("Checking package integrity...")

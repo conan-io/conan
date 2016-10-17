@@ -5,9 +5,9 @@ from conans.client.conf import ConanClientConfigParser, default_client_conf, def
 from conans.model.values import Values
 from conans.client.detect import detect_defaults_settings
 from conans.model.ref import ConanFileReference
-from os.path import isfile
 from conans.model.manifest import FileTreeManifest
-from conans.paths import CONAN_MANIFEST, SimplePaths
+from conans.paths import SimplePaths
+from genericpath import isdir
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -84,15 +84,26 @@ class ClientCache(SimplePaths):
         return relative_dirs(self.package(package_reference))
 
     def conan_packages(self, conan_reference):
-        """ Returns a list of package_id from a conans """
+        """ Returns a list of package_id from a local cache package folder """
         assert isinstance(conan_reference, ConanFileReference)
         packages_dir = self.packages(conan_reference)
         try:
             packages = [dirname for dirname in os.listdir(packages_dir)
-                        if not isfile(os.path.join(packages_dir, dirname))]
+                        if isdir(os.path.join(packages_dir, dirname))]
         except:  # if there isn't any package folder
             packages = []
         return packages
+
+    def conan_builds(self, conan_reference):
+        """ Returns a list of package ids from a local cache build folder """
+        assert isinstance(conan_reference, ConanFileReference)
+        builds_dir = self.builds(conan_reference)
+        try:
+            builds = [dirname for dirname in os.listdir(builds_dir)
+                      if isdir(os.path.join(builds_dir, dirname))]
+        except:  # if there isn't any package folder
+            builds = []
+        return builds
 
     def load_manifest(self, conan_reference):
         '''conan_id = sha(zip file)'''
@@ -101,7 +112,7 @@ class ClientCache(SimplePaths):
 
     def load_package_manifest(self, package_reference):
         '''conan_id = sha(zip file)'''
-        filename = self.digestfile_package(package_reference)
+        filename = self.digestfile_package(package_reference, short_paths=None)
         return FileTreeManifest.loads(load(filename))
 
     def conan_manifests(self, conan_reference):
@@ -109,7 +120,7 @@ class ClientCache(SimplePaths):
         return self._digests(digest_path)
 
     def package_manifests(self, package_reference):
-        digest_path = self.digestfile_package(package_reference)
+        digest_path = self.digestfile_package(package_reference, short_paths=None)
         return self._digests(digest_path)
 
     def _digests(self, digest_path):
