@@ -11,7 +11,7 @@ class Profile(object):
     def __init__(self):
         # Sections
         self.settings = OrderedDict()
-        self.env = dict()
+        self.env = OrderedDict()
         self.scopes = Scopes()
 
     @staticmethod
@@ -80,3 +80,9 @@ class Profile(object):
             for name, value in tmp_settings.items():
                 if func(name):
                     self.settings[name] = value
+
+        tmp_env = copy.copy(self.env)
+        self.env = OrderedDict()
+        for ordered_key in sorted(tmp_env):
+            self.env[ordered_key] = tmp_env[ordered_key]
+        

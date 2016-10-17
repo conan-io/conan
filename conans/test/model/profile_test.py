@@ -64,11 +64,11 @@ class ProfileTest(unittest.TestCase):
 
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
                          '[scopes]\np1:conaning=True\np2:testing=True\n'
-                         '[env]\nCXX=path/to/my/compiler/g++\nCC=path/to/my/compiler/gcc',
+                         '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())
 
         profile.update_scopes({"p1": {"new_one": 2}})
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
                          '[scopes]\np1:new_one=2\np2:testing=True\n'
-                         '[env]\nCXX=path/to/my/compiler/g++\nCC=path/to/my/compiler/gcc',
+                         '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())
