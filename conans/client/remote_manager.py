@@ -97,6 +97,9 @@ class RemoteManager(object):
         files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
         rmdir(self._client_cache.source(conan_reference), True)
+        for dirname, _, files in os.walk(dest_folder):
+            for fname in files:
+                touch(os.path.join(dirname, fname))
 #       TODO: Download only the CONANFILE file and only download the rest of files
 #       in install if needed (not found remote package)
         return files
