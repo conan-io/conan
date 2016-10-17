@@ -84,6 +84,9 @@ class ProfileTest(unittest.TestCase):
         if platform.system() == "Windows":
             self.assertIn("CC=/path/tomy/gcc", self.client.user_io.out)
             self.assertIn("CXX=/path/tomy/g++", self.client.user_io.out)
+        elif platform.system() == "Darwin":
+            self.assertIn('CC="/path/tomy/gcc"', self.client.user_io.out)
+            self.assertIn('CXX="/path/tomy/g++"', self.client.user_io.out)
         else:
             self.assertIn("CC='/path/tomy/gcc'", self.client.user_io.out)
             self.assertIn("CXX='/path/tomy/g++'", self.client.user_io.out)
