@@ -447,8 +447,11 @@ path to the CMake binary directory, like this:
     def package(self, *args):
         """ calls your conanfile.py "package" method for a specific package or
             regenerates the existing package's manifest.
+            It will not create a new package, use 'install' or 'test_package' instead.
             Intended for package creators, for regenerating a package without
-            recompiling the source.
+            recompiling the source, i.e. for troubleshooting,
+            and fixing the package() method, not normal operation. It requires
+            the package has been built locally, it will not re-package otherwise.
             e.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
@@ -456,12 +459,8 @@ path to the CMake binary directory, like this:
                             'e.g., MyPackage/1.2@user/channel')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
-                                 '9cf83afd07b678d38a9c1645f605875400847ff3')
-        parser.add_argument("-o", "--only-manifest", default=False, action='store_true',
-                            help='Just regenerate manifest for the existing package.'
-                                 'If True conan won\'t call your conanfile\'s package method.')
-        parser.add_argument("--all", action='store_true',
-                            default=False, help='Package all packages from specified reference')
+                                 '9cf83afd07b678d38a9c1645f605875400847ff3'
+                                 ' If not specified, ALL binaries for this recipe are re-packaged')
 
         args = parser.parse_args(*args)
 
@@ -471,10 +470,7 @@ path to the CMake binary directory, like this:
             raise ConanException("Invalid package recipe reference. "
                                  "e.g., MyPackage/1.2@user/channel")
 
-        if not args.all and not args.package:
-            raise ConanException("'conan package': Please specify --all or a package ID")
-
-        self._manager.package(reference, args.package, args.only_manifest, args.all)
+        self._manager.package(reference, args.package)
 
     def source(self, *args):
         """ Calls your conanfile.py "source" method to configure the source directory.
