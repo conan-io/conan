@@ -365,7 +365,7 @@ If not:
             rmdir(package_folder)
             packager.create_package(conanfile, build_folder, package_folder, output)
 
-    def build(self, conanfile_path, current_path, test=False, filename=None):
+    def build(self, conanfile_path, current_path, test=False, filename=None, profile_name=None):
         """ Call to build() method saved on the conanfile.py
         param conanfile_path: the original source directory of the user containing a
                             conanfile.py
@@ -407,7 +407,12 @@ If not:
 
             os.chdir(current_path)
             conan_file._conanfile_directory = conanfile_path
-            conan_file.build()
+            # Append env_vars to execution environment and clear when block code ends
+            profile = self._read_profile(profile_name)
+            env_vars = self._read_profile_env_vars(profile)
+            with environment_append(env_vars):
+                conan_file.build()
+
             if test:
                 conan_file.test()
         except ConanException:

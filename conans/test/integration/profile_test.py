@@ -37,6 +37,19 @@ class ProfileTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
+    def build_with_profile_test(self):
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
+        files["conanfile.py"] = conanfile_scope_env
+
+        self._create_profile("scopes_env", {},
+                             {},  # undefined scope do not apply to my packages
+                             {"CXX": "/path/tomy/g++_build", "CC": "/path/tomy/gcc_build"})
+
+        self.client.save(files)
+        self.client.run("build -pr scopes_env")
+        self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
+        self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")
+
     def install_profile_settings_test(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["conanfile.py"] = files["conanfile.py"].replace("generators =", "generators = \"txt\",")
@@ -81,19 +94,21 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("Scope myscope: 1", self.client.user_io.out)
         self.assertIn("Scope otherscope: 2", self.client.user_io.out)
         self.assertIn("Scope undefined: None", self.client.user_io.out)
-        if platform.system() == "Windows":
-            self.assertIn("CC=/path/tomy/gcc", self.client.user_io.out)
-            self.assertIn("CXX=/path/tomy/g++", self.client.user_io.out)
-        elif platform.system() == "Darwin":
-            self.assertIn('CC="/path/tomy/gcc"', self.client.user_io.out)
-            self.assertIn('CXX="/path/tomy/g++"', self.client.user_io.out)
-        else:
-            self.assertIn("CC='/path/tomy/gcc'", self.client.user_io.out)
-            self.assertIn("CXX='/path/tomy/g++'", self.client.user_io.out)
+
+        self._assert_env_variable_printed("CC", "/path/tomy/gcc")
+        self._assert_env_variable_printed("CXX", "/path/tomy/g++")
 
         # The env variable shouldn't persist after install command
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
+
+    def _assert_env_variable_printed(self, name, value):
+        if platform.system() == "Windows":
+            self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
+        elif platform.system() == "Darwin":
+            self.assertIn('%s="%s"' % (name, value), self.client.user_io.out)
+        else:
+            self.assertIn("%s='%s'" % (name, value), self.client.user_io.out)
 
     def _create_profile(self, name, settings, scopes=None, env=None):
         profile = Profile()

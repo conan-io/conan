@@ -438,13 +438,14 @@ path to the CMake binary directory, like this:
                             help='path to user conanfile.py, e.g., conan build .',
                             default="")
         parser.add_argument("--file", "-f", help="specify conanfile filename")
+        parser.add_argument("--profile", "-pr", nargs="?", default=None, help='Define a profile')
         args = parser.parse_args(*args)
         current_path = os.getcwd()
         if args.path:
             root_path = os.path.abspath(args.path)
         else:
             root_path = current_path
-        self._manager.build(root_path, current_path, filename=args.file)
+        self._manager.build(root_path, current_path, filename=args.file, profile_name=args.profile)
 
     def package(self, *args):
         """ calls your conanfile.py "package" method for a specific package or
