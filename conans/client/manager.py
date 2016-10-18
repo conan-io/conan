@@ -286,45 +286,42 @@ If not:
         export_folder = self._client_cache.export(reference)
         config_source(export_folder, src_folder, conanfile, output, force)
 
-    def package(self, reference, package_id, only_manifest, package_all):
+    def package(self, reference, package_id):
         assert(isinstance(reference, ConanFileReference))
 
         # Package paths
         conan_file_path = self._client_cache.conanfile(reference)
+        if not os.path.exists(conan_file_path):
+            raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
-        if package_all:
-            if only_manifest:
-                packages_dir = self._client_cache.packages(reference)
-            else:
-                packages_dir = self._client_cache.builds(reference)
-            if not os.path.exists(packages_dir):
-                raise NotFoundException('%s does not exist' % str(reference))
+        if not package_id:
             packages = [PackageReference(reference, packid)
-                        for packid in os.listdir(packages_dir)]
+                        for packid in self._client_cache.conan_builds(reference)]
+            if not packages:
+                raise NotFoundException("%s: Package recipe has not been built locally\n"
+                                        "Please read the 'conan package' command help\n"
+                                        "Use 'conan install' or 'conan test_package' to build and "
+                                        "create binaries" % str(reference))
         else:
             packages = [PackageReference(reference, package_id)]
 
         for package_reference in packages:
+            build_folder = self._client_cache.build(package_reference, short_paths=None)
+            if not os.path.exists(build_folder):
+                raise NotFoundException("%s: Package binary '%s' folder doesn't exist\n"
+                                        "Please read the 'conan package' command help\n"
+                                        "Use 'conan install' or 'conan test_package' to build and "
+                                        "create binaries"
+                                        % (str(reference), package_reference.package_id))
             # The package already exist, we can use short_paths if they were defined
             package_folder = self._client_cache.package(package_reference, short_paths=None)
             # Will read current conaninfo with specified options and load conanfile with them
-            if not only_manifest:
-                self._user_io.out.info("Packaging %s" % package_reference.package_id)
-                build_folder = self._client_cache.build(package_reference)
-                # Small fix to package for short paths, without messing with the whole thing
-                link = os.path.join(build_folder, ".conan_link")
-                if os.path.exists(link):
-                    build_folder = load(link)
-                loader = self._loader(build_folder)
-                conanfile = loader.load_conan(conan_file_path, self._user_io.out)
-                rmdir(package_folder)
-                output = ScopedOutput(str(reference), self._user_io.out)
-                packager.create_package(conanfile, build_folder, package_folder, output)
-            else:
-                self._user_io.out.info("Creating manifest for %s" % package_reference.package_id)
-                if not os.path.exists(package_folder):
-                    raise NotFoundException('Package %s does not exist' % str(package_reference))
-                packager.generate_manifest(package_folder)
+            output = ScopedOutput(str(reference), self._user_io.out)
+            output.info("Re-packaging %s" % package_reference.package_id)
+            loader = self._loader(build_folder)
+            conanfile = loader.load_conan(conan_file_path, self._user_io.out)
+            rmdir(package_folder)
+            packager.create_package(conanfile, build_folder, package_folder, output)
 
     def build(self, conanfile_path, current_path, test=False, filename=None):
         """ Call to build() method saved on the conanfile.py
