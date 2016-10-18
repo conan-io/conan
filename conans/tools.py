@@ -25,6 +25,15 @@ def pythonpath(conanfile):
     sys.path = old_path
 
 
+@contextmanager
+def environment_append(env_vars):
+    old_env = dict(os.environ)
+    os.environ.update(env_vars)
+    yield
+    os.environ.clear()
+    os.environ.update(old_env)
+
+
 def vcvars_command(settings):
     param = "x86" if settings.arch == "x86" else "amd64"
     existing_version = os.environ.get("VisualStudioVersion")
