@@ -224,24 +224,21 @@ class ConanManager(object):
                                      "%s" % (profile_name, current_profiles))
         return None
 
-    def _mix_settings_and_profile(self, settings, profile_name):
+    def _mix_settings_and_profile(self, settings, profile):
         '''Mix the specified settings with the specified profile.
         Specified settings are prioritized to profile'''
-        profile = self._read_profile(profile_name)
         if profile:
             profile.update_settings(dict(settings))
             return profile.settings.items()
         return settings
 
-    def _mix_scopes_and_profile(self, scopes, profile_name):
-        profile = self._read_profile(profile_name)
+    def _mix_scopes_and_profile(self, scopes, profile):
         if profile:
             profile.update_scopes(scopes)
             return profile.scopes
         return scopes
 
-    def _read_profile_env_vars(self, profile_name):
-        profile = self._read_profile(profile_name)
+    def _read_profile_env_vars(self, profile):
         if profile:
             return profile.env
         return {}
@@ -268,57 +265,58 @@ class ConanManager(object):
         else:
             manifest_manager = None
 
-        settings = self._mix_settings_and_profile(settings, profile_name)
-        scopes = self._mix_scopes_and_profile(scopes, profile_name)
-        env_vars = self._read_profile_env_vars(profile_name)
+        profile = self._read_profile(profile_name)
+        settings = self._mix_settings_and_profile(settings, profile)
+        scopes = self._mix_scopes_and_profile(scopes, profile)
+        env_vars = self._read_profile_env_vars(profile)
+
+        objects = self._get_graph(reference, current_path, remote, options, settings, filename,
+                                  update, check_updates, manifest_manager, scopes)
+        (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
+
+        Printer(self._user_io.out).print_graph(deps_graph, registry)
+        # Warn if os doesn't match
+        try:
+            if detected_os() != loader._settings.os:
+                message = '''You are building this package with settings.os='%s' on a '%s' system.
+If this is your intention, you can ignore this message.
+If not:
+     - Check the passed settings (-s)
+     - Check your global settings in ~/.conan/conan.conf
+     - Remove conaninfo.txt to avoid bad cached settings
+''' % (loader._settings.os, detected_os())
+                self._user_io.out.warn(message)
+        except ConanException:  # Setting os doesn't exist
+            pass
+
+        installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
 
         # Append env_vars to execution environment and clear when block code ends
         with environment_append(env_vars):
-
-            objects = self._get_graph(reference, current_path, remote, options, settings, filename,
-                                      update, check_updates, manifest_manager, scopes)
-            (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
-
-            Printer(self._user_io.out).print_graph(deps_graph, registry)
-            # Warn if os doesn't match
-            try:
-                if detected_os() != loader._settings.os:
-                    message = '''You are building this package with settings.os='%s' on a '%s' system.
-    If this is your intention, you can ignore this message.
-    If not:
-         - Check the passed settings (-s)
-         - Check your global settings in ~/.conan/conan.conf
-         - Remove conaninfo.txt to avoid bad cached settings
-    ''' % (loader._settings.os, detected_os())
-                    self._user_io.out.warn(message)
-            except ConanException:  # Setting os doesn't exist
-                pass
-
-            installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
             installer.install(deps_graph, build_mode)
 
-            prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
-            output = ScopedOutput(prefix, self._user_io.out)
+        prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
+        output = ScopedOutput(prefix, self._user_io.out)
 
-            # Write generators
-            tmp = list(conanfile.generators)  # Add the command line specified generators
-            tmp.extend(generators)
-            conanfile.generators = tmp
-            write_generators(conanfile, current_path, output)
+        # Write generators
+        tmp = list(conanfile.generators)  # Add the command line specified generators
+        tmp.extend(generators)
+        conanfile.generators = tmp
+        write_generators(conanfile, current_path, output)
 
-            if not isinstance(reference, ConanFileReference):
-                content = normalize(conanfile.info.dumps())
-                save(os.path.join(current_path, CONANINFO), content)
-                output.info("Generated %s" % CONANINFO)
-                local_installer = FileImporter(deps_graph, self._client_cache, current_path)
-                conanfile.copy = local_installer
-                conanfile.imports()
-                copied_files = local_installer.execute()
-                import_output = ScopedOutput("%s imports()" % output.scope, output)
-                report_copied_files(copied_files, import_output)
+        if not isinstance(reference, ConanFileReference):
+            content = normalize(conanfile.info.dumps())
+            save(os.path.join(current_path, CONANINFO), content)
+            output.info("Generated %s" % CONANINFO)
+            local_installer = FileImporter(deps_graph, self._client_cache, current_path)
+            conanfile.copy = local_installer
+            conanfile.imports()
+            copied_files = local_installer.execute()
+            import_output = ScopedOutput("%s imports()" % output.scope, output)
+            report_copied_files(copied_files, import_output)
 
-            if manifest_manager:
-                manifest_manager.print_log()
+        if manifest_manager:
+            manifest_manager.print_log()
 
     def source(self, reference, force):
         assert(isinstance(reference, ConanFileReference))
