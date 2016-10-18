@@ -305,7 +305,7 @@ path to the CMake binary directory, like this:
                             help="update with new upstream packages")
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Define scopes for packages')
-        parser.add_argument("--profile", "-pr", nargs="?", default=None, help='Define a profile')
+        parser.add_argument("--profile", "-pr", default=None, help='Define a profile')
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("--werror", action='store_true', default=False,
@@ -438,7 +438,7 @@ path to the CMake binary directory, like this:
                             help='path to user conanfile.py, e.g., conan build .',
                             default="")
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("--profile", "-pr", nargs="?", default=None, help='Define a profile')
+        parser.add_argument("--profile", "-pr", default=None, help='Define a profile')
         args = parser.parse_args(*args)
         current_path = os.getcwd()
         if args.path:
