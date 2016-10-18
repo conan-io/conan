@@ -224,7 +224,7 @@ class OSInfo(object):
         self.is_macos = platform.system() == "Darwin"
 
         if self.is_linux:
-            tmp = platform.linux_distribution()
+            tmp = platform.linux_distribution(full_distribution_name=0)
             self.linux_distro = None
             self.linux_distro = tmp[0].lower()
             self.os_version = Version(tmp[1])
