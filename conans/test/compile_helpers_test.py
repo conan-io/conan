@@ -9,6 +9,7 @@ from conans.client.runner import ConanRunner
 from conans.test.tools import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
 from conans.model.env_info import DepsEnvInfo
+from conans.util.files import load
 
 
 class MockWinSettings(Settings):
@@ -23,7 +24,14 @@ class MockWinSettings(Settings):
 
     @property
     def compiler(self):
-        return "Visual Studio"
+        class Compiler(object):
+            @property
+            def version(self):
+                return "14"
+
+            def __str__(self):
+                return "Visual Studio"
+        return Compiler()
 
     @property
     def build_type(self):
@@ -114,34 +122,10 @@ class CompileHelpersTest(unittest.TestCase):
     def tearDown(self):
         os.chdir(self.current)
 
-    def configure_environment_legacy_test(self):
-        conanfile = MockConanfile()
-        conanfile.output = TestBufferConanOutput()
-        conanfile.deps_cpp_info = BuildInfoMock()
-        conanfile.deps_env_info = DepsEnvInfo()
-        conanfile.settings = MockWinGccSettings()
-        env = ConfigureEnvironment(conanfile)
-        self.assertIn("env LIBS=", env.command_line)
-        self.assertIn("Please use ConfigureEnvironment.command_line_env if possible",
-                      conanfile.output)
-
-        conanfile.settings = MockAndroidSettings()
-        env = ConfigureEnvironment(conanfile)
-        self.assertEqual("", env.command_line)
-        self.assertIn("ERROR: ConfigureEnvironment not implemented for your OS/compiler",
-                      conanfile.output)
-
-        self.assertEqual("", env.command_line_env)
-        self.assertIn("ERROR: ConfigureEnvironment not implemented for your OS/compiler",
-                      conanfile.output)
-
     def configure_environment_test(self):
         env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
 
-        expected = ('SET LIB="path/to/lib1";"path/to/lib2";%LIB% && '
-                    'SET CL=/I"path/to/includes/lib1" '
-                    '/I"path/to/includes/lib2"')
-
+        expected = 'call "%vs140comntools%../../VC/vcvarsall.bat" x86 && call _conan_env.bat'
         self.assertEquals(env.command_line, expected)
 
         env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
@@ -191,15 +175,16 @@ class CompileHelpersTest(unittest.TestCase):
             os.environ["C_INCLUDE_PATH"] = ""
             os.environ["CPLUS_INCLUDE_PATH"] = ""
         else:
-            os.environ["LIB"] = '"/path/to/lib.a"'
+            os.environ["LIB"] = '/path/to/lib.a'
             os.environ["CL"] = '/I"path/to/cl1" /I"path/to/cl2"'
 
             env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
             command = "%s && SET" % env.command_line
             runner(command, output=output)
 
-            self.assertIn('LIB="path/to/lib1";"path/to/lib2";"/path/to/lib.a"', output)
-            self.assertIn('CL=/I"path/to/includes/lib1" /I"path/to/includes/lib2"', output)
+            self.assertIn('/path/to/lib.a;path/to/lib1;path/to/lib2', output)
+            self.assertIn('CL=/I"path/to/cl1" /I"path/to/cl2" '
+                          '/I"path/to/includes/lib1" /I"path/to/includes/lib2"', output)
 
             os.environ["LIB"] = ""
             os.environ["CL"] = ""
