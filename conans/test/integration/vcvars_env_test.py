@@ -16,6 +16,12 @@ set MYVAR2=OK
 if defined MYVAR (SET RESPONSE=%MYVAR%;Yeah!) else (SET RESPONSE=Nop!)
 """)
 
+        save("test3.bat", """@echo off
+set VAR1=HOLA
+set VAR1=ADIOS;%VAR1%
+set VAR1=BYE;%VAR1%
+""")
+
         def call(cmd):
             print (cmd, " => \t",)
             os.system(cmd)
@@ -53,6 +59,7 @@ if defined MYVAR (SET RESPONSE=%MYVAR%;Yeah!) else (SET RESPONSE=Nop!)
              "&& call echo %RESPONSE% %RESPONSE2%")
 
         call('SET "VAR1=VALUE1" SET "VAR2=VALUE2" && call echo %VAR1% %VAR2%')
+        call("call test3.bat && call echo %VAR1%")
 
     def conan_env_deps(self):
         client = TestClient()

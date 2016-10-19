@@ -4,6 +4,8 @@ from conans.client.generators.virtualenv import get_setenv_variables_commands
 from conans.model.env_info import DepsEnvInfo
 from conans.util.files import save
 from conans import tools
+from conans.client.output import ConanOutput
+import sys
 
 
 class ConfigureEnvironment(object):
@@ -13,8 +15,10 @@ class ConfigureEnvironment(object):
             deps_cpp_info = args[0]
             deps_env_info = DepsEnvInfo()
             settings = args[1]
+            self.output = ConanOutput(sys.stdout)
         elif len(args) == 1:  # conanfile (new interface)
             self.conanfile = args[0]
+            self.output = self.conanfile.output
             deps_cpp_info = self.conanfile.deps_cpp_info
             deps_env_info = self.conanfile.deps_env_info
             settings = self.conanfile.settings
@@ -49,29 +53,7 @@ class ConfigureEnvironment(object):
         except:
             self.libcxx = None
 
-    @property
-    def command_line(self):
-        """
-            env = ConfigureEnvironment(self.deps_cpp_info, self.settings)
-            command = '%s && nmake /f Makefile.msvc"' % env.command_line
-            self.run(command)
-        """
-
-        if self.os == "Linux" or self.os == "Macos":
-            return self._nix_env()
-        if self.os == "Windows":
-            if self.compiler == "Visual Studio":
-                cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
-                lib_paths = ";".join(['"%s"' % lib for lib in self._deps_cpp_info.lib_paths])
-                commands = []
-                commands.append('SET LIB={};%LIB%'.format(lib_paths))
-                commands.append('SET CL={}'.format(cl_args))
-                commands.extend(get_setenv_variables_commands(self._deps_env_info, "SET"))
-                command = " && ".join(commands)
-
-        return command
-
-    def _nix_env(self):
+    def _gcc_env(self):
         libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
         libs = 'LIBS="%s"' % libflags
         archflag = "-m32" if self.arch == "x86" else ""
@@ -107,51 +89,51 @@ class ConfigureEnvironment(object):
         headers_flags = ('C_INCLUDE_PATH=$C_INCLUDE_PATH:{0} '
                          'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:{0}'.format(include_paths))
         command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
-        # Add the rest of env variables from deps_env_info, WITHOUT SET, not needed with ENV
+        # Do not include "export" command, they are passed to env
         command += " ".join(get_setenv_variables_commands(self._deps_env_info, ""))
         return command
 
     @property
     def command_line_env(self):
         if self.os == "Linux" or self.os == "Macos":
-            return self._nix_env()
-
-        if self.compiler == "Visual Studio":
-            cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
-            lib_paths = ";".join(['%s' % lib for lib in self._deps_cpp_info.lib_paths])
+            if self.compiler == "gcc" or "clang" in str(self.compiler):
+                return self._gcc_env()
+        elif self.os == "Windows":
             commands = []
             commands.append("@echo off")
-            commands.append('if defined LIB (SET "LIB=%LIB%;{0}") else (SET "LIB={0}")'.
-                            format(lib_paths))
-            commands.append('if defined CL (SET "CL=%CL% {0}") else (SET "CL={0}")'.
-                            format(cl_args))
-            commands.extend(get_setenv_variables_commands(self._deps_env_info, "SET"))
+            vcvars = ""
+            if self.compiler == "Visual Studio":
+                cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
+                lib_paths = ";".join(['%s' % lib for lib in self._deps_cpp_info.lib_paths])
+                commands.append('if defined LIB (SET "LIB=%LIB%;{0}") else (SET "LIB={0}")'.
+                                format(lib_paths))
+                commands.append('if defined CL (SET "CL=%CL% {0}") else (SET "CL={0}")'.
+                                format(cl_args))
+                vcvars = tools.vcvars_command(self._settings)
+                if vcvars:
+                    vcvars += " && "
+            elif self.compiler == "gcc":
+                include_paths = ";".join(['%s'
+                                          % lib for lib in self._deps_cpp_info.include_paths])
+                commands.append('if defined C_INCLUDE_PATH (SET "C_INCLUDE_PATH=%C_INCLUDE_PATH%;{0}")'
+                                ' else (SET "C_INCLUDE_PATH={0}")'.format(include_paths))
+                commands.append('if defined CPLUS_INCLUDE_PATH '
+                                '(SET "CPLUS_INCLUDE_PATH=%CPLUS_INCLUDE_PATH%;{0}")'
+                                ' else (SET "CPLUS_INCLUDE_PATH={0}")'.format(include_paths))
 
-            save("_conan_env.bat", "\r\n".join(commands))
-            command = "call _conan_env.bat"
-            vcvars = tools.vcvars_command(self._settings)
-            if vcvars:
-                command = vcvars + " && " + command
-        elif self.os == "Windows" and self.compiler == "gcc":
-            include_paths = ";".join(['%s'
-                                      % lib for lib in self._deps_cpp_info.include_paths])
-            commands = []
-            commands.append("@echo off")
-            commands.append('if defined C_INCLUDE_PATH (SET "C_INCLUDE_PATH=%C_INCLUDE_PATH%;{0}")'
-                            ' else (SET "C_INCLUDE_PATH={0}")'.format(include_paths))
-            commands.append('if defined CPLUS_INCLUDE_PATH '
-                            '(SET "CPLUS_INCLUDE_PATH=%CPLUS_INCLUDE_PATH%;{0}")'
-                            ' else (SET "CPLUS_INCLUDE_PATH={0}")'.format(include_paths))
-
-            lib_paths = ";".join([lib for lib in self._deps_cpp_info.lib_paths])
-            commands.append('if defined LIBRARY_PATH (SET "LIBRARY_PATH=%LIBRARY_PATH%;{0}")'
-                            ' else (SET "LIBRARY_PATH={0}")'.format(lib_paths))
+                lib_paths = ";".join([lib for lib in self._deps_cpp_info.lib_paths])
+                commands.append('if defined LIBRARY_PATH (SET "LIBRARY_PATH=%LIBRARY_PATH%;{0}")'
+                                ' else (SET "LIBRARY_PATH={0}")'.format(lib_paths))
 
             commands.extend(get_setenv_variables_commands(self._deps_env_info, "SET"))
             save("_conan_env.bat", "\r\n".join(commands))
-            command = "call _conan_env.bat"
+            command = "%scall _conan_env.bat" % vcvars
+            return command
 
-        return command
+        return " && ".join(get_setenv_variables_commands(self._deps_env_info))
+
+    # alias for backward compatibility
+    command_line = command_line_env
 
     @property
     def compile_flags(self):
@@ -183,3 +165,5 @@ class ConfigureEnvironment(object):
         if self.compiler == "Visual Studio":
             libs = " ".join("%s.lib" % lib for lib in self._deps_cpp_info.libs)
             return libs
+
+        return ""

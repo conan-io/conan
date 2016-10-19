@@ -6,8 +6,12 @@ from conans.client.gcc import GCC
 import platform
 import os
 from conans.client.runner import ConanRunner
-from conans.test.tools import TestBufferConanOutput
+from conans.test.tools import TestBufferConanOutput, TestClient
 from conans.test.utils.test_files import temp_folder
+from conans.model.profile import Profile
+from conans.model.scope import Scopes
+from conans.util.files import save
+from conans.paths import CONANFILE
 
 
 class MockWinSettings(Settings):
@@ -22,7 +26,14 @@ class MockWinSettings(Settings):
 
     @property
     def compiler(self):
-        return "Visual Studio"
+        class Compiler(object):
+            @property
+            def version(self):
+                return "14"
+
+            def __str__(self):
+                return "Visual Studio"
+        return Compiler()
 
     @property
     def build_type(self):
@@ -56,6 +67,13 @@ class MockLinuxSettings(Settings):
     @property
     def build_type(self):
         return self._build_type
+
+
+class MockAndroidSettings(Settings):
+
+    @property
+    def os(self):
+        return "Android"
 
 
 class BuildInfoMock(object):
@@ -93,6 +111,10 @@ class BuildInfoMock(object):
         return ["cppflag1"]
 
 
+class MockConanfile(object):
+    pass
+
+
 class CompileHelpersTest(unittest.TestCase):
 
     def setUp(self):
@@ -105,10 +127,7 @@ class CompileHelpersTest(unittest.TestCase):
     def configure_environment_test(self):
         env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
 
-        expected = ('SET LIB="path/to/lib1";"path/to/lib2";%LIB% && '
-                    'SET CL=/I"path/to/includes/lib1" '
-                    '/I"path/to/includes/lib2"')
-
+        expected = 'call "%vs140comntools%../../VC/vcvarsall.bat" x86 && call _conan_env.bat'
         self.assertEquals(env.command_line, expected)
 
         env = ConfigureEnvironment(BuildInfoMock(), MockLinuxSettings())
@@ -158,15 +177,78 @@ class CompileHelpersTest(unittest.TestCase):
             os.environ["C_INCLUDE_PATH"] = ""
             os.environ["CPLUS_INCLUDE_PATH"] = ""
         else:
-            os.environ["LIB"] = '"/path/to/lib.a"'
+            os.environ["LIB"] = '/path/to/lib.a'
             os.environ["CL"] = '/I"path/to/cl1" /I"path/to/cl2"'
 
             env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
             command = "%s && SET" % env.command_line
             runner(command, output=output)
 
-            self.assertIn('LIB="path/to/lib1";"path/to/lib2";"/path/to/lib.a"', output)
-            self.assertIn('CL=/I"path/to/includes/lib1" /I"path/to/includes/lib2"', output)
+            self.assertIn('/path/to/lib.a;path/to/lib1;path/to/lib2', output)
+            self.assertIn('CL=/I"path/to/cl1" /I"path/to/cl2" '
+                          '/I"path/to/includes/lib1" /I"path/to/includes/lib2"', output)
 
             os.environ["LIB"] = ""
             os.environ["CL"] = ""
+
+
+conanfile_scope_env = """
+from conans import ConanFile, ConfigureEnvironment
+
+class AConan(ConanFile):
+    settings = "os"
+    requires = "Hello/0.1@lasote/testing"
+    generators = "env"
+
+    def build(self):
+        env = ConfigureEnvironment(self)
+        self.run(env.command_line + (" && SET" if self.settings.os=="Windows" else " && export"))
+"""
+
+conanfile_dep = """
+from conans import ConanFile
+
+class AConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def package_info(self):
+        self.env_info.PATH=["/path/to/my/folder"]
+"""
+
+
+class ConfigureEnvironmentTest(unittest.TestCase):
+
+    def setUp(self):
+        self.client = TestClient()
+
+    def build_with_profile_test(self):
+        self._create_profile("scopes_env", {},
+                             {},  # undefined scope do not apply to my packages
+                             {"CXX": "/path/tomy/g++_build", "CC": "/path/tomy/gcc_build"})
+
+        self.client.save({CONANFILE: conanfile_dep})
+        self.client.run("export lasote/testing")
+
+        self.client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
+        self.client.run("install --build=missing")
+        self.client.run("build -pr scopes_env")
+        self.assertRegexpMatches(str(self.client.user_io.out), "PATH=['\"]?/path/to/my/folder")
+        self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
+        self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")
+
+    def _assert_env_variable_printed(self, name, value):
+        if platform.system() == "Windows":
+            self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
+        elif platform.system() == "Darwin":
+            self.assertIn('%s="%s"' % (name, value), self.client.user_io.out)
+        else:
+            self.assertIn("%s='%s'" % (name, value), self.client.user_io.out)
+
+    def _create_profile(self, name, settings, scopes=None, env=None):
+        profile = Profile()
+        profile.settings = settings or {}
+        if scopes:
+            profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
+        profile.env = env or {}
+        save(self.client.client_cache.profile_path(name), profile.dumps())
