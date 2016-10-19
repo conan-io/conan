@@ -78,13 +78,10 @@ class DepsGraph(object):
         """ return nodes with direct reacheability by public dependencies
         """
         neighbors = self.neighbors(node)
-        result = []
         _, conanfile = node
-        for n in neighbors:
-            for req in conanfile.requires.values():
-                if req.conan_reference == n.conan_ref:
-                    if not req.private:
-                        result.append(n)
+
+        public_requires = [r.conan_reference for r in conanfile.requires.values() if not r.private]
+        result = [n for n in neighbors if n.conan_ref in public_requires]
         return result
 
     def private_inverse_neighbors(self, node):
@@ -234,7 +231,7 @@ class DepsGraph(object):
 
         return result
 
-    def private_nodes(self):
+    def private_nodes(self, built_private_nodes):
         """ computes a list of nodes living in the private zone of the deps graph,
         together with the list of nodes that privately require it
         """
@@ -245,7 +242,10 @@ class DepsGraph(object):
         while open_nodes:
             new_open_nodes = set()
             for node in open_nodes:
-                neighbors = self.public_neighbors(node)
+                if node in built_private_nodes:
+                    neighbors = self.public_neighbors(node)
+                else:
+                    neighbors = self.neighbors(node)
                 new_open_nodes.update(set(neighbors).difference(closure))
                 closure.update(neighbors)
             open_nodes = new_open_nodes
@@ -253,7 +253,7 @@ class DepsGraph(object):
         private_nodes = self.nodes.difference(closure)
         result = []
         for node in private_nodes:
-            result.append((node, self.private_inverse_neighbors(node)))
+            result.append(node)
         return result
 
     def non_dev_nodes(self, root):

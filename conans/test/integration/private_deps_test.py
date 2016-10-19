@@ -17,14 +17,46 @@ class PrivateDepsTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-    def _export_upload(self, name=0, version=None, deps=None, msg=None, static=True):
+    def _export_upload(self, name=0, version=None, deps=None, msg=None, static=True, build=True,
+                       upload=True):
         dll_export = self.client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files(name, version, deps, msg=msg, static=static,
-                                      private_includes=True, dll_export=dll_export)
+                                      private_includes=True, dll_export=dll_export, build=build)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)
         self.client.run("export lasote/stable")
-        self.client.run("upload %s" % str(conan_ref))
+        if upload:
+            self.client.run("upload %s" % str(conan_ref))
+
+    def consumer_private_test(self):
+        self._export_upload("Hello0", "0.1", build=False, upload=False)
+        self._export_upload("Hello1", "0.1", deps=["Hello0/0.1@lasote/stable"],
+                            build=False, upload=False)
+        self._export_upload("Hello2", "0.1", deps=[("Hello1/0.1@lasote/stable", "private")],
+                            build=False, upload=False)
+        self._export_upload("Hello3", "0.1", deps=[("Hello2/0.1@lasote/stable"),
+                                                   ],
+                            build=False, upload=False)
+
+        self.client.run('install --build missing')
+        self.assertIn("Hello0/0.1@lasote/stable: Generating the package", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Generating the package", self.client.user_io.out)
+        self.assertIn("Hello2/0.1@lasote/stable: Generating the package", self.client.user_io.out)
+
+        self.client.run("remove Hello0* -p -f ")
+        self.client.run("remove Hello1* -p -f")
+        self.client.run("search Hello0/0.1@lasote/stable")
+        self.assertIn("There are no packages for pattern 'Hello0/0.1@lasote/stable'",
+                      self.client.user_io.out)
+        self.client.run("search Hello1/0.1@lasote/stable")
+        self.assertIn("There are no packages for pattern 'Hello1/0.1@lasote/stable'",
+                      self.client.user_io.out)
+
+        self.client.run('install --build missing')
+        self.assertNotIn("Hello0/0.1@lasote/stable: Generating the package",
+                         self.client.user_io.out)
+        self.assertNotIn("Hello1/0.1@lasote/stable: Generating the package",
+                         self.client.user_io.out)
 
     def reuse_test(self):
         self._export_upload("Hello0", "0.1")

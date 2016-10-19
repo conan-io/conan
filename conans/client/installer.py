@@ -63,21 +63,24 @@ class ConanInstaller(object):
         """ computes a list of nodes that are not required to be built, as they are
         private requirements of already available shared libraries as binaries
         """
-        private_closure = deps_graph.private_nodes()
-        skippable_nodes = []
-        for private_node, private_requirers in private_closure:
-            for private_requirer in private_requirers:
-                conan_ref, conan_file = private_requirer
-                if conan_ref is None:
-                    break
-                package_id = conan_file.info.package_id()
+
+        skip_nodes = set()
+        for node in deps_graph.nodes:
+            conan_ref, conanfile = node
+            if not [r for r in conanfile.requires.values() if r.private]:
+                continue
+
+            if conan_ref:
+                package_id = conanfile.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
-                build_forced = self._build_forced(conan_ref, build_mode, conan_file)
-                if not self._remote_proxy.get_package(package_reference, build_forced,
-                                                      short_paths=conan_file.short_paths):
-                    break
-            else:
-                skippable_nodes.append(private_node)
+                build_forced = self._build_forced(conan_ref, build_mode, conanfile)
+                self._out.info("%s: Checking if package with private requirements "
+                               "has pre-built binary" % str(conan_ref))
+                if self._remote_proxy.get_package(package_reference, build_forced,
+                                                  short_paths=conanfile.short_paths):
+                    skip_nodes.add(node)
+
+        skippable_nodes = deps_graph.private_nodes(skip_nodes)
         return skippable_nodes
 
     def _build_forced(self, conan_ref, build_mode, conan_file):
