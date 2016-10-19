@@ -6,10 +6,12 @@ from conans.client.gcc import GCC
 import platform
 import os
 from conans.client.runner import ConanRunner
-from conans.test.tools import TestBufferConanOutput
+from conans.test.tools import TestBufferConanOutput, TestClient
 from conans.test.utils.test_files import temp_folder
-from conans.model.env_info import DepsEnvInfo
-from conans.util.files import load
+from conans.model.profile import Profile
+from conans.model.scope import Scopes
+from conans.util.files import save
+from conans.paths import CONANFILE
 
 
 class MockWinSettings(Settings):
@@ -188,3 +190,65 @@ class CompileHelpersTest(unittest.TestCase):
 
             os.environ["LIB"] = ""
             os.environ["CL"] = ""
+
+
+conanfile_scope_env = """
+from conans import ConanFile, ConfigureEnvironment
+
+class AConan(ConanFile):
+    settings = "os"
+    requires = "Hello/0.1@lasote/testing"
+    generators = "env"
+
+    def build(self):
+        env = ConfigureEnvironment(self)
+        self.run(env.command_line + " && SET" if self.settings.os=="Windows" else " && export")
+"""
+
+conanfile_dep = """
+from conans import ConanFile
+
+class AConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def package_info(self):
+        self.env_info.PATH=["/path/to/my/folder"]
+"""
+
+
+class ConfigureEnvironmentTest(unittest.TestCase):
+
+    def setUp(self):
+        self.client = TestClient()
+
+    def build_with_profile_test(self):
+        self._create_profile("scopes_env", {},
+                             {},  # undefined scope do not apply to my packages
+                             {"CXX": "/path/tomy/g++_build", "CC": "/path/tomy/gcc_build"})
+
+        self.client.save({CONANFILE: conanfile_dep})
+        self.client.run("export lasote/testing")
+
+        self.client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
+        self.client.run("install --build=missing")
+        self.client.run("build -pr scopes_env")
+        self._assert_env_variable_printed("PATH", "/path/to/my/folder")
+        self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
+        self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")
+
+    def _assert_env_variable_printed(self, name, value):
+        if platform.system() == "Windows":
+            self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
+        elif platform.system() == "Darwin":
+            self.assertIn('%s="%s"' % (name, value), self.client.user_io.out)
+        else:
+            self.assertIn("%s='%s'" % (name, value), self.client.user_io.out)
+
+    def _create_profile(self, name, settings, scopes=None, env=None):
+        profile = Profile()
+        profile.settings = settings or {}
+        if scopes:
+            profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
+        profile.env = env or {}
+        save(self.client.client_cache.profile_path(name), profile.dumps())
