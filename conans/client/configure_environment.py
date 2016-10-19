@@ -4,6 +4,8 @@ from conans.client.generators.virtualenv import get_setenv_variables_commands
 from conans.model.env_info import DepsEnvInfo
 from conans.util.files import save
 from conans import tools
+from conans.client.output import ConanOutput
+import sys
 
 
 class ConfigureEnvironment(object):
@@ -13,8 +15,10 @@ class ConfigureEnvironment(object):
             deps_cpp_info = args[0]
             deps_env_info = DepsEnvInfo()
             settings = args[1]
+            self.output = ConanOutput(sys.stdout)
         elif len(args) == 1:  # conanfile (new interface)
             self.conanfile = args[0]
+            self.output = self.conanfile.output
             deps_cpp_info = self.conanfile.deps_cpp_info
             deps_env_info = self.conanfile.deps_env_info
             settings = self.conanfile.settings
@@ -56,10 +60,12 @@ class ConfigureEnvironment(object):
             command = '%s && nmake /f Makefile.msvc"' % env.command_line
             self.run(command)
         """
-
         if self.os == "Linux" or self.os == "Macos":
             return self._nix_env()
+
         if self.os == "Windows":
+            self.output.warn("ConfigureEnvironment.command_line has been improved for Windows\n"
+                             "Please use ConfigureEnvironment.command_line_env if possible")
             if self.compiler == "Visual Studio":
                 cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
                 lib_paths = ";".join(['"%s"' % lib for lib in self._deps_cpp_info.lib_paths])
@@ -68,8 +74,13 @@ class ConfigureEnvironment(object):
                 commands.append('SET CL={}'.format(cl_args))
                 commands.extend(get_setenv_variables_commands(self._deps_env_info, "SET"))
                 command = " && ".join(commands)
+                return command
+            elif self.compiler == "gcc":
+                return self._nix_env()
 
-        return command
+        self.output.error("ConfigureEnvironment not implemented for your OS/compiler: %s/%s\n"
+                          "Build might fail" % (str(self.os), str(self.compiler)))
+        return ""
 
     def _nix_env(self):
         libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
@@ -132,7 +143,9 @@ class ConfigureEnvironment(object):
             vcvars = tools.vcvars_command(self._settings)
             if vcvars:
                 command = vcvars + " && " + command
-        elif self.os == "Windows" and self.compiler == "gcc":
+            return command
+
+        if self.os == "Windows" and self.compiler == "gcc":
             include_paths = ";".join(['%s'
                                       % lib for lib in self._deps_cpp_info.include_paths])
             commands = []
@@ -150,8 +163,11 @@ class ConfigureEnvironment(object):
             commands.extend(get_setenv_variables_commands(self._deps_env_info, "SET"))
             save("_conan_env.bat", "\r\n".join(commands))
             command = "call _conan_env.bat"
+            return command
 
-        return command
+        self.output.error("ConfigureEnvironment not implemented for your OS/compiler: %s/%s\n"
+                          "Build might fail" % (str(self.os), str(self.compiler)))
+        return ""
 
     @property
     def compile_flags(self):
@@ -183,3 +199,5 @@ class ConfigureEnvironment(object):
         if self.compiler == "Visual Studio":
             libs = " ".join("%s.lib" % lib for lib in self._deps_cpp_info.libs)
             return libs
+
+        return ""

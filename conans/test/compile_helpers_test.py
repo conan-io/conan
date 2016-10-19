@@ -8,6 +8,7 @@ import os
 from conans.client.runner import ConanRunner
 from conans.test.tools import TestBufferConanOutput
 from conans.test.utils.test_files import temp_folder
+from conans.model.env_info import DepsEnvInfo
 
 
 class MockWinSettings(Settings):
@@ -58,6 +59,13 @@ class MockLinuxSettings(Settings):
         return self._build_type
 
 
+class MockAndroidSettings(Settings):
+
+    @property
+    def os(self):
+        return "Android"
+
+
 class BuildInfoMock(object):
 
     @property
@@ -93,6 +101,10 @@ class BuildInfoMock(object):
         return ["cppflag1"]
 
 
+class MockConanfile(object):
+    pass
+
+
 class CompileHelpersTest(unittest.TestCase):
 
     def setUp(self):
@@ -101,6 +113,27 @@ class CompileHelpersTest(unittest.TestCase):
 
     def tearDown(self):
         os.chdir(self.current)
+
+    def configure_environment_legacy_test(self):
+        conanfile = MockConanfile()
+        conanfile.output = TestBufferConanOutput()
+        conanfile.deps_cpp_info = BuildInfoMock()
+        conanfile.deps_env_info = DepsEnvInfo()
+        conanfile.settings = MockWinGccSettings()
+        env = ConfigureEnvironment(conanfile)
+        self.assertIn("env LIBS=", env.command_line)
+        self.assertIn("Please use ConfigureEnvironment.command_line_env if possible",
+                      conanfile.output)
+
+        conanfile.settings = MockAndroidSettings()
+        env = ConfigureEnvironment(conanfile)
+        self.assertEqual("", env.command_line)
+        self.assertIn("ERROR: ConfigureEnvironment not implemented for your OS/compiler",
+                      conanfile.output)
+
+        self.assertEqual("", env.command_line_env)
+        self.assertIn("ERROR: ConfigureEnvironment not implemented for your OS/compiler",
+                      conanfile.output)
 
     def configure_environment_test(self):
         env = ConfigureEnvironment(BuildInfoMock(), MockWinSettings())
