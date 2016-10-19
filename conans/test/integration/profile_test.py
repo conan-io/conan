@@ -1,11 +1,12 @@
 import unittest
-from conans.test.tools import TestServer, TestClient
+from conans.test.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.profile import Profile
 from conans.util.files import save, load
 import os
 from conans.model.scope import Scopes
 import platform
+from conans.paths import CONANFILE
 
 
 conanfile_scope_env = """
@@ -33,19 +34,14 @@ class AConan(ConanFile):
 class ProfileTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer()
-        self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        self.client = TestClient()
 
     def build_with_profile_test(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] = conanfile_scope_env
-
         self._create_profile("scopes_env", {},
                              {},  # undefined scope do not apply to my packages
                              {"CXX": "/path/tomy/g++_build", "CC": "/path/tomy/gcc_build"})
 
-        self.client.save(files)
+        self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("build -pr scopes_env")
         self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
         self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")
@@ -78,16 +74,13 @@ class ProfileTest(unittest.TestCase):
                 self.assertIn("compiler.version=14", info)
 
     def scopes_env_test(self):
-        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] = conanfile_scope_env
-
         # Create a profile and use it
         self._create_profile("scopes_env", {},
                              {"Hello0:myscope": "1",
                               "ALL:otherscope": "2",
                               "undefined": "3"},  # undefined scope do not apply to my packages
                              {"CXX": "/path/tomy/g++", "CC": "/path/tomy/gcc"})
-        self.client.save(files)
+        self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("export lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr scopes_env")
 
@@ -101,6 +94,43 @@ class ProfileTest(unittest.TestCase):
         # The env variable shouldn't persist after install command
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
+
+    def test_package_test(self):
+        test_conanfile = '''from conans.model.conan_file import ConanFile
+from conans import CMake
+import os
+
+class DefaultNameConan(ConanFile):
+    name = "DefaultName"
+    version = "0.1"
+    settings = "os", "compiler", "arch", "build_type"
+    requires = "Hello0/0.1@lasote/stable"
+
+    def build(self):
+        # Print environment vars
+        # self.run('cmake %s %s' % (self.conanfile_directory, cmake.command_line))
+        if self.settings.os == "Windows":
+            self.run('echo "My var is %ONE_VAR%"')
+        else:
+            self.run('echo "My var is $ONE_VAR"')
+
+    def test(self):
+        pass
+
+'''
+        files = {}
+        files["conanfile.py"] = conanfile_scope_env
+        files["test_package/conanfile.py"] = test_conanfile
+        # Create a profile and use it
+        self._create_profile("scopes_env", {},
+                             {},
+                             {"ONE_VAR": "ONE_VALUE"})
+
+        self.client.save(files)
+        self.client.run("test_package --profile scopes_env")
+
+        self._assert_env_variable_printed("ONE_VAR", "ONE_VALUE")
+        self.assertIn("My var is ONE_VALUE", str(self.client.user_io.out))
 
     def _assert_env_variable_printed(self, name, value):
         if platform.system() == "Windows":

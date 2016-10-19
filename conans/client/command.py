@@ -211,6 +211,7 @@ path to the CMake binary directory, like this:
                                  'Use for testing purposes only')
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="update with new upstream packages")
+        parser.add_argument("--profile", "-pr", default=None, help='Define a profile')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -276,9 +277,10 @@ path to the CMake binary directory, like this:
                               settings=settings,
                               build_mode=args.build,
                               scopes=scopes,
-                              update=args.update)
+                              update=args.update,
+                              profile_name=args.profile)
         self._test_check(test_folder, test_folder_name)
-        self._manager.build(test_folder, build_folder, test=True)
+        self._manager.build(test_folder, build_folder, test=True, profile_name=args.profile)
 
     # Alias to test
     def test(self, *args):
