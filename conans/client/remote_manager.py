@@ -41,7 +41,7 @@ class RemoteManager(object):
         t1 = time.time()
         # existing package, will use short paths if defined
         basedir = self._client_cache.package(package_reference, short_paths=None)
-        rel_files = self._client_cache.package_paths(package_reference)
+        rel_files = self._client_cache.package_paths(package_reference, short_paths=None)
 
         self._output.rewrite_line("Checking package integrity...")
         if CONANINFO not in rel_files or CONAN_MANIFEST not in rel_files:
@@ -223,6 +223,7 @@ def unzip_and_get_files(files, destination_dir, tgz_name):
     tgz_file = files.pop(tgz_name, None)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir)
+        os.remove(tgz_file)
 
     return relative_dirs(destination_dir)
 

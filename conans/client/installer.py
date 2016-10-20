@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO
+from conans.paths import CONANINFO, BUILD_INFO, package_exists, build_exists
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -160,7 +160,7 @@ class ConanInstaller(object):
         # If already exists do not dirt the output, the common situation
         # is that package is already installed and OK. If don't, the proxy
         # will print some other message about it
-        if not os.path.exists(package_folder):
+        if not package_exists(package_folder):
             output.info("Installing package %s" % package_id)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
@@ -250,7 +250,7 @@ Package configuration:
         code
         """
         output.info('Building your package in %s' % build_folder)
-        if not os.path.exists(build_folder):
+        if not build_exists(build_folder):
             config_source(export_folder, src_folder, conan_file, output)
             output.info('Copying sources to build folder')
 
