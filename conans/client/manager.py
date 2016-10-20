@@ -2,7 +2,7 @@ import os
 import time
 from collections import OrderedDict
 
-from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
+from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, build_exists)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
 from conans.client.deps_builder import DepsBuilder
@@ -218,6 +218,8 @@ class ConanManager(object):
             try:
                 profile = self._client_cache.load_profile(profile_name)
                 return profile
+            except ConanException as exc:
+                raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
             except Exception:
                 current_profiles = ", ".join(self._client_cache.current_profiles()) or "[]"
                 raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
@@ -349,7 +351,7 @@ If not:
 
         for package_reference in packages:
             build_folder = self._client_cache.build(package_reference, short_paths=None)
-            if not os.path.exists(build_folder):
+            if not build_exists(build_folder):
                 raise NotFoundException("%s: Package binary '%s' folder doesn't exist\n"
                                         "Please read the 'conan package' command help\n"
                                         "Use 'conan install' or 'conan test_package' to build and "

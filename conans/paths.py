@@ -83,6 +83,18 @@ def shortener(path, short_paths):
     return redirect
 
 
+def package_exists(folder):
+    return os.path.exists(os.path.join(folder, CONANINFO))
+
+
+def build_exists(folder):
+    return os.path.exists(os.path.join(folder, CONANFILE))
+
+
+def source_exists(folder):
+    return os.path.exists(os.path.join(folder, CONANFILE))
+
+
 class SimplePaths(object):
     """
     Generate Conan paths. Handles the conan domain path logic. NO DISK ACCESS, just

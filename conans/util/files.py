@@ -162,7 +162,7 @@ def path_exists(path, basedir=None):
         tmp = chunks[0]  # Skip unit (c:)
         chunks = chunks[1:]
 
-    for chunk in chunks[0:]:
+    for chunk in chunks:
         tmp = tmp + os.sep
         if chunk and chunk not in os.listdir(tmp):
             return False

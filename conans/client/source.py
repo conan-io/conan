@@ -1,4 +1,4 @@
-from conans.paths import DIRTY_FILE
+from conans.paths import DIRTY_FILE, source_exists
 import os
 from conans.util.files import rmdir, save
 import six
@@ -36,7 +36,7 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
         output.warn("Detected build_policy 'always', trying to remove source folder")
         remove_source(raise_error=True)
 
-    if not os.path.exists(src_folder):
+    if not source_exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
         shutil.copytree(export_folder, src_folder)
         save(dirty, "")  # Creation of DIRTY flag

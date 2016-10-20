@@ -1,16 +1,11 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.tools import TestClient, TestServer
 from conans.util.files import load
 import os
 from conans.model.ref import PackageReference, ConanFileReference
 import platform
 
-
-class PathLengthLimitTest(unittest.TestCase):
-
-    def basic_test(self):
-        client = TestClient()
-        base = '''
+base = '''
 from conans import ConanFile
 from conans.util.files import load, save
 import os
@@ -37,6 +32,45 @@ class ConanLib(ConanFile):
         self.copy("*.txt", keep_path=False)
 '''
 
+
+class PathLengthLimitTest(unittest.TestCase):
+
+    def upload_test(self):
+        test_server = TestServer([],  # write permissions
+                                 users={"lasote": "mypass"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        files = {"conanfile.py": base}
+        client.save(files)
+        client.run("export lasote/channel")
+        client.run("install lib/0.1@lasote/channel --build")
+        client.run("upload lib/0.1@lasote/channel --all")
+        client.run("remove lib/0.1@lasote/channel -f")
+        client.run("search")
+        self.assertIn("There are no packages", client.user_io.out)
+
+        for download in ("", "--all"):
+            client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+            client2.run("install lib/0.1@lasote/channel %s" % download)
+            reference = ConanFileReference.loads("lib/0.1@lasote/channel")
+            export_folder = client2.client_cache.export(reference)
+            export_files = os.listdir(export_folder)
+            self.assertNotIn('conan_export.tgz', export_files)
+            package_ref = PackageReference.loads("lib/0.1@lasote/channel:"
+                                                 "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+            package_folder = client2.client_cache.package(package_ref, short_paths=None)
+            if platform.system() == "Windows":
+                original_folder = client2.client_cache.package(package_ref)
+                link = load(os.path.join(original_folder, ".conan_link"))
+                self.assertEqual(link, package_folder)
+
+            files = os.listdir(package_folder)
+            self.assertIn("myfile.txt", files)
+            self.assertIn("myfile2.txt", files)
+            self.assertNotIn("conan_package.tgz", files)
+
+    def basic_test(self):
+        client = TestClient()
         files = {"conanfile.py": base}
         client.save(files)
         client.run("export user/channel")
