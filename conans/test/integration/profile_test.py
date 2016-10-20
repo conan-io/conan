@@ -36,6 +36,51 @@ class ProfileTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    def bad_syntax_test(self):
+        self.client.save({CONANFILE: conanfile_scope_env})
+        self.client.run("export lasote/stable")
+
+        profile = '''
+        [settings
+        '''
+        save(self.client.client_cache.profile_path("clang"), profile)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.assertIn("Error reading 'clang' profile", self.client.user_io.out)
+        self.assertIn("Bad syntax", self.client.user_io.out)
+
+        profile = '''
+        [settings]
+        [invented]
+        '''
+        save(self.client.client_cache.profile_path("clang"), profile)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.assertIn("Unrecognized field 'invented'", self.client.user_io.out)
+        self.assertIn("Error reading 'clang' profile", self.client.user_io.out)
+
+        profile = '''
+        [settings]
+        as
+        '''
+        save(self.client.client_cache.profile_path("clang"), profile)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.assertIn("Error reading 'clang' profile: Invalid setting line 'as'", self.client.user_io.out)
+
+        profile = '''
+        [env]
+        as
+        '''
+        save(self.client.client_cache.profile_path("clang"), profile)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.assertIn("Error reading 'clang' profile: Invalid env line 'as'", self.client.user_io.out)
+
+        profile = '''
+        [scopes]
+        as
+        '''
+        save(self.client.client_cache.profile_path("clang"), profile)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.assertIn("Error reading 'clang' profile: Bad scope as", self.client.user_io.out)
+
     def build_with_profile_test(self):
         self._create_profile("scopes_env", {},
                              {},  # undefined scope do not apply to my packages

@@ -2,6 +2,7 @@ import copy
 from collections import OrderedDict
 from conans.util.config_parser import ConfigParser
 from conans.model.scope import Scopes, _root
+from conans.errors import ConanException
 
 
 class Profile(object):
@@ -21,6 +22,8 @@ class Profile(object):
 
         for setting in doc.settings.split("\n"):
             if setting:
+                if "=" not in setting:
+                    raise ConanException("Invalid setting line '%s'" % setting)
                 name, value = setting.split("=")
                 obj.settings[name] = value
 
@@ -29,6 +32,8 @@ class Profile(object):
 
         for env in doc.env.split("\n"):
             if env:
+                if "=" not in env:
+                    raise ConanException("Invalid env line '%s'" % env)
                 varname, value = env.split("=")
                 obj.env[varname] = value
 
