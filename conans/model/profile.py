@@ -20,22 +20,24 @@ class Profile(object):
         obj = Profile()
         doc = ConfigParser(text, allowed_fields=["settings", "env", "scopes"])
 
-        for setting in doc.settings.split("\n"):
-            if setting:
+        for setting in doc.settings.splitlines():
+            setting = setting.strip()
+            if setting and not setting.startswith("#"):
                 if "=" not in setting:
                     raise ConanException("Invalid setting line '%s'" % setting)
                 name, value = setting.split("=")
-                obj.settings[name] = value
+                obj.settings[name.strip()] = value.strip()
 
         if doc.scopes:
             obj.scopes = Scopes.from_list(doc.scopes.split("\n"))
 
-        for env in doc.env.split("\n"):
-            if env:
+        for env in doc.env.splitlines():
+            env = env.strip()
+            if env and not env.startswith("#"):
                 if "=" not in env:
                     raise ConanException("Invalid env line '%s'" % env)
                 varname, value = env.split("=")
-                obj.env[varname] = value
+                obj.env[varname.strip()] = value.strip()
 
         obj._order()
         return obj
