@@ -95,6 +95,43 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
+    def test_package_test(self):
+        test_conanfile = '''from conans.model.conan_file import ConanFile
+from conans import CMake
+import os
+
+class DefaultNameConan(ConanFile):
+    name = "DefaultName"
+    version = "0.1"
+    settings = "os", "compiler", "arch", "build_type"
+    requires = "Hello0/0.1@lasote/stable"
+
+    def build(self):
+        # Print environment vars
+        # self.run('cmake %s %s' % (self.conanfile_directory, cmake.command_line))
+        if self.settings.os == "Windows":
+            self.run('echo "My var is %ONE_VAR%"')
+        else:
+            self.run('echo "My var is $ONE_VAR"')
+
+    def test(self):
+        pass
+
+'''
+        files = {}
+        files["conanfile.py"] = conanfile_scope_env
+        files["test_package/conanfile.py"] = test_conanfile
+        # Create a profile and use it
+        self._create_profile("scopes_env", {},
+                             {},
+                             {"ONE_VAR": "ONE_VALUE"})
+
+        self.client.save(files)
+        self.client.run("test_package --profile scopes_env")
+
+        self._assert_env_variable_printed("ONE_VAR", "ONE_VALUE")
+        self.assertIn("My var is ONE_VALUE", str(self.client.user_io.out))
+
     def _assert_env_variable_printed(self, name, value):
         if platform.system() == "Windows":
             self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
