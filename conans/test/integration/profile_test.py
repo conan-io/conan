@@ -98,6 +98,16 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
         self._assert_env_variable_printed("env_var", "a value")
 
+        profile = '''
+        # Line with comments is not a problem
+        [env]
+        # Not even here
+        env_var =   a value
+        '''
+        save(self.client.client_cache.profile_path("clang"), profile)
+        self.client.run("install Hello0/0.1@lasote/stable --build -pr clang", ignore_error=True)
+        self._assert_env_variable_printed("env_var", "a value")
+
     def build_with_profile_test(self):
         self._create_profile("scopes_env", {},
                              {},  # undefined scope do not apply to my packages
