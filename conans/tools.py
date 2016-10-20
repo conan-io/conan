@@ -4,7 +4,7 @@ from __future__ import print_function
 import sys
 import os
 from conans.errors import ConanException
-from conans.util.files import _generic_algorithm_sum, load, save
+from conans.util.files import _generic_algorithm_sum, load
 from patch import fromfile, fromstring
 from conans.client.rest.uploader_downloader import Downloader
 import requests
@@ -14,6 +14,7 @@ from conans.model.version import Version
 from conans.util.log import logger
 from conans.client.runner import ConanRunner
 from contextlib import contextmanager
+import multiprocessing
 
 
 @contextmanager
@@ -22,6 +23,15 @@ def pythonpath(conanfile):
     sys.path.extend(conanfile.deps_env_info.PYTHONPATH)
     yield
     sys.path = old_path
+
+
+@contextmanager
+def environment_append(env_vars):
+    old_env = dict(os.environ)
+    os.environ.update(env_vars)
+    yield
+    os.environ.clear()
+    os.environ.update(old_env)
 
 
 def vcvars_command(settings):
@@ -38,6 +48,14 @@ def vcvars_command(settings):
         command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
                    % (settings.compiler.version, param))
     return command
+
+
+def cpu_count():
+    try:
+        return multiprocessing.cpu_count()
+    except NotImplementedError:
+        print("WARN: multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
+    return 1  # Safe guess
 
 
 def human_size(size_bytes):
@@ -72,6 +90,15 @@ def unzip(filename, destination="."):
         return untargz(filename, destination)
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
+
+    if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
+        def print_progress(extracted_size, uncompress_size):
+            txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
+            print(txt_msg, end='')
+    else:
+        def print_progress(extracted_size, uncompress_size):
+            pass
+
     with zipfile.ZipFile(filename, "r") as z:
         uncompress_size = sum((file_.file_size for file_ in z.infolist()))
         print("Unzipping %s, this can take a while" % human_size(uncompress_size))
@@ -79,8 +106,7 @@ def unzip(filename, destination="."):
         if platform.system() == "Windows":
             for file_ in z.infolist():
                 extracted_size += file_.file_size
-                txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
-                print(txt_msg, end='')
+                print_progress(extracted_size, uncompress_size)
                 try:
                     # Win path limit is 260 chars
                     if len(file_.filename) + len(full_path) >= 260:
@@ -91,8 +117,7 @@ def unzip(filename, destination="."):
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in z.infolist():
                 extracted_size += file_.file_size
-                txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
-                print(txt_msg, end='')
+                print_progress(extracted_size, uncompress_size)
                 try:
                     z.extract(file_, full_path)
                 except Exception as e:
@@ -199,7 +224,7 @@ class OSInfo(object):
         self.is_macos = platform.system() == "Darwin"
 
         if self.is_linux:
-            tmp = platform.linux_distribution()
+            tmp = platform.linux_distribution(full_distribution_name=0)
             self.linux_distro = None
             self.linux_distro = tmp[0].lower()
             self.os_version = Version(tmp[1])
@@ -333,24 +358,34 @@ class SystemPackageTool(object):
             Get the system package tool update command
         """
         sudo_str = "sudo " if self._sudo else ""
+        update_command = None
         if self._os_info.with_apt:
-            return self._runner("%sapt-get update" % sudo_str, True)
+            update_command = "%sapt-get update" % sudo_str
         elif self._os_info.with_yum:
-            return self._runner("%syum check-update" % sudo_str, True)
+            update_command = "%syum check-update" % sudo_str
         elif self._os_info.is_macos:
-            return self._runner("brew update", True)
+            update_command = "brew update"
+
+        if update_command:
+            print("Running: %s" % update_command)
+            return self._runner(update_command, True)
 
     def install(self, package_name):
         '''
             Get the system package tool install command.
         '''
         sudo_str = "sudo " if self._sudo else ""
+        install_command = None
         if self._os_info.with_apt:
-            return self._runner("%sapt-get install -y %s" % (sudo_str, package_name), True)
+            install_command = "%sapt-get install -y %s" % (sudo_str, package_name)
         elif self._os_info.with_yum:
-            return self._runner("%syum install -y %s" % (sudo_str, package_name), True)
+            install_command = "%syum install -y %s" % (sudo_str, package_name)
         elif self._os_info.is_macos:
-            return self._runner("brew install %s" % package_name, True)
+            install_command = "brew install %s" % package_name
+
+        if install_command:
+            print("Running: %s" % install_command)
+            return self._runner(install_command, True)
         else:
             print("Warn: Only available for linux with apt-get or yum or OSx with brew")
             return None

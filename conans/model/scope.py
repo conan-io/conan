@@ -54,17 +54,8 @@ class Scopes(defaultdict):
     def from_list(items):
         result = Scopes()
         for item in items:
-            chunks = item.split(":")
-            if len(chunks) == 2:
-                root = chunks[0]
-                scope = chunks[1]
-            elif len(chunks) == 1:
-                root = _root
-                scope = chunks[0]
-            else:
-                raise ConanException("Bad scope %s" % item)
             try:
-                key, value = scope.split("=")
+                key, value = item.split("=")
             except:
                 raise ConanException("Bad scope %s" % item)
             v = value.upper()
@@ -74,7 +65,18 @@ class Scopes(defaultdict):
                 value = False
             elif v == "NONE":
                 value = None
-            result[root][key] = value
+
+            chunks = key.split(":")
+            if len(chunks) == 2:
+                root = chunks[0]
+                scope = chunks[1]
+            elif len(chunks) == 1:
+                root = _root
+                scope = chunks[0]
+            else:
+                raise ConanException("Bad scope %s" % item)
+
+            result[root][scope] = value
         return result
 
     def update_scope(self, other):

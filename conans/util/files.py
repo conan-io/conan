@@ -23,8 +23,7 @@ def decode_text(text):
 
 
 def touch(fname, times=None):
-    with open(fname, 'a'):
-        os.utime(fname, times)
+    os.utime(fname, times)
 
 
 def normalize(text):
@@ -116,10 +115,10 @@ def _change_permissions(func, path, exc_info):
         raise
 
 
-def rmdir(path, shorten=False):
+def rmdir(path, short_paths=False):
     '''Recursive rm of a directory. If dir not exists
     only raise exception if raise_if_not_exist'''
-    if shorten and platform.system() == "Windows":
+    if short_paths and platform.system() == "Windows":
         link = os.path.join(path, ".conan_link")
         if os.path.exists(link):
             short_path = load(link)

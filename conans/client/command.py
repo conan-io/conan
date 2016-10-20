@@ -211,6 +211,7 @@ path to the CMake binary directory, like this:
                                  'Use for testing purposes only')
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="update with new upstream packages")
+        parser.add_argument("--profile", "-pr", default=None, help='Define a profile')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -276,9 +277,10 @@ path to the CMake binary directory, like this:
                               settings=settings,
                               build_mode=args.build,
                               scopes=scopes,
-                              update=args.update)
+                              update=args.update,
+                              profile_name=args.profile)
         self._test_check(test_folder, test_folder_name)
-        self._manager.build(test_folder, build_folder, test=True)
+        self._manager.build(test_folder, build_folder, test=True, profile_name=args.profile)
 
     # Alias to test
     def test(self, *args):
@@ -305,8 +307,11 @@ path to the CMake binary directory, like this:
                             help="update with new upstream packages")
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Define scopes for packages')
+        parser.add_argument("--profile", "-pr", default=None, help='Define a profile')
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
+        parser.add_argument("--werror", action='store_true', default=False,
+                            help='Error instead of warnings for graph inconsistencies')
 
         # Manifests arguments
         default_manifest_folder = '.conan_manifests'
@@ -324,6 +329,7 @@ path to the CMake binary directory, like this:
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
+        self._user_io.out.werror_active = args.werror
 
         current_path = os.getcwd()
         try:
@@ -373,7 +379,8 @@ path to the CMake binary directory, like this:
                                   manifest_verify=manifest_verify,
                                   manifest_interactive=manifest_interactive,
                                   scopes=scopes,
-                                  generators=args.generator)
+                                  generators=args.generator,
+                                  profile_name=args.profile)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -433,19 +440,23 @@ path to the CMake binary directory, like this:
                             help='path to user conanfile.py, e.g., conan build .',
                             default="")
         parser.add_argument("--file", "-f", help="specify conanfile filename")
+        parser.add_argument("--profile", "-pr", default=None, help='Define a profile')
         args = parser.parse_args(*args)
         current_path = os.getcwd()
         if args.path:
             root_path = os.path.abspath(args.path)
         else:
             root_path = current_path
-        self._manager.build(root_path, current_path, filename=args.file)
+        self._manager.build(root_path, current_path, filename=args.file, profile_name=args.profile)
 
     def package(self, *args):
         """ calls your conanfile.py "package" method for a specific package or
             regenerates the existing package's manifest.
+            It will not create a new package, use 'install' or 'test_package' instead.
             Intended for package creators, for regenerating a package without
-            recompiling the source.
+            recompiling the source, i.e. for troubleshooting,
+            and fixing the package() method, not normal operation. It requires
+            the package has been built locally, it will not re-package otherwise.
             e.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
@@ -453,12 +464,8 @@ path to the CMake binary directory, like this:
                             'e.g., MyPackage/1.2@user/channel')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
-                                 '9cf83afd07b678d38a9c1645f605875400847ff3')
-        parser.add_argument("-o", "--only-manifest", default=False, action='store_true',
-                            help='Just regenerate manifest for the existing package.'
-                                 'If True conan won\'t call your conanfile\'s package method.')
-        parser.add_argument("--all", action='store_true',
-                            default=False, help='Package all packages from specified reference')
+                                 '9cf83afd07b678d38a9c1645f605875400847ff3'
+                                 ' If not specified, ALL binaries for this recipe are re-packaged')
 
         args = parser.parse_args(*args)
 
@@ -468,10 +475,7 @@ path to the CMake binary directory, like this:
             raise ConanException("Invalid package recipe reference. "
                                  "e.g., MyPackage/1.2@user/channel")
 
-        if not args.all and not args.package:
-            raise ConanException("'conan package': Please specify --all or a package ID")
-
-        self._manager.package(reference, args.package, args.only_manifest, args.all)
+        self._manager.package(reference, args.package)
 
     def source(self, *args):
         """ Calls your conanfile.py "source" method to configure the source directory.

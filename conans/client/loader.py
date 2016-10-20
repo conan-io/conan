@@ -189,7 +189,7 @@ class ConanFileLoader(object):
         # conanfile.options.values = options
         conanfile.options.initialize_upstream(options)
 
-        conanfile.generators = ["txt"]
+        conanfile.generators = []
         conanfile.scope = self._scopes.package_scope()
 
         return conanfile

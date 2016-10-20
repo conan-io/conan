@@ -10,6 +10,7 @@ from conans.paths import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE
 import platform
 from conans.util.log import logger
 import time
+import shutil
 
 
 @attr("slow")
@@ -68,6 +69,18 @@ class DiamondTest(unittest.TestCase):
         self._diamond_test(install=install, use_cmake=False)
 
     def _diamond_test(self, install="install", use_cmake=True):
+        def wait_until_removed(folder):
+            latest_exception = None
+            for _ in range(50):  # Max 5 seconds
+                time.sleep(0.1)
+                try:
+                    shutil.rmtree(folder)
+                    break
+                except Exception as e:
+                    latest_exception = e
+            else:
+                raise Exception("Could remove folder %s: %s" % (folder, latest_exception))
+
         self._export_upload("Hello0", "0.1", use_cmake=use_cmake)
         self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake)
         self._export_upload("Hello2", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake)
@@ -102,11 +115,11 @@ class DiamondTest(unittest.TestCase):
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1,
                                        use_cmake=use_cmake)
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
-        client.save(files3, clean_first=True)
+        wait_until_removed(client.current_folder)
+        client.save(files3)
         client.run("%s . --build missing" % install)
         client.run("build .")
 
-        time.sleep(2)
         client.runner(command, cwd=client.current_folder)
         self.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
                           'Hola Hello2', 'Hola Hello0'],
@@ -134,7 +147,6 @@ class DiamondTest(unittest.TestCase):
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
-        time.sleep(2)
         client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
                           'Hello Hello2', 'Hello Hello0'],
@@ -143,14 +155,14 @@ class DiamondTest(unittest.TestCase):
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1,
                                        use_cmake=use_cmake)
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
-        client2.save(files3, clean_first=True)
+        wait_until_removed(client2.current_folder)
+        client2.save(files3)
         client2.run("%s . --build missing" % install)
         client2.run("build .")
         self.assertNotIn("libhello0.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)
         self.assertNotIn("libhello2.a", client2.user_io.out)
         self.assertNotIn("libhello3.a", client2.user_io.out)
-        time.sleep(2)
         client2.runner(command, cwd=client2.current_folder)
         self.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
                           'Hola Hello2', 'Hola Hello0'],
