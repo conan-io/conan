@@ -86,9 +86,9 @@ class ClientCache(SimplePaths):
         ''' Returns all file paths for a conans (relative to conans directory)'''
         return relative_dirs(self.export(conan_reference))
 
-    def package_paths(self, package_reference):
+    def package_paths(self, package_reference, short_paths):
         ''' Returns all file paths for a package (relative to conans directory)'''
-        return relative_dirs(self.package(package_reference))
+        return relative_dirs(self.package(package_reference, short_paths))
 
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """
@@ -124,15 +124,17 @@ class ClientCache(SimplePaths):
 
     def conan_manifests(self, conan_reference):
         digest_path = self.digestfile_conanfile(conan_reference)
+        if not path_exists(digest_path, self.store):
+            return None, None
         return self._digests(digest_path)
 
     def package_manifests(self, package_reference):
         digest_path = self.digestfile_package(package_reference, short_paths=None)
+        if not os.path.exists(digest_path):
+            return None, None
         return self._digests(digest_path)
 
     def _digests(self, digest_path):
-        if not path_exists(digest_path, self.store):
-            return None, None
         readed_digest = FileTreeManifest.loads(load(digest_path))
         expected_digest = FileTreeManifest.create(os.path.dirname(digest_path))
         return readed_digest, expected_digest
