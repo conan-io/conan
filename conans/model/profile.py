@@ -29,7 +29,7 @@ class Profile(object):
                 obj.settings[name.strip()] = value.strip()
 
         if doc.scopes:
-            obj.scopes = Scopes.from_list(doc.scopes.split("\n"))
+            obj.scopes = Scopes.from_list(doc.scopes.splitlines())
 
         for env in doc.env.splitlines():
             env = env.strip()
