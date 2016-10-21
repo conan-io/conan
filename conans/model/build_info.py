@@ -87,35 +87,34 @@ class DepsCppInfo(_CppInfo):
 
     @staticmethod
     def loads(text):
-        pattern = re.compile("^\[([a-zA-Z0-9_-]{2,50})\]")
+        pattern = re.compile("^\[([a-zA-Z0-9_:-]+)\]([^\[]+)", re.MULTILINE)
         result = DepsCppInfo()
+
         try:
-            for line in text.splitlines():
-                line = line.strip()
-                if not line or line[0] == '#':
+            for m in pattern.finditer(text):
+                var_name = m.group(1)
+                lines = []
+                for line in m.group(2).splitlines():
+                    line = line.strip()
+                    if not line or line[0] == "#":
+                        continue
+                    lines.append(line)
+                if not lines:
                     continue
-                m = pattern.match(line)
-                if m:  # Header like [includedirs]
-                    group = m.group(1)
-                    tokens = group.split("_")
-                    field = tokens[0]
-                    if field not in DepsCppInfo.fields:
-                        raise ConanException("Unrecognized field '%s'" % field)
-                    if len(tokens) == 2:
-                        dep = tokens[1]
-                        child = result._dependencies.setdefault(dep, DepsCppInfo())
-                        current_info_object = child
-                    else:
-                        current_info_object = result
-                else:  # Line with a value
-                    current_field = getattr(current_info_object, field)
-                    if isinstance(current_field, str):  # Attribute of type string
-                        setattr(current_info_object, field, current_field)
-                    else:  # Attribute is a list
-                        current_field.append(line)
-        except Exception:
+                tokens = var_name.split("_")
+                field = tokens[0]
+                if len(tokens) == 2:
+                    dep = tokens[1]
+                    dep_cpp_info = result._dependencies.setdefault(dep, DepsCppInfo())
+                    if field == "rootpath":
+                        lines = lines[0]
+                    setattr(dep_cpp_info, field, lines)
+                else:
+                    setattr(result, field, lines)
+        except Exception as e:
             logger.error(traceback.format_exc())
-            raise
+            raise ConanException("There was an error parsing  conaninfo.txt: %s" % str(e))
+
         return result
 
     def update(self, dep_cpp_info, conan_ref=None):
