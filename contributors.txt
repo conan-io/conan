@@ -4,5 +4,6 @@ Contributors
 This is the list of contributors to this project source code, in alphabetical order. 
 Many thanks to all of them!
 
+- Bocanegra Algarra, Raul (raul.bocanegra.algarra@gmail.com)
 - Dragly, Svenn-Arne (dragly.org)
 - Kourkoulis, Dimitri (@dimi309)
