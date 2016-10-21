@@ -142,4 +142,5 @@ def progress_units(progress, total):
 
 
 def print_progress(output, units):
-    output.rewrite_line("[%s%s]" % ('=' * units, ' ' * (50 - units)))
+    if output.is_terminal():
+        output.rewrite_line("[%s%s]" % ('=' * units, ' ' * (50 - units)))

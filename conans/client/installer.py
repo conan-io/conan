@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO
+from conans.paths import CONANINFO, BUILD_INFO, package_exists, build_exists
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -28,7 +28,7 @@ def init_package_info(deps_graph, paths):
         if conan_ref:
             package_id = conan_file.info.package_id()
             package_reference = PackageReference(conan_ref, package_id)
-            package_folder = paths.package(package_reference)
+            package_folder = paths.package(package_reference, conan_file.short_paths)
             conan_file.package_folder = package_folder
             conan_file.cpp_info = CppInfo(package_folder)
             conan_file.env_info = EnvInfo(package_folder)
@@ -63,20 +63,24 @@ class ConanInstaller(object):
         """ computes a list of nodes that are not required to be built, as they are
         private requirements of already available shared libraries as binaries
         """
-        private_closure = deps_graph.private_nodes()
-        skippable_nodes = []
-        for private_node, private_requirers in private_closure:
-            for private_requirer in private_requirers:
-                conan_ref, conan_file = private_requirer
-                if conan_ref is None:
-                    break
-                package_id = conan_file.info.package_id()
+
+        skip_nodes = set()
+        for node in deps_graph.nodes:
+            conan_ref, conanfile = node
+            if not [r for r in conanfile.requires.values() if r.private]:
+                continue
+
+            if conan_ref:
+                package_id = conanfile.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
-                build_forced = self._build_forced(conan_ref, build_mode, conan_file)
-                if not self._remote_proxy.get_package(package_reference, build_forced):
-                    break
-            else:
-                skippable_nodes.append(private_node)
+                build_forced = self._build_forced(conan_ref, build_mode, conanfile)
+                self._out.info("%s: Checking if package with private requirements "
+                               "has pre-built binary" % str(conan_ref))
+                if self._remote_proxy.get_package(package_reference, build_forced,
+                                                  short_paths=conanfile.short_paths):
+                    skip_nodes.add(node)
+
+        skippable_nodes = deps_graph.private_nodes(skip_nodes)
         return skippable_nodes
 
     def _build_forced(self, conan_ref, build_mode, conan_file):
@@ -148,7 +152,7 @@ class ConanInstaller(object):
         package_reference = PackageReference(conan_ref, package_id)
 
         conan_ref = package_reference.conan
-        package_folder = self._paths.package(package_reference)
+        package_folder = self._paths.package(package_reference, conan_file.short_paths)
         build_folder = self._paths.build(package_reference, conan_file.short_paths)
         src_folder = self._paths.source(conan_ref, conan_file.short_paths)
         export_folder = self._paths.export(conan_ref)
@@ -156,13 +160,14 @@ class ConanInstaller(object):
         # If already exists do not dirt the output, the common situation
         # is that package is already installed and OK. If don't, the proxy
         # will print some other message about it
-        if not os.path.exists(package_folder):
+        if not package_exists(package_folder):
             output.info("Installing package %s" % package_id)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
         force_build = self._build_forced(conan_ref, build_mode, conan_file)
-        if self._remote_proxy.get_package(package_reference, force_build):
+        if self._remote_proxy.get_package(package_reference, force_build,
+                                          short_paths=conan_file.short_paths):
             return
 
         # we need and can build? Only if we are forced or build_mode missing and package not exists
@@ -245,7 +250,7 @@ Package configuration:
         code
         """
         output.info('Building your package in %s' % build_folder)
-        if not os.path.exists(build_folder):
+        if not build_exists(build_folder):
             config_source(export_folder, src_folder, conan_file, output)
             output.info('Copying sources to build folder')
 
@@ -286,12 +291,12 @@ Package configuration:
             conan_file._conanfile_directory = build_folder
             conan_file.build()
             self._out.writeln("")
-            output.success("Package '%s' built" % os.path.basename(build_folder))
+            output.success("Package '%s' built" % conan_file.info.package_id())
             output.info("Build folder %s" % build_folder)
         except Exception as e:
             os.chdir(src_folder)
             self._out.writeln("")
-            output.error("Package '%s' build failed" % os.path.basename(build_folder))
+            output.error("Package '%s' build failed" % conan_file.info.package_id())
             output.warn("Build folder %s" % build_folder)
             raise ConanException("%s: %s" % (conan_file.name, str(e)))
         finally:

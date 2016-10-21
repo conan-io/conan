@@ -4,9 +4,9 @@ from conans.paths import BUILD_INFO_QMAKE
 
 class DepsCppQmake(object):
     def __init__(self, deps_cpp_info):
-        self.include_paths = " \\\n    ".join('%s' % p.replace("\\", "/")
+        self.include_paths = " \\\n    ".join('"%s"' % p.replace("\\", "/")
                                               for p in deps_cpp_info.include_paths)
-        self.lib_paths = " \\\n    ".join('-L%s' % p.replace("\\", "/")
+        self.lib_paths = " \\\n    ".join('-L"%s"' % p.replace("\\", "/")
                                           for p in deps_cpp_info.lib_paths)
         self.libs = " ".join('-l%s' % l for l in deps_cpp_info.libs)
         self.defines = " \\\n    ".join('"%s"' % d for d in deps_cpp_info.defines)
@@ -14,7 +14,7 @@ class DepsCppQmake(object):
         self.cflags = " ".join(deps_cpp_info.cflags)
         self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
         self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
-        self.bin_paths = " \\\n    ".join('%s' % p.replace("\\", "/")
+        self.bin_paths = " \\\n    ".join('"%s"' % p.replace("\\", "/")
                                           for p in deps_cpp_info.bin_paths)
 
         self.rootpath = '%s' % deps_cpp_info.rootpath.replace("\\", "/")
@@ -43,7 +43,7 @@ class QmakeGenerator(Generator):
         all_flags = template_all.format(dep_name="", deps=deps)
         sections.append(all_flags)
 
-        template_deps = template + 'CONAN{dep_name}_ROOT = {deps.rootpath}\n'
+        template_deps = template + 'CONAN{dep_name}_ROOT = "{deps.rootpath}"\n'
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             deps = DepsCppQmake(dep_cpp_info)

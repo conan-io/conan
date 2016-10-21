@@ -11,11 +11,6 @@ import os
 
 def get_env(env_key, default=None, environment=os.environ):
     '''Get the env variable associated with env_key'''
-    _default_type = {str: lambda x: x,
-                     int: lambda x: int(x),
-                     float: lambda x: float(x),
-                     list: lambda x: x.split(","),
-                     bool: lambda x: x == '1'}
 
     env_var = environment.get(env_key, default)
     if env_var != default:

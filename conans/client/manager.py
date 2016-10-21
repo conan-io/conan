@@ -2,7 +2,7 @@ import os
 import time
 from collections import OrderedDict
 
-from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
+from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, build_exists)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
 from conans.client.deps_builder import DepsBuilder
@@ -12,7 +12,7 @@ from conans.util.files import save, load, rmdir, normalize
 from conans.util.log import logger
 from conans.client.uploader import ConanUploader
 from conans.client.printer import Printer
-from conans.errors import NotFoundException, ConanException, format_conanfile_exception
+from conans.errors import NotFoundException, ConanException
 from conans.client.generators import write_generators
 from conans.client.importer import FileImporter
 from conans.model.ref import ConanFileReference, PackageReference
@@ -32,7 +32,8 @@ from conans.model.scope import Scopes
 from conans.client.client_cache import ClientCache
 from conans.client.source import config_source
 from conans.client.manifest_manager import ManifestManager
-from conans.model.env_info import EnvInfo
+from conans.model.env_info import EnvInfo, DepsEnvInfo
+from conans.tools import environment_append
 
 
 def get_user_channel(text):
@@ -61,8 +62,10 @@ class ConanManager(object):
 
     def _loader(self, current_path=None, user_settings_values=None, user_options_values=None,
                 scopes=None):
+
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
+
         options = OptionsValues()
         conaninfo_scopes = Scopes()
 
@@ -210,16 +213,49 @@ class ConanManager(object):
                                               info, registry, graph_updates_info,
                                               remote)
 
+    def _read_profile(self, profile_name):
+        if profile_name:
+            try:
+                profile = self._client_cache.load_profile(profile_name)
+                return profile
+            except ConanException as exc:
+                raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
+            except Exception:
+                current_profiles = ", ".join(self._client_cache.current_profiles()) or "[]"
+                raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
+                                     "%s" % (profile_name, current_profiles))
+        return None
+
+    def _mix_settings_and_profile(self, settings, profile):
+        '''Mix the specified settings with the specified profile.
+        Specified settings are prioritized to profile'''
+        if profile:
+            profile.update_settings(dict(settings))
+            return profile.settings.items()
+        return settings
+
+    def _mix_scopes_and_profile(self, scopes, profile):
+        if profile:
+            profile.update_scopes(scopes)
+            return profile.scopes
+        return scopes
+
+    def _read_profile_env_vars(self, profile):
+        if profile:
+            return profile.env
+        return {}
+
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                scopes=None, generators=None):
+                scopes=None, generators=None, profile_name=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
         @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
         @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
+        @param profile: name of the profile to use
         """
         generators = generators or []
 
@@ -230,6 +266,11 @@ class ConanManager(object):
                                                interactive=manifest_interactive)
         else:
             manifest_manager = None
+
+        profile = self._read_profile(profile_name)
+        settings = self._mix_settings_and_profile(settings, profile)
+        scopes = self._mix_scopes_and_profile(scopes, profile)
+        env_vars = self._read_profile_env_vars(profile)
 
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, manifest_manager, scopes)
@@ -251,7 +292,10 @@ If not:
             pass
 
         installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
-        installer.install(deps_graph, build_mode)
+
+        # Append env_vars to execution environment and clear when block code ends
+        with environment_append(env_vars):
+            installer.install(deps_graph, build_mode)
 
         prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
         output = ScopedOutput(prefix, self._user_io.out)
@@ -286,46 +330,44 @@ If not:
         export_folder = self._client_cache.export(reference)
         config_source(export_folder, src_folder, conanfile, output, force)
 
-    def package(self, reference, package_id, only_manifest, package_all):
+    def package(self, reference, package_id):
         assert(isinstance(reference, ConanFileReference))
 
         # Package paths
         conan_file_path = self._client_cache.conanfile(reference)
+        if not os.path.exists(conan_file_path):
+            raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
-        if package_all:
-            if only_manifest:
-                packages_dir = self._client_cache.packages(reference)
-            else:
-                packages_dir = self._client_cache.builds(reference)
-            if not os.path.exists(packages_dir):
-                raise NotFoundException('%s does not exist' % str(reference))
+        if not package_id:
             packages = [PackageReference(reference, packid)
-                        for packid in os.listdir(packages_dir)]
+                        for packid in self._client_cache.conan_builds(reference)]
+            if not packages:
+                raise NotFoundException("%s: Package recipe has not been built locally\n"
+                                        "Please read the 'conan package' command help\n"
+                                        "Use 'conan install' or 'conan test_package' to build and "
+                                        "create binaries" % str(reference))
         else:
             packages = [PackageReference(reference, package_id)]
 
         for package_reference in packages:
-            package_folder = self._client_cache.package(package_reference)
+            build_folder = self._client_cache.build(package_reference, short_paths=None)
+            if not build_exists(build_folder):
+                raise NotFoundException("%s: Package binary '%s' folder doesn't exist\n"
+                                        "Please read the 'conan package' command help\n"
+                                        "Use 'conan install' or 'conan test_package' to build and "
+                                        "create binaries"
+                                        % (str(reference), package_reference.package_id))
+            # The package already exist, we can use short_paths if they were defined
+            package_folder = self._client_cache.package(package_reference, short_paths=None)
             # Will read current conaninfo with specified options and load conanfile with them
-            if not only_manifest:
-                self._user_io.out.info("Packaging %s" % package_reference.package_id)
-                build_folder = self._client_cache.build(package_reference)
-                # Small fix to package for short paths, without messing with the whole thing
-                link = os.path.join(build_folder, ".conan_link")
-                if os.path.exists(link):
-                    build_folder = load(link)
-                loader = self._loader(build_folder)
-                conanfile = loader.load_conan(conan_file_path, self._user_io.out)
-                rmdir(package_folder)
-                output = ScopedOutput(str(reference), self._user_io.out)
-                packager.create_package(conanfile, build_folder, package_folder, output)
-            else:
-                self._user_io.out.info("Creating manifest for %s" % package_reference.package_id)
-                if not os.path.exists(package_folder):
-                    raise NotFoundException('Package %s does not exist' % str(package_reference))
-                packager.generate_manifest(package_folder)
+            output = ScopedOutput(str(reference), self._user_io.out)
+            output.info("Re-packaging %s" % package_reference.package_id)
+            loader = self._loader(build_folder)
+            conanfile = loader.load_conan(conan_file_path, self._user_io.out)
+            rmdir(package_folder)
+            packager.create_package(conanfile, build_folder, package_folder, output)
 
-    def build(self, conanfile_path, current_path, test=False, filename=None):
+    def build(self, conanfile_path, current_path, test=False, filename=None, profile_name=None):
         """ Call to build() method saved on the conanfile.py
         param conanfile_path: the original source directory of the user containing a
                             conanfile.py
@@ -357,9 +399,22 @@ If not:
                 except:
                     pass
 
+            env_file = os.path.join(current_path, "conanenv.txt")
+            if os.path.exists(env_file):
+                try:
+                    deps_env_info = DepsEnvInfo.loads(load(env_file))
+                    conan_file.deps_env_info = deps_env_info
+                except:
+                    pass
+
             os.chdir(current_path)
             conan_file._conanfile_directory = conanfile_path
-            conan_file.build()
+            # Append env_vars to execution environment and clear when block code ends
+            profile = self._read_profile(profile_name)
+            env_vars = self._read_profile_env_vars(profile)
+            with environment_append(env_vars):
+                conan_file.build()
+
             if test:
                 conan_file.test()
         except ConanException:

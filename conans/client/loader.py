@@ -24,9 +24,9 @@ class ConanFileLoader(object):
                         to start propagation, and having them in order to call build()
         '''
         self._runner = runner
-        assert isinstance(settings, Settings)
-        assert isinstance(options, OptionsValues)
-        assert isinstance(scopes, Scopes)
+        assert settings is None or isinstance(settings, Settings)
+        assert options is None or isinstance(options, OptionsValues)
+        assert scopes is None or isinstance(scopes, Scopes)
         self._settings = settings
         self._options = options
         self._scopes = scopes
@@ -189,7 +189,7 @@ class ConanFileLoader(object):
         # conanfile.options.values = options
         conanfile.options.initialize_upstream(options)
 
-        conanfile.generators = ["txt"]
+        conanfile.generators = []
         conanfile.scope = self._scopes.package_scope()
 
         return conanfile

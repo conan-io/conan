@@ -39,8 +39,9 @@ class RemoteManager(object):
     def upload_package(self, package_reference, remote):
         """Will upload the package to the first remote"""
         t1 = time.time()
-        basedir = self._client_cache.package(package_reference)
-        rel_files = self._client_cache.package_paths(package_reference)
+        # existing package, will use short paths if defined
+        basedir = self._client_cache.package(package_reference, short_paths=None)
+        rel_files = self._client_cache.package_paths(package_reference, short_paths=None)
 
         self._output.rewrite_line("Checking package integrity...")
         if CONANINFO not in rel_files or CONAN_MANIFEST not in rel_files:
@@ -96,6 +97,9 @@ class RemoteManager(object):
         files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
         rmdir(self._client_cache.source(conan_reference), True)
+        for dirname, _, filenames in os.walk(dest_folder):
+            for fname in filenames:
+                touch(os.path.join(dirname, fname))
 #       TODO: Download only the CONANFILE file and only download the rest of files
 #       in install if needed (not found remote package)
         return files
@@ -109,8 +113,8 @@ class RemoteManager(object):
         zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
         files = unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
         # Issue #214 https://github.com/conan-io/conan/issues/214
-        for dirname, _, files in os.walk(dest_folder):
-            for fname in files:
+        for dirname, _, filenames in os.walk(dest_folder):
+            for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
         return files
@@ -219,6 +223,7 @@ def unzip_and_get_files(files, destination_dir, tgz_name):
     tgz_file = files.pop(tgz_name, None)
     if tgz_file:
         uncompress_file(tgz_file, destination_dir)
+        os.remove(tgz_file)
 
     return relative_dirs(destination_dir)
 

@@ -78,13 +78,10 @@ class DepsGraph(object):
         """ return nodes with direct reacheability by public dependencies
         """
         neighbors = self.neighbors(node)
-        result = []
         _, conanfile = node
-        for n in neighbors:
-            for req in conanfile.requires.values():
-                if req.conan_reference == n.conan_ref:
-                    if not req.private:
-                        result.append(n)
+
+        public_requires = [r.conan_reference for r in conanfile.requires.values() if not r.private]
+        result = [n for n in neighbors if n.conan_ref in public_requires]
         return result
 
     def private_inverse_neighbors(self, node):
@@ -234,7 +231,7 @@ class DepsGraph(object):
 
         return result
 
-    def private_nodes(self):
+    def private_nodes(self, built_private_nodes):
         """ computes a list of nodes living in the private zone of the deps graph,
         together with the list of nodes that privately require it
         """
@@ -245,7 +242,10 @@ class DepsGraph(object):
         while open_nodes:
             new_open_nodes = set()
             for node in open_nodes:
-                neighbors = self.public_neighbors(node)
+                if node in built_private_nodes:
+                    neighbors = self.public_neighbors(node)
+                else:
+                    neighbors = self.neighbors(node)
                 new_open_nodes.update(set(neighbors).difference(closure))
                 closure.update(neighbors)
             open_nodes = new_open_nodes
@@ -253,7 +253,7 @@ class DepsGraph(object):
         private_nodes = self.nodes.difference(closure)
         result = []
         for node in private_nodes:
-            result.append((node, self.private_inverse_neighbors(node)))
+            result.append(node)
         return result
 
     def non_dev_nodes(self, root):
@@ -310,14 +310,17 @@ class DepsBuilder(object):
         public_deps = {}  # {name: Node} dict with public nodes, so they are not added again
         # enter recursive computation
         t1 = time.time()
-        self._load_deps(root_node, Requirements(), dep_graph, public_deps, conan_ref, None)
+        loop_ancestors = []
+        self._load_deps(root_node, Requirements(), dep_graph, public_deps, conan_ref, None,
+                        loop_ancestors)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
         dep_graph.propagate_info()
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
 
-    def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options):
+    def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
+                   loop_ancestors):
         """ loads a Conan object from the given file
         param node: Node object to be expanded in this step
         down_reqs: the Requirements as coming from downstream, which can overwrite current
@@ -337,25 +340,30 @@ class DepsBuilder(object):
         for name, require in conanfile.requires.items():
             if require.override or require.conan_reference is None:
                 continue
+            if require.conan_reference in loop_ancestors:
+                raise ConanException("Loop detected: %s"
+                                     % "->".join(str(r) for r in loop_ancestors))
+            new_loop_ancestors = loop_ancestors[:]  # Copy for propagating
+            new_loop_ancestors.append(require.conan_reference)
             previous_node = public_deps.get(name)
             if require.private or not previous_node:  # new node, must be added and expanded
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name)
                 if new_node:
                     # RECURSION!
                     self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
-                                    new_options.copy())
+                                    new_options.copy(), new_loop_ancestors)
             else:  # a public node already exist with this name
                 if previous_node.conan_ref != require.conan_reference:
-                    self._output.error("Conflict in %s\n"
-                                       "    Requirement %s conflicts with already defined %s\n"
-                                       "    Keeping %s\n"
-                                       "    To change it, override it in your base requirements"
-                                       % (conanref, require.conan_reference,
-                                          previous_node.conan_ref, previous_node.conan_ref))
+                    self._output.werror("Conflict in %s\n"
+                                        "    Requirement %s conflicts with already defined %s\n"
+                                        "    Keeping %s\n"
+                                        "    To change it, override it in your base requirements"
+                                        % (conanref, require.conan_reference,
+                                           previous_node.conan_ref, previous_node.conan_ref))
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 self._load_deps(previous_node, new_reqs, dep_graph, public_deps, conanref,
-                                new_options.copy())
+                                new_options.copy(), new_loop_ancestors)
 
     def _config_node(self, conanfile, conanref, down_reqs, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual

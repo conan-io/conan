@@ -123,10 +123,10 @@ class Values(object):
                 if modified_value == value:
                     continue
                 else:
-                    output.warn("%s tried to change %s option %s:%s to %s\n"
-                                "but it was already assigned to %s by %s"
-                                % (down_ref, own_ref, package_name, name, value,
-                                   modified_value, modified_ref))
+                    output.werror("%s tried to change %s option %s:%s to %s\n"
+                                  "but it was already assigned to %s by %s"
+                                  % (down_ref, own_ref, package_name, name, value,
+                                     modified_value, modified_ref))
             else:
                 self._modified[name] = (value, down_ref)
                 list_settings = name.split(".")

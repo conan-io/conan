@@ -12,6 +12,7 @@ class PathExistsTest(unittest.TestCase):
     def test_paths(self):
         """Unit test of path_exists"""
         tmp_dir = temp_folder()
+        tmp_dir = os.path.join(tmp_dir, "WhatEver")
         new_path = os.path.join(tmp_dir, "CapsDir")
         mkdir(new_path)
         self.assertTrue(path_exists(new_path, tmp_dir))

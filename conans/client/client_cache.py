@@ -1,18 +1,20 @@
 import os
-from conans.util.files import save, load, relative_dirs, path_exists
+from conans.util.files import save, load, relative_dirs, path_exists, mkdir
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
 from conans.client.detect import detect_defaults_settings
 from conans.model.ref import ConanFileReference
-from os.path import isfile
 from conans.model.manifest import FileTreeManifest
-from conans.paths import CONAN_MANIFEST, SimplePaths
+from conans.paths import SimplePaths
+from genericpath import isdir
+from conans.model.profile import Profile
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
+PROFILES_FOLDER = "profiles"
 
 
 class ClientCache(SimplePaths):
@@ -57,6 +59,10 @@ class ClientCache(SimplePaths):
         return os.path.join(self.conan_folder, CONAN_CONF)
 
     @property
+    def profiles_path(self):
+        return os.path.join(self.conan_folder, PROFILES_FOLDER)
+
+    @property
     def settings_path(self):
         return os.path.join(self.conan_folder, CONAN_SETTINGS)
 
@@ -65,6 +71,7 @@ class ClientCache(SimplePaths):
         """Returns {setting: [value, ...]} defining all the possible
            settings and their values"""
         if not self._settings:
+            # TODO: Read default environment settings
             if not os.path.exists(self.settings_path):
                 save(self.settings_path, default_settings_yml)
                 settings = Settings.loads(default_settings_yml)
@@ -79,20 +86,31 @@ class ClientCache(SimplePaths):
         ''' Returns all file paths for a conans (relative to conans directory)'''
         return relative_dirs(self.export(conan_reference))
 
-    def package_paths(self, package_reference):
+    def package_paths(self, package_reference, short_paths):
         ''' Returns all file paths for a package (relative to conans directory)'''
-        return relative_dirs(self.package(package_reference))
+        return relative_dirs(self.package(package_reference, short_paths))
 
     def conan_packages(self, conan_reference):
-        """ Returns a list of package_id from a conans """
+        """ Returns a list of package_id from a local cache package folder """
         assert isinstance(conan_reference, ConanFileReference)
         packages_dir = self.packages(conan_reference)
         try:
             packages = [dirname for dirname in os.listdir(packages_dir)
-                        if not isfile(os.path.join(packages_dir, dirname))]
+                        if isdir(os.path.join(packages_dir, dirname))]
         except:  # if there isn't any package folder
             packages = []
         return packages
+
+    def conan_builds(self, conan_reference):
+        """ Returns a list of package ids from a local cache build folder """
+        assert isinstance(conan_reference, ConanFileReference)
+        builds_dir = self.builds(conan_reference)
+        try:
+            builds = [dirname for dirname in os.listdir(builds_dir)
+                      if isdir(os.path.join(builds_dir, dirname))]
+        except:  # if there isn't any package folder
+            builds = []
+        return builds
 
     def load_manifest(self, conan_reference):
         '''conan_id = sha(zip file)'''
@@ -101,20 +119,22 @@ class ClientCache(SimplePaths):
 
     def load_package_manifest(self, package_reference):
         '''conan_id = sha(zip file)'''
-        filename = self.digestfile_package(package_reference)
+        filename = self.digestfile_package(package_reference, short_paths=None)
         return FileTreeManifest.loads(load(filename))
 
     def conan_manifests(self, conan_reference):
         digest_path = self.digestfile_conanfile(conan_reference)
+        if not path_exists(digest_path, self.store):
+            return None, None
         return self._digests(digest_path)
 
     def package_manifests(self, package_reference):
-        digest_path = self.digestfile_package(package_reference)
+        digest_path = self.digestfile_package(package_reference, short_paths=None)
+        if not os.path.exists(digest_path):
+            return None, None
         return self._digests(digest_path)
 
     def _digests(self, digest_path):
-        if not path_exists(digest_path, self.store):
-            return None, None
         readed_digest = FileTreeManifest.loads(load(digest_path))
         expected_digest = FileTreeManifest.create(os.path.dirname(digest_path))
         return readed_digest, expected_digest
@@ -129,3 +149,15 @@ class ClientCache(SimplePaths):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
+
+    def profile_path(self, name):
+        if not os.path.exists(self.profiles_path):
+            mkdir(self.profiles_path)
+        return os.path.join(self.profiles_path, name)
+
+    def load_profile(self, name):
+        text = load(self.profile_path(name))
+        return Profile.loads(text)
+
+    def current_profiles(self):
+        return [name for name in os.listdir(self.profiles_path) if not os.path.isdir(name)]
