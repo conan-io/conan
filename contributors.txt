@@ -4,4 +4,4 @@ Contributors
 This is the list of contributors to this project source code, in alphabetical order. 
 Many thanks to all of them!
 
-- 
+- Dragly, Svenn-Arne (dragly.org)
