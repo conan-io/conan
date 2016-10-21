@@ -5,3 +5,4 @@ This is the list of contributors to this project source code, in alphabetical or
 Many thanks to all of them!
 
 - Dragly, Svenn-Arne (dragly.org)
+- Kourkoulis, Dimitri (@dimi309)
