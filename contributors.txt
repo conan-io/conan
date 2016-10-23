@@ -5,6 +5,7 @@ This is the list of contributors to this project source code, in alphabetical or
 Many thanks to all of them!
 
 - Bocanegra Algarra, Raul (raul.bocanegra.algarra@gmail.com)
+- Díaz Más, Luis (piponazo@gmail, @pipotux)
 - Dragly, Svenn-Arne (dragly.org)
 - Hochstedler, Reid
 - Ivek, Tomislav (tomislav.ivek@gmail.com, @tomivek)
