@@ -62,9 +62,10 @@ class ConfigureEnvironment(object):
         lib_paths = " ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths])
         ldflags = 'LDFLAGS="%s %s %s %s $LDFLAGS"' % (lib_paths, archflag,
                                                       exe_linker_flags, shared_linker_flags)
-        debug = "-g" if self.build_type == "Debug" else "-DNDEBUG"
-        if self.compiler == "gcc" and self.build_type != "Debug":
-            debug += " -s"
+        if self.build_type == "Debug":
+            debug = "-g"
+        else:
+            debug = "-s -DNDEBUG" if self.compiler == "gcc" else "-DNDEBUG"
         include_flags = " ".join(['-I%s' % i for i in self._deps_cpp_info.include_paths])
         defines = " ".join(['-D%s' % i for i in self._deps_cpp_info.defines])
         cflags = 'CFLAGS="$CFLAGS %s %s %s %s %s"' % (archflag,
@@ -146,9 +147,10 @@ class ConfigureEnvironment(object):
                 flags.append("-m32")
             flags.extend(self._deps_cpp_info.exelinkflags)
             flags.extend(self._deps_cpp_info.sharedlinkflags)
-            flags.append("-g" if self.build_type == "Debug" else "-DNDEBUG")
-            if self.compiler == "gcc" and self.build_type != "Debug":
-                flags.append("-s")
+            if self.build_type == "Debug":
+                flags.append("-g")
+            else:
+                flags.append("-s -DNDEBUG" if self.compiler == "gcc" else "-DNDEBUG")
             flags.extend('-D%s' % i for i in self._deps_cpp_info.defines)
             flags.extend('-I"%s"' % i for i in self._deps_cpp_info.include_paths)
             flags.extend('-L"%s"' % i for i in self._deps_cpp_info.lib_paths)
