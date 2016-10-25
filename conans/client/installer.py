@@ -268,10 +268,14 @@ Package configuration:
                         output.warn("Filename too long, file excluded: %s" % dest_path)
                 return filtered_files
             shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
+            logger.debug("Copied to %s" % build_folder)
+            logger.debug("Files copied %s" % os.listdir(build_folder))
         os.chdir(build_folder)
         conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files
+        logger.debug("Writing generators")
         write_generators(conan_file, build_folder, output)
+        logger.debug("Files copied after generators %s" % os.listdir(build_folder))
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -287,6 +291,7 @@ Package configuration:
             # This is necessary because it is different for user projects
             # than for packages
             conan_file._conanfile_directory = build_folder
+            logger.debug("Call conanfile.build() with files in build folder: %s" % os.listdir(build_folder))
             conan_file.build()
             self._out.writeln("")
             output.success("Package '%s' built" % conan_file.info.package_id())
