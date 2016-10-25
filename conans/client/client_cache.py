@@ -122,6 +122,12 @@ class ClientCache(SimplePaths):
         filename = self.digestfile_package(package_reference, short_paths=None)
         return FileTreeManifest.loads(load(filename))
 
+    def load_recipe_hash(self, conan_reference):
+        path = self.recipe_hash_path(conan_reference)
+        if path_exists(path, self.store):
+            return load(path)
+        return None
+
     def conan_manifests(self, conan_reference):
         digest_path = self.digestfile_conanfile(conan_reference)
         if not path_exists(digest_path, self.store):

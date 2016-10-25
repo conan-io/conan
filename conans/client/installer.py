@@ -38,8 +38,8 @@ class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, paths, user_io, remote_proxy):
-        self._paths = paths
+    def __init__(self, client_cache, user_io, remote_proxy):
+        self._client_cache = client_cache
         self._out = user_io.out
         self._remote_proxy = remote_proxy
 
@@ -48,7 +48,7 @@ class ConanInstaller(object):
         """
         self._deps_graph = deps_graph  # necessary for _build_package
         t1 = time.time()
-        init_package_info(deps_graph, self._paths)
+        init_package_info(deps_graph, self._client_cache)
         # order by levels and propagate exports as download imports
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
@@ -152,10 +152,10 @@ class ConanInstaller(object):
         package_reference = PackageReference(conan_ref, package_id)
 
         conan_ref = package_reference.conan
-        package_folder = self._paths.package(package_reference, conan_file.short_paths)
-        build_folder = self._paths.build(package_reference, conan_file.short_paths)
-        src_folder = self._paths.source(conan_ref, conan_file.short_paths)
-        export_folder = self._paths.export(conan_ref)
+        package_folder = self._client_cache.package(package_reference, conan_file.short_paths)
+        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
+        src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
+        export_folder = self._client_cache.export(conan_ref)
 
         # If already exists do not dirt the output, the common situation
         # is that package is already installed and OK. If don't, the proxy
@@ -187,6 +187,9 @@ class ConanInstaller(object):
 
             self._build_package(export_folder, src_folder, build_folder, package_folder,
                                 conan_file, output)
+
+            # FIXME: Is weak to assign here the recipe_hash
+            conan_file.info.recipe_hash = self._client_cache.load_recipe_hash(conan_ref)
 
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
@@ -221,8 +224,8 @@ Package configuration:
         if "system_requirements" not in type(conan_file).__dict__:
             return
 
-        system_reqs_path = self._paths.system_reqs(conan_ref)
-        system_reqs_package_path = self._paths.system_reqs_package(package_reference)
+        system_reqs_path = self._client_cache.system_reqs(conan_ref)
+        system_reqs_package_path = self._client_cache.system_reqs_package(package_reference)
         if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
             return
 
@@ -278,7 +281,7 @@ Package configuration:
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
         from conans.client.importer import FileImporter
-        local_installer = FileImporter(self._deps_graph, self._paths, build_folder)
+        local_installer = FileImporter(self._deps_graph, self._client_cache, build_folder)
         conan_file.copy = local_installer
         conan_file.imports()
         copied_files = local_installer.execute()

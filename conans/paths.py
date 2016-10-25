@@ -135,6 +135,10 @@ class SimplePaths(object):
         export = self.export(conan_reference)
         return normpath(join(export, CONAN_MANIFEST))
 
+    def recipe_hash_path(self, conan_reference):
+        export = self.export(conan_reference)
+        return normpath(join(export, RECIPE_HASH))
+
     def digestfile_package(self, package_reference, short_paths=False):
         assert isinstance(package_reference, PackageReference)
         return normpath(join(self.package(package_reference, short_paths), CONAN_MANIFEST))
