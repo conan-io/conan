@@ -5,7 +5,7 @@ from conans.util.sha import sha1
 
 def normalize_crlfs(path):
     contents = load(path, binary=True)
-    return contents.replace('\r\n', '\n').replace('\r', '\n')
+    return contents.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
 
 
 def get_file_digest(path):
