@@ -34,7 +34,8 @@ class ExportPathTest(unittest.TestCase):
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
                          'conanfile.py': '5632cf850a7161388ab24f42b9bdb3fd',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd',
+                         'recipe_hash.txt': '98c9802ede8cc530809f4c6ff7c62809' }
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_rel_path(self):
@@ -63,7 +64,8 @@ class ExportPathTest(unittest.TestCase):
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
                          'conanfile.py': '5632cf850a7161388ab24f42b9bdb3fd',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd',
+                         'recipe_hash.txt': '98c9802ede8cc530809f4c6ff7c62809'}
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_path(self):
@@ -97,7 +99,8 @@ class ExportPathTest(unittest.TestCase):
                          'source/CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
                          'conanfile.py': 'c0bb94a3da6eb978cb94f5faff037ed3',
                          'source/executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'source/helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'source/helloHello0.h': '9448df034392fc8781a47dd03ae71bdd',
+                         'recipe_hash.txt': 'c05f6329572a44f8b99d8a219a8b874a'}
         self.assertEqual(expected_sums, manif.file_sums)
 
     def test_combined(self):
@@ -134,5 +137,6 @@ class ExportPathTest(unittest.TestCase):
                          'source/CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
                          'conanfile.py': 'c0bb94a3da6eb978cb94f5faff037ed3',
                          'source/executable': '68b329da9893e34099c7d8ad5cb9c940',
-                         'source/helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
+                         'source/helloHello0.h': '9448df034392fc8781a47dd03ae71bdd',
+                         'recipe_hash.txt': 'c05f6329572a44f8b99d8a219a8b874a'}
         self.assertEqual(expected_sums, manif.file_sums)

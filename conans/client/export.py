@@ -5,11 +5,12 @@ to the local store, as an initial step before building or uploading to remotes
 import shutil
 import os
 from conans.util.files import save, load, rmdir
-from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE
+from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE, RECIPE_HASH
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
+from conans.client.recipe_hash import get_normalized_hash
 
 
 def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, short_paths,
@@ -82,3 +83,5 @@ def _export(file_patterns, origin_folder, destination_folder, output):
     copier.report(package_output)
 
     shutil.copy2(os.path.join(origin_folder, CONANFILE), destination_folder)
+    recipe_sha = get_normalized_hash(destination_folder)
+    save(os.path.join(destination_folder, RECIPE_HASH), recipe_sha)

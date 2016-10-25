@@ -28,6 +28,7 @@ BUILD_INFO_YCM = '.ycm_extra_conf.py'
 CONANINFO = "conaninfo.txt"
 SYSTEM_REQS = "system_reqs.txt"
 DIRTY_FILE = ".conan_dirty"
+RECIPE_HASH = "recipe_hash.txt"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
