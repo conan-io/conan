@@ -18,5 +18,8 @@ def get_normalized_hash(folder):
         for name in files:
             paths.append(os.path.join(root, name))
     paths = sorted(paths)
+    print(paths)
     digest_lines = "\n".join([_get_file_digest(path) for path in paths])
+    print("HOLAA")
+    print(digest_lines)
     return sha1(digest_lines.encode("utf-8"))
