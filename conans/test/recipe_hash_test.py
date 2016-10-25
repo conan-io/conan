@@ -15,10 +15,10 @@ class RecipeHashTest(unittest.TestCase):
                              "binary": '\x80abc'})
 
         norm_hash = get_normalized_hash(tmp_dir)
-        expected_hashes_file = sha1(sha1("\x80abc").encode("utf-8") + "\n" +
-                                    sha1("Some contents\ncontents").encode("utf-8") + "\n" +
-                                    sha1("More contents\n").encode("utf-8") + "\n" +
-                                    sha1("more\nlines").encode("utf-8")).encode("utf-8")
+        expected_hashes_file = sha1((sha1("\x80abc".encode("utf-8")) + "\n" +
+                                    sha1("Some contents\ncontents".encode("utf-8")) + "\n" +
+                                    sha1("More contents\n".encode("utf-8")) + "\n" +
+                                    sha1("more\nlines".encode("utf-8"))).encode("utf-8"))
         self.assertEquals(norm_hash, expected_hashes_file)
         self.assertEquals(norm_hash, "deb6fbeed96361c0c57afa1e34ebda60b97cb6cd")
 
