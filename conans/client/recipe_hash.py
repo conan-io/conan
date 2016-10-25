@@ -16,7 +16,11 @@ def get_normalized_hash(folder):
     paths = []
     for root, _, files in os.walk(folder):
         for name in files:
-            paths.append(os.path.join(root, name))
+            if not name.endswith(".pyc"):
+                paths.append(os.path.join(root, name))
     paths = sorted(paths)
+    print("********** SORTED**********")
+    print(paths)
+    print("***************************")
     digest_lines = "\n".join([_get_file_digest(path) for path in paths])
     return sha1(digest_lines.encode("utf-8"))
