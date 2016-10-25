@@ -1,6 +1,6 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
-from conans.util.files import load
+from conans.util.files import load, save_files
 import os
 from conans.model.ref import PackageReference, ConanFileReference
 import platform
@@ -101,3 +101,64 @@ class PathLengthLimitTest(unittest.TestCase):
             self.assertFalse(os.path.exists(link_source))
             self.assertFalse(os.path.exists(link_build))
             self.assertFalse(os.path.exists(link_package))
+
+    def failure_test(self):
+
+        base = '''
+from conans import ConanFile
+from conans.util.files import load, save
+import os
+
+class ConanLib(ConanFile):
+    name = "lib"
+    version = "0.1"
+    short_paths = True
+    exports = "*"
+    generators = "cmake"
+
+    def build(self):
+        self.output.info("%s/%s" % (self.conanfile_directory, self.name))
+        print os.listdir(self.conanfile_directory)
+        path = os.path.join(self.conanfile_directory, self.name)
+        print "PATH EXISTS ", os.path.exists(path)
+        print os.listdir(path)
+        path = os.path.join(path, "myfile.txt")
+        print "PATH EXISTS ", os.path.exists(path)
+
+    def package(self):
+        self.copy("*.txt", keep_path=False)
+'''
+
+        client = TestClient()
+        files = {"conanfile.py": base,
+                 "lib/myfile.txt": "Hello world!"}
+        client.save(files)
+        client.run("export user/channel")
+        client.run("install lib/0.1@user/channel --build")
+        print client.paths.store
+        package_ref = PackageReference.loads("lib/0.1@user/channel:"
+                                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        package_folder = client.client_cache.package(package_ref, short_paths=None)
+        file1 = load(os.path.join(package_folder, "myfile.txt"))
+        self.assertEqual("Hello world!", file1)
+
+        client.run("install lib/0.1@user/channel --build")
+        package_ref = PackageReference.loads("lib/0.1@user/channel:"
+                                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        package_folder = client.client_cache.package(package_ref, short_paths=None)
+        file1 = load(os.path.join(package_folder, "myfile.txt"))
+        self.assertEqual("Hello world!", file1)
+
+    def dummy_test(self):
+        import shutil
+        from conans.test.utils.test_files import temp_folder
+        src_folder = temp_folder()
+        save_files(src_folder, {"%s.txt" % s: "Content: %s" % s for s in range(20)})
+        for _ in range(1000):
+            build_folder = os.path.join(temp_folder(), "dst")
+            shutil.copytree(src_folder, build_folder)
+            try:
+                os.makedirs(build_folder)
+                print "SUCCEEDED in CREATING"
+            except:
+                pass
