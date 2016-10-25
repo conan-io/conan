@@ -3,7 +3,6 @@ from conans.test.tools import TestClient
 from conans.paths import CONANFILE
 from conans.util.files import load
 import os
-from conans.model.env_info import DepsEnvInfo
 
 
 class PythonBuildTest(unittest.TestCase):
@@ -27,6 +26,10 @@ class ConanToolPackage(ConanFile):
     output.info("Hello Foo")
 def bar(output):
     output.info("Hello Bar")
+def baz(output):
+    output.info("Hello Baz")
+def boom(output):
+    output.info("Hello Boom")
 """
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
@@ -35,13 +38,25 @@ def bar(output):
         reuse = """from conans import ConanFile, tools
 
 class ToolsTest(ConanFile):
+    name = "Consumer"
+    version = "0.1"
     requires = "conantool/1.0@lasote/stable"
     generators = "virtualenv", "env"
+
+    def source(self):
+        with tools.pythonpath(self):
+            import mytest
+            mytest.baz(self.output)
 
     def build(self):
         with tools.pythonpath(self):
             import mytest
             mytest.foo(self.output)
+
+    def package(self):
+        with tools.pythonpath(self):
+            import mytest
+            mytest.boom(self.output)
 
     def package_info(self):
         with tools.pythonpath(self):
@@ -57,3 +72,10 @@ class ToolsTest(ConanFile):
         client.run("build")
         self.assertNotIn("Hello Bar", client.user_io.out)
         self.assertIn("Hello Foo", client.user_io.out)
+
+        client.run("export lasote/stable")
+        client.run("install Consumer/0.1@lasote/stable --build")
+        lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
+                 if line.startswith("Consumer/0.1@lasote/stable: Hello")]
+        self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
+                         lines)
