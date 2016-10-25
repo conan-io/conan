@@ -19,4 +19,4 @@ def get_normalized_hash(folder):
             paths.append(os.path.join(root, name))
     paths = sorted(paths)
     digest_lines = "\n".join([get_file_digest(path) for path in paths])
-    return sha1(digest_lines)
+    return sha1(digest_lines.encode("utf-8"))
