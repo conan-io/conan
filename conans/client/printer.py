@@ -161,6 +161,11 @@ class Printer(object):
                     elif isinstance(attrs, list):  # full requires
                         for key in sorted(attrs):
                             self._print_colored_line(key, indent=3)
+            # Print recipe hash
+            recipe_hash = properties.get("recipe_hash", None) or "Not present (created with conan < 0.15)"
+            self._print_colored_line("[recipe hash]", indent=2)
+            self._print_colored_line(recipe_hash, indent=3)
+
             self._out.writeln("")
 
     def _print_colored_line(self, text, value=None, indent=0):

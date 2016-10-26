@@ -271,5 +271,6 @@ class ConanInfo(object):
         """
         conan_info_json = {"settings": dict(self.settings.serialize()),
                            "options": dict(self.options.serialize()["options"]),
-                           "full_requires": self.full_requires.serialize()}
+                           "full_requires": self.full_requires.serialize(),
+                           "recipe_hash": self.recipe_hash}
         return conan_info_json

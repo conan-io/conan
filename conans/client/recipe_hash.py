@@ -19,8 +19,14 @@ def get_normalized_hash(folder):
             if not name.endswith(".pyc"):
                 paths.append(os.path.join(root, name))
     paths = sorted(paths)
-    print("********** SORTED**********")
-    print(paths)
-    print("***************************")
     digest_lines = "\n".join([_get_file_digest(path) for path in paths])
     return sha1(digest_lines.encode("utf-8"))
+
+
+def hashes_match(recipe_hash, package_recipe_hash):
+    # Both None package is up to date (old packages), we don't have information
+    # If recipe_hash is not None and package hash is None (exported again but not packaged again)
+    # don't match
+    if recipe_hash != package_recipe_hash:
+        return False
+    return True
