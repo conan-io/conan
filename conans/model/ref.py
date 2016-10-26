@@ -7,7 +7,7 @@ from conans.model.version import Version
 def validate_conan_name(name):
     """Check for name compliance with pattern rules"""
     try:
-        if name == '*' and ConanFileReference.wildcard_is_allowed:
+        if name == '*' or (name.startswith("[") and name.endswith("]")):
             return name
         if ConanFileReference.validation_pattern.match(name) is None:
             if len(name) > ConanFileReference.max_chars:
@@ -40,7 +40,6 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     validation_pattern = re.compile(regular_expression)
     whitespace_pattern = re.compile(r"\s+")
     sep_pattern = re.compile("@|/")
-    wildcard_is_allowed = True
 
     def __new__(cls, name, version, user, channel, validate=True):
         """Simple name creation.

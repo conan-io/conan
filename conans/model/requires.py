@@ -22,6 +22,11 @@ class Requirement(object):
         self.override = override
         self.dev = dev
 
+    def version_range(self):
+        version = self.conan_reference.version
+        if version.startswith("[") and version.endswith("]"):
+            return version[1:-1]
+
     def __repr__(self):
         return ("%s" % str(self.conan_reference) + (" P" if self.private else ""))
 

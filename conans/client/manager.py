@@ -34,6 +34,7 @@ from conans.client.source import config_source, config_source_local
 from conans.client.manifest_manager import ManifestManager
 from conans.model.env_info import EnvInfo, DepsEnvInfo
 from conans.tools import environment_append
+from conans.client.require_resolver import RequireResolver
 
 
 def get_user_channel(text):
@@ -174,7 +175,9 @@ class ConanManager(object):
                 conanfile = loader.load_conan_txt(conan_path, output)
                 is_txt = True
         # build deps graph and install it
-        builder = DepsBuilder(remote_proxy, self._user_io.out, loader)
+        local_search = None if update else self._search_manager
+        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
+        builder = DepsBuilder(remote_proxy, self._user_io.out, loader, resolver)
         deps_graph = builder.load(None, conanfile)
         # These lines are so the conaninfo stores the correct complete info
         if is_txt:
