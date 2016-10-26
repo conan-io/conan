@@ -220,10 +220,7 @@ class ConanManager(object):
                 return profile
             except ConanException as exc:
                 raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
-            except Exception:
-                current_profiles = ", ".join(self._client_cache.current_profiles()) or "[]"
-                raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                                     "%s" % (profile_name, current_profiles))
+
         return None
 
     def _mix_settings_and_profile(self, settings, profile):
