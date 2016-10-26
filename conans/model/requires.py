@@ -94,12 +94,9 @@ class Requirements(OrderedDict):
         assert isinstance(reference, six.string_types)
         if dev and not self.allow_dev:
             return
-        try:
-            conan_reference = ConanFileReference.loads(reference)
-            name = conan_reference.name
-        except ConanException:
-            conan_reference = None
-            name = reference
+
+        conan_reference = ConanFileReference.loads(reference)
+        name = conan_reference.name
 
         new_requirement = Requirement(conan_reference, private, override, dev)
         old_requirement = self.get(name)

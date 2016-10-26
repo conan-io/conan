@@ -338,7 +338,7 @@ class DepsBuilder(object):
 
         # Expand each one of the current requirements
         for name, require in conanfile.requires.items():
-            if require.override or require.conan_reference is None:
+            if require.override:
                 continue
             if require.conan_reference in loop_ancestors:
                 raise ConanException("Loop detected: %s"
