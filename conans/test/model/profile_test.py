@@ -1,5 +1,6 @@
 import unittest
 from conans.model.profile import Profile
+from conans.errors import ConanException
 
 
 class ProfileTest(unittest.TestCase):
@@ -36,6 +37,35 @@ class ProfileTest(unittest.TestCase):
 
         self.assertEquals(dict(new_profile.scopes)["p1"]["conaning"], '1')
         self.assertEquals(dict(new_profile.scopes)["p2"]["testing"], '2')
+
+    def profile_loads_test(self):
+        prof = '''[env]
+CXX_FLAGS="-DAAA=0"
+[settings]
+'''
+        new_profile = Profile.loads(prof)
+        self.assertEquals(new_profile.env["CXX_FLAGS"], "-DAAA=0")
+
+        prof = '''[env]
+CXX_FLAGS='-DAAA=0'
+[settings]
+'''
+        new_profile = Profile.loads(prof)
+        self.assertEquals(new_profile.env["CXX_FLAGS"], "-DAAA=0")
+
+        prof = '''[env]
+CXX_FLAGS=-DAAA=0
+[settings]
+'''
+        new_profile = Profile.loads(prof)
+        self.assertEquals(new_profile.env["CXX_FLAGS"], "-DAAA=0")
+
+        prof = '''[env]
+CXX_FLAGS="-DAAA=0
+[settings]
+'''
+        new_profile = Profile.loads(prof)
+        self.assertEquals(new_profile.env["CXX_FLAGS"], "\"-DAAA=0")
 
     def profile_dump_order_test(self):
         # Settings
