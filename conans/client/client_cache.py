@@ -83,14 +83,6 @@ class ClientCache(SimplePaths):
             self._settings = settings
         return self._settings
 
-    def export_paths(self, conan_reference):
-        ''' Returns all file paths for a conans (relative to conans directory)'''
-        return relative_dirs(self.export(conan_reference))
-
-    def package_paths(self, package_reference, short_paths):
-        ''' Returns all file paths for a package (relative to conans directory)'''
-        return relative_dirs(self.package(package_reference, short_paths))
-
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """
         assert isinstance(conan_reference, ConanFileReference)

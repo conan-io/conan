@@ -78,21 +78,10 @@ def shortener(path, short_paths):
         os.makedirs(short_path)
     except:
         pass
-    redirect = tempfile.mkdtemp(dir=short_path)
+    redirect = tempfile.mkdtemp(dir=short_path, prefix="")
+    redirect = os.path.join(redirect, "1")
     save(link, redirect)
     return redirect
-
-
-def package_exists(folder):
-    return os.path.exists(os.path.join(folder, CONANINFO))
-
-
-def build_exists(folder):
-    return os.path.exists(os.path.join(folder, CONANFILE))
-
-
-def source_exists(folder):
-    return os.path.exists(os.path.join(folder, CONANFILE))
 
 
 class SimplePaths(object):

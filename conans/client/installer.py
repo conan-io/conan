@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, package_exists, build_exists
+from conans.paths import CONANINFO, BUILD_INFO
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -160,7 +160,7 @@ class ConanInstaller(object):
         # If already exists do not dirt the output, the common situation
         # is that package is already installed and OK. If don't, the proxy
         # will print some other message about it
-        if not package_exists(package_folder):
+        if not os.path.exists(package_folder):
             output.info("Installing package %s" % package_id)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
@@ -248,28 +248,28 @@ Package configuration:
         code
         """
         output.info('Building your package in %s' % build_folder)
-        if not build_exists(build_folder):
-            config_source(export_folder, src_folder, conan_file, output)
-            output.info('Copying sources to build folder')
+        config_source(export_folder, src_folder, conan_file, output)
+        output.info('Copying sources to build folder')
 
-            def check_max_path_len(src, files):
-                if platform.system() != "Windows":
-                    return []
-                filtered_files = []
-                for the_file in files:
-                    source_path = os.path.join(src, the_file)
-                    # Without storage path, just relative
-                    rel_path = os.path.relpath(source_path, src_folder)
-                    dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
-                    # it is NOT that "/" is counted as "\\" so it counts double
-                    # seems a bug in python, overflows paths near the limit of 260,
-                    if len(dest_path) >= 249:
-                        filtered_files.append(the_file)
-                        output.warn("Filename too long, file excluded: %s" % dest_path)
-                return filtered_files
-            shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
-            logger.debug("Copied to %s" % build_folder)
-            logger.debug("Files copied %s" % os.listdir(build_folder))
+        def check_max_path_len(src, files):
+            if platform.system() != "Windows":
+                return []
+            filtered_files = []
+            for the_file in files:
+                source_path = os.path.join(src, the_file)
+                # Without storage path, just relative
+                rel_path = os.path.relpath(source_path, src_folder)
+                dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
+                # it is NOT that "/" is counted as "\\" so it counts double
+                # seems a bug in python, overflows paths near the limit of 260,
+                if len(dest_path) >= 249:
+                    filtered_files.append(the_file)
+                    output.warn("Filename too long, file excluded: %s" % dest_path)
+            return filtered_files
+
+        shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
+        logger.debug("Copied to %s" % build_folder)
+        logger.debug("Files copied %s" % os.listdir(build_folder))
         os.chdir(build_folder)
         conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files

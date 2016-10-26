@@ -24,15 +24,15 @@ class RemoteManager(object):
 
     def upload_conan(self, conan_reference, remote):
         """Will upload the conans to the first remote"""
-        basedir = self._client_cache.export(conan_reference)
-        rel_files = self._client_cache.export_paths(conan_reference)
-        the_files = {filename: os.path.join(basedir, filename) for filename in rel_files}
+        export_folder = self._client_cache.export(conan_reference)
+        rel_files = relative_dirs(export_folder)
+        the_files = {filename: os.path.join(export_folder, filename) for filename in rel_files}
 
         if CONANFILE not in rel_files or CONAN_MANIFEST not in rel_files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
 
         # FIXME: Check modified exports by hand?
-        the_files = compress_export_files(the_files, basedir, self._output)
+        the_files = compress_export_files(the_files, export_folder, self._output)
 
         return self._call_remote(remote, "upload_conan", conan_reference, the_files)
 
@@ -40,14 +40,15 @@ class RemoteManager(object):
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
-        basedir = self._client_cache.package(package_reference, short_paths=None)
-        rel_files = self._client_cache.package_paths(package_reference, short_paths=None)
+        package_folder = self._client_cache.package(package_reference, short_paths=None)
+        # Get all the files in that directory
+        rel_files = relative_dirs(package_folder)
 
         self._output.rewrite_line("Checking package integrity...")
         if CONANINFO not in rel_files or CONAN_MANIFEST not in rel_files:
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
 
-        the_files = {filename: os.path.join(basedir, filename) for filename in rel_files}
+        the_files = {filename: os.path.join(package_folder, filename) for filename in rel_files}
         logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         # If package has been modified remove tgz to regenerate it
@@ -55,7 +56,7 @@ class RemoteManager(object):
         if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
             if PACKAGE_TGZ_NAME in the_files:
                 try:
-                    tgz_path = os.path.join(basedir, PACKAGE_TGZ_NAME)
+                    tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
                     os.unlink(tgz_path)
                 except Exception:
                     pass
@@ -65,7 +66,7 @@ class RemoteManager(object):
         self._output.writeln("")
         logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
 
-        the_files = compress_package_files(the_files, basedir, self._output)
+        the_files = compress_package_files(the_files, package_folder, self._output)
 
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files)
         logger.debug("====> Time remote_manager upload_package: %f" % (time.time() - t1))

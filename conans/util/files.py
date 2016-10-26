@@ -122,7 +122,7 @@ def rmdir(path, short_paths=False):
         link = os.path.join(path, ".conan_link")
         if os.path.exists(link):
             short_path = load(link)
-            rmdir(short_path)
+            rmdir(os.path.dirname(short_path))
 
     try:
         shutil.rmtree(path, onerror=_change_permissions)

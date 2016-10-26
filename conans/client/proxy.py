@@ -5,8 +5,8 @@ from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedCl
                            NotFoundException)
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
-from conans.paths import package_exists, CONANFILE
 from conans.client.loader import ConanFileLoader
+import os
 
 
 class ConanProxy(object):
@@ -37,7 +37,7 @@ class ConanProxy(object):
         package_folder = self._client_cache.package(package_reference, short_paths=short_paths)
 
         # Check current package status
-        if package_exists(package_folder):
+        if os.path.exists(package_folder):
             if self._check_updates:
                 read_manifest = self._client_cache.load_package_manifest(package_reference)
                 try:  # get_conan_digest can fail, not in server
@@ -55,7 +55,7 @@ class ConanProxy(object):
 
         installed = False
         if not force_build:
-            local_package = package_exists(package_folder)
+            local_package = os.path.exists(package_folder)
             if local_package:
                 output = ScopedOutput(str(package_reference.conan), self._out)
                 output.info('Already installed!')

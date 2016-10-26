@@ -45,7 +45,8 @@ def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, sho
     if remove:
         output.info("Removing 'source' folder, this can take a while for big packages")
         try:
-            rmdir(source, short_paths)
+            # remove only the internal
+            rmdir(source)
         except BaseException as e:
             output.error("Unable to delete source folder. "
                          "Will be marked as dirty for deletion")

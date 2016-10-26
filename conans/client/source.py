@@ -1,4 +1,4 @@
-from conans.paths import DIRTY_FILE, source_exists
+from conans.paths import DIRTY_FILE
 import os
 from conans.util.files import rmdir, save
 import six
@@ -12,10 +12,10 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
     """
     dirty = os.path.join(src_folder, DIRTY_FILE)
 
-    def remove_source(raise_error=False):
+    def remove_source(raise_error=True):
         output.warn("This can take a while for big packages")
         try:
-            rmdir(src_folder, conan_file.short_paths)
+            rmdir(src_folder)
         except BaseException as e_rm:
             save(dirty, "")  # Creation of DIRTY flag
             msg = str(e_rm)
@@ -28,15 +28,15 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
 
     if force:
         output.warn("Forced removal of source folder")
-        remove_source(raise_error=True)
+        remove_source()
     elif os.path.exists(dirty):
         output.warn("Trying to remove dirty source folder")
-        remove_source(raise_error=True)
+        remove_source()
     elif conan_file.build_policy_always:
         output.warn("Detected build_policy 'always', trying to remove source folder")
-        remove_source(raise_error=True)
+        remove_source()
 
-    if not source_exists(src_folder):
+    if not os.path.exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
         shutil.copytree(export_folder, src_folder)
         save(dirty, "")  # Creation of DIRTY flag
@@ -49,6 +49,6 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
             # in case source() fails (user error, typically), remove the src_folder
             # and raise to interrupt any other processes (build, package)
             output.warn("Trying to remove dirty source folder")
-            remove_source()
+            remove_source(raise_error=False)
             msg = format_conanfile_exception(output.scope, "source", e)
             raise ConanException(msg)
