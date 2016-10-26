@@ -5,6 +5,18 @@ from conans.model.scope import Scopes, _root
 from conans.errors import ConanException
 
 
+def _clean_value(value):
+    '''Strip a value and remove the quotes. EX:
+    key="value " => str('value')
+    '''
+    value = value.strip()
+    if value.startswith('"') and value.endswith('"') and value != '"':
+        value = value[1:-1]
+    if value.startswith("'") and value.endswith("'") and value != "'":
+        value = value[1:-1]
+    return value
+
+
 class Profile(object):
     '''A profile contains a set of setting (with values), environment variables
     and scopes'''
@@ -17,30 +29,35 @@ class Profile(object):
 
     @staticmethod
     def loads(text):
-        obj = Profile()
-        doc = ConfigParser(text, allowed_fields=["settings", "env", "scopes"])
+        try:
+            obj = Profile()
+            doc = ConfigParser(text, allowed_fields=["settings", "env", "scopes"])
 
-        for setting in doc.settings.splitlines():
-            setting = setting.strip()
-            if setting and not setting.startswith("#"):
-                if "=" not in setting:
-                    raise ConanException("Invalid setting line '%s'" % setting)
-                name, value = setting.split("=")
-                obj.settings[name.strip()] = value.strip()
+            for setting in doc.settings.splitlines():
+                setting = setting.strip()
+                if setting and not setting.startswith("#"):
+                    if "=" not in setting:
+                        raise ConanException("Invalid setting line '%s'" % setting)
+                    name, value = setting.split("=", 1)
+                    obj.settings[name.strip()] = _clean_value(value)
 
-        if doc.scopes:
-            obj.scopes = Scopes.from_list(doc.scopes.splitlines())
+            if doc.scopes:
+                obj.scopes = Scopes.from_list(doc.scopes.splitlines())
 
-        for env in doc.env.splitlines():
-            env = env.strip()
-            if env and not env.startswith("#"):
-                if "=" not in env:
-                    raise ConanException("Invalid env line '%s'" % env)
-                varname, value = env.split("=")
-                obj.env[varname.strip()] = value.strip()
+            for env in doc.env.splitlines():
+                env = env.strip()
+                if env and not env.startswith("#"):
+                    if "=" not in env:
+                        raise ConanException("Invalid env line '%s'" % env)
+                    varname, value = env.split("=", 1)
+                    obj.env[varname.strip()] = _clean_value(value)
 
-        obj._order()
-        return obj
+            obj._order()
+            return obj
+        except ConanException:
+            raise
+        except Exception as exc:
+            raise ConanException("Error parsing the profile text file: %s" % str(exc))
 
     def dumps(self):
         self._order()  # gets in order the settings

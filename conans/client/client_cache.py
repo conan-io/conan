@@ -10,6 +10,7 @@ from conans.paths import SimplePaths, CONANINFO
 from genericpath import isdir
 from conans.model.profile import Profile
 from conans.model.info import ConanInfo
+from conans.errors import ConanException
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -168,7 +169,12 @@ class ClientCache(SimplePaths):
         return os.path.join(self.profiles_path, name)
 
     def load_profile(self, name):
-        text = load(self.profile_path(name))
+        try:
+            text = load(self.profile_path(name))
+        except Exception:
+            current_profiles = ", ".join(self.current_profiles()) or "[]"
+            raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
+                                 "%s" % (name, current_profiles))
         return Profile.loads(text)
 
     def current_profiles(self):
