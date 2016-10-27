@@ -320,15 +320,29 @@ If not:
         if manifest_manager:
             manifest_manager.print_log()
 
-    def source(self, reference, force):
-        assert(isinstance(reference, ConanFileReference))
-
+    def source(self, current_path, reference, force):
         output = ScopedOutput(str(reference), self._user_io.out)
-        conan_file_path = self._client_cache.conanfile(reference)
-        conanfile = self._loader().load_conan(conan_file_path, output)
-        src_folder = self._client_cache.source(reference, conanfile.short_paths)
-        export_folder = self._client_cache.export(reference)
-        config_source(export_folder, src_folder, conanfile, output, force)
+
+        if not isinstance(reference, ConanFileReference):
+            conan_file_path = os.path.join(reference, CONANFILE)
+            conan_file = self._loader().load_conan(conan_file_path, output)
+            src_folder = current_path
+            export_folder = None
+
+            env_file = os.path.join(current_path, "conanenv.txt")
+            if os.path.exists(env_file):
+                try:
+                    deps_env_info = DepsEnvInfo.loads(load(env_file))
+                    conan_file.deps_env_info = deps_env_info
+                except:
+                    pass
+        else:
+            conan_file_path = self._client_cache.conanfile(reference)
+            conan_file = self._loader().load_conan(conan_file_path, output)
+            src_folder = self._client_cache.source(reference, conanfile.short_paths)
+            export_folder = self._client_cache.export(reference)
+
+        config_source(export_folder, src_folder, conan_file, output, force)
 
     def package(self, reference, package_id):
         assert(isinstance(reference, ConanFileReference))

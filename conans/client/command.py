@@ -431,8 +431,8 @@ path to the CMake binary directory, like this:
                            scopes=scopes)
 
     def build(self, *args):
-        """ calls your project conanfile.py "build" method.
-            EX: conan build ./my_project
+        """ Calls your project conanfile.py "build" method.
+            E.g. conan build ./my_project
             Intended for package creators, requires a conanfile.py.
         """
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
@@ -450,14 +450,14 @@ path to the CMake binary directory, like this:
         self._manager.build(root_path, current_path, filename=args.file, profile_name=args.profile)
 
     def package(self, *args):
-        """ calls your conanfile.py "package" method for a specific package or
+        """ Calls your conanfile.py "package" method for a specific package or
             regenerates the existing package's manifest.
             It will not create a new package, use 'install' or 'test_package' instead.
             Intended for package creators, for regenerating a package without
             recompiling the source, i.e. for troubleshooting,
             and fixing the package() method, not normal operation. It requires
             the package has been built locally, it will not re-package otherwise.
-            e.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
+            E.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("reference", help='package recipe reference name. '
@@ -482,20 +482,21 @@ path to the CMake binary directory, like this:
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("reference", help="package recipe reference name. e.g., zlib-ng/1.2.8@plex/stable")
+        parser.add_argument("reference", help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
         parser.add_argument("-f", "--force", default=False, action="store_true", help="force remove the source directory and run again.")
 
         args = parser.parse_args(*args)
 
+        current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
-            raise ConanException("Invalid package recipe reference. e.g., zlib-ng/1.2.8@plex/stable")
+            reference = os.path.normpath(os.path.join(current_path, args.reference))
 
-        self._manager.source(reference, args.force)
+        self._manager.source(current_path, reference, args.force)
 
     def export(self, *args):
-        """ copies the package recipe (conanfile.py and associated files) to your local store,
+        """ Copies the package recipe (conanfile.py and associated files) to your local store,
         where it can be shared and reused in other projects.
         From that store, it can be uploaded to any remote with "upload" command.
         """
