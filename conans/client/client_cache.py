@@ -1,5 +1,5 @@
 import os
-from conans.util.files import save, load, relative_dirs, path_exists, mkdir
+from conans.util.files import save, load, path_exists, mkdir
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values

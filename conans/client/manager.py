@@ -482,7 +482,10 @@ If not:
         @param channel: Destination channel
         @param remote: install only from that remote
         """
-        copier = PackageCopier(self._client_cache, self._user_io)
+        output = ScopedOutput(str(reference), self._user_io.out)
+        conan_file_path = self._client_cache.conanfile(reference)
+        conanfile = self._loader().load_conan(conan_file_path, output)
+        copier = PackageCopier(self._client_cache, self._user_io, conanfile.short_paths)
         if not package_ids:
             packages = self._client_cache.packages(reference)
             if os.path.exists(packages):

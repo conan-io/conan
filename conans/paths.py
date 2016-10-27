@@ -1,6 +1,6 @@
 import os
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import load, save
+from conans.util.files import load, save, rmdir
 from os.path import join, normpath
 import platform
 import tempfile
@@ -31,6 +31,7 @@ DIRTY_FILE = ".conan_dirty"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
+CONAN_LINK = ".conan_link"
 
 
 def conan_expand_user(path):
@@ -54,7 +55,21 @@ def conan_expand_user(path):
     return os.path.expanduser(path)
 
 
-def shortener(path, short_paths):
+if platform.system() == "Windows":
+    def _rm_conandir(path):
+        ''' removal of a directory that might contain a link to a short path
+        '''
+        link = os.path.join(path, CONAN_LINK)
+        if os.path.exists(link):
+            short_path = load(link)
+            rmdir(os.path.dirname(short_path))
+        rmdir(path)
+    rm_conandir = _rm_conandir
+else:
+    rm_conandir = rmdir
+
+
+def _shortener(path, short_paths):
     """ short_paths is 4-state:
     False: Never shorten the path
     True: Always shorten the path, create link if not existing
@@ -63,7 +78,7 @@ def shortener(path, short_paths):
     """
     if short_paths is False:
         return path
-    link = os.path.join(path, ".conan_link")
+    link = os.path.join(path, CONAN_LINK)
     if os.path.exists(link):
         return load(link)
     elif short_paths is None:
@@ -72,13 +87,18 @@ def shortener(path, short_paths):
         raise ConanException("This path should be short, but it isn't: %s\n"
                              "Try to remove these packages and re-build them" % path)
 
-    drive = os.path.splitdrive(path)[0]
-    short_path = drive + "/.conan"
+    short_home = os.getenv("CONAN_USER_HOME_SHORT")
+    if not short_home:
+        drive = os.path.splitdrive(path)[0]
+        short_home = drive + "/.conan"
     try:
-        os.makedirs(short_path)
+        os.makedirs(short_home)
     except:
         pass
-    redirect = tempfile.mkdtemp(dir=short_path, prefix="")
+    redirect = tempfile.mkdtemp(dir=short_home, prefix="")
+    # This "1" is the way to have a non-existing directory, so commands like
+    # shutil.copytree() to it, works. It can be removed without compromising the
+    # temp folder generator and conan-links consistency
     redirect = os.path.join(redirect, "1")
     save(link, redirect)
     return redirect
@@ -92,7 +112,7 @@ class SimplePaths(object):
     def __init__(self, store_folder):
         self._store_folder = store_folder
         if platform.system() == "Windows":
-            self._shortener = shortener
+            self._shortener = _shortener
         else:
             self._shortener = lambda x, _: x
 

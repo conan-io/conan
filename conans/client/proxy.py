@@ -7,6 +7,8 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
 from conans.client.loader import ConanFileLoader
 import os
+from conans.paths import rm_conandir
+from conans.client.remover import DiskRemover
 
 
 class ConanProxy(object):
@@ -79,7 +81,7 @@ class ConanProxy(object):
             export_path = self._client_cache.export(conan_reference)
             rmdir(export_path)
             # It might need to remove shortpath
-            rmdir(self._client_cache.source(conan_reference), True)
+            rm_conandir(self._client_cache.source(conan_reference))
             current_remote, _ = self._get_remote(conan_reference)
             output.info("Retrieving from remote '%s'..." % current_remote.name)
             self._remote_manager.get_recipe(conan_reference, export_path, current_remote)
@@ -111,7 +113,7 @@ class ConanProxy(object):
                         else:
                             if remote != ref_remote:
                                 # Delete packages, could be non coherent with new remote
-                                rmdir(self._client_cache.packages(conan_reference))
+                                DiskRemover(self._client_cache).remove_packages(conan_reference)
                             _refresh()
                     elif ret == -1:
                         if not self._update:

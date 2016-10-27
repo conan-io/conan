@@ -9,7 +9,8 @@ from requests.exceptions import ConnectionError
 from conans.errors import ConanException, ConanConnectionError
 from conans.util.files import tar_extract, rmdir, relative_dirs
 from conans.util.log import logger
-from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
+from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
+    rm_conandir
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
 
@@ -97,7 +98,7 @@ class RemoteManager(object):
         zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
         files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
-        rmdir(self._client_cache.source(conan_reference), True)
+        rm_conandir(self._client_cache.source(conan_reference))
         for dirname, _, filenames in os.walk(dest_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
