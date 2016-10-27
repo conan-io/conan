@@ -339,7 +339,7 @@ If not:
         else:
             conan_file_path = self._client_cache.conanfile(reference)
             conan_file = self._loader().load_conan(conan_file_path, output)
-            src_folder = self._client_cache.source(reference, conanfile.short_paths)
+            src_folder = self._client_cache.source(reference, conan_file.short_paths)
             export_folder = self._client_cache.export(reference)
 
         config_source(export_folder, src_folder, conan_file, output, force)
