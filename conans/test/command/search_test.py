@@ -1,6 +1,10 @@
 import unittest
 from conans.test.tools import TestClient
-from conans.paths import PACKAGES_FOLDER, CONANINFO
+from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER,\
+    CONAN_MANIFEST
+import os
+from conans.model.manifest import FileTreeManifest
+from time import time
 
 
 conan_vars1 = '''
@@ -38,7 +42,9 @@ conan_vars1c = '''
   Hello2/0.1@lasote/stable:11111
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@fenix/testing:33333
-'''
+[recipe_hash]
+  a01610228fe998f515a72dd730294d87
+'''  # The recipe_hash correspond to the faked conanmanifests in export
 
 conan_vars2 = '''
 [options]
@@ -111,6 +117,15 @@ class SearchTest(unittest.TestCase):
                                                        "hello.txt"): "Hello"},
                          self.client.paths.store)
 
+        # Fake some manifests to be able to calculate recipe hash
+        fake_manifest = FileTreeManifest(1212, {})
+        self.client.save({os.path.join(root_folder1, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
+                          os.path.join(root_folder2, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
+                          os.path.join(root_folder3, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
+                          os.path.join(root_folder4, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
+                          },
+                         self.client.paths.store)
+
     def recipe_search_test(self):
         self.client.run("search Hello*")
         self.assertEquals("Existing package recipes:\n\nHello/1.4.10@fenix/testing\nhelloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
@@ -171,6 +186,7 @@ class SearchTest(unittest.TestCase):
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
 
         self.client.run('search Hello/1.4.10/fenix/testing -q "arch=x86"')
+        # One package will be outdated from recipe and another don't
         self.assertEquals("""Existing packages for recipe Hello/1.4.10@fenix/testing:
 
     Package_ID: LinuxPackageSHA
@@ -185,8 +201,7 @@ class SearchTest(unittest.TestCase):
             Hello2/0.1@lasote/stable:11111
             HelloInfo1/0.45@fenix/testing:33333
             OpenSSL/2.10@lasote/testing:2222
-        [recipe hash]
-            Not present (created with conan < 0.15)
+        outdated from recipe: False
 
     Package_ID: PlatformIndependantSHA
         [options]
@@ -195,8 +210,7 @@ class SearchTest(unittest.TestCase):
             arch: x86
             compiler: gcc
             compiler.version: 4.3
-        [recipe hash]
-            Not present (created with conan < 0.15)
+        outdated from recipe: True
 
 """, self.client.user_io.out)
 

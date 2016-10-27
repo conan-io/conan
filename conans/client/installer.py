@@ -197,7 +197,7 @@ class ConanInstaller(object):
                                 conan_file, output)
 
             # FIXME: Is weak to assign here the recipe_hash
-            conan_file.info.recipe_hash = self._client_cache.load_recipe_hash(conan_ref)
+            conan_file.info.recipe_hash = self._client_cache.load_manifest(conan_ref).summary_hash
 
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())

@@ -28,7 +28,6 @@ BUILD_INFO_YCM = '.ycm_extra_conf.py'
 CONANINFO = "conaninfo.txt"
 SYSTEM_REQS = "system_reqs.txt"
 DIRTY_FILE = ".conan_dirty"
-RECIPE_HASH = "recipe_hash.txt"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
@@ -134,10 +133,6 @@ class SimplePaths(object):
     def digestfile_conanfile(self, conan_reference):
         export = self.export(conan_reference)
         return normpath(join(export, CONAN_MANIFEST))
-
-    def recipe_hash_path(self, conan_reference):
-        export = self.export(conan_reference)
-        return normpath(join(export, RECIPE_HASH))
 
     def digestfile_package(self, package_reference, short_paths=False):
         assert isinstance(package_reference, PackageReference)

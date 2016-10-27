@@ -7,7 +7,6 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
 from conans.paths import package_exists, CONANFILE
 from conans.client.loader import ConanFileLoader
-from conans.client.recipe_hash import hashes_match
 
 
 class ConanProxy(object):
@@ -75,9 +74,9 @@ class ConanProxy(object):
         return installed
 
     def _package_outdated(self, package_reference, package_folder):
-        recipe_hash = self._client_cache.load_recipe_hash(package_reference.conan)
+        recipe_hash = self._client_cache.load_manifest(package_reference.conan).summary_hash
         package_recipe_hash = self._client_cache.read_package_recipe_hash(package_folder)
-        return not hashes_match(recipe_hash, package_recipe_hash)
+        return not recipe_hash == package_recipe_hash
 
     def handle_package_manifest(self, package_reference, installed):
         if installed and self._manifest_manager:

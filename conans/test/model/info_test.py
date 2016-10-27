@@ -50,7 +50,7 @@ class ConanInfoTest(unittest.TestCase):
                     ['bzip2/1.0.6@lasote/stable:c6c01ee5ea2cf4af63e7b83b722b0a2d90640641',
                      'zlib/1.2.8@lasote/stable:2dec3996ef8de7edb0304eaf4efdd96a0477d3a3'],
                     'options': {'shared': 'False', 'fPIC': 'True', 'header_only': 'False'},
-                    'recipe_hash': '',
+                    'recipe_hash': None,
                     'settings': {'arch': 'x86_64', 'compiler.libcxx': 'libstdc++11',
                                  'compiler.version': '5.2', 'os': 'Linux',
                                  'build_type': 'Debug', 'compiler': 'gcc'}}
