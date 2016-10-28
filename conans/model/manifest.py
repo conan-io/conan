@@ -20,7 +20,10 @@ class FileTreeManifest(object):
 
     @property
     def summary_hash(self):
-        return md5(str(self))
+        ret = ""  # Do not include the timestamp in the summary hash
+        for filepath, file_md5 in self.file_sums.items():
+            ret += "\n%s: %s" % (filepath, file_md5)
+        return md5(ret)
 
     @staticmethod
     def loads(text):
