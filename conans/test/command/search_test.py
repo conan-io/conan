@@ -43,7 +43,7 @@ conan_vars1c = '''
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@fenix/testing:33333
 [recipe_hash]
-  a01610228fe998f515a72dd730294d87
+  d41d8cd98f00b204e9800998ecf8427e
 '''  # The recipe_hash correspond to the faked conanmanifests in export
 
 conan_vars2 = '''
