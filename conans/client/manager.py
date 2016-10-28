@@ -30,7 +30,7 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.client.file_copier import report_copied_files
 from conans.model.scope import Scopes
 from conans.client.client_cache import ClientCache
-from conans.client.source import config_source
+from conans.client.source import config_source, config_source_local
 from conans.client.manifest_manager import ManifestManager
 from conans.model.env_info import EnvInfo, DepsEnvInfo
 from conans.tools import environment_append
@@ -321,13 +321,10 @@ If not:
             manifest_manager.print_log()
 
     def source(self, current_path, reference, force):
-        output = ScopedOutput(str(reference), self._user_io.out)
-
         if not isinstance(reference, ConanFileReference):
+            output = ScopedOutput("PROJECT", self._user_io.out)
             conan_file_path = os.path.join(reference, CONANFILE)
-            conan_file = self._loader().load_conan(conan_file_path, output)
-            src_folder = current_path
-            export_folder = None
+            conan_file = self._loader().load_conan(conan_file_path, output, consumer=True)
 
             env_file = os.path.join(current_path, "conanenv.txt")
             if os.path.exists(env_file):
@@ -336,13 +333,14 @@ If not:
                     conan_file.deps_env_info = deps_env_info
                 except:
                     pass
+            config_source_local(current_path, conan_file, output)
         else:
+            output = ScopedOutput(str(reference), self._user_io.out)
             conan_file_path = self._client_cache.conanfile(reference)
             conan_file = self._loader().load_conan(conan_file_path, output)
             src_folder = self._client_cache.source(reference, conan_file.short_paths)
             export_folder = self._client_cache.export(reference)
-
-        config_source(export_folder, src_folder, conan_file, output, force)
+            config_source(export_folder, src_folder, conan_file, output, force)
 
     def package(self, reference, package_id):
         assert(isinstance(reference, ConanFileReference))
