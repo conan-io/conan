@@ -6,9 +6,10 @@ from conans.model.values import Values
 from conans.client.detect import detect_defaults_settings
 from conans.model.ref import ConanFileReference
 from conans.model.manifest import FileTreeManifest
-from conans.paths import SimplePaths
+from conans.paths import SimplePaths, CONANINFO
 from genericpath import isdir
 from conans.model.profile import Profile
+from conans.model.info import ConanInfo
 from conans.errors import ConanException
 
 CONAN_CONF = 'conan.conf'
@@ -122,6 +123,11 @@ class ClientCache(SimplePaths):
         '''conan_id = sha(zip file)'''
         filename = self.digestfile_package(package_reference, short_paths=None)
         return FileTreeManifest.loads(load(filename))
+
+    def read_package_recipe_hash(self, package_folder):
+        filename = os.path.join(package_folder, CONANINFO)
+        info = ConanInfo.loads(load(filename))
+        return info.recipe_hash
 
     def conan_manifests(self, conan_reference):
         digest_path = self.digestfile_conanfile(conan_reference)

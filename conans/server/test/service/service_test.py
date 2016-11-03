@@ -213,12 +213,14 @@ class ConanServiceTest(unittest.TestCase):
         info = self.search_service.search_packages(conan_ref2, None)
         self.assertEqual(info, {'12345587754': {'full_requires': [],
                                                 'options': {'use_Qt': 'False'},
-                                                'settings': {}}})
+                                                'settings': {},
+                                                'recipe_hash': None}})
 
         info = self.search_service.search_packages(conan_ref3, None)
         self.assertEqual(info, {'77777777777': {'full_requires': [],
                                                 'options': {'use_Qt': 'True'},
-                                                'settings': {}}})
+                                                'settings': {},
+                                                'recipe_hash': None}})
 
     def remove_test(self):
         conan_ref2 = ConanFileReference("OpenCV", "3.0", "lasote", "stable")

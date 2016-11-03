@@ -85,6 +85,7 @@ class Command(object):
 --build            Build all from sources, do not use binary packages.
 --build=never      Default option. Never build, use binary packages or fail if a binary package is not found.
 --build=missing    Build from code if a binary package is not found.
+--build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
 --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 ''')
 
@@ -103,6 +104,8 @@ class Command(object):
         #         False if building is forbidden
         #         A list with patterns: Will force build matching libraries,
         #                               will look for the package for the rest
+        #         "outdated" if will build when the package is not generated with
+        #                    the current exported recipe
 
         if isinstance(build_param, list):
             if len(build_param) == 0:  # All packages from source
@@ -111,6 +114,8 @@ class Command(object):
                 return False  # Default
             elif len(build_param) == 1 and build_param[0] == "missing":
                 return True
+            elif len(build_param) == 1 and build_param[0] == "outdated":
+                return "outdated"
             else:  # A list of expressions to match (if matches, will build from source)
                 return ["%s*" % ref_expr for ref_expr in build_param]
         else:

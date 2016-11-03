@@ -1,7 +1,7 @@
 import os
 import calendar
 import time
-from conans.util.files import md5sum
+from conans.util.files import md5sum, md5
 from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
 
 
@@ -17,6 +17,13 @@ class FileTreeManifest(object):
         for filepath, file_md5 in self.file_sums.items():
             ret += "\n%s: %s" % (filepath, file_md5)
         return ret
+
+    @property
+    def summary_hash(self):
+        ret = ""  # Do not include the timestamp in the summary hash
+        for filepath, file_md5 in self.file_sums.items():
+            ret += "\n%s: %s" % (filepath, file_md5)
+        return md5(ret)
 
     @staticmethod
     def loads(text):

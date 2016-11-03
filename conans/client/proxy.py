@@ -29,7 +29,7 @@ class ConanProxy(object):
     def registry(self):
         return self._registry
 
-    def get_package(self, package_reference, force_build, short_paths):
+    def get_package(self, package_reference, force_build, short_paths, check_outdated):
         """ obtain a package, either from disk or retrieve from remotes if necessary
         and not necessary to build
         """
@@ -57,15 +57,26 @@ class ConanProxy(object):
         if not force_build:
             local_package = package_exists(package_folder)
             if local_package:
-                output = ScopedOutput(str(package_reference.conan), self._out)
                 output.info('Already installed!')
                 installed = True
             else:
                 installed = self._retrieve_remote_package(package_reference, package_folder,
                                                           output)
+        # Check if the package is outdated
+        if check_outdated and package_exists(package_folder):
+            if self._package_outdated(package_reference, package_folder):
+                output.info("Outdated package!")
+                installed = False
+            else:
+                output.info("Package is up to date")
 
         self.handle_package_manifest(package_reference, installed)
         return installed
+
+    def _package_outdated(self, package_reference, package_folder):
+        recipe_hash = self._client_cache.load_manifest(package_reference.conan).summary_hash
+        package_recipe_hash = self._client_cache.read_package_recipe_hash(package_folder)
+        return not recipe_hash == package_recipe_hash
 
     def handle_package_manifest(self, package_reference, installed):
         if installed and self._manifest_manager:
