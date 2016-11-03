@@ -142,4 +142,5 @@ class PythonBuildTest(unittest.TestCase):
                       client.user_io.out)
         self.assertIn("Consumer/0.1@lasote/stable: WARN: conanbuildinfo.txt file not found",
                       client.user_io.out)
-        self.assertIn("No module named mytest", client.user_io.out)
+        # Output in py3 is different, uses single quote
+        self.assertIn("No module named mytest", str(client.user_io.out).replace("'", ""))
