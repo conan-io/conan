@@ -35,10 +35,10 @@ def get_dict_values(deps_env_info):
             # Allow path with spaces in non-windows platforms
             if platform.system() != "Windows" and name in ["PATH", "PYTHONPATH"]:
                 value = ['"%s"' % v for v in value]
-            multiple_to_set[name] = os.pathsep.join(value)
+            multiple_to_set[name] = os.pathsep.join(value).replace("\\", "/")
         else:
-            simple_to_set[name] = value
-
+            #  It works in windows too using "/" and allows to use MSYS shell
+            simple_to_set[name] = value.replace("\\", "/")
     return multiple_to_set, simple_to_set
 
 
@@ -58,7 +58,7 @@ class VirtualEnvGenerator(Generator):
         all_vars = copy.copy(multiple_to_set)
         all_vars.update(simple_to_set)
         venv_name = os.path.basename(self.conanfile.conanfile_directory)
-        venv_dir = self.conanfile.conanfile_directory
+        venv_dir = self.conanfile.conanfile_directory.replace("\\", "/")
         deactivate_lines = ["@echo off"] if platform.system() == "Windows" else []
         for name in all_vars.keys():
             old_value = os.environ.get(name, "")
