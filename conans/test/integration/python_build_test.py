@@ -79,3 +79,11 @@ class ToolsTest(ConanFile):
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
+
+        client.run("remove Consumer/0.1@lasote/stable -f")
+        client.run("export lasote/stable")
+        client.run("source Consumer/0.1@lasote/stable")
+        self.assertIn("Hello Baz", client.user_io.out)
+        self.assertNotIn("Hello Foo", client.user_io.out)
+        self.assertNotIn("Hello Bar", client.user_io.out)
+        self.assertNotIn("Hello Boom", client.user_io.out)

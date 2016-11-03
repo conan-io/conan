@@ -38,8 +38,8 @@ class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, paths, user_io, remote_proxy):
-        self._paths = paths
+    def __init__(self, client_cache, user_io, remote_proxy):
+        self._client_cache = client_cache
         self._out = user_io.out
         self._remote_proxy = remote_proxy
 
@@ -48,7 +48,7 @@ class ConanInstaller(object):
         """
         self._deps_graph = deps_graph  # necessary for _build_package
         t1 = time.time()
-        init_package_info(deps_graph, self._paths)
+        init_package_info(deps_graph, self._client_cache)
         # order by levels and propagate exports as download imports
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
@@ -63,7 +63,7 @@ class ConanInstaller(object):
         """ computes a list of nodes that are not required to be built, as they are
         private requirements of already available shared libraries as binaries
         """
-
+        check_outdated = build_mode == "outdated"
         skip_nodes = set()
         for node in deps_graph.nodes:
             conan_ref, conanfile = node
@@ -77,13 +77,17 @@ class ConanInstaller(object):
                 self._out.info("%s: Checking if package with private requirements "
                                "has pre-built binary" % str(conan_ref))
                 if self._remote_proxy.get_package(package_reference, build_forced,
-                                                  short_paths=conanfile.short_paths):
+                                                  short_paths=conanfile.short_paths,
+                                                  check_outdated=check_outdated):
                     skip_nodes.add(node)
 
         skippable_nodes = deps_graph.private_nodes(skip_nodes)
         return skippable_nodes
 
     def _build_forced(self, conan_ref, build_mode, conan_file):
+        if build_mode == "outdated":
+            return False
+
         if conan_file.build_policy_always:
             out = ScopedOutput(str(conan_ref), self._out)
             out.info("Building package from source as defined by build_policy='always'")
@@ -110,6 +114,7 @@ class ConanInstaller(object):
                    => ["hello*", "bye*"] if user wrote "--build hello --build bye"
                    => False if user wrote "never"
                    => True if user wrote "missing"
+                   => "outdated" if user wrote "--build outdated"
 
         """
         inverse = self._deps_graph.inverse_levels()
@@ -150,12 +155,13 @@ class ConanInstaller(object):
         output = ScopedOutput(str(conan_ref), self._out)
         package_id = conan_file.info.package_id()
         package_reference = PackageReference(conan_ref, package_id)
+        check_outdated = build_mode == "outdated"
 
         conan_ref = package_reference.conan
-        package_folder = self._paths.package(package_reference, conan_file.short_paths)
-        build_folder = self._paths.build(package_reference, conan_file.short_paths)
-        src_folder = self._paths.source(conan_ref, conan_file.short_paths)
-        export_folder = self._paths.export(conan_ref)
+        package_folder = self._client_cache.package(package_reference, conan_file.short_paths)
+        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
+        src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
+        export_folder = self._client_cache.export(conan_ref)
 
         # If already exists do not dirt the output, the common situation
         # is that package is already installed and OK. If don't, the proxy
@@ -167,12 +173,14 @@ class ConanInstaller(object):
 
         force_build = self._build_forced(conan_ref, build_mode, conan_file)
         if self._remote_proxy.get_package(package_reference, force_build,
-                                          short_paths=conan_file.short_paths):
+                                          short_paths=conan_file.short_paths,
+                                          check_outdated=check_outdated):
             return
 
         # we need and can build? Only if we are forced or build_mode missing and package not exists
-        build = force_build or build_mode is True or conan_file.build_policy_missing
-
+        # Option "--build outdated" means: missing or outdated, so don't care if it's really oudated
+        # just build it.
+        build = force_build or build_mode is True or check_outdated or conan_file.build_policy_missing
         if build:
             if not force_build and not build_mode:
                 output.info("Building package from source as defined by build_policy='missing'")
@@ -186,6 +194,9 @@ class ConanInstaller(object):
                 output.warn('Forced build from source')
 
             self._build_package(export_folder, src_folder, build_folder, conan_file, output)
+
+            # FIXME: Is weak to assign here the recipe_hash
+            conan_file.info.recipe_hash = self._client_cache.load_manifest(conan_ref).summary_hash
 
             # Creating ***info.txt files
             save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
@@ -220,8 +231,8 @@ Package configuration:
         if "system_requirements" not in type(conan_file).__dict__:
             return
 
-        system_reqs_path = self._paths.system_reqs(conan_ref)
-        system_reqs_package_path = self._paths.system_reqs_package(package_reference)
+        system_reqs_path = self._client_cache.system_reqs(conan_ref)
+        system_reqs_package_path = self._client_cache.system_reqs_package(package_reference)
         if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
             return
 
@@ -280,7 +291,7 @@ Package configuration:
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
         from conans.client.importer import FileImporter
-        local_installer = FileImporter(self._deps_graph, self._paths, build_folder)
+        local_installer = FileImporter(self._deps_graph, self._client_cache, build_folder)
         conan_file.copy = local_installer
         conan_file.imports()
         copied_files = local_installer.execute()
