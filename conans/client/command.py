@@ -460,7 +460,7 @@ path to the CMake binary directory, like this:
             E.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("reference", help='package recipe reference name. '
+        parser.add_argument("reference", nargs='?', default="", help='package recipe reference name. '
                             'e.g., MyPackage/1.2@user/channel')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
@@ -469,20 +469,24 @@ path to the CMake binary directory, like this:
 
         args = parser.parse_args(*args)
 
+        current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
+            self._manager.package(reference, args.package)
         except:
-            raise ConanException("Invalid package recipe reference. "
-                                 "e.g., MyPackage/1.2@user/channel")
-
-        self._manager.package(reference, args.package)
+            if "@" in args.reference:
+                raise
+            build_folder = args.reference
+            if not os.path.isabs(build_folder):
+                build_folder = os.path.normpath(os.path.join(current_path, build_folder))
+            self._manager.local_package(current_path, build_folder)
 
     def source(self, *args):
         """ Calls your conanfile.py "source" method to configure the source directory.
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("reference", help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
+        parser.add_argument("reference", nargs='?', default="", help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
         parser.add_argument("-f", "--force", default=False, action="store_true", help="force remove the source directory and run again.")
 
         args = parser.parse_args(*args)
@@ -491,7 +495,12 @@ path to the CMake binary directory, like this:
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
-            reference = os.path.normpath(os.path.join(current_path, args.reference))
+            if "@" in args.reference:
+                raise
+            if not os.path.isabs(args.reference):
+                reference = os.path.normpath(os.path.join(current_path, args.reference))
+            else:
+                reference = args.reference
 
         self._manager.source(current_path, reference, args.force)
 

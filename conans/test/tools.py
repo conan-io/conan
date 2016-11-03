@@ -400,10 +400,15 @@ class TestClient(object):
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
 
+        old_modules = list(sys.modules.keys())
         try:
             error = command.run(args)
         finally:
             os.chdir(current_dir)
+            # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
+            added_modules = set(sys.modules).difference(old_modules)
+            for added in added_modules:
+                sys.modules.pop(added, None)
 
         if not ignore_error and error:
             logger.error(self.user_io.out)
