@@ -65,7 +65,7 @@ class ConanProxy(object):
                 installed = self._retrieve_remote_package(package_reference, package_folder,
                                                           output)
         # Check if the package is outdated
-        if check_outdated and package_exists(package_folder):
+        if check_outdated and os.path.exists(package_folder):
             if self._package_outdated(package_reference, package_folder):
                 output.info("Outdated package!")
                 installed = False

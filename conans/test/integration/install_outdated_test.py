@@ -19,9 +19,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export lasote/stable")
 
-        # Will raise if not generated
-        self.client.paths.load_recipe_hash(self.ref)
-
         self.client.run("install Hello0/0.1@lasote/stable --build missing")
         self.client.run("upload  Hello0/0.1@lasote/stable --all")
 
@@ -47,17 +44,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.assertNotIn("Package is up to date", self.client.user_io.out)
         self.assertIn("Outdated package!", self.client.user_io.out)
         self.assertIn("Building your package", self.client.user_io.out)
-
-        # Edit a file in windows (\r\n) and see if conan consider it outdated
-        files["conanfile.py"] = files["conanfile.py"].replace("\n", "\r\n")
-        self.client.save(files)
-        self.client.run("export lasote/stable")
-        self.assertIn("Package recipe modified in export", self.client.user_io.out)
-        self.client.run("install Hello0/0.1@lasote/stable --build outdated")
-        self.assertIn("Hello0/0.1@lasote/stable: Already installed!", self.client.user_io.out)
-        self.assertIn("Package is up to date", self.client.user_io.out)
-        self.assertNotIn("Outdated package!", self.client.user_io.out)
-        self.assertNotIn("Building your package", self.client.user_io.out)
 
         # Remove all local references, export again (the modified version not uploaded)
         # and try to install, it will discard the remote package too
