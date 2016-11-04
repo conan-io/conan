@@ -10,7 +10,7 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
-def create_package(conanfile, build_folder, package_folder, output):
+def create_package(conanfile, build_folder, package_folder, output, local=False):
     """ copies built artifacts, libs, headers, data, etc from build_folder to
     package folder
     """
@@ -35,12 +35,13 @@ def create_package(conanfile, build_folder, package_folder, output):
         package_output = ScopedOutput("%s package()" % output.scope, output)
         conanfile.copy.report(package_output, warn=True)
     except Exception as e:
-        os.chdir(build_folder)
-        try:
-            rmdir(package_folder)
-        except Exception as e_rm:
-            output.error("Unable to remove package folder %s\n%s" % (package_folder, str(e_rm)))
-            output.warn("**** Please delete it manually ****")
+        if not local:
+            os.chdir(build_folder)
+            try:
+                rmdir(package_folder)
+            except Exception as e_rm:
+                output.error("Unable to remove package folder %s\n%s" % (package_folder, str(e_rm)))
+                output.warn("**** Please delete it manually ****")
 
         msg = format_conanfile_exception(output.scope, "package", e)
         raise ConanException(msg)

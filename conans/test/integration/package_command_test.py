@@ -3,7 +3,8 @@ from conans.test.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
 from conans.paths import CONANFILE
-from conans.util.files import save
+from conans.util.files import mkdir, load
+from conans.test.utils.test_files import temp_folder
 
 
 class PackageCommandTest(unittest.TestCase):
@@ -11,7 +12,7 @@ class PackageCommandTest(unittest.TestCase):
     def package_errors_test(self):
         client = TestClient()
         client.run("package whatever@user/channel", ignore_error=True)
-        self.assertIn("Invalid package recipe reference", client.user_io.out)
+        self.assertIn("Wrong package recipe", client.user_io.out)
 
         client.run("package whatever/1.0@user/channel", ignore_error=True)
         self.assertIn("ERROR: Package recipe 'whatever/1.0@user/channel' does not exist",
@@ -40,9 +41,84 @@ class MyConan(ConanFile):
         self.assertIn("ERROR: MyLib/0.1@lasote/stable: Package binary '1234' folder doesn't exist",
                       client.user_io.out)
 
+    def local_package_test(self):
+        """Use 'conan package' to process locally the package method"""
+        client = TestClient()
+        conanfile_template = """
+from conans import ConanFile
+
+class MyConan(ConanFile):
+    def package(self):
+        self.copy(pattern="*.h", dst="include", src="include")
+"""
+        files = {"include/file.h": "foo",
+                 CONANFILE: conanfile_template}
+
+        client.save(files)
+        client.run("install -g env -g txt")
+        client.run("build")
+        origin_folder = client.current_folder
+        client.current_folder = temp_folder()
+        client.run('package "%s"' % origin_folder)
+        content = load(os.path.join(client.current_folder, "include/file.h"))
+        self.assertEqual(content, "foo")
+
+    def local_package_build_test(self):
+        """Use 'conan package' to process locally the package method"""
+        client = TestClient()
+        conanfile_template = """
+from conans import ConanFile
+
+class MyConan(ConanFile):
+    def package(self):
+        self.copy(pattern="*.h", dst="include", src="include")
+"""
+        files = {"include/file.h": "foo",
+                 CONANFILE: conanfile_template}
+
+        client.save(files)
+        origin_folder = client.current_folder
+        build_folder = os.path.join(client.current_folder, "build")
+        mkdir(build_folder)
+        client.current_folder = build_folder
+        client.run("install .. -g env -g txt")
+        client.run("source ..")
+        client.run("build ..")
+        client.current_folder = temp_folder()
+        client.run('package "%s/build"' % origin_folder)
+        content = load(os.path.join(client.current_folder, "include/file.h"))
+        self.assertEqual(content, "foo")
+
+    def local_flow_test(self):
+        """Use 'conan package' to process locally the package method"""
+        client = TestClient()
+        conanfile_template = """
+from conans import ConanFile
+
+class MyConan(ConanFile):
+    def package(self):
+        self.copy(pattern="*.h", dst="include", src="include")
+"""
+        files = {"include/file.h": "foo",
+                 CONANFILE: conanfile_template}
+
+        client.save(files)
+        origin_folder = client.current_folder
+        client.run("install -g env -g txt")
+        client.run("source")
+        client.run("build")
+        client.run("package .", ignore_error=True)
+        self.assertIn("ERROR: Cannot 'conan package' to the build folder", client.user_io.out)
+        package_folder = os.path.join(origin_folder, "package")
+        mkdir(package_folder)
+        client.current_folder = package_folder
+        client.run('package ..')
+        content = load(os.path.join(client.current_folder, "include/file.h"))
+        self.assertEqual(content, "foo")
+
     def package_test(self):
         """Use 'conan package' command to repackage a generated package (without build it)"""
-        client = TestClient(users={"default": [("lasote", "mypass")]})
+        client = TestClient()
         conanfile_template = """
 from conans import ConanFile
 

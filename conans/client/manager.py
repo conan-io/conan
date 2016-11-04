@@ -2,7 +2,7 @@ import os
 import time
 from collections import OrderedDict
 
-from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
+from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, CONANENV)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
 from conans.client.deps_builder import DepsBuilder
@@ -317,31 +317,59 @@ If not:
         if manifest_manager:
             manifest_manager.print_log()
 
+    def _load_deps_info(self, current_path, conanfile, output):
+        build_info_file = os.path.join(current_path, BUILD_INFO)
+        if os.path.exists(build_info_file):
+            try:
+                deps_cpp_info = DepsCppInfo.loads(load(build_info_file))
+                conanfile.deps_cpp_info = deps_cpp_info
+            except:
+                output.error("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
+        else:
+            output.warn("%s file not found in %s\nIt is recommended for source, build and package "
+                        "commands\nYou can generate it using 'conan install -g env -g txt'"
+                        % (BUILD_INFO, current_path))
+
+        env_file = os.path.join(current_path, CONANENV)
+        if os.path.exists(env_file):
+            try:
+                deps_env_info = DepsEnvInfo.loads(load(env_file))
+                conanfile.deps_env_info = deps_env_info
+            except:
+                output.error("Parse error in '%s' file in %s" % (CONANENV, current_path))
+        else:
+            output.warn("%s file not found in %s\nIt is recommended for source, build and package "
+                        "commands\nYou can generate it using 'conan install -g env -g txt'"
+                        % (CONANENV, current_path))
+
     def source(self, current_path, reference, force):
         if not isinstance(reference, ConanFileReference):
             output = ScopedOutput("PROJECT", self._user_io.out)
             conan_file_path = os.path.join(reference, CONANFILE)
-            conan_file = self._loader().load_conan(conan_file_path, output, consumer=True)
-
-            env_file = os.path.join(current_path, "conanenv.txt")
-            if os.path.exists(env_file):
-                try:
-                    deps_env_info = DepsEnvInfo.loads(load(env_file))
-                    conan_file.deps_env_info = deps_env_info
-                except:
-                    pass
-            config_source_local(current_path, conan_file, output)
+            conanfile = self._loader().load_conan(conan_file_path, output, consumer=True)
+            self._load_deps_info(current_path, conanfile, output)
+            export_folder = reference
+            config_source_local(export_folder, current_path, conanfile, output)
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conan_file_path = self._client_cache.conanfile(reference)
-            conan_file = self._loader().load_conan(conan_file_path, output)
-            src_folder = self._client_cache.source(reference, conan_file.short_paths)
+            conanfile = self._loader().load_conan(conan_file_path, output)
+            self._load_deps_info(current_path, conanfile, output)
+            src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
-            config_source(export_folder, src_folder, conan_file, output, force)
+            config_source(export_folder, src_folder, conanfile, output, force)
+
+    def local_package(self, current_path, build_folder):
+        if current_path == build_folder:
+            raise ConanException("Cannot 'conan package' to the build folder. "
+                                 "Please move to another folder and try again")
+        output = ScopedOutput("PROJECT", self._user_io.out)
+        conan_file_path = os.path.join(build_folder, CONANFILE)
+        conanfile = self._loader().load_conan(conan_file_path, output, consumer=True)
+        self._load_deps_info(build_folder, conanfile, output)
+        packager.create_package(conanfile, build_folder, current_path, output, local=True)
 
     def package(self, reference, package_id):
-        assert(isinstance(reference, ConanFileReference))
-
         # Package paths
         conan_file_path = self._client_cache.conanfile(reference)
         if not os.path.exists(conan_file_path):
@@ -373,6 +401,7 @@ If not:
             output.info("Re-packaging %s" % package_reference.package_id)
             loader = self._loader(build_folder)
             conanfile = loader.load_conan(conan_file_path, self._user_io.out)
+            self._load_deps_info(build_folder, conanfile, output)
             rmdir(package_folder)
             packager.create_package(conanfile, build_folder, package_folder, output)
 
@@ -400,21 +429,7 @@ If not:
                                  "requirements and generators from '%s' file"
                                  % (CONANFILE, CONANFILE, CONANFILE_TXT))
         try:
-            build_info_file = os.path.join(current_path, BUILD_INFO)
-            if os.path.exists(build_info_file):
-                try:
-                    deps_cpp_info = DepsCppInfo.loads(load(build_info_file))
-                    conan_file.deps_cpp_info = deps_cpp_info
-                except:
-                    pass
-
-            env_file = os.path.join(current_path, "conanenv.txt")
-            if os.path.exists(env_file):
-                try:
-                    deps_env_info = DepsEnvInfo.loads(load(env_file))
-                    conan_file.deps_env_info = deps_env_info
-                except:
-                    pass
+            self._load_deps_info(current_path, conan_file, output)
 
             os.chdir(current_path)
             conan_file._conanfile_directory = conanfile_path
