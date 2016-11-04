@@ -360,6 +360,9 @@ If not:
             config_source(export_folder, src_folder, conanfile, output, force)
 
     def local_package(self, current_path, build_folder):
+        if current_path == build_folder:
+            raise ConanException("Cannot 'conan package' to the build folder. "
+                                 "Please move to another folder and try again")
         output = ScopedOutput("PROJECT", self._user_io.out)
         conan_file_path = os.path.join(build_folder, CONANFILE)
         conanfile = self._loader().load_conan(conan_file_path, output, consumer=True)

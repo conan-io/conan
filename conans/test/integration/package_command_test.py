@@ -107,6 +107,8 @@ class MyConan(ConanFile):
         client.run("install -g env -g txt")
         client.run("source")
         client.run("build")
+        client.run("package .", ignore_error=True)
+        self.assertIn("ERROR: Cannot 'conan package' to the build folder", client.user_io.out)
         package_folder = os.path.join(origin_folder, "package")
         mkdir(package_folder)
         client.current_folder = package_folder

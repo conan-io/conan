@@ -456,18 +456,23 @@ path to the CMake binary directory, like this:
         self._manager.build(root_path, current_path, filename=args.file, profile_name=args.profile)
 
     def package(self, *args):
-        """ Calls your conanfile.py "package" method for a specific package or
-            regenerates the existing package's manifest.
-            It will not create a new package, use 'install' or 'test_package' instead.
+        """ Calls your conanfile.py "package" method for a specific package recipe.
+            It will not create a new package, use 'install' or 'test_package' instead for
+            packages in the conan local cache, or `build' for conanfile.py in user space.
             Intended for package creators, for regenerating a package without
             recompiling the source, i.e. for troubleshooting,
             and fixing the package() method, not normal operation. It requires
             the package has been built locally, it will not re-package otherwise.
             E.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
+
+            When used in a user space project, it will execute from the build folder specified
+            as parameter, and the current directory. This is useful while creating package recipes
+            or just for extracting artifacts from the current project, without even being a package
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("reference", nargs='?', default="", help='package recipe reference name. '
-                            'e.g., MyPackage/1.2@user/channel')
+        parser.add_argument("reference", help='package recipe reference '
+                            'e.g. MyPkg/0.1@user/channel, or local path to the build folder'
+                            ' (relative or absolute)')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3'
