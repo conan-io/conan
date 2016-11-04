@@ -1,14 +1,15 @@
 import os
-from conans.util.files import save, load, relative_dirs, path_exists, mkdir
+from conans.util.files import save, load, path_exists, mkdir
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
 from conans.client.detect import detect_defaults_settings
 from conans.model.ref import ConanFileReference
 from conans.model.manifest import FileTreeManifest
-from conans.paths import SimplePaths
+from conans.paths import SimplePaths, CONANINFO
 from genericpath import isdir
 from conans.model.profile import Profile
+from conans.model.info import ConanInfo
 from conans.errors import ConanException
 
 CONAN_CONF = 'conan.conf'
@@ -83,14 +84,6 @@ class ClientCache(SimplePaths):
             self._settings = settings
         return self._settings
 
-    def export_paths(self, conan_reference):
-        ''' Returns all file paths for a conans (relative to conans directory)'''
-        return relative_dirs(self.export(conan_reference))
-
-    def package_paths(self, package_reference, short_paths):
-        ''' Returns all file paths for a package (relative to conans directory)'''
-        return relative_dirs(self.package(package_reference, short_paths))
-
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """
         assert isinstance(conan_reference, ConanFileReference)
@@ -122,6 +115,11 @@ class ClientCache(SimplePaths):
         '''conan_id = sha(zip file)'''
         filename = self.digestfile_package(package_reference, short_paths=None)
         return FileTreeManifest.loads(load(filename))
+
+    def read_package_recipe_hash(self, package_folder):
+        filename = os.path.join(package_folder, CONANINFO)
+        info = ConanInfo.loads(load(filename))
+        return info.recipe_hash
 
     def conan_manifests(self, conan_reference):
         digest_path = self.digestfile_conanfile(conan_reference)

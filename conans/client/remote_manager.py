@@ -9,7 +9,8 @@ from requests.exceptions import ConnectionError
 from conans.errors import ConanException, ConanConnectionError
 from conans.util.files import tar_extract, rmdir, relative_dirs
 from conans.util.log import logger
-from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME
+from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
+    rm_conandir
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
 
@@ -24,15 +25,15 @@ class RemoteManager(object):
 
     def upload_conan(self, conan_reference, remote):
         """Will upload the conans to the first remote"""
-        basedir = self._client_cache.export(conan_reference)
-        rel_files = self._client_cache.export_paths(conan_reference)
-        the_files = {filename: os.path.join(basedir, filename) for filename in rel_files}
+        export_folder = self._client_cache.export(conan_reference)
+        rel_files = relative_dirs(export_folder)
+        the_files = {filename: os.path.join(export_folder, filename) for filename in rel_files}
 
         if CONANFILE not in rel_files or CONAN_MANIFEST not in rel_files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
 
         # FIXME: Check modified exports by hand?
-        the_files = compress_export_files(the_files, basedir, self._output)
+        the_files = compress_export_files(the_files, export_folder, self._output)
 
         return self._call_remote(remote, "upload_conan", conan_reference, the_files)
 
@@ -40,14 +41,15 @@ class RemoteManager(object):
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
-        basedir = self._client_cache.package(package_reference, short_paths=None)
-        rel_files = self._client_cache.package_paths(package_reference, short_paths=None)
+        package_folder = self._client_cache.package(package_reference, short_paths=None)
+        # Get all the files in that directory
+        rel_files = relative_dirs(package_folder)
 
         self._output.rewrite_line("Checking package integrity...")
         if CONANINFO not in rel_files or CONAN_MANIFEST not in rel_files:
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
 
-        the_files = {filename: os.path.join(basedir, filename) for filename in rel_files}
+        the_files = {filename: os.path.join(package_folder, filename) for filename in rel_files}
         logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         # If package has been modified remove tgz to regenerate it
@@ -55,7 +57,7 @@ class RemoteManager(object):
         if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
             if PACKAGE_TGZ_NAME in the_files:
                 try:
-                    tgz_path = os.path.join(basedir, PACKAGE_TGZ_NAME)
+                    tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
                     os.unlink(tgz_path)
                 except Exception:
                     pass
@@ -65,7 +67,7 @@ class RemoteManager(object):
         self._output.writeln("")
         logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
 
-        the_files = compress_package_files(the_files, basedir, self._output)
+        the_files = compress_package_files(the_files, package_folder, self._output)
 
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files)
         logger.debug("====> Time remote_manager upload_package: %f" % (time.time() - t1))
@@ -96,7 +98,7 @@ class RemoteManager(object):
         zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
         files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
-        rmdir(self._client_cache.source(conan_reference), True)
+        rm_conandir(self._client_cache.source(conan_reference))
         for dirname, _, filenames in os.walk(dest_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))

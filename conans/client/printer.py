@@ -136,7 +136,7 @@ class Printer(object):
         for conan_ref in sorted(references):
             self._print_colored_line(str(conan_ref), indent=0)
 
-    def print_search_packages(self, packages_props, reference, packages_query):
+    def print_search_packages(self, packages_props, reference, recipe_hash, packages_query):
         if not packages_props:
             if packages_query:
                 warn_msg = "There are no packages for reference '%s' matching the query '%s'" % (str(reference), packages_query)
@@ -161,6 +161,8 @@ class Printer(object):
                     elif isinstance(attrs, list):  # full requires
                         for key in sorted(attrs):
                             self._print_colored_line(key, indent=3)
+            package_recipe_hash = properties.get("recipe_hash", None)
+            self._print_colored_line("outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
             self._out.writeln("")
 
     def _print_colored_line(self, text, value=None, indent=0):

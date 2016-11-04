@@ -5,8 +5,10 @@ from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedCl
                            NotFoundException)
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
-from conans.paths import package_exists, CONANFILE
 from conans.client.loader import ConanFileLoader
+import os
+from conans.paths import rm_conandir
+from conans.client.remover import DiskRemover
 
 
 class ConanProxy(object):
@@ -29,7 +31,7 @@ class ConanProxy(object):
     def registry(self):
         return self._registry
 
-    def get_package(self, package_reference, force_build, short_paths):
+    def get_package(self, package_reference, force_build, short_paths, check_outdated):
         """ obtain a package, either from disk or retrieve from remotes if necessary
         and not necessary to build
         """
@@ -37,7 +39,7 @@ class ConanProxy(object):
         package_folder = self._client_cache.package(package_reference, short_paths=short_paths)
 
         # Check current package status
-        if package_exists(package_folder):
+        if os.path.exists(package_folder):
             if self._check_updates:
                 read_manifest = self._client_cache.load_package_manifest(package_reference)
                 try:  # get_conan_digest can fail, not in server
@@ -55,17 +57,28 @@ class ConanProxy(object):
 
         installed = False
         if not force_build:
-            local_package = package_exists(package_folder)
+            local_package = os.path.exists(package_folder)
             if local_package:
-                output = ScopedOutput(str(package_reference.conan), self._out)
                 output.info('Already installed!')
                 installed = True
             else:
                 installed = self._retrieve_remote_package(package_reference, package_folder,
                                                           output)
+        # Check if the package is outdated
+        if check_outdated and package_exists(package_folder):
+            if self._package_outdated(package_reference, package_folder):
+                output.info("Outdated package!")
+                installed = False
+            else:
+                output.info("Package is up to date")
 
         self.handle_package_manifest(package_reference, installed)
         return installed
+
+    def _package_outdated(self, package_reference, package_folder):
+        recipe_hash = self._client_cache.load_manifest(package_reference.conan).summary_hash
+        package_recipe_hash = self._client_cache.read_package_recipe_hash(package_folder)
+        return not recipe_hash == package_recipe_hash
 
     def handle_package_manifest(self, package_reference, installed):
         if installed and self._manifest_manager:
@@ -79,7 +92,7 @@ class ConanProxy(object):
             export_path = self._client_cache.export(conan_reference)
             rmdir(export_path)
             # It might need to remove shortpath
-            rmdir(self._client_cache.source(conan_reference), True)
+            rm_conandir(self._client_cache.source(conan_reference))
             current_remote, _ = self._get_remote(conan_reference)
             output.info("Retrieving from remote '%s'..." % current_remote.name)
             self._remote_manager.get_recipe(conan_reference, export_path, current_remote)
@@ -111,7 +124,7 @@ class ConanProxy(object):
                         else:
                             if remote != ref_remote:
                                 # Delete packages, could be non coherent with new remote
-                                rmdir(self._client_cache.packages(conan_reference))
+                                DiskRemover(self._client_cache).remove_packages(conan_reference)
                             _refresh()
                     elif ret == -1:
                         if not self._update:

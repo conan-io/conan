@@ -2,7 +2,7 @@ import os
 import time
 from collections import OrderedDict
 
-from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, build_exists, CONANENV)
+from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, CONANENV)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
 from conans.client.deps_builder import DepsBuilder
@@ -364,7 +364,7 @@ If not:
         conan_file_path = os.path.join(build_folder, CONANFILE)
         conanfile = self._loader().load_conan(conan_file_path, output, consumer=True)
         self._load_deps_info(build_folder, conanfile, output)
-        packager.create_package(conanfile, build_folder, current_path, output)
+        packager.create_package(conanfile, build_folder, current_path, output, local=True)
 
     def package(self, reference, package_id):
         # Package paths
@@ -385,7 +385,7 @@ If not:
 
         for package_reference in packages:
             build_folder = self._client_cache.build(package_reference, short_paths=None)
-            if not build_exists(build_folder):
+            if not os.path.exists(build_folder):
                 raise NotFoundException("%s: Package binary '%s' folder doesn't exist\n"
                                         "Please read the 'conan package' command help\n"
                                         "Use 'conan install' or 'conan test_package' to build and "
@@ -493,7 +493,9 @@ If not:
         if isinstance(pattern_or_reference, ConanFileReference):
             packages_props = adapter.search_packages(pattern_or_reference, packages_query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
-            printer.print_search_packages(ordered_packages, pattern_or_reference, packages_query)
+            recipe_hash = self._client_cache.load_manifest(pattern_or_reference).summary_hash
+            printer.print_search_packages(ordered_packages, pattern_or_reference,
+                                          recipe_hash, packages_query)
         else:
             references = adapter.search(pattern_or_reference, ignorecase)
             printer.print_search_recipes(references, pattern_or_reference)
@@ -506,7 +508,10 @@ If not:
         @param channel: Destination channel
         @param remote: install only from that remote
         """
-        copier = PackageCopier(self._client_cache, self._user_io)
+        output = ScopedOutput(str(reference), self._user_io.out)
+        conan_file_path = self._client_cache.conanfile(reference)
+        conanfile = self._loader().load_conan(conan_file_path, output)
+        copier = PackageCopier(self._client_cache, self._user_io, conanfile.short_paths)
         if not package_ids:
             packages = self._client_cache.packages(reference)
             if os.path.exists(packages):
