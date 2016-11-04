@@ -5,8 +5,10 @@ from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedCl
                            NotFoundException)
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
-from conans.paths import package_exists, CONANFILE
 from conans.client.loader import ConanFileLoader
+import os
+from conans.paths import rm_conandir
+from conans.client.remover import DiskRemover
 
 
 class ConanProxy(object):
@@ -37,7 +39,7 @@ class ConanProxy(object):
         package_folder = self._client_cache.package(package_reference, short_paths=short_paths)
 
         # Check current package status
-        if package_exists(package_folder):
+        if os.path.exists(package_folder):
             if self._check_updates:
                 read_manifest = self._client_cache.load_package_manifest(package_reference)
                 try:  # get_conan_digest can fail, not in server
@@ -55,7 +57,7 @@ class ConanProxy(object):
 
         installed = False
         if not force_build:
-            local_package = package_exists(package_folder)
+            local_package = os.path.exists(package_folder)
             if local_package:
                 output.info('Already installed!')
                 installed = True
@@ -90,7 +92,7 @@ class ConanProxy(object):
             export_path = self._client_cache.export(conan_reference)
             rmdir(export_path)
             # It might need to remove shortpath
-            rmdir(self._client_cache.source(conan_reference), True)
+            rm_conandir(self._client_cache.source(conan_reference))
             current_remote, _ = self._get_remote(conan_reference)
             output.info("Retrieving from remote '%s'..." % current_remote.name)
             self._remote_manager.get_recipe(conan_reference, export_path, current_remote)
@@ -122,7 +124,7 @@ class ConanProxy(object):
                         else:
                             if remote != ref_remote:
                                 # Delete packages, could be non coherent with new remote
-                                rmdir(self._client_cache.packages(conan_reference))
+                                DiskRemover(self._client_cache).remove_packages(conan_reference)
                             _refresh()
                     elif ret == -1:
                         if not self._update:

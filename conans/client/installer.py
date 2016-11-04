@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, package_exists, build_exists
+from conans.paths import CONANINFO, BUILD_INFO
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -166,7 +166,7 @@ class ConanInstaller(object):
         # If already exists do not dirt the output, the common situation
         # is that package is already installed and OK. If don't, the proxy
         # will print some other message about it
-        if not package_exists(package_folder):
+        if not os.path.exists(package_folder):
             output.info("Installing package %s" % package_id)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
@@ -185,7 +185,7 @@ class ConanInstaller(object):
             if not force_build and not build_mode:
                 output.info("Building package from source as defined by build_policy='missing'")
             try:
-                rmdir(build_folder, conan_file.short_paths)
+                rmdir(build_folder)
                 rmdir(package_folder)
             except Exception as e:
                 raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
@@ -193,8 +193,7 @@ class ConanInstaller(object):
             if force_build:
                 output.warn('Forced build from source')
 
-            self._build_package(export_folder, src_folder, build_folder, package_folder,
-                                conan_file, output)
+            self._build_package(export_folder, src_folder, build_folder, conan_file, output)
 
             # FIXME: Is weak to assign here the recipe_hash
             conan_file.info.recipe_hash = self._client_cache.load_manifest(conan_ref).summary_hash
@@ -253,38 +252,41 @@ Package configuration:
         else:
             save(system_reqs_package_path, output)
 
-    def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file,
-                       output):
+    def _build_package(self, export_folder, src_folder, build_folder, conan_file, output):
         """ builds the package, creating the corresponding build folder if necessary
         and copying there the contents from the src folder. The code is duplicated
         in every build, as some configure processes actually change the source
         code
         """
         output.info('Building your package in %s' % build_folder)
-        if not build_exists(build_folder):
-            config_source(export_folder, src_folder, conan_file, output)
-            output.info('Copying sources to build folder')
+        config_source(export_folder, src_folder, conan_file, output)
+        output.info('Copying sources to build folder')
 
-            def check_max_path_len(src, files):
-                if platform.system() != "Windows":
-                    return []
-                filtered_files = []
-                for the_file in files:
-                    source_path = os.path.join(src, the_file)
-                    # Without storage path, just relative
-                    rel_path = os.path.relpath(source_path, src_folder)
-                    dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
-                    # it is NOT that "/" is counted as "\\" so it counts double
-                    # seems a bug in python, overflows paths near the limit of 260,
-                    if len(dest_path) >= 249:
-                        filtered_files.append(the_file)
-                        output.warn("Filename too long, file excluded: %s" % dest_path)
-                return filtered_files
-            shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
+        def check_max_path_len(src, files):
+            if platform.system() != "Windows":
+                return []
+            filtered_files = []
+            for the_file in files:
+                source_path = os.path.join(src, the_file)
+                # Without storage path, just relative
+                rel_path = os.path.relpath(source_path, src_folder)
+                dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
+                # it is NOT that "/" is counted as "\\" so it counts double
+                # seems a bug in python, overflows paths near the limit of 260,
+                if len(dest_path) >= 249:
+                    filtered_files.append(the_file)
+                    output.warn("Filename too long, file excluded: %s" % dest_path)
+            return filtered_files
+
+        shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
+        logger.debug("Copied to %s" % build_folder)
+        logger.debug("Files copied %s" % os.listdir(build_folder))
         os.chdir(build_folder)
         conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files
+        logger.debug("Writing generators")
         write_generators(conan_file, build_folder, output)
+        logger.debug("Files copied after generators %s" % os.listdir(build_folder))
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
@@ -300,6 +302,7 @@ Package configuration:
             # This is necessary because it is different for user projects
             # than for packages
             conan_file._conanfile_directory = build_folder
+            logger.debug("Call conanfile.build() with files in build folder: %s" % os.listdir(build_folder))
             conan_file.build()
             self._out.writeln("")
             output.success("Package '%s' built" % conan_file.info.package_id())

@@ -1,5 +1,5 @@
 import os
-from conans.util.files import save, load, relative_dirs, path_exists, mkdir
+from conans.util.files import save, load, path_exists, mkdir
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
@@ -83,14 +83,6 @@ class ClientCache(SimplePaths):
             settings.values = self.conan_config.settings_defaults
             self._settings = settings
         return self._settings
-
-    def export_paths(self, conan_reference):
-        ''' Returns all file paths for a conans (relative to conans directory)'''
-        return relative_dirs(self.export(conan_reference))
-
-    def package_paths(self, package_reference, short_paths):
-        ''' Returns all file paths for a package (relative to conans directory)'''
-        return relative_dirs(self.package(package_reference, short_paths))
 
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """

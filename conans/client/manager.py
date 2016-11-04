@@ -2,7 +2,7 @@ import os
 import time
 from collections import OrderedDict
 
-from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, build_exists)
+from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
 from conans.client.deps_builder import DepsBuilder
@@ -360,7 +360,7 @@ If not:
 
         for package_reference in packages:
             build_folder = self._client_cache.build(package_reference, short_paths=None)
-            if not build_exists(build_folder):
+            if not os.path.exists(build_folder):
                 raise NotFoundException("%s: Package binary '%s' folder doesn't exist\n"
                                         "Please read the 'conan package' command help\n"
                                         "Use 'conan install' or 'conan test_package' to build and "
@@ -496,7 +496,10 @@ If not:
         @param channel: Destination channel
         @param remote: install only from that remote
         """
-        copier = PackageCopier(self._client_cache, self._user_io)
+        output = ScopedOutput(str(reference), self._user_io.out)
+        conan_file_path = self._client_cache.conanfile(reference)
+        conanfile = self._loader().load_conan(conan_file_path, output)
+        copier = PackageCopier(self._client_cache, self._user_io, conanfile.short_paths)
         if not package_ids:
             packages = self._client_cache.packages(reference)
             if os.path.exists(packages):

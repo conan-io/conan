@@ -8,6 +8,7 @@ from conans.model.info import ConanInfo
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANINFO
 from conans.util.log import logger
+import os
 
 
 class SearchAdapterABC(object):
@@ -37,16 +38,14 @@ class DiskSearchAdapter(SearchAdapterABC):
         from conans.util.files import list_folder_subdirs
         return list_folder_subdirs(basedir, level)
 
-    def path_exists(self, path, basedir=None):
-        from conans.util.files import path_exists
-        return path_exists(path, basedir)
+    def path_exists(self, path):
+        return os.path.exists(path)
 
     def load(self, filepath):
         from conans.util.files import load
         return load(filepath)
 
     def join_paths(self, *args):
-        import os
         return os.path.join(*args)
 
 
@@ -111,7 +110,7 @@ class DiskSearchManager(SearchManagerABC):
                 info_path = self._adapter.join_paths(self._paths.package(package_reference,
                                                                          short_paths=None),
                                                      CONANINFO)
-                if not self._adapter.path_exists(info_path, self._paths.store):
+                if not self._adapter.path_exists(info_path):
                     raise NotFoundException("")
                 conan_info_content = self._adapter.load(info_path)
                 conan_vars_info = ConanInfo.loads(conan_info_content)
