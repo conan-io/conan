@@ -3,6 +3,10 @@ from conans.tools import SystemPackageTool, replace_in_file
 import os
 from conans.test.utils.test_files import temp_folder
 from conans import tools
+from conans.test.utils.visual_project_files import get_vs_project_files
+from conans.test.tools import TestClient
+from conans.paths import CONANFILE
+import platform
 
 
 class RunnerMock(object):
@@ -117,3 +121,52 @@ class ToolsTest(unittest.TestCase):
         self.assertEquals(runner.command_called, "brew install a_package")
 
         del os.environ["CONAN_SYSREQUIRES_SUDO"]
+
+    def build_vs_project_test(self):
+        if platform.system() != "Windows":
+            return
+        conan_build_vs = """
+from conans import ConanFile, tools, ConfigureEnvironment
+import platform
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "1.2.1"
+    exports = "*"
+    settings = "os", "build_type", "arch", "compiler"
+
+    def build(self):
+        build_command = tools.build_sln_command(self.settings, "MyProject.sln")
+        env = ConfigureEnvironment(self)
+        command = "%s && %s" % (env.command_line_env, build_command)
+        self.output.warn(command)
+        self.run(command)
+
+    def package(self):
+        self.copy(pattern="*.exe")
+
+"""
+        client = TestClient()
+        files = get_vs_project_files()
+        files[CONANFILE] = conan_build_vs
+
+        # Try with x86_64
+        client.save(files)
+        client.run("export lasote/stable")
+        client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86_64")
+        self.assertTrue("Release|x64", client.user_io.out)
+        self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+
+        # Try with x86
+        client.save(files, clean_first=True)
+        client.run("export lasote/stable")
+        client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86")
+        self.assertTrue("Release|x86", client.user_io.out)
+        self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+
+        # Try with x86 debug
+        client.save(files, clean_first=True)
+        client.run("export lasote/stable")
+        client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
+        self.assertTrue("Debug|x86", client.user_io.out)
+        self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
