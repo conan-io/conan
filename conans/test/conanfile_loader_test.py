@@ -14,6 +14,22 @@ from conans.model.scope import Scopes
 
 class ConanLoaderTest(unittest.TestCase):
 
+    def requires_init_test(self):
+        loader = ConanFileLoader(None, Settings(), OptionsValues.loads(""), Scopes())
+        tmp_dir = temp_folder()
+        conanfile_path = os.path.join(tmp_dir, "conanfile.py")
+        conanfile = """from conans import ConanFile
+class MyTest(ConanFile):
+    requires = {}
+    def requirements(self):
+        self.requires("MyPkg/0.1@user/channel")
+"""
+        for requires in ("''", "[]", "()", "None"):
+            save(conanfile_path, conanfile.format(requires))
+            result = loader.load_conan(conanfile_path, output=None, consumer=True)
+            result.requirements()
+            self.assertEqual("MyPkg/0.1@user/channel", str(result.requires))
+
     def conanfile_txt_errors_test(self):
         # Valid content
         file_content = '''[requires}

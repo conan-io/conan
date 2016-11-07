@@ -35,6 +35,8 @@ def create_requirements(conanfile):
         if not hasattr(conanfile, "requires"):
             return Requirements()
         else:
+            if not conanfile.requires:
+                return Requirements()
             if isinstance(conanfile.requires, tuple):
                 return Requirements(*conanfile.requires)
             else:
