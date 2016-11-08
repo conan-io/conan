@@ -492,16 +492,7 @@ path to the CMake binary directory, like this:
                 build_folder = os.path.normpath(os.path.join(current_path, build_folder))
             self._manager.local_package(current_path, build_folder)
 
-    def source(self, *args):
-        """ Calls your conanfile.py "source" method to configure the source directory.
-            I.e., downloads and unzip the package source.
-        """
-        parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("reference", nargs='?', default="", help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
-        parser.add_argument("-f", "--force", default=False, action="store_true", help="force remove the source directory and run again.")
-
-        args = parser.parse_args(*args)
-
+    def _get_reference(self, args):
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -512,8 +503,36 @@ path to the CMake binary directory, like this:
                 reference = os.path.normpath(os.path.join(current_path, args.reference))
             else:
                 reference = args.reference
+        return current_path, reference
 
+    def source(self, *args):
+        """ Calls your conanfile.py "source" method to configure the source directory.
+            I.e., downloads and unzip the package source.
+        """
+        parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
+        parser.add_argument("reference", nargs='?', default="", help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
+        parser.add_argument("-f", "--force", default=False, action="store_true", help="force remove the source directory and run again.")
+
+        args = parser.parse_args(*args)
+
+        current_path, reference = self._get_reference(args)
         self._manager.source(current_path, reference, args.force)
+
+    def imports(self, *args):
+        """ Executes only the import functionality of the conanfile (txt or py). It requires
+        to have been previously installed and have a conanbuildinfo.txt generated file
+        """
+        parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
+        parser.add_argument("reference", nargs='?', default="",
+                            help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
+        parser.add_argument("-d", "--dest",
+                            help="optional destination base directory, current dir by default")
+
+        args = parser.parse_args(*args)
+
+        dest_folder = args.dest
+        current_path, reference = self._get_reference(args)
+        self._manager.imports(current_path, reference, dest_folder)
 
     def export(self, *args):
         """ Copies the package recipe (conanfile.py and associated files) to your local store,

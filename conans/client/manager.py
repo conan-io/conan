@@ -307,7 +307,7 @@ If not:
             content = normalize(conanfile.info.dumps())
             save(os.path.join(current_path, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
-            local_installer = FileImporter(deps_graph, self._client_cache, current_path)
+            local_installer = FileImporter(conanfile, current_path)
             conanfile.copy = local_installer
             conanfile.imports()
             copied_files = local_installer.execute()
@@ -358,6 +358,28 @@ If not:
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             config_source(export_folder, src_folder, conanfile, output, force)
+
+    def imports(self, current_path, reference, dest_folder):
+        if not isinstance(reference, ConanFileReference):
+            output = ScopedOutput("PROJECT", self._user_io.out)
+            conan_file_path = os.path.join(reference, CONANFILE)
+            if os.path.exists(conan_file_path):
+                conanfile = self._loader().load_conan(conan_file_path, output, consumer=True)
+            else:
+                conan_file_path = os.path.join(reference, CONANFILE_TXT)
+                conanfile = self._loader().load_conan_txt(conan_file_path, output)
+        else:
+            output = ScopedOutput(str(reference), self._user_io.out)
+            conan_file_path = self._client_cache.conanfile(reference)
+            conanfile = self._loader().load_conan(conan_file_path, output)
+
+        self._load_deps_info(current_path, conanfile, output)
+        local_installer = FileImporter(conanfile, dest_folder or current_path)
+        conanfile.copy = local_installer
+        conanfile.imports()
+        copied_files = local_installer.execute()
+        import_output = ScopedOutput("%s imports()" % output.scope, output)
+        report_copied_files(copied_files, import_output)
 
     def local_package(self, current_path, build_folder):
         if current_path == build_folder:
