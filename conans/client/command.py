@@ -85,6 +85,7 @@ class Command(object):
 --build            Build all from sources, do not use binary packages.
 --build=never      Default option. Never build, use binary packages or fail if a binary package is not found.
 --build=missing    Build from code if a binary package is not found.
+--build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
 --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 ''')
 
@@ -103,6 +104,8 @@ class Command(object):
         #         False if building is forbidden
         #         A list with patterns: Will force build matching libraries,
         #                               will look for the package for the rest
+        #         "outdated" if will build when the package is not generated with
+        #                    the current exported recipe
 
         if isinstance(build_param, list):
             if len(build_param) == 0:  # All packages from source
@@ -111,6 +114,8 @@ class Command(object):
                 return False  # Default
             elif len(build_param) == 1 and build_param[0] == "missing":
                 return True
+            elif len(build_param) == 1 and build_param[0] == "outdated":
+                return "outdated"
             else:  # A list of expressions to match (if matches, will build from source)
                 return ["%s*" % ref_expr for ref_expr in build_param]
         else:
@@ -252,6 +257,7 @@ path to the CMake binary directory, like this:
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
             # convert to list from ItemViews required for python3
+            conanfile.requirements()
             reqs = list(conanfile.requires.items())
             first_dep = reqs[0][1].conan_reference
         except Exception:
@@ -431,8 +437,8 @@ path to the CMake binary directory, like this:
                            scopes=scopes)
 
     def build(self, *args):
-        """ calls your project conanfile.py "build" method.
-            EX: conan build ./my_project
+        """ Calls your project conanfile.py "build" method.
+            E.g. conan build ./my_project
             Intended for package creators, requires a conanfile.py.
         """
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
@@ -450,18 +456,23 @@ path to the CMake binary directory, like this:
         self._manager.build(root_path, current_path, filename=args.file, profile_name=args.profile)
 
     def package(self, *args):
-        """ calls your conanfile.py "package" method for a specific package or
-            regenerates the existing package's manifest.
-            It will not create a new package, use 'install' or 'test_package' instead.
+        """ Calls your conanfile.py "package" method for a specific package recipe.
+            It will not create a new package, use 'install' or 'test_package' instead for
+            packages in the conan local cache, or `build' for conanfile.py in user space.
             Intended for package creators, for regenerating a package without
             recompiling the source, i.e. for troubleshooting,
             and fixing the package() method, not normal operation. It requires
             the package has been built locally, it will not re-package otherwise.
-            e.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
+            E.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
+
+            When used in a user space project, it will execute from the build folder specified
+            as parameter, and the current directory. This is useful while creating package recipes
+            or just for extracting artifacts from the current project, without even being a package
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("reference", help='package recipe reference name. '
-                            'e.g., MyPackage/1.2@user/channel')
+        parser.add_argument("reference", help='package recipe reference '
+                            'e.g. MyPkg/0.1@user/channel, or local path to the build folder'
+                            ' (relative or absolute)')
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3'
@@ -469,33 +480,43 @@ path to the CMake binary directory, like this:
 
         args = parser.parse_args(*args)
 
+        current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
+            self._manager.package(reference, args.package)
         except:
-            raise ConanException("Invalid package recipe reference. "
-                                 "e.g., MyPackage/1.2@user/channel")
-
-        self._manager.package(reference, args.package)
+            if "@" in args.reference:
+                raise
+            build_folder = args.reference
+            if not os.path.isabs(build_folder):
+                build_folder = os.path.normpath(os.path.join(current_path, build_folder))
+            self._manager.local_package(current_path, build_folder)
 
     def source(self, *args):
         """ Calls your conanfile.py "source" method to configure the source directory.
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("reference", help="package recipe reference name. e.g., zlib-ng/1.2.8@plex/stable")
+        parser.add_argument("reference", nargs='?', default="", help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
         parser.add_argument("-f", "--force", default=False, action="store_true", help="force remove the source directory and run again.")
 
         args = parser.parse_args(*args)
 
+        current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
-            raise ConanException("Invalid package recipe reference. e.g., zlib-ng/1.2.8@plex/stable")
+            if "@" in args.reference:
+                raise
+            if not os.path.isabs(args.reference):
+                reference = os.path.normpath(os.path.join(current_path, args.reference))
+            else:
+                reference = args.reference
 
-        self._manager.source(reference, args.force)
+        self._manager.source(current_path, reference, args.force)
 
     def export(self, *args):
-        """ copies the package recipe (conanfile.py and associated files) to your local store,
+        """ Copies the package recipe (conanfile.py and associated files) to your local store,
         where it can be shared and reused in other projects.
         From that store, it can be uploaded to any remote with "upload" command.
         """

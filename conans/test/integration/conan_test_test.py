@@ -14,9 +14,9 @@ class ConanTestTest(unittest.TestCase):
             client.run("export lasote/stable")
 
     def conan_test_test(self):
-        client = TestClient()
-        files = cpp_hello_conan_files("Hello0", "0.1")
-        test_conanfile = '''
+
+        # With classic requires
+        conanfile = '''
 from conans import ConanFile, CMake
 import os
 
@@ -34,6 +34,34 @@ class HelloReuseConan(ConanFile):
         # equal to ./bin/greet, but portable win: .\bin\greet
         self.run(os.sep.join([".","bin", "greet"]))
         '''
+        self._test_with_conanfile(conanfile)
+
+        # With requirements
+        conanfile = '''
+from conans import ConanFile, CMake
+import os
+
+class HelloReuseConan(ConanFile):
+    settings = "os", "compiler", "build_type", "arch"
+    generators = "cmake"
+
+    def requirements(self):
+        self.requires("Hello0/0.1@ lasote/stable")
+
+    def build(self):
+        cmake = CMake(self.settings)
+        self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
+        self.run("cmake --build . %s" % cmake.build_config)
+
+    def test(self):
+        # equal to ./bin/greet, but portable win: .\bin\greet
+        self.run(os.sep.join([".","bin", "greet"]))
+        '''
+        self._test_with_conanfile(conanfile)
+
+    def _test_with_conanfile(self, test_conanfile):
+        client = TestClient()
+        files = cpp_hello_conan_files("Hello0", "0.1")
 
         cmakelist = """PROJECT(MyHello)
 cmake_minimum_required(VERSION 2.8)

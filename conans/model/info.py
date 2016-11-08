@@ -178,13 +178,14 @@ class ConanInfo(object):
         result.scope = None
         result.requires.add(indirect_requires)
         result.full_requires.extend(indirect_requires)
+        result.recipe_hash = None
         result._non_devs_requirements = non_devs_requirements  # Can be None
         return result
 
     @staticmethod
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
-                                     "requires", "full_requires", "scope"])
+                                     "requires", "full_requires", "scope", "recipe_hash"])
 
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
@@ -193,6 +194,7 @@ class ConanInfo(object):
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = RequirementsList.loads(parser.full_requires)
         result.requires = RequirementsInfo(result.full_requires, None)
+        result.recipe_hash = parser.recipe_hash or None
         # TODO: Missing handling paring of requires, but not necessary now
         result.scope = Scopes.loads(parser.scope)
         return result
@@ -217,6 +219,7 @@ class ConanInfo(object):
         result.append("\n[scope]")
         if self.scope:
             result.append(indent(self.scope.dumps()))
+        result.append("\n[recipe_hash]\n%s" % self.recipe_hash)
         return '\n'.join(result)
 
     def __eq__(self, other):
@@ -258,19 +261,9 @@ class ConanInfo(object):
                            "options": self.options.serialize(),
                            "full_options": self.full_options.serialize(),
                            "requires": self.requires.serialize(),
-                           "full_requires": self.full_requires.serialize()}
+                           "full_requires": self.full_requires.serialize(),
+                           "recipe_hash": self.recipe_hash}
         return conan_info_json
-
-    @staticmethod
-    def deserialize(data):
-        res = ConanInfo()
-        res.settings = Values.deserialize(data["settings"])
-        res.full_settings = Values.deserialize(data["full_settings"])
-        res.options = OptionsValues.deserialize(data["options"])
-        res.full_options = OptionsValues.deserialize(data["full_options"])
-        res.requires = RequirementsInfo.deserialize(data["requires"])
-        res.full_requires = RequirementsList.deserialize(data["full_requires"])
-        return res
 
     def serialize_min(self):
         """
@@ -278,5 +271,6 @@ class ConanInfo(object):
         """
         conan_info_json = {"settings": dict(self.settings.serialize()),
                            "options": dict(self.options.serialize()["options"]),
-                           "full_requires": self.full_requires.serialize()}
+                           "full_requires": self.full_requires.serialize(),
+                           "recipe_hash": self.recipe_hash}
         return conan_info_json

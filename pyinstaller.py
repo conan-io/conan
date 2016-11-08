@@ -39,7 +39,9 @@ def pyinstall(source_folder):
 
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
-    subprocess.call('python pyinstaller.py -y -p %s --console %s' % (source_folder, conan_path),
+    hidden = "--hidden-import=glob"
+    subprocess.call('python pyinstaller.py -y -p %s --console %s %s'
+                    % (source_folder, conan_path, hidden),
                     cwd=pyinstaller_path, shell=True)
     _run_bin(pyinstaller_path)
 

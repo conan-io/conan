@@ -1,11 +1,12 @@
 from conans.model import Generator
+from conans.paths import CONANENV
 
 
 class ConanEnvGenerator(Generator):
 
     @property
     def filename(self):
-        return "conanenv.txt"
+        return CONANENV
 
     @property
     def content(self):

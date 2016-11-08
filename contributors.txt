@@ -4,4 +4,15 @@ Contributors
 This is the list of contributors to this project source code, in alphabetical order. 
 Many thanks to all of them!
 
-- 
+- Bocanegra Algarra, Raul (raul.bocanegra.algarra@gmail.com)
+- Dauphin, Loïc (astralien3000@yahoo.fr, @astralien3000)
+- Díaz Más, Luis (piponazo@gmail, @pipotux)
+- Dragly, Svenn-Arne (dragly.org)
+- Hieta, Tobias (tobias@plex.tv, @tobiashieta)
+- Hochstedler, Reid
+- Ivek, Tomislav (tomislav.ivek@gmail.com, @tomivek)
+- Kourkoulis, Dimitri (@dimi309)
+- Lee, Jeongseok (jslee02@gmail.com, @jslee02)
+- Márki, Róbert (gsmiko@gmail.com, @robertmrk)
+- Ray, Chris (chris@xaltotun.com)
+- Sechet, Olivier (osechet@gmail.com)
