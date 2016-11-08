@@ -34,6 +34,28 @@ def environment_append(env_vars):
     os.environ.update(old_env)
 
 
+def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
+    '''
+    Use example:
+        build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
+        env = ConfigureEnvironment(self)
+        command = "%s && %s" % (env.command_line_env, build_command)
+        self.run(command)
+    '''
+    targets = targets or []
+    command = "devenv %s /upgrade && " % sln_path if upgrade_project else ""
+    command += "msbuild %s /p:Configuration=%s" % (sln_path, settings.build_type)
+    if str(settings.arch) in ["x86_64", "x86"]:
+        command += ' /p:Platform='
+        command += '"x64"' if settings.arch == "x86_64" else '"x86"'
+    elif "ARM" in str(settings.arch).upper():
+        command += ' /p:Platform="ARM"'
+
+    if targets:
+        command += " /target:%s" % ";".join(targets)
+    return command
+
+
 def vcvars_command(settings):
     param = "x86" if settings.arch == "x86" else "amd64"
     existing_version = os.environ.get("VisualStudioVersion")
