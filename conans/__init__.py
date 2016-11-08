@@ -9,5 +9,5 @@ from conans.client.configure_environment import ConfigureEnvironment
 from conans.util.files import load
 import os
 
-__version__ = '0.15.0-dev'
+__version__ = '0.15.0'
 
