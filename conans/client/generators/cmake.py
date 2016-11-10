@@ -72,6 +72,22 @@ class CMakeGenerator(Generator):
                                     name=self.conanfile.name, version=self.conanfile.version)
         sections.append(all_flags)
 
+        # TARGETS
+        template = """
+add_library({name} INTERFACE)
+set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_LIBS_{uname}}})
+set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}})
+set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_DEFINES_{uname}}})
+set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
+set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
+{deps}
+"""
+        existing_deps = self.deps_build_info.deps
+        for dep_name, dep_info in self.deps_build_info.dependencies:
+            use_deps = [d for d in dep_info.deps if d in existing_deps]
+            deps = "" if not use_deps else "target_link_libraries(%s INTERFACE %s)" % (dep_name, " ".join(use_deps))
+            sections.append(template.format(name=dep_name, deps=deps, uname=dep_name.upper()))
+
         # MACROS
         sections.append(self._aux_cmake_test_setup())
 
@@ -85,6 +101,13 @@ class CMakeGenerator(Generator):
     conan_set_find_paths()
 endmacro()
 
+macro(conan_targets_setup)
+    conan_check_compiler()
+    conan_output_dirs_setup()
+    conan_flags_target_setup()
+    conan_set_find_paths()
+endmacro()
+
 macro(conan_set_find_paths)
     # CMake can find findXXX.cmake files in the root of packages
     set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
@@ -92,6 +115,57 @@ macro(conan_set_find_paths)
     # Make find_package() to work
     set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
 endmacro()
+
+macro(conan_flags_target_setup)
+
+    link_directories(${CONAN_LIB_DIRS})
+
+    set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
+    set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
+
+    if(APPLE)
+        # https://cmake.org/Wiki/CMake_RPATH_handling
+        # CONAN GUIDE: All generated libraries should have the id and dependencies to other
+        # dylibs without path, just the name, EX:
+        # libMyLib1.dylib:
+        #     libMyLib1.dylib (compatibility version 0.0.0, current version 0.0.0)
+        #     libMyLib0.dylib (compatibility version 0.0.0, current version 0.0.0)
+        #     /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.0.0)
+        #     /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1197.1.1)
+        set(CMAKE_SKIP_RPATH 1)  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
+                                 # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
+    endif()
+    if(CONAN_LINK_RUNTIME)
+        if(DEFINED CMAKE_CXX_FLAGS_RELEASE)
+            string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
+        endif()
+        if(DEFINED CMAKE_CXX_FLAGS_DEBUG)
+            string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
+        endif()
+        if(DEFINED CMAKE_C_FLAGS_RELEASE)
+            string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
+        endif()
+        if(DEFINED CMAKE_C_FLAGS_DEBUG)
+            string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
+        endif()
+    endif()
+    if(DEFINED CONAN_LIBCXX)
+        message(STATUS "Conan C++ stdlib: ${CONAN_LIBCXX}")
+        if(CONAN_COMPILER STREQUAL "clang" OR CONAN_COMPILER STREQUAL "apple-clang")
+            if(CONAN_LIBCXX STREQUAL "libstdc++" OR CONAN_LIBCXX STREQUAL "libstdc++11" )
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
+            elseif(CONAN_LIBCXX STREQUAL "libc++")
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+            endif()
+        endif()
+        if(CONAN_LIBCXX STREQUAL "libstdc++11")
+            add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+        elseif(CONAN_LIBCXX STREQUAL "libstdc++")
+            add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+        endif()
+    endif()
+endmacro()
+
 
 macro(conan_flags_setup)
     if(CONAN_SYSTEM_INCLUDES)

@@ -134,6 +134,25 @@ target_link_libraries(say_hello hello{name})
 
 """ % BUILD_INFO_CMAKE
 
+cmake_targets_file = """
+project(MyHello)
+cmake_minimum_required(VERSION 2.8.12)
+
+include(${{CMAKE_BINARY_DIR}}/%s)
+
+add_definitions(-DCONAN_LANGUAGE=${{CONAN_LANGUAGE}})
+message("HELLO LANGUAGE " ${{CONAN_LANGUAGE}})
+conan_targets_setup()
+
+add_library(hello{name} hello{ext})
+target_link_libraries(hello{name} PUBLIC {targets})
+set_target_properties(hello{name}  PROPERTIES POSITION_INDEPENDENT_CODE ON)
+add_executable(say_hello main{ext})
+target_link_libraries(say_hello hello{name})
+
+
+""" % BUILD_INFO_CMAKE
+
 body = r"""#include "hello{name}.h"
 
 #include <iostream>
@@ -185,8 +204,8 @@ executable = """
 """
 
 
-def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
-                           msg=None, dll_export=False, need_patch=False, pure_c=False):
+def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=None,
+                           dll_export=False, need_patch=False, pure_c=False, targets=False):
     """
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
     param deps: [] list of integers, defining which dependencies this conans
@@ -228,7 +247,11 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False,
                                                msg=msg)
 
     # Naive approximation, NO DEPS
-    ret["CMakeLists.txt"] = cmake_file.format(name=name, ext=ext)
+    if targets:
+        ret["CMakeLists.txt"] = cmake_targets_file.format(name=name, ext=ext,
+                                                          targets=" ".join(deps))
+    else:
+        ret["CMakeLists.txt"] = cmake_file.format(name=name, ext=ext)
     if pure_c:
         ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project(MyHello)",
                                                               "project(MyHello C)")
