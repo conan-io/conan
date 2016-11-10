@@ -530,7 +530,10 @@ If not:
         if isinstance(pattern_or_reference, ConanFileReference):
             packages_props = adapter.search_packages(pattern_or_reference, packages_query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
-            recipe_hash = self._client_cache.load_manifest(pattern_or_reference).summary_hash
+            try:
+                recipe_hash = self._client_cache.load_manifest(pattern_or_reference).summary_hash
+            except IOError:  # It could not exist in local
+                recipe_hash = None
             printer.print_search_packages(ordered_packages, pattern_or_reference,
                                           recipe_hash, packages_query)
         else:
