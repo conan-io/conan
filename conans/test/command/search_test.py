@@ -227,3 +227,8 @@ class SearchTest(unittest.TestCase):
         self.client.run('search helloTest/1.4.10@fenix/stable -q "use_OpenGL=True AND arch=x86"')
         self.assertIn("There are no packages for reference 'helloTest/1.4.10@fenix/stable' "
                       "matching the query 'use_OpenGL=True AND arch=x86'", self.client.user_io.out)
+
+    def search_with_no_local_test(self):
+        client = TestClient()
+        client.run("search nonexist/1.0@lasote/stable")
+        self.assertIn("There are no packages", self.client.user_io.out)

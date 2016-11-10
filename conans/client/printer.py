@@ -162,7 +162,9 @@ class Printer(object):
                         for key in sorted(attrs):
                             self._print_colored_line(key, indent=3)
             package_recipe_hash = properties.get("recipe_hash", None)
-            self._print_colored_line("outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
+            # Always compare outdated with local recipe, simplification, if a remote check is needed install recipe first
+            if recipe_hash:
+                self._print_colored_line("outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
             self._out.writeln("")
 
     def _print_colored_line(self, text, value=None, indent=0):
