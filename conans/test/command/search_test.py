@@ -232,5 +232,3 @@ class SearchTest(unittest.TestCase):
         client = TestClient()
         client.run("search nonexist/1.0@lasote/stable")
         self.assertIn("There are no packages", self.client.user_io.out)
-
-        
