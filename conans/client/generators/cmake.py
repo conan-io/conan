@@ -3,13 +3,16 @@ from conans.paths import BUILD_INFO_CMAKE
 
 
 class DepsCppCmake(object):
-    def __init__(self, deps_cpp_info):
+    def __init__(self, deps_cpp_info, use_define_token=True):
         self.include_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
                                              for p in deps_cpp_info.include_paths)
         self.lib_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
                                          for p in deps_cpp_info.lib_paths)
         self.libs = " ".join(deps_cpp_info.libs)
-        self.defines = "\n\t\t\t".join("-D%s" % d for d in deps_cpp_info.defines)
+        if use_define_token:
+            self.defines = "\n\t\t\t".join("-D%s" % d for d in deps_cpp_info.defines)
+        else:
+            self.defines = "\n\t\t\t".join("%s" % d for d in deps_cpp_info.defines)
         self.cppflags = " ".join(deps_cpp_info.cppflags)
         self.cflags = " ".join(deps_cpp_info.cflags)
         self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
@@ -42,7 +45,7 @@ class CMakeGenerator(Generator):
                         'set(CONAN_C_FLAGS_{dep} "{deps.cflags}")\n')
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            deps = DepsCppCmake(dep_cpp_info)
+            deps = DepsCppCmake(dep_cpp_info, False)
             dep_flags = template_dep.format(dep=dep_name.upper(),
                                             deps=deps)
             sections.append(dep_flags)
@@ -74,19 +77,19 @@ class CMakeGenerator(Generator):
 
         # TARGETS
         template = """
-add_library({name} INTERFACE)
-set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_LIBS_{uname}}})
+add_library({name} INTERFACE IMPORTED)
+set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_LIBS_{uname}}} {deps})
 set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}})
 set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_DEFINES_{uname}}})
 set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
 set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
-{deps}
+
 """
         existing_deps = self.deps_build_info.deps
         for dep_name, dep_info in self.deps_build_info.dependencies:
-            use_deps = [d for d in dep_info.deps if d in existing_deps]
-            deps = "" if not use_deps else "target_link_libraries(%s INTERFACE %s)" % (dep_name, " ".join(use_deps))
-            sections.append(template.format(name=dep_name, deps=deps, uname=dep_name.upper()))
+            use_deps = ["x::"+d for d in dep_info.deps if d in existing_deps]
+            deps = "" if not use_deps else " ".join(use_deps)
+            sections.append(template.format(name="x::"+dep_name, deps=deps, uname=dep_name.upper()))
 
         # MACROS
         sections.append(self._aux_cmake_test_setup())
