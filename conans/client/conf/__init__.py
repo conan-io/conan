@@ -23,7 +23,7 @@ compiler:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14"]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0"]
