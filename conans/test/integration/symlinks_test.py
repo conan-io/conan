@@ -79,5 +79,7 @@ class SymLinksTest(unittest.TestCase):
 
         client.run("upload Hello/0.1@lasote/stable --all")
         client.run('remove "*" -f')
-        client.run("install -f=conanfile.txt")
+        client.save({"conanfile.txt": test_conanfile}, clean_first=True)
+        client.run("install")
         self._check(client, ref, build=False)
+
