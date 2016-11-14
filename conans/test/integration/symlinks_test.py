@@ -1,6 +1,6 @@
 import unittest
 from conans.test.tools import TestClient
-from conans.util.files import load
+from conans.util.files import load, save
 from conans.model.ref import PackageReference
 import os
 import platform
@@ -16,6 +16,7 @@ class SymLinksTest(unittest.TestCase):
         conanfile = """
 from conans import ConanFile
 from conans.util.files import save
+import os
 
 class HelloConan(ConanFile):
     name = "Hello"
@@ -28,24 +29,27 @@ class HelloConan(ConanFile):
     def package(self):
         self.copy("*.txt*")
 """
-        test_conanfile = """
-from conans import ConanFile, CMake
-import os
+        test_conanfile = """[requires]
+Hello/0.1@lasote/stable
 
-class HelloReuseConan(ConanFile):
-    requires = "Hello/0.1@lasote/stable"
-
-    def imports(self):
-        self.copy("*")
-
-    def test(self):
-        self.conanfile_directory
+[imports]
+., * -> .
 """
         client.save({"conanfile.py": conanfile,
-                     "test/conanfile.py": test_conanfile})
-        client.run("test_package")
+                     "conanfile.txt": test_conanfile})
+        client.run("export lasote/stable")
+        client.run("install . --build -f=conanfile.txt")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
-        file1 = load(os.path.join(client.paths.package(ref), "file1.txt"))
-        print file1
+        for base in [client.paths.package(ref), client.paths.build(ref), client.current_folder]:
+            filepath = os.path.join(base, "file1.txt")
+            link = os.path.join(base, "file1.txt.1")
+            self.assertEqual(os.readlink(link), "file1.txt")
+            file1 = load(filepath)
+            self.assertEqual("Hello1", file1)
+            file1 = load(link)
+            self.assertEqual("Hello1", file1)
+            # Save any different string, random, or the base path
+            save(filepath, base)
+            self.assertEqual(load(link), base)
