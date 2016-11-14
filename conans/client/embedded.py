@@ -1,7 +1,5 @@
 from conans.errors import ConanException
 from conans.paths import conan_expand_user
-from conans.client.paths import ConanPaths
-from conans.client.output import ConanOutput
 from conans import tools
 
 import yaml
@@ -55,12 +53,12 @@ class EmbeddedSettingsParser:
 class Embedded:
     # VERY DIRTY !
     user_folder = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
-    out = ConanOutput(sys.stdout, True)
-    paths = ConanPaths(user_folder, None, out)
-    if not os.path.exists(paths.embedded_settings_path):
+    conan_folder = os.path.join(user_folder, ".conan")
+    embedded_settings_path = os.path.join(conan_folder, "conan-embedded-settings-master")
+    if not os.path.exists(embedded_settings_path):
         tools.download("https://github.com/astralien3000/conan-embedded-settings/archive/master.zip", "embedded-settings.zip")
-        tools.unzip("embedded-settings.zip", paths.conan_folder)
-    settings = EmbeddedSettingsParser(os.path.join(paths.embedded_settings_path, "test.yml"))
+        tools.unzip("embedded-settings.zip", conan_folder)
+    settings = EmbeddedSettingsParser(os.path.join(embedded_settings_path, "test.yml"))
 
     def __init__(self, settings):
         self.target = None
