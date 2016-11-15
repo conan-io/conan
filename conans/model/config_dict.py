@@ -71,7 +71,7 @@ class ConfigItem(object):
         if other is None:
             return self._value is None
         other = str(other)
-        if other not in self.values_range:
+        if self._definition != "ANY" and other not in self.values_range:
             raise ConanException(bad_value_msg(self._name, other, self.values_range))
         return other == self.__str__()
 
