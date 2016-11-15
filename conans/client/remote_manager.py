@@ -7,7 +7,7 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError
-from conans.util.files import tar_extract, rmdir, relative_dirs
+from conans.util.files import tar_extract, relative_dirs
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
     rm_conandir
@@ -200,8 +200,13 @@ def compress_files(files, name, excluded, dest_dir):
             info = tarfile.TarInfo(name=name)
             info.size = os.stat(abs_path).st_size
             info.mode = os.stat(abs_path).st_mode
-            with open(abs_path, 'rb') as file_handler:
-                tar.addfile(tarinfo=info, fileobj=file_handler)
+            if os.path.islink(abs_path):
+                info.type = tarfile.SYMTYPE
+                info.linkname = os.readlink(abs_path)
+                tar.addfile(tarinfo=info)
+            else:
+                with open(abs_path, 'rb') as file_handler:
+                    tar.addfile(tarinfo=info, fileobj=file_handler)
 
         for filename, abs_path in files.items():
             if filename not in excluded:
