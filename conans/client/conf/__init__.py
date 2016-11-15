@@ -35,20 +35,7 @@ compiler:
 
 build_type: [None, Debug, Release]
 
-target:
-    native:
-    mcu:
-        mcu: [
-            stm32f407vg,
-            atmega2560,
-            atmega328p,
-        ]
-    board:
-        board: [
-            stm32f4_discovery,
-            arduino_mega,
-            arduino_uno,
-        ]
+target: ANY
 """
 
 
