@@ -32,9 +32,9 @@ class EmbeddedSettingsParser:
         target = str(target)
         if not self.data.has_key(target):
             return set()
+        ret = set([target])
         if self.data[target] == None:
-            return set()
-        ret = set()
+            return ret
         for p in self.data[target]:
             ret.add(p)
             ret = ret.union(self.get_groups(p))
