@@ -212,7 +212,7 @@ def tar_extract(fileobj, destination_dir):
         base = realpath(abspath("."))
 
         for finfo in members:
-            if badpath(finfo.name, base) or finfo.issym() or finfo.islnk():
+            if badpath(finfo.name, base) or finfo.islnk():
                 continue
             else:
                 # Fixes unzip a windows zipped file in linux
