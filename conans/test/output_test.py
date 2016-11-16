@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import unittest
 from conans.client.output import ConanOutput
 from six import StringIO
@@ -8,6 +9,8 @@ import zipfile
 import os
 from conans.util.files import save, load
 import sys
+from conans.test.tools import TestClient
+from conans.client.userio import UserIO
 
 
 class OutputTest(unittest.TestCase):
@@ -19,6 +22,23 @@ class OutputTest(unittest.TestCase):
                             "because it is so long it doesn't fit in the output terminal")
         self.assertIn("This is a very long line that ha ... esn't fit in the output terminal",
                       stream.getvalue())
+
+    def error_test(self):
+        client = TestClient()
+        conanfile = """
+# -*- coding: utf-8 -*-
+
+from conans import ConanFile
+from conans.errors import ConanException
+
+class PkgConan(ConanFile):
+    def source(self):
+       self.output.info("TEXT ÑÜíóúéáàèòù абвгдежзийкл 做戏之说  ENDTEXT")
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("source")
+        self.assertIn("TEXT", client.user_io.out)
+        self.assertIn("ENDTEXT", client.user_io.out)
 
     def print_progress_test(self):
         stream = StringIO()
