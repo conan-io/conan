@@ -60,10 +60,15 @@ class ConanOutput(object):
         if self._color and (front or back):
             color = "%s%s" % (front or '', back or '')
             end = (Style.RESET_ALL + "\n") if newline else Style.RESET_ALL  # @UndefinedVariable
-            self._stream.write("%s%s%s" % (color, data, end))
+            data = "%s%s%s" % (color, data, end)
         else:
             if newline:
                 data = "%s\n" % data
+
+        try:
+            self._stream.write(data)
+        except UnicodeError:
+            data = data.encode("utf8").decode("ascii", "ignore")
             self._stream.write(data)
         self._stream.flush()
 
