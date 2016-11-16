@@ -14,14 +14,14 @@ class FileTreeManifest(object):
 
     def __repr__(self):
         ret = "%s" % (self.time)
-        for filepath, file_md5 in self.file_sums.items():
+        for filepath, file_md5 in sorted(self.file_sums.items()):
             ret += "\n%s: %s" % (filepath, file_md5)
         return ret
 
     @property
     def summary_hash(self):
         ret = ""  # Do not include the timestamp in the summary hash
-        for filepath, file_md5 in self.file_sums.items():
+        for filepath, file_md5 in sorted(self.file_sums.items()):
             ret += "\n%s: %s" % (filepath, file_md5)
         return md5(ret)
 
