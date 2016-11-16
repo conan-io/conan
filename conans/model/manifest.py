@@ -13,16 +13,16 @@ class FileTreeManifest(object):
         self.file_sums = file_sums
 
     def __repr__(self):
-        ret = "%s" % (self.time)
+        ret = "%s\n" % (self.time)
         for filepath, file_md5 in sorted(self.file_sums.items()):
-            ret += "\n%s: %s" % (filepath, file_md5)
+            ret += "%s: %s\n" % (filepath, file_md5)
         return ret
 
     @property
     def summary_hash(self):
         ret = ""  # Do not include the timestamp in the summary hash
         for filepath, file_md5 in sorted(self.file_sums.items()):
-            ret += "\n%s: %s" % (filepath, file_md5)
+            ret += "%s: %s\n" % (filepath, file_md5)
         return md5(ret)
 
     @staticmethod
@@ -34,8 +34,9 @@ class FileTreeManifest(object):
         time = int(tokens[0])
         file_sums = {}
         for md5line in tokens[1:]:
-            filename, file_md5 = md5line.split(": ")
-            file_sums[filename] = file_md5
+            if md5line:
+                filename, file_md5 = md5line.split(": ")
+                file_sums[filename] = file_md5
         return FileTreeManifest(time, file_sums)
 
     @classmethod
