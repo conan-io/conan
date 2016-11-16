@@ -19,6 +19,12 @@ class SettingsTest(unittest.TestCase):
                 "os": ["Windows", "Linux"]}
         self.sut = Settings(data)
 
+    def any_test(self):
+        data = {"target": "ANY"}
+        sut = Settings(data)
+        sut.target = "native"
+        self.assertTrue(sut.target == "native")
+
     def remove_test(self):
         self.sut.remove("compiler")
         self.sut.os = "Windows"
