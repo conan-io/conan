@@ -47,6 +47,6 @@ class ConanUploader(object):
         local_digest = self._paths.load_manifest(conan_ref)
 
         if remote_conan_digest.time > local_digest.time:
-            raise ConanException("Remote conans is newer than local conans: "
+            raise ConanException("Remote recipe is newer than local recipe: "
                                  "\n Remote date: %s\n Local date: %s" %
                                  (remote_conan_digest.time, local_digest.time))
