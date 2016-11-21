@@ -762,10 +762,7 @@ path to the CMake binary directory, like this:
             logger.error(exc)
             errors = True
         except ConanException as exc:
-            try:
-                msg = unicode(exc)
-            except:
-                msg = str(exc)
+            msg = str(exc)
 #             import traceback
 #             logger.debug(traceback.format_exc())
             errors = True
