@@ -71,13 +71,15 @@ class DiskSearchManager(SearchManagerABC):
         self._adapter = disk_search_adapter
 
     def search(self, pattern=None, ignorecase=True):
+        print "PATTERN ", pattern
         # Conan references in main storage
         if pattern:
             pattern = translate(pattern)
+            print "TRANSLATED pattern ", pattern
             pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
         subdirs = self._adapter.list_folder_subdirs(basedir=self._paths.store, level=4)
-
+        print "SUBDIRS ", subdirs
         if not pattern:
             return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
         else:

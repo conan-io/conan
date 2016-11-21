@@ -41,7 +41,7 @@ class PathsTest(unittest.TestCase):
                          os.path.join(paths.store, expected_base, PACKAGES_FOLDER,
                                       "456fa678eae68"))
 
-    def basic_test2(self):
+    def _setup_search(self):
         folder = temp_folder()
         paths = SimplePaths(folder)
         search_adapter = DiskSearchAdapter()
@@ -92,6 +92,9 @@ class PathsTest(unittest.TestCase):
         conan_ref5 = ConanFileReference.loads("SDL_fake/1.10@lasote/testing")
         os.makedirs("%s/%s" % (root_folder5, EXPORT_FOLDER))
 
+    def basic_test2(self):
+
+
         # Case insensitive searches
         search_adapter = DiskSearchAdapter()
         search_manager = DiskSearchManager(paths, search_adapter)
@@ -109,3 +112,6 @@ class PathsTest(unittest.TestCase):
         # Case sensitive search
         self.assertEqual(str(search_manager.search(pattern="SDL*", ignorecase=False)[0]),
                          str(conan_ref5))
+
+        found = search_manager.search("sdl/*@lasote/testing")
+        print found
