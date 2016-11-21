@@ -63,8 +63,8 @@ setup(
     url='https://conan.io',
 
     # Author details
-    author='Luis Martinez de Bartolome',
-    author_email='lasote@gmail.com',
+    author='JFrog LTD',
+    author_email='luism@jfrog.com',
 
     # Choose your license
     license='MIT',
