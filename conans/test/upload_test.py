@@ -209,7 +209,7 @@ class TestConan(ConanFile):
         save(digest_path, str(fake_digest))
 
         self.client.run('upload %s' % str(self.conan_ref), ignore_error=True)
-        self.assertIn("Remote conans is newer than local conans", self.client.user_io.out)
+        self.assertIn("Remote recipe is newer than local recipe", self.client.user_io.out)
 
         self.client.run('upload %s --force' % str(self.conan_ref))
         self.assertIn("Uploading %s" % str(self.conan_ref),
