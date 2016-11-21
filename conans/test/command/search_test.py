@@ -4,7 +4,6 @@ from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER,\
     CONAN_MANIFEST
 import os
 from conans.model.manifest import FileTreeManifest
-from time import time
 
 
 conan_vars1 = '''
@@ -92,9 +91,17 @@ class SearchTest(unittest.TestCase):
         root_folder3 = 'Bye/0.14/fenix/testing'
         root_folder4 = 'NodeInfo/1.0.2/fenix/stable'
         root_folder5 = 'MissFile/1.0.2/fenix/stable'
+        root_folder11 = 'Hello/1.4.11/fenix/testing'
+        root_folder12 = 'Hello/1.4.12/fenix/testing'
 
         self.client.save({"Empty/1.10/fake/test/reg/fake.txt": "//",
                           "%s/%s/WindowsPackageSHA/%s" % (root_folder1,
+                                                          PACKAGES_FOLDER,
+                                                          CONANINFO): conan_vars1,
+                          "%s/%s/WindowsPackageSHA/%s" % (root_folder11,
+                                                          PACKAGES_FOLDER,
+                                                          CONANINFO): conan_vars1,
+                          "%s/%s/WindowsPackageSHA/%s" % (root_folder12,
                                                           PACKAGES_FOLDER,
                                                           CONANINFO): conan_vars1,
                           "%s/%s/PlatformIndependantSHA/%s" % (root_folder1,
@@ -128,15 +135,49 @@ class SearchTest(unittest.TestCase):
 
     def recipe_search_test(self):
         self.client.run("search Hello*")
-        self.assertEquals("Existing package recipes:\n\nHello/1.4.10@fenix/testing\nhelloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n"
+                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
         self.client.run("search Hello* --case-sensitive")
-        self.assertEquals("Existing package recipes:\n\nHello/1.4.10@fenix/testing\n", self.client.user_io.out)
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n",
+                          self.client.user_io.out)
 
         self.client.run("search *fenix* --case-sensitive")
         self.assertEquals("Existing package recipes:\n\n"
                           "Bye/0.14@fenix/testing\n"
                           "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n"
+                          "MissFile/1.0.2@fenix/stable\n"
+                          "NodeInfo/1.0.2@fenix/stable\n"
+                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+
+    def recipe_pattern_search_test(self):
+        self.client.run("search Hello*")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n"
+                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+
+        self.client.run("search Hello* --case-sensitive")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
+
+        self.client.run("search *fenix* --case-sensitive")
+        self.assertEquals("Existing package recipes:\n\n"
+                          "Bye/0.14@fenix/testing\n"
+                          "Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n"
                           "MissFile/1.0.2@fenix/stable\n"
                           "NodeInfo/1.0.2@fenix/stable\n"
                           "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)

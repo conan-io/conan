@@ -4,12 +4,14 @@ from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
 
 
-def validate_conan_name(name):
+def validate_conan_name(name, version=False):
     """Check for name compliance with pattern rules"""
     try:
-        if name == '*' or (name.startswith("[") and name.endswith("]")):
+        if name == '*':
             return name
         if ConanFileReference.validation_pattern.match(name) is None:
+            if version and name.startswith("[") and name.endswith("]"):
+                return name
             if len(name) > ConanFileReference.max_chars:
                 message = "'%s' is too long. Valid names must " \
                           "contain at most %s characters." % (name,
@@ -48,7 +50,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         """
         if validate:
             name = validate_conan_name(name)
-            version = validate_conan_name(version)
+            version = validate_conan_name(version, True)
             user = validate_conan_name(user)
             channel = validate_conan_name(channel)
         version = Version(version)

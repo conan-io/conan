@@ -7,3 +7,4 @@ PyYAML>=3.11, <3.13.0
 patch==1.16
 fasteners>=0.14.1
 six>=1.10.0
+node-semver==0.1.1
