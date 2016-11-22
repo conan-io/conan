@@ -12,9 +12,22 @@ class RequireResolver(object):
         self._local_search = local_search
         self._remote_search = remote_search
 
-    def resolve(self, require):
+    def resolve(self, require, base_conanref):
         version_range = require.version_range()
         if version_range is None:
+            return
+
+        if require.is_resolved():
+            ref = require.conan_reference
+            resolved = self._resolve_version(version_range, [ref])
+            if not resolved:
+                self._output.warn("Version range '%s' required by '%s' not valid for "
+                                  "downstream requirement '%s'"
+                                  % (version_range, base_conanref, str(ref)))
+            else:
+                self._output.success("Version range '%s' required by '%s' valid for "
+                                     "downstream requirement '%s'"
+                                     % (version_range, base_conanref, str(ref)))
             return
 
         ref = require.conan_reference

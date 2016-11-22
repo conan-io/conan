@@ -339,7 +339,10 @@ class DepsBuilder(object):
 
         # Expand each one of the current requirements
         for name, require in conanfile.requires.items():
-            self._resolver.resolve(require)
+            self._resolver.resolve(require, conanref)
+
+        # Expand each one of the current requirements
+        for name, require in conanfile.requires.items():
             if require.override:
                 continue
             if require.conan_reference in loop_ancestors:

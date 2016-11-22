@@ -14,6 +14,27 @@ from collections import namedtuple
 from conans.model.scope import Scopes
 from conans.client.require_resolver import RequireResolver
 import re
+from nose_parameterized import parameterized
+
+
+class BasicMaxVersionTest(unittest.TestCase):
+    def basic_test(self):
+        from semver import max_satisfying
+        result = max_satisfying(["1.1", "1.2", "1.3", "2.1"], "1.1", loose=True)
+        self.assertEqual(result, "1.1")
+        result = max_satisfying(["1.1", "1.2", "1.3", "2.1"], ">1.1", loose=True)
+        self.assertEqual(result, "2.1")
+        result = max_satisfying(["1.1", "1.2", "1.3", "2.1"], ">1.1 <2.1", loose=True)
+        self.assertEqual(result, "1.3")
+        result = max_satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<1.2", loose=True)
+        self.assertEqual(result, "1.1.2")
+        result = max_satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<1.2.1", loose=True)
+        self.assertEqual(result, "1.1.2")
+        result = max_satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<=1.2.1", loose=True)
+        self.assertEqual(result, "1.2.1")
+        # FIXME: Very annoying, this lib, will not find 1.2 for this range
+        result = max_satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "<=1.2", loose=True)
+        self.assertEqual(result, "1.1.2")
 
 
 class Retriever(object):
@@ -67,9 +88,6 @@ class HelloConan(ConanFile):
 """
 
 
-hello_ref = ConanFileReference.loads("Hello/1.2@memsharded/testing")
-
-
 def _get_nodes(graph, name):
     """ return all the nodes matching a particular name. Could be >1 in case
     that private requirements embed different versions
@@ -91,7 +109,7 @@ class MockSearchRemote(object):
     def __init__(self, packages=None):
         self.packages = packages or []
 
-    def search_remotes(self, pattern):
+    def search_remotes(self, pattern):  # @UnusedVariable
         return self.packages
 
 
@@ -154,3 +172,55 @@ class SayConan(ConanFile):
             remote_packages.append(say_ref)
         self.remote_search.packages = remote_packages
         self.test_local_basic()
+
+    @parameterized.expand([("", "0.3", None, None),
+                           ('"Say/1.1@memsharded/testing"', "1.1", False, False),
+                           ('"Say/0.2@memsharded/testing"', "0.2", False, True),
+                           ('("Say/1.1@memsharded/testing", "override")', "1.1", True, False),
+                           ('("Say/0.2@memsharded/testing", "override")', "0.2", True, True),
+                           # ranges
+                           ('"Say/[<=1.2]@memsharded/testing"', "1.1.2", False, False),
+                           ('"Say/[>=0.2,<=1.1]@memsharded/testing"', "0.3", False, True),
+                           ('("Say/[<=1.2]@memsharded/testing", "override")', "1.1.2", True, False),
+                           ('("Say/[>=0.2,<=1.1]@memsharded/testing", "override")', "0.3", True, True),
+                           ])
+    def transitive_test(self, version_range, solution, override, valid):
+        hello_text = hello_content % ">0.1, <1"
+        hello_ref = ConanFileReference.loads("Hello/1.0@memsharded/testing")
+        self.retriever.conan(hello_ref, hello_text)
+
+        chat_content = """
+from conans import ConanFile
+
+class ChatConan(ConanFile):
+    name = "Chat"
+    version = "2.3"
+    requires = "Hello/1.0@memsharded/testing", %s
+"""
+
+        deps_graph = self.root(chat_content % version_range)
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        edges = {Edge(hello, say), Edge(chat, hello)}
+        if override is not None:
+            self.assertIn("override", self.output)
+        else:
+            self.assertNotIn("override", self.output)
+        if override is False:
+            edges = {Edge(hello, say), Edge(chat, say), Edge(chat, hello)}
+
+        if valid is True:
+            self.assertIn(" valid", self.output)
+        elif valid is False:
+            self.assertIn("not valid", self.output)
+        self.assertEqual(3, len(deps_graph.nodes))
+
+        self.assertEqual(_get_edges(deps_graph), edges)
+
+        self.assertEqual(hello.conan_ref, hello_ref)
+        conanfile = hello.conanfile
+        self.assertEqual(conanfile.version, "1.2")
+        self.assertEqual(conanfile.name, "Hello")
+        say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
+        self.assertEqual(conanfile.requires, Requirements(str(say_ref)))

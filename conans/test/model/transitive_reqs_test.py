@@ -118,7 +118,7 @@ def _get_edges(graph):
 
 
 class MockRequireResolver(object):
-    def resolve(self, _):
+    def resolve(self, rquire, conanref):  # @UnusedVariable
         return
 
 

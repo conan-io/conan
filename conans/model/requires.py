@@ -18,14 +18,18 @@ class Requirement(object):
                     needed for building or testing, but not affects the package hash at all
         """
         self.conan_reference = conan_reference
+        self.range_reference = conan_reference
         self.private = private
         self.override = override
         self.dev = dev
 
     def version_range(self):
-        version = self.conan_reference.version
+        version = self.range_reference.version
         if version.startswith("[") and version.endswith("]"):
             return version[1:-1]
+
+    def is_resolved(self):
+        return self.conan_reference != self.range_reference
 
     def __repr__(self):
         return ("%s" % str(self.conan_reference) + (" P" if self.private else ""))
