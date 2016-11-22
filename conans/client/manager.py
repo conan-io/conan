@@ -359,15 +359,21 @@ If not:
             export_folder = self._client_cache.export(reference)
             config_source(export_folder, src_folder, conanfile, output, force)
 
-    def imports(self, current_path, reference, dest_folder):
+    def imports(self, current_path, reference, conan_file_path, dest_folder):
         if not isinstance(reference, ConanFileReference):
             output = ScopedOutput("PROJECT", self._user_io.out)
-            conan_file_path = os.path.join(reference, CONANFILE)
-            if os.path.exists(conan_file_path):
-                conanfile = self._loader().load_conan(conan_file_path, output, consumer=True)
+            if conan_file_path:
+                if conan_file_path.endswith(".txt"):
+                    conanfile = self._loader().load_conan_txt(conan_file_path, output)
+                else:
+                    conanfile = self._loader().load_conan(conan_file_path, output, consumer=True)
             else:
-                conan_file_path = os.path.join(reference, CONANFILE_TXT)
-                conanfile = self._loader().load_conan_txt(conan_file_path, output)
+                conan_file_path = os.path.join(reference, CONANFILE)
+                if os.path.exists(conan_file_path):
+                    conanfile = self._loader().load_conan(conan_file_path, output, consumer=True)
+                else:
+                    conan_file_path = os.path.join(reference, CONANFILE_TXT)
+                    conanfile = self._loader().load_conan_txt(conan_file_path, output)
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conan_file_path = self._client_cache.conanfile(reference)
