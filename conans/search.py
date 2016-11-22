@@ -73,7 +73,7 @@ class DiskSearchManager(SearchManagerABC):
     def search(self, pattern=None, ignorecase=True):
         # Conan references in main storage
         if pattern:
-            pattern = translate(pattern)
+            pattern = translate(str(pattern))
             pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
         subdirs = self._adapter.list_folder_subdirs(basedir=self._paths.store, level=4)

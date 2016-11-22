@@ -39,6 +39,8 @@ class RequireResolver(object):
                 resolved = self._resolve_version(version_range, remote_found)
 
         if resolved:
+            self._output.success("Version range '%s' required by '%s' resolved to '%s'"
+                                 % (version_range, base_conanref, str(resolved)))
             require.conan_reference = resolved
         else:
             raise ConanException("The version in '%s' could not be resolved" % version_range)
