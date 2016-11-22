@@ -233,6 +233,16 @@ class ConanManager(object):
             return profile.settings.items()
         return settings
 
+    def _mix_package_settings_and_profile(self, package_settings, profile):
+        '''Mix the specified package settings with the specified profile.
+        Specified package settings are prioritized to profile'''
+        if profile:
+            for package_name, settings in profile.package_settings.items():
+                if package_name in package_settings:
+                    profile.package_settings[package_name].update(dict(package_settings[package_name]))
+            return {package_name: settings.items() for package_name, settings in profile.package_settings.items()}
+        return package_settings
+
     def _mix_scopes_and_profile(self, scopes, profile):
         if profile:
             profile.update_scopes(scopes)
@@ -269,6 +279,7 @@ class ConanManager(object):
 
         profile = self._read_profile(profile_name)
         settings = self._mix_settings_and_profile(settings, profile)
+        package_settings = self._mix_package_settings_and_profile(package_settings, profile)
         scopes = self._mix_scopes_and_profile(scopes, profile)
         env_vars = self._read_profile_env_vars(profile)
 

@@ -1,6 +1,5 @@
 import unittest
 from conans.model.profile import Profile
-from conans.errors import ConanException
 
 
 class ProfileTest(unittest.TestCase):
@@ -67,14 +66,24 @@ CXX_FLAGS="-DAAA=0
         new_profile = Profile.loads(prof)
         self.assertEquals(new_profile.env["CXX_FLAGS"], "\"-DAAA=0")
 
+        prof = '''
+[settings]
+zlib:compiler=gcc
+compiler=Visual Studio
+'''
+        new_profile = Profile.loads(prof)
+        self.assertEquals(new_profile.package_settings["zlib"], {"compiler": "gcc"})
+        self.assertEquals(new_profile.settings["compiler"], "Visual Studio")
+
     def profile_dump_order_test(self):
         # Settings
         profile = Profile()
+        profile.package_settings["zlib"] = {"compiler": "gcc"}
         profile.settings["compiler.version"] = "12"
         profile.settings["arch"] = "x86_64"
         profile.settings["compiler"] = "Visual Studio"
 
-        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=12\n[scopes]\n[env]',
+        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=12\nzlib:compiler=gcc\n[scopes]\n[env]',
                          profile.dumps())
 
     def apply_test(self):

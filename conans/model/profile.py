@@ -3,6 +3,7 @@ from collections import OrderedDict
 from conans.util.config_parser import ConfigParser
 from conans.model.scope import Scopes, _root
 from conans.errors import ConanException
+from collections import defaultdict
 
 
 def _clean_value(value):
@@ -24,6 +25,7 @@ class Profile(object):
     def __init__(self):
         # Sections
         self.settings = OrderedDict()
+        self.package_settings = defaultdict(OrderedDict)
         self.env = OrderedDict()
         self.scopes = Scopes()
 
@@ -36,10 +38,20 @@ class Profile(object):
             for setting in doc.settings.splitlines():
                 setting = setting.strip()
                 if setting and not setting.startswith("#"):
+                    package_name = None
                     if "=" not in setting:
                         raise ConanException("Invalid setting line '%s'" % setting)
+                    if ":" in setting:
+                        tmp = setting.split(":", 1)
+                        package_name, setting = tmp
+
                     name, value = setting.split("=", 1)
-                    obj.settings[name.strip()] = _clean_value(value)
+                    name = name.strip()
+                    value = _clean_value(value)
+                    if package_name:
+                        obj.package_settings[package_name][name] = value
+                    else:
+                        obj.settings[name] = value
 
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())
@@ -65,6 +77,9 @@ class Profile(object):
         result = ["[settings]"]
         for name, value in self.settings.items():
             result.append("%s=%s" % (name, value))
+        for package, values in self.package_settings.items():
+            for name, value in values.items():
+                result.append("%s:%s=%s" % (package, name, value))
 
         result.append("[scopes]")
         if self.scopes[_root].get("dev", None):

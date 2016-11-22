@@ -7,6 +7,7 @@ import os
 from conans.model.scope import Scopes
 import platform
 from conans.paths import CONANFILE
+from collections import OrderedDict
 
 
 conanfile_scope_env = """
@@ -127,7 +128,8 @@ class ProfileTest(unittest.TestCase):
                             "compiler.version": "12",
                             "compiler.runtime": "MD",
                             "arch": "x86"}
-        self._create_profile("vs_12_86", profile_settings)
+
+        self._create_profile("vs_12_86", profile_settings, package_settings={})
 
         self.client.save(files)
         self.client.run("export lasote/stable")
@@ -144,6 +146,37 @@ class ProfileTest(unittest.TestCase):
                 self.assertIn("%s=%s" % (setting, value), info)
             else:
                 self.assertIn("compiler.version=14", info)
+
+        # Use package settings in profile
+        tmp_settings = OrderedDict()
+        tmp_settings["compiler"] = "gcc"
+        tmp_settings["compiler.libcxx"] = "libstdc++11"
+        package_settings = {"Hello0": tmp_settings}
+        self._create_profile("vs_12_86_Hello0_gcc", profile_settings, package_settings=package_settings)
+        # Try to override some settings in install command
+        self.client.run("install --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
+        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        self.assertIn("compiler=gcc", info)
+        self.assertIn("compiler.libcxx=libstdc++11", info)
+
+        # If other package is specified compiler is not modified
+        package_settings = {"NoExistsRecipe": tmp_settings}
+        self._create_profile("vs_12_86_Hello0_gcc", profile_settings, package_settings=package_settings)
+        # Try to override some settings in install command
+        self.client.run("install --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
+        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        self.assertIn("compiler=Visual Studio", info)
+        self.assertNotIn("compiler.libcxx", info)
+
+        # Mix command line package settings with profile
+        package_settings = {"Hello0": tmp_settings}
+        self._create_profile("vs_12_86_Hello0_gcc", profile_settings, package_settings=package_settings)
+        # Try to override some settings in install command
+        self.client.run("install --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14 -s Hello0:compiler.libcxx=libstdc++")
+        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        self.assertIn("compiler=gcc", info)
+        self.assertNotIn("compiler.libcxx=libstdc++11", info)
+        self.assertIn("compiler.libcxx=libstdc++", info)
 
     def scopes_env_test(self):
         # Create a profile and use it
@@ -212,10 +245,14 @@ class DefaultNameConan(ConanFile):
         else:
             self.assertIn("%s='%s'" % (name, value), self.client.user_io.out)
 
-    def _create_profile(self, name, settings, scopes=None, env=None):
+    def _create_profile(self, name, settings, scopes=None, env=None, package_settings=None):
         profile = Profile()
         profile.settings = settings or {}
         if scopes:
             profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
+
+        if package_settings:
+            profile.package_settings = package_settings
+
         profile.env = env or {}
         save(self.client.client_cache.profile_path(name), profile.dumps())
