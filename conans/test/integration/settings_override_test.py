@@ -26,7 +26,7 @@ class SettingsOverrideTest(unittest.TestCase):
         self.client.run("export lasote/testing")
         self.client.run("install VisualBuild/0.1@lasote/testing --build missing -s compiler='Visual Studio' "
                         "-s compiler.version=14 -s compiler.runtime=MD "
-                        "-s MinGWBuild:compiler='gcc' ")
+                        "-s MinGWBuild:compiler='gcc' -s MinGWBuild:compiler.libcxx='libstdc++'")
 
         self.assertIn("COMPILER=> MinGWBuild gcc", self.client.user_io.out)
         self.assertIn("COMPILER=> VisualBuild Visual Studio", self.client.user_io.out)
