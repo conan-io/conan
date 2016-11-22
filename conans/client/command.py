@@ -1,34 +1,36 @@
-from conans.client.output import ConanOutput, Color
 import argparse
-from conans.errors import ConanException
 import inspect
-from conans.client.remote_manager import RemoteManager
-from conans.client.userio import UserIO
-from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.rest.rest_client import RestApiClient
-from conans.client.store.localdb import LocalDB
-from conans.util.log import logger
-from conans.model.ref import ConanFileReference
-from conans.client.manager import ConanManager
-from conans.paths import CONANFILE, conan_expand_user
-import requests
-from conans.client.rest.version_checker import VersionCheckerRequester
-from conans import __version__ as CLIENT_VERSION
-from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
-from conans.model.version import Version
-from conans.client.migrations import ClientMigrator
 import hashlib
-from conans.util.files import rmdir, load, save_files
-from argparse import RawTextHelpFormatter
-from conans.client.runner import ConanRunner
-from conans.client.remote_registry import RemoteRegistry
-from conans.model.scope import Scopes
 import re
-from conans.search import DiskSearchManager, DiskSearchAdapter
 import sys
 import os
+import requests
+from argparse import RawTextHelpFormatter
+from collections import defaultdict
+
+from conans import __version__ as CLIENT_VERSION
 from conans.client.client_cache import ClientCache
+from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
+from conans.client.manager import ConanManager
+from conans.client.migrations import ClientMigrator
+from conans.client.remote_manager import RemoteManager
+from conans.client.remote_registry import RemoteRegistry
+from conans.client.rest.auth_manager import ConanApiAuthManager
+from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.version_checker import VersionCheckerRequester
+from conans.client.output import ConanOutput, Color
+from conans.client.runner import ConanRunner
+from conans.client.store.localdb import LocalDB
+from conans.client.userio import UserIO
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+from conans.model.scope import Scopes
+from conans.model.version import Version
+from conans.paths import CONANFILE, conan_expand_user
+from conans.search import DiskSearchManager, DiskSearchAdapter
+from conans.util.log import logger
 from conans.util.env_reader import get_env
+from conans.util.files import rmdir, load, save_files
 
 
 class Extender(argparse.Action):
@@ -98,6 +100,20 @@ class Command(object):
             if len(chunks) != 2:
                 raise ConanException("Invalid input '%s', use 'name=value'" % item)
         return [(item[0], item[1]) for item in [item.split("=") for item in items]]
+
+    def _get_settings_from_extender_arg(self, items):
+        settings = []
+        package_settings = defaultdict(list)
+        tuples = self._get_tuples_list_from_extender_arg(items)
+        for name, value in tuples:
+            if ":" in name:  # Scoped settings
+                tmp = name.split(":", 1)
+                ref_name = tmp[0]
+                name = tmp[1]
+                package_settings[ref_name].append((name, value))
+            else:
+                settings.append((name, value))
+        return settings, package_settings
 
     def _get_build_sources_parameter(self, build_param):
         # returns True if we want to build the missing libraries
@@ -249,11 +265,11 @@ path to the CMake binary directory, like this:
         # shutil.copytree(test_folder, build_folder)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
-        settings = self._get_tuples_list_from_extender_arg(args.settings)
+        settings, package_settings = self._get_settings_from_extender_arg(args.settings)
         scopes = Scopes.from_list(args.scope) if args.scope else None
 
         manager = self._manager
-        loader = manager._loader(None, settings, options, scopes)
+        loader = manager._loader(None, settings, options, scopes, package_settings)
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
             # convert to list from ItemViews required for python3
@@ -281,6 +297,7 @@ path to the CMake binary directory, like this:
                               remote=args.remote,
                               options=options,
                               settings=settings,
+                              package_settings=package_settings,
                               build_mode=args.build,
                               scopes=scopes,
                               update=args.update,
@@ -354,7 +371,7 @@ path to the CMake binary directory, like this:
             # Get False or a list of patterns to check
             args.build = self._get_build_sources_parameter(args.build)
             options = self._get_tuples_list_from_extender_arg(args.options)
-            settings = self._get_tuples_list_from_extender_arg(args.settings)
+            settings, package_settings = self._get_settings_from_extender_arg(args.settings)
             scopes = Scopes.from_list(args.scope) if args.scope else None
             if args.manifests and args.manifests_interactive:
                 raise ConanException("Do not specify both manifests and "
@@ -386,7 +403,8 @@ path to the CMake binary directory, like this:
                                   manifest_interactive=manifest_interactive,
                                   scopes=scopes,
                                   generators=args.generator,
-                                  profile_name=args.profile)
+                                  profile_name=args.profile,
+                                  package_settings=package_settings)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -418,7 +436,7 @@ path to the CMake binary directory, like this:
         args = parser.parse_args(*args)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
-        settings = self._get_tuples_list_from_extender_arg(args.settings)
+        settings, package_settings = self._get_settings_from_extender_arg(args.settings)
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -430,6 +448,7 @@ path to the CMake binary directory, like this:
                            remote=args.remote,
                            options=options,
                            settings=settings,
+                           package_settings=package_settings,
                            info=args.only or True,
                            check_updates=args.update,
                            filename=args.file,

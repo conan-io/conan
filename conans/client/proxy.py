@@ -279,7 +279,7 @@ class ConanProxy(object):
         export_path = self._client_cache.export(reference)
         self._remote_manager.get_recipe(reference, export_path, remote)
         conanfile_path = self._client_cache.conanfile(reference)
-        loader = ConanFileLoader(None, None, None, None)
+        loader = ConanFileLoader(None, None, None, None, None)
         conanfile = loader.load_class(conanfile_path)
         short_paths = conanfile.short_paths
         self._registry.set_ref(reference, remote)

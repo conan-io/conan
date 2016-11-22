@@ -122,7 +122,7 @@ class ConanRequirementsTest(unittest.TestCase):
     def setUp(self):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, Settings.loads(""),
-                                      OptionsValues.loads(""), Scopes())
+                                      OptionsValues.loads(""), Scopes(), None)
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsBuilder(self.retriever, self.output, self.loader)
 
@@ -1418,7 +1418,7 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, full_settings, options, Scopes())
+        loader = ConanFileLoader(None, full_settings, options, Scopes(), None)
         retriever = Retriever(loader, self.output)
         builder = DepsBuilder(retriever, self.output, loader)
         root_conan = retriever.root(content)
@@ -1701,7 +1701,7 @@ class ChatConan(ConanFile):
                                  OptionsValues.loads("Say:myoption_say=123\n"
                                                      "Hello:myoption_hello=True\n"
                                                      "myoption_chat=on"),
-                                 Scopes())
+                                 Scopes(), None)
         retriever = Retriever(loader, output)
         builder = DepsBuilder(retriever, output, loader)
         retriever.conan(say_ref, say_content)

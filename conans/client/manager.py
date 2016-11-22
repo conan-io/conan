@@ -61,7 +61,7 @@ class ConanManager(object):
         self._search_manager = search_manager
 
     def _loader(self, current_path=None, user_settings_values=None, user_options_values=None,
-                scopes=None):
+                scopes=None, package_settings=None):
 
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
@@ -90,7 +90,8 @@ class ConanManager(object):
             conaninfo_scopes.update_scope(scopes)
 
         self._current_scopes = conaninfo_scopes
-        return ConanFileLoader(self._runner, settings, options=options, scopes=conaninfo_scopes)
+        return ConanFileLoader(self._runner, settings, options=options,
+                               scopes=conaninfo_scopes, package_settings=package_settings)
 
     def export(self, user, conan_file_path, keep_source=False):
         """ Export the conans
@@ -143,9 +144,9 @@ class ConanManager(object):
             remote_proxy.download_packages(reference, list(packages_props.keys()))
 
     def _get_graph(self, reference, current_path, remote, options, settings, filename, update,
-                   check_updates, manifest_manager, scopes):
+                   check_updates, manifest_manager, scopes, package_settings):
 
-        loader = self._loader(current_path, settings, options, scopes)
+        loader = self._loader(current_path, settings, options, scopes, package_settings)
         # Not check for updates for info command, it'll be checked when dep graph is built
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
@@ -189,16 +190,17 @@ class ConanManager(object):
 
     def info(self, reference, current_path, remote=None, options=None, settings=None,
              info=None, filename=None, update=False, check_updates=False, scopes=None,
-             build_order=None):
+             build_order=None, package_settings=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
         @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
         @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
+        @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
         """
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
-                                  update, check_updates, None, scopes)
+                                  update, check_updates, None, scopes, package_settings)
         (builder, deps_graph, project_reference, registry, _, _, _) = objects
 
         if build_order:
@@ -245,13 +247,14 @@ class ConanManager(object):
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                scopes=None, generators=None, profile_name=None):
+                scopes=None, generators=None, profile_name=None, package_settings=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
         @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
         @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
+        @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
         @param profile: name of the profile to use
         """
         generators = generators or []
@@ -270,7 +273,7 @@ class ConanManager(object):
         env_vars = self._read_profile_env_vars(profile)
 
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
-                                  update, check_updates, manifest_manager, scopes)
+                                  update, check_updates, manifest_manager, scopes, package_settings)
         (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
 
         Printer(self._user_io.out).print_graph(deps_graph, registry)

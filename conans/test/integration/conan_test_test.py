@@ -5,6 +5,7 @@ from nose.plugins.attrib import attr
 from conans.util.files import load
 from conans.model.ref import PackageReference
 import os
+from conans.paths import CONANFILE
 
 
 @attr("slow")
@@ -101,6 +102,13 @@ class HelloReuseConan(ConanFile):
     def _test_with_conanfile(self, test_conanfile):
         client = TestClient()
         files = cpp_hello_conan_files("Hello0", "0.1")
+        print_build = 'self.output.warn("BUILD_TYPE=>%s" % self.settings.build_type)'
+        files[CONANFILE] = files[CONANFILE].replace("def build(self):",
+                                                    'def build(self):\n        %s' % print_build)
+
+        # Add build_type setting
+        files[CONANFILE] = files[CONANFILE].replace(', "arch"',
+                                                    ', "arch", "build_type"')
 
         cmakelist = """PROJECT(MyHello)
 cmake_minimum_required(VERSION 2.8)
@@ -119,6 +127,7 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         error = client.run("test -s build_type=Release")
         self.assertFalse(error)
         self.assertIn('Hello Hello0', client.user_io.out)
-        error = client.run("test -s build_type=Release -o Hello0:language=1")
+        error = client.run("test -s Hello0:build_type=Debug -o Hello0:language=1")
         self.assertFalse(error)
         self.assertIn('Hola Hello0', client.user_io.out)
+        self.assertIn('BUILD_TYPE=>Debug', client.user_io.out)

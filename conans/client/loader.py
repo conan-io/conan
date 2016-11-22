@@ -14,22 +14,26 @@ import sys
 from conans.model.conan_generator import Generator
 from conans.client.generators import _save_generator
 from conans.model.scope import Scopes
+from conans.model.values import Values
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, options, scopes):
+    def __init__(self, runner, settings, options, scopes, package_settings):
         '''
         param settings: Settings object, to assign to ConanFile at load time
         param options: OptionsValues, necessary so the base conanfile loads the options
                         to start propagation, and having them in order to call build()
+        param package_settings: Dict with {recipe_name: {setting_name: setting_value}}
         '''
         self._runner = runner
         assert settings is None or isinstance(settings, Settings)
         assert options is None or isinstance(options, OptionsValues)
         assert scopes is None or isinstance(scopes, Scopes)
+        # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
         self._options = options
         self._scopes = scopes
+        self._package_settings = package_settings
 
     def _parse_module(self, conanfile_module, consumer, filename):
         """ Parses a python in-memory module, to extract the classes, mainly the main
@@ -125,7 +129,17 @@ class ConanFileLoader(object):
         loaded, filename = self._parse_file(conanfile_path)
         try:
             result = self._parse_module(loaded, consumer, filename)
-            result = result(output, self._runner, self._settings.copy(),
+
+            # Prepare the settings for the loaded conanfile
+            # Mixing the global settings with the specified for that name if exist
+            tmp_settings = self._settings.copy()
+            if self._package_settings and result.name in self._package_settings:
+                # Update the values, keeping old ones (confusing assign)
+                values_tuple = self._package_settings[result.name]
+                tmp_settings.values = Values.from_list(values_tuple)
+
+            # Instance the conanfile
+            result = result(output, self._runner, tmp_settings,
                             os.path.dirname(conanfile_path))
 
             if consumer:
