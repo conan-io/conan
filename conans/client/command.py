@@ -374,6 +374,9 @@ path to the CMake binary directory, like this:
         parser.add_argument("--verify", "-v", const=default_manifest_folder, nargs="?",
                             help='Verify dependencies manifests against stored ones')
 
+        parser.add_argument("--no-imports", action='store_true', default=False,
+                            help='Install specified packages but avoid running imports')
+
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -433,7 +436,8 @@ path to the CMake binary directory, like this:
                                   profile_name=args.profile,
                                   package_settings=package_settings,
                                   env=env,
-                                  package_env=package_env)
+                                  package_env=package_env,
+                                  no_imports=args.no_imports)
 
     def info(self, *args):
         """ Prints information about the requirements.
