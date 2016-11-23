@@ -18,22 +18,28 @@ from conans.model.values import Values
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, options, scopes, package_settings):
+    def __init__(self, runner, settings, package_settings, options, scopes, env, package_env):
         '''
-        param settings: Settings object, to assign to ConanFile at load time
-        param options: OptionsValues, necessary so the base conanfile loads the options
+        @param settings: Settings object, to assign to ConanFile at load time
+        @param options: OptionsValues, necessary so the base conanfile loads the options
                         to start propagation, and having them in order to call build()
-        param package_settings: Dict with {recipe_name: {setting_name: setting_value}}
+        @param package_settings: Dict with {recipe_name: {setting_name: setting_value}}
+        @param env: list of tuples for environment vars: [(var, value), (var2, value2)...]
+        @param package_env: package dict of list of tuples: {"name": [(var, v1), (var2, v2)...]}
         '''
         self._runner = runner
         assert settings is None or isinstance(settings, Settings)
         assert options is None or isinstance(options, OptionsValues)
         assert scopes is None or isinstance(scopes, Scopes)
+        assert env is None or isinstance(env, list)
+        assert package_env is None or isinstance(package_env, dict)
         # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
         self._options = options
         self._scopes = scopes
         self._package_settings = package_settings
+        self._env = env or []
+        self._package_env = package_env or {}
 
     def _parse_module(self, conanfile_module, consumer, filename):
         """ Parses a python in-memory module, to extract the classes, mainly the main
@@ -141,6 +147,19 @@ class ConanFileLoader(object):
             # Instance the conanfile
             result = result(output, self._runner, tmp_settings,
                             os.path.dirname(conanfile_path))
+
+            # Prepare the env variables mixing global env vars with the
+            # package ones if name match
+            tmp_env = []
+            # Copy only the global variables not present in package level vars
+            for var_name, value in self._env:
+                if result.name in self._package_env:
+                    if var_name not in self._package_env[result.name]:
+                        tmp_env.append((var_name, value))
+                else:
+                    tmp_env.append((var_name, value))
+            tmp_env.extend(self._package_env.get(result.name, []))
+            result.env = tmp_env
 
             if consumer:
                 result.options.initialize_upstream(self._options, result.name)

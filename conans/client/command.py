@@ -81,6 +81,9 @@ class Command(object):
         parser.add_argument("--settings", "-s",
                             help='load settings to build the package, -s compiler:gcc',
                             nargs=1, action=Extender)
+        parser.add_argument("--env", "-e",
+                            help='set environment variables to build the package, -e CXX=/usr/bin/clang++',
+                            nargs=1, action=Extender)
         parser.add_argument("--build", "-b", action=Extender, nargs="*",
                             help='''Optional, use it to choose if you want to build from sources:
 
@@ -101,19 +104,23 @@ class Command(object):
                 raise ConanException("Invalid input '%s', use 'name=value'" % item)
         return [(item[0], item[1]) for item in [item.split("=") for item in items]]
 
-    def _get_settings_from_extender_arg(self, items):
-        settings = []
-        package_settings = defaultdict(list)
+    def _get_simple_and_package_tuples(self, items):
+        ''' Parse items like "thing:item=value or item2=value2 and returns a tuple list for
+        the simple items (name, value) and a dict for the package items
+        {package: [(item, value)...)], ...}
+        '''
+        simple_items = []
+        package_items = defaultdict(list)
         tuples = self._get_tuples_list_from_extender_arg(items)
         for name, value in tuples:
-            if ":" in name:  # Scoped settings
+            if ":" in name:  # Scoped items
                 tmp = name.split(":", 1)
                 ref_name = tmp[0]
                 name = tmp[1]
-                package_settings[ref_name].append((name, value))
+                package_items[ref_name].append((name, value))
             else:
-                settings.append((name, value))
-        return settings, package_settings
+                simple_items.append((name, value))
+        return simple_items, package_items
 
     def _get_build_sources_parameter(self, build_param):
         # returns True if we want to build the missing libraries
@@ -265,11 +272,25 @@ path to the CMake binary directory, like this:
         # shutil.copytree(test_folder, build_folder)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
-        settings, package_settings = self._get_settings_from_extender_arg(args.settings)
+        env, package_env = self._get_simple_and_package_tuples(args.env)
+        settings, package_settings = self._get_simple_and_package_tuples(args.settings)
         scopes = Scopes.from_list(args.scope) if args.scope else None
 
         manager = self._manager
-        loader = manager._loader(None, settings, options, scopes, package_settings)
+
+        # Read profile environment and mix with the command line parameters
+        if args.profile:
+            try:
+                profile = self._client_cache.load_profile(args.profile)
+            except ConanException as exc:
+                raise ConanException("Error reading '%s' profile: %s" % (args.profile, exc))
+            else:
+                profile.update_env(env)
+                profile.update_packages_env(package_env)
+                env = profile.env
+                package_env = profile.package_env
+
+        loader = manager._loader(None, settings, options, scopes, package_settings, env, package_env)
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
             # convert to list from ItemViews required for python3
@@ -301,9 +322,13 @@ path to the CMake binary directory, like this:
                               build_mode=args.build,
                               scopes=scopes,
                               update=args.update,
-                              profile_name=args.profile)
+                              profile_name=args.profile,
+                              env=env,
+                              package_env=package_env
+                              )
         self._test_check(test_folder, test_folder_name)
-        self._manager.build(test_folder, build_folder, test=True, profile_name=args.profile)
+        self._manager.build(test_folder, build_folder, test=True, profile_name=args.profile,
+                            env=env, package_env=package_env)
 
     # Alias to test
     def test(self, *args):
@@ -371,7 +396,9 @@ path to the CMake binary directory, like this:
             # Get False or a list of patterns to check
             args.build = self._get_build_sources_parameter(args.build)
             options = self._get_tuples_list_from_extender_arg(args.options)
-            settings, package_settings = self._get_settings_from_extender_arg(args.settings)
+            settings, package_settings = self._get_simple_and_package_tuples(args.settings)
+            env, package_env = self._get_simple_and_package_tuples(args.env)
+
             scopes = Scopes.from_list(args.scope) if args.scope else None
             if args.manifests and args.manifests_interactive:
                 raise ConanException("Do not specify both manifests and "
@@ -404,7 +431,9 @@ path to the CMake binary directory, like this:
                                   scopes=scopes,
                                   generators=args.generator,
                                   profile_name=args.profile,
-                                  package_settings=package_settings)
+                                  package_settings=package_settings,
+                                  env=env,
+                                  package_env=package_env)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -436,7 +465,7 @@ path to the CMake binary directory, like this:
         args = parser.parse_args(*args)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
-        settings, package_settings = self._get_settings_from_extender_arg(args.settings)
+        settings, package_settings = self._get_simple_and_package_tuples(args.settings)
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
