@@ -31,7 +31,8 @@ class RequireResolver(object):
             return
 
         ref = require.conan_reference
-        search_ref = ConanFileReference(ref.name, "*", ref.user, ref.channel)
+        # The search pattern must be a string
+        search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
         resolved = self._resolve_local(search_ref, version_range)
         if not resolved:
             remote_found = self._remote_search.search_remotes(search_ref)

@@ -61,7 +61,7 @@ class Retriever(object):
 
     def search(self, pattern):
         from fnmatch import translate
-        pattern = translate(str(pattern))
+        pattern = translate(pattern)
         pattern = re.compile(pattern)
 
         subdirs = list_folder_subdirs(basedir=self.folder, level=4)
