@@ -245,7 +245,7 @@ class ConanManager(object):
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                scopes=None, generators=None, profile_name=None):
+                scopes=None, generators=None, profile_name=None, no_imports=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -307,12 +307,13 @@ If not:
             content = normalize(conanfile.info.dumps())
             save(os.path.join(current_path, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
-            local_installer = FileImporter(conanfile, current_path)
-            conanfile.copy = local_installer
-            conanfile.imports()
-            copied_files = local_installer.execute()
-            import_output = ScopedOutput("%s imports()" % output.scope, output)
-            report_copied_files(copied_files, import_output)
+            if not no_imports:
+                local_installer = FileImporter(conanfile, current_path)
+                conanfile.copy = local_installer
+                conanfile.imports()
+                copied_files = local_installer.execute()
+                import_output = ScopedOutput("%s imports()" % output.scope, output)
+                report_copied_files(copied_files, import_output)
 
         if manifest_manager:
             manifest_manager.print_log()
