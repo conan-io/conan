@@ -525,6 +525,7 @@ path to the CMake binary directory, like this:
         parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
         parser.add_argument("reference", nargs='?', default="",
                             help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("-d", "--dest",
                             help="optional destination base directory, current dir by default")
 
@@ -532,7 +533,7 @@ path to the CMake binary directory, like this:
 
         dest_folder = args.dest
         current_path, reference = self._get_reference(args)
-        self._manager.imports(current_path, reference, dest_folder)
+        self._manager.imports(current_path, reference, args.file, dest_folder)
 
     def export(self, *args):
         """ Copies the package recipe (conanfile.py and associated files) to your local store,
