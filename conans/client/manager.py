@@ -332,9 +332,9 @@ If not:
                             "commands\nYou can generate it using 'conan install -g env -g txt'"
                             % (BUILD_INFO, current_path))
             else:
-                output.error("%s file not found in %s\nIt is required for imports "
-                             "command\nYou can generate it using 'conan install -g txt'"
-                             % (BUILD_INFO, current_path))
+                raise ConanException("%s file not found in %s\nIt is required for imports "
+                                     "command\nYou can generate it using 'conan install -g txt'"
+                                     % (BUILD_INFO, current_path))
 
         if not for_imports:
             env_file = os.path.join(current_path, CONANENV)
