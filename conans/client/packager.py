@@ -64,9 +64,13 @@ def _create_aux_files(build_folder, package_folder):
         logger.debug("Creating config files to %s" % package_folder)
         shutil.copy(os.path.join(build_folder, CONANINFO), package_folder)
 
-        # Create the digest for the package
-        generate_manifest(package_folder)
-
     except IOError:
         raise ConanException("%s does not exist inside of your %s folder. Try to re-build it again"
                              " to solve it." % (CONANINFO, build_folder))
+
+    try:
+        # Create the digest for the package
+        generate_manifest(package_folder)
+    except IOError as exc:
+        raise ConanException("Cannot create the manifest file, Try to re-build it again"
+                             " to solve it: %s" % exc)
