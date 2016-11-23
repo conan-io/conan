@@ -32,19 +32,19 @@ class Profile(object):
 
     @property
     def package_settings(self):
-        return {package_name: settings.items() for package_name, settings in self._package_settings.items()}
+        return {package_name: list(settings.items()) for package_name, settings in self._package_settings.items()}
 
     @property
     def settings(self):
-        return self._settings.items()
+        return list(self._settings.items())
 
     @property
     def package_env(self):
-        return {package_name: env.items() for package_name, env in self._package_env.items()}
+        return {package_name: list(env.items()) for package_name, env in self._package_env.items()}
 
     @property
     def env(self):
-        return self._env.items()
+        return list(self._env.items())
 
     @staticmethod
     def loads(text):
