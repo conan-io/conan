@@ -36,7 +36,6 @@ class SettingsOverrideTest(unittest.TestCase):
         pack_dir = os.path.join(packs_dir, os.listdir(packs_dir)[0])
         conaninfo = load(os.path.join(pack_dir, CONANINFO))
         self.assertIn("compiler=gcc", conaninfo)
-        self.assertIn("compiler.version=4.9", conaninfo)
 
         # CHECK CONANINFO FILE
         packs_dir = self.client.paths.packages(ConanFileReference.loads("VisualBuild/0.1@lasote/testing"))
