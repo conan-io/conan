@@ -174,6 +174,7 @@ class ProfileTest(unittest.TestCase):
         tmp_settings = OrderedDict()
         tmp_settings["compiler"] = "gcc"
         tmp_settings["compiler.libcxx"] = "libstdc++11"
+        tmp_settings["compiler.version"] = "4.8"
         package_settings = {"Hello0": tmp_settings}
         self._create_profile("vs_12_86_Hello0_gcc", settings=profile_settings,
                              package_settings=package_settings)
