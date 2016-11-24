@@ -151,7 +151,8 @@ class RemoteManager(object):
         try:
             return getattr(self._remote_client, method)(*argc, **argv)
         except ConnectionError as exc:
-            raise ConanConnectionError("Unable to connect to %s=%s" % (remote.name, remote.url))
+            raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
+                                       % (str(exc), remote.name, remote.url))
         except ConanException:
             raise
         except Exception as exc:
