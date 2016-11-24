@@ -294,7 +294,7 @@ Package configuration:
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
         from conans.client.importer import FileImporter
-        local_installer = FileImporter(self._deps_graph, self._client_cache, build_folder)
+        local_installer = FileImporter(conan_file, build_folder)
         conan_file.copy = local_installer
         conan_file.imports()
         copied_files = local_installer.execute()
