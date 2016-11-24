@@ -58,6 +58,6 @@ class FileImporter(object):
             matching_paths = self._get_folders(conan_name_pattern)
             for matching_path in matching_paths:
                 file_copier = FileCopier(matching_path, real_dst_folder)
-                files = file_copier(pattern, src=src_folder)
+                files = file_copier(pattern, src=src_folder, links=True)
                 copied_files.update(files)
         return copied_files
