@@ -126,8 +126,9 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""),
-                                      OptionsValues.loads(""), Scopes())
+        self.loader = ConanFileLoader(None, Settings.loads(""), None,
+                                      OptionsValues.loads(""), Scopes(),
+                                      env=[], package_env={})
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsBuilder(self.retriever, self.output, self.loader, MockRequireResolver())
 
@@ -1423,7 +1424,8 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, full_settings, options, Scopes())
+        loader = ConanFileLoader(None, full_settings, None, options, Scopes(),
+                                 env=None, package_env=None)
         retriever = Retriever(loader, self.output)
         builder = DepsBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
@@ -1702,11 +1704,11 @@ class ChatConan(ConanFile):
     options = {"myoption_chat": ["on", "off"]}
 """
         output = TestBufferConanOutput()
-        loader = ConanFileLoader(None, Settings.loads(""),
+        loader = ConanFileLoader(None, Settings.loads(""), None,
                                  OptionsValues.loads("Say:myoption_say=123\n"
                                                      "Hello:myoption_hello=True\n"
                                                      "myoption_chat=on"),
-                                 Scopes())
+                                 Scopes(), env=None, package_env=None)
         retriever = Retriever(loader, output)
         builder = DepsBuilder(retriever, output, loader, MockRequireResolver())
         retriever.conan(say_ref, say_content)

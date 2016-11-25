@@ -17,6 +17,7 @@ from conans.model.env_info import EnvInfo
 from conans.client.file_copier import report_copied_files
 from conans.client.source import config_source
 from conans.client.generators.env import ConanEnvGenerator
+from conans.tools import environment_append
 
 
 def init_package_info(deps_graph, paths):
@@ -194,7 +195,8 @@ class ConanInstaller(object):
             if force_build:
                 output.warn('Forced build from source')
 
-            self._build_package(export_folder, src_folder, build_folder, conan_file, output)
+            with environment_append(conan_file.env):
+                self._build_package(export_folder, src_folder, build_folder, conan_file, output)
 
             # FIXME: Is weak to assign here the recipe_hash
             conan_file.info.recipe_hash = self._client_cache.load_manifest(conan_ref).summary_hash
@@ -208,7 +210,9 @@ class ConanInstaller(object):
             output.info("Generated %s" % CONANENV)
 
             os.chdir(build_folder)
-            create_package(conan_file, build_folder, package_folder, output)
+            with environment_append(conan_file.env):
+                create_package(conan_file, build_folder, package_folder, output)
+
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
         else:
             self._raise_package_not_found_error(conan_ref, conan_file)
@@ -307,6 +311,7 @@ Package configuration:
             conan_file._conanfile_directory = build_folder
             logger.debug("Call conanfile.build() with files in build folder: %s" % os.listdir(build_folder))
             conan_file.build()
+
             self._out.writeln("")
             output.success("Package '%s' built" % conan_file.info.package_id())
             output.info("Build folder %s" % build_folder)

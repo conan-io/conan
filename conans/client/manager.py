@@ -61,8 +61,8 @@ class ConanManager(object):
         self._current_scopes = None
         self._search_manager = search_manager
 
-    def _loader(self, current_path=None, user_settings_values=None, user_options_values=None,
-                scopes=None):
+    def _loader(self, current_path=None, user_settings_values=None, package_settings=None,
+                user_options_values=None, scopes=None, env=None, package_env=None):
 
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
@@ -91,7 +91,9 @@ class ConanManager(object):
             conaninfo_scopes.update_scope(scopes)
 
         self._current_scopes = conaninfo_scopes
-        return ConanFileLoader(self._runner, settings, options=options, scopes=conaninfo_scopes)
+        return ConanFileLoader(self._runner, settings, package_settings=package_settings,
+                               options=options, scopes=conaninfo_scopes, 
+                               env=env, package_env=package_env)
 
     def export(self, user, conan_file_path, keep_source=False):
         """ Export the conans
@@ -144,9 +146,9 @@ class ConanManager(object):
             remote_proxy.download_packages(reference, list(packages_props.keys()))
 
     def _get_graph(self, reference, current_path, remote, options, settings, filename, update,
-                   check_updates, manifest_manager, scopes):
+                   check_updates, manifest_manager, scopes, package_settings, env, package_env):
 
-        loader = self._loader(current_path, settings, options, scopes)
+        loader = self._loader(current_path, settings, package_settings, options, scopes, env, package_env)
         # Not check for updates for info command, it'll be checked when dep graph is built
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
@@ -192,16 +194,17 @@ class ConanManager(object):
 
     def info(self, reference, current_path, remote=None, options=None, settings=None,
              info=None, filename=None, update=False, check_updates=False, scopes=None,
-             build_order=None):
+             build_order=None, package_settings=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
         @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
         @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
+        @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
         """
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
-                                  update, check_updates, None, scopes)
+                                  update, check_updates, None, scopes, package_settings, None, None)
         (builder, deps_graph, project_reference, registry, _, _, _) = objects
 
         if build_order:
@@ -226,36 +229,21 @@ class ConanManager(object):
 
         return None
 
-    def _mix_settings_and_profile(self, settings, profile):
-        '''Mix the specified settings with the specified profile.
-        Specified settings are prioritized to profile'''
-        if profile:
-            profile.update_settings(dict(settings))
-            return profile.settings.items()
-        return settings
-
-    def _mix_scopes_and_profile(self, scopes, profile):
-        if profile:
-            profile.update_scopes(scopes)
-            return profile.scopes
-        return scopes
-
-    def _read_profile_env_vars(self, profile):
-        if profile:
-            return profile.env
-        return {}
-
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                scopes=None, generators=None, profile_name=None, no_imports=False):
+                scopes=None, generators=None, profile_name=None, package_settings=None,
+                env=None, package_env=None, no_imports=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
         @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
         @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
+        @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
         @param profile: name of the profile to use
+        @param env: list of tuples for environment vars: [(var, value), (var2, value2)...]
+        @param package_env: package dict of list of tuples: {"package_name": [(var, value), (var2, value2)...]}
         """
         generators = generators or []
 
@@ -268,12 +256,25 @@ class ConanManager(object):
             manifest_manager = None
 
         profile = self._read_profile(profile_name)
-        settings = self._mix_settings_and_profile(settings, profile)
-        scopes = self._mix_scopes_and_profile(scopes, profile)
-        env_vars = self._read_profile_env_vars(profile)
+
+        # Mix Settings, Env vars and scopes between profile and command line
+        if profile:
+            profile.update_settings(settings)
+            profile.update_package_settings(package_settings)
+            settings = profile.settings
+            package_settings = profile.package_settings
+
+            profile.update_env(env)
+            profile.update_packages_env(package_env)
+            env = profile.env
+            package_env = profile.package_env
+
+            profile.update_scopes(scopes)
+            scopes = profile.scopes
 
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
-                                  update, check_updates, manifest_manager, scopes)
+                                  update, check_updates, manifest_manager, scopes, package_settings,
+                                  env, package_env)
         (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
 
         Printer(self._user_io.out).print_graph(deps_graph, registry)
@@ -292,10 +293,7 @@ If not:
             pass
 
         installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
-
-        # Append env_vars to execution environment and clear when block code ends
-        with environment_append(env_vars):
-            installer.install(deps_graph, build_mode)
+        installer.install(deps_graph, build_mode)
 
         prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
         output = ScopedOutput(prefix, self._user_io.out)
@@ -409,7 +407,8 @@ If not:
             rmdir(package_folder)
             packager.create_package(conanfile, build_folder, package_folder, output)
 
-    def build(self, conanfile_path, current_path, test=False, filename=None, profile_name=None):
+    def build(self, conanfile_path, current_path, test=False, filename=None, profile_name=None,
+              env=None, package_env=None):
         """ Call to build() method saved on the conanfile.py
         param conanfile_path: the original source directory of the user containing a
                             conanfile.py
@@ -423,9 +422,20 @@ If not:
         conanfile_file = os.path.join(conanfile_path, filename or CONANFILE)
 
         try:
+            # Append env_vars to execution environment and clear when block code ends
+            profile = self._read_profile(profile_name)
             output = ScopedOutput("Project", self._user_io.out)
-            conan_file = self._loader(current_path).load_conan(conanfile_file, output,
-                                                               consumer=True)
+            if profile:
+                profile.update_env(env)
+                profile.update_packages_env(package_env)
+
+                env = profile.env
+                package_env = profile.package_env
+
+            env = profile.env if profile else None
+            package_env = profile.package_env if profile else None
+            loader = self._loader(current_path, env=env, package_env=package_env)
+            conan_file = loader.load_conan(conanfile_file, output, consumer=True)
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"
@@ -437,10 +447,7 @@ If not:
 
             os.chdir(current_path)
             conan_file._conanfile_directory = conanfile_path
-            # Append env_vars to execution environment and clear when block code ends
-            profile = self._read_profile(profile_name)
-            env_vars = self._read_profile_env_vars(profile)
-            with environment_append(env_vars):
+            with environment_append(conan_file.env):
                 conan_file.build()
 
             if test:

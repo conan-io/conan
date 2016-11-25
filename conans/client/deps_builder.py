@@ -326,7 +326,6 @@ class DepsBuilder(object):
         param node: Node object to be expanded in this step
         down_reqs: the Requirements as coming from downstream, which can overwrite current
                     values
-        param settings: dict of settings values => {"os": "windows"}
         param deps: DepsGraph result
         param public_deps: {name: Node} of already expanded public Nodes, not to be repeated
                            in graph
@@ -415,7 +414,6 @@ class DepsBuilder(object):
             dep_graph.add_edge(current_node, new_node)
             if not requirement.private:
                 public_deps[name_req] = new_node
-            # RECURSION!
             return new_node
         else:
             self._output.error("Could not retrieve %s" % requirement.conan_reference)
