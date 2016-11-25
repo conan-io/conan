@@ -13,11 +13,11 @@ class RequireResolver(object):
         self._remote_search = remote_search
 
     def resolve(self, require, base_conanref):
-        version_range = require.version_range()
+        version_range = require.version_range
         if version_range is None:
             return
 
-        if require.is_resolved():
+        if require.is_resolved:
             ref = require.conan_reference
             resolved = self._resolve_version(version_range, [ref])
             if not resolved:

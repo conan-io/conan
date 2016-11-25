@@ -23,12 +23,20 @@ class Requirement(object):
         self.override = override
         self.dev = dev
 
+    @property
     def version_range(self):
+        """ returns the version range expression, without brackets []
+        or None if it is not an expression
+        """
         version = self.range_reference.version
         if version.startswith("[") and version.endswith("]"):
             return version[1:-1]
 
+    @property
     def is_resolved(self):
+        """ returns True if the version_range reference has been already resolved to a
+        concrete reference
+        """
         return self.conan_reference != self.range_reference
 
     def __repr__(self):
