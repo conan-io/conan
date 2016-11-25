@@ -115,6 +115,9 @@ class ConanFile(object):
         self.package_folder = None  # Assigned at runtime
         self._scope = None
 
+        # user specified env variables
+        self.env = None  # Assigned at runtime
+
     def collect_libs(self, folder="lib"):
         if not self.package_folder:
             return []

@@ -82,4 +82,3 @@ class SymLinksTest(unittest.TestCase):
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
         client.run("install")
         self._check(client, ref, build=False)
-

@@ -77,7 +77,6 @@ class DiskSearchManager(SearchManagerABC):
             pattern = re.compile(pattern, re.IGNORECASE) if ignorecase else re.compile(pattern)
 
         subdirs = self._adapter.list_folder_subdirs(basedir=self._paths.store, level=4)
-
         if not pattern:
             return sorted([ConanFileReference(*folder.split("/")) for folder in subdirs])
         else:

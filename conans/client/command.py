@@ -1,34 +1,36 @@
-from conans.client.output import ConanOutput, Color
 import argparse
-from conans.errors import ConanException
 import inspect
-from conans.client.remote_manager import RemoteManager
-from conans.client.userio import UserIO
-from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.rest.rest_client import RestApiClient
-from conans.client.store.localdb import LocalDB
-from conans.util.log import logger
-from conans.model.ref import ConanFileReference
-from conans.client.manager import ConanManager
-from conans.paths import CONANFILE, conan_expand_user
-import requests
-from conans.client.rest.version_checker import VersionCheckerRequester
-from conans import __version__ as CLIENT_VERSION
-from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
-from conans.model.version import Version
-from conans.client.migrations import ClientMigrator
 import hashlib
-from conans.util.files import rmdir, load, save_files
-from argparse import RawTextHelpFormatter
-from conans.client.runner import ConanRunner
-from conans.client.remote_registry import RemoteRegistry
-from conans.model.scope import Scopes
 import re
-from conans.search import DiskSearchManager, DiskSearchAdapter
 import sys
 import os
+import requests
+from argparse import RawTextHelpFormatter
+from collections import defaultdict
+
+from conans import __version__ as CLIENT_VERSION
 from conans.client.client_cache import ClientCache
+from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
+from conans.client.manager import ConanManager
+from conans.client.migrations import ClientMigrator
+from conans.client.remote_manager import RemoteManager
+from conans.client.remote_registry import RemoteRegistry
+from conans.client.rest.auth_manager import ConanApiAuthManager
+from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.version_checker import VersionCheckerRequester
+from conans.client.output import ConanOutput, Color
+from conans.client.runner import ConanRunner
+from conans.client.store.localdb import LocalDB
+from conans.client.userio import UserIO
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+from conans.model.scope import Scopes
+from conans.model.version import Version
+from conans.paths import CONANFILE, conan_expand_user
+from conans.search import DiskSearchManager, DiskSearchAdapter
+from conans.util.log import logger
 from conans.util.env_reader import get_env
+from conans.util.files import rmdir, load, save_files
 
 
 class Extender(argparse.Action):
@@ -79,6 +81,9 @@ class Command(object):
         parser.add_argument("--settings", "-s",
                             help='load settings to build the package, -s compiler:gcc',
                             nargs=1, action=Extender)
+        parser.add_argument("--env", "-e",
+                            help='set environment variables to build the package, -e CXX=/usr/bin/clang++',
+                            nargs=1, action=Extender)
         parser.add_argument("--build", "-b", action=Extender, nargs="*",
                             help='''Optional, use it to choose if you want to build from sources:
 
@@ -98,6 +103,24 @@ class Command(object):
             if len(chunks) != 2:
                 raise ConanException("Invalid input '%s', use 'name=value'" % item)
         return [(item[0], item[1]) for item in [item.split("=") for item in items]]
+
+    def _get_simple_and_package_tuples(self, items):
+        ''' Parse items like "thing:item=value or item2=value2 and returns a tuple list for
+        the simple items (name, value) and a dict for the package items
+        {package: [(item, value)...)], ...}
+        '''
+        simple_items = []
+        package_items = defaultdict(list)
+        tuples = self._get_tuples_list_from_extender_arg(items)
+        for name, value in tuples:
+            if ":" in name:  # Scoped items
+                tmp = name.split(":", 1)
+                ref_name = tmp[0]
+                name = tmp[1]
+                package_items[ref_name].append((name, value))
+            else:
+                simple_items.append((name, value))
+        return simple_items, package_items
 
     def _get_build_sources_parameter(self, build_param):
         # returns True if we want to build the missing libraries
@@ -249,11 +272,25 @@ path to the CMake binary directory, like this:
         # shutil.copytree(test_folder, build_folder)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
-        settings = self._get_tuples_list_from_extender_arg(args.settings)
+        env, package_env = self._get_simple_and_package_tuples(args.env)
+        settings, package_settings = self._get_simple_and_package_tuples(args.settings)
         scopes = Scopes.from_list(args.scope) if args.scope else None
 
         manager = self._manager
-        loader = manager._loader(None, settings, options, scopes)
+
+        # Read profile environment and mix with the command line parameters
+        if args.profile:
+            try:
+                profile = self._client_cache.load_profile(args.profile)
+            except ConanException as exc:
+                raise ConanException("Error reading '%s' profile: %s" % (args.profile, exc))
+            else:
+                profile.update_env(env)
+                profile.update_packages_env(package_env)
+                env = profile.env
+                package_env = profile.package_env
+
+        loader = manager._loader(None, settings, options, scopes, package_settings, env, package_env)
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
             # convert to list from ItemViews required for python3
@@ -281,12 +318,17 @@ path to the CMake binary directory, like this:
                               remote=args.remote,
                               options=options,
                               settings=settings,
+                              package_settings=package_settings,
                               build_mode=args.build,
                               scopes=scopes,
                               update=args.update,
-                              profile_name=args.profile)
+                              profile_name=args.profile,
+                              env=env,
+                              package_env=package_env
+                              )
         self._test_check(test_folder, test_folder_name)
-        self._manager.build(test_folder, build_folder, test=True, profile_name=args.profile)
+        self._manager.build(test_folder, build_folder, test=True, profile_name=args.profile,
+                            env=env, package_env=package_env)
 
     # Alias to test
     def test(self, *args):
@@ -332,6 +374,9 @@ path to the CMake binary directory, like this:
         parser.add_argument("--verify", "-v", const=default_manifest_folder, nargs="?",
                             help='Verify dependencies manifests against stored ones')
 
+        parser.add_argument("--no-imports", action='store_true', default=False,
+                            help='Install specified packages but avoid running imports')
+
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -354,7 +399,9 @@ path to the CMake binary directory, like this:
             # Get False or a list of patterns to check
             args.build = self._get_build_sources_parameter(args.build)
             options = self._get_tuples_list_from_extender_arg(args.options)
-            settings = self._get_tuples_list_from_extender_arg(args.settings)
+            settings, package_settings = self._get_simple_and_package_tuples(args.settings)
+            env, package_env = self._get_simple_and_package_tuples(args.env)
+
             scopes = Scopes.from_list(args.scope) if args.scope else None
             if args.manifests and args.manifests_interactive:
                 raise ConanException("Do not specify both manifests and "
@@ -386,7 +433,11 @@ path to the CMake binary directory, like this:
                                   manifest_interactive=manifest_interactive,
                                   scopes=scopes,
                                   generators=args.generator,
-                                  profile_name=args.profile)
+                                  profile_name=args.profile,
+                                  package_settings=package_settings,
+                                  env=env,
+                                  package_env=package_env,
+                                  no_imports=args.no_imports)
 
     def info(self, *args):
         """ Prints information about the requirements.
@@ -418,7 +469,7 @@ path to the CMake binary directory, like this:
         args = parser.parse_args(*args)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
-        settings = self._get_tuples_list_from_extender_arg(args.settings)
+        settings, package_settings = self._get_simple_and_package_tuples(args.settings)
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -430,6 +481,7 @@ path to the CMake binary directory, like this:
                            remote=args.remote,
                            options=options,
                            settings=settings,
+                           package_settings=package_settings,
                            info=args.only or True,
                            check_updates=args.update,
                            filename=args.file,
@@ -492,16 +544,7 @@ path to the CMake binary directory, like this:
                 build_folder = os.path.normpath(os.path.join(current_path, build_folder))
             self._manager.local_package(current_path, build_folder)
 
-    def source(self, *args):
-        """ Calls your conanfile.py "source" method to configure the source directory.
-            I.e., downloads and unzip the package source.
-        """
-        parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("reference", nargs='?', default="", help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
-        parser.add_argument("-f", "--force", default=False, action="store_true", help="force remove the source directory and run again.")
-
-        args = parser.parse_args(*args)
-
+    def _get_reference(self, args):
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -512,8 +555,37 @@ path to the CMake binary directory, like this:
                 reference = os.path.normpath(os.path.join(current_path, args.reference))
             else:
                 reference = args.reference
+        return current_path, reference
 
+    def source(self, *args):
+        """ Calls your conanfile.py "source" method to configure the source directory.
+            I.e., downloads and unzip the package source.
+        """
+        parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
+        parser.add_argument("reference", nargs='?', default="", help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
+        parser.add_argument("-f", "--force", default=False, action="store_true", help="force remove the source directory and run again.")
+
+        args = parser.parse_args(*args)
+
+        current_path, reference = self._get_reference(args)
         self._manager.source(current_path, reference, args.force)
+
+    def imports(self, *args):
+        """ Executes only the import functionality of the conanfile (txt or py). It requires
+        to have been previously installed and have a conanbuildinfo.txt generated file
+        """
+        parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
+        parser.add_argument("reference", nargs='?', default="",
+                            help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
+        parser.add_argument("-d", "--dest",
+                            help="optional destination base directory, current dir by default")
+
+        args = parser.parse_args(*args)
+
+        dest_folder = args.dest
+        current_path, reference = self._get_reference(args)
+        self._manager.imports(current_path, reference, args.file, dest_folder)
 
     def export(self, *args):
         """ Copies the package recipe (conanfile.py and associated files) to your local store,

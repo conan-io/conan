@@ -247,8 +247,8 @@ class ConfigureEnvironmentTest(unittest.TestCase):
 
     def _create_profile(self, name, settings, scopes=None, env=None):
         profile = Profile()
-        profile.settings = settings or {}
+        profile._settings = settings or {}
         if scopes:
             profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
-        profile.env = env or {}
+        profile._env = env or {}
         save(self.client.client_cache.profile_path(name), profile.dumps())

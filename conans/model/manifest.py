@@ -3,6 +3,8 @@ import calendar
 import time
 from conans.util.files import md5sum, md5
 from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.util.log import logger
+from conans.errors import ConanException
 
 
 class FileTreeManifest(object):
@@ -51,8 +53,11 @@ class FileTreeManifest(object):
                 abs_path = os.path.join(root, f)
                 rel_path = os.path.normpath(os.path.join(relative_path, f))
                 rel_path = rel_path.replace("\\", "/")
-                file_dict[rel_path] = md5sum(abs_path)
-
+                if os.path.exists(abs_path):
+                    file_dict[rel_path] = md5sum(abs_path)
+                else:
+                    raise ConanException("The file is a broken symlink, verify that "
+                                         "you are packaging the needed destination files: '%s'" % abs_path)
         date = calendar.timegm(time.gmtime())
         from conans.paths import CONAN_MANIFEST, CONANFILE
         file_dict.pop(PACKAGE_TGZ_NAME, None)  # Exclude the PACKAGE_TGZ_NAME
