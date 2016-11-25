@@ -32,6 +32,8 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "1.1.2")
         result = max_satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<=1.2.1", loose=True)
         self.assertEqual(result, "1.2.1")
+        result = max_satisfying(["1.6.1"], ">1.5.0,<1.6.8", loose=True)
+        self.assertEqual(result, "1.6.1")
         # FIXME: Very annoying, this lib, will not find 1.2 for this range
         result = max_satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "<=1.2", loose=True)
         self.assertEqual(result, "1.1.2")
