@@ -14,7 +14,6 @@ from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
 from conans.model.env_info import EnvInfo
-from conans.client.file_copier import report_copied_files
 from conans.client.source import config_source
 from conans.client.generators.env import ConanEnvGenerator
 
@@ -293,13 +292,8 @@ Package configuration:
 
         # Build step might need DLLs, binaries as protoc to generate source files
         # So execute imports() before build, storing the list of copied_files
-        from conans.client.importer import FileImporter
-        local_installer = FileImporter(conan_file, build_folder)
-        conan_file.copy = local_installer
-        conan_file.imports()
-        copied_files = local_installer.execute()
-        import_output = ScopedOutput("%s imports()" % output.scope, output)
-        report_copied_files(copied_files, import_output)
+        from conans.client.importer import run_imports
+        copied_files = run_imports(conan_file, build_folder, output)
 
         try:
             # This is necessary because it is different for user projects

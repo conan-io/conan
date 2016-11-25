@@ -11,6 +11,7 @@ def run_imports(conanfile, current_path, output):
     copied_files = file_importer.execute()
     import_output = ScopedOutput("%s imports()" % output.scope, output)
     report_copied_files(copied_files, import_output)
+    return copied_files
 
 
 class FileImporter(object):
