@@ -253,6 +253,12 @@ class ConanProxy(object):
         remote, _ = self._get_remote()
         return self._remote_manager.search(remote, pattern, ignorecase)
 
+    def search_remotes(self, pattern=None, ignorecase=True):
+        for remote in self._registry.remotes:
+            search_result = self._remote_manager.search(remote, pattern, ignorecase)
+            if search_result:
+                return search_result
+
     def search_packages(self, reference, query):
         remote, _ = self._get_remote()
         return self._remote_manager.search_packages(remote, reference, query)
@@ -279,7 +285,7 @@ class ConanProxy(object):
         export_path = self._client_cache.export(reference)
         self._remote_manager.get_recipe(reference, export_path, remote)
         conanfile_path = self._client_cache.conanfile(reference)
-        loader = ConanFileLoader(None, None, None, None)
+        loader = ConanFileLoader(None, None, None, None, None, None, None)
         conanfile = loader.load_class(conanfile_path)
         short_paths = conanfile.short_paths
         self._registry.set_ref(reference, remote)

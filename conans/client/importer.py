@@ -1,6 +1,18 @@
 import os
 import fnmatch
-from conans.client.file_copier import FileCopier
+
+from conans.client.file_copier import FileCopier, report_copied_files
+from conans.client.output import ScopedOutput
+
+
+def run_imports(conanfile, current_path, output):
+    file_importer = FileImporter(conanfile, current_path)
+    conanfile.copy = file_importer
+    conanfile.imports()
+    copied_files = file_importer.execute()
+    import_output = ScopedOutput("%s imports()" % output.scope, output)
+    report_copied_files(copied_files, import_output)
+    return copied_files
 
 
 class FileImporter(object):

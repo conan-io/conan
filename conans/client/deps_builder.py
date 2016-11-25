@@ -282,13 +282,14 @@ class DepsGraph(object):
 class DepsBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, retriever, output, loader):
+    def __init__(self, retriever, output, loader, resolver):
         """ param retriever: something that implements retrieve_conanfile for installed conans
         param loader: helper ConanLoader to be able to load user space conanfile
         """
         self._retriever = retriever
         self._output = output
         self._loader = loader
+        self._resolver = resolver
 
     def get_graph_updates_info(self, deps_graph):
         """
@@ -325,7 +326,6 @@ class DepsBuilder(object):
         param node: Node object to be expanded in this step
         down_reqs: the Requirements as coming from downstream, which can overwrite current
                     values
-        param settings: dict of settings values => {"os": "windows"}
         param deps: DepsGraph result
         param public_deps: {name: Node} of already expanded public Nodes, not to be repeated
                            in graph
@@ -338,7 +338,11 @@ class DepsBuilder(object):
 
         # Expand each one of the current requirements
         for name, require in conanfile.requires.items():
-            if require.override or require.conan_reference is None:
+            self._resolver.resolve(require, conanref)
+
+        # Expand each one of the current requirements
+        for name, require in conanfile.requires.items():
+            if require.override:
                 continue
             if require.conan_reference in loop_ancestors:
                 raise ConanException("Loop detected: %s"
@@ -410,7 +414,6 @@ class DepsBuilder(object):
             dep_graph.add_edge(current_node, new_node)
             if not requirement.private:
                 public_deps[name_req] = new_node
-            # RECURSION!
             return new_node
         else:
             self._output.error("Could not retrieve %s" % requirement.conan_reference)
