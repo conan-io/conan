@@ -12,6 +12,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs
+import urllib
 
 
 def handle_return_deserializer(deserializer=None):
@@ -218,19 +219,20 @@ class RestApiClient(object):
         """
         query = ''
         if pattern:
-            case_sensitive = "&ignorecase=False" if not ignorecase else ''
-            pattern = "q=%s" % pattern
-            query = "?%s%s" % (pattern, case_sensitive)
+            params = {"q": pattern}
+            if not ignorecase:
+                params["ignorecase"] = "False"
+            query = "?%s" % urllib.urlencode(params)
 
         url = "%s/conans/search%s" % (self._remote_api_url, query)
         response = self._get_json(url)["results"]
         return [ConanFileReference.loads(ref) for ref in response]
 
     def search_packages(self, reference, query):
-        url = "%s/conans/%s/search" % (self._remote_api_url, "/".join(reference))
+        url = "%s/conans/%s/search?" % (self._remote_api_url, "/".join(reference))
         if query:
-            url += "?q=%s" % query
-
+            params = {"q": query}
+            url += urllib.urlencode(params)
         references = self._get_json(url)
         return references
 

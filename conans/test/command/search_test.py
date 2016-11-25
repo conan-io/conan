@@ -1,10 +1,11 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.tools import TestClient, TestServer
 from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER,\
-    CONAN_MANIFEST
+    CONAN_MANIFEST, CONANFILE
 import os
 from conans.model.manifest import FileTreeManifest
 from time import time
+import shutil
 
 
 conan_vars1 = '''
@@ -26,6 +27,7 @@ conan_vars1b = '''
     arch=x86
     compiler=gcc
     compiler.version=4.3
+    compiler.libcxx=libstdc++
 [options]
     use_Qt=True
 '''
@@ -36,6 +38,7 @@ conan_vars1c = '''
     arch=x86
     compiler=gcc
     compiler.version=4.5
+    compiler.libcxx=libstdc++11
 [options]
     use_Qt=False
 [full_requires]
@@ -79,7 +82,8 @@ conan_vars4 = """[settings]
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
-        self.client = TestClient()
+        self.servers = {"local": TestServer()}
+        self.client = TestClient(servers=self.servers)
 
         # No conans created
         self.client.run("search")
@@ -87,20 +91,20 @@ class SearchTest(unittest.TestCase):
         self.assertIn('There are no packages', output)
 
         # Conans with and without packages created
-        root_folder1 = 'Hello/1.4.10/fenix/testing'
+        self.root_folder1 = 'Hello/1.4.10/fenix/testing'
         root_folder2 = 'helloTest/1.4.10/fenix/stable'
         root_folder3 = 'Bye/0.14/fenix/testing'
         root_folder4 = 'NodeInfo/1.0.2/fenix/stable'
         root_folder5 = 'MissFile/1.0.2/fenix/stable'
 
         self.client.save({"Empty/1.10/fake/test/reg/fake.txt": "//",
-                          "%s/%s/WindowsPackageSHA/%s" % (root_folder1,
+                          "%s/%s/WindowsPackageSHA/%s" % (self.root_folder1,
                                                           PACKAGES_FOLDER,
                                                           CONANINFO): conan_vars1,
-                          "%s/%s/PlatformIndependantSHA/%s" % (root_folder1,
+                          "%s/%s/PlatformIndependantSHA/%s" % (self.root_folder1,
                                                                PACKAGES_FOLDER,
                                                                CONANINFO): conan_vars1b,
-                          "%s/%s/LinuxPackageSHA/%s" % (root_folder1,
+                          "%s/%s/LinuxPackageSHA/%s" % (self.root_folder1,
                                                         PACKAGES_FOLDER,
                                                         CONANINFO): conan_vars1c,
                           "%s/%s/a44f541cd44w57/%s" % (root_folder2,
@@ -119,7 +123,7 @@ class SearchTest(unittest.TestCase):
 
         # Fake some manifests to be able to calculate recipe hash
         fake_manifest = FileTreeManifest(1212, {})
-        self.client.save({os.path.join(root_folder1, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
+        self.client.save({os.path.join(self.root_folder1, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
                           os.path.join(root_folder2, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
                           os.path.join(root_folder3, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
                           os.path.join(root_folder4, EXPORT_FOLDER, CONAN_MANIFEST): str(fake_manifest),
@@ -150,6 +154,31 @@ class SearchTest(unittest.TestCase):
         self.assertIn("WindowsPackageSHA", self.client.user_io.out)
         self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
+
+    def package_search_nonescaped_characters_test(self):
+        self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11"')
+        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+
+        self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++"')
+        self.assertNotIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+
+        # Now search with a remote
+        os.rmdir(self.servers["local"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        self.client.run("remove Hello* -f")
+        self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
+        self.assertIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
+
+        self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++" -r local')
+        self.assertNotIn("LinuxPackageSHA", self.client.user_io.out)
+        self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
+        self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
 
     def package_search_with_invalid_query_test(self):
         self.client.run("search Hello/1.4.10/fenix/testing -q 'invalid'", ignore_error=True)
@@ -195,6 +224,7 @@ class SearchTest(unittest.TestCase):
         [settings]
             arch: x86
             compiler: gcc
+            compiler.libcxx: libstdc++11
             compiler.version: 4.5
             os: Linux
         [requires]
@@ -209,6 +239,7 @@ class SearchTest(unittest.TestCase):
         [settings]
             arch: x86
             compiler: gcc
+            compiler.libcxx: libstdc++
             compiler.version: 4.3
         outdated from recipe: True
 
