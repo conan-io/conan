@@ -14,7 +14,7 @@ from conans.client.uploader import ConanUploader
 from conans.client.printer import Printer
 from conans.errors import NotFoundException, ConanException
 from conans.client.generators import write_generators
-from conans.client.importer import FileImporter
+from conans.client.importer import run_imports
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.client.remover import ConanRemover
 from conans.model.info import ConanInfo
@@ -27,7 +27,6 @@ from conans.client.package_copier import PackageCopier
 from conans.client.output import ScopedOutput
 from conans.client.proxy import ConanProxy
 from conans.client.remote_registry import RemoteRegistry
-from conans.client.file_copier import report_copied_files
 from conans.model.scope import Scopes
 from conans.client.client_cache import ClientCache
 from conans.client.source import config_source, config_source_local
@@ -309,40 +308,35 @@ If not:
             save(os.path.join(current_path, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
             if not no_imports:
-                local_installer = FileImporter(deps_graph, self._client_cache, current_path)
-                conanfile.copy = local_installer
-                conanfile.imports()
-                copied_files = local_installer.execute()
-                import_output = ScopedOutput("%s imports()" % output.scope, output)
-                report_copied_files(copied_files, import_output)
+                run_imports(conanfile, current_path, output)
 
         if manifest_manager:
             manifest_manager.print_log()
 
-    def _load_deps_info(self, current_path, conanfile, output):
-        build_info_file = os.path.join(current_path, BUILD_INFO)
-        if os.path.exists(build_info_file):
-            try:
-                deps_cpp_info = DepsCppInfo.loads(load(build_info_file))
-                conanfile.deps_cpp_info = deps_cpp_info
-            except:
-                output.error("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
+    def _load_info_file(self, current_path, conanfile, output, info_file, error=False):
+        if info_file == BUILD_INFO:
+            class_, attr, gen = DepsCppInfo, "deps_cpp_info", "txt"
         else:
-            output.warn("%s file not found in %s\nIt is recommended for source, build and package "
-                        "commands\nYou can generate it using 'conan install -g env -g txt'"
-                        % (BUILD_INFO, current_path))
+            class_, attr, gen = DepsEnvInfo, "deps_env_info", "env"
+        info_file_path = os.path.join(current_path, info_file)
+        try:
+            deps_info = class_.loads(load(info_file_path))
+            setattr(conanfile, attr, deps_info)
+        except IOError:
+            error_msg = ("%s file not found in %s\nIt is %s for this command\n"
+                         "You can generate it using 'conan install -g %s'"
+                         % (info_file, current_path, "required" if error else "recommended", gen))
+            if not error:
+                output.warn(error_msg)
+            else:
+                raise ConanException(error_msg)
+        except ConanException:
+            raise ConanException("Parse error in '%s' file in %s" % (info_file, current_path))
 
-        env_file = os.path.join(current_path, CONANENV)
-        if os.path.exists(env_file):
-            try:
-                deps_env_info = DepsEnvInfo.loads(load(env_file))
-                conanfile.deps_env_info = deps_env_info
-            except:
-                output.error("Parse error in '%s' file in %s" % (CONANENV, current_path))
-        else:
-            output.warn("%s file not found in %s\nIt is recommended for source, build and package "
-                        "commands\nYou can generate it using 'conan install -g env -g txt'"
-                        % (CONANENV, current_path))
+    def _load_deps_info(self, current_path, conanfile, output, load_env=True, error=False):
+        self._load_info_file(current_path, conanfile, output, BUILD_INFO, error=error)
+        if load_env:
+            self._load_info_file(current_path, conanfile, output, CONANENV, error=error)
 
     def source(self, current_path, reference, force):
         if not isinstance(reference, ConanFileReference):
@@ -360,6 +354,26 @@ If not:
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             config_source(export_folder, src_folder, conanfile, output, force)
+
+    def imports(self, current_path, reference, conan_file_path, dest_folder):
+        if not isinstance(reference, ConanFileReference):
+            output = ScopedOutput("PROJECT", self._user_io.out)
+            if not conan_file_path:
+                conan_file_path = os.path.join(reference, CONANFILE)
+                if not os.path.exists(conan_file_path):
+                    conan_file_path = os.path.join(reference, CONANFILE_TXT)
+
+            if conan_file_path.endswith(".txt"):
+                conanfile = self._loader().load_conan_txt(conan_file_path, output)
+            else:
+                conanfile = self._loader().load_conan(conan_file_path, output, consumer=True)
+        else:
+            output = ScopedOutput(str(reference), self._user_io.out)
+            conan_file_path = self._client_cache.conanfile(reference)
+            conanfile = self._loader().load_conan(conan_file_path, output)
+
+        self._load_deps_info(current_path, conanfile, output, load_env=False, error=True)
+        run_imports(conanfile, dest_folder or current_path, output)
 
     def local_package(self, current_path, build_folder):
         if current_path == build_folder:
