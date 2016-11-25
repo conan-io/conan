@@ -1,10 +1,9 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
 from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER,\
-    CONAN_MANIFEST, CONANFILE
+    CONAN_MANIFEST
 import os
 from conans.model.manifest import FileTreeManifest
-from time import time
 import shutil
 
 
