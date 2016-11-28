@@ -19,7 +19,7 @@ class HelloConan(ConanFile):
         os.symlink("file1.txt", "file1.txt.1")
 
     def package(self):
-        self.copy("*.txt*")
+        self.copy("*.txt*", links=True)
 """
 
 test_conanfile = """[requires]

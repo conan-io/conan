@@ -40,7 +40,7 @@ class FileCopier(object):
     def report(self, output, warn=False):
         report_copied_files(self._copied, output, warn)
 
-    def __call__(self, pattern, dst="", src="", keep_path=True):
+    def __call__(self, pattern, dst="", src="", keep_path=True, links=False):
         """ FileCopier is lazy, it just store requested copies, and execute them later
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -85,7 +85,7 @@ class FileCopier(object):
                         os.makedirs(os.path.dirname(abs_dst_name))
                     except:
                         pass
-                    if os.path.islink(abs_src_name):
+                    if links and os.path.islink(abs_src_name):
                         linkto = os.readlink(abs_src_name)
                         os.symlink(linkto, abs_dst_name)
                     else:
