@@ -254,6 +254,11 @@ class ConanProxy(object):
         return self._remote_manager.search(remote, pattern, ignorecase)
 
     def search_remotes(self, pattern=None, ignorecase=True):
+        if self._remote_name:
+            remote = self._registry.remote(self._remote_name)
+            search_result = self._remote_manager.search(remote, pattern, ignorecase)
+            return search_result
+
         for remote in self._registry.remotes:
             search_result = self._remote_manager.search(remote, pattern, ignorecase)
             if search_result:
