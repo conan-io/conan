@@ -68,7 +68,7 @@ class CMake(object):
     def is_multi_configuration(self):
         """ some IDEs are multi-configuration, as Visual. Makefiles or Ninja are single-conf
         """
-        if "Visual" in str(self._settings.compiler):
+        if "Visual" in self.generator:
             return True
         # TODO: complete logic
         return False
