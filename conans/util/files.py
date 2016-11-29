@@ -157,10 +157,9 @@ def path_exists(path, basedir=None):
         chunks = chunks[1:]
 
     for chunk in chunks:
-        tmp = tmp + os.sep
         if chunk and chunk not in os.listdir(tmp):
             return False
-        tmp += chunk
+        tmp = os.path.normpath(tmp + os.sep + chunk)
     return True
 
 
