@@ -12,31 +12,45 @@ from conans.model.requires import Requirements
 from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
 from conans.model.scope import Scopes
-from conans.client.require_resolver import RequireResolver
+from conans.client.require_resolver import RequireResolver, satisfying
 import re
 from nose_parameterized import parameterized
 
 
 class BasicMaxVersionTest(unittest.TestCase):
     def basic_test(self):
-        from semver import max_satisfying
-        result = max_satisfying(["1.1", "1.2", "1.3", "2.1"], "1.1", loose=True)
-        self.assertEqual(result, "1.1")
-        result = max_satisfying(["1.1", "1.2", "1.3", "2.1"], ">1.1", loose=True)
+        output = TestBufferConanOutput()
+        result = satisfying(["1.1", "1.2", "1.3", "2.1"], "", output)
         self.assertEqual(result, "2.1")
-        result = max_satisfying(["1.1", "1.2", "1.3", "2.1"], ">1.1 <2.1", loose=True)
+        result = satisfying(["1.1", "1.2", "1.3", "2.1"], "1", output)
         self.assertEqual(result, "1.3")
-        result = max_satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<1.2", loose=True)
+        result = satisfying(["1.1", "1.2", "1.3", "2.1"], "1.1", output)
+        self.assertEqual(result, "1.1")
+        result = satisfying(["1.1", "1.2", "1.3", "2.1"], ">1.1", output)
+        self.assertEqual(result, "2.1")
+        result = satisfying(["1.1", "1.2", "1.3", "2.1"], "<1.3", output)
+        self.assertEqual(result, "1.2")
+        result = satisfying(["1.1", "1.2", "1.3", "2.1"], "<=1.3", output)
+        self.assertEqual(result, "1.3")
+        result = satisfying(["1.1", "1.2", "1.3", "2.1"], ">1.1,<2.1", output)
+        self.assertEqual(result, "1.3")
+        result = satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<1.2", output)
         self.assertEqual(result, "1.1.2")
-        result = max_satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<1.2.1", loose=True)
+        result = satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<1.2.1", output)
         self.assertEqual(result, "1.1.2")
-        result = max_satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<=1.2.1", loose=True)
+        result = satisfying(["1.1.1", "1.1.2", "1.2.1", "1.3", "2.1"], "<=1.2.1", output)
         self.assertEqual(result, "1.2.1")
-        result = max_satisfying(["1.6.1"], ">1.5.0,<1.6.8", loose=True)
+        result = satisfying(["1.6.1"], ">1.5.0,<1.6.8", output)
         self.assertEqual(result, "1.6.1")
-        # FIXME: Very annoying, this lib, will not find 1.2 for this range
-        result = max_satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "<=1.2", loose=True)
-        self.assertEqual(result, "1.1.2")
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "<=1.2", output)
+        self.assertEqual(result, "1.2")
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "<1.3", output)
+        self.assertEqual(result, "1.2.1")
+        result = satisfying(["1.a.1", "master", "X.2", "1.2.1", "1.3", "2.1"], "1.3", output)
+        self.assertIn("Version 'master' is not semver", output)
+        self.assertEqual(result, "1.3")
+        result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3", output)
+        self.assertEqual(result, "1.3")
 
 
 class Retriever(object):
@@ -119,7 +133,7 @@ class VersionRangesTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), None, 
+        self.loader = ConanFileLoader(None, Settings.loads(""), None,
                                       OptionsValues.loads(""), Scopes(), None, None)
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
@@ -144,8 +158,8 @@ class SayConan(ConanFile):
 
     def test_local_basic(self):
         for expr, solution in [(">0.0", "2.2.1"),
-                               (">0.1, <1", "0.3"),
-                               (">0.1, <1 || 2.1", "2.1"),
+                               (">0.1,<1", "0.3"),
+                               (">0.1,<1||2.1", "2.1"),
                                ("", "2.2.1"),
                                ("~0", "0.3"),
                                ("~=1", "1.2.1"),
@@ -183,9 +197,9 @@ class SayConan(ConanFile):
                            ('("Say/0.2@memsharded/testing", "override")', "0.2", True, True),
                            # ranges
                            ('"Say/[<=1.2]@memsharded/testing"', "1.1.2", False, False),
-                           ('"Say/[>=0.2,<=1.1]@memsharded/testing"', "0.3", False, True),
+                           ('"Say/[>=0.2,<=1.0]@memsharded/testing"', "0.3", False, True),
                            ('("Say/[<=1.2]@memsharded/testing", "override")', "1.1.2", True, False),
-                           ('("Say/[>=0.2,<=1.1]@memsharded/testing", "override")', "0.3", True, True),
+                           ('("Say/[>=0.2,<=1.0]@memsharded/testing", "override")', "0.3", True, True),
                            ])
     def transitive_test(self, version_range, solution, override, valid):
         hello_text = hello_content % ">0.1, <1"

@@ -1,7 +1,26 @@
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
-from conans.model.version import Version
 import re
+
+
+def satisfying(list_versions, versionexpr, output):
+    """ returns the maximum version that satisfies the expression
+    if some version cannot be converted to loose SemVer, it is discarded with a msg
+    This provides some woraround for failing comparisons like "2.1" not matching "<=2.1"
+    """
+    from semver import SemVer, max_satisfying
+    version_range = versionexpr.replace(",", " ")
+    candidates = {}
+    for v in list_versions:
+        try:
+            ver = SemVer(v, loose=True)
+            if not ver.prerelease:  # Hack to allow version "2.1" match expr "<=2.1"
+                ver.prerelease = [0]
+            candidates[ver] = v
+        except (ValueError, AttributeError):
+            output.warn("Version '%s' is not semver, cannot be compared with a range" % str(v))
+    result = max_satisfying(candidates, version_range, loose=True)
+    return candidates.get(result)
 
 
 class RequireResolver(object):
@@ -55,9 +74,6 @@ class RequireResolver(object):
                     return resolved_version
 
     def _resolve_version(self, version_range, local_found):
-        version_range = version_range.replace(",", " ")
-        versions = {Version(ref.version): ref for ref in local_found}
-        sorted_versions = reversed(sorted(versions))
-        from semver import max_satisfying
-        result = max_satisfying(sorted_versions, version_range, loose=True)
+        versions = {ref.version: ref for ref in local_found}
+        result = satisfying(versions, version_range, self._output)
         return versions.get(result)
