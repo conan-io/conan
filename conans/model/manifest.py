@@ -3,6 +3,8 @@ import calendar
 import time
 from conans.util.files import md5sum, md5
 from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.util.log import logger
+from conans.errors import ConanException
 
 
 class FileTreeManifest(object):
@@ -13,16 +15,16 @@ class FileTreeManifest(object):
         self.file_sums = file_sums
 
     def __repr__(self):
-        ret = "%s" % (self.time)
-        for filepath, file_md5 in self.file_sums.items():
-            ret += "\n%s: %s" % (filepath, file_md5)
+        ret = "%s\n" % (self.time)
+        for filepath, file_md5 in sorted(self.file_sums.items()):
+            ret += "%s: %s\n" % (filepath, file_md5)
         return ret
 
     @property
     def summary_hash(self):
         ret = ""  # Do not include the timestamp in the summary hash
-        for filepath, file_md5 in self.file_sums.items():
-            ret += "\n%s: %s" % (filepath, file_md5)
+        for filepath, file_md5 in sorted(self.file_sums.items()):
+            ret += "%s: %s\n" % (filepath, file_md5)
         return md5(ret)
 
     @staticmethod
@@ -34,8 +36,9 @@ class FileTreeManifest(object):
         time = int(tokens[0])
         file_sums = {}
         for md5line in tokens[1:]:
-            filename, file_md5 = md5line.split(": ")
-            file_sums[filename] = file_md5
+            if md5line:
+                filename, file_md5 = md5line.split(": ")
+                file_sums[filename] = file_md5
         return FileTreeManifest(time, file_sums)
 
     @classmethod
@@ -50,8 +53,11 @@ class FileTreeManifest(object):
                 abs_path = os.path.join(root, f)
                 rel_path = os.path.normpath(os.path.join(relative_path, f))
                 rel_path = rel_path.replace("\\", "/")
-                file_dict[rel_path] = md5sum(abs_path)
-
+                if os.path.exists(abs_path):
+                    file_dict[rel_path] = md5sum(abs_path)
+                else:
+                    raise ConanException("The file is a broken symlink, verify that "
+                                         "you are packaging the needed destination files: '%s'" % abs_path)
         date = calendar.timegm(time.gmtime())
         from conans.paths import CONAN_MANIFEST, CONANFILE
         file_dict.pop(PACKAGE_TGZ_NAME, None)  # Exclude the PACKAGE_TGZ_NAME

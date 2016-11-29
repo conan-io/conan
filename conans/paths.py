@@ -45,7 +45,12 @@ def conan_expand_user(path):
         old_env = dict(os.environ)
         try:
             home = os.environ.get("HOME")
-            if home and not os.path.exists(home):
+            # Problematic cases of wrong HOME variable
+            # - HOME = %USERPROFILE% verbatim, as messed by some other tools
+            # - MSYS console, that defines a different user home in /c/mingw/msys/users/xxx
+            # In these cases, it is safe to remove it and rely on USERPROFILE directly
+            if home and (not os.path.exists(home) or
+                         (os.getenv("MSYSTEM") and os.getenv("USERPROFILE"))):
                 del os.environ["HOME"]
             result = os.path.expanduser(path)
         finally:

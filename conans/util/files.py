@@ -157,10 +157,9 @@ def path_exists(path, basedir=None):
         chunks = chunks[1:]
 
     for chunk in chunks:
-        tmp = tmp + os.sep
         if chunk and chunk not in os.listdir(tmp):
             return False
-        tmp += chunk
+        tmp = os.path.normpath(tmp + os.sep + chunk)
     return True
 
 
@@ -212,7 +211,7 @@ def tar_extract(fileobj, destination_dir):
         base = realpath(abspath("."))
 
         for finfo in members:
-            if badpath(finfo.name, base) or finfo.issym() or finfo.islnk():
+            if badpath(finfo.name, base) or finfo.islnk():
                 continue
             else:
                 # Fixes unzip a windows zipped file in linux

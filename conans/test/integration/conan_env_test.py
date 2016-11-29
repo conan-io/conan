@@ -3,9 +3,63 @@ from conans.test.tools import TestClient
 from conans.util.files import load
 import os
 import platform
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.paths import CONANFILE
 
 
 class ConanEnvTest(unittest.TestCase):
+
+    def dual_compiler_settings_and_env_test(self):
+
+        def patch_conanfile(conanfile):
+            return conanfile + '''
+    def build(self):
+        import os
+        self.output.warn("COMPILER: %s=>%s" % (self.name, self.settings.compiler))
+        self.output.warn("CXX: %s=>%s" % (self.name, os.environ["CXX"]))
+        self.output.warn("CC: %s=>%s" % (self.name, os.environ["CC"]))
+'''
+
+        client = TestClient()
+        files = cpp_hello_conan_files("Hello0", "1.0", deps=[], build=False)
+        files[CONANFILE] = patch_conanfile(files[CONANFILE])
+        client.save(files)
+        client.run("export lasote/stable")
+
+        files = cpp_hello_conan_files("Hello1", "1.0", 
+                                      deps=["Hello0/1.0@lasote/stable"], build=False)
+        files[CONANFILE] = patch_conanfile(files[CONANFILE])
+        client.save(files)
+        client.run("export lasote/stable")
+
+        # Both with same settings
+        client.run("install Hello1/1.0@lasote/stable --build -s compiler=gcc"
+                   " -s compiler.version=4.6 -s compiler.libcxx=libstdc++11"
+                   " -e CXX=/mycompilercxx -e CC=/mycompilercc")
+
+        self.assertIn("COMPILER: Hello0=>gcc", client.user_io.out)
+        self.assertIn("CXX: Hello0=>/mycompilercxx", client.user_io.out)
+        self.assertIn("CC: Hello0=>/mycompilercc", client.user_io.out)
+
+        self.assertIn("COMPILER: Hello1=>gcc", client.user_io.out)
+        self.assertIn("CXX: Hello1=>/mycompilercxx", client.user_io.out)
+        self.assertIn("CC: Hello1=>/mycompilercc", client.user_io.out)
+
+        # Different for Hello0
+        client.run("install Hello1/1.0@lasote/stable --build -s compiler=gcc"
+                   " -s compiler.version=4.6 -s compiler.libcxx=libstdc++11"
+                   " -e CXX=/mycompilercxx -e CC=/mycompilercc"
+                   " -s Hello0:compiler=clang -s Hello0:compiler.version=3.7"
+                   " -s Hello0:compiler.libcxx=libstdc++"
+                   " -e Hello0:CXX=/othercompilercxx -e Hello0:CC=/othercompilercc")
+
+        self.assertIn("COMPILER: Hello0=>clang", client.user_io.out)
+        self.assertIn("CXX: Hello0=>/othercompilercxx", client.user_io.out)
+        self.assertIn("CC: Hello0=>/othercompilercc", client.user_io.out)
+
+        self.assertIn("COMPILER: Hello1=>gcc", client.user_io.out)
+        self.assertIn("CXX: Hello1=>/mycompilercxx", client.user_io.out)
+        self.assertIn("CC: Hello1=>/mycompilercc", client.user_io.out)
 
     def conan_env_deps_test(self):
         client = TestClient()
