@@ -106,9 +106,8 @@ def human_size(size_bytes):
 
 
 def unzip(filename, destination="."):
-    if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-        filename.endswith(".tzb2") or filename.endswith(".tar.bz2") or
-            filename.endswith(".tar")):
+    import tarfile
+    if (tarfile.is_tarfile(filename)):
         return untargz(filename, destination)
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))

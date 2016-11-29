@@ -1,5 +1,5 @@
 import unittest
-import os
+import os, sys
 from conans.util.files import save, load
 from conans.client.loader import ConanFileLoader
 from conans.model.settings import Settings
@@ -29,6 +29,48 @@ class ConanfileToolsTest(unittest.TestCase):
         tools.unzip(tar_path, output_dir)
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
+
+    def test_untar_lzma(self):
+        if sys.version_info < (3, 3):
+            print("Only works with python >= 3.3 - skipping")
+            return
+
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "example.txt")
+        save(file_path, "Hello LZMA!")
+        tar_path = os.path.join(tmp_dir, "sample.tar.xz")
+        try:
+            old_path = os.getcwd()
+            os.chdir(tmp_dir)
+            import tarfile
+            tar = tarfile.open(tar_path, "w:xz")
+            tar.add("example.txt")
+            tar.close()
+        finally:
+            os.chdir(old_path)
+        output_dir = os.path.join(tmp_dir, "output_dir")
+        tools.unzip(tar_path, output_dir)
+        content = load(os.path.join(output_dir, "example.txt"))
+        self.assertEqual(content, "Hello LZMA!")
+
+    def test_unzip(self):
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "example.txt")
+        save(file_path, "Hello zip!")
+        zip_path = os.path.join(tmp_dir, "sample.zip")
+        try:
+            old_path = os.getcwd()
+            os.chdir(tmp_dir)
+            import zipfile
+            with zipfile.ZipFile(zip_path, 'w') as arc:
+                arc.write("example.txt")
+                arc.close()
+        finally:
+            os.chdir(old_path)
+        output_dir = os.path.join(tmp_dir, "output_dir")
+        tools.unzip(zip_path, output_dir)
+        content = load(os.path.join(output_dir, "example.txt"))
+        self.assertEqual(content, "Hello zip!")
 
     def test_replace_in_file(self):
         file_content = '''
