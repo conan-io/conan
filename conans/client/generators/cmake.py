@@ -82,8 +82,15 @@ class CMakeGenerator(Generator):
 
         # TARGETS
         template = """
+
+foreach(_LIBRARY_NAME ${{CONAN_LIBS_{uname}}})
+    unset(FOUND_LIBRARY CACHE)
+    find_library(FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS ${{CONAN_LIB_DIRS_{uname}}} NO_DEFAULT_PATH)
+    set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{FOUND_LIBRARY}})
+endforeach()
+
 add_library({name} INTERFACE IMPORTED)
-set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_LIBS_{uname}}} {deps})
+set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} {deps})
 set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}})
 set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_DEFINES_{uname}}})
 set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
@@ -127,8 +134,6 @@ macro(conan_set_find_paths)
 endmacro()
 
 macro(conan_flags_target_setup)
-
-    link_directories(${CONAN_LIB_DIRS})
 
     set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
     set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
