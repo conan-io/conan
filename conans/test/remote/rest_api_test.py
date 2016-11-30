@@ -14,6 +14,7 @@ from conans.util.files import md5, save
 from conans.test.utils.test_files import temp_folder
 from conans.model.version import Version
 from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
+import platform
 
 
 class RestApiTest(unittest.TestCase):
@@ -89,16 +90,17 @@ class RestApiTest(unittest.TestCase):
         self.assertIn("hello.cpp", package)
 
     def upload_huge_conan_test(self):
-        # Upload a conans
-        conan_reference = ConanFileReference.loads("conanhuge/1.0.0@private_user/testing")
-        files = {"file%s.cpp" % name: "File conent" for name in range(1000)}
-        self._upload_conan(conan_reference, files)
+        if platform.system() != "Windows":
+            # Upload a conans
+            conan_reference = ConanFileReference.loads("conanhuge/1.0.0@private_user/testing")
+            files = {"file%s.cpp" % name: "File conent" for name in range(1000)}
+            self._upload_conan(conan_reference, files)
 
-        # Get the conans
-        tmp_dir = temp_folder()
-        pack = self.api.get_recipe(conan_reference, tmp_dir)
-        self.assertIsNotNone(pack)
-        self.assertIn("file999.cpp", pack)
+            # Get the conans
+            tmp_dir = temp_folder()
+            pack = self.api.get_recipe(conan_reference, tmp_dir)
+            self.assertIsNotNone(pack)
+            self.assertIn("file999.cpp", pack)
 
     def search_test(self):
         # Upload a conan1
