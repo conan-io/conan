@@ -52,6 +52,25 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "1.8||1.3", output)
         self.assertEqual(result, "1.3")
 
+        result = satisfying(["1.3", "1.3.1"], "<1.3", output)
+        self.assertEqual(result, None)
+        result = satisfying(["1.3.0", "1.3.1"], "<1.3", output)
+        self.assertEqual(result, None)
+        result = satisfying(["1.3", "1.3.1"], "<=1.3", output)
+        self.assertEqual(result, "1.3")
+        result = satisfying(["1.3.0", "1.3.1"], "<=1.3", output)
+        self.assertEqual(result, "1.3.0")
+        # >2 means >=3.0.0-0
+        result = satisfying(["2.1"], ">2", output)
+        self.assertEqual(result, None)
+        result = satisfying(["2.1"], ">2.0", output)
+        self.assertEqual(result, "2.1")
+        # >2.1 means >=2.2.0-0
+        result = satisfying(["2.1.1"], ">2.1", output)
+        self.assertEqual(result, None)
+        result = satisfying(["2.1.1"], ">2.1.0", output)
+        self.assertEqual(result, "2.1.1")
+
 
 class Retriever(object):
     def __init__(self, loader, output):
