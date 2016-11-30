@@ -17,8 +17,8 @@ class ConanController(Controller):
 
         conan_route = '%s/:conanname/:version/:username/:channel' % self.route
 
-        @app.route("/server_info", method=["GET"])
-        def server_info():
+        @app.route("/ping", method=["GET"])
+        def ping():
             """
             Response OK. Useful to get server capabilities (version_checker bottle plugin)
             """

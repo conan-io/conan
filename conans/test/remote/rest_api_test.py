@@ -12,7 +12,6 @@ import requests
 from conans.model.manifest import FileTreeManifest
 from conans.util.files import md5, save
 from conans.test.utils.test_files import temp_folder
-import conans
 from conans.model.version import Version
 from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
 
@@ -48,7 +47,7 @@ class RestApiTest(unittest.TestCase):
 
     def server_info_test(self):
         check, version, capabilities = self.api.server_info()
-        self.assertEquals(version, conans.__version__)
+        self.assertEquals(version, "0.16.0")
         self.assertEquals(check, None)  # None because we are not sending client version
         self.assertEquals(capabilities, [])
 

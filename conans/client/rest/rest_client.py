@@ -274,7 +274,7 @@ class RestApiClient(object):
 
     def server_info(self):
         """Get information about the server: status, version, type and capabilities"""
-        url = "%s/server_info" % self._remote_api_url
+        url = "%s/ping" % self._remote_api_url
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.VERIFY_SSL)
         version_check = ret.headers.get('X-Conan-Client-Version-Check', None)
