@@ -205,7 +205,7 @@ executable = """
 
 
 def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=None,
-                           dll_export=False, need_patch=False, pure_c=False, targets=False):
+                           dll_export=False, need_patch=False, pure_c=False, targets=True):
     """
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
     param deps: [] list of integers, defining which dependencies this conans
@@ -249,7 +249,8 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
     # Naive approximation, NO DEPS
     if targets:
         ret["CMakeLists.txt"] = cmake_targets_file.format(name=name, ext=ext,
-                                                          targets=" ".join(deps))
+                                                          targets=" ".join("CONAN_PKG::%s"
+                                                                           % d for d in deps))
     else:
         ret["CMakeLists.txt"] = cmake_file.format(name=name, ext=ext)
     if pure_c:

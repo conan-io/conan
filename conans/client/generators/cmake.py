@@ -3,16 +3,21 @@ from conans.paths import BUILD_INFO_CMAKE
 
 
 class DepsCppCmake(object):
-    def __init__(self, deps_cpp_info, use_define_token=True):
+    def __init__(self, deps_cpp_info):
         self.include_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
                                              for p in deps_cpp_info.include_paths)
         self.lib_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
                                          for p in deps_cpp_info.lib_paths)
         self.libs = " ".join(deps_cpp_info.libs)
-        if use_define_token:
-            self.defines = "\n\t\t\t".join("-D%s" % d for d in deps_cpp_info.defines)
-        else:
-            self.defines = "\n\t\t\t".join("%s" % d for d in deps_cpp_info.defines)
+
+        defines = []
+        for d in deps_cpp_info.defines:
+            if d.startswith("-D"):
+                defines.append(d)
+            else:
+                defines.append("-D%s" % d)
+        self.defines = "\n\t\t\t".join(defines)
+
         self.cppflags = " ".join(deps_cpp_info.cppflags)
         self.cflags = " ".join(deps_cpp_info.cflags)
         self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
@@ -45,7 +50,7 @@ class CMakeGenerator(Generator):
                         'set(CONAN_C_FLAGS_{dep} "{deps.cflags}")\n')
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
-            deps = DepsCppCmake(dep_cpp_info, False)
+            deps = DepsCppCmake(dep_cpp_info)
             dep_flags = template_dep.format(dep=dep_name.upper(),
                                             deps=deps)
             sections.append(dep_flags)
@@ -86,10 +91,12 @@ set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_
 
 """
         existing_deps = self.deps_build_info.deps
+
         for dep_name, dep_info in self.deps_build_info.dependencies:
-            use_deps = ["x::"+d for d in dep_info.deps if d in existing_deps]
+            use_deps = ["CONAN_PKG::%s" % d for d in dep_info.deps if d in existing_deps]
             deps = "" if not use_deps else " ".join(use_deps)
-            sections.append(template.format(name="x::"+dep_name, deps=deps, uname=dep_name.upper()))
+            sections.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
+                                            uname=dep_name.upper()))
 
         # MACROS
         sections.append(self._aux_cmake_test_setup())
