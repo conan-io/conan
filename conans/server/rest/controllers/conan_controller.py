@@ -17,8 +17,12 @@ class ConanController(Controller):
 
         conan_route = '%s/:conanname/:version/:username/:channel' % self.route
 
-        # FIXME: REPLACE ROUTE WITH AN ER COMPOSED WITH ERs for
-        # {conanname}/{version}/{username}/{channel}
+        @app.route("/server_info", method=["GET"])
+        def server_info():
+            """
+            Response OK. Useful to get server capabilities (version_checker bottle plugin)
+            """
+            return
 
         @app.route("%s/digest" % conan_route, method=["GET"])
         def get_conan_digest_url(conanname, version, username, channel, auth_user):
