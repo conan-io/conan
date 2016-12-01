@@ -237,8 +237,7 @@ class RestApiClient(object):
 
     @handle_return_deserializer()
     def remove_conanfile(self, conan_reference):
-        """ Remove any conans
-        """
+        """ Remove a recipe and packages """
         self.check_credentials()
         url = "%s/conans/%s" % (self._remote_api_url, '/'.join(conan_reference))
         response = self.requester.delete(url,
@@ -249,8 +248,7 @@ class RestApiClient(object):
 
     @handle_return_deserializer()
     def remove_packages(self, conan_reference, package_ids=None):
-        """ Remove any conans
-        """
+        """ Remove any packages specified by package_ids"""
         self.check_credentials()
         payload = {"package_ids": package_ids}
         url = "%s/conans/%s/packages/delete" % (self._remote_api_url, '/'.join(conan_reference))
@@ -258,8 +256,7 @@ class RestApiClient(object):
 
     @handle_return_deserializer()
     def _remove_conanfile_files(self, conan_reference, files):
-        """ Remove any conans
-        """
+        """ Remove recipe files """
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
         url = "%s/conans/%s/remove_files" % (self._remote_api_url, '/'.join(conan_reference))
@@ -267,14 +264,25 @@ class RestApiClient(object):
 
     @handle_return_deserializer()
     def _remove_package_files(self, package_reference, files):
-        """ Remove any conans
-        """
+        """ Remove package files """
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
         url = "%s/conans/%s/packages/%s/remove_files" % (self._remote_api_url,
                                                          "/".join(package_reference.conan),
                                                          package_reference.package_id)
         return self._post_json(url, payload)
+
+    def server_info(self):
+        """Get information about the server: status, version, type and capabilities"""
+        url = "%s/ping" % self._remote_api_url
+        ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
+                                 verify=self.VERIFY_SSL)
+        version_check = ret.headers.get('X-Conan-Client-Version-Check', None)
+        server_version = ret.headers.get('X-Conan-Server-Version', None)
+        server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")
+        server_capabilities = [cap.strip() for cap in server_capabilities.split(",") if cap]
+
+        return version_check, server_version, server_capabilities
 
     def _get_conan_snapshot(self, reference):
         url = "%s/conans/%s" % (self._remote_api_url, '/'.join(reference))

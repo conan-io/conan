@@ -53,8 +53,13 @@ class VersionCheckerPlugin(object):
                 elif client_version == self.server_version:
                     check = 'current'
                 elif client_version > self.server_version:
+                    # Client won't complain unless client has a "min_server_compatible_version"
+                    # higher than current CONAN_SERVER_VERSION (not planned in conan development)
                     check = 'server_outdated'
                 resp.headers['X-Conan-Client-Version-Check'] = check
-                resp.headers['X-Conan-Server-Version'] = str(self.server_version)
+
+            resp.headers['X-Conan-Server-Version'] = str(self.server_version)
+            # colon separated, future: "complex_search" etc
+            resp.headers['X-Conan-Server-Capabilities'] = ""
         except Exception:
             logger.error(traceback.format_exc())
