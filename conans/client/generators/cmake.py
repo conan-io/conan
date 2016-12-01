@@ -86,7 +86,12 @@ class CMakeGenerator(Generator):
 foreach(_LIBRARY_NAME ${{CONAN_LIBS_{uname}}})
     unset(FOUND_LIBRARY CACHE)
     find_library(FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS ${{CONAN_LIB_DIRS_{uname}}} NO_DEFAULT_PATH)
-    set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{FOUND_LIBRARY}})
+    if(FOUND_LIBRARY)
+        set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{FOUND_LIBRARY}})
+    else()
+        message(STATUS "Library ${{_LIBRARY_NAME}} not found in package, might be system one")
+        set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{_LIBRARY_NAME}})
+    endif()
 endforeach()
 
 add_library({name} INTERFACE IMPORTED)
@@ -99,11 +104,15 @@ set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_
 """
         existing_deps = self.deps_build_info.deps
 
+        sections.append('if(${CMAKE_VERSION} VERSION_GREATER "3.1.2")')
+
         for dep_name, dep_info in self.deps_build_info.dependencies:
             use_deps = ["CONAN_PKG::%s" % d for d in dep_info.deps if d in existing_deps]
             deps = "" if not use_deps else " ".join(use_deps)
             sections.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                             uname=dep_name.upper()))
+
+        sections.append('endif()  # CMAKE > 3.x')
 
         # MACROS
         sections.append(self._aux_cmake_test_setup())
@@ -114,16 +123,19 @@ set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_
         return """macro(conan_basic_setup)
     conan_check_compiler()
     conan_output_dirs_setup()
-    conan_flags_setup()
+    conan_set_find_paths()
+    if(NOT "${ARGV0}" STREQUAL "TARGETS")
+        message(STATUS "Conan: Using cmake global configuration")
+        conan_global_flags()
+    else()
+        message(STATUS "Conan: Using cmake targets configuration")
+    endif()
+    conan_set_rpath()
+    conan_set_vs_runtime()
+    conan_set_libcxx()
     conan_set_find_paths()
 endmacro()
 
-macro(conan_targets_setup)
-    conan_check_compiler()
-    conan_output_dirs_setup()
-    conan_flags_target_setup()
-    conan_set_find_paths()
-endmacro()
 
 macro(conan_set_find_paths)
     # CMake can find findXXX.cmake files in the root of packages
@@ -133,23 +145,7 @@ macro(conan_set_find_paths)
     set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
 endmacro()
 
-macro(conan_flags_target_setup)
-
-    set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
-    set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
-
-    if(APPLE)
-        # https://cmake.org/Wiki/CMake_RPATH_handling
-        # CONAN GUIDE: All generated libraries should have the id and dependencies to other
-        # dylibs without path, just the name, EX:
-        # libMyLib1.dylib:
-        #     libMyLib1.dylib (compatibility version 0.0.0, current version 0.0.0)
-        #     libMyLib0.dylib (compatibility version 0.0.0, current version 0.0.0)
-        #     /usr/lib/libc++.1.dylib (compatibility version 1.0.0, current version 120.0.0)
-        #     /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1197.1.1)
-        set(CMAKE_SKIP_RPATH 1)  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
-                                 # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
-    endif()
+macro(conan_set_vs_runtime)
     if(CONAN_LINK_RUNTIME)
         if(DEFINED CMAKE_CXX_FLAGS_RELEASE)
             string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
@@ -164,6 +160,9 @@ macro(conan_flags_target_setup)
             string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
         endif()
     endif()
+endmacro()
+
+macro(conan_set_libcxx)
     if(DEFINED CONAN_LIBCXX)
         message(STATUS "Conan C++ stdlib: ${CONAN_LIBCXX}")
         if(CONAN_COMPILER STREQUAL "clang" OR CONAN_COMPILER STREQUAL "apple-clang")
@@ -181,25 +180,7 @@ macro(conan_flags_target_setup)
     endif()
 endmacro()
 
-
-macro(conan_flags_setup)
-    if(CONAN_SYSTEM_INCLUDES)
-        include_directories(SYSTEM ${CONAN_INCLUDE_DIRS})
-    else()
-        include_directories(${CONAN_INCLUDE_DIRS})
-    endif()
-    link_directories(${CONAN_LIB_DIRS})
-    add_definitions(${CONAN_DEFINES})
-
-    # For find_library
-    set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
-    set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CXX_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_C_FLAGS}")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_SHARED_LINKER_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
-
+macro(conan_set_rpath)
     if(APPLE)
         # https://cmake.org/Wiki/CMake_RPATH_handling
         # CONAN GUIDE: All generated libraries should have the id and dependencies to other
@@ -212,35 +193,37 @@ macro(conan_flags_setup)
         set(CMAKE_SKIP_RPATH 1)  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
                                  # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
     endif()
-    if(CONAN_LINK_RUNTIME)
-        if(DEFINED CMAKE_CXX_FLAGS_RELEASE)
-            string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
-        endif()
-        if(DEFINED CMAKE_CXX_FLAGS_DEBUG)
-            string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-        endif()
-        if(DEFINED CMAKE_C_FLAGS_RELEASE)
-            string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
-        endif()
-        if(DEFINED CMAKE_C_FLAGS_DEBUG)
-            string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
-        endif()
+endmacro()
+
+
+macro(conan_global_flags)
+    if(CONAN_SYSTEM_INCLUDES)
+        include_directories(SYSTEM ${CONAN_INCLUDE_DIRS})
+    else()
+        include_directories(${CONAN_INCLUDE_DIRS})
     endif()
-    if(DEFINED CONAN_LIBCXX)
-        message(STATUS "Conan C++ stdlib: ${CONAN_LIBCXX}")
-        if(CONAN_COMPILER STREQUAL "clang" OR CONAN_COMPILER STREQUAL "apple-clang")
-            if(CONAN_LIBCXX STREQUAL "libstdc++" OR CONAN_LIBCXX STREQUAL "libstdc++11" )
-                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
-            elseif(CONAN_LIBCXX STREQUAL "libc++")
-                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-            endif()
-        endif()
-        if(CONAN_LIBCXX STREQUAL "libstdc++11")
-            add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
-        elseif(CONAN_LIBCXX STREQUAL "libstdc++")
-            add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-        endif()
-    endif()
+    link_directories(${CONAN_LIB_DIRS})
+    add_definitions(${CONAN_DEFINES})
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CXX_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_C_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_SHARED_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
+endmacro()
+
+macro(conan_set_find_paths)
+    # For find_library
+    set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
+    set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
+endmacro()
+
+macro(conan_flags_setup)
+    # Macro maintained for backwards compatibility
+    conan_set_find_paths()
+    conan_global_flags()
+    conan_set_rpath()
+    conan_set_vs_runtime()
+    conan_set_libcxx()
 endmacro()
 
 macro(conan_output_dirs_setup)

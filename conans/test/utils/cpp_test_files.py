@@ -142,7 +142,7 @@ include(${{CMAKE_BINARY_DIR}}/%s)
 
 add_definitions(-DCONAN_LANGUAGE=${{CONAN_LANGUAGE}})
 message("HELLO LANGUAGE " ${{CONAN_LANGUAGE}})
-conan_targets_setup()
+conan_basic_setup(TARGETS)
 
 add_library(hello{name} hello{ext})
 target_link_libraries(hello{name} PUBLIC {targets})
@@ -205,7 +205,7 @@ executable = """
 
 
 def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=None,
-                           dll_export=False, need_patch=False, pure_c=False, targets=True):
+                           dll_export=False, need_patch=False, pure_c=False, cmake_targets=False):
     """
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
     param deps: [] list of integers, defining which dependencies this conans
@@ -247,7 +247,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
                                                msg=msg)
 
     # Naive approximation, NO DEPS
-    if targets:
+    if cmake_targets:
         ret["CMakeLists.txt"] = cmake_targets_file.format(name=name, ext=ext,
                                                           targets=" ".join("CONAN_PKG::%s"
                                                                            % d for d in deps))
@@ -267,7 +267,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
                           pure_c=False, config=True, build=True, collect_libs=False,
-                          use_cmake=True):
+                          use_cmake=True, cmake_targets=False):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -299,7 +299,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
 
     base_files = cpp_hello_source_files(name, code_deps, private_includes, msg=msg,
                                         dll_export=dll_export, need_patch=need_patch,
-                                        pure_c=pure_c)
+                                        pure_c=pure_c, cmake_targets=cmake_targets)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
     build_env = conanfile_build_cmake if use_cmake else conanfile_build_env
     conanfile = conanfile_template.format(name=name,
