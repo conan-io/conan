@@ -123,7 +123,7 @@ set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_
         return """macro(conan_basic_setup)
     conan_check_compiler()
     conan_output_dirs_setup()
-    conan_set_find_paths()
+    conan_set_find_library_paths()
     if(NOT "${ARGV0}" STREQUAL "TARGETS")
         message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
@@ -136,13 +136,18 @@ set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_
     conan_set_find_paths()
 endmacro()
 
-
 macro(conan_set_find_paths)
     # CMake can find findXXX.cmake files in the root of packages
     set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
 
     # Make find_package() to work
     set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
+endmacro()
+
+macro(conan_set_find_library_paths)
+    # For find_library
+    set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
+    set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
 endmacro()
 
 macro(conan_set_vs_runtime)
@@ -211,15 +216,9 @@ macro(conan_global_flags)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
 endmacro()
 
-macro(conan_set_find_paths)
-    # For find_library
-    set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
-    set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
-endmacro()
-
 macro(conan_flags_setup)
     # Macro maintained for backwards compatibility
-    conan_set_find_paths()
+    conan_set_find_library_paths()
     conan_global_flags()
     conan_set_rpath()
     conan_set_vs_runtime()
