@@ -129,7 +129,7 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conan(self, conanfile_path, output, consumer=False):
+    def load_conan(self, conanfile_path, output, consumer=False, reference=None):
         """ loads a ConanFile object from the given file
         """
         loaded, filename = self._parse_file(conanfile_path)
@@ -144,9 +144,11 @@ class ConanFileLoader(object):
                 values_tuple = self._package_settings[result.name]
                 tmp_settings.values = Values.from_list(values_tuple)
 
+            user, channel = (reference.user, reference.channel) if reference else (None, None)
+
             # Instance the conanfile
             result = result(output, self._runner, tmp_settings,
-                            os.path.dirname(conanfile_path))
+                            os.path.dirname(conanfile_path), user, channel)
 
             # Prepare the env variables mixing global env vars with the
             # package ones if name match
