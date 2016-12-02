@@ -9,6 +9,7 @@ from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import CONANINFO
 from conans.util.log import logger
 import os
+from conans.search.query_parse import infix_to_postfix, evaluate_postfix
 
 
 class SearchAdapterABC(object):
@@ -62,6 +63,46 @@ class SearchManagerABC(object):
         pass
 
 
+def get_postfix_from_query(query):
+    try:
+        postfix = infix_to_postfix(query) if query else []
+    except Exception as exc:
+        raise ConanException("Invalid package query: %s. %s" % (query, exc))
+    return postfix
+
+
+def evaluate_postfix_with_info(postfix, conan_vars_info):
+
+    # Evaluate conaninfo with the expression
+
+    def evaluate_info(expression):
+        """Receives an expression like compiler.version="12"
+        Uses conan_vars_info in the closure to evaluate it"""
+        name, value = expression.split("=", 1)
+        value = value.replace("\"", "")
+        return evaluate(name, value, conan_vars_info)
+
+    return evaluate_postfix(postfix, evaluate_info)
+
+
+def evaluate(prop_name, prop_value, conan_vars_info):
+    """
+    Evaluates a single prop_name, prop_value like "os", "Windows" against conan_vars_info.serialize_min()
+    """
+
+    def compatible_prop(setting_value, prop_value):
+        return setting_value is None or prop_value == setting_value
+
+    info_settings = conan_vars_info.get("settings", [])
+    info_options = conan_vars_info.get("options", [])
+
+    if prop_name in ["os", "compiler", "arch", "build_type"] or prop_name.startswith("compiler."):
+        return compatible_prop(info_settings.get(prop_name, None), prop_value)
+    else:
+        return compatible_prop(info_options.get(prop_name, None), prop_value)
+    return False
+
+
 class DiskSearchManager(SearchManagerABC):
     """Will search recipes and packages using a file system.
     Can be used with a SearchAdapter"""
@@ -96,14 +137,15 @@ class DiskSearchManager(SearchManagerABC):
                                settings: {os: Windows}}}
         param conan_ref: ConanFileReference object
         """
-        # GET PROPERTIES FROM QUERY
-        properties = get_properties_from_query(query)
 
-        logger.debug("SEARCH PACKAGE PROPERTIES: %s" % properties)
+        # Parse the query
+        postfix = get_postfix_from_query(query)
+
         result = {}
         packages_path = self._paths.packages(reference)
         subdirs = self._adapter.list_folder_subdirs(packages_path, level=1)
         for package_id in subdirs:
+            # Read conaninfo
             try:
                 package_reference = PackageReference(reference, package_id)
                 info_path = self._adapter.join_paths(self._paths.package(package_reference,
@@ -112,61 +154,18 @@ class DiskSearchManager(SearchManagerABC):
                 if not self._adapter.path_exists(info_path):
                     raise NotFoundException("")
                 conan_info_content = self._adapter.load(info_path)
-                conan_vars_info = ConanInfo.loads(conan_info_content)
-                if not self._filtered_by_properties(conan_vars_info, properties):
-                    result[package_id] = conan_vars_info.serialize_min()
+                conan_vars_info = ConanInfo.loads(conan_info_content).serialize_min()
+
             except Exception as exc:
                 logger.error("Package %s has not ConanInfo file" % str(package_reference))
                 if str(exc):
                     logger.error(str(exc))
 
-        return result
-
-    def _filtered_by_properties(self, conan_vars_info, properties):
-
-        def compatible_prop(setting_value, prop_value):
-            return setting_value is None or prop_value == setting_value
-
-        for prop_name, prop_value in properties.items():
-            if prop_name == "os":
-                if compatible_prop(conan_vars_info.settings.os, prop_value):
-                    continue
-                return True
-            elif prop_name == "compiler":
-                if compatible_prop(conan_vars_info.settings.compiler, prop_value):
-                    continue
-                return True
-            elif prop_name.startswith("compiler."):
-                subsetting = prop_name[9:]
-                prop = getattr(conan_vars_info.settings.compiler, subsetting)
-                if compatible_prop(prop, prop_value):
-                    continue
-                return True
-            elif prop_name == "arch":
-                if compatible_prop(conan_vars_info.settings.arch, prop_value):
-                    continue
-                return True
-            elif prop_name == "build_type":
-                if compatible_prop(conan_vars_info.settings.build_type, prop_value):
-                    continue
-                return True
-            else:
-                if hasattr(conan_vars_info.options, prop_name):
-                    if getattr(conan_vars_info.options, prop_name) == prop_value:
-                        continue
-                    return True
-        return False
-
-
-def get_properties_from_query(query):
-    properties = {}
-    if query:
-        query = query.replace("AND", "and").replace("and", ",").replace(" ", "")
-        for pair in query.split(","):
+            # Evaluate the postfix with the conan info
             try:
-                name, value = pair.split("=")
-                properties[name] = value
-            except ValueError as exc:
-                logger.error(exc)
+                if evaluate_postfix_with_info(postfix, conan_vars_info):
+                    result[package_id] = conan_vars_info
+            except Exception:
                 raise ConanException("Invalid package query: %s" % query)
-    return properties
+
+        return result

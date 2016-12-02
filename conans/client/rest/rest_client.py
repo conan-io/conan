@@ -12,6 +12,9 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
+from conans import COMPLEX_SEARCH_CAPABILITY
+from conans.search.search import get_postfix_from_query,\
+    evaluate_postfix_with_info
 
 
 def handle_return_deserializer(deserializer=None):
@@ -228,12 +231,33 @@ class RestApiClient(object):
         return [ConanFileReference.loads(ref) for ref in response]
 
     def search_packages(self, reference, query):
+
+        try:
+            _, _, capabilities = self.server_info()
+        except NotFoundException:
+            capabilities = []
+
         url = "%s/conans/%s/search?" % (self._remote_api_url, "/".join(reference))
-        if query:
-            params = {"q": query}
+        if COMPLEX_SEARCH_CAPABILITY in capabilities:
+            if query:
+                params = {"q": query}
+                url += urlencode(params)
+            package_infos = self._get_json(url)
+            return package_infos
+
+        else:
+            result = {}
+            # Extract the conan infos
+            params = {"q": ""}
             url += urlencode(params)
-        references = self._get_json(url)
-        return references
+            package_infos = self._get_json(url)
+            # Evaluate the query
+            # Parse the query
+            postfix = get_postfix_from_query(query)
+            for package_id, info in package_infos.items():
+                if evaluate_postfix_with_info(postfix, info):
+                    result[package_id] = info
+            return result
 
     @handle_return_deserializer()
     def remove_conanfile(self, conan_reference):
@@ -277,6 +301,9 @@ class RestApiClient(object):
         url = "%s/ping" % self._remote_api_url
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.VERIFY_SSL)
+        if ret.status_code == 404:
+            raise NotFoundException("Not implemented endpoint")
+
         version_check = ret.headers.get('X-Conan-Client-Version-Check', None)
         server_version = ret.headers.get('X-Conan-Server-Version', None)
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")

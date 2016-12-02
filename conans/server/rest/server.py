@@ -12,14 +12,19 @@ class ConanServer(object):
     store = None
     root_app = None
 
-    def __init__(self, run_port, ssl_enabled, credentials_manager,
+    def __init__(self, run_port, credentials_manager,
                  updown_auth_manager, authorizer, authenticator,
-                 file_manager, search_manager, server_version, min_client_compatible_version):
+                 file_manager, search_manager, server_version, min_client_compatible_version,
+                 server_capabilities):
 
         assert(isinstance(server_version, Version))
         assert(isinstance(min_client_compatible_version, Version))
 
-        self.api_v1 = ApiV1(credentials_manager, updown_auth_manager, server_version, min_client_compatible_version)
+        server_capabilities = server_capabilities or []
+
+        self.api_v1 = ApiV1(credentials_manager, updown_auth_manager,
+                            server_version, min_client_compatible_version,
+                            server_capabilities)
 
         self.root_app = bottle.Bottle()
         self.root_app.mount("/v1/", self.api_v1)

@@ -4,6 +4,7 @@ from conans.paths import PACKAGES_FOLDER, CONANINFO, EXPORT_FOLDER, CONAN_MANIFE
 import os
 from conans.model.manifest import FileTreeManifest
 import shutil
+from conans import COMPLEX_SEARCH_CAPABILITY
 
 
 conan_vars1 = '''
@@ -80,7 +81,8 @@ conan_vars4 = """[settings]
 class SearchTest(unittest.TestCase):
 
     def setUp(self):
-        self.servers = {"local": TestServer()}
+        self.servers = {"local": TestServer(server_capabilities=[]),
+                        "search_able": TestServer(server_capabilities=[COMPLEX_SEARCH_CAPABILITY])}
         self.client = TestClient(servers=self.servers)
 
         # No conans created
@@ -220,9 +222,90 @@ class SearchTest(unittest.TestCase):
         self.assertIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
 
+    def _assert_pkg_q(self, query, packages_found, remote):
+
+        command = 'search Hello/1.4.10@fenix/testing -q \'%s\'' % query
+        if remote:
+            command += " -r %s" % remote
+        self.client.run(command)
+
+        for pack_name in ["LinuxPackageSHA", "PlatformIndependantSHA", "WindowsPackageSHA"]:
+            self.assertEquals(pack_name in self.client.user_io.out,
+                              pack_name in packages_found, "%s fail" % pack_name)
+
+    def package_search_complex_queries_test(self):
+
+        def test_cases(remote=None):
+
+            if remote:  # Simulate upload to remote
+                os.rmdir(self.servers[remote].paths.store)
+                shutil.copytree(self.client.paths.store, self.servers[remote].paths.store)
+
+            q = ''
+            self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA",
+                                   "WindowsPackageSHA"], remote)
+            q = 'compiler="gcc"'
+            self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA"], remote)
+
+            q = 'compiler='  # No packages found with empty value
+            self._assert_pkg_q(q, [], remote)
+
+            q = 'compiler="gcc" OR compiler.libcxx=libstdc++11'
+            # Should find Visual because of the OR, visual doesn't care about libcxx
+            self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA",
+                                   "WindowsPackageSHA"], remote)
+
+            q = '(compiler="gcc" AND compiler.libcxx=libstdc++11) OR compiler.version=4.5'
+            self._assert_pkg_q(q, ["LinuxPackageSHA"], remote)
+
+            q = '(compiler="gcc" AND compiler.libcxx=libstdc++11) OR '\
+                '(compiler.version=4.5 OR compiler.version=8.1)'
+            self._assert_pkg_q(q, ["LinuxPackageSHA", "WindowsPackageSHA"], remote)
+
+            q = '(compiler="gcc" AND compiler.libcxx=libstdc++) OR '\
+                '(compiler.version=4.5 OR compiler.version=8.1)'
+            self._assert_pkg_q(q, ["LinuxPackageSHA", "PlatformIndependantSHA",
+                                   "WindowsPackageSHA"], remote)
+
+            q = '(compiler="gcc" AND compiler.libcxx=libstdc++) OR '\
+                '(compiler.version=4.3 OR compiler.version=8.1)'
+            self._assert_pkg_q(q, ["PlatformIndependantSHA", "WindowsPackageSHA"], remote)
+
+            q = '(os="Linux" OR os=Windows)'
+            self._assert_pkg_q(q, ["PlatformIndependantSHA", "LinuxPackageSHA",
+                                   "WindowsPackageSHA"], remote)
+
+            q = '(os="Linux" OR os=Windows) AND use_Qt=True'
+            self._assert_pkg_q(q, ["PlatformIndependantSHA",  "WindowsPackageSHA"], remote)
+
+            q = '(os="Linux" OR os=Windows) AND use_Qt=True AND nonexistant_option=3'
+            self._assert_pkg_q(q, ["PlatformIndependantSHA",  "WindowsPackageSHA"], remote)
+
+            q = '(os="Linux" OR os=Windows) AND use_Qt=True OR nonexistant_option=3'
+            self._assert_pkg_q(q, ["PlatformIndependantSHA",
+                                   "WindowsPackageSHA", "LinuxPackageSHA"], remote)
+
+        # test in local
+        test_cases()
+
+        # test in remote
+        test_cases(remote="local")
+
+        # test in remote with search capabilities
+        test_cases(remote="search_able")
+
     def package_search_with_invalid_query_test(self):
         self.client.run("search Hello/1.4.10/fenix/testing -q 'invalid'", ignore_error=True)
         self.assertIn("Invalid package query: invalid", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4.10/fenix/testing -q 'os= 3'", ignore_error=True)
+        self.assertIn("Invalid package query: os= 3", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4.10/fenix/testing -q 'os=3 FAKE '", ignore_error=True)
+        self.assertIn("Invalid package query: os=3 FAKE ", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4.10/fenix/testing -q 'os=3 os.compiler=4'", ignore_error=True)
+        self.assertIn("Invalid package query: os=3 os.compiler=4", self.client.user_io.out)
 
     def package_search_properties_filter_test(self):
 

@@ -3,7 +3,7 @@ import unittest
 from conans.paths import (BUILD_FOLDER, PACKAGES_FOLDER, EXPORT_FOLDER, SimplePaths, CONANINFO)
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
-from conans.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.files import save
 from conans.model.info import ConanInfo
 
