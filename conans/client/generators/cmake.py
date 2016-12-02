@@ -10,13 +10,8 @@ class DepsCppCmake(object):
                                          for p in deps_cpp_info.lib_paths)
         self.libs = " ".join(deps_cpp_info.libs)
 
-        defines = []
-        for d in deps_cpp_info.defines:
-            if d.startswith("-D"):
-                defines.append(d)
-            else:
-                defines.append("-D%s" % d)
-        self.defines = "\n\t\t\t".join(defines)
+        self.defines = "\n\t\t\t".join("-D%s" % d for d in deps_cpp_info.defines)
+        self.compile_definitions = "\n\t\t\t".join(deps_cpp_info.defines)
 
         self.cppflags = " ".join(deps_cpp_info.cppflags)
         self.cflags = " ".join(deps_cpp_info.cflags)
@@ -44,6 +39,8 @@ class CMakeGenerator(Generator):
                         'set(CONAN_BIN_DIRS_{dep} {deps.bin_paths})\n'
                         'set(CONAN_LIBS_{dep} {deps.libs})\n'
                         'set(CONAN_DEFINES_{dep} {deps.defines})\n'
+                        '# COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets'
+                        'set(CONAN_COMPILE_DEFINITIONS_{dep} {deps.compile_definitions})\n'
                         'set(CONAN_CXX_FLAGS_{dep} "{deps.cppflags}")\n'
                         'set(CONAN_SHARED_LINKER_FLAGS_{dep} "{deps.sharedlinkflags}")\n'
                         'set(CONAN_EXE_LINKER_FLAGS_{dep} "{deps.exelinkflags}")\n'
@@ -51,8 +48,7 @@ class CMakeGenerator(Generator):
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             deps = DepsCppCmake(dep_cpp_info)
-            dep_flags = template_dep.format(dep=dep_name.upper(),
-                                            deps=deps)
+            dep_flags = template_dep.format(dep=dep_name.upper(), deps=deps)
             sections.append(dep_flags)
 
         # GENERAL VARIABLES
@@ -97,7 +93,7 @@ endforeach()
 add_library({name} INTERFACE IMPORTED)
 set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} {deps})
 set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}})
-set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_DEFINES_{uname}}})
+set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}})
 set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
 set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
 
