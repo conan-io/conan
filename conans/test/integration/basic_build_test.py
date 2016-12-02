@@ -18,9 +18,9 @@ class BasicBuildTest(unittest.TestCase):
         dll_export = client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files("Hello0", "0.1", dll_export=dll_export,
                                       pure_c=pure_c, use_cmake=use_cmake)
+
         client.save(files)
         client.run(cmd)
-        # time.sleep(1)  # necessary so the conaninfo.txt is flushed to disc
         client.run('build')
         ld_path = ("LD_LIBRARY_PATH=$(pwd)"
                    if not static and not platform.system() == "Windows" else "")
