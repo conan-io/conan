@@ -9,8 +9,7 @@ import os
 from conans.paths import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE
 import platform
 from conans.util.log import logger
-import time
-import shutil
+from conans.test.utils.test_files import wait_until_removed
 
 
 @attr("slow")
@@ -69,18 +68,6 @@ class DiamondTest(unittest.TestCase):
         self._diamond_test(install=install, use_cmake=False)
 
     def _diamond_test(self, install="install", use_cmake=True):
-        def wait_until_removed(folder):
-            latest_exception = None
-            for _ in range(50):  # Max 5 seconds
-                time.sleep(0.1)
-                try:
-                    shutil.rmtree(folder)
-                    break
-                except Exception as e:
-                    latest_exception = e
-            else:
-                raise Exception("Could remove folder %s: %s" % (folder, latest_exception))
-
         self._export_upload("Hello0", "0.1", use_cmake=use_cmake)
         self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake)
         self._export_upload("Hello2", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake)

@@ -9,6 +9,7 @@ from conans.model.info import ConanInfo
 import time
 import platform
 from conans.util.log import logger
+from conans.test.utils.test_files import wait_until_removed
 
 
 @attr("slow")
@@ -22,9 +23,10 @@ class BasicBuildTest(unittest.TestCase):
         dll_export = self.client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files("Hello0", "0.1", dll_export=dll_export,
                                       pure_c=pure_c, use_cmake=use_cmake)
+        wait_until_removed(self.client.current_folder)
         self.client.save(files, clean_first=True)
         self.client.run(cmd)
-        time.sleep(1)  # necessary so the conaninfo.txt is flushed to disc
+        # time.sleep(1)  # necessary so the conaninfo.txt is flushed to disc
         self.client.run('build')
         ld_path = ("LD_LIBRARY_PATH=$(pwd)"
                    if not static and not platform.system() == "Windows" else "")
