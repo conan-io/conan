@@ -32,7 +32,7 @@ from conans.util.log import logger
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files
 from conans.util.config_parser import get_bool_from_text_value
-
+from conans.client.printer import Printer
 
 class Extender(argparse.Action):
     '''Allows to use the same flag several times in a command and creates a list with the values.
@@ -795,6 +795,25 @@ path to the CMake binary directory, like this:
             registry.remove_ref(args.reference)
         elif args.subcommand == "update_ref":
             registry.update_ref(args.reference, args.remote)
+
+    def profile(self, *args):
+        """ manage profiles
+        """
+        parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+
+        # create the parser for the "profile" command
+        subparsers.add_parser('list', help='list current profiles')
+        parser_show = subparsers.add_parser('show', help='show the values defined for a profile')
+        parser_show.add_argument('profile',  help='name of the profile')
+        args = parser.parse_args(*args)
+
+        if args.subcommand == "list":
+            for p in self._client_cache.current_profiles():
+                self._user_io.out.info(p)
+        elif args.subcommand == "show":
+            p = self._client_cache.load_profile(args.profile)
+            Printer(self._user_io.out).print_profile(args.profile, p)
 
     def _show_help(self):
         """ prints a summary of all commands
