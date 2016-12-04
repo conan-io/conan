@@ -322,6 +322,7 @@ path to the CMake binary directory, like this:
                               build_mode=args.build,
                               scopes=scopes,
                               update=args.update,
+                              generators=["env", "txt"],
                               profile_name=args.profile,
                               env=env,
                               package_env=package_env
