@@ -91,7 +91,7 @@ class ConanManager(object):
 
         self._current_scopes = conaninfo_scopes
         return ConanFileLoader(self._runner, settings, package_settings=package_settings,
-                               options=options, scopes=conaninfo_scopes, 
+                               options=options, scopes=conaninfo_scopes,
                                env=env, package_env=package_env)
 
     def export(self, user, conan_file_path, keep_source=False):
@@ -349,7 +349,7 @@ If not:
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conan_file_path = self._client_cache.conanfile(reference)
-            conanfile = self._loader().load_conan(conan_file_path, output)
+            conanfile = self._loader().load_conan(conan_file_path, output, reference=reference)
             self._load_deps_info(current_path, conanfile, output)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
@@ -370,7 +370,7 @@ If not:
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conan_file_path = self._client_cache.conanfile(reference)
-            conanfile = self._loader().load_conan(conan_file_path, output)
+            conanfile = self._loader().load_conan(conan_file_path, output, reference=reference)
 
         self._load_deps_info(current_path, conanfile, output, load_env=False, error=True)
         run_imports(conanfile, dest_folder or current_path, output)
@@ -416,7 +416,8 @@ If not:
             output = ScopedOutput(str(reference), self._user_io.out)
             output.info("Re-packaging %s" % package_reference.package_id)
             loader = self._loader(build_folder)
-            conanfile = loader.load_conan(conan_file_path, self._user_io.out)
+            conanfile = loader.load_conan(conan_file_path, self._user_io.out,
+                                          reference=package_reference.conan)
             self._load_deps_info(build_folder, conanfile, output)
             rmdir(package_folder)
             packager.create_package(conanfile, build_folder, package_folder, output)

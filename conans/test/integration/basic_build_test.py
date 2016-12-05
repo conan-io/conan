@@ -6,34 +6,29 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
 from conans.util.files import load
 from conans.model.info import ConanInfo
-import time
 import platform
 from conans.util.log import logger
-from conans.test.utils.test_files import wait_until_removed
 
 
 @attr("slow")
 class BasicBuildTest(unittest.TestCase):
 
-    def setUp(self):
-        self.client = TestClient()
-        self.command = os.sep.join([".", "bin", "say_hello"])
-
     def _build(self, cmd, static, pure_c, use_cmake, lang):
-        dll_export = self.client.default_compiler_visual_studio and not static
+        client = TestClient()
+        dll_export = client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files("Hello0", "0.1", dll_export=dll_export,
                                       pure_c=pure_c, use_cmake=use_cmake)
-        wait_until_removed(self.client.current_folder)
-        self.client.save(files, clean_first=True)
-        self.client.run(cmd)
-        # time.sleep(1)  # necessary so the conaninfo.txt is flushed to disc
-        self.client.run('build')
+
+        client.save(files)
+        client.run(cmd)
+        client.run('build')
         ld_path = ("LD_LIBRARY_PATH=$(pwd)"
                    if not static and not platform.system() == "Windows" else "")
-        self.client.runner("%s %s" % (ld_path, self.command), cwd=self.client.current_folder)
+        command = os.sep.join([".", "bin", "say_hello"])
+        client.runner("%s %s" % (ld_path, command), cwd=client.current_folder)
         msg = "Hello" if lang == 0 else "Hola"
-        self.assertIn("%s Hello0" % msg, self.client.user_io.out)
-        conan_info_path = os.path.join(self.client.current_folder, CONANINFO)
+        self.assertIn("%s Hello0" % msg, client.user_io.out)
+        conan_info_path = os.path.join(client.current_folder, CONANINFO)
         conan_info = ConanInfo.loads(load(conan_info_path))
         self.assertTrue(conan_info.full_options.language == lang)
         if static:

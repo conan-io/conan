@@ -26,7 +26,7 @@ class RestApiTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not cls.server:
-            plugin = VersionCheckerPlugin(Version("0.16.0"), Version("0.16.0"))
+            plugin = VersionCheckerPlugin(Version("0.16.0"), Version("0.16.0"), ["ImCool"])
             cls.server = TestServerLauncher(server_version=Version("0.16.0"),
                                             min_client_compatible_version=Version("0.16.0"),
                                             plugins=[plugin])
@@ -50,7 +50,7 @@ class RestApiTest(unittest.TestCase):
         check, version, capabilities = self.api.server_info()
         self.assertEquals(version, "0.16.0")
         self.assertEquals(check, None)  # None because we are not sending client version
-        self.assertEquals(capabilities, [])
+        self.assertEquals(capabilities, ["ImCool"])
 
     def get_conan_test(self):
         # Upload a conans

@@ -9,10 +9,11 @@ from conans.util.log import logger
 from conans.util.files import mkdir
 from conans.test.utils.test_files import temp_folder
 from conans.server.migrate import migrate_and_get_server_config
-from conans.search import DiskSearchAdapter, DiskSearchManager
+from conans.search.search import DiskSearchAdapter, DiskSearchManager
 from conans.paths import SimplePaths
 import time
 import shutil
+from conans import SERVER_CAPABILITIES
 
 
 TESTING_REMOTE_PRIVATE_USER = "private_user"
@@ -25,11 +26,15 @@ class TestServerLauncher(object):
     def __init__(self, base_path=None, read_permissions=None,
                  write_permissions=None, users=None, base_url=None, plugins=None,
                  server_version=None,
-                 min_client_compatible_version=None):
+                 min_client_compatible_version=None,
+                 server_capabilities=None):
 
         plugins = plugins or []
         if not base_path:
             base_path = temp_folder()
+
+        if server_capabilities is None:
+            server_capabilities = SERVER_CAPABILITIES  # Default enabled
 
         if not os.path.exists(base_path):
             raise Exception("Base path not exist! %s")
@@ -73,9 +78,10 @@ class TestServerLauncher(object):
         logger.debug("Storage path: %s" % self.storage_folder)
         self.port = TestServerLauncher.port
 
-        self.ra = ConanServer(self.port, False, credentials_manager, updown_auth_manager,
-                              authorizer, authenticator, self.file_manager, self.search_manager, 
-                              server_version, min_client_compatible_version)
+        self.ra = ConanServer(self.port, credentials_manager, updown_auth_manager,
+                              authorizer, authenticator, self.file_manager, self.search_manager,
+                              server_version, min_client_compatible_version,
+                              server_capabilities)
         for plugin in plugins:
             self.ra.api_v1.install(plugin)
 

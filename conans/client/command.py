@@ -27,7 +27,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, conan_expand_user
-from conans.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.log import logger
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files
@@ -323,6 +323,7 @@ path to the CMake binary directory, like this:
                               build_mode=args.build,
                               scopes=scopes,
                               update=args.update,
+                              generators=["env", "txt"],
                               profile_name=args.profile,
                               env=env,
                               package_env=package_env

@@ -12,6 +12,8 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
+from conans import COMPLEX_SEARCH_CAPABILITY
+from conans.search.search import filter_packages
 
 
 def handle_return_deserializer(deserializer=None):
@@ -228,12 +230,25 @@ class RestApiClient(object):
         return [ConanFileReference.loads(ref) for ref in response]
 
     def search_packages(self, reference, query):
+
         url = "%s/conans/%s/search?" % (self._remote_api_url, "/".join(reference))
-        if query:
-            params = {"q": query}
-            url += urlencode(params)
-        references = self._get_json(url)
-        return references
+        if not query:
+            package_infos = self._get_json(url)
+            return package_infos
+
+        # Read capabilities
+        try:
+            _, _, capabilities = self.server_info()
+        except NotFoundException:
+            capabilities = []
+
+        if COMPLEX_SEARCH_CAPABILITY in capabilities:
+            url += urlencode({"q": query})
+            package_infos = self._get_json(url)
+            return package_infos
+        else:
+            package_infos = self._get_json(url)
+            return filter_packages(query, package_infos)
 
     @handle_return_deserializer()
     def remove_conanfile(self, conan_reference):
@@ -277,6 +292,9 @@ class RestApiClient(object):
         url = "%s/ping" % self._remote_api_url
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.VERIFY_SSL)
+        if ret.status_code == 404:
+            raise NotFoundException("Not implemented endpoint")
+
         version_check = ret.headers.get('X-Conan-Client-Version-Check', None)
         server_version = ret.headers.get('X-Conan-Server-Version', None)
         server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")

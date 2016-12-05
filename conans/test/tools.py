@@ -32,7 +32,7 @@ from collections import Counter
 import six
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.client_cache import ClientCache
-from conans.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager, DiskSearchAdapter
 
 
 class TestingResponse(object):
@@ -168,7 +168,8 @@ class TestServer(object):
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_version=Version(SERVER_VERSION),
-                 min_client_compatible_version=Version(MIN_CLIENT_COMPATIBLE_VERSION)):
+                 min_client_compatible_version=Version(MIN_CLIENT_COMPATIBLE_VERSION),
+                 server_capabilities=None):
         """
              'read_permissions' and 'write_permissions' is a list of:
                  [("opencv/2.3.4@lasote/testing", "user1, user2")]
@@ -185,6 +186,7 @@ class TestServer(object):
             write_permissions = []
         if users is None:
             users = {"lasote": "mypass"}
+
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         min_client_ver = min_client_compatible_version
         self.test_server = TestServerLauncher(base_path, read_permissions,
@@ -192,7 +194,8 @@ class TestServer(object):
                                               base_url=self.fake_url + "/v1",
                                               plugins=plugins,
                                               server_version=server_version,
-                                              min_client_compatible_version=min_client_ver)
+                                              min_client_compatible_version=min_client_ver,
+                                              server_capabilities=server_capabilities)
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property

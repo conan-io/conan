@@ -80,7 +80,7 @@ class ConanFile(object):
     build_policy = None
     short_paths = False
 
-    def __init__(self, output, runner, settings, conanfile_directory):
+    def __init__(self, output, runner, settings, conanfile_directory, user=None, channel=None):
         '''
         param settings: Settings
         '''
@@ -117,6 +117,26 @@ class ConanFile(object):
 
         # user specified env variables
         self.env = None  # Assigned at runtime
+        self._user = user
+        self._channel = channel
+
+    @property
+    def channel(self):
+        if not self._channel:
+            self._channel = os.getenv("CONAN_CHANNEL")
+            if not self._channel:
+                raise ConanException("CONAN_CHANNEL environment variable not defined, "
+                                     "but self.channel is used in conanfile")
+        return self._channel
+
+    @property
+    def user(self):
+        if not self._user:
+            self._user = os.getenv("CONAN_USERNAME")
+            if not self._user:
+                raise ConanException("CONAN_USERNAME environment variable not defined, "
+                                     "but self.user is used in conanfile")
+        return self._user
 
     def collect_libs(self, folder="lib"):
         if not self.package_folder:
