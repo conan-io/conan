@@ -11,11 +11,12 @@ class VersionCheckerPlugin(object):
     name = 'VersionCheckerPlugin'
     api = 2
 
-    def __init__(self, server_version, min_client_compatible_version):
+    def __init__(self, server_version, min_client_compatible_version, server_capabilities):
         assert(isinstance(server_version, Version))
         assert(isinstance(min_client_compatible_version, Version))
         self.server_version = server_version
         self.min_client_compatible_version = min_client_compatible_version
+        self.server_capabilities = server_capabilities
 
     def setup(self, app):
         ''' Make sure that other installed plugins don't affect the same
@@ -60,6 +61,6 @@ class VersionCheckerPlugin(object):
 
             resp.headers['X-Conan-Server-Version'] = str(self.server_version)
             # colon separated, future: "complex_search" etc
-            resp.headers['X-Conan-Server-Capabilities'] = ""
+            resp.headers['X-Conan-Server-Capabilities'] = ",".join(self.server_capabilities)
         except Exception:
             logger.error(traceback.format_exc())
