@@ -11,6 +11,33 @@ from conans.paths import CONANFILE
 @attr("slow")
 class ConanTestTest(unittest.TestCase):
 
+    def scopes_test_package_test(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def build(self):
+        self.output.info("Scope: %s" % self.scope)
+"""
+        test_conanfile = """
+from conans import ConanFile, CMake
+import os
+
+class HelloReuseConan(ConanFile):
+    requires = "Hello/0.1@lasote/stable"
+
+    def test(self):
+        self.conanfile_directory
+"""
+        client.save({"conanfile.py": conanfile,
+                     "test/conanfile.py": test_conanfile})
+        client.run("test_package --scope Hello:dev=True --build=missing")
+        self.assertIn("Hello/0.1@lasote/stable: Scope: dev=True", client.user_io.out)
+
     def fail_test_package_test(self):
         client = TestClient()
         conanfile = """
