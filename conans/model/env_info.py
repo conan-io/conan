@@ -92,11 +92,8 @@ class DepsEnvInfo(EnvInfo):
     def __getitem__(self, item):
         return self._dependencies_[item]
 
-    def update(self, dep_env_info, conan_ref=None):
-        if conan_ref is not None:
-            self._dependencies_[conan_ref.name] = dep_env_info
-        else:
-            self._dependencies_.update(dep_env_info.dependencies)
+    def update(self, dep_env_info, conan_ref):
+        self._dependencies_[conan_ref.name] = dep_env_info
 
         # With vars if its setted the keep the setted value
         for varname, value in dep_env_info.vars.items():
