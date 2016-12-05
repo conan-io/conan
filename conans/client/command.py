@@ -290,7 +290,8 @@ path to the CMake binary directory, like this:
                 env = profile.env
                 package_env = profile.package_env
 
-        loader = manager._loader(None, settings, options, scopes, package_settings, env, package_env)
+        loader = manager._loader(current_path=None, user_settings_values=settings, user_options_values=options,
+                                 scopes=scopes, package_settings=package_settings, env=env, package_env=package_env)
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
             # convert to list from ItemViews required for python3
