@@ -407,7 +407,8 @@ class DepsBuilder(object):
         """
         conanfile_path = self._retriever.get_recipe(requirement.conan_reference)
         output = ScopedOutput(str(requirement.conan_reference), self._output)
-        dep_conanfile = self._loader.load_conan(conanfile_path, output)
+        dep_conanfile = self._loader.load_conan(conanfile_path, output,
+                                                reference=requirement.conan_reference)
         if dep_conanfile:
             new_node = Node(requirement.conan_reference, dep_conanfile)
             dep_graph.add_node(new_node)
