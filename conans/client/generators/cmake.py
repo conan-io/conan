@@ -74,33 +74,37 @@ class CMakeGenerator(Generator):
         all_flags = template.format(deps=deps, module_paths=module_paths,
                                     dependencies=" ".join(self.deps_build_info.deps),
                                     name=self.conanfile.name, version=self.conanfile.version)
+
+        sections.append("\n### Definition of global aggregated variables ###\n")
         sections.append(all_flags)
 
         # TARGETS
         template = """
+    foreach(_LIBRARY_NAME ${{CONAN_LIBS_{uname}}})
+        unset(FOUND_LIBRARY CACHE)
+        find_library(FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS ${{CONAN_LIB_DIRS_{uname}}} NO_DEFAULT_PATH)
+        if(FOUND_LIBRARY)
+            set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{FOUND_LIBRARY}})
+        else()
+            message(STATUS "Library ${{_LIBRARY_NAME}} not found in package, might be system one")
+            set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{_LIBRARY_NAME}})
+        endif()
+    endforeach()
 
-foreach(_LIBRARY_NAME ${{CONAN_LIBS_{uname}}})
-    unset(FOUND_LIBRARY CACHE)
-    find_library(FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS ${{CONAN_LIB_DIRS_{uname}}} NO_DEFAULT_PATH)
-    if(FOUND_LIBRARY)
-        set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{FOUND_LIBRARY}})
-    else()
-        message(STATUS "Library ${{_LIBRARY_NAME}} not found in package, might be system one")
-        set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{_LIBRARY_NAME}})
-    endif()
-endforeach()
-
-add_library({name} INTERFACE IMPORTED)
-set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} {deps})
-set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}})
-set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}})
-set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
-set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
-
+    add_library({name} INTERFACE IMPORTED)
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} {deps})
+    set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}})
+    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}})
+    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
 """
         existing_deps = self.deps_build_info.deps
 
-        sections.append('if(${CMAKE_VERSION} VERSION_GREATER "3.1.2")')
+        sections.append("\n###  Definition of macros and functions ###\n")
+        sections.append('macro(conan_define_targets)\n'
+                        '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
+                        '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
+                        '    endif()  # CMAKE > 3.x\n')
 
         for dep_name, dep_info in self.deps_build_info.dependencies:
             use_deps = ["CONAN_PKG::%s" % d for d in dep_info.deps if d in existing_deps]
@@ -108,7 +112,7 @@ set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_
             sections.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                             uname=dep_name.upper()))
 
-        sections.append('endif()  # CMAKE > 3.x')
+        sections.append('endmacro()\n')
 
         # MACROS
         sections.append(self._aux_cmake_test_setup())
@@ -125,6 +129,7 @@ set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_
         conan_global_flags()
     else()
         message(STATUS "Conan: Using cmake targets configuration")
+        conan_define_targets()
     endif()
     conan_set_rpath()
     conan_set_vs_runtime()
