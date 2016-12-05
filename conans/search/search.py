@@ -63,12 +63,22 @@ class SearchManagerABC(object):
         pass
 
 
-def get_postfix_from_query(query):
+def filter_packages(query, package_infos):
+    if query is None:
+        return package_infos
     try:
+        if "!" in query:
+            raise ConanException("'!' character is not allowed")
+        if " not " in query or query.startswith("not "):
+            raise ConanException("'not' operator is not allowed")
+        result = {}
         postfix = infix_to_postfix(query) if query else []
+        for package_id, info in package_infos.items():
+            if evaluate_postfix_with_info(postfix, info):
+                result[package_id] = info
+        return result
     except Exception as exc:
         raise ConanException("Invalid package query: %s. %s" % (query, exc))
-    return postfix
 
 
 def evaluate_postfix_with_info(postfix, conan_vars_info):
@@ -138,9 +148,10 @@ class DiskSearchManager(SearchManagerABC):
         param conan_ref: ConanFileReference object
         """
 
-        # Parse the query
-        postfix = get_postfix_from_query(query)
+        infos = self._get_local_infos_min(reference)
+        return filter_packages(query, infos)
 
+    def _get_local_infos_min(self, reference):
         result = {}
         packages_path = self._paths.packages(reference)
         subdirs = self._adapter.list_folder_subdirs(packages_path, level=1)
@@ -155,17 +166,11 @@ class DiskSearchManager(SearchManagerABC):
                     raise NotFoundException("")
                 conan_info_content = self._adapter.load(info_path)
                 conan_vars_info = ConanInfo.loads(conan_info_content).serialize_min()
+                result[package_id] = conan_vars_info
 
             except Exception as exc:
                 logger.error("Package %s has not ConanInfo file" % str(package_reference))
                 if str(exc):
                     logger.error(str(exc))
-
-            # Evaluate the postfix with the conan info
-            try:
-                if evaluate_postfix_with_info(postfix, conan_vars_info):
-                    result[package_id] = conan_vars_info
-            except Exception:
-                raise ConanException("Invalid package query: %s" % query)
 
         return result

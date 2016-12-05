@@ -307,6 +307,12 @@ class SearchTest(unittest.TestCase):
         self.client.run("search Hello/1.4.10/fenix/testing -q 'os=3 os.compiler=4'", ignore_error=True)
         self.assertIn("Invalid package query: os=3 os.compiler=4", self.client.user_io.out)
 
+        self.client.run("search Hello/1.4.10/fenix/testing -q 'not os=3 AND os.compiler=4'", ignore_error=True)
+        self.assertIn("Invalid package query: not os=3 AND os.compiler=4. 'not' operator is not allowed", self.client.user_io.out)
+
+        self.client.run("search Hello/1.4.10/fenix/testing -q 'os=3 AND !os.compiler=4'", ignore_error=True)
+        self.assertIn("Invalid package query: os=3 AND !os.compiler=4. '!' character is not allowed", self.client.user_io.out)
+
     def package_search_properties_filter_test(self):
 
         # All packages without filter
