@@ -177,9 +177,9 @@ class Printer(object):
             del scopes[_root]["dev"] # Ignore dev
             if not scopes[_root]:
                del scopes[_root] # Remove empty section
-        self._print_colored_line("[sections]")
+        self._print_colored_line("[scopes]")
         for section, values in scopes.items():
-            self._print_profile_section(section, values, indent=1)
+            self._print_profile_section(section, values.items(), indent=1)
 
     def _print_profile_section(self, name, items, indent=0):
         self._print_colored_line("[%s]" % name, indent=indent)
