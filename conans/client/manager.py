@@ -34,6 +34,7 @@ from conans.client.manifest_manager import ManifestManager
 from conans.model.env_info import EnvInfo, DepsEnvInfo
 from conans.tools import environment_append
 from conans.client.require_resolver import RequireResolver
+from conans.model.profile import Profile
 
 
 def get_user_channel(text):
@@ -218,15 +219,32 @@ class ConanManager(object):
                                               info, registry, graph_updates_info,
                                               remote)
 
-    def _read_profile(self, profile_name):
-        if profile_name:
-            try:
-                profile = self._client_cache.load_profile(profile_name)
-                return profile
-            except ConanException as exc:
-                raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
+    def read_profile(self, profile_name, cwd):
+        if not profile_name:
+            return None
 
-        return None
+        if os.path.isabs(profile_name):
+            profile_path = profile_name
+            folder = os.path.dirname(profile_name)
+        elif profile_name.startswith("."):  # relative path name
+            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+            folder = cwd
+        else:
+            folder = self._client_cache.profiles_path
+            profile_path = self._client_cache.profile_path(profile_name)
+
+        try:
+            text = load(profile_path)
+        except Exception:
+            profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
+            current_profiles = ", ".join(profiles) or "[]"
+            raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
+                                 "%s" % (profile_name, current_profiles))
+
+        try:
+            return Profile.loads(text)
+        except ConanException as exc:
+            raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
@@ -254,7 +272,7 @@ class ConanManager(object):
         else:
             manifest_manager = None
 
-        profile = self._read_profile(profile_name)
+        profile = self.read_profile(profile_name, current_path)
 
         # Mix Settings, Env vars and scopes between profile and command line
         if profile:
@@ -438,7 +456,7 @@ If not:
 
         try:
             # Append env_vars to execution environment and clear when block code ends
-            profile = self._read_profile(profile_name)
+            profile = self.read_profile(profile_name, current_path)
             output = ScopedOutput("Project", self._user_io.out)
             if profile:
                 profile.update_env(env)

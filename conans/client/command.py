@@ -244,7 +244,8 @@ path to the CMake binary directory, like this:
 
         args = parser.parse_args(*args)
 
-        root_folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
+        current_path = os.getcwd()
+        root_folder = os.path.normpath(os.path.join(current_path, args.path))
         if args.folder:
             test_folder_name = args.folder
             test_folder = os.path.join(root_folder, test_folder_name)
@@ -281,7 +282,7 @@ path to the CMake binary directory, like this:
         # Read profile environment and mix with the command line parameters
         if args.profile:
             try:
-                profile = self._client_cache.load_profile(args.profile)
+                profile = manager.read_profile(args.profile, current_path)
             except ConanException as exc:
                 raise ConanException("Error reading '%s' profile: %s" % (args.profile, exc))
             else:

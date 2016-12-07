@@ -153,15 +153,3 @@ class ClientCache(SimplePaths):
         if not os.path.exists(self.profiles_path):
             mkdir(self.profiles_path)
         return os.path.join(self.profiles_path, name)
-
-    def load_profile(self, name):
-        try:
-            text = load(self.profile_path(name))
-        except Exception:
-            current_profiles = ", ".join(self.current_profiles()) or "[]"
-            raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                                 "%s" % (name, current_profiles))
-        return Profile.loads(text)
-
-    def current_profiles(self):
-        return [name for name in os.listdir(self.profiles_path) if not os.path.isdir(name)]
