@@ -750,14 +750,14 @@ path to the CMake binary directory, like this:
         parser_add.add_argument('remote',  help='name of the remote')
         parser_add.add_argument('url',  help='url of the remote')
         parser_add.add_argument('verify_ssl',  help='Verify SSL certificated. Default True',
-                                default="True", nargs="*")
+                                default="True", nargs="?")
         parser_rm = subparsers.add_parser('remove', help='remove a remote')
         parser_rm.add_argument('remote',  help='name of the remote')
         parser_upd = subparsers.add_parser('update', help='update the remote url')
         parser_upd.add_argument('remote',  help='name of the remote')
         parser_upd.add_argument('url',  help='url')
         parser_upd.add_argument('verify_ssl',  help='Verify SSL certificated. Default True',
-                                default="True", nargs="*")
+                                default="True", nargs="?")
         subparsers.add_parser('list_ref',
                               help='list the package recipes and its associated remotes')
         parser_padd = subparsers.add_parser('add_ref',
@@ -778,12 +778,12 @@ path to the CMake binary directory, like this:
             for r in registry.remotes:
                 self._user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
         elif args.subcommand == "add":
-            verify = get_bool_from_text_value(args.verify_ssl[0])
+            verify = get_bool_from_text_value(args.verify_ssl)
             registry.add(args.remote, args.url, args.verify_ssl)
         elif args.subcommand == "remove":
             registry.remove(args.remote)
         elif args.subcommand == "update":
-            verify = get_bool_from_text_value(args.verify_ssl[0])
+            verify = get_bool_from_text_value(args.verify_ssl)
             registry.update(args.remote, args.url, verify)
         elif args.subcommand == "list_ref":
             for ref, remote in registry.refs.items():
