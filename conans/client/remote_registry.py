@@ -3,12 +3,13 @@ from conans.errors import ConanException
 from conans.util.files import load, save
 from collections import OrderedDict, namedtuple
 import fasteners
+from conans.util.config_parser import get_bool_from_text_value
 
 
 default_remotes = """conan.io https://server.conan.io
 """
 
-Remote = namedtuple("Remote", "name url")
+Remote = namedtuple("Remote", "name url verify_ssl")
 
 
 class RemoteRegistry(object):
@@ -32,15 +33,25 @@ class RemoteRegistry(object):
                     raise ConanException("Bad file format, blank line %s" % self._filename)
                 end_remotes = True
                 continue
-            ref, remote = line.split()
+            chunks = line.split()
+            if len(chunks) == 2:
+                ref, remote = chunks
+                verify_ssl = "True"
+            elif len(chunks) == 3:
+                ref, remote, verify_ssl = chunks
+            else:
+                raise ConanException("Bad file format, too much items in line '%s'" % line)
+
+            verify_ssl = get_bool_from_text_value(verify_ssl)
+
             if not end_remotes:
-                remotes[ref] = remote
+                remotes[ref] = (remote, verify_ssl)
             else:
                 refs[ref] = remote
         return remotes, refs
 
     def _to_string(self, remotes, refs):
-        lines = ["%s %s" % (ref, remote) for ref, remote in remotes.items()]
+        lines = ["%s %s %s" % (ref, remote, verify_ssl) for ref, (remote, verify_ssl) in remotes.items()]
         lines.append("")
         lines.extend(["%s %s" % (ref, remote) for ref, remote in sorted(refs.items())])
         text = os.linesep.join(lines)
@@ -70,7 +81,7 @@ class RemoteRegistry(object):
     def remotes(self):
         with fasteners.InterProcessLock(self._filename + ".lock"):
             remotes, _ = self._load()
-            return [Remote(ref, remote) for ref, remote in remotes.items()]
+            return [Remote(ref, remote, verify_ssl) for ref, (remote, verify_ssl) in remotes.items()]
 
     @property
     def refs(self):
@@ -82,7 +93,7 @@ class RemoteRegistry(object):
         with fasteners.InterProcessLock(self._filename + ".lock"):
             remotes, _ = self._load()
             try:
-                return Remote(name, remotes[name])
+                return Remote(name, remotes[name][0], remotes[name][1])
             except KeyError:
                 raise ConanException("No remote '%s' defined in remotes in file %s"
                                      % (name, self._filename))
@@ -92,7 +103,7 @@ class RemoteRegistry(object):
             remotes, refs = self._load()
             remote_name = refs.get(str(conan_reference))
             try:
-                return Remote(remote_name, remotes[remote_name])
+                return Remote(remote_name, remotes[remote_name][0], remotes[remote_name][1])
             except:
                 return None
 
@@ -137,13 +148,13 @@ class RemoteRegistry(object):
             refs[conan_reference] = remote
             self._save(remotes, refs)
 
-    def add(self, remote_name, remote):
+    def add(self, remote_name, remote, verify_ssl=True):
         with fasteners.InterProcessLock(self._filename + ".lock"):
             remotes, refs = self._load()
             if remote_name in remotes:
                 raise ConanException("Remote %s already exist in remotes (use update to modify)"
                                      % remote_name)
-            remotes[remote_name] = remote
+            remotes[remote_name] = (remote, verify_ssl)
             self._save(remotes, refs)
 
     def remove(self, remote_name):
@@ -155,10 +166,10 @@ class RemoteRegistry(object):
             refs = {k: v for k, v in refs.items() if v != remote_name}
             self._save(remotes, refs)
 
-    def update(self, remote_name, remote):
+    def update(self, remote_name, remote, verify_ssl=True):
         with fasteners.InterProcessLock(self._filename + ".lock"):
             remotes, refs = self._load()
             if remote_name not in remotes:
                 raise ConanException("%s not found in remotes" % remote_name)
-            remotes[remote_name] = remote
+            remotes[remote_name] = (remote, verify_ssl)
             self._save(remotes, refs)

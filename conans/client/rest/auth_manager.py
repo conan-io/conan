@@ -100,6 +100,7 @@ class ConanApiAuthManager(object):
     def remote(self, remote):
         self._remote = remote
         self._rest_client.remote_url = remote.url
+        self._rest_client.verify_ssl = remote.verify_ssl
         self.user, self._rest_client.token = self._localdb.get_login(remote.url)
 
     def _store_login(self, login):

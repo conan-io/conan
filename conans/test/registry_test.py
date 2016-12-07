@@ -15,27 +15,32 @@ class RegistryTest(unittest.TestCase):
 
         # Add
         registry.add("local", "http://localhost:9300")
-        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io"),
-                                            ("local", "http://localhost:9300")])
+        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io", True),
+                                            ("local", "http://localhost:9300", True)])
         # Add
-        registry.add("new", "new_url")
-        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io"),
-                                            ("local", "http://localhost:9300"),
-                                            ("new", "new_url")])
+        registry.add("new", "new_url", False)
+        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io", True),
+                                            ("local", "http://localhost:9300", True),
+                                            ("new", "new_url", False)])
         with self.assertRaises(ConanException):
             registry.add("new", "new_url")
         # Update
         registry.update("new", "other_url")
-        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io"),
-                                            ("local", "http://localhost:9300"),
-                                            ("new", "other_url")])
+        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io", True),
+                                            ("local", "http://localhost:9300", True),
+                                            ("new", "other_url", True)])
         with self.assertRaises(ConanException):
             registry.update("new2", "new_url")
 
+        registry.update("new", "other_url", False)
+        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io", True),
+                                            ("local", "http://localhost:9300", True),
+                                            ("new", "other_url", False)])
+
         # Remove
         registry.remove("local")
-        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io"),
-                                            ("new", "other_url")])
+        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io", True),
+                                            ("new", "other_url", False)])
         with self.assertRaises(ConanException):
             registry.remove("new2")
 
