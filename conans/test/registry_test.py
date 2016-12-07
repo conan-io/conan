@@ -5,9 +5,17 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
 from conans.test.tools import TestBufferConanOutput
+from conans.util.files import save
 
 
 class RegistryTest(unittest.TestCase):
+
+    def retro_compatibility_test(self):
+        f = os.path.join(temp_folder(), "aux_file")
+        save(f, """conan.io https://server.conan.io
+""")  # Without SSL parameter
+        registry = RemoteRegistry(f, TestBufferConanOutput())
+        self.assertEqual(registry.remotes, [("conan.io", "https://server.conan.io", True)])
 
     def add_remove_update_test(self):
         f = os.path.join(temp_folder(), "aux_file")

@@ -6,7 +6,7 @@ import fasteners
 from conans.util.config_parser import get_bool_from_text_value
 
 
-default_remotes = """conan.io https://server.conan.io
+default_remotes = """conan.io https://server.conan.io True
 """
 
 Remote = namedtuple("Remote", "name url verify_ssl")
@@ -34,20 +34,21 @@ class RemoteRegistry(object):
                 end_remotes = True
                 continue
             chunks = line.split()
-            if len(chunks) == 2:
-                ref, remote = chunks
-                verify_ssl = "True"
-            elif len(chunks) == 3:
-                ref, remote, verify_ssl = chunks
-            else:
-                raise ConanException("Bad file format, too much items in line '%s'" % line)
-
-            verify_ssl = get_bool_from_text_value(verify_ssl)
-
             if not end_remotes:
+                if len(chunks) == 2:  # Retro compatibility
+                    ref, remote = chunks
+                    verify_ssl = "True"
+                elif len(chunks) == 3:
+                    ref, remote, verify_ssl = chunks
+                else:
+                    raise ConanException("Bad file format, wrong item numbers in line '%s'" % line)
+
+                verify_ssl = get_bool_from_text_value(verify_ssl)
                 remotes[ref] = (remote, verify_ssl)
             else:
+                ref, remote = chunks
                 refs[ref] = remote
+
         return remotes, refs
 
     def _to_string(self, remotes, refs):
