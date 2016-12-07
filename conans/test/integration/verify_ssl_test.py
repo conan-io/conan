@@ -4,7 +4,7 @@ from requests.models import Response
 
 
 resp = Response()
-resp._content = '{"results": []}'
+resp._content = b'{"results": []}'
 resp.status_code = 200
 
 
