@@ -70,7 +70,7 @@ class RemoteManagerTest(unittest.TestCase):
 
         # If remote is specified took it
         self.assertRaises(NotFoundException,
-                          self.manager.upload_conan, self.conan_reference, Remote("other", "url"))
+                          self.manager.upload_conan, self.conan_reference, Remote("other", "url", True))
 
     def method_called_test(self):
 
@@ -79,17 +79,17 @@ class RemoteManagerTest(unittest.TestCase):
         save(os.path.join(self.client_cache.package(self.package_reference), CONAN_MANIFEST), str(manifest))
 
         self.assertFalse(self.remote_client.upload_package.called)
-        self.manager.upload_package(self.package_reference, Remote("other", "url"))
+        self.manager.upload_package(self.package_reference, Remote("other", "url", True))
         self.assertTrue(self.remote_client.upload_package.called)
 
         self.assertFalse(self.remote_client.get_conan_digest.called)
-        self.manager.get_conan_digest(self.conan_reference, Remote("other", "url"))
+        self.manager.get_conan_digest(self.conan_reference, Remote("other", "url", True))
         self.assertTrue(self.remote_client.get_conan_digest.called)
 
         self.assertFalse(self.remote_client.get_recipe.called)
-        self.manager.get_recipe(self.conan_reference, temp_folder(), Remote("other", "url"))
+        self.manager.get_recipe(self.conan_reference, temp_folder(), Remote("other", "url", True))
         self.assertTrue(self.remote_client.get_recipe.called)
 
         self.assertFalse(self.remote_client.get_package.called)
-        self.manager.get_package(self.package_reference, temp_folder(), Remote("other", "url"))
+        self.manager.get_package(self.package_reference, temp_folder(), Remote("other", "url", True))
         self.assertTrue(self.remote_client.get_package.called)

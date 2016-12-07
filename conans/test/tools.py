@@ -282,7 +282,8 @@ class TestClient(object):
 
     def __init__(self, base_folder=None, current_folder=None,
                  servers=None, users=None, client_version=CLIENT_VERSION,
-                 min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION):
+                 min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
+                 requester_class=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -308,6 +309,8 @@ class TestClient(object):
         self.default_settings(get_env("CONAN_COMPILER", "gcc"),
                               get_env("CONAN_COMPILER_VERSION", "4.8"),
                               get_env("CONAN_LIBCXX", "libstdc++"))
+
+        self.requester_class = requester_class
 
         self.init_dynamic_vars()
 
@@ -365,7 +368,10 @@ class TestClient(object):
         if real_servers:
             requester = requests
         else:
-            requester = TestRequester(self.servers)
+            if self.requester_class:
+                requester = self.requester_class(self.servers)
+            else:
+                requester = TestRequester(self.servers)
 
         # Verify client version against remotes
         self.requester = VersionCheckerRequester(requester, self.client_version,

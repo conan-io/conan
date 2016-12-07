@@ -64,18 +64,31 @@ class RestApiClient(object):
     """
         Rest Api Client for handle remote.
     """
-    from conans.client.rest import cacert
-    # Necessary for pyinstaller, because it doesn't copy the cacert.
-    # It should not be necessary anymore the own conan.io certificate (fixed in server)
-    VERIFY_SSL = cacert.file_path
 
     def __init__(self, output, requester):
+
         # Set to instance
         self.token = None
         self.remote_url = None
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
         self.requester = requester
+        self._verify_ssl = True
+
+    @property
+    def verify_ssl(self):
+        from conans.client.rest import cacert
+        if self._verify_ssl:
+            # Necessary for pyinstaller, because it doesn't copy the cacert.
+            # It should not be necessary anymore the own conan.io certificate (fixed in server)
+            return cacert.file_path
+        else:
+            return False
+
+    @verify_ssl.setter
+    def verify_ssl(self, check):
+        assert(isinstance(check, bool))
+        self._verify_ssl = check
 
     @property
     def auth(self):
@@ -202,7 +215,7 @@ class RestApiClient(object):
         auth = HTTPBasicAuth(user, password)
         path = "%s/users/authenticate" % self._remote_api_url
         ret = self.requester.get(path, auth=auth, headers=self.custom_headers,
-                                 verify=self.VERIFY_SSL)
+                                 verify=self.verify_ssl)
         return ret
 
     @handle_return_deserializer()
@@ -211,7 +224,7 @@ class RestApiClient(object):
         User will be asked for new user/pass"""
         url = "%s/users/check_credentials" % self._remote_api_url
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.VERIFY_SSL)
+                                 verify=self.verify_ssl)
         return ret
 
     def search(self, pattern=None, ignorecase=True):
@@ -258,7 +271,7 @@ class RestApiClient(object):
         response = self.requester.delete(url,
                                          auth=self.auth,
                                          headers=self.custom_headers,
-                                         verify=self.VERIFY_SSL)
+                                         verify=self.verify_ssl)
         return response
 
     @handle_return_deserializer()
@@ -291,7 +304,7 @@ class RestApiClient(object):
         """Get information about the server: status, version, type and capabilities"""
         url = "%s/ping" % self._remote_api_url
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.VERIFY_SSL)
+                                 verify=self.verify_ssl)
         if ret.status_code == 404:
             raise NotFoundException("Not implemented endpoint")
 
@@ -328,7 +341,7 @@ class RestApiClient(object):
         response = self.requester.post(url,
                                        auth=self.auth,
                                        headers=self.custom_headers,
-                                       verify=self.VERIFY_SSL,
+                                       verify=self.verify_ssl,
                                        json=payload)
         return response
 
@@ -339,12 +352,12 @@ class RestApiClient(object):
                        'Accept': 'application/json'}
             headers.update(self.custom_headers)
             response = self.requester.post(url, auth=self.auth, headers=headers,
-                                           verify=self.VERIFY_SSL,
+                                           verify=self.verify_ssl,
                                            stream=True,
                                            data=json.dumps(data))
         else:
             response = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                          verify=self.VERIFY_SSL,
+                                          verify=self.verify_ssl,
                                           stream=True)
         if response.status_code != 200:  # Error message is text
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
@@ -377,7 +390,7 @@ class RestApiClient(object):
 
         Its a generator, so it yields elements for memory performance
         """
-        downloader = Downloader(self.requester, output, self.VERIFY_SSL)
+        downloader = Downloader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
@@ -395,7 +408,7 @@ class RestApiClient(object):
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
-        downloader = Downloader(self.requester, output, self.VERIFY_SSL)
+        downloader = Downloader(self.requester, output, self.verify_ssl)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
@@ -413,7 +426,7 @@ class RestApiClient(object):
     def upload_files(self, file_urls, files, output):
         t1 = time.time()
         failed = {}
-        uploader = Uploader(self.requester, output, self.VERIFY_SSL)
+        uploader = Uploader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
