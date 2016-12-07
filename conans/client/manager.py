@@ -14,7 +14,7 @@ from conans.client.uploader import ConanUploader
 from conans.client.printer import Printer
 from conans.errors import NotFoundException, ConanException
 from conans.client.generators import write_generators
-from conans.client.importer import run_imports
+from conans.client.importer import run_imports, undo_imports
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.client.remover import ConanRemover
 from conans.model.info import ConanInfo
@@ -372,6 +372,9 @@ If not:
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             config_source(export_folder, src_folder, conanfile, output, force)
+
+    def imports_undo(self, current_path):
+        undo_imports(current_path, self._user_io.out)
 
     def imports(self, current_path, reference, conan_file_path, dest_folder):
         if not isinstance(reference, ConanFileReference):
