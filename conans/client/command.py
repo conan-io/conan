@@ -809,10 +809,15 @@ path to the CMake binary directory, like this:
         args = parser.parse_args(*args)
 
         if args.subcommand == "list":
-            for p in self._client_cache.current_profiles():
-                self._user_io.out.info(p)
+            folder = self._client_cache.profiles_path
+            if os.path.exists(folder):
+                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
+                for p in profiles:
+                    self._user_io.out.info(p)
+            else:
+                self._user_io.out.info("No profiles defined")
         elif args.subcommand == "show":
-            p = self._client_cache.load_profile(args.profile)
+            p = self._manager.read_profile(args.profile, os.getcwd())
             Printer(self._user_io.out).print_profile(args.profile, p)
 
     def _show_help(self):

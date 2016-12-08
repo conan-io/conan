@@ -228,7 +228,7 @@ class ConanManager(object):
             folder = os.path.dirname(profile_name)
         elif profile_name.startswith("."):  # relative path name
             profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-            folder = cwd
+            folder = os.path.dirname(profile_path)
         else:
             folder = self._client_cache.profiles_path
             profile_path = self._client_cache.profile_path(profile_name)
@@ -236,7 +236,10 @@ class ConanManager(object):
         try:
             text = load(profile_path)
         except Exception:
-            profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
+            if os.path.exists(folder):
+                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
+            else:
+                profiles = []
             current_profiles = ", ".join(profiles) or "[]"
             raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
                                  "%s" % (profile_name, current_profiles))

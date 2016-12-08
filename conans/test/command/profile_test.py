@@ -8,7 +8,7 @@ class ProfileTest(unittest.TestCase):
     def empty_test(self):
         client = TestClient()
         client.run("profile list")
-        self.assertEqual("", client.user_io.out)
+        self.assertIn("No profiles defined", client.user_io.out)
 
     def list_test(self):
         client = TestClient()
@@ -26,12 +26,9 @@ class ProfileTest(unittest.TestCase):
         create_profile(client.client_cache.profiles_path, "profile3",
                        env=[("CXX", "/path/tomy/g++_build"), ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
-        print client.user_io.out
-
-
-
-
-
-    """create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={},
-                       scopes={},  # undefined scope do not apply to my packages
-                       env=[("CXX", "/path/tomy/g++_build"), ("CC", "/path/tomy/gcc_build")])"""
+        self.assertIn("    os: Windows", client.user_io.out)
+        client.run("profile show profile2")
+        self.assertIn("    test=True", client.user_io.out)
+        client.run("profile show profile3")
+        self.assertIn("    CC: /path/tomy/gcc_build", client.user_io.out)
+        self.assertIn("    CXX: /path/tomy/g++_build", client.user_io.out)
