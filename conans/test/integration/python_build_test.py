@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.tools import TestClient, TestServer
 from conans.paths import CONANFILE, CONANENV, BUILD_INFO
 from conans.util.files import load
 import os
@@ -84,6 +84,36 @@ class PythonBuildTest(unittest.TestCase):
                  if line.startswith("Consumer/0.1@lasote/stable: Hello")]
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
+
+    def upload_reuse_test(self):
+        server = TestServer()
+        servers = {"default": server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})
+        client.run("export lasote/stable")
+
+        client.save({CONANFILE: reuse}, clean_first=True)
+        client.run("export lasote/stable")
+        client.run("install Consumer/0.1@lasote/stable --build")
+        lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
+                 if line.startswith("Consumer/0.1@lasote/stable: Hello")]
+        self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
+                         lines)
+
+        client.run("upload conantool/1.0@lasote/stable --all")
+        client.run("remove * -f")
+        client.run("search")
+        self.assertNotIn("lasote/stable", client.user_io.out)
+        client.run("export lasote/stable")
+        client.run("install Consumer/0.1@lasote/stable --build")
+        lines = [line.split(":")[1] for line in str(client.user_io.out).splitlines()
+                 if line.startswith("Consumer/0.1@lasote/stable: Hello")]
+        self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
+                         lines)
+        # Try again, just in case
+        client.run("upload conantool/1.0@lasote/stable --all")
+        client.run("remove * -f -r=default")
+        client.run("upload conantool/1.0@lasote/stable --all")
 
     def basic_install_test(self):
         client = TestClient()
