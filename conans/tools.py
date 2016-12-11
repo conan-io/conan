@@ -225,6 +225,7 @@ class OSInfo(object):
         print(os_info.is_linux) # True/False
         print(os_info.is_windows) # True/False
         print(os_info.is_macos) # True/False
+        print(os_info.is_freebsd) # True/False
 
         print(os_info.linux_distro)  # debian, ubuntu, fedora, centos...
 
@@ -244,6 +245,7 @@ class OSInfo(object):
         self.linux_distro = None
         self.is_windows = platform.system() == "Windows"
         self.is_macos = platform.system() == "Darwin"
+        self.is_freebsd = platform.system() == "FreeBSD"
 
         if self.is_linux:
             tmp = platform.linux_distribution(full_distribution_name=0)
@@ -259,6 +261,9 @@ class OSInfo(object):
         elif self.is_macos:
             self.os_version = Version(platform.mac_ver()[0])
             self.os_version_name = self.get_osx_version_name(self.os_version)
+        elif self.is_freebsd:
+            self.os_version = self.get_freebsd_version()
+            self.os_version_name = "FreeBSD %s" % self.os_version
 
     @property
     def with_apt(self):
@@ -359,6 +364,9 @@ class OSInfo(object):
             return "Puma"
         elif version.minor() == "10.0.Z":
             return "Cheetha"
+
+    def get_freebsd_version(self):
+        return platform.release().split("-")[0]
 
 try:
     os_info = OSInfo()
