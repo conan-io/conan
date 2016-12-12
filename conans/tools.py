@@ -203,7 +203,7 @@ def check_sha256(file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def patch(base_path=None, patch_file=None, patch_string=None):
+def patch(base_path=None, patch_file=None, patch_string=None, strip=0):
     """Applies a diff from file (patch_file)  or string (patch_string)
     in base_path directory or current dir if None"""
 
@@ -214,7 +214,7 @@ def patch(base_path=None, patch_file=None, patch_string=None):
     else:
         patchset = fromstring(patch_string.encode())
 
-    if not patchset.apply(root=base_path):
+    if not patchset.apply(root=base_path, strip=strip):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
