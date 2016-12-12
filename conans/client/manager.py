@@ -106,14 +106,11 @@ class ConanManager(object):
         logger.debug("Exporting %s" % conan_file_path)
         user_name, channel = get_user_channel(user)
         conan_file = self._loader().load_class(os.path.join(conan_file_path, CONANFILE))
-        url = getattr(conan_file, "url", None)
-        license_ = getattr(conan_file, "license", None)
-        if not url:
-            self._user_io.out.warn("Conanfile doesn't have 'url'.\n"
-                                   "It is recommended to add your repo URL as attribute")
-        if not license_:
-            self._user_io.out.warn("Conanfile doesn't have a 'license'.\n"
-                                   "It is recommended to add the package license as attribute")
+        for field in ["url", "license", "description"]:
+            field_value = getattr(conan_file, field, None)
+            if not field_value:
+                self._user_io.out.warn("Conanfile doesn't have '%s'.\n"
+                                       "It is recommended to add it as attribute" % field)
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
         conan_ref_str = str(conan_ref)
