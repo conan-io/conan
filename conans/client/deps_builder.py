@@ -375,7 +375,6 @@ class DepsBuilder(object):
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
-            conanfile.requires.output = self._output
             if hasattr(conanfile, "config"):
                 if not conanref:
                     self._output.warn("config() has been deprecated."
