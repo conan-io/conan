@@ -89,6 +89,10 @@ class FileCopier(object):
                         pass
                     if links and os.path.islink(abs_src_name):
                         linkto = os.readlink(abs_src_name)
+                        try:
+                            os.remove(abs_dst_name)
+                        except OSError:
+                            pass
                         os.symlink(linkto, abs_dst_name)
                     else:
                         shutil.copy2(abs_src_name, abs_dst_name)

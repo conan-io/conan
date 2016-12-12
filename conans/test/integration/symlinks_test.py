@@ -62,6 +62,9 @@ class SymLinksTest(unittest.TestCase):
 
         self._check(client, ref)
 
+        client.run("install --build -f=conanfile.txt")
+        self._check(client, ref)
+
     def upload_test(self):
         if platform.system() == "Windows":
             return
