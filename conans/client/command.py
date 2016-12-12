@@ -584,12 +584,21 @@ path to the CMake binary directory, like this:
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("-d", "--dest",
                             help="optional destination base directory, current dir by default")
+        parser.add_argument("-u", "--undo", default=False, action="store_true",
+                            help="Undo the imports, remove files copied to project or user space")
 
         args = parser.parse_args(*args)
 
-        dest_folder = args.dest
-        current_path, reference = self._get_reference(args)
-        self._manager.imports(current_path, reference, args.file, dest_folder)
+        if args.undo:
+            if not os.path.isabs(args.reference):
+                current_path = os.path.normpath(os.path.join(os.getcwd(), args.reference))
+            else:
+                current_path = args.reference
+            self._manager.imports_undo(current_path)
+        else:
+            dest_folder = args.dest
+            current_path, reference = self._get_reference(args)
+            self._manager.imports(current_path, reference, args.file, dest_folder)
 
     def export(self, *args):
         """ Copies the package recipe (conanfile.py and associated files) to your local store,

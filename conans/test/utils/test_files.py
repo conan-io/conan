@@ -25,6 +25,8 @@ def wait_until_removed(folder):
 
 def temp_folder():
     t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+    # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
+    t = os.path.realpath(t)
     nt = os.path.join(t, "path with spaces")
     os.makedirs(nt)
     return nt
