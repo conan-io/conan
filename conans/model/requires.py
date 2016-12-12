@@ -55,9 +55,6 @@ class Requirement(object):
 class Requirements(OrderedDict):
     """ {name: Requirement} in order, e.g. {"Hello": Requirement for Hello}
     """
-    # auxiliary class variable so output messages when overriding requirements
-    # FIXME: A more elegant solution
-    output = None
 
     def __init__(self, *args):
         super(Requirements, self).__init__()
@@ -118,8 +115,8 @@ class Requirements(OrderedDict):
         new_requirement = Requirement(conan_reference, private, override, dev)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
-            self.output.werror("Duplicated requirement %s != %s"
-                               % (old_requirement, new_requirement))
+            raise ConanException("Duplicated requirement %s != %s"
+                                 % (old_requirement, new_requirement))
         else:
             self[name] = new_requirement
 
