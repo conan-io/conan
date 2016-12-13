@@ -127,8 +127,13 @@ def _detect_compiler_version(result, output):
             result.append(("compiler.runtime", "MD"))
         elif compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
-        elif compiler == "gcc" or "clang" in compiler:
+        elif compiler == "gcc" in compiler:
             result.append(("compiler.libcxx", "libstdc++"))
+        elif compiler == "clang" in compiler:
+            if platform.system() == "FreeBSD":
+                result.append(("compiler.libcxx", "libc++"))
+            else:
+                result.append(("compiler.libcxx", "libstdc++"))
 
 
 def detected_os():
