@@ -22,7 +22,7 @@ class TestConan(ConanFile):
         files = {CONANFILE: conanfile}
         client.save(files)
         client.run("export lasote/stable")
-        self.assertIn("WARN: Conanfile doesn't have a 'license'", client.user_io.out)
+        self.assertIn("WARN: Conanfile doesn't have 'license'", client.user_io.out)
         client.run("install Hello/1.2@lasote/stable -s os=Windows", ignore_error=True)
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
