@@ -16,8 +16,8 @@ class ProfileTest(unittest.TestCase):
         create_profile(client.client_cache.profiles_path, "profile2")
         create_profile(client.client_cache.profiles_path, "profile3")
         client.run("profile list")
-        self.assertEqual(["profile1", "profile2", "profile3"],
-                         str(client.user_io.out).splitlines())
+        self.assertEqual(set(["profile1", "profile2", "profile3"]),
+                         set(str(client.user_io.out).splitlines()))
 
     def show_test(self):
         client = TestClient()
