@@ -1,15 +1,14 @@
 import unittest
 from conans.test.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.model.profile import Profile
 from conans.util.files import save, load
 import os
-from conans.model.scope import Scopes
 import platform
 from conans.paths import CONANFILE
 from collections import OrderedDict
 from conans.test.utils.test_files import temp_folder
-from nose_parameterized.parameterized import parameterized
+from conans.test.utils.profiles import create_profile
+from nose_parameterized import parameterized
 
 
 conanfile_scope_env = """
@@ -114,16 +113,15 @@ class ProfileTest(unittest.TestCase):
     @parameterized.expand([("", ), ("./local_profiles/", ), (temp_folder() + "/", )])
     def build_with_profile_test(self, path):
         if path == "":
-            folder = None
+            folder = self.client.client_cache.profiles_path
         elif path == "./local_profiles/":
             folder = os.path.join(self.client.current_folder, "local_profiles")
         else:
             folder = path
-        self._create_profile("scopes_env", settings={},
-                             scopes={},  # undefined scope do not apply to my packages
-                             env=[("CXX", "/path/tomy/g++_build"),
-                                  ("CC", "/path/tomy/gcc_build")],
-                             folder=folder)
+        create_profile(folder, "scopes_env", settings={},
+                       scopes={},  # undefined scope do not apply to my packages
+                       env=[("CXX", "/path/tomy/g++_build"),
+                            ("CC", "/path/tomy/gcc_build")])
 
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run('build -pr "%sscopes_env"' % path)
@@ -142,8 +140,8 @@ class ProfileTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["conanfile.py"] = conanfile_scope_env
 
-        self._create_profile("envs", settings={}, env=[("A_VAR", "A_VALUE")],
-                             package_env={"Hello0": [("OTHER_VAR", 2)]})
+        create_profile(self.client.client_cache.profiles_path, "envs", settings={},
+                       env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", 2)]})
 
         self.client.save(files)
         self.client.run("export lasote/stable")
@@ -171,7 +169,8 @@ class ProfileTest(unittest.TestCase):
                             "compiler.runtime": "MD",
                             "arch": "x86"}
 
-        self._create_profile("vs_12_86", settings=profile_settings, package_settings={})
+        create_profile(self.client.client_cache.profiles_path, "vs_12_86",
+                       settings=profile_settings, package_settings={})
 
         self.client.save(files)
         self.client.run("export lasote/stable")
@@ -195,8 +194,9 @@ class ProfileTest(unittest.TestCase):
         tmp_settings["compiler.libcxx"] = "libstdc++11"
         tmp_settings["compiler.version"] = "4.8"
         package_settings = {"Hello0": tmp_settings}
-        self._create_profile("vs_12_86_Hello0_gcc", settings=profile_settings,
-                             package_settings=package_settings)
+        create_profile(self.client.client_cache.profiles_path,
+                       "vs_12_86_Hello0_gcc", settings=profile_settings,
+                       package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
@@ -205,8 +205,9 @@ class ProfileTest(unittest.TestCase):
 
         # If other package is specified compiler is not modified
         package_settings = {"NoExistsRecipe": tmp_settings}
-        self._create_profile("vs_12_86_Hello0_gcc", settings=profile_settings,
-                             package_settings=package_settings)
+        create_profile(self.client.client_cache.profiles_path,
+                       "vs_12_86_Hello0_gcc", settings=profile_settings,
+                       package_settings=package_settings)
         # Try to override some settings in install command
         self.client.run("install --build missing -pr vs_12_86_Hello0_gcc -s compiler.version=14")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
@@ -215,8 +216,8 @@ class ProfileTest(unittest.TestCase):
 
         # Mix command line package settings with profile
         package_settings = {"Hello0": tmp_settings}
-        self._create_profile("vs_12_86_Hello0_gcc", settings=profile_settings,
-                             package_settings=package_settings)
+        create_profile(self.client.client_cache.profiles_path, "vs_12_86_Hello0_gcc",
+                       settings=profile_settings, package_settings=package_settings)
 
         # Try to override some settings in install command
         self.client.run("install --build missing -pr vs_12_86_Hello0_gcc"
@@ -228,11 +229,11 @@ class ProfileTest(unittest.TestCase):
 
     def scopes_env_test(self):
         # Create a profile and use it
-        self._create_profile("scopes_env", settings={},
-                             scopes={"Hello0:myscope": "1",
-                                     "ALL:otherscope": "2",
-                                     "undefined": "3"},  # undefined scope do not apply to my packages
-                             env=[("CXX", "/path/tomy/g++"), ("CC", "/path/tomy/gcc")])
+        create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={},
+                       scopes={"Hello0:myscope": "1",
+                               "ALL:otherscope": "2",
+                               "undefined": "3"},  # undefined scope do not apply to my packages
+                       env=[("CXX", "/path/tomy/g++"), ("CC", "/path/tomy/gcc")])
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("export lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr scopes_env")
@@ -275,9 +276,8 @@ class DefaultNameConan(ConanFile):
         files["conanfile.py"] = conanfile_scope_env
         files["test_package/conanfile.py"] = test_conanfile
         # Create a profile and use it
-        self._create_profile("scopes_env", settings={},
-                             scopes={},
-                             env=[("ONE_VAR", "ONE_VALUE")])
+        create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={},
+                       scopes={}, env=[("ONE_VAR", "ONE_VALUE")])
 
         self.client.save(files)
         self.client.run("test_package --profile scopes_env")
@@ -286,10 +286,9 @@ class DefaultNameConan(ConanFile):
         self.assertIn("My var is ONE_VALUE", str(self.client.user_io.out))
 
         # Try now with package environment vars
-        self._create_profile("scopes_env2", settings={},
-                             scopes={},
-                             package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
-                                          "Hello0": [("ONE_VAR", "PACKAGE VALUE")]})
+        create_profile(self.client.client_cache.profiles_path, "scopes_env2", settings={},
+                       scopes={}, package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
+                                               "Hello0": [("ONE_VAR", "PACKAGE VALUE")]})
 
         self.client.run("test_package --profile scopes_env2")
 
@@ -314,28 +313,3 @@ class DefaultNameConan(ConanFile):
             self.assertIn('%s="%s"' % (name, value), self.client.user_io.out)
         else:
             self.assertIn("%s='%s'" % (name, value), self.client.user_io.out)
-
-    def _create_profile(self, name, settings, scopes=None, package_settings=None,
-                        env=None, package_env=None, folder=None):
-
-        package_env = package_env or {}
-
-        profile = Profile()
-        profile._settings = settings or {}
-        if scopes:
-            profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
-
-        if package_settings:
-            profile._package_settings = package_settings
-
-        for package_name, envs in package_env.items():
-            for var_name, value in envs:
-                profile._package_env[package_name][var_name] = value
-
-        for var_name, value in env or {}:
-            profile._env[var_name] = value
-        if not folder:
-            dest = self.client.client_cache.profile_path(name)
-        else:
-            dest = os.path.join(folder, name)
-        save(dest, profile.dumps())

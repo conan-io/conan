@@ -8,9 +8,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.manifest import FileTreeManifest
 from conans.paths import SimplePaths, CONANINFO
 from genericpath import isdir
-from conans.model.profile import Profile
 from conans.model.info import ConanInfo
-from conans.errors import ConanException
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
