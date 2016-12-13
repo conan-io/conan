@@ -10,8 +10,7 @@ from conans.paths import conan_expand_user
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
-default_settings_yml = """
-os: [Windows, Linux, Macos, Android, iOS]
+default_settings_yml = """os: [Windows, Linux, Macos, Android, iOS, FreeBSD]
 arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8]
 compiler:
     gcc:
@@ -33,8 +32,7 @@ build_type: [None, Debug, Release]
 """
 
 
-default_client_conf = '''
-[storage]
+default_client_conf = '''[storage]
 # This is the default path, but you can write your own
 path: ~/.conan/data
 

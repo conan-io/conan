@@ -2,6 +2,11 @@ import re
 from conans.errors import ConanException
 
 
+def get_bool_from_text_value(value):
+    return (value == "1" or value.lower() == "yes" or value.lower() == "y" or
+            value.lower() == "true") if value else True
+
+
 class ConfigParser(object):
     """ util class to load a file with sections as [section1]
     checking the values of those sections, and returns each section

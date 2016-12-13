@@ -133,6 +133,7 @@ class ConanInstaller(object):
 
                 # Get deps_cpp_info from upstream nodes
                 node_order = self._deps_graph.ordered_closure(node, flat)
+                conan_file.cpp_info.deps = [n.conan_ref.name for n in node_order]
                 for n in node_order:
                     conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
                     conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)

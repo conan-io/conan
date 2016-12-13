@@ -7,6 +7,18 @@ from conans.model.options import OptionsValues
 from conans.test.utils.test_files import temp_folder
 from conans.model.scope import Scopes
 from conans import tools
+from nose_parameterized.parameterized import parameterized
+
+
+base_conanfile = '''
+from conans import ConanFile
+from conans.tools import patch, replace_in_file
+import os
+
+class ConanFileToolsTest(ConanFile):
+    name = "test"
+    version = "1.9.10"
+'''
 
 
 class ConanfileToolsTest(unittest.TestCase):
@@ -31,99 +43,43 @@ class ConanfileToolsTest(unittest.TestCase):
         self.assertEqual(content, "Hello world!")
 
     def test_replace_in_file(self):
-        file_content = '''
-from conans import ConanFile
-from conans.tools import download, unzip, replace_in_file
-import os
-
-class ConanFileToolsTest(ConanFile):
-    name = "test"
-    version = "1.9.10"
-    settings = []
-
-    def source(self):
-        pass
-
+        file_content = base_conanfile + '''
     def build(self):
-        replace_in_file("otherfile.txt", "ONE TWO THREE", "FOUR FIVE SIX")
-
+        replace_in_file("text.txt", "ONE TWO THREE", "FOUR FIVE SIX")
 '''
-        tmp_dir = temp_folder()
-        file_path = os.path.join(tmp_dir, "conanfile.py")
-        other_file = os.path.join(tmp_dir, "otherfile.txt")
-        save(file_path, file_content)
-        save(other_file, "ONE TWO THREE")
-        loader = ConanFileLoader(None, Settings(), None, OptionsValues.loads(""), Scopes(), 
-                                 None, None)
-        ret = loader.load_conan(file_path, None)
-        curdir = os.path.abspath(os.curdir)
-        os.chdir(tmp_dir)
-        try:
-            ret.build()
-        finally:
-            os.chdir(curdir)
+        tmp_dir, file_path, text_file = self._save_files(file_content)
+        self._build_and_check(tmp_dir, file_path, text_file, "FOUR FIVE SIX")
 
-        content = load(other_file)
-        self.assertEquals(content, "FOUR FIVE SIX")
-
-    def test_patch_from_file(self):
-        file_content = '''
-from conans import ConanFile
-from conans.tools import patch
-import os
-
-class ConanFileToolsTest(ConanFile):
-    name = "test"
-    version = "1.9.10"
-    settings = []
-
-    def source(self):
-        pass
-
+    @parameterized.expand([(0, ), (1, )])
+    def test_patch_from_file(self, strip):
+        if strip:
+            file_content = base_conanfile + '''
+    def build(self):
+        patch(patch_file="file.patch", strip=%s)
+''' % strip
+            patch_content = '''--- %s/text.txt\t2016-01-25 17:57:11.452848309 +0100
++++ %s/text_new.txt\t2016-01-25 17:57:28.839869950 +0100
+@@ -1 +1 @@
+-ONE TWO THREE
++ONE TWO FOUR''' % ("old_path", "new_path")
+        else:
+            file_content = base_conanfile + '''
     def build(self):
         patch(patch_file="file.patch")
-
 '''
-        patch_content = '''--- text.txt\t2016-01-25 17:57:11.452848309 +0100
+            patch_content = '''--- text.txt\t2016-01-25 17:57:11.452848309 +0100
 +++ text_new.txt\t2016-01-25 17:57:28.839869950 +0100
 @@ -1 +1 @@
 -ONE TWO THREE
 +ONE TWO FOUR'''
 
-        tmp_dir = temp_folder()
-        file_path = os.path.join(tmp_dir, "conanfile.py")
-        text_file = os.path.join(tmp_dir, "text.txt")
+        tmp_dir, file_path, text_file = self._save_files(file_content)
         patch_file = os.path.join(tmp_dir, "file.patch")
-        save(file_path, file_content)
-        save(text_file, "ONE TWO THREE")
         save(patch_file, patch_content)
-        loader = ConanFileLoader(None, Settings(), None, OptionsValues.loads(""), Scopes(), 
-                                 None, None)
-        ret = loader.load_conan(file_path, None)
-        curdir = os.path.abspath(os.curdir)
-        os.chdir(tmp_dir)
-        try:
-            ret.build()
-        finally:
-            os.chdir(curdir)
-
-        content = load(text_file)
-        self.assertEquals(content, "ONE TWO FOUR")
+        self._build_and_check(tmp_dir, file_path, text_file, "ONE TWO FOUR")
 
     def test_patch_from_str(self):
-        file_content = '''
-from conans import ConanFile
-from conans.tools import patch
-import os
-
-class ConanFileToolsTest(ConanFile):
-    name = "test"
-    version = "1.9.10"
-    settings = []
-
-    def source(self):
-        pass
-
+        file_content = base_conanfile + '''
     def build(self):
         patch_content = \'''--- text.txt\t2016-01-25 17:57:11.452848309 +0100
 +++ text_new.txt\t2016-01-25 17:57:28.839869950 +0100
@@ -133,12 +89,19 @@ class ConanFileToolsTest(ConanFile):
         patch(patch_string=patch_content)
 
 '''
+        tmp_dir, file_path, text_file = self._save_files(file_content)
+        self._build_and_check(tmp_dir, file_path, text_file, "ONE TWO DOH!")
+
+    def _save_files(self, file_content):
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "conanfile.py")
         text_file = os.path.join(tmp_dir, "text.txt")
         save(file_path, file_content)
         save(text_file, "ONE TWO THREE")
-        loader = ConanFileLoader(None, Settings(), None, OptionsValues.loads(""), Scopes(), 
+        return tmp_dir, file_path, text_file
+
+    def _build_and_check(self, tmp_dir, file_path, text_file, msg):
+        loader = ConanFileLoader(None, Settings(), None, OptionsValues.loads(""), Scopes(),
                                  None, None)
         ret = loader.load_conan(file_path, None)
         curdir = os.path.abspath(os.curdir)
@@ -149,4 +112,4 @@ class ConanFileToolsTest(ConanFile):
             os.chdir(curdir)
 
         content = load(text_file)
-        self.assertEquals(content, "ONE TWO DOH!")
+        self.assertEquals(content, msg)

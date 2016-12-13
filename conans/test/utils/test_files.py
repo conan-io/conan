@@ -6,10 +6,27 @@ import tempfile
 from conans.test import CONAN_TEST_FOLDER
 from conans.tools import untargz
 from conans.errors import ConanException
+import time
+import shutil
+
+
+def wait_until_removed(folder):
+    latest_exception = None
+    for _ in range(50):  # Max 5 seconds
+        time.sleep(0.1)
+        try:
+            shutil.rmtree(folder)
+            break
+        except Exception as e:
+            latest_exception = e
+    else:
+        raise Exception("Could remove folder %s: %s" % (folder, latest_exception))
 
 
 def temp_folder():
     t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
+    # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
+    t = os.path.realpath(t)
     nt = os.path.join(t, "path with spaces")
     os.makedirs(nt)
     return nt

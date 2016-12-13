@@ -8,6 +8,7 @@ class CMake(object):
     def __init__(self, settings):
         assert isinstance(settings, Settings)
         self._settings = settings
+        self.generator = self._generator()
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -19,8 +20,7 @@ class CMake(object):
                 result.append("-D%s=%s" % (option, value))
         return ' '.join(result)
 
-    @property
-    def generator(self):
+    def _generator(self):
         if (not self._settings.compiler or
                 not self._settings.compiler.version or
                 not self._settings.arch):
@@ -59,6 +59,9 @@ class CMake(object):
             if compiler in ["gcc", "clang", "apple-clang"]:
                 return "Unix Makefiles"
         if operating_system == "Macos":
+            if compiler in ["gcc", "clang", "apple-clang"]:
+                return "Unix Makefiles"
+        if operating_system == "FreeBSD":
             if compiler in ["gcc", "clang", "apple-clang"]:
                 return "Unix Makefiles"
 

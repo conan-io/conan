@@ -14,7 +14,7 @@ from conans.client.uploader import ConanUploader
 from conans.client.printer import Printer
 from conans.errors import NotFoundException, ConanException
 from conans.client.generators import write_generators
-from conans.client.importer import run_imports
+from conans.client.importer import run_imports, undo_imports
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.client.remover import ConanRemover
 from conans.model.info import ConanInfo
@@ -34,6 +34,7 @@ from conans.client.manifest_manager import ManifestManager
 from conans.model.env_info import EnvInfo, DepsEnvInfo
 from conans.tools import environment_append
 from conans.client.require_resolver import RequireResolver
+from conans.model.profile import Profile
 
 
 def get_user_channel(text):
@@ -91,7 +92,7 @@ class ConanManager(object):
 
         self._current_scopes = conaninfo_scopes
         return ConanFileLoader(self._runner, settings, package_settings=package_settings,
-                               options=options, scopes=conaninfo_scopes, 
+                               options=options, scopes=conaninfo_scopes,
                                env=env, package_env=package_env)
 
     def export(self, user, conan_file_path, keep_source=False):
@@ -105,14 +106,11 @@ class ConanManager(object):
         logger.debug("Exporting %s" % conan_file_path)
         user_name, channel = get_user_channel(user)
         conan_file = self._loader().load_class(os.path.join(conan_file_path, CONANFILE))
-        url = getattr(conan_file, "url", None)
-        license_ = getattr(conan_file, "license", None)
-        if not url:
-            self._user_io.out.warn("Conanfile doesn't have 'url'.\n"
-                                   "It is recommended to add your repo URL as attribute")
-        if not license_:
-            self._user_io.out.warn("Conanfile doesn't have a 'license'.\n"
-                                   "It is recommended to add the package license as attribute")
+        for field in ["url", "license", "description"]:
+            field_value = getattr(conan_file, field, None)
+            if not field_value:
+                self._user_io.out.warn("Conanfile doesn't have '%s'.\n"
+                                       "It is recommended to add it as attribute" % field)
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
         conan_ref_str = str(conan_ref)
@@ -218,15 +216,35 @@ class ConanManager(object):
                                               info, registry, graph_updates_info,
                                               remote)
 
-    def _read_profile(self, profile_name):
-        if profile_name:
-            try:
-                profile = self._client_cache.load_profile(profile_name)
-                return profile
-            except ConanException as exc:
-                raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
+    def read_profile(self, profile_name, cwd):
+        if not profile_name:
+            return None
 
-        return None
+        if os.path.isabs(profile_name):
+            profile_path = profile_name
+            folder = os.path.dirname(profile_name)
+        elif profile_name.startswith("."):  # relative path name
+            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+            folder = os.path.dirname(profile_path)
+        else:
+            folder = self._client_cache.profiles_path
+            profile_path = self._client_cache.profile_path(profile_name)
+
+        try:
+            text = load(profile_path)
+        except Exception:
+            if os.path.exists(folder):
+                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
+            else:
+                profiles = []
+            current_profiles = ", ".join(profiles) or "[]"
+            raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
+                                 "%s" % (profile_name, current_profiles))
+
+        try:
+            return Profile.loads(text)
+        except ConanException as exc:
+            raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
@@ -254,7 +272,7 @@ class ConanManager(object):
         else:
             manifest_manager = None
 
-        profile = self._read_profile(profile_name)
+        profile = self.read_profile(profile_name, current_path)
 
         # Mix Settings, Env vars and scopes between profile and command line
         if profile:
@@ -349,11 +367,14 @@ If not:
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conan_file_path = self._client_cache.conanfile(reference)
-            conanfile = self._loader().load_conan(conan_file_path, output)
+            conanfile = self._loader().load_conan(conan_file_path, output, reference=reference)
             self._load_deps_info(current_path, conanfile, output)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             config_source(export_folder, src_folder, conanfile, output, force)
+
+    def imports_undo(self, current_path):
+        undo_imports(current_path, self._user_io.out)
 
     def imports(self, current_path, reference, conan_file_path, dest_folder):
         if not isinstance(reference, ConanFileReference):
@@ -370,7 +391,7 @@ If not:
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conan_file_path = self._client_cache.conanfile(reference)
-            conanfile = self._loader().load_conan(conan_file_path, output)
+            conanfile = self._loader().load_conan(conan_file_path, output, reference=reference)
 
         self._load_deps_info(current_path, conanfile, output, load_env=False, error=True)
         run_imports(conanfile, dest_folder or current_path, output)
@@ -416,7 +437,8 @@ If not:
             output = ScopedOutput(str(reference), self._user_io.out)
             output.info("Re-packaging %s" % package_reference.package_id)
             loader = self._loader(build_folder)
-            conanfile = loader.load_conan(conan_file_path, self._user_io.out)
+            conanfile = loader.load_conan(conan_file_path, self._user_io.out,
+                                          reference=package_reference.conan)
             self._load_deps_info(build_folder, conanfile, output)
             rmdir(package_folder)
             packager.create_package(conanfile, build_folder, package_folder, output)
@@ -437,7 +459,7 @@ If not:
 
         try:
             # Append env_vars to execution environment and clear when block code ends
-            profile = self._read_profile(profile_name)
+            profile = self.read_profile(profile_name, current_path)
             output = ScopedOutput("Project", self._user_io.out)
             if profile:
                 profile.update_env(env)

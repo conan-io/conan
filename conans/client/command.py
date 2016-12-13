@@ -27,11 +27,12 @@ from conans.model.ref import ConanFileReference
 from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, conan_expand_user
-from conans.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.log import logger
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files
-
+from conans.util.config_parser import get_bool_from_text_value
+from conans.client.printer import Printer
 
 class Extender(argparse.Action):
     '''Allows to use the same flag several times in a command and creates a list with the values.
@@ -244,7 +245,8 @@ path to the CMake binary directory, like this:
 
         args = parser.parse_args(*args)
 
-        root_folder = os.path.normpath(os.path.join(os.getcwd(), args.path))
+        current_path = os.getcwd()
+        root_folder = os.path.normpath(os.path.join(current_path, args.path))
         if args.folder:
             test_folder_name = args.folder
             test_folder = os.path.join(root_folder, test_folder_name)
@@ -281,7 +283,7 @@ path to the CMake binary directory, like this:
         # Read profile environment and mix with the command line parameters
         if args.profile:
             try:
-                profile = self._client_cache.load_profile(args.profile)
+                profile = manager.read_profile(args.profile, current_path)
             except ConanException as exc:
                 raise ConanException("Error reading '%s' profile: %s" % (args.profile, exc))
             else:
@@ -323,6 +325,7 @@ path to the CMake binary directory, like this:
                               build_mode=args.build,
                               scopes=scopes,
                               update=args.update,
+                              generators=["env", "txt"],
                               profile_name=args.profile,
                               env=env,
                               package_env=package_env
@@ -581,12 +584,21 @@ path to the CMake binary directory, like this:
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("-d", "--dest",
                             help="optional destination base directory, current dir by default")
+        parser.add_argument("-u", "--undo", default=False, action="store_true",
+                            help="Undo the imports, remove files copied to project or user space")
 
         args = parser.parse_args(*args)
 
-        dest_folder = args.dest
-        current_path, reference = self._get_reference(args)
-        self._manager.imports(current_path, reference, args.file, dest_folder)
+        if args.undo:
+            if not os.path.isabs(args.reference):
+                current_path = os.path.normpath(os.path.join(os.getcwd(), args.reference))
+            else:
+                current_path = args.reference
+            self._manager.imports_undo(current_path)
+        else:
+            dest_folder = args.dest
+            current_path, reference = self._get_reference(args)
+            self._manager.imports(current_path, reference, args.file, dest_folder)
 
     def export(self, *args):
         """ Copies the package recipe (conanfile.py and associated files) to your local store,
@@ -747,11 +759,15 @@ path to the CMake binary directory, like this:
         parser_add = subparsers.add_parser('add', help='add a remote')
         parser_add.add_argument('remote',  help='name of the remote')
         parser_add.add_argument('url',  help='url of the remote')
+        parser_add.add_argument('verify_ssl',  help='Verify SSL certificated. Default True',
+                                default="True", nargs="?")
         parser_rm = subparsers.add_parser('remove', help='remove a remote')
         parser_rm.add_argument('remote',  help='name of the remote')
         parser_upd = subparsers.add_parser('update', help='update the remote url')
         parser_upd.add_argument('remote',  help='name of the remote')
         parser_upd.add_argument('url',  help='url')
+        parser_upd.add_argument('verify_ssl',  help='Verify SSL certificated. Default True',
+                                default="True", nargs="?")
         subparsers.add_parser('list_ref',
                               help='list the package recipes and its associated remotes')
         parser_padd = subparsers.add_parser('add_ref',
@@ -770,13 +786,15 @@ path to the CMake binary directory, like this:
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         if args.subcommand == "list":
             for r in registry.remotes:
-                self._user_io.out.info("%s: %s" % (r.name, r.url))
+                self._user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
         elif args.subcommand == "add":
-            registry.add(args.remote, args.url)
+            verify = get_bool_from_text_value(args.verify_ssl)
+            registry.add(args.remote, args.url, args.verify_ssl)
         elif args.subcommand == "remove":
             registry.remove(args.remote)
         elif args.subcommand == "update":
-            registry.update(args.remote, args.url)
+            verify = get_bool_from_text_value(args.verify_ssl)
+            registry.update(args.remote, args.url, verify)
         elif args.subcommand == "list_ref":
             for ref, remote in registry.refs.items():
                 self._user_io.out.info("%s: %s" % (ref, remote))
@@ -786,6 +804,30 @@ path to the CMake binary directory, like this:
             registry.remove_ref(args.reference)
         elif args.subcommand == "update_ref":
             registry.update_ref(args.reference, args.remote)
+
+    def profile(self, *args):
+        """ manage profiles
+        """
+        parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+
+        # create the parser for the "profile" command
+        subparsers.add_parser('list', help='list current profiles')
+        parser_show = subparsers.add_parser('show', help='show the values defined for a profile')
+        parser_show.add_argument('profile',  help='name of the profile')
+        args = parser.parse_args(*args)
+
+        if args.subcommand == "list":
+            folder = self._client_cache.profiles_path
+            if os.path.exists(folder):
+                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
+                for p in profiles:
+                    self._user_io.out.info(p)
+            else:
+                self._user_io.out.info("No profiles defined")
+        elif args.subcommand == "show":
+            p = self._manager.read_profile(args.profile, os.getcwd())
+            Printer(self._user_io.out).print_profile(args.profile, p)
 
     def _show_help(self):
         """ prints a summary of all commands

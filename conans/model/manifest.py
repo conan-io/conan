@@ -2,8 +2,7 @@ import os
 import calendar
 import time
 from conans.util.files import md5sum, md5
-from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME
-from conans.util.log import logger
+from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, CONANFILE
 from conans.errors import ConanException
 
 
@@ -43,12 +42,16 @@ class FileTreeManifest(object):
 
     @classmethod
     def create(cls, folder):
-        """ Walks a folder and create a TreeDigest for it, reading file contents
+        """ Walks a folder and create a FileTreeManifest for it, reading file contents
         from disk, and capturing current time
         """
+        filterfiles = (PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, CONANFILE + "c",
+                       ".DS_Store")
         file_dict = {}
-        for root, _, files in os.walk(folder):
+        for root, dirs, files in os.walk(folder):
+            dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
             relative_path = os.path.relpath(root, folder)
+            files = [f for f in files if f not in filterfiles]  # Avoid md5 of big TGZ files
             for f in files:
                 abs_path = os.path.join(root, f)
                 rel_path = os.path.normpath(os.path.join(relative_path, f))
@@ -57,17 +60,9 @@ class FileTreeManifest(object):
                     file_dict[rel_path] = md5sum(abs_path)
                 else:
                     raise ConanException("The file is a broken symlink, verify that "
-                                         "you are packaging the needed destination files: '%s'" % abs_path)
+                                         "you are packaging the needed destination files: '%s'"
+                                         % abs_path)
         date = calendar.timegm(time.gmtime())
-        from conans.paths import CONAN_MANIFEST, CONANFILE
-        file_dict.pop(PACKAGE_TGZ_NAME, None)  # Exclude the PACKAGE_TGZ_NAME
-        file_dict.pop(EXPORT_TGZ_NAME, None)  # Exclude the EXPORT_TGZ_NAME
-        file_dict.pop(CONAN_MANIFEST, None)  # Exclude the MANIFEST itself
-        file_dict.pop(CONANFILE + "c", None)  # Exclude the CONANFILE.pyc
-        file_dict.pop(".DS_Store", None)  # Exclude tmp in mac
-
-        file_dict = {key: value for key, value in file_dict.items()
-                     if not key.startswith("__pycache__")}
 
         return cls(date, file_dict)
 

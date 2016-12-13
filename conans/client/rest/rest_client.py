@@ -12,6 +12,8 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
+from conans import COMPLEX_SEARCH_CAPABILITY
+from conans.search.search import filter_packages
 
 
 def handle_return_deserializer(deserializer=None):
@@ -62,18 +64,31 @@ class RestApiClient(object):
     """
         Rest Api Client for handle remote.
     """
-    from conans.client.rest import cacert
-    # Necessary for pyinstaller, because it doesn't copy the cacert.
-    # It should not be necessary anymore the own conan.io certificate (fixed in server)
-    VERIFY_SSL = cacert.file_path
 
     def __init__(self, output, requester):
+
         # Set to instance
         self.token = None
         self.remote_url = None
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
         self.requester = requester
+        self._verify_ssl = True
+
+    @property
+    def verify_ssl(self):
+        from conans.client.rest import cacert
+        if self._verify_ssl:
+            # Necessary for pyinstaller, because it doesn't copy the cacert.
+            # It should not be necessary anymore the own conan.io certificate (fixed in server)
+            return cacert.file_path
+        else:
+            return False
+
+    @verify_ssl.setter
+    def verify_ssl(self, check):
+        assert(isinstance(check, bool))
+        self._verify_ssl = check
 
     @property
     def auth(self):
@@ -200,7 +215,7 @@ class RestApiClient(object):
         auth = HTTPBasicAuth(user, password)
         path = "%s/users/authenticate" % self._remote_api_url
         ret = self.requester.get(path, auth=auth, headers=self.custom_headers,
-                                 verify=self.VERIFY_SSL)
+                                 verify=self.verify_ssl)
         return ret
 
     @handle_return_deserializer()
@@ -209,7 +224,7 @@ class RestApiClient(object):
         User will be asked for new user/pass"""
         url = "%s/users/check_credentials" % self._remote_api_url
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.VERIFY_SSL)
+                                 verify=self.verify_ssl)
         return ret
 
     def search(self, pattern=None, ignorecase=True):
@@ -228,29 +243,40 @@ class RestApiClient(object):
         return [ConanFileReference.loads(ref) for ref in response]
 
     def search_packages(self, reference, query):
+
         url = "%s/conans/%s/search?" % (self._remote_api_url, "/".join(reference))
-        if query:
-            params = {"q": query}
-            url += urlencode(params)
-        references = self._get_json(url)
-        return references
+        if not query:
+            package_infos = self._get_json(url)
+            return package_infos
+
+        # Read capabilities
+        try:
+            _, _, capabilities = self.server_info()
+        except NotFoundException:
+            capabilities = []
+
+        if COMPLEX_SEARCH_CAPABILITY in capabilities:
+            url += urlencode({"q": query})
+            package_infos = self._get_json(url)
+            return package_infos
+        else:
+            package_infos = self._get_json(url)
+            return filter_packages(query, package_infos)
 
     @handle_return_deserializer()
     def remove_conanfile(self, conan_reference):
-        """ Remove any conans
-        """
+        """ Remove a recipe and packages """
         self.check_credentials()
         url = "%s/conans/%s" % (self._remote_api_url, '/'.join(conan_reference))
         response = self.requester.delete(url,
                                          auth=self.auth,
                                          headers=self.custom_headers,
-                                         verify=self.VERIFY_SSL)
+                                         verify=self.verify_ssl)
         return response
 
     @handle_return_deserializer()
     def remove_packages(self, conan_reference, package_ids=None):
-        """ Remove any conans
-        """
+        """ Remove any packages specified by package_ids"""
         self.check_credentials()
         payload = {"package_ids": package_ids}
         url = "%s/conans/%s/packages/delete" % (self._remote_api_url, '/'.join(conan_reference))
@@ -258,8 +284,7 @@ class RestApiClient(object):
 
     @handle_return_deserializer()
     def _remove_conanfile_files(self, conan_reference, files):
-        """ Remove any conans
-        """
+        """ Remove recipe files """
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
         url = "%s/conans/%s/remove_files" % (self._remote_api_url, '/'.join(conan_reference))
@@ -267,14 +292,28 @@ class RestApiClient(object):
 
     @handle_return_deserializer()
     def _remove_package_files(self, package_reference, files):
-        """ Remove any conans
-        """
+        """ Remove package files """
         self.check_credentials()
         payload = {"files": [filename.replace("\\", "/") for filename in files]}
         url = "%s/conans/%s/packages/%s/remove_files" % (self._remote_api_url,
                                                          "/".join(package_reference.conan),
                                                          package_reference.package_id)
         return self._post_json(url, payload)
+
+    def server_info(self):
+        """Get information about the server: status, version, type and capabilities"""
+        url = "%s/ping" % self._remote_api_url
+        ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
+                                 verify=self.verify_ssl)
+        if ret.status_code == 404:
+            raise NotFoundException("Not implemented endpoint")
+
+        version_check = ret.headers.get('X-Conan-Client-Version-Check', None)
+        server_version = ret.headers.get('X-Conan-Server-Version', None)
+        server_capabilities = ret.headers.get('X-Conan-Server-Capabilities', "")
+        server_capabilities = [cap.strip() for cap in server_capabilities.split(",") if cap]
+
+        return version_check, server_version, server_capabilities
 
     def _get_conan_snapshot(self, reference):
         url = "%s/conans/%s" % (self._remote_api_url, '/'.join(reference))
@@ -302,7 +341,7 @@ class RestApiClient(object):
         response = self.requester.post(url,
                                        auth=self.auth,
                                        headers=self.custom_headers,
-                                       verify=self.VERIFY_SSL,
+                                       verify=self.verify_ssl,
                                        json=payload)
         return response
 
@@ -313,12 +352,12 @@ class RestApiClient(object):
                        'Accept': 'application/json'}
             headers.update(self.custom_headers)
             response = self.requester.post(url, auth=self.auth, headers=headers,
-                                           verify=self.VERIFY_SSL,
+                                           verify=self.verify_ssl,
                                            stream=True,
                                            data=json.dumps(data))
         else:
             response = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                          verify=self.VERIFY_SSL,
+                                          verify=self.verify_ssl,
                                           stream=True)
         if response.status_code != 200:  # Error message is text
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
@@ -351,7 +390,7 @@ class RestApiClient(object):
 
         Its a generator, so it yields elements for memory performance
         """
-        downloader = Downloader(self.requester, output, self.VERIFY_SSL)
+        downloader = Downloader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
@@ -369,7 +408,7 @@ class RestApiClient(object):
 
         It writes downloaded files to disk (appending to file, only keeps chunks in memory)
         """
-        downloader = Downloader(self.requester, output, self.VERIFY_SSL)
+        downloader = Downloader(self.requester, output, self.verify_ssl)
         ret = {}
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
@@ -387,7 +426,7 @@ class RestApiClient(object):
     def upload_files(self, file_urls, files, output):
         t1 = time.time()
         failed = {}
-        uploader = Uploader(self.requester, output, self.VERIFY_SSL)
+        uploader = Uploader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):

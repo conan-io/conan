@@ -3,6 +3,48 @@ import fnmatch
 
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
+from conans.model.manifest import FileTreeManifest
+from conans.util.files import save, md5sum, load
+import calendar
+import time
+from conans.errors import ConanException
+
+
+IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
+
+
+def undo_imports(current_path, output):
+    manifest_path = os.path.join(current_path, IMPORTS_MANIFESTS)
+    try:
+        manifest_content = load(manifest_path)
+    except:
+        raise ConanException("Cannot load file %s" % manifest_path)
+
+    try:
+        manifest = FileTreeManifest.loads(manifest_content)
+    except:
+        raise ConanException("Wrong manifest file format %s" % manifest_path)
+
+    not_removed = 0
+    for filepath, _ in manifest.file_sums.items():
+        if not os.path.exists(filepath):
+            output.warn("File doesn't exist: %s" % filepath)
+            continue
+        try:
+            os.remove(filepath)
+        except:
+            output.error("Cannot remove file (open or busy): %s" % filepath)
+            not_removed += 1
+
+    if not_removed:
+        raise ConanException("Cannot remove %s or more imported files" % not_removed)
+
+    output.success("Removed %s imported files" % (len(manifest.file_sums)))
+    try:
+        os.remove(manifest_path)
+        output.success("Removed imports manifest file: %s" % manifest_path)
+    except:
+        raise ConanException("Cannot remove manifest file (open or busy): %s" % manifest_path)
 
 
 def run_imports(conanfile, current_path, output):
@@ -12,6 +54,14 @@ def run_imports(conanfile, current_path, output):
     copied_files = file_importer.execute()
     import_output = ScopedOutput("%s imports()" % output.scope, output)
     report_copied_files(copied_files, import_output)
+    if copied_files:
+        date = calendar.timegm(time.gmtime())
+        file_dict = {}
+        for f in copied_files:
+            abs_path = os.path.join(current_path, f)
+            file_dict[f] = md5sum(abs_path)
+        manifest = FileTreeManifest(date, file_dict)
+        save(os.path.join(current_path, IMPORTS_MANIFESTS), str(manifest))
     return copied_files
 
 

@@ -1,5 +1,5 @@
 import os
-from conans.util.files import save, load, path_exists, mkdir
+from conans.util.files import save, load, path_exists, mkdir, normalize
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
@@ -8,9 +8,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.manifest import FileTreeManifest
 from conans.paths import SimplePaths, CONANINFO
 from genericpath import isdir
-from conans.model.profile import Profile
 from conans.model.info import ConanInfo
-from conans.errors import ConanException
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -42,7 +41,7 @@ class ClientCache(SimplePaths):
             default_settings = detect_defaults_settings(self._output)
             default_setting_values = Values.from_list(default_settings)
             client_conf = default_client_conf + default_setting_values.dumps()
-            save(self.conan_conf_path, client_conf)
+            save(self.conan_conf_path, normalize(client_conf))
 
         if not self._conan_config:
             if not os.path.exists(self.conan_conf_path):
@@ -75,7 +74,7 @@ class ClientCache(SimplePaths):
         if not self._settings:
             # TODO: Read default environment settings
             if not os.path.exists(self.settings_path):
-                save(self.settings_path, default_settings_yml)
+                save(self.settings_path, normalize(default_settings_yml))
                 settings = Settings.loads(default_settings_yml)
             else:
                 content = load(self.settings_path)
@@ -153,15 +152,3 @@ class ClientCache(SimplePaths):
         if not os.path.exists(self.profiles_path):
             mkdir(self.profiles_path)
         return os.path.join(self.profiles_path, name)
-
-    def load_profile(self, name):
-        try:
-            text = load(self.profile_path(name))
-        except Exception:
-            current_profiles = ", ".join(self.current_profiles()) or "[]"
-            raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                                 "%s" % (name, current_profiles))
-        return Profile.loads(text)
-
-    def current_profiles(self):
-        return [name for name in os.listdir(self.profiles_path) if not os.path.isdir(name)]

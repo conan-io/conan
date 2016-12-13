@@ -167,6 +167,20 @@ class Printer(object):
                 self._print_colored_line("outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
             self._out.writeln("")
 
+    def print_profile(self, name, profile):
+        self._out.info("Configuration for profile %s:\n" % name)
+        self._print_profile_section("settings", profile.settings)
+        self._print_profile_section("env", profile.env)
+        scopes = profile.scopes.dumps().splitlines()
+        self._print_colored_line("[scopes]")
+        for scope in scopes:
+            self._print_colored_line(scope, indent=1)
+
+    def _print_profile_section(self, name, items, indent=0):
+        self._print_colored_line("[%s]" % name, indent=indent)
+        for key, value in items:
+            self._print_colored_line(key, value=str(value), indent=indent+1)
+
     def _print_colored_line(self, text, value=None, indent=0):
         """ Print a colored line depending on its indentation level
             Attributes:

@@ -16,23 +16,28 @@ class CMakeTest(unittest.TestCase):
         self.assertEqual('-G "Visual Studio 12 2013"   -DCONAN_COMPILER="Visual Studio" '
                          '-DCONAN_COMPILER_VERSION="12" -Wno-dev', cmake.command_line)
         self.assertEqual('', cmake.build_config)
+
         settings.build_type = "Debug"
+        cmake = CMake(settings)
         self.assertEqual('-G "Visual Studio 12 2013"   -DCONAN_COMPILER="Visual Studio" '
                          '-DCONAN_COMPILER_VERSION="12" -Wno-dev', cmake.command_line)
         self.assertEqual('--config Debug', cmake.build_config)
 
         settings.arch = "x86_64"
+        cmake = CMake(settings)
         self.assertEqual('-G "Visual Studio 12 2013 Win64"   -DCONAN_COMPILER="Visual Studio" '
                          '-DCONAN_COMPILER_VERSION="12" -Wno-dev', cmake.command_line)
 
         settings.os = "Windows"
         settings.compiler = "gcc"
         settings.compiler.version = "4.8"
+        cmake = CMake(settings)
         self.assertEqual('-G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug  -DCONAN_COMPILER="gcc" '
                          '-DCONAN_COMPILER_VERSION="4.8" -Wno-dev', cmake.command_line)
 
         settings.os = "Linux"
         settings.arch = "x86"
+        cmake = CMake(settings)
         self.assertEqual('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug  -DCONAN_COMPILER="gcc" '
                          '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS=-m32 '
                          '-DCONAN_SHARED_LINKER_FLAGS=-m32 -DCONAN_C_FLAGS=-m32 -Wno-dev',

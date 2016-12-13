@@ -186,10 +186,10 @@ License
    :target: https://travis-ci.org/conan-io/conan
 .. |Build Status2| image:: https://travis-ci.org/conan-io/conan.svg?branch=develop
    :target: https://travis-ci.org/conan-io/conan
-.. |Build status3| image:: https://ci.appveyor.com/api/projects/status/5hedgjt9ggj1artx/branch/develop?svg=true
-   :target: https://ci.appveyor.com/project/lasote/conan-mva77/branch/master
-.. |Build status4| image:: https://ci.appveyor.com/api/projects/status/5hedgjt9ggj1artx/branch/develop?svg=true
-   :target: https://ci.appveyor.com/project/lasote/conan-mva77/branch/develop
+.. |Build status3| image:: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/master?svg=true
+   :target: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/master
+.. |Build status4| image:: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/develop?svg=true
+   :target: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/develop
 .. _`pip docs`: https://pip.pypa.io/en/stable/installing/
 .. _`brew homepage`: http://brew.sh/
 

@@ -21,9 +21,11 @@ class InfoTest(unittest.TestCase):
             expected_output = textwrap.dedent(
                 """\
                 WARN: Conanfile doesn't have 'url'.
-                It is recommended to add your repo URL as attribute
-                WARN: Conanfile doesn't have a 'license'.
-                It is recommended to add the package license as attribute""")
+                It is recommended to add it as attribute
+                WARN: Conanfile doesn't have 'license'.
+                It is recommended to add it as attribute
+                WARN: Conanfile doesn't have 'description'.
+                It is recommended to add it as attribute""")
             self.assertIn(expected_output, self.client.user_io.out)
 
         if number != "Hello2":
