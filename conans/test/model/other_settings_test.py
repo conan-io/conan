@@ -93,7 +93,7 @@ from conans import ConanFile
 class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
-    settings = {"os": ["Windows", "Linux", "Macos"], "compiler": ["Visual Studio"]}
+    settings = {"os": ["Windows", "Linux", "Macos", "FreeBSD"], "compiler": ["Visual Studio"]}
 """
 
         self.client.save({CONANFILE: content})

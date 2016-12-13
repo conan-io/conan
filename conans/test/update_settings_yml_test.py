@@ -24,7 +24,7 @@ class ConanFileToolsTest(ConanFile):
         self.output.warn("Building...")
     '''
         prev_settings = """
-os: [Windows, Linux, Macos, Android]
+os: [Windows, Linux, Macos, Android, FreeBSD]
 arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
 compiler:
     gcc:
