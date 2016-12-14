@@ -1,5 +1,5 @@
 from conans.client.output import ScopedOutput
-from conans.util.files import path_exists, rmdir
+from conans.util.files import path_exists, rmdir, load
 from conans.model.ref import PackageReference
 from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedClient,
                            NotFoundException)
