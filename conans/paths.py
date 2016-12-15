@@ -75,6 +75,23 @@ else:
     rm_conandir = rmdir
 
 
+if platform.system() != "Linux" and platform.system() != "FreeBSD":
+    def _check_ref_case(conan_reference, conan_folder):
+        if not os.path.exists(conan_folder):  # If it doesn't exist, not a problem
+            return
+        # If exists, lets check path
+        parts = os.path.normpath(conan_folder).split(os.sep)[-5:-1]
+        cache_ref = "{}/{}@{}/{}".format(*parts)
+        if str(conan_reference) != cache_ref:
+            raise ConanException("Requested '%s' but found in local cache '%s'\n"
+                                 "Case different packages in a case insensitive filesystem "
+                                 "can't be managed"
+                                 % (str(conan_reference), cache_ref))
+else:
+    def _check_ref_case(conan_reference, conan_folder):  # @UnusedVariable
+        pass
+
+
 def _shortener(path, short_paths):
     """ short_paths is 4-state:
     False: Never shorten the path
@@ -143,10 +160,12 @@ class SimplePaths(object):
 
     def conanfile(self, conan_reference):
         export = self.export(conan_reference)
+        _check_ref_case(conan_reference, export)
         return normpath(join(export, CONANFILE))
 
     def digestfile_conanfile(self, conan_reference):
         export = self.export(conan_reference)
+        _check_ref_case(conan_reference, export)
         return normpath(join(export, CONAN_MANIFEST))
 
     def digestfile_package(self, package_reference, short_paths=False):
