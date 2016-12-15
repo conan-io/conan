@@ -279,7 +279,7 @@ class DepsGraph(object):
         return result
 
 
-class DepsBuilder(object):
+class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
     def __init__(self, retriever, output, loader, resolver):

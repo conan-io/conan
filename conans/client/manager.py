@@ -5,7 +5,7 @@ from collections import OrderedDict
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, CONANENV)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
-from conans.client.deps_builder import DepsBuilder
+from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.userio import UserIO
 from conans.client.installer import ConanInstaller
 from conans.util.files import save, load, rmdir, normalize
@@ -181,7 +181,7 @@ class ConanManager(object):
         # build deps graph and install it
         local_search = None if update else self._search_manager
         resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
-        builder = DepsBuilder(remote_proxy, self._user_io.out, loader, resolver)
+        builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         deps_graph = builder.load(None, conanfile)
         # These lines are so the conaninfo stores the correct complete info
         if is_txt:

@@ -2,7 +2,7 @@ import unittest
 from conans.test.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os
-from conans.client.deps_builder import DepsBuilder
+from conans.client.deps_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues
 from conans.client.loader import ConanFileLoader
@@ -130,7 +130,7 @@ class ConanRequirementsTest(unittest.TestCase):
                                       OptionsValues.loads(""), Scopes(),
                                       env=[], package_env={})
         self.retriever = Retriever(self.loader, self.output)
-        self.builder = DepsBuilder(self.retriever, self.output, self.loader, MockRequireResolver())
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, MockRequireResolver())
 
     def root(self, content):
         root_conan = self.retriever.root(content)
@@ -1427,7 +1427,7 @@ class CoreSettingsTest(unittest.TestCase):
         loader = ConanFileLoader(None, full_settings, None, options, Scopes(),
                                  env=None, package_env=None)
         retriever = Retriever(loader, self.output)
-        builder = DepsBuilder(retriever, self.output, loader, MockRequireResolver())
+        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
         deps_graph = builder.load(None, root_conan)
         return deps_graph
@@ -1710,7 +1710,7 @@ class ChatConan(ConanFile):
                                                      "myoption_chat=on"),
                                  Scopes(), env=None, package_env=None)
         retriever = Retriever(loader, output)
-        builder = DepsBuilder(retriever, output, loader, MockRequireResolver())
+        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver())
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 
