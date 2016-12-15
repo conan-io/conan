@@ -133,14 +133,19 @@ class ConanManager(object):
         assert(isinstance(reference, ConanFileReference))
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
 
+        package = remote_proxy.search(reference, None)
+        if not package:  # Search the reference first, and raise if it doesn't exist
+            raise ConanException("'%s' not found in remote" % str(reference))
+
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
-        else:  # Not specified packages, download all
+        else:
             packages_props = remote_proxy.search_packages(reference, None)
-            if not packages_props:  # No filter by properties
-                raise ConanException("'%s' not found in remote" % str(reference))
-
-            remote_proxy.download_packages(reference, list(packages_props.keys()))
+            if not packages_props:
+                output = ScopedOutput(str(reference), self._user_io.out)
+                output.warn("No remote binary packages found in remote")
+            else:
+                remote_proxy.download_packages(reference, list(packages_props.keys()))
 
     def _get_graph(self, reference, current_path, remote, options, settings, filename, update,
                    check_updates, manifest_manager, scopes, package_settings, env, package_env):

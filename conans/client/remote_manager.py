@@ -7,7 +7,7 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError
-from conans.util.files import tar_extract, relative_dirs
+from conans.util.files import tar_extract, relative_dirs, rmdir
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
     rm_conandir
@@ -108,6 +108,7 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
+        rmdir(dest_folder)  # Remove first the destination folder
         zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
         files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
@@ -125,6 +126,7 @@ class RemoteManager(object):
         Will iterate the remotes to find the conans unless remote was specified
 
         returns (dict relative_filepath:abs_path , remote_name)"""
+        rm_conandir(dest_folder)  # Remove first the destination folder
         zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
         files = unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
         # Issue #214 https://github.com/conan-io/conan/issues/214
