@@ -1,5 +1,5 @@
 from conans.client.output import ScopedOutput
-from conans.util.files import path_exists, rmdir
+from conans.util.files import rmdir
 from conans.model.ref import PackageReference
 from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedClient,
                            NotFoundException)
@@ -103,9 +103,8 @@ class ConanProxy(object):
 
         # check if it is in disk
         conanfile_path = self._client_cache.conanfile(conan_reference)
-        path_exist = path_exists(conanfile_path, self._client_cache.store)
 
-        if path_exist:
+        if os.path.exists(conanfile_path):
             if self._check_updates:
                 ret = self.update_available(conan_reference)
                 if ret != 0:  # Found and not equal

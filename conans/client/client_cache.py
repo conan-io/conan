@@ -1,5 +1,5 @@
 import os
-from conans.util.files import save, load, path_exists, mkdir, normalize
+from conans.util.files import save, load, mkdir, normalize
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
@@ -122,7 +122,7 @@ class ClientCache(SimplePaths):
 
     def conan_manifests(self, conan_reference):
         digest_path = self.digestfile_conanfile(conan_reference)
-        if not path_exists(digest_path, self.store):
+        if not os.path.exists(digest_path):
             return None, None
         return self._digests(digest_path)
 
