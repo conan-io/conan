@@ -95,6 +95,11 @@ class Downloader(object):
         self.verify = verify
 
     def download(self, url, file_path=None, auth=None):
+
+        if file_path and os.path.exists(file_path):
+            # Should not happen, better to raise, probably we had to remove the dest folder before
+            raise ConanException("Error, the file to download already exists: '%s'" % file_path)
+
         ret = bytearray()
         response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
         if not response.ok:

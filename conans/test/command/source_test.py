@@ -14,7 +14,6 @@ from conans import ConanFile
 class ConanLib(ConanFile):
     name = "Hello"
     version = "0.1"
-    exports = "*"
 
     def source(self):
         self.output.info("Running source!")
