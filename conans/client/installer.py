@@ -139,7 +139,7 @@ class ConanInstaller(object):
             self._build_and_package(conan_ref, package_reference, package_folder, conan_file, output)
             self._call_package_info(conan_file, conan_ref)
 
-    def _get_nodes_to_build(self, nodes_by_level, skip_private_nodes, build_mode):
+    def _get_nodes_to_build(self, nodes_by_level, skip_nodes, build_mode):
         """Install the available packages if needed/allowed and return a list
         of nodes to build (tuples (conan_file, conan_ref))
         and installed nodes"""
@@ -154,7 +154,7 @@ class ConanInstaller(object):
         # Now build each level, starting from the most independent one
         for level in nodes_by_level:
             for node in level:
-                if node in skip_private_nodes:
+                if node in skip_nodes:
                     continue
                 conan_ref, conan_file = node
 
