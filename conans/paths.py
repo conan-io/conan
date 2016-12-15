@@ -75,12 +75,16 @@ else:
     rm_conandir = rmdir
 
 
-if platform.system() != "Linux" and platform.system() != "FreeBSD":
+def is_case_insensitive_os():
+    system = platform.system()
+    return system != "Linux" and system != "FreeBSD"
+
+
+if is_case_insensitive_os():
     def _check_ref_case(conan_reference, conan_folder, store_folder):
         if not os.path.exists(conan_folder):  # If it doesn't exist, not a problem
             return
         # If exists, lets check path
-
         tmp = store_folder
         for part in conan_reference:
             items = os.listdir(tmp)

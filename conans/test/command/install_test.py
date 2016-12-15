@@ -26,12 +26,6 @@ class InstallTest(unittest.TestCase):
         if export:
             self.client.run("export lasote/stable")
 
-    def case_sensitive_test(self):
-        self._create("Hello0", "0.1")
-        error = self.client.run("install hello0/0.1@lasote/stable --build=missing", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("case incompatible 'Hello0'", self.client.user_io.out)
-
     def imports_test(self):
         """ Ensure that when importing files in a global path, outside the package build,
         they are not deleted

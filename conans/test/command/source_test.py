@@ -5,7 +5,10 @@ from conans.util.files import load
 import os
 
 
-conanfile = '''
+class SourceTest(unittest.TestCase):
+
+    def basic_source_test(self):
+        conanfile = '''
 from conans import ConanFile
 
 class ConanLib(ConanFile):
@@ -15,11 +18,6 @@ class ConanLib(ConanFile):
     def source(self):
         self.output.info("Running source!")
 '''
-
-
-class SourceTest(unittest.TestCase):
-
-    def basic_source_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export lasote/stable")
@@ -37,14 +35,6 @@ class SourceTest(unittest.TestCase):
         self.assertIn("WARN: Forced removal of source folder", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Running source!", client.user_io.out)
-
-    def case_sensitive_test(self):
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
-        error = client.run("source hello/0.1@lasote/stable", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("case incompatible 'Hello'", client.user_io.out)
 
     def local_source_test(self):
         conanfile = '''
