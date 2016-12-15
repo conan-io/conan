@@ -85,26 +85,6 @@ class ConanInstaller(object):
         skippable_nodes = deps_graph.private_nodes(skip_nodes)
         return skippable_nodes
 
-    def _build_forced(self, conan_ref, build_mode, conan_file):
-        if build_mode == "outdated":
-            return False
-
-        if conan_file.build_policy_always:
-            out = ScopedOutput(str(conan_ref), self._out)
-            out.info("Building package from source as defined by build_policy='always'")
-            return True
-
-        if build_mode is False:  # "never" option, default
-            return False
-
-        if build_mode is True:  # Build missing (just if needed), not force
-            return False
-
-        # Patterns to match, if package matches pattern, build is forced
-        force_build = any([fnmatch.fnmatch(str(conan_ref), pattern)
-                           for pattern in build_mode])
-        return force_build
-
     def _build(self, nodes_by_level, skip_private_nodes, build_mode):
         """ The build assumes an input of conans ordered by degree, first level
         should be indpendent from each other, the next-second level should have
@@ -363,3 +343,23 @@ Package configuration:
         except Exception as e:
             msg = format_conanfile_exception(str(conan_ref), "package_info", e)
             raise ConanException(msg)
+
+    def _build_forced(self, conan_ref, build_mode, conan_file):
+        if build_mode == "outdated":
+            return False
+
+        if conan_file.build_policy_always:
+            out = ScopedOutput(str(conan_ref), self._out)
+            out.info("Building package from source as defined by build_policy='always'")
+            return True
+
+        if build_mode is False:  # "never" option, default
+            return False
+
+        if build_mode is True:  # Build missing (just if needed), not force
+            return False
+
+        # Patterns to match, if package matches pattern, build is forced
+        force_build = any([fnmatch.fnmatch(str(conan_ref), pattern)
+                           for pattern in build_mode])
+        return force_build
