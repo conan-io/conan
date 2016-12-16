@@ -34,6 +34,7 @@ from conans.util.files import rmdir, load, save_files
 from conans.util.config_parser import get_bool_from_text_value
 from conans.client.printer import Printer
 
+
 class Extender(argparse.Action):
     '''Allows to use the same flag several times in a command and creates a list with the values.
        For example:
@@ -466,14 +467,20 @@ path to the CMake binary directory, like this:
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="check updates exist from upstream remotes")
         parser.add_argument("--build_order", "-bo",
-                            help='given a modified reference, return ordered list to build (CI)',
+                            help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
+        parser.add_argument("--build", "-b", action=Extender, nargs="*",
+                            help='given a build policy (same install command "build" parameter), '
+                                 'return an ordered list of packages that would be built from '
+                                 'sources in install command')
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Define scopes for packages')
         args = parser.parse_args(*args)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         settings, package_settings = self._get_simple_and_package_tuples(args.settings)
+        # Get False or a list of patterns to check
+        args.build = self._get_build_sources_parameter(args.build)
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -490,6 +497,7 @@ path to the CMake binary directory, like this:
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
+                           build_mode=args.build,
                            scopes=scopes)
 
     def build(self, *args):

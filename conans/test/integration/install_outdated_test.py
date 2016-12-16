@@ -25,7 +25,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
     def install_outdated_test(self):
         # If we try to install the same package with --build oudated it's already ok
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")
-        self.assertIn("Hello0/0.1@lasote/stable: Already installed!", self.client.user_io.out)
         self.assertIn("Hello0/0.1@lasote/stable: Package is up to date", self.client.user_io.out)
 
         # Then we can export a modified recipe and try to install without --build outdated
@@ -40,7 +39,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
 
         # Try now with the --build outdated
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")
-        self.assertIn("Hello0/0.1@lasote/stable: Already installed!", self.client.user_io.out)
         self.assertNotIn("Package is up to date", self.client.user_io.out)
         self.assertIn("Outdated package!", self.client.user_io.out)
         self.assertIn("Building your package", self.client.user_io.out)

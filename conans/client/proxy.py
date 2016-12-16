@@ -47,8 +47,6 @@ class ConanProxy(object):
                 remote_info = self.get_package_info(package_ref)
             except ConanException:
                 return False  # Not local nor remote
-        else:
-            output.info('Already installed!')
 
         # Maybe we have the package (locally or in remote) but it's outdated
         if check_outdated:
