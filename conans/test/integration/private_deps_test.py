@@ -28,6 +28,44 @@ class PrivateDepsTest(unittest.TestCase):
         if upload:
             self.client.run("upload %s" % str(conan_ref))
 
+    def consumer_force_build_test(self):
+        """If a conanfile requires another private conanfile, but in the install is forced
+        the build, the private node has to be downloaded and built"""
+        self._export_upload("Hello0", "0.1", build=False, upload=False)
+        self._export_upload("Hello1", "0.1", deps=[("Hello0/0.1@lasote/stable", "private")],
+                            build=False, upload=False)
+
+        # Build packages for both recipes
+        self.client.run('install Hello1/0.1@lasote/stable --build missing')
+
+        # Upload them to remote
+        self.client.run("upload Hello0/0.1@lasote/stable --all")
+        self.client.run("upload Hello1/0.1@lasote/stable --all")
+
+        # Remove local recipes and packages
+        self.client.run('remove Hello* -f')
+
+        # Install them without force build, private is not retrieved
+        self.client.run('install Hello1/0.1@lasote/stable --build missing')
+        # FIXME: recipe should not be retrieved either
+        # self.assertNotIn("Hello0/0.1@lasote/stable", self.client.user_io.out)
+        self.assertNotIn("Hello0/0.1@lasote/stable: Package installed", self.client.user_io.out)
+
+        # Remove local recipes and packages
+        self.client.run('remove Hello* -f')
+
+        # Install them without force build, private is not retrieved
+        self.client.run('install Hello1/0.1@lasote/stable ')
+        self.assertNotIn("Hello0/0.1@lasote/stable: Package installed", self.client.user_io.out)
+
+        # Remove local recipes and packages
+        self.client.run('remove Hello* -f')
+
+        # Install them without forcing build
+        self.client.run('install Hello1/0.1@lasote/stable --build Hello1')
+        self.assertIn("Hello0/0.1@lasote/stable: Package installed", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Building your package", self.client.user_io.out)
+
     def consumer_private_test(self):
         self._export_upload("Hello0", "0.1", build=False, upload=False)
         self._export_upload("Hello1", "0.1", deps=["Hello0/0.1@lasote/stable"],
