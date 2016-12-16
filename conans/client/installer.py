@@ -62,32 +62,38 @@ class ConanInstaller(object):
 
     def _compute_private_nodes(self, deps_graph, build_mode):
         """ computes a list of nodes that are not required to be built, as they are
-        private requirements of already available shared libraries as binaries
+        private requirements of already available shared libraries as binaries.
+
+        If the package requiring a private node has an up to date binary package,
+        the private node is not retrieved nor built
         """
-        check_outdated = build_mode == "outdated"
-        skip_nodes = set()
+        skip_nodes = set()  # Nodes that require private packages but are already built
         for node in deps_graph.nodes:
             conan_ref, conanfile = node
             if not [r for r in conanfile.requires.values() if r.private]:
                 continue
 
             if conan_ref:
+                build_forced = self._build_forced(conan_ref, build_mode, conanfile)
+                if build_forced:
+                    continue
+
                 package_id = conanfile.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
-                build_forced = self._build_forced(conan_ref, build_mode, conanfile)
-                self._out.info("%s: Checking if package with private requirements "
-                               "has pre-built binary" % str(conan_ref))
-                if self._remote_proxy.get_package(package_reference, build_forced,
-                                                  short_paths=conanfile.short_paths,
-                                                  check_outdated=check_outdated):
+                check_outdated = self._check_outdated(build_mode)
+
+                if self._remote_proxy.package_available(package_reference,
+                                                        conanfile.short_paths,
+                                                        check_outdated):
                     skip_nodes.add(node)
 
-        skippable_nodes = deps_graph.private_nodes(skip_nodes)
-        return skippable_nodes
+        # Get the private nodes
+        skippable_private_nodes = deps_graph.private_nodes(skip_nodes)
+        return skippable_private_nodes
 
     def _build(self, nodes_by_level, skip_private_nodes, build_mode):
         """ The build assumes an input of conans ordered by degree, first level
-        should be indpendent from each other, the next-second level should have
+        should be independent from each other, the next-second level should have
         dependencies only to first level conans.
         param nodes_by_level: list of lists [[nodeA, nodeB], [nodeC], [nodeD, ...], ...]
 
@@ -112,28 +118,35 @@ class ConanInstaller(object):
         for conan_ref, conan_file, build_needed in nodes_to_process:
 
             if build_needed:
-                force_build = self._build_forced(conan_ref, build_mode, conan_file)
+                build_allowed = self._build_allowed(conan_ref, build_mode, conan_file)
+                if not build_allowed:
+                    self._raise_package_not_found_error(conan_ref, conan_file)
                 output = ScopedOutput(str(conan_ref), self._out)
-                package_reference = PackageReference(conan_ref, conan_file.info.package_id())
-                package_folder = self._client_cache.package(package_reference, conan_file.short_paths)
-                if not force_build and not build_mode:
+                package_ref = PackageReference(conan_ref, conan_file.info.package_id())
+                package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
+                if build_mode is True:
                     output.info("Building package from source as defined by build_policy='missing'")
-                if force_build:
+                elif self._build_forced(conan_ref, build_mode, conan_file):
                     output.warn('Forced build from source')
 
                 # Assign to node the propagated info
                 self._propagate_info(conan_ref, conan_file, flat)
 
                 # Call the conanfile's build method
-                self._build_conanfile(conan_ref, conan_file, package_reference, package_folder, output)
+                self._build_conanfile(conan_ref, conan_file, package_ref, package_folder, output)
 
                 # Call the conanfile's package method
-                self._package_conanfile(conan_ref, conan_file, package_reference, package_folder, output)
+                self._package_conanfile(conan_ref, conan_file, package_ref, package_folder, output)
 
                 # Call the info method
                 self._package_info_conanfile(conan_ref, conan_file)
             else:
-                # Assign to node the propagated info
+                # Get the package, we have a not outdated remote package
+                if conan_ref:
+                    self._get_package(conan_ref, conan_file)
+
+                # Assign to the node the propagated info
+                # (conan_ref could be None if user project, but of course assign the info
                 self._propagate_info(conan_ref, conan_file, flat)
 
                 # Call the info method
@@ -166,24 +179,26 @@ class ConanInstaller(object):
                 build_node = False
                 if conan_ref:
                     logger.debug("Processing node %s" % repr(conan_ref))
-                    # TODO: Maybe here not get the package, just compare the metadata
-                    # to know if it will be downloaded, then call _get_package in the
-                    # _build() when not build needed.
-                    got_package = self._get_package(conan_ref, conan_file, build_mode)
-                    build_node = not got_package
+                    package_id = conan_file.info.package_id()
+                    package_reference = PackageReference(conan_ref, package_id)
+                    check_outdated = self._check_outdated(build_mode)
+                    if self._build_forced(conan_ref, build_mode, conan_file):
+                        build_node = True
+                    else:
+                        build_node = not self._remote_proxy.package_available(package_reference,
+                                                                              conan_file.short_paths,
+                                                                              check_outdated)
 
                 nodes_to_build.append((conan_ref, conan_file, build_node))
 
         return nodes_to_build
 
-    def _get_package(self, conan_ref, conan_file, build_mode):
-        '''Get remote package, returns False if build is needed or raise
-        if build is forbidden but its required'''
+    def _get_package(self, conan_ref, conan_file):
+        '''Get remote package. It won't check if it's outdated'''
         # Compute conan_file package from local (already compiled) or from remote
         output = ScopedOutput(str(conan_ref), self._out)
         package_id = conan_file.info.package_id()
         package_reference = PackageReference(conan_ref, package_id)
-        check_outdated = build_mode == "outdated"
 
         conan_ref = package_reference.conan
         package_folder = self._client_cache.package(package_reference, conan_file.short_paths)
@@ -194,21 +209,11 @@ class ConanInstaller(object):
         if not os.path.exists(package_folder):
             output.info("Installing package %s" % package_id)
 
-        force_build = self._build_forced(conan_ref, build_mode, conan_file)
-        if self._remote_proxy.get_package(package_reference, force_build,
-                                          short_paths=conan_file.short_paths,
-                                          check_outdated=check_outdated):
+        if self._remote_proxy.get_package(package_reference, short_paths=conan_file.short_paths):
             self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
             return True
 
-        # we need and can build? Only if we are forced or build_mode missing and package not exists
-        # Option "--build outdated" means: missing or outdated, so don't care if it's really oudated
-        # just build it.
-        build = force_build or build_mode is True or check_outdated or conan_file.build_policy_missing
-        if build:
-            return False
-        else:
-            self._raise_package_not_found_error(conan_ref, conan_file)
+        self._raise_package_not_found_error(conan_ref, conan_file)
 
     def _build_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
         """Calls the conanfile's build method"""
@@ -387,3 +392,11 @@ Package configuration:
         force_build = any([fnmatch.fnmatch(str(conan_ref), pattern)
                            for pattern in build_mode])
         return force_build
+
+    def _build_allowed(self, conan_ref, build_mode, conan_file):
+        forced = self._build_forced(conan_ref, build_mode, conan_file)
+        # Option "--build outdated" means: missing or outdated, so don't care if it's really outdated
+        return forced or build_mode in (True, "outdated") or conan_file.build_policy_missing
+
+    def _check_outdated(self, build_mode):
+        return build_mode == "outdated"

@@ -31,19 +31,54 @@ class ConanProxy(object):
     def registry(self):
         return self._registry
 
-    def get_package(self, package_reference, force_build, short_paths, check_outdated):
+    def package_available(self, package_ref, short_paths, check_outdated):
+        """
+        Returns True if there is a local or remote package available (and up to date if check_outdated).
+        It wont download the package, just check its hash
+        """
+
+        output = ScopedOutput(str(package_ref.conan), self._out)
+        package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
+
+        remote_info = None
+        # No package in local cache
+        if not os.path.exists(package_folder):
+            try:
+                remote_info = self.get_package_info(package_ref)
+            except ConanException:
+                return False  # Not local nor remote
+        else:
+            output.info('Already installed!')
+
+        # Maybe we have the package (locally or in remote) but it's outdated
+        if check_outdated:
+            if remote_info:
+                package_hash = remote_info.recipe_hash
+            else:
+                package_hash = self._client_cache.read_package_recipe_hash(package_folder)
+            local_recipe_hash = self._client_cache.load_manifest(package_ref.conan).summary_hash
+            up_to_date = local_recipe_hash == package_hash
+            if not up_to_date:
+                output.info("Outdated package!")
+            else:
+                output.info("Package is up to date")
+            return up_to_date
+
+        return True
+
+    def get_package(self, package_ref, short_paths):
         """ obtain a package, either from disk or retrieve from remotes if necessary
         and not necessary to build
         """
-        output = ScopedOutput(str(package_reference.conan), self._out)
-        package_folder = self._client_cache.package(package_reference, short_paths=short_paths)
+        output = ScopedOutput(str(package_ref.conan), self._out)
+        package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
 
         # Check current package status
         if os.path.exists(package_folder):
             if self._check_updates:
-                read_manifest = self._client_cache.load_package_manifest(package_reference)
+                read_manifest = self._client_cache.load_package_manifest(package_ref)
                 try:  # get_conan_digest can fail, not in server
-                    upstream_manifest = self.get_package_digest(package_reference)
+                    upstream_manifest = self.get_package_digest(package_ref)
                     if upstream_manifest.file_sums != read_manifest.file_sums:
                         if upstream_manifest.time > read_manifest.time:
                             output.warn("Current package is older than remote upstream one")
@@ -56,34 +91,25 @@ class ConanProxy(object):
                     pass
 
         installed = False
-        if not force_build:
-            local_package = os.path.exists(package_folder)
-            if local_package:
-                output.info('Already installed!')
-                installed = True
-            else:
-                installed = self._retrieve_remote_package(package_reference, package_folder,
-                                                          output)
-        # Check if the package is outdated
-        if check_outdated and os.path.exists(package_folder):
-            if self._package_outdated(package_reference, package_folder):
-                output.info("Outdated package!")
-                installed = False
-            else:
-                output.info("Package is up to date")
-
-        self.handle_package_manifest(package_reference, installed)
+        local_package = os.path.exists(package_folder)
+        if local_package:
+            output.info('Already installed!')
+            installed = True
+        else:
+            installed = self._retrieve_remote_package(package_ref, package_folder,
+                                                      output)
+        self.handle_package_manifest(package_ref, installed)
         return installed
 
-    def _package_outdated(self, package_reference, package_folder):
-        recipe_hash = self._client_cache.load_manifest(package_reference.conan).summary_hash
+    def _package_outdated(self, package_ref, package_folder):
+        recipe_hash = self._client_cache.load_manifest(package_ref.conan).summary_hash
         package_recipe_hash = self._client_cache.read_package_recipe_hash(package_folder)
         return not recipe_hash == package_recipe_hash
 
-    def handle_package_manifest(self, package_reference, installed):
+    def handle_package_manifest(self, package_ref, installed):
         if installed and self._manifest_manager:
-            remote = self._registry.get_ref(package_reference.conan)
-            self._manifest_manager.check_package(package_reference, remote)
+            remote = self._registry.get_ref(package_ref.conan)
+            self._manifest_manager.check_package(package_ref, remote)
 
     def get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
@@ -220,15 +246,15 @@ class ConanProxy(object):
                 remote = self._registry.default_remote
         return remote, ref_remote
 
-    def upload_package(self, package_reference):
-        remote, current_remote = self._get_remote(package_reference.conan)
+    def upload_package(self, package_ref):
+        remote, current_remote = self._get_remote(package_ref.conan)
 
         if not current_remote:
             self._out.warn("Remote for '%s' not defined, uploading to %s"
-                           % (str(package_reference.conan), remote.name))
-        result = self._remote_manager.upload_package(package_reference, remote)
+                           % (str(package_ref.conan), remote.name))
+        result = self._remote_manager.upload_package(package_ref, remote)
         if not current_remote:
-            self._registry.set_ref(package_reference.conan, remote)
+            self._registry.set_ref(package_ref.conan, remote)
         return result
 
     def get_conan_digest(self, conan_ref):
@@ -240,13 +266,22 @@ class ConanProxy(object):
             self._registry.set_ref(conan_ref, remote)
         return result
 
-    def get_package_digest(self, package_reference):
+    def get_package_digest(self, package_ref):
         """ used by update to check the date of packages, require force if older
         """
-        remote, ref_remote = self._get_remote(package_reference.conan)
-        result = self._remote_manager.get_package_digest(package_reference, remote)
+        remote, ref_remote = self._get_remote(package_ref.conan)
+        result = self._remote_manager.get_package_digest(package_ref, remote)
         if not ref_remote:
-            self._registry.set_ref(package_reference.conan, remote)
+            self._registry.set_ref(package_ref.conan, remote)
+        return result
+
+    def get_package_info(self, package_ref):
+        """ Gets the package info to check if outdated
+        """
+        remote, ref_remote = self._get_remote(package_ref.conan)
+        result = self._remote_manager.get_package_info(package_ref, remote)
+        if not ref_remote:
+            self._registry.set_ref(package_ref.conan, remote)
         return result
 
     def search(self, pattern=None, ignorecase=True):
@@ -296,23 +331,23 @@ class ConanProxy(object):
         self._registry.set_ref(reference, remote)
         output = ScopedOutput(str(reference), self._out)
         for package_id in package_ids:
-            package_reference = PackageReference(reference, package_id)
-            package_folder = self._client_cache.package(package_reference, short_paths=short_paths)
-            self._retrieve_remote_package(package_reference, package_folder, output, remote)
+            package_ref = PackageReference(reference, package_id)
+            package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
+            self._retrieve_remote_package(package_ref, package_folder, output, remote)
 
-    def _retrieve_remote_package(self, package_reference, package_folder, output, remote=None):
+    def _retrieve_remote_package(self, package_ref, package_folder, output, remote=None):
 
         if remote is None:
-            remote = self._registry.get_ref(package_reference.conan)
+            remote = self._registry.get_ref(package_ref.conan)
         if not remote:
             output.warn("Package doesn't have a remote defined. "
                         "Probably created locally and not uploaded")
             return False
-        package_id = str(package_reference.package_id)
+        package_id = str(package_ref.package_id)
         try:
             output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
             # Will raise if not found NotFoundException
-            self._remote_manager.get_package(package_reference, package_folder, remote)
+            self._remote_manager.get_package(package_ref, package_folder, remote)
             output.success('Package installed %s' % package_id)
             return True
         except ConanConnectionError:
