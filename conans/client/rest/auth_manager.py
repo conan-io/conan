@@ -151,6 +151,10 @@ class ConanApiAuthManager(object):
         return self._rest_client.get_package(package_reference, dest_folder)
 
     @input_credentials_if_unauthorized
+    def get_package_info(self, package_reference):
+        return self._rest_client.get_package_info(package_reference)
+
+    @input_credentials_if_unauthorized
     def search(self, pattern, ignorecase):
         return self._rest_client.search(pattern, ignorecase)
 
