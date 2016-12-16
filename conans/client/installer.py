@@ -91,6 +91,14 @@ class ConanInstaller(object):
         skippable_private_nodes = deps_graph.private_nodes(skip_nodes)
         return skippable_private_nodes
 
+    def nodes_to_build(self, deps_graph, build_mode):
+        """Called from info command when a build policy is used in build_order parameter"""
+        # Get the nodes in order and if we have to build them
+        nodes_by_level = deps_graph.by_levels()
+        skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
+        nodes = self._get_nodes(nodes_by_level, skip_private_nodes, build_mode)
+        return [(conan_ref, conan_file) for conan_ref, conan_file, build in nodes if build]
+
     def _build(self, nodes_by_level, skip_private_nodes, build_mode):
         """ The build assumes an input of conans ordered by degree, first level
         should be independent from each other, the next-second level should have
