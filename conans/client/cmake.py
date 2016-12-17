@@ -40,7 +40,8 @@ class CMake(object):
                         '10': '10 2010',
                         '11': '11 2012',
                         '12': '12 2013',
-                        '14': '14 2015'}
+                        '14': '14 2015',
+                        '15': '15 2017'}
             str_ver = str(self._settings.compiler.version)
             base = "Visual Studio %s" % _visuals.get(str_ver, "UnknownVersion %s" % str_ver)
             if arch == "x86_64":
