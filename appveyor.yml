@@ -11,6 +11,7 @@ init:
   - "ECHO %PYTHON%"
 
 install:
+  - "set PATH=%PATH%;C:\MinGW\bin"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
   - "set CONAN_LOGGING_LEVEL=10"
   - "set CONAN_COMPILER=Visual Studio"
@@ -23,5 +24,4 @@ test_script:
   - "%PYTHON%/Scripts/nosetests --with-coverage"
   
 after_test:
-  - set PATH=C:\MinGW\bin;%PATH%
   - bash <(curl -s https://codecov.io/bash)
