@@ -4,6 +4,7 @@ from conans.util.files import load
 import os
 from conans.model.ref import PackageReference, ConanFileReference
 import platform
+import time
 
 
 base = '''
@@ -46,6 +47,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client.run("export lasote/channel")
         client.run("install lib/0.1@lasote/channel --build")
         client.run("upload lib/0.1@lasote/channel --all")
+        time.sleep(1)  # OSX busy folder in remove
         client.run("remove lib/0.1@lasote/channel -f")
         client.run("search")
         self.assertIn("There are no packages", client.user_io.out)
@@ -91,6 +93,7 @@ class PathLengthLimitTest(unittest.TestCase):
         self.assertNotIn("Configuring sources", client.user_io.out)
 
         # But if we remove the source, it will retrieve sources again
+        time.sleep(1)  # OSX busy folder in remove
         client.run("remove lib/0.1@user/channel -s -f")
         client.run("source lib/0.1@user/channel")
         self.assertIn("Configuring sources", client.user_io.out)
