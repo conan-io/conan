@@ -187,9 +187,9 @@ License
 .. |Build Status2| image:: https://travis-ci.org/conan-io/conan.svg?branch=develop
    :target: https://travis-ci.org/conan-io/conan
 .. |Build status3| image:: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/master?svg=true
-   :target: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/master
+   :target: https://ci.appveyor.com/project/ConanCIintegration/conan/branch/master
 .. |Build status4| image:: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/develop?svg=true
-   :target: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/develop
+   :target: https://ci.appveyor.com/project/ConanCIintegration/conan/branch/develop
 .. _`pip docs`: https://pip.pypa.io/en/stable/installing/
 .. _`brew homepage`: http://brew.sh/
 
