@@ -1,0 +1,32 @@
+codecov:
+  notify:
+    require_ci_to_pass: yes
+
+coverage:
+  precision: 2
+  round: down
+  range: "85...100"
+
+  status:
+    project: yes
+    patch: yes
+    changes: no
+
+  notify:
+    slack:
+      frontend:
+        url: "https://hooks.slack.com/services/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"
+
+parsers:
+  gcov:
+    branch_detection:
+      conditional: yes
+      loop: yes
+      method: no
+      macro: no
+
+comment:
+  layout: "header, diff"
+  behavior: default
+  require_changes: no
+
