@@ -23,5 +23,5 @@ test_script:
   - "%PYTHON%/Scripts/nosetests --with-coverage"
   
 after_test:
-  - "set PATH=C:\cygwin\bin;C:\cccl-1.0;%PATH%"
+  - "set PATH=C:\cygwin\bin;%PATH%"
   - bash <(curl -s https://codecov.io/bash)
