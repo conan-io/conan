@@ -14,8 +14,9 @@ coverage:
 
   notify:
     slack:
-      frontend:
+      default:
         url: "https://hooks.slack.com/services/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"
+        threshold: 1% # allow coverage to drop by 1% without posting
 
 parsers:
   gcov:
