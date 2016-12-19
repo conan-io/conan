@@ -29,11 +29,6 @@ matrix:
           os: osx
           env: PYVER=py35 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
 
-# Coverages  
-        - language: generic
-          os: osx
-          env: PYVER=py27 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0 COVERAGE=true
-          
 # command to install dependencies
 install:
   - ./.ci/travis/install.sh
