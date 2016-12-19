@@ -11,7 +11,8 @@ init:
   - "ECHO %PYTHON%"
 
 install:
-  - "set PATH=%PATH%;C:\MinGW\bin"
+  - set PATH=%PATH:C:\Program Files (x86)\Git\bin;=%
+  - set PATH=C:\MinGW\bin;%PATH%
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
   - "set CONAN_LOGGING_LEVEL=10"
   - "set CONAN_COMPILER=Visual Studio"
