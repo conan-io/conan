@@ -23,4 +23,4 @@ test_script:
   - "%PYTHON%/Scripts/nosetests --with-coverage"
   
 after_test:
-  - codecov
+  - codecov || echo "Codecov not present, why?"
