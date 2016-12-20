@@ -9,7 +9,11 @@ A distributed, open source, package manager.
 | |Build Status1|        | |Build Status2|         | |Build status3|      | |Build status4|       |
 +------------------------+-------------------------+----------------------+-----------------------+
 
-Develop coverage
++------------------------+---------------------------+
+| **Coverage develop**   | **Coverage master**       |
++========================+===========================+
+| |Develop coverage|     | |Master coverage|         |
++------------------------+---------------------------+
 
 .. image:: https://codecov.io/gh/conan-io/conan/branch/develop/graphs/tree.svg
    :height: 200px
@@ -200,4 +204,8 @@ License
    :target: https://ci.appveyor.com/project/ConanCIintegration/conan/branch/develop
 .. _`pip docs`: https://pip.pypa.io/en/stable/installing/
 .. _`brew homepage`: http://brew.sh/
+.. |Develop coverage| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graph/badge.svg
+   :target: https://codecov.io/gh/conan-io/conan/branch/develop
+.. |Master coverage| image:: https://codecov.io/gh/conan-io/conan/branch/master/graph/badge.svg
+   :target: https://codecov.io/gh/conan-io/conan/branch/master
 
