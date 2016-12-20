@@ -106,7 +106,7 @@ class TestServerLauncher(object):
             def stopped(self):
                 return self._stop.isSet()
 
-        self.t1 = StoppableThread(target=self.ra.run, kwargs={"host": "0.0.0.0"})
+        self.t1 = StoppableThread(target=self.ra.run, kwargs={"host": "0.0.0.0", "quiet": True})
         self.t1.daemon = daemon
         self.t1.start()
         time.sleep(1)
