@@ -8,7 +8,7 @@ conanfile_build_cmake = """    def build(self):
         cmake = CMake(self.settings)
         cmake_flags = cmake.command_line
         cmd = 'cmake "%s" %s %s %s' % (self.conanfile_directory, cmake_flags, lang, static_flags)
-        print "Executing command ", cmd
+        # print "Executing command: %s" % cmd
         self.run(cmd)
         self.run("cmake --build . %s" % cmake.build_config)"""
 
