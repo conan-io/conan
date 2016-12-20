@@ -1,4 +1,5 @@
 from conans.paths import CONANFILE, BUILD_INFO_CMAKE
+import platform
 
 
 conanfile_build_cmake = """    def build(self):
@@ -309,8 +310,13 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                           static=static,
                                           libcxx_remove=libcxx_remove,
                                           build=build_env)
+
+    if platform.system() == "FreeBSD":  # Patch for using native clang
+        conanfile = conanfile.replace("g++", "clang++")
+
     if pure_c:
         conanfile = conanfile.replace("hello.cpp", "hello.c").replace("main.cpp", "main.c")
+        conanfile = conanfile.replace("clang++", "clang")
         conanfile = conanfile.replace("g++", "gcc")
     if not build:
         conanfile = conanfile.replace("build(", "build2(")
