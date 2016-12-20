@@ -28,7 +28,7 @@ matrix:
         - language: generic
           os: osx
           env: PYVER=py35 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
-          
+
 # command to install dependencies
 install:
   - ./.ci/travis/install.sh
@@ -38,3 +38,6 @@ before_script:
 # command to run tests
 script: 
   - ./.ci/travis/run.sh
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)

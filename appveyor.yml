@@ -20,4 +20,7 @@ install:
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt"
 
 test_script:
-  - "%PYTHON%/Scripts/nosetests"
+  - "%PYTHON%/Scripts/nosetests --with-coverage"
+  
+after_test:
+  - "%PYTHON%/Scripts/codecov"
