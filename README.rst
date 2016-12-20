@@ -9,16 +9,13 @@ A distributed, open source, package manager.
 | |Build Status1|        | |Build Status2|         | |Build status3|      | |Build status4|       |
 +------------------------+-------------------------+----------------------+-----------------------+
 
-+------------------------+---------------------------+
-| **Coverage develop**   | **Coverage master**       |
-+========================+===========================+
-| |Develop coverage|     | |Master coverage|         |
-+------------------------+---------------------------+
++------------------------+---------------------------+--------------------------------------------------+
+| **Coverage develop**   | **Coverage master**       | **Coverage graph**                               |
++========================+===========================+==================================================+
+| |Develop coverage|     | |Master coverage|         |      |Coverage graph|                            |
++------------------------+---------------------------+--------------------------------------------------+
 
-.. image:: https://codecov.io/gh/conan-io/conan/branch/develop/graphs/tree.svg
-   :height: 200px
-   :width: 200 px
-   :alt: Conan develop coverage
+
 
 
 Setup
@@ -208,4 +205,8 @@ License
    :target: https://codecov.io/gh/conan-io/conan/branch/develop
 .. |Master coverage| image:: https://codecov.io/gh/conan-io/conan/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/conan-io/conan/branch/master
+.. |Coverage graph| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graphs/tree.svg
+   :height: 50px
+   :width: 50 px
+   :alt: Conan develop coverage
 
