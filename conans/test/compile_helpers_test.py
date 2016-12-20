@@ -238,10 +238,7 @@ class ConfigureEnvironmentTest(unittest.TestCase):
         self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")
 
     def _assert_env_variable_printed(self, name, value):
-        if platform.system() == "Windows":
-            self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
-        else:
-            self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
+        self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
 
     def _create_profile(self, name, settings, scopes=None, env=None):
         profile = Profile()
