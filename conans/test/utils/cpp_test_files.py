@@ -8,7 +8,7 @@ conanfile_build_cmake = """    def build(self):
         cmake = CMake(self.settings)
         cmake_flags = cmake.command_line
         cmd = 'cmake "%s" %s %s %s' % (self.conanfile_directory, cmake_flags, lang, static_flags)
-        #print "Executing command ", cmd
+        print "Executing command ", cmd
         self.run(cmd)
         self.run("cmake --build . %s" % cmake.build_config)"""
 
@@ -36,17 +36,17 @@ conanfile_build_env = """
             # libs = " ".join("-l%s" % lib for lib in self.deps_cpp_info.libs)
             lang = '-DCONAN_LANGUAGE=%s' % self.options.language
             if self.options.static:
-                self.run("g++ -c hello.cpp {} {}".format(lang, flags))
+                self.run("c++ -c hello.cpp {} {}".format(lang, flags))
                 self.run("{} && ar rcs libhello{}.a hello.o".format(env, self.name))
             else:
                 if self.settings.os == "Windows":
-                    self.run("{} && g++ -o libhello{}.dll -shared -fPIC hello.cpp {} {} "
+                    self.run("{} && c++ -o libhello{}.dll -shared -fPIC hello.cpp {} {} "
                              "-Wl,--out-implib,libhello{}.a".
                              format(env, self.name, lang, flags, self.name))
                 else:
-                    self.run("{} && g++ -o libhello{}.so -shared -fPIC hello.cpp {} {}".
+                    self.run("{} && c++ -o libhello{}.so -shared -fPIC hello.cpp {} {}".
                     format(env, self.name, flags, lang))
-            self.run('{} && g++ -o main main.cpp -L. -lhello{} {}'.format(env, self.name, flags))
+            self.run('{} && c++ -o main main.cpp -L. -lhello{} {}'.format(env, self.name, flags))
 
         try:
             os.makedirs("bin")
@@ -311,13 +311,9 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                           libcxx_remove=libcxx_remove,
                                           build=build_env)
 
-    if platform.system() == "FreeBSD":  # Patch for using native clang
-        conanfile = conanfile.replace("g++", "clang++")
-
     if pure_c:
         conanfile = conanfile.replace("hello.cpp", "hello.c").replace("main.cpp", "main.c")
-        conanfile = conanfile.replace("clang++", "clang")
-        conanfile = conanfile.replace("g++", "gcc")
+        conanfile = conanfile.replace("c++", "cc")
     if not build:
         conanfile = conanfile.replace("build(", "build2(")
     if not config:
