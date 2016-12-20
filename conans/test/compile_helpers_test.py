@@ -240,8 +240,6 @@ class ConfigureEnvironmentTest(unittest.TestCase):
     def _assert_env_variable_printed(self, name, value):
         if platform.system() == "Windows":
             self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
-        elif platform.system() == "Darwin":
-            self.assertIn('%s="%s"' % (name, value), self.client.user_io.out)
         else:
             self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
 
