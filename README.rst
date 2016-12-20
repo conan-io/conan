@@ -9,8 +9,16 @@ A distributed, open source, package manager.
 | |Build Status1|        | |Build Status2|         | |Build status3|      | |Build status4|       |
 +------------------------+-------------------------+----------------------+-----------------------+
 
+Develop coverage
+
+.. image:: https://codecov.io/gh/conan-io/conan/branch/develop/graphs/tree.svg
+   :height: 200px
+   :width: 200 px
+   :alt: Conan develop coverage
+
+
 Setup
-=====
+======
 
 From binaries
 -------------
