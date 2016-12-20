@@ -11,5 +11,5 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
 fi
 
 
-nosetests conans.test.path_limit_test  --with-coverage
+nosetests --with-coverage
 
