@@ -11,6 +11,7 @@ init:
   - "ECHO %PYTHON%"
 
 install:
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
   - "set CONAN_LOGGING_LEVEL=10"
   - "set CONAN_COMPILER=Visual Studio"
@@ -20,7 +21,7 @@ install:
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt"
 
 test_script:
-  - "%PYTHON%/Scripts/nosetests --with-coverage"
+  - "nosetests --with-coverage"
   
 after_test:
-  - "%PYTHON%/Scripts/codecov"
+  - "codecov"
