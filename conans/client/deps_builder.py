@@ -381,8 +381,7 @@ class DepsGraphBuilder(object):
         try:
             if hasattr(conanfile, "config"):
                 if not conanref:
-                    ref_print = conanref or "PROJECT"
-                    output = ScopedOutput(str(ref_print), self._output)
+                    output = ScopedOutput(str("PROJECT"), self._output)
                     output.warn("config() has been deprecated."
                                 " Use config_options and configure")
                 conanfile.config()
