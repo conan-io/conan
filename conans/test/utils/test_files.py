@@ -8,6 +8,7 @@ from conans.tools import untargz
 from conans.errors import ConanException
 import time
 import shutil
+import platform
 
 
 def wait_until_removed(folder):
@@ -27,7 +28,10 @@ def temp_folder():
     t = tempfile.mkdtemp(suffix='conans', dir=CONAN_TEST_FOLDER)
     # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
     t = os.path.realpath(t)
-    nt = os.path.join(t, "path with spaces")
+    # In FreeBDS path with spaces crashes in make, couldn't know why, CMake seems to scape and quote them 
+    # right but "make" command fails
+    path = "path with spaces" if not platform.system() == "FreeBSD" else "pathwithoutspaces"
+    nt = os.path.join(t, path)
     os.makedirs(nt)
     return nt
 
