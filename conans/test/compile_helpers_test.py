@@ -281,7 +281,7 @@ class CompileHelpersTest(unittest.TestCase):
 
             win_settings = MockSettings("Release", os="Windows", arch="x86",
                                         compiler_name="Visual Studio", libcxx=None,
-                                        version="6.2")
+                                        version="12")
             env = ConfigureEnvironment(BuildInfoMock(), win_settings)
             command = "%s && SET" % env.command_line
             runner(command, output=output)
