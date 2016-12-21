@@ -37,6 +37,7 @@ before_script:
   - export CONAN_LOGGING_LEVEL=10
 # command to run tests
 script: 
+  - ulimit -n 2048 # Error with py3 and OSX, max file descriptors
   - ./.ci/travis/run.sh
 
 after_success:

@@ -279,7 +279,7 @@ class DepsGraph(object):
         return result
 
 
-class DepsBuilder(object):
+class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
     def __init__(self, retriever, output, loader, resolver):
@@ -351,6 +351,10 @@ class DepsBuilder(object):
             new_loop_ancestors.append(require.conan_reference)
             previous_node = public_deps.get(name)
             if require.private or not previous_node:  # new node, must be added and expanded
+                # TODO: if we could detect that current node has an available package
+                # we could not download the private dep. See installer _compute_private_nodes
+                # maybe we could move these functionality to here and build only the graph
+                # with the nodes to be took in account
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name)
                 if new_node:
                     # RECURSION!
@@ -377,8 +381,9 @@ class DepsBuilder(object):
         try:
             if hasattr(conanfile, "config"):
                 if not conanref:
-                    self._output.warn("config() has been deprecated."
-                                      " Use config_options and configure")
+                    output = ScopedOutput(str("PROJECT"), self._output)
+                    output.warn("config() has been deprecated."
+                                " Use config_options and configure")
                 conanfile.config()
             conanfile.config_options()
             conanfile.options.propagate_upstream(down_options, down_ref, conanref, self._output)

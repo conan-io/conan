@@ -4,6 +4,7 @@ from conans.util.files import load
 import os
 from conans.model.ref import PackageReference, ConanFileReference
 import platform
+import time
 
 
 base = '''

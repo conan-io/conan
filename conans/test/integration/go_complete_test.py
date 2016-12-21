@@ -6,6 +6,7 @@ from conans.test.utils.context_manager import CustomEnvPath
 import platform
 from conans.test.utils.test_files import scan_folder
 from conans.test.utils.test_files import uncompress_packaged_files
+from nose.plugins.attrib import attr
 
 stringutil_conanfile = '''
 from conans import ConanFile
@@ -76,6 +77,7 @@ func main() {
 '''
 
 
+@attr('golang')
 class GoCompleteTest(unittest.TestCase):
 
     def setUp(self):
