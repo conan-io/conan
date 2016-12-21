@@ -49,7 +49,7 @@ class ConfigureEnvironment(object):
             self.build_type = None
 
         try:
-            self.libcxx = str(self.compiler.libcxx)
+            self.libcxx = str(self._settings.compiler.libcxx)
         except:
             self.libcxx = None
 
