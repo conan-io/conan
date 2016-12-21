@@ -3,7 +3,7 @@ from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
-from conans.paths import CONANFILE, CONAN_MANIFEST
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
 from conans.util.files import decode_text, md5sum
@@ -14,6 +14,7 @@ from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
+from conans.model.info import ConanInfo
 
 
 def handle_return_deserializer(deserializer=None):
@@ -108,7 +109,7 @@ class RestApiClient(object):
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
     def get_package_digest(self, package_reference):
-        """Gets a FileTreeManifest from conans"""
+        """Gets a FileTreeManifest from a package"""
 
         # Obtain the URLs
         url = "%s/conans/%s/packages/%s/digest" % (self._remote_api_url,
@@ -121,6 +122,25 @@ class RestApiClient(object):
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
+
+    def get_package_info(self, package_reference):
+        """Gets a ConanInfo file from a package"""
+
+        url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
+                                                          "/".join(package_reference.conan),
+                                                          package_reference.package_id)
+        urls = self._get_json(url)
+        if not urls:
+            raise NotFoundException("Package not found!")
+
+        if CONANINFO not in urls:
+            raise NotFoundException("Package %s doesn't have the %s file!" % (package_reference,
+                                                                              CONANINFO))
+        # Get the info (in memory)
+        contents = self.download_files({CONANINFO: urls[CONANINFO]})
+        # Unroll generator and decode shas (plain text)
+        contents = {key: decode_text(value) for key, value in dict(contents).items()}
+        return ConanInfo.loads(contents[CONANINFO])
 
     def get_recipe(self, conan_reference, dest_folder):
         """Gets a dict of filename:contents from conans"""

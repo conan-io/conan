@@ -25,7 +25,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
     def install_outdated_test(self):
         # If we try to install the same package with --build oudated it's already ok
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")
-        self.assertIn("Hello0/0.1@lasote/stable: Already installed!", self.client.user_io.out)
         self.assertIn("Hello0/0.1@lasote/stable: Package is up to date", self.client.user_io.out)
 
         # Then we can export a modified recipe and try to install without --build outdated
@@ -40,7 +39,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
 
         # Try now with the --build outdated
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")
-        self.assertIn("Hello0/0.1@lasote/stable: Already installed!", self.client.user_io.out)
         self.assertNotIn("Package is up to date", self.client.user_io.out)
         self.assertIn("Outdated package!", self.client.user_io.out)
         self.assertIn("Building your package", self.client.user_io.out)
@@ -52,7 +50,6 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.client.run("export lasote/stable")
         self.client.run("remote add_ref Hello0/0.1@lasote/stable default")
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")
-        self.assertIn("Downloading conan_package.tgz", self.client.user_io.out)
         self.assertNotIn("Hello0/0.1@lasote/stable: Already installed!", self.client.user_io.out)
         self.assertNotIn("Package is up to date", self.client.user_io.out)
         self.assertIn("Outdated package!", self.client.user_io.out)
@@ -88,9 +85,8 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable: Package is up to date", new_client.user_io.out)
 
         # But if we remove the full Hello0 local package, will retrieve the updated
-        # recipe and an the outdated package
+        # recipe and the outdated package
         new_client.run("remove Hello0* -f")
         new_client.run("install Hello1/0.1@lasote/stable --build outdated")
-        self.assertIn("Downloading conan_package.tgz", new_client.user_io.out)
         self.assertIn("Hello0/0.1@lasote/stable: Outdated package!", new_client.user_io.out)
         self.assertIn("Hello0/0.1@lasote/stable: Building your package", new_client.user_io.out)

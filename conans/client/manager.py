@@ -5,7 +5,7 @@ from collections import OrderedDict
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, CONANENV)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
-from conans.client.deps_builder import DepsBuilder
+from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.userio import UserIO
 from conans.client.installer import ConanInstaller
 from conans.util.files import save, load, rmdir, normalize
@@ -181,7 +181,7 @@ class ConanManager(object):
         # build deps graph and install it
         local_search = None if update else self._search_manager
         resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
-        builder = DepsBuilder(remote_proxy, self._user_io.out, loader, resolver)
+        builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         deps_graph = builder.load(None, conanfile)
         # These lines are so the conaninfo stores the correct complete info
         if is_txt:
@@ -196,7 +196,7 @@ class ConanManager(object):
 
     def info(self, reference, current_path, remote=None, options=None, settings=None,
              info=None, filename=None, update=False, check_updates=False, scopes=None,
-             build_order=None, package_settings=None):
+             build_order=None, build_mode=None, package_settings=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -207,12 +207,19 @@ class ConanManager(object):
         """
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, None, scopes, package_settings, None, None)
-        (builder, deps_graph, project_reference, registry, _, _, _) = objects
+        (builder, deps_graph, project_reference, registry, _, remote_proxy, _) = objects
 
         if build_order:
             result = deps_graph.build_order(build_order)
             self._user_io.out.info(", ".join(str(s) for s in result))
             return
+
+        if build_mode is not False:  # sim_install is a policy or list of names (same as install build param)
+            installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
+            nodes = installer.nodes_to_build(deps_graph, build_mode)
+            self._user_io.out.info("[%s]" % ", ".join(str(ref) for ref, _ in nodes))
+            return
+
         if check_updates:
             graph_updates_info = builder.get_graph_updates_info(deps_graph)
         else:

@@ -102,6 +102,14 @@ class RemoteManager(object):
         returns (ConanDigest, remote_name)"""
         return self._call_remote(remote, "get_package_digest", package_reference)
 
+    def get_package_info(self, package_reference, remote):
+        """
+        Read a package ConanInfo from remotes
+        Will iterate the remotes to find the conans unless remote was specified
+
+        returns (ConanInfo, remote_name)"""
+        return self._call_remote(remote, "get_package_info", package_reference)
+
     def get_recipe(self, conan_reference, dest_folder, remote):
         """
         Read the conans from remotes

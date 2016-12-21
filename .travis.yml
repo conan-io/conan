@@ -36,7 +36,8 @@ before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
   - export CONAN_LOGGING_LEVEL=10
 # command to run tests
-script: 
+script:
+  - ulimit -n 2048
   - ./.ci/travis/run.sh
 
 after_success:
