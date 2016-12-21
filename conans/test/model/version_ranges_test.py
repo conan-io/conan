@@ -2,7 +2,7 @@ import unittest
 from conans.test.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os
-from conans.client.deps_builder import DepsBuilder
+from conans.client.deps_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues
 from conans.client.loader import ConanFileLoader
@@ -157,7 +157,7 @@ class VersionRangesTest(unittest.TestCase):
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)
-        self.builder = DepsBuilder(self.retriever, self.output, self.loader, self.resolver)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = """
