@@ -91,8 +91,8 @@ Development:
 
     $ sudo pip install -r conans/requirements_dev.txt
 
-Running the tests on Ubuntu
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Running the tests
+~~~~~~~~~~~~~~~~~~
 
 Make sure that the Python requirements have been installed.
 
@@ -102,6 +102,13 @@ variables first.
 ::
 
     $ export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+
+On Windows it would be (while being in the conan root directory):
+
+::
+
+    $ export PYTHONPATH=.
 
 Ensure that your ``cmake`` has version 2.8 or later. You can see the
 version with the following command:
@@ -129,7 +136,7 @@ These should work for OS X:
     $ export CONAN_COMPILER_VERSION=3.5
 
 Finally, there are some tests that use conan to package Go-lang
-libraries, so you would **need to install go-lang** in your computer and
+libraries, so you might **need to install go-lang** in your computer and
 add it to the path.
 
 You can run the actual tests like this:
@@ -138,7 +145,15 @@ You can run the actual tests like this:
 
     $ nosetests .
 
-About one minute later it should print ``OK``:
+
+There are a couple of test attributes defined, as ``slow``, or ``golang`` that you can use
+to filter the tests, and do not execute them:
+
+::
+
+    $ nosetests . -a !golang
+
+A few minutes later it should print ``OK``:
 
 ::
 
