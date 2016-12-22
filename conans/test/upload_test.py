@@ -120,13 +120,13 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Cannot upload corrupted recipe", self.client.user_io.out)
 
     def upload_with_pattern_test(self):
-        for num in xrange(5):
+        for num in range(5):
             files = hello_conan_files("Hello%s" % num, "1.2.1")
             self.client.save(files)
             self.client.run("export frodo/stable")
 
         self.client.run("upload Hello* --confirm")
-        for num in xrange(5):
+        for num in range(5):
             self.assertIn("Uploading Hello%s/1.2.1@frodo/stable" % num, self.client.user_io.out)
 
         self.client.run("upload Hello0* --confirm")

@@ -149,7 +149,7 @@ class Downloader(object):
         return response
 
     def call_with_retry(self, retry, retry_wait, method, *args, **kwargs):
-        for counter in xrange(retry):
+        for counter in range(retry):
             try:
                 return method(*args, **kwargs)
             except Exception as exc:

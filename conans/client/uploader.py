@@ -76,7 +76,7 @@ class ConanUploader(object):
         logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
 
     def _call_with_retry(self, retry, retry_wait, method, *args, **kwargs):
-        for counter in xrange(retry):
+        for counter in range(retry):
             try:
                 return method(*args, **kwargs)
             except ConanException as exc:
