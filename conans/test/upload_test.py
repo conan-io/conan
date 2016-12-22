@@ -130,7 +130,8 @@ class UploadTest(unittest.TestCase):
             self.assertIn("Uploading Hello%s/1.2.1@frodo/stable" % num, self.client.user_io.out)
 
         self.client.run("upload Hello0* --confirm")
-        self.assertIn("Uploading Hello0/1.2.1@frodo/stable", self.client.user_io.out)
+        self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
+                      self.client.user_io.out)
         self.assertNotIn("Uploading Hello1/1.2.1@frodo/stable", self.client.user_io.out)
 
     def upload_error_test(self):

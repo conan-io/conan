@@ -36,7 +36,14 @@ class RemoteManager(object):
         the_files = compress_conan_files(the_files, export_folder, EXPORT_TGZ_NAME,
                                          CONANFILE, self._output)
 
-        return self._call_remote(remote, "upload_conan", conan_reference, the_files)
+        ret = self._call_remote(remote, "upload_conan", conan_reference, the_files)
+        msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
+        # FIXME: server dependent
+        if remote.url == "https://server.conan.io":
+            msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
+        self._output.info(msg)
+
+        return ret
 
     def upload_package(self, package_reference, remote):
         """Will upload the package to the first remote"""
