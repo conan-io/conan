@@ -507,30 +507,24 @@ If not:
             trace = traceback.format_exc().split('\n')
             raise ConanException("Unable to build it successfully\n%s" % '\n'.join(trace[3:]))
 
-    def upload(self, conan_reference, package_id=None, remote=None, all_packages=None,
-               force=False):
+    def upload(self, conan_reference_or_pattern, package_id=None, remote=None, all_packages=None,
+               force=False, confirm=False, retry=0, retry_wait=0):
+        """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
 
         t1 = time.time()
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-        uploader = ConanUploader(self._client_cache, self._user_io, remote_proxy)
-
-        # Load conanfile to check if the build policy is set to always
-        try:
-            conanfile_path = self._client_cache.conanfile(conan_reference)
-            conan_file = self._loader().load_class(conanfile_path)
-        except NotFoundException:
-            raise NotFoundException("There is no local conanfile exported as %s"
-                                    % str(conan_reference))
-
-        # Can't use build_policy_always here because it's not loaded (only load_class)
-        if conan_file.build_policy == "always" and (all_packages or package_id):
-            raise ConanException("Conanfile has build_policy='always', "
-                                 "no packages can be uploaded")
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
+                                  remote)
+        uploader = ConanUploader(self._client_cache, self._user_io, remote_proxy,
+                                 self._search_manager, self._loader())
 
         if package_id:  # Upload package
-            uploader.upload_package(PackageReference(conan_reference, package_id))
+            ref = ConanFileReference.loads(conan_reference_or_pattern)
+            uploader.upload_package(PackageReference(ref, package_id), retry=retry,
+                                    retry_wait=retry_wait)
         else:  # Upload conans
-            uploader.upload_conan(conan_reference, all_packages=all_packages, force=force)
+            uploader.upload_conan(conan_reference_or_pattern, all_packages=all_packages,
+                                  force=force, confirm=confirm,
+                                  retry=retry, retry_wait=retry_wait)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 

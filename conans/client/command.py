@@ -23,7 +23,7 @@ from conans.client.runner import ConanRunner
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import ConanException
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, is_a_reference
 from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, conan_expand_user
@@ -734,8 +734,7 @@ path to the CMake binary directory, like this:
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
-        parser.add_argument("reference",
-                            help='package recipe reference, e.g., MyPackage/1.2@user/channel')
+        parser.add_argument('pattern', help='Pattern or package recipe reference, e.g., "openssl/*", "MyPackage/1.2@user/channel"')
         # TODO: packageparser.add_argument('package', help='user name')
         parser.add_argument("--package", "-p", default=None, help='package ID to upload')
         parser.add_argument("--remote", "-r", help='upload to this specific remote')
@@ -744,17 +743,22 @@ path to the CMake binary directory, like this:
         parser.add_argument("--force", action='store_true',
                             default=False,
                             help='Do not check conan recipe date, override remote with local')
+        parser.add_argument('--confirm', '-c', default=False,
+                            action='store_true', help='If pattern is given upload all matching recipes without confirmation')
+        parser.add_argument('--retry', default=2, type=int,
+                            help='In case of fail retries to upload again the specified times')
+        parser.add_argument('--retry_wait', default=5, type=int,
+                            help='Waits specified seconds before retry again')
 
         args = parser.parse_args(*args)
 
-        conan_ref = ConanFileReference.loads(args.reference)
-        package_id = args.package
+        if args.package and not is_a_reference(args.pattern):
+            raise ConanException("-p parameter only allowed with a valid recipe reference, not with a pattern")
 
-        if not conan_ref and not package_id:
-            raise ConanException("Enter conan reference or package id")
-
-        self._manager.upload(conan_ref, package_id,
-                             args.remote, all_packages=args.all, force=args.force)
+        self._manager.upload(args.pattern, args.package,
+                             args.remote, all_packages=args.all,
+                             force=args.force, confirm=args.confirm, retry=args.retry,
+                             retry_wait=args.retry_wait)
 
     def remote(self, *args):
         """ manage remotes

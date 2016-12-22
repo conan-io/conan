@@ -1,5 +1,5 @@
 from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
-    ConanException
+    ConanException, UploadException
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
@@ -452,19 +452,21 @@ class RestApiClient(object):
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
             output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
-            response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup)
-            output.writeln("")
-            if not response.ok:
-                output.error("\nError uploading file: %s" % filename)
-                logger.debug(response.content)
+            try:
+                response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup)
+                output.writeln("")
+                if not response.ok:
+                    output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
+                    logger.debug(response.content)
+                    failed[filename] = resource_url
+                else:
+                    pass
+            except Exception as exc:
+                output.error("\nError uploading file: %s, '%s'" % (filename, exc))
                 failed[filename] = resource_url
-            else:
-                pass
 
         if failed:
             logger.debug(failed)
-            output.warn("\nThe upload of some files has failed. "
-                        "Execute upload again to retry upload the failed files.")
-            raise ConanException("Upload failed!")
+            raise UploadException(", ".join(failed))
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))

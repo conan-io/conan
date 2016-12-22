@@ -6,7 +6,7 @@ import traceback
 
 from requests.exceptions import ConnectionError
 
-from conans.errors import ConanException, ConanConnectionError
+from conans.errors import ConanException, ConanConnectionError, UploadException
 from conans.util.files import tar_extract, relative_dirs, rmdir
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
@@ -176,6 +176,9 @@ class RemoteManager(object):
         except ConnectionError as exc:
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))
+        except UploadException as exc:
+            msg = "Execute upload again to retry upload the failed files: [%s]" % exc.message
+            raise ConanException("Upload to remote '%s' failed! %s" % (remote.name, msg))
         except ConanException:
             raise
         except Exception as exc:
