@@ -18,15 +18,31 @@ class PrivateDepsTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def _export_upload(self, name=0, version=None, deps=None, msg=None, static=True, build=True,
-                       upload=True):
+                       upload=True, cmake_targets=False):
         dll_export = self.client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files(name, version, deps, msg=msg, static=static,
-                                      private_includes=True, dll_export=dll_export, build=build)
+                                      private_includes=True, dll_export=dll_export, build=build,
+                                      cmake_targets=cmake_targets)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)
         self.client.run("export lasote/stable")
         if upload:
             self.client.run("upload %s" % str(conan_ref))
+
+    def modern_cmake_test(self):
+        cmake_targets = True
+        settings = "-s compiler=gcc -s compiler.version=4.9 -s compiler.libcxx=libstdc++"
+        self._export_upload("Hello0", "0.1",  upload=False, cmake_targets=cmake_targets)
+        self._export_upload("Hello1", "0.1", deps=[("Hello0/0.1@lasote/stable", "private")],
+                            static=False, upload=False, cmake_targets=cmake_targets)
+        self.client.run('install Hello1/0.1@lasote/stable --build missing %s' % settings)
+        self.client.run("remove Hello0/0.1@lasote/stable -p -f")
+        self._export_upload("Hello2", "0.1", deps=[("Hello1/0.1@lasote/stable")],
+                            upload=False, cmake_targets=cmake_targets)
+
+        # Build packages for both recipes
+        self.client.run('install Hello2/0.1@lasote/stable --build Hello2 %s' % settings, ignore_error=True)
+        print self.client.user_io.out
 
     def consumer_force_build_test(self):
         """If a conanfile requires another private conanfile, but in the install is forced
