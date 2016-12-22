@@ -177,7 +177,7 @@ class RemoteManager(object):
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))
         except UploadException as exc:
-            msg = "Execute upload again to retry upload the failed files: [%s]" % exc.message
+            msg = "Execute upload again to retry upload the failed files: [%s]" % str(exc)
             raise ConanException("Upload to remote '%s' failed! %s" % (remote.name, msg))
         except ConanException:
             raise
