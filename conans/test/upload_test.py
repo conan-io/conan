@@ -165,8 +165,7 @@ class UploadTest(unittest.TestCase):
         client.run("upload Hello* --confirm --retry 10 --retry_wait=0", ignore_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
         self.assertIn("ERROR: Upload to remote 'default' failed! Execute upload again"
-                      " to retry upload the failed files: [conanmanifest.txt, conanfile.py,"
-                      " conan_export.tgz]", client.user_io.out)
+                      " to retry upload the failed files", client.user_io.out)
 
         # Try the package retry, will fail the pair files, we can do it with 3 attempts
         client = self._get_client(FailPairFilesUploader)
