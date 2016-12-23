@@ -1,7 +1,6 @@
 from conans.model import Generator
-from conans.paths import BUILD_INFO_CMAKE
 from conans.client.generators.cmake_common import cmake_single_dep_vars, cmake_multi_dep_vars,\
-    cmake_macros
+    cmake_macros_multi
 
 
 class DepsCppCmake(object):
@@ -25,19 +24,29 @@ class DepsCppCmake(object):
         self.rootpath = '"%s"' % deps_cpp_info.rootpath.replace("\\", "/")
 
 
-class CMakeGenerator(Generator):
+class CMakeMultiGenerator(Generator):
     @property
-    def filename(self):
-        return BUILD_INFO_CMAKE
+    def build_type(self):
+        return "_" + str(self.conanfile.settings.build_type).upper()
 
     @property
     def content(self):
+        result = {"conanbuildinfo%s.cmake" % self.build_type.lower(): self.content_type,
+                  "conanbuildinfo_multi.cmake": self.content_multi}
+        return result
+
+    @property
+    def filename(self):
+        pass
+
+    @property
+    def content_type(self):
         sections = []
 
         # Per requirement variables
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             deps = DepsCppCmake(dep_cpp_info)
-            dep_flags = cmake_single_dep_vars(dep_name, deps=deps)
+            dep_flags = cmake_single_dep_vars(dep_name, deps=deps, build_type=self.build_type)
             sections.append(dep_flags)
 
         # GENERAL VARIABLES
@@ -46,15 +55,24 @@ class CMakeGenerator(Generator):
                      in self.deps_build_info.dependencies]
         all_flags = cmake_multi_dep_vars(deps=deps, root_paths=rootpaths,
                                          dependencies=self.deps_build_info.deps,
-                                         name=self.conanfile.name, version=self.conanfile.version)
+                                         name=self.conanfile.name, version=self.conanfile.version,
+                                         build_type=self.build_type)
 
         sections.append("\n### Definition of global aggregated variables ###\n")
         sections.append(all_flags)
 
         # TARGETS
         template = """
-    conan_find_libraries_abs_path(${{CONAN_LIBS_{uname}}} ${{CONAN_LIB_DIRS_{uname}}}
-                                  CONAN_FULLPATH_LIBS_{uname})
+    foreach(_LIBRARY_NAME ${{CONAN_LIBS_{uname}}})
+        unset(FOUND_LIBRARY CACHE)
+        find_library(FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS ${{CONAN_LIB_DIRS_{uname}}} NO_DEFAULT_PATH)
+        if(FOUND_LIBRARY)
+            set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{FOUND_LIBRARY}})
+        else()
+            message(STATUS "Library ${{_LIBRARY_NAME}} not found in package, might be system one")
+            set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{_LIBRARY_NAME}})
+        endif()
+    endforeach()
 
     add_library({name} INTERFACE IMPORTED)
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} {deps})
@@ -79,7 +97,8 @@ class CMakeGenerator(Generator):
 
         sections.append('endmacro()\n')
 
-        # MACROS
-        sections.append(cmake_macros)
-
         return "\n".join(sections)
+
+    @property
+    def content_multi(self):
+        return cmake_macros_multi

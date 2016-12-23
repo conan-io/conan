@@ -185,6 +185,7 @@ class ConanFileLoader(object):
 
     def parse_conan_txt(self, contents, path, output):
         conanfile = ConanFile(output, self._runner, self._settings.copy(), path)
+        conanfile.settings = self._settings.copy()
 
         try:
             parser = ConanFileTextLoader(contents)

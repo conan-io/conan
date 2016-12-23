@@ -10,7 +10,8 @@ from .visualstudio import VisualStudioGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
-from conans.client.generators.env import ConanEnvGenerator
+from .env import ConanEnvGenerator
+from .cmake_multi import CMakeMultiGenerator
 
 
 def _save_generator(name, klass):
@@ -20,6 +21,7 @@ def _save_generator(name, klass):
 _save_generator("txt", TXTGenerator)
 _save_generator("gcc", GCCGenerator)
 _save_generator("cmake", CMakeGenerator)
+_save_generator("cmake_multi", CMakeMultiGenerator)
 _save_generator("qmake", QmakeGenerator)
 _save_generator("qbs", QbsGenerator)
 _save_generator("visual_studio", VisualStudioGenerator)
