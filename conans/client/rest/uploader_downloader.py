@@ -3,7 +3,7 @@ from conans.util.log import logger
 import traceback
 from conans.util.files import save, sha1sum
 import os
-import time
+from conans.client.uploader import call_with_retry
 
 
 class Uploader(object):
@@ -102,7 +102,7 @@ class Downloader(object):
             raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
         ret = bytearray()
-        response = self.call_with_retry(retry, retry_wait, self._download_file, url, auth)
+        response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth)
 
         try:
             total_length = response.headers.get('content-length')
@@ -141,24 +141,15 @@ class Downloader(object):
                                        % str(e))
 
     def _download_file(self, url, auth):
-        response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
+        try:
+            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
+        except Exception as exc:
+            raise ConanException("Error downloading file %s: %s" % (url, str(exc)))
 
         if not response.ok:
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         return response
-
-    def call_with_retry(self, retry, retry_wait, method, *args, **kwargs):
-        for counter in range(retry):
-            try:
-                return method(*args, **kwargs)
-            except Exception as exc:
-                if counter == (retry - 1):
-                    raise
-                else:
-                    logger.error(exc)
-                    self.output.writeln("Waiting %d seconds to retry..." % retry_wait)
-                    time.sleep(retry_wait)
 
 
 def progress_units(progress, total):

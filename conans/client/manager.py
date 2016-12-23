@@ -519,6 +519,7 @@ If not:
 
         if package_id:  # Upload package
             ref = ConanFileReference.loads(conan_reference_or_pattern)
+            uploader.check_reference(ref)
             uploader.upload_package(PackageReference(ref, package_id), retry=retry,
                                     retry_wait=retry_wait)
         else:  # Upload conans

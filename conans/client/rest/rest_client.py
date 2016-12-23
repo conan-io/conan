@@ -445,7 +445,7 @@ class RestApiClient(object):
 
     def upload_files(self, file_urls, files, output):
         t1 = time.time()
-        failed = {}
+        failed = []
         uploader = Uploader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
@@ -457,13 +457,12 @@ class RestApiClient(object):
                 output.writeln("")
                 if not response.ok:
                     output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
-                    logger.debug(response.content)
-                    failed[filename] = resource_url
+                    failed.append(filename)
                 else:
                     pass
             except Exception as exc:
                 output.error("\nError uploading file: %s, '%s'" % (filename, exc))
-                failed[filename] = resource_url
+                failed.append(filename)
 
         if failed:
             logger.debug(failed)

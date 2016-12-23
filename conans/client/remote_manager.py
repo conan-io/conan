@@ -41,6 +41,8 @@ class RemoteManager(object):
         # FIXME: server dependent
         if remote.url == "https://server.conan.io":
             msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
+        else:
+            msg += ": %s" % remote.url
         self._output.info(msg)
 
         return ret

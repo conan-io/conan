@@ -177,7 +177,7 @@ class HelloConan(ConanFile):
         out = TestBufferConanOutput()
 
         # Connection error
-        with self.assertRaisesRegexp(ConnectionError, "HTTPConnectionPool"):
+        with self.assertRaisesRegexp(ConanException, "HTTPConnectionPool"):
             tools.download("http://fakeurl3.es/nonexists",
                            os.path.join(temp_folder(), "file.txt"), out=out,
                            retry=3, retry_wait=0)
