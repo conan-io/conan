@@ -4,6 +4,7 @@ import time
 from conans.util.files import md5sum, md5
 from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, CONANFILE
 from conans.errors import ConanException
+import datetime
 
 
 class FileTreeManifest(object):
@@ -25,6 +26,10 @@ class FileTreeManifest(object):
         for filepath, file_md5 in sorted(self.file_sums.items()):
             ret += "%s: %s\n" % (filepath, file_md5)
         return md5(ret)
+
+    @property
+    def time_str(self):
+        return datetime.datetime.fromtimestamp(int(self.time)).strftime('%Y-%m-%d %H:%M:%S')
 
     @staticmethod
     def loads(text):

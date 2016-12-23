@@ -226,7 +226,15 @@ class ConanManager(object):
             graph_updates_info = {}
         Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                               info, registry, graph_updates_info,
-                                              remote)
+                                              remote, self.read_dates(deps_graph))
+
+    def read_dates(self, deps_graph):
+        ret = {}
+        for ref, _ in sorted(deps_graph.nodes):
+            if ref:
+                manifest = self._client_cache.load_manifest(ref)
+                ret[ref] = manifest.time_str
+        return ret
 
     def read_profile(self, profile_name, cwd):
         if not profile_name:
