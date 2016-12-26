@@ -238,7 +238,7 @@ endmacro()
 
 macro(conan_split_version VERSION_STRING MAJOR MINOR)
     #make a list from the version string
-    string(REPLACE "." ";" VERSION_LIST ${${VERSION_STRING}})
+    string(REPLACE "." ";" VERSION_LIST "${${VERSION_STRING}}")
 
     #write output values
     list(GET VERSION_LIST 0 ${MAJOR})
