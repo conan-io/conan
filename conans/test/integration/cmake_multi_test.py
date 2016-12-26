@@ -2,7 +2,7 @@ import unittest
 from conans.test.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
-import io
+from six import StringIO
 from conans.test.utils.runner import TestRunner
 import platform
 import os
@@ -75,7 +75,7 @@ class CMakeMultiTest(unittest.TestCase):
             # Header of the package will contain a different DEFINE, to make sure that it includes
             # the correct one
             conanfile = conanfile.replace("def build(self):\n", """def build(self):
-        with open("helloHello{0}.h", "ab") as f:
+        with open("helloHello{0}.h", "a") as f:
             f.write('#define HELLO{0}BUILD "%s"' % self.settings.build_type)
 """.format(number))
             conanfile = conanfile.replace("def package_info(self):\n", """def package_info(self):
@@ -97,7 +97,7 @@ class CMakeMultiTest(unittest.TestCase):
                          "main.cpp": main}, clean_first=True)
             client.run('install -s build_type=Debug %s --build=missing' % debug_install)
             client.run('install -s build_type=Release %s --build=missing' % release_install)
-            output = io.StringIO()
+            output = StringIO()
             runner = TestRunner(output)
             runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
             runner('cmake --build . --config Debug', cwd=client.current_folder)
