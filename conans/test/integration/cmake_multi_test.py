@@ -58,7 +58,7 @@ class CMakeMultiTest(unittest.TestCase):
             debug_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MDd'
             release_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MD'
         elif platform.system() == "Darwin":
-            generator = "XCode"
+            generator = "Xcode"
             debug_install = ''
             release_install = ''
         else:
