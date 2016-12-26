@@ -22,7 +22,12 @@ include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
 conan_basic_setup()
 
 add_executable(say_hello main.cpp)
-target_link_libraries(say_hello debug ${CONAN_LIBS_DEBUG} optimized ${CONAN_LIBS_RELEASE})
+foreach(_LIB ${CONAN_LIBS_RELEASE})
+    target_link_libraries(say_hello optimized ${_LIB})
+endforeach()
+foreach(_LIB ${CONAN_LIBS_DEBUG})
+    target_link_libraries(say_hello debug ${_LIB})
+endforeach()
 """
 
 cmake_targets = """
