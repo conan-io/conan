@@ -109,7 +109,7 @@ class ConanClientConfigParser(ConfigParser):
         ignored"""
 
         def get_env_value(name):
-            env_name = "CONAN_ENV_%s" % name.upper().replace(".", "-")
+            env_name = "CONAN_ENV_%s" % name.upper().replace(".", "_")
             return os.getenv(env_name, None)
 
         def get_setting_name(env_name):
