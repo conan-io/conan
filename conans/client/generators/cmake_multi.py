@@ -1,27 +1,7 @@
 from conans.model import Generator
 from conans.client.generators.cmake_common import cmake_single_dep_vars, cmake_multi_dep_vars,\
     cmake_macros_multi
-
-
-class DepsCppCmake(object):
-    def __init__(self, deps_cpp_info):
-        self.include_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
-                                             for p in deps_cpp_info.include_paths)
-        self.lib_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
-                                         for p in deps_cpp_info.lib_paths)
-        self.libs = " ".join(deps_cpp_info.libs)
-
-        self.defines = "\n\t\t\t".join("-D%s" % d for d in deps_cpp_info.defines)
-        self.compile_definitions = "\n\t\t\t".join(deps_cpp_info.defines)
-
-        self.cppflags = " ".join(deps_cpp_info.cppflags)
-        self.cflags = " ".join(deps_cpp_info.cflags)
-        self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
-        self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
-        self.bin_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
-                                         for p in deps_cpp_info.bin_paths)
-
-        self.rootpath = '"%s"' % deps_cpp_info.rootpath.replace("\\", "/")
+from conans.client.generators.cmake import DepsCppCmake
 
 
 class CMakeMultiGenerator(Generator):
@@ -60,26 +40,29 @@ class CMakeMultiGenerator(Generator):
 
         sections.append("\n### Definition of global aggregated variables ###\n")
         sections.append(all_flags)
+        return "\n".join(sections)
 
+    @property
+    def content_multi(self):
+        sections = []
         # TARGETS
         template = """
-    foreach(_LIBRARY_NAME ${{CONAN_LIBS_{uname}}})
-        unset(FOUND_LIBRARY CACHE)
-        find_library(FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS ${{CONAN_LIB_DIRS_{uname}}} NO_DEFAULT_PATH)
-        if(FOUND_LIBRARY)
-            set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{FOUND_LIBRARY}})
-        else()
-            message(STATUS "Library ${{_LIBRARY_NAME}} not found in package, might be system one")
-            set(CONAN_FULLPATH_LIBS_{uname} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{_LIBRARY_NAME}})
-        endif()
-    endforeach()
+    conan_find_libraries_abs_path(${{CONAN_LIBS_{uname}_DEBUG}} ${{CONAN_LIB_DIRS_{uname}_DEBUG}}
+                                  CONAN_FULLPATH_LIBS_{uname}_DEBUG)
+    conan_find_libraries_abs_path(${{CONAN_LIBS_{uname}_RELEASE}} ${{CONAN_LIB_DIRS_{uname}_RELEASE}}
+                                  CONAN_FULLPATH_LIBS_{uname}_RELEASE)
 
     add_library({name} INTERFACE IMPORTED)
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} {deps})
-    set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}})
-    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}})
-    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES {deps} $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}}>
+                                                                      $<$<CONFIG:Debug>:${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
+                                                                      $<$<CONFIG:Debug>:${{CONAN_INCLUDE_DIRS_{uname}_DEBUG}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS $<$<CONFIG:Release>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELEASE}}>
+                                                                      $<$<CONFIG:Debug>:${{CONAN_COMPILE_DEFINITIONS_{uname}_DEBUG}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS $<$<CONFIG:Release>:${{CONAN_CFLAGS_{uname}_RELEASE}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE}}>
+                                                                  $<$<CONFIG:Debug>:${{CONAN_CFLAGS_{uname}_DEBUG}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS $<$<CONFIG:Release>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
+                                                             $<$<CONFIG:Debug>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG}}  ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG}}>)
 """
         existing_deps = self.deps_build_info.deps
 
@@ -96,9 +79,4 @@ class CMakeMultiGenerator(Generator):
                                             uname=dep_name.upper()))
 
         sections.append('endmacro()\n')
-
-        return "\n".join(sections)
-
-    @property
-    def content_multi(self):
-        return cmake_macros_multi
+        return cmake_macros_multi + "\n\n" + "\n".join(sections)
