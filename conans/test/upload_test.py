@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient, TestServer
+from conans.test.tools import TestClient, TestServer, TestRequester
 from conans.test.utils.test_files import hello_source_files, temp_folder,\
     hello_conan_files
 from conans.client.manager import CONANFILE
@@ -12,6 +12,8 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import uncompress_packaged_files
 from conans.tools import untargz
+from requests.packages.urllib3.exceptions import ConnectionError
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
 myconan1 = """
 from conans import ConanFile
@@ -22,17 +24,50 @@ class HelloConan(ConanFile):
 """
 
 
+class BadConnectionUploader(TestRequester):
+    fail_on = 1
+
+    def __init__(self, *args, **kwargs):
+        super(BadConnectionUploader, self).__init__(*args, **kwargs)
+        self.counter_fail = 0
+
+    def put(self, *args, **kwargs):
+        self.counter_fail += 1
+        if self.counter_fail == self.fail_on:
+            raise ConnectionError("Can't connect because of the evil mock")
+        else:
+            return super(BadConnectionUploader, self).put(*args, **kwargs)
+
+
+class TerribleConnectionUploader(BadConnectionUploader):
+    def put(self, *args, **kwargs):
+        raise ConnectionError("Can't connect because of the evil mock")
+
+
+class FailPairFilesUploader(BadConnectionUploader):
+
+    def put(self, *args, **kwargs):
+        self.counter_fail += 1
+        if self.counter_fail % 2 == 1:
+            raise ConnectionError("Pair file, error!")
+        else:
+            return super(BadConnectionUploader, self).put(*args, **kwargs)
+
+
 class UploadTest(unittest.TestCase):
 
-    def setUp(self):
+    def _get_client(self, requester=None):
         servers = {}
         # All can write (for avoid authentication until we mock user_io)
         self.test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
                                       users={"lasote": "mypass"})
         servers["default"] = self.test_server
-        conan_digest = FileTreeManifest('123123123', {})
+        return TestClient(servers=servers, users={"default": [("lasote", "mypass")]},
+                          requester_class=requester)
 
-        self.client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+    def setUp(self):
+        self.client = self._get_client()
+        conan_digest = FileTreeManifest('123123123', {})
         self.conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
         reg_folder = self.client.paths.export(self.conan_ref)
 
@@ -83,6 +118,94 @@ class UploadTest(unittest.TestCase):
             self.client.run("upload %s" % str(ref))
 
         self.assertIn("Cannot upload corrupted recipe", self.client.user_io.out)
+
+    def upload_with_pattern_test(self):
+        for num in range(5):
+            files = hello_conan_files("Hello%s" % num, "1.2.1")
+            self.client.save(files)
+            self.client.run("export frodo/stable")
+
+        self.client.run("upload Hello* --confirm")
+        for num in range(5):
+            self.assertIn("Uploading Hello%s/1.2.1@frodo/stable" % num, self.client.user_io.out)
+
+        self.client.run("upload Hello0* --confirm")
+        self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
+                      self.client.user_io.out)
+        self.assertNotIn("Uploading Hello1/1.2.1@frodo/stable", self.client.user_io.out)
+
+    def upload_error_test(self):
+        """Cause an error in the transfer and see some message"""
+
+        # This will fail in the first put file, so, as we need to
+        # upload 3 files (conanmanifest, conanfile and tgz) will do it with 2 retries
+        client = self._get_client(BadConnectionUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export frodo/stable")
+        client.run("upload Hello* --confirm --retry_wait=0")
+        self.assertIn("Can't connect because of the evil mock", client.user_io.out)
+        self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
+
+        # but not with 1
+        client = self._get_client(BadConnectionUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export frodo/stable")
+        client.run("upload Hello* --confirm --retry 1 --retry_wait=1", ignore_error=True)
+        self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
+        self.assertIn("ERROR: Upload to remote 'default' failed! Execute upload again"
+                      " to retry upload the failed files: [conanmanifest.txt]", client.user_io.out)
+
+        # Try with broken connection even with 10 retries
+        client = self._get_client(TerribleConnectionUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export frodo/stable")
+        client.run("upload Hello* --confirm --retry 10 --retry_wait=0", ignore_error=True)
+        self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
+        self.assertIn("ERROR: Upload to remote 'default' failed! Execute upload again"
+                      " to retry upload the failed files", client.user_io.out)
+
+        # Try the package retry, will fail the pair files, we can do it with 3 attempts
+        client = self._get_client(FailPairFilesUploader)
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export frodo/stable")
+        client.run("install Hello0/1.2.1@frodo/stable --build")
+        client.run("upload Hello* --confirm --retry 3 --retry_wait=0 --all")
+        self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
+        self.assertIn("Error uploading file: conan_export.tgz, 'Pair file, error!'",
+                      client.user_io.out)
+        self.assertIn("Error uploading file: conan_package.tgz, 'Pair file, error!'",
+                      client.user_io.out)
+
+    def upload_with_pattern_and_package_error_test(self):
+        files = hello_conan_files("Hello1", "1.2.1")
+        self.client.save(files)
+        self.client.run("export frodo/stable")
+
+        self.client.run("upload Hello* --confirm -p 234234234", ignore_error=True)
+        self.assertIn("-p parameter only allowed with a valid recipe reference",
+                      self.client.user_io.out)
+
+    def check_upload_confirm_question_test(self):
+        user_io = self.client.user_io
+        files = hello_conan_files("Hello1", "1.2.1")
+        self.client.save(files)
+        self.client.run("export frodo/stable")
+
+        user_io.request_string = lambda x: "y"
+        self.client.run("upload Hello*", user_io=user_io)
+        self.assertIn("Uploading Hello1/1.2.1@frodo/stable", self.client.user_io.out)
+
+        files = hello_conan_files("Hello2", "1.2.1")
+        self.client.save(files)
+        self.client.run("export frodo/stable")
+
+        user_io.request_string = lambda x: "n"
+        self.client.run("upload Hello*", user_io=user_io)
+        self.assertNotIn("Uploading Hello2/1.2.1@frodo/stable", self.client.user_io.out)
 
     def upload_same_package_dont_compress_test(self):
         # Create a manifest for the faked package

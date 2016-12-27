@@ -3,6 +3,7 @@ from conans.util.log import logger
 import traceback
 from conans.util.files import save, sha1sum
 import os
+from conans.client.uploader import call_with_retry
 
 
 class Uploader(object):
@@ -94,15 +95,15 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None, auth=None):
+    def download(self, url, file_path=None, auth=None, retry=1, retry_wait=0):
 
         if file_path and os.path.exists(file_path):
             # Should not happen, better to raise, probably we had to remove the dest folder before
             raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
         ret = bytearray()
-        response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
-        if not response.ok:
+        response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth)
+        if not response.ok:  # Do not retry if not found or whatever controlled error
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
@@ -140,6 +141,14 @@ class Downloader(object):
             # If this part failed, it means problems with the connection to server
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))
+
+    def _download_file(self, url, auth):
+        try:
+            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
+        except Exception as exc:
+            raise ConanException("Error downloading file %s: %s" % (url, str(exc)))
+
+        return response
 
 
 def progress_units(progress, total):

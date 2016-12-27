@@ -161,14 +161,14 @@ def get(url):
     os.unlink(filename)
 
 
-def download(url, filename, verify=True):
-    out = ConanOutput(sys.stdout, True)
+def download(url, filename, verify=True, out=None, retry=2, retry_wait=5):
+    out = out or ConanOutput(sys.stdout, True)
     if verify:
         # We check the certificate using a list of known verifiers
         import conans.client.rest.cacert as cacert
         verify = cacert.file_path
     downloader = Downloader(requests, out, verify=verify)
-    downloader.download(url, filename)
+    downloader.download(url, filename, retry=retry, retry_wait=retry_wait)
     out.writeln("")
 #     save(filename, content)
 
