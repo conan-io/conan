@@ -205,6 +205,15 @@ class ConanManager(object):
         @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
         @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
         """
+
+        def read_dates(deps_graph):
+            ret = {}
+            for ref, _ in sorted(deps_graph.nodes):
+                if ref:
+                    manifest = self._client_cache.load_manifest(ref)
+                    ret[ref] = manifest.time_str
+            return ret
+
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, None, scopes, package_settings, None, None)
         (builder, deps_graph, project_reference, registry, _, remote_proxy, _) = objects
@@ -224,9 +233,10 @@ class ConanManager(object):
             graph_updates_info = builder.get_graph_updates_info(deps_graph)
         else:
             graph_updates_info = {}
+
         Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                               info, registry, graph_updates_info,
-                                              remote)
+                                              remote, read_dates(deps_graph))
 
     def read_profile(self, profile_name, cwd):
         if not profile_name:
