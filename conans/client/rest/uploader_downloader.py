@@ -103,6 +103,8 @@ class Downloader(object):
 
         ret = bytearray()
         response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth)
+        if not response.ok:  # Do not retry if not found or whatever controlled error
+            raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
             total_length = response.headers.get('content-length')
@@ -145,9 +147,6 @@ class Downloader(object):
             response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
         except Exception as exc:
             raise ConanException("Error downloading file %s: %s" % (url, str(exc)))
-
-        if not response.ok:
-            raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         return response
 
