@@ -305,6 +305,10 @@ macro(conan_basic_setup)
 endmacro()
 
 macro(conan_set_vs_runtime)
+    # This conan_set_vs_runtime is MORE opinionated than the regular one. It will
+    # Leave the defaults MD (MDd) or replace them with MT (MTd) but taking into account the
+    # debug, forcing MXd for debug builds. It will generate MSVCRT warnings if the dependencies
+    # are installed with "conan install" and the wrong build time.
     if(CONAN_LINK_RUNTIME MATCHES "MT")
         if(DEFINED CMAKE_CXX_FLAGS_RELEASE)
             string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
@@ -316,7 +320,7 @@ macro(conan_set_vs_runtime)
             string(REPLACE "/MD" "/MT" CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
         endif()
         if(DEFINED CMAKE_C_FLAGS_DEBUG)
-            string(REPLACE "/MDd" "/MT" CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
+            string(REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
         endif()
     endif()
 endmacro()
