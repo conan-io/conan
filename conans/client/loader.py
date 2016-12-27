@@ -184,7 +184,11 @@ class ConanFileLoader(object):
         return conanfile
 
     def parse_conan_txt(self, contents, path, output):
-        conanfile = ConanFile(output, self._runner, self._settings.copy(), path)
+        conanfile = ConanFile(output, self._runner, Settings(), path)
+        # It is necessary to copy the settings, because the above is only a constraint of
+        # conanfile settings, and a txt doesn't define settings. Necessary for generators,
+        # as cmake_multi, that check build_type.
+        conanfile.settings = self._settings.copy()
 
         try:
             parser = ConanFileTextLoader(contents)

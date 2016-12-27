@@ -10,7 +10,6 @@ import os
 from conans.util.files import save, load
 import sys
 from conans.test.tools import TestClient
-from conans.client.userio import UserIO
 
 
 class OutputTest(unittest.TestCase):

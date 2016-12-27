@@ -1,5 +1,4 @@
 from conans.paths import CONANFILE, BUILD_INFO_CMAKE
-import platform
 
 
 conanfile_build_cmake = """    def build(self):

@@ -5,6 +5,7 @@ from conans.model.conan_file import ConanFile
 from conans.client.generators.cmake import CMakeGenerator
 from conans.model.build_info import DepsCppInfo
 from conans.model.ref import ConanFileReference
+from conans.client.generators.cmake_common import cmake_macros
 
 
 class CMakeGeneratorTest(unittest.TestCase):
@@ -34,7 +35,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     def aux_cmake_test_setup_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
         generator = CMakeGenerator(conanfile)
-        aux_cmake_test_setup = generator._aux_cmake_test_setup()
+        aux_cmake_test_setup = generator.content
 
         # extract the conan_basic_setup macro
         macro = self._extract_macro("conan_basic_setup", aux_cmake_test_setup)
