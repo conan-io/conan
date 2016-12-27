@@ -7,6 +7,7 @@ from six.moves.configparser import ConfigParser, NoSectionError
 from conans.model.values import Values
 import urllib
 from conans.paths import conan_expand_user
+from collections import OrderedDict
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
@@ -115,18 +116,18 @@ class ConanClientConfigParser(ConfigParser):
         def get_setting_name(env_name):
             return env_name[10:].lower().replace("_", ".")
 
-        ret = []
+        ret = OrderedDict()
         for name, value in settings:
             if get_env_value(name):
-                ret.append((name, get_env_value(name)))
+                ret[name] = get_env_value(name)
             else:
                 # being a subsetting, if parent exist in env discard this, because
                 # env doesn't define this setting. EX: env=>Visual Studio but
                 # env doesn't define compiler.libcxx
                 if "." not in name or not get_env_value(name.split(".")[0]):
-                    ret.append((name, value))
+                    ret[name] = value
         # Now read if there are more env variables
         for env, value in sorted(os.environ.items()):
-            if env.startswith("CONAN_ENV_") and get_setting_name(env) not in dict(ret):
-                ret.append((get_setting_name(env), value))
-        return ret
+            if env.startswith("CONAN_ENV_") and get_setting_name(env) not in ret:
+                ret[get_setting_name(env)] = value
+        return list(ret.items())
