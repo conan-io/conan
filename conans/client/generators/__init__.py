@@ -6,6 +6,7 @@ from .gcc import GCCGenerator
 from .cmake import CMakeGenerator
 from .qmake import QmakeGenerator
 from .qbs import QbsGenerator
+from .scons import SConsGenerator
 from .visualstudio import VisualStudioGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
@@ -24,6 +25,7 @@ _save_generator("cmake", CMakeGenerator)
 _save_generator("cmake_multi", CMakeMultiGenerator)
 _save_generator("qmake", QmakeGenerator)
 _save_generator("qbs", QbsGenerator)
+_save_generator("scons", SConsGenerator)
 _save_generator("visual_studio", VisualStudioGenerator)
 _save_generator("xcode", XCodeGenerator)
 _save_generator("ycm", YouCompleteMeGenerator)
