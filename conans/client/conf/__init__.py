@@ -7,6 +7,7 @@ from six.moves.configparser import ConfigParser, NoSectionError
 from conans.model.values import Values
 import urllib
 from conans.paths import conan_expand_user
+from collections import OrderedDict
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
@@ -97,5 +98,36 @@ class ConanClientConfigParser(ConfigParser):
     @property
     def settings_defaults(self):
         default_settings = self.get_conf("settings_defaults")
+        default_settings = self._mix_settings_with_env(default_settings)
         values = Values.from_list(default_settings)
         return values
+
+    def _mix_settings_with_env(self, settings):
+        """Reads CONAN_ENV_XXXX variables from environment
+        and if it's defined uses these value instead of the default
+        from conf file. If you specify a compiler with ENV variable you
+        need to specify all the subsettings, the file defaulted will be
+        ignored"""
+
+        def get_env_value(name):
+            env_name = "CONAN_ENV_%s" % name.upper().replace(".", "_")
+            return os.getenv(env_name, None)
+
+        def get_setting_name(env_name):
+            return env_name[10:].lower().replace("_", ".")
+
+        ret = OrderedDict()
+        for name, value in settings:
+            if get_env_value(name):
+                ret[name] = get_env_value(name)
+            else:
+                # being a subsetting, if parent exist in env discard this, because
+                # env doesn't define this setting. EX: env=>Visual Studio but
+                # env doesn't define compiler.libcxx
+                if "." not in name or not get_env_value(name.split(".")[0]):
+                    ret[name] = value
+        # Now read if there are more env variables
+        for env, value in sorted(os.environ.items()):
+            if env.startswith("CONAN_ENV_") and get_setting_name(env) not in ret:
+                ret[get_setting_name(env)] = value
+        return list(ret.items())
