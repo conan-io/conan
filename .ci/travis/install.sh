@@ -32,6 +32,10 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
             pyenv install 3.5.0
             pyenv virtualenv 3.5.0 conan
             ;;
+        py36)
+            pyenv install 3.6.0
+            pyenv virtualenv 3.6.0 conan
+            ;;
 
     esac
     pyenv rehash
