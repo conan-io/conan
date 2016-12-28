@@ -175,6 +175,7 @@ class ConanInstaller(object):
 
         nodes_to_build = []
         # Now build each level, starting from the most independent one
+        package_references = set()
         for level in nodes_by_level:
             for node in level:
                 if node in skip_nodes:
@@ -189,13 +190,16 @@ class ConanInstaller(object):
                     logger.debug("Processing node %s" % repr(conan_ref))
                     package_id = conan_file.info.package_id()
                     package_reference = PackageReference(conan_ref, package_id)
-                    check_outdated = self._check_outdated(build_mode)
-                    if self._build_forced(conan_ref, build_mode, conan_file):
-                        build_node = True
-                    else:
-                        build_node = not self._remote_proxy.package_available(package_reference,
-                                                                              conan_file.short_paths,
-                                                                              check_outdated)
+                    # Avoid processing twice the same package reference
+                    if package_reference not in package_references:
+                        package_references.add(package_reference)
+                        check_outdated = self._check_outdated(build_mode)
+                        if self._build_forced(conan_ref, build_mode, conan_file):
+                            build_node = True
+                        else:
+                            build_node = not self._remote_proxy.package_available(package_reference,
+                                                                                  conan_file.short_paths,
+                                                                                  check_outdated)
 
                 nodes_to_build.append((conan_ref, conan_file, build_node))
 
