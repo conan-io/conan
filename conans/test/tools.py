@@ -392,7 +392,6 @@ class TestClient(object):
 
         # Migration system
         self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
-                                                         manager=self.remote_manager,
                                                          storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations
