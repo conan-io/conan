@@ -387,12 +387,8 @@ class TestClient(object):
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
     def init_dynamic_vars(self, user_io=None):
-
-        self._init_collaborators(user_io)
-
         # Migration system
         self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
-                                                         manager=self.remote_manager,
                                                          storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations

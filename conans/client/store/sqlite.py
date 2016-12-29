@@ -13,14 +13,6 @@ class SQLiteDB(object):
             dbfile.close()
         self.dbfile = dbfile_path
 
-    def init(self):
-        """Called when database doesn't exist"""
-        try:
-            statement = self.connection.cursor()
-            statement.execute("PRAGMA auto_vacuum = INCREMENTAL;")
-        except Exception as e:
-            raise ConanException("Could not initialize local cache", e)
-
     def connect(self):
         try:
             self.connection = sqlite3.connect(self.dbfile,

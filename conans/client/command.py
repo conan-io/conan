@@ -898,16 +898,14 @@ path to the CMake binary directory, like this:
         return errors
 
 
-def migrate_and_get_client_cache(base_folder, out, manager, storage_folder=None):
+def migrate_and_get_client_cache(base_folder, out, storage_folder=None):
     # Init paths
     client_cache = ClientCache(base_folder, storage_folder, out)
 
     # Migration system
-    migrator = ClientMigrator(client_cache, Version(CLIENT_VERSION), out, manager)
+    migrator = ClientMigrator(client_cache, Version(CLIENT_VERSION), out)
     migrator.migrate()
 
-    # Init again paths, migration could change config
-    client_cache = ClientCache(base_folder, storage_folder, out)
     return client_cache
 
 
@@ -943,17 +941,7 @@ def get_command():
     user_folder = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
 
     try:
-        # To capture exceptions in conan.conf parsing
-        client_cache = ClientCache(user_folder, None, out)
-        # obtain a temp ConanManager instance to execute the migrations
-        remote_manager = instance_remote_manager(client_cache)
-
-        # Get a DiskSearchManager
-        search_adapter = DiskSearchAdapter()
-        search_manager = DiskSearchManager(client_cache, search_adapter)
-        manager = ConanManager(client_cache, user_io, ConanRunner(), remote_manager, search_manager)
-
-        client_cache = migrate_and_get_client_cache(user_folder, out, manager)
+        client_cache = migrate_and_get_client_cache(user_folder, out)
     except Exception as e:
         out.error(str(e))
         sys.exit(True)
