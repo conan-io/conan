@@ -78,10 +78,10 @@ class Command(object):
     def _parse_args(self, parser):
         parser.add_argument("-r", "--remote", help='look in the specified remote server')
         parser.add_argument("--options", "-o",
-                            help='Options to build the package, overriding the defaults. e.g., -o with_qt=true',
+                            help='Options to build the package, overwriting the defaults. e.g., -o with_qt=true',
                             nargs=1, action=Extender)
         parser.add_argument("--settings", "-s",
-                            help='Settings to build the package, overriding the defaults. e.g., -s compiler=gcc',
+                            help='Settings to build the package, overwriting the defaults. e.g., -s compiler=gcc',
                             nargs=1, action=Extender)
         parser.add_argument("--env", "-e",
                             help='Environment variables that will be set during the package build, -e CXX=/usr/bin/clang++',
@@ -243,7 +243,7 @@ path to the CMake binary directory, like this:
                                  'Use for testing purposes only')
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="update with new upstream packages, "
-                                 "overriding the local cache if needed.")
+                                 "overwriting the local cache if needed.")
         parser.add_argument("--profile", "-pr", default=None,
                             help='Apply the specified profile to the install command')
         self._parse_args(parser)
@@ -365,7 +365,7 @@ If no binary package is found you can build the package from sources using the '
                             help='Install all packages from the specified package recipe')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--update", "-u", action='store_true', default=False,
-                            help="update with new upstream packages, overriding the local"
+                            help="update with new upstream packages, overwriting the local"
                             " cache if needed.")
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Use the specified scope in the install command')
@@ -467,11 +467,11 @@ existing package in your local cache.
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("-r", "--remote", help='look in the specified remote server')
         parser.add_argument("--options", "-o",
-                            help='Options to build the package, overriding the defaults.'
+                            help='Options to build the package, overwriting the defaults.'
                                  ' e.g., -o with_qt=true',
                             nargs=1, action=Extender)
         parser.add_argument("--settings", "-s",
-                            help='Settings to build the package, overriding the defaults.'
+                            help='Settings to build the package, overwriting the defaults.'
                                  ' e.g., -s compiler=gcc',
                             nargs=1, action=Extender)
         parser.add_argument("--only", "-n",
@@ -558,7 +558,8 @@ folder to the current one.
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3'
                                  ' This optional parameter is only used for the local conan '
-                                 'cache.')
+                                 'cache. If not specified, ALL binaries for this recipe are '
+                                 're-packaged')
 
         args = parser.parse_args(*args)
 
@@ -660,7 +661,7 @@ folder to the current one.
         self._manager.export(args.user, current_path, keep_source)
 
     def remove(self, *args):
-        """ Remove any package recipe folders matching a pattern, or their packages and/or build folders.
+        """ Remove any package recipe folders matching a pattern, or their package and/or build folders.
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
         parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
