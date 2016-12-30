@@ -76,15 +76,15 @@ class Command(object):
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
 
     def _parse_args(self, parser):
-        parser.add_argument("-r", "--remote", help='look for in the remote storage')
+        parser.add_argument("-r", "--remote", help='look in the specified remote server')
         parser.add_argument("--options", "-o",
-                            help='load options to build the package, e.g., -o with_qt=true',
+                            help='Options to build the package, overwriting the defaults. e.g., -o with_qt=true',
                             nargs=1, action=Extender)
         parser.add_argument("--settings", "-s",
-                            help='load settings to build the package, -s compiler:gcc',
+                            help='Settings to build the package, overwriting the defaults. e.g., -s compiler=gcc',
                             nargs=1, action=Extender)
         parser.add_argument("--env", "-e",
-                            help='set environment variables to build the package, -e CXX=/usr/bin/clang++',
+                            help='Environment variables that will be set during the package build, -e CXX=/usr/bin/clang++',
                             nargs=1, action=Extender)
         parser.add_argument("--build", "-b", action=Extender, nargs="*",
                             help='''Optional, use it to choose if you want to build from sources:
@@ -187,9 +187,11 @@ path to the CMake binary directory, like this:
         parser.add_argument("-t", "--test", action='store_true', default=False,
                             help='Create test_package skeleton to test package')
         parser.add_argument("-i", "--header", action='store_true', default=False,
-                            help='Create a headers only package')
+                            help='Create a headers only package template')
         parser.add_argument("-c", "--pure_c", action='store_true', default=False,
-                            help='Create a C language package only package (non-headers)')
+                            help='Create a C language package only package, '
+                                 'deleting "self.settings.compiler.libcxx" setting '
+                                 'in the configure method')
 
         args = parser.parse_args(*args)
 
@@ -210,7 +212,7 @@ path to the CMake binary directory, like this:
             files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                       package_name=package_name)}
             if args.pure_c:
-                config = "\n    def config(self):\n        del self.settings.compiler.libcxx"
+                config = "\n    def configure(self):\n        del self.settings.compiler.libcxx"
                 files["conanfile.py"] = files["conanfile.py"] + config
         if args.test:
             files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
@@ -235,13 +237,15 @@ path to the CMake binary directory, like this:
                             help='Do not export the conanfile before test execution')
         parser.add_argument("-f", "--folder", help='alternative test folder name')
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
-                            help='Define scopes for packages')
+                            help='Use the specified scope in the install command')
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
-                            help='Optional. Do not remove the source folder in local store. '
+                            help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
         parser.add_argument("--update", "-u", action='store_true', default=False,
-                            help="update with new upstream packages")
-        parser.add_argument("--profile", "-pr", default=None, help='Define a profile')
+                            help="update with new upstream packages, "
+                                 "overwriting the local cache if needed.")
+        parser.add_argument("--profile", "-pr", default=None,
+                            help='Apply the specified profile to the install command')
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
@@ -342,8 +346,12 @@ path to the CMake binary directory, like this:
         self.test_package(*args)
 
     def install(self, *args):
-        """ install in the local store the given requirements.
-        Requirements can be defined in the command line or in a conanfile.
+        """Installs the requirements specified in a 'conanfile.py' or 'conanfile.txt'.
+It can also be used to install a concrete recipe/package specified by the reference parameter.
+If the recipe is not found in the local cache it will retrieve the recipe from the remotes sequentially.
+When the recipe has been downloaded it will try to download a binary package matching the specified settings.
+If no binary package is found you can build the package from sources using the '--build' option.
+
         EX: conan install opencv/2.4.10@lasote/testing
         """
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install",
@@ -357,10 +365,12 @@ path to the CMake binary directory, like this:
                             help='Install all packages from the specified package recipe')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--update", "-u", action='store_true', default=False,
-                            help="update with new upstream packages")
+                            help="update with new upstream packages, overwriting the local"
+                            " cache if needed.")
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
-                            help='Define scopes for packages')
-        parser.add_argument("--profile", "-pr", default=None, help='Define a profile')
+                            help='Use the specified scope in the install command')
+        parser.add_argument("--profile", "-pr", default=None,
+                            help='Apply the specified profile to the install command')
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("--werror", action='store_true', default=False,
@@ -445,9 +455,9 @@ path to the CMake binary directory, like this:
                                   no_imports=args.no_imports)
 
     def info(self, *args):
-        """ Prints information about the requirements.
-        Requirements can be defined in the command line or in a conanfile.
-        EX: conan info opencv/2.4.10@lasote/testing
+        """Prints information about a package recipe's dependency tree.
+You can use it for your current project (just point to the path if you want), or for any
+existing package in your local cache.
         """
         parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info",
                                          formatter_class=RawTextHelpFormatter)
@@ -455,12 +465,14 @@ path to the CMake binary directory, like this:
                             help='reference name or path to conanfile file, '
                             'e.g., MyPackage/1.2@user/channel or ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("-r", "--remote", help='look for in the remote storage')
+        parser.add_argument("-r", "--remote", help='look in the specified remote server')
         parser.add_argument("--options", "-o",
-                            help='load options to build the package, e.g., -o with_qt=true',
+                            help='Options to build the package, overwriting the defaults.'
+                                 ' e.g., -o with_qt=true',
                             nargs=1, action=Extender)
         parser.add_argument("--settings", "-s",
-                            help='load settings to build the package, -s compiler:gcc',
+                            help='Settings to build the package, overwriting the defaults.'
+                                 ' e.g., -s compiler=gcc',
                             nargs=1, action=Extender)
         parser.add_argument("--only", "-n",
                             help='show fields only')
@@ -472,9 +484,9 @@ path to the CMake binary directory, like this:
         parser.add_argument("--build", "-b", action=Extender, nargs="*",
                             help='given a build policy (same install command "build" parameter), '
                                  'return an ordered list of packages that would be built from '
-                                 'sources in install command')
+                                 'sources in install command (simulation)')
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
-                            help='Define scopes for packages')
+                            help='Use the specified scope in the info command')
         args = parser.parse_args(*args)
 
         options = self._get_tuples_list_from_extender_arg(args.options)
@@ -501,16 +513,17 @@ path to the CMake binary directory, like this:
                            scopes=scopes)
 
     def build(self, *args):
-        """ Calls your project conanfile.py "build" method.
-            E.g. conan build ./my_project
-            Intended for package creators, requires a conanfile.py.
+        """ Utility command to run your current project 'conanfile.py' `build()` method. It doesn't
+work for 'conanfile.txt'. It is convenient for automatic translation of conan settings and options,
+for example to CMake syntax, as it can be done by the CMake helper. It is also a good starting point
+if you would like to create a package from your current project.
         """
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
         parser.add_argument("path", nargs="?",
-                            help='path to user conanfile.py, e.g., conan build .',
+                            help='path to conanfile.py, e.g., conan build .',
                             default="")
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("--profile", "-pr", default=None, help='Define a profile')
+        parser.add_argument("--profile", "-pr", default=None, help='Apply a profile')
         args = parser.parse_args(*args)
         current_path = os.getcwd()
         if args.path:
@@ -520,18 +533,22 @@ path to the CMake binary directory, like this:
         self._manager.build(root_path, current_path, filename=args.file, profile_name=args.profile)
 
     def package(self, *args):
-        """ Calls your conanfile.py "package" method for a specific package recipe.
-            It will not create a new package, use 'install' or 'test_package' instead for
-            packages in the conan local cache, or `build' for conanfile.py in user space.
-            Intended for package creators, for regenerating a package without
-            recompiling the source, i.e. for troubleshooting,
-            and fixing the package() method, not normal operation. It requires
-            the package has been built locally, it will not re-package otherwise.
-            E.g. conan package MyPackage/1.2@user/channel 9cf83afd07b678da9c1645f605875400847ff3
+        """ Calls your conanfile.py "package" method for a specific package recipe. It
+won't create a new package, use 'install' or 'test_package' instead for
+creating packages in the conan local cache, or `build' for conanfile.py in user space.
 
-            When used in a user space project, it will execute from the build folder specified
-            as parameter, and the current directory. This is useful while creating package recipes
-            or just for extracting artifacts from the current project, without even being a package
+Intended for package creators, for regenerating a package without recompiling
+the source, i.e. for troubleshooting, and fixing the package() method, not
+normal operation.
+
+It requires the package has been built locally, it won't
+re-package otherwise. When used in a user space project, it
+will execute from the build folder specified as parameter, and the current
+directory. This is useful while creating package recipes or just for
+extracting artifacts from the current project, without even being a package
+
+This command also works locally, in the user space, and it will copy artifacts from the provided
+folder to the current one.
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("reference", help='package recipe reference '
@@ -540,7 +557,9 @@ path to the CMake binary directory, like this:
         parser.add_argument("package", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3'
-                                 ' If not specified, ALL binaries for this recipe are re-packaged')
+                                 ' This optional parameter is only used for the local conan '
+                                 'cache. If not specified, ALL binaries for this recipe are '
+                                 're-packaged')
 
         args = parser.parse_args(*args)
 
@@ -574,8 +593,16 @@ path to the CMake binary directory, like this:
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("reference", nargs='?', default="", help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
-        parser.add_argument("-f", "--force", default=False, action="store_true", help="force remove the source directory and run again.")
+        parser.add_argument("reference", nargs='?',
+                            default="",
+                            help="package recipe reference. e.g., MyPackage/1.2@user/channel "
+                                 "or ./my_project/")
+        parser.add_argument("-f", "--force", default=False,
+                            action="store_true",
+                            help="In the case of local cache, force the removal of the source"
+                                 " folder, then the execution and retrieval of the source code."
+                                 " Otherwise, if the code has already been retrieved, it will"
+                                 " do nothing.")
 
         args = parser.parse_args(*args)
 
@@ -583,17 +610,22 @@ path to the CMake binary directory, like this:
         self._manager.source(current_path, reference, args.force)
 
     def imports(self, *args):
-        """ Executes only the import functionality of the conanfile (txt or py). It requires
-        to have been previously installed and have a conanbuildinfo.txt generated file
+        """ Execute the ``imports`` stage of a conanfile.txt or a conanfile.py. It requires
+        to have been previously installed and have a conanbuildinfo.txt generated file.
         """
         parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
         parser.add_argument("reference", nargs='?', default="",
-                            help="package recipe reference. e.g., MyPackage/1.2@user/channel or ./my_project/")
-        parser.add_argument("--file", "-f", help="specify conanfile filename")
+                            help="Specify the location of the folder containing the conanfile."
+                            "By default it will be the current directory. It can also use a full "
+                            "reference e.g. openssl/1.0.2@lasote/testing and the recipe "
+                            "'imports()' for that package in the local conan cache will be used ")
+        parser.add_argument("--file", "-f", help="Use another filename, "
+                            "e.g.: conan imports -f=conanfile2.py")
         parser.add_argument("-d", "--dest",
-                            help="optional destination base directory, current dir by default")
+                            help="Directory to copy the artifacts to. By default it will be the"
+                                 " current directory")
         parser.add_argument("-u", "--undo", default=False, action="store_true",
-                            help="Undo the imports, remove files copied to project or user space")
+                            help="Undo imports. Remove imported files")
 
         args = parser.parse_args(*args)
 
@@ -609,9 +641,9 @@ path to the CMake binary directory, like this:
             self._manager.imports(current_path, reference, args.file, dest_folder)
 
     def export(self, *args):
-        """ Copies the package recipe (conanfile.py and associated files) to your local store,
+        """ Copies the package recipe (conanfile.py and associated files) to your local cache,
         where it can be shared and reused in other projects.
-        From that store, it can be uploaded to any remote with "upload" command.
+        From the local cache, it can be uploaded to any remote with the "upload" command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
         parser.add_argument("user", help='user_name[/channel]. By default, channel is '
@@ -620,7 +652,7 @@ path to the CMake binary directory, like this:
                             help='Optional. Folder with a %s. Default current directory.'
                             % CONANFILE)
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
-                            help='Optional. Do not remove the source folder in local store. '
+                            help='Optional. Do not remove the source folder in the local cache. '
                                  'Use for testing purposes only')
         args = parser.parse_args(*args)
 
@@ -629,7 +661,7 @@ path to the CMake binary directory, like this:
         self._manager.export(args.user, current_path, keep_source)
 
     def remove(self, *args):
-        """ Remove any package recipe or package from your local/remote store
+        """ Remove any package recipe folders matching a pattern, or their package and/or build folders.
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
         parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
@@ -643,7 +675,7 @@ path to the CMake binary directory, like this:
                             help='Remove source folders')
         parser.add_argument('-f', '--force', default=False,
                             action='store_true', help='Remove without requesting a confirmation')
-        parser.add_argument('-r', '--remote', help='Remote origin')
+        parser.add_argument('-r', '--remote', help='Will remove from the specified remote')
         args = parser.parse_args(*args)
 
         if args.packages:
@@ -655,7 +687,8 @@ path to the CMake binary directory, like this:
                              src=args.src, force=args.force, remote=args.remote)
 
     def copy(self, *args):
-        """ Copy package recipe and packages to another user/channel
+        """ Copy conan recipes and packages to another user/channel. Useful to promote packages (e.g. from "beta" to "stable"). 
+Also for moving packages from an user to another.
         """
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
         parser.add_argument("reference", default="",
@@ -683,14 +716,16 @@ path to the CMake binary directory, like this:
         self._manager.copy(reference, args.package, new_ref.user, new_ref.channel, args.force)
 
     def user(self, *parameters):
-        """ shows or change the current user """
+        """ Update your cached user name [and password] to avoid it being requested later, e.g. while you're uploading a package.
+You can have more than one user (one per remote). Changing the user, or introducing the password is only necessary to upload 
+packages to a remote. """
         parser = argparse.ArgumentParser(description=self.user.__doc__, prog="conan user")
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. '
                                  'If no name is provided it will show the current user.')
         parser.add_argument("-p", "--password", help='User password. Use double quotes '
                             'if password with spacing, and escape quotes if existing')
-        parser.add_argument("--remote", "-r", help='look for in the remote storage')
+        parser.add_argument("--remote", "-r", help='look in the specified remote server')
         parser.add_argument('-c', '--clean', default=False,
                             action='store_true', help='Remove user and tokens for all remotes')
         args = parser.parse_args(*parameters)  # To enable -h
@@ -703,14 +738,24 @@ path to the CMake binary directory, like this:
         self._manager.user(args.remote, args.name, args.password)
 
     def search(self, *args):
-        """ show local/remote packages
-        """
+        """ Search both package recipes and package binaries in the local cache or a remote server.
+If you provide a pattern, then it will search for existing package recipes matching that pattern.
+
+You can search in a remote or in the local cache, if nothing is specified, the local conan cache is
+assumed"""
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
-        parser.add_argument('pattern', nargs='?', help='Pattern name, e.g. openssl/* or package recipe reference if "-q" is used. e.g. MyPackage/1.2@user/channel')
+        parser.add_argument('pattern', nargs='?', help='Pattern name, e.g. openssl/* or package'
+                                                       ' recipe reference if "-q" is used. e.g. '
+                                                       'MyPackage/1.2@user/channel')
         parser.add_argument('--case-sensitive', default=False,
                             action='store_true', help='Make a case-sensitive search')
         parser.add_argument('-r', '--remote', help='Remote origin')
-        parser.add_argument('-q', '--query', default=None, help='Packages query: "os=Windows AND arch=x86". The "pattern" parameter has to be a package recipe reference: MyPackage/1.2@user/channel')
+        parser.add_argument('-q', '--query', default=None, help='Packages query: "os=Windows AND '
+                                                                '(arch=x86 OR compiler=gcc)".'
+                                                                ' The "pattern" parameter '
+                                                                'has to be a package recipe '
+                                                                'reference: MyPackage/1.2'
+                                                                '@user/channel')
         args = parser.parse_args(*args)
 
         reference = None
@@ -729,8 +774,7 @@ path to the CMake binary directory, like this:
                              packages_query=args.query)
 
     def upload(self, *args):
-        """ uploads a conanfile or binary packages from the local store to any remote.
-        To upload something, it should be "exported" first.
+        """ Uploads recipes and binary packages from your local cache to a remote server
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
@@ -761,7 +805,7 @@ path to the CMake binary directory, like this:
                              retry_wait=args.retry_wait)
 
     def remote(self, *args):
-        """ manage remotes
+        """ Handles the remote list and the package recipes associated to a remote.
         """
         parser = argparse.ArgumentParser(description=self.remote.__doc__, prog="conan remote")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
@@ -818,14 +862,19 @@ path to the CMake binary directory, like this:
             registry.update_ref(args.reference, args.remote)
 
     def profile(self, *args):
-        """ manage profiles
+        """ List all the profiles existing in the '.conan/profiles' folder, or show details for a given profile.
+The 'list' subcommand will always use the default user 'conan/profiles' folder. But the 
+'show' subcommand is able to resolve absolute and relative paths, as well as to map names to 
+'.conan/profiles' folder, in the same way as the '--profile' install argument.
         """
         parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
 
         # create the parser for the "profile" command
         subparsers.add_parser('list', help='list current profiles')
-        parser_show = subparsers.add_parser('show', help='show the values defined for a profile')
+        parser_show = subparsers.add_parser('show', help='show the values defined for a profile.'
+                                                         ' Can be a path (relative or absolute) to'
+                                                         ' a profile file in  any location.')
         parser_show.add_argument('profile',  help='name of the profile')
         args = parser.parse_args(*args)
 
