@@ -16,10 +16,6 @@ matrix:
         - language: generic
           os: osx
           env: PYVER=py27 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
-          
-        - language: generic
-          os: osx
-          env: PYVER=py33 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
         
         - language: generic
           os: osx
