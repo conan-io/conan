@@ -42,7 +42,7 @@ class FileTreeManifest(object):
         for md5line in tokens[1:]:
             if md5line:
                 filename, file_md5 = md5line.split(": ")
-                if not _discarded_file(filename):
+                if not discarded_file(filename):
                     file_sums[filename] = file_md5
         return FileTreeManifest(time, file_sums)
 
@@ -57,18 +57,17 @@ class FileTreeManifest(object):
         for root, dirs, files in os.walk(folder):
             dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
             relative_path = os.path.relpath(root, folder)
-            files = [f for f in files if f not in filterfiles]  # Avoid md5 of big TGZ files
+            files = [f for f in files if f not in filterfiles and not discarded_file(f)]  # Avoid md5 of big TGZ files
             for f in files:
-                if not _discarded_file(f):
-                    abs_path = os.path.join(root, f)
-                    rel_path = os.path.normpath(os.path.join(relative_path, f))
-                    rel_path = rel_path.replace("\\", "/")
-                    if os.path.exists(abs_path):
-                        file_dict[rel_path] = md5sum(abs_path)
-                    else:
-                        raise ConanException("The file is a broken symlink, verify that "
-                                             "you are packaging the needed destination files: '%s'"
-                                             % abs_path)
+                abs_path = os.path.join(root, f)
+                rel_path = os.path.normpath(os.path.join(relative_path, f))
+                rel_path = rel_path.replace("\\", "/")
+                if os.path.exists(abs_path):
+                    file_dict[rel_path] = md5sum(abs_path)
+                else:
+                    raise ConanException("The file is a broken symlink, verify that "
+                                         "you are packaging the needed destination files: '%s'"
+                                         % abs_path)
         date = calendar.timegm(time.gmtime())
 
         return cls(date, file_dict)
@@ -80,5 +79,5 @@ class FileTreeManifest(object):
         return not self.__eq__(other)
 
 
-def _discarded_file(filename):
-    return filename.endswith(".pyc") or filename.endswith("*.pyo")
+def discarded_file(filename):
+    return filename.endswith(".pyc") or filename.endswith(".pyo")
