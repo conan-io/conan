@@ -278,7 +278,9 @@ from conans import ConanFile
 class LoggerInterfaceConan(ConanFile):
     name = "LoggerInterface"
     version = "0.1.1"
-    requires = "log4cpp/[~1.1]@memsharded/testing"
+
+    def requirements(self):
+        self.requires("log4cpp/[~1.1]@memsharded/testing")
 """
         logiface_ref = ConanFileReference.loads("LoggerInterface/0.1.1@memsharded/testing")
         self.retriever.conan(logiface_ref, content)

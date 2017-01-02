@@ -303,7 +303,8 @@ path to the CMake binary directory, like this:
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
             # convert to list from ItemViews required for python3
-            conanfile.requirements()
+            if hasattr(conanfile, "requirements"):
+                conanfile.requirements()
             reqs = list(conanfile.requires.items())
             first_dep = reqs[0][1].conan_reference
         except Exception:
