@@ -244,7 +244,4 @@ class ConanFile(object):
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
-        result = []
-        result.append("name: %s" % self.name)
-        result.append("version: %s" % self.version)
-        return '\n'.join(result)
+        return 'Conanfile:%s/%s' % (self.name, self.version)

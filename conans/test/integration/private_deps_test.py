@@ -29,26 +29,40 @@ class PrivateDepsTest(unittest.TestCase):
         if upload:
             self.client.run("upload %s" % str(conan_ref))
 
+    def _export(self, name=0, version=None, deps=None):
+        files = cpp_hello_conan_files(name, version, deps,
+                                      private_includes=True, build=False,
+                                      cmake_targets=True)
+        self.client.save(files, clean_first=True)
+        self.client.run("export lasote/stable")
+
     def modern_cmake_test(self):
-        return
-        cmake_targets = True
-        settings = "-s compiler=gcc -s compiler.version=4.9 -s compiler.libcxx=libstdc++"
-        self._export_upload("Hello0", "0.1",  upload=False, cmake_targets=cmake_targets)
-        self._export_upload("Hello1", "0.1", deps=[("Hello0/0.1@lasote/stable", "private")],
-                            static=False, upload=False, cmake_targets=cmake_targets)
-        #self.client.run('install Hello1/0.1@lasote/stable --build missing %s' % settings)
-        #self.client.run("remove Hello0/0.1@lasote/stable -p -f")
-        self._export_upload("Hello2", "0.1", deps=[("Hello1/0.1@lasote/stable", ),  ("Hello0/0.1@lasote/stable", )],
-                            upload=False, cmake_targets=cmake_targets)
-        self.client.run("remove Hello2/0.1@lasote/stable -f")
+        self._export("zlib", "0.1")
+        self._export("libpng", "0.1", deps=["zlib/0.1@lasote/stable"])
+        self._export("glew", "0.1")
+        self._export("glm", "0.1")
+        self._export("imgui", "0.1")
+        self._export("gf", "0.1", deps=["glew/0.1@lasote/stable",
+                                        "glm/0.1@lasote/stable",
+                                        "libpng/0.1@lasote/stable"])
+
+        self._export("ImGuiTest", "0.1", deps=["glew/0.1@lasote/stable",
+                                               "gf/0.1@lasote/stable",
+                                               "glm/0.1@lasote/stable",
+                                               "imgui/0.1@lasote/stable"])
+
+        # Consuming project
+        self._export("Project", "0.1", deps=["ImGuiTest/0.1@lasote/stable"])
 
         # Build packages for both recipes
-        self.client.run('install . %s --build=missing' % settings, ignore_error=True)
-        #print self.client.user_io.out
-        #print "\n\nFILE\n", load(os.path.join(self.client.current_folder, "conanbuildinfo.cmake"))
-        self.client.run('build',  ignore_error=True)
-        #print self.client.user_io.out
+        self.client.run('install . --build=missing')
+        conanbuildinfo_cmake = load(os.path.join(self.client.current_folder,
+                                                 "conanbuildinfo.cmake"))
 
+        self.assertIn("CONAN_PKG::ImGuiTest PROPERTY INTERFACE_LINK_LIBRARIES "
+                      "${CONAN_FULLPATH_LIBS_IMGUITEST} CONAN_PKG::gf CONAN_PKG::imgui "
+                      "CONAN_PKG::glew CONAN_PKG::glm CONAN_PKG::libpng CONAN_PKG::zlib",
+                      conanbuildinfo_cmake)
 
     def consumer_force_build_test(self):
         """If a conanfile requires another private conanfile, but in the install is forced

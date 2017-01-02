@@ -84,23 +84,6 @@ class DepsGraph(object):
         result = [n for n in neighbors if n.conan_ref in public_requires]
         return result
 
-    def private_inverse_neighbors(self, node):
-        """ return nodes connected to a given one (inversely), by a private requirement
-        """
-        neighbors = self._inverse_neighbors[node]
-        result = []
-        for n in neighbors:
-            _, conanfile = n
-            for req in conanfile.requires.values():
-                if req.conan_reference == node.conan_ref:
-                    if req.private:
-                        result.append(n)
-        return result
-
-    def __repr__(self):
-        return "\n".join(["Nodes:\n    ",
-                          "\n    ".join(repr(n) for n in self.nodes)])
-
     def propagate_info(self):
         """ takes the exports from upper level and updates the imports
         right now also the imports are propagated, but should be checked
@@ -338,10 +321,9 @@ class DepsGraphBuilder(object):
                 # maybe we could move these functionality to here and build only the graph
                 # with the nodes to be took in account
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name)
-                if new_node:
-                    # RECURSION!
-                    self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
-                                    new_options.copy(), new_loop_ancestors)
+                # RECURSION!
+                self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
+                                new_options.copy(), new_loop_ancestors)
             else:  # a public node already exist with this name
                 if previous_node.conan_ref != require.conan_reference:
                     self._output.werror("Conflict in %s\n"
@@ -395,12 +377,10 @@ class DepsGraphBuilder(object):
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
-        if dep_conanfile:
-            new_node = Node(requirement.conan_reference, dep_conanfile)
-            dep_graph.add_node(new_node)
-            dep_graph.add_edge(current_node, new_node)
-            if not requirement.private:
-                public_deps[name_req] = new_node
-            return new_node
-        else:
-            self._output.error("Could not retrieve %s" % requirement.conan_reference)
+
+        new_node = Node(requirement.conan_reference, dep_conanfile)
+        dep_graph.add_node(new_node)
+        dep_graph.add_edge(current_node, new_node)
+        if not requirement.private:
+            public_deps[name_req] = new_node
+        return new_node
