@@ -97,7 +97,8 @@ class ConanInstaller(object):
         nodes_by_level = deps_graph.by_levels()
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         nodes = self._get_nodes(nodes_by_level, skip_private_nodes, build_mode)
-        return [(conan_ref, conan_file) for conan_ref, conan_file, build in nodes if build]
+        return [(PackageReference(conan_ref, package_id), conan_file)
+                for conan_ref, package_id, conan_file, build in nodes if build]
 
     def _build(self, nodes_by_level, skip_private_nodes, build_mode):
         """ The build assumes an input of conans ordered by degree, first level
@@ -123,14 +124,14 @@ class ConanInstaller(object):
         # Get the nodes in order and if we have to build them
         nodes_to_process = self._get_nodes(nodes_by_level, skip_private_nodes, build_mode)
 
-        for conan_ref, conan_file, build_needed in nodes_to_process:
+        for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
 
             if build_needed:
                 build_allowed = self._build_allowed(conan_ref, build_mode, conan_file)
                 if not build_allowed:
                     self._raise_package_not_found_error(conan_ref, conan_file)
                 output = ScopedOutput(str(conan_ref), self._out)
-                package_ref = PackageReference(conan_ref, conan_file.info.package_id())
+                package_ref = PackageReference(conan_ref, package_id)
                 package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
                 if build_mode is True:
                     output.info("Building package from source as defined by build_policy='missing'")
@@ -175,6 +176,7 @@ class ConanInstaller(object):
 
         nodes_to_build = []
         # Now build each level, starting from the most independent one
+        package_references = set()
         for level in nodes_by_level:
             for node in level:
                 if node in skip_nodes:
@@ -185,19 +187,23 @@ class ConanInstaller(object):
                 # is not inside the storage but in a user folder, and thus its
                 # treatment is different
                 build_node = False
+                package_id = None
                 if conan_ref:
                     logger.debug("Processing node %s" % repr(conan_ref))
                     package_id = conan_file.info.package_id()
                     package_reference = PackageReference(conan_ref, package_id)
-                    check_outdated = self._check_outdated(build_mode)
-                    if self._build_forced(conan_ref, build_mode, conan_file):
-                        build_node = True
-                    else:
-                        build_node = not self._remote_proxy.package_available(package_reference,
-                                                                              conan_file.short_paths,
-                                                                              check_outdated)
+                    # Avoid processing twice the same package reference
+                    if package_reference not in package_references:
+                        package_references.add(package_reference)
+                        check_outdated = self._check_outdated(build_mode)
+                        if self._build_forced(conan_ref, build_mode, conan_file):
+                            build_node = True
+                        else:
+                            build_node = not self._remote_proxy.package_available(package_reference,
+                                                                                  conan_file.short_paths,
+                                                                                  check_outdated)
 
-                nodes_to_build.append((conan_ref, conan_file, build_node))
+                nodes_to_build.append((conan_ref, package_id, conan_file, build_node))
 
         return nodes_to_build
 

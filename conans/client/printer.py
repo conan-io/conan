@@ -2,7 +2,6 @@ from conans.client.output import Color
 from conans.model.ref import PackageReference
 from conans.model.ref import ConanFileReference
 from collections import OrderedDict
-import datetime
 
 
 class Printer(object):

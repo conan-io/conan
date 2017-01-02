@@ -1,6 +1,6 @@
 import os
 import time
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, CONANENV)
 from conans.client.loader import ConanFileLoader
@@ -226,7 +226,10 @@ class ConanManager(object):
         if build_mode is not False:  # sim_install is a policy or list of names (same as install build param)
             installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
             nodes = installer.nodes_to_build(deps_graph, build_mode)
-            self._user_io.out.info(", ".join(str(ref) for ref, _ in nodes))
+            counter = Counter(ref.conan.name for ref, _ in nodes)
+            self._user_io.out.info(", ".join((str(ref)
+                                              if counter[ref.conan.name] > 1 else str(ref.conan))
+                                             for ref, _ in nodes))
             return
 
         if check_updates:

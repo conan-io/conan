@@ -16,7 +16,8 @@ class InfoTest(unittest.TestCase):
     def _export(self, name=0, version=None, deps=None):
         client = TestClient(servers=self.servers, users={"default": [("lu", "mypass")]})
         self.clients[name] = client
-        files = cpp_hello_conan_files(name, version, deps)
+        # Not necessary to actually build binaries
+        files = cpp_hello_conan_files(name, version, deps, build=False)
         client.save(files, clean_first=True)
         client.run("export lu/st")
         client.run("upload %s/%s@lu/st" % (name, version))
@@ -64,7 +65,7 @@ class InfoTest(unittest.TestCase):
         # If we install H3 we need to build all except H1b
         self.clients["H3"].run("info --build missing")
         self.assert_last_line(self.clients["H3"],
-                              "H0/0.1@lu/st, H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
+                              "H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
 
         # If we install H0 we need to build nothing (current project)
         self.clients["H0"].run("info --build missing")
@@ -89,7 +90,7 @@ class InfoTest(unittest.TestCase):
         self.clients["H3"].run("remove '*' -f")
         self.clients["H3"].run("info --build")
         self.assert_last_line(self.clients["H3"],
-                              "H0/0.1@lu/st, H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
+                              "H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
 
         # Now upgrade the recipe H1a and upload it (but not the package)
         # so the package become outdated
