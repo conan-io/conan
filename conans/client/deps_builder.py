@@ -77,29 +77,12 @@ class DepsGraph(object):
     def public_neighbors(self, node):
         """ return nodes with direct reacheability by public dependencies
         """
-        neighbors = self.neighbors(node)
+        neighbors = self._neighbors[node]
         _, conanfile = node
 
         public_requires = [r.conan_reference for r in conanfile.requires.values() if not r.private]
         result = [n for n in neighbors if n.conan_ref in public_requires]
         return result
-
-    def private_inverse_neighbors(self, node):
-        """ return nodes connected to a given one (inversely), by a private requirement
-        """
-        neighbors = self.inverse_neighbors(node)
-        result = []
-        for n in neighbors:
-            _, conanfile = n
-            for req in conanfile.requires.values():
-                if req.conan_reference == node.conan_ref:
-                    if req.private:
-                        result.append(n)
-        return result
-
-    def __repr__(self):
-        return "\n".join(["Nodes:\n    ",
-                          "\n    ".join(repr(n) for n in self.nodes)])
 
     def propagate_info(self):
         """ takes the exports from upper level and updates the imports
@@ -115,7 +98,7 @@ class DepsGraph(object):
         for level in ordered:
             for node in level:
                 _, conanfile = node
-                neighbors = self.neighbors(node)
+                neighbors = self._neighbors[node]
                 direct_reqs = []  # of PackageReference
                 indirect_reqs = set()   # of PackageReference, avoid duplicates
                 for nref, nconan in neighbors:
@@ -145,7 +128,7 @@ class DepsGraph(object):
 
     def ordered_closure(self, node, flat):
         closure = set()
-        current = self.neighbors(node)
+        current = self._neighbors[node]
         while current:
             new_current = set()
             for n in current:
@@ -166,7 +149,7 @@ class DepsGraph(object):
             new_current = set()
             for n in current:
                 closure.add(n)
-                new_neighs = self.inverse_neighbors(n)
+                new_neighs = self._inverse_neighbors[n]
                 to_add = set(new_neighs).difference(current)
                 new_current.update(to_add)
             current = new_current
@@ -183,30 +166,12 @@ class DepsGraph(object):
         return result
 
     def by_levels(self):
-        """ order by node degree. The first level will be the one which nodes dont have
-        dependencies. Second level will be with nodes that only have dependencies to
-        first level nodes, and so on
-        return [[node1, node34], [node3], [node23, node8],...]
-        """
-        current_level = []
-        result = [current_level]
-        opened = self.nodes.copy()
-        while opened:
-            current = opened.copy()
-            for o in opened:
-                o_neighs = self._neighbors[o]
-                if not any(n in opened for n in o_neighs):
-                    current_level.append(o)
-                    current.discard(o)
-            current_level.sort()
-            # now initialize new level
-            opened = current
-            if opened:
-                current_level = []
-                result.append(current_level)
-        return result
+        return self._order_levels(self._neighbors)
 
     def inverse_levels(self):
+        return self._order_levels(self._inverse_neighbors)
+
+    def _order_levels(self, neighbours):
         """ order by node degree. The first level will be the one which nodes dont have
         dependencies. Second level will be with nodes that only have dependencies to
         first level nodes, and so on
@@ -218,7 +183,7 @@ class DepsGraph(object):
         while opened:
             current = opened.copy()
             for o in opened:
-                o_neighs = self._inverse_neighbors[o]
+                o_neighs = neighbours[o]
                 if not any(n in opened for n in o_neighs):
                     current_level.append(o)
                     current.discard(o)
@@ -245,7 +210,7 @@ class DepsGraph(object):
                 if node in built_private_nodes:
                     neighbors = self.public_neighbors(node)
                 else:
-                    neighbors = self.neighbors(node)
+                    neighbors = self._neighbors[node]
                 new_open_nodes.update(set(neighbors).difference(closure))
                 closure.update(neighbors)
             open_nodes = new_open_nodes
@@ -266,7 +231,7 @@ class DepsGraph(object):
         while open_nodes:
             new_open_nodes = set()
             for node in open_nodes:
-                neighbors = self.neighbors(node)
+                neighbors = self._neighbors[node]
                 requires = node.conanfile.requires
                 for n in neighbors:
                     requirement = requires[n.conan_ref.name]
@@ -356,10 +321,9 @@ class DepsGraphBuilder(object):
                 # maybe we could move these functionality to here and build only the graph
                 # with the nodes to be took in account
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name)
-                if new_node:
-                    # RECURSION!
-                    self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
-                                    new_options.copy(), new_loop_ancestors)
+                # RECURSION!
+                self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
+                                new_options.copy(), new_loop_ancestors)
             else:  # a public node already exist with this name
                 if previous_node.conan_ref != require.conan_reference:
                     self._output.werror("Conflict in %s\n"
@@ -413,12 +377,10 @@ class DepsGraphBuilder(object):
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
-        if dep_conanfile:
-            new_node = Node(requirement.conan_reference, dep_conanfile)
-            dep_graph.add_node(new_node)
-            dep_graph.add_edge(current_node, new_node)
-            if not requirement.private:
-                public_deps[name_req] = new_node
-            return new_node
-        else:
-            self._output.error("Could not retrieve %s" % requirement.conan_reference)
+
+        new_node = Node(requirement.conan_reference, dep_conanfile)
+        dep_graph.add_node(new_node)
+        dep_graph.add_edge(current_node, new_node)
+        if not requirement.private:
+            public_deps[name_req] = new_node
+        return new_node
