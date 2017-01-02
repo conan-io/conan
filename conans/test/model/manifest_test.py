@@ -37,7 +37,8 @@ class ManifestTest(unittest.TestCase):
         tmp_dir = temp_folder()
         save(os.path.join(tmp_dir, "man.txt"), "1478122267\nconanfile.pyc: "
                                                "2bcac725a0e6843ef351f4d18cf867ec\n"
-                                               "conanfile.py: 2bcac725a0e6843ef351f4d18cf867ec")
+                                               "conanfile.py: 2bcac725a0e6843ef351f4d18cf867ec",
+                                               "conanfile.pyo: 2bcac725a0e6843ef351f4d18cf867ec")
 
         read_manifest = FileTreeManifest.loads(load(os.path.join(tmp_dir, "man.txt")))
         # Not included the pycs or pyo
