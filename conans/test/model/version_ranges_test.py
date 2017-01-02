@@ -260,3 +260,65 @@ class ChatConan(ConanFile):
         self.assertEqual(conanfile.name, "Hello")
         say_ref = ConanFileReference.loads("Say/%s@memsharded/testing" % solution)
         self.assertEqual(conanfile.requires, Requirements(str(say_ref)))
+
+    def duplicated_error_test(self):
+        content = """
+from conans import ConanFile
+
+class Log3cppConan(ConanFile):
+    name = "log4cpp"
+    version = "1.1.1"
+"""
+        log4cpp_ref = ConanFileReference.loads("log4cpp/1.1.1@memsharded/testing")
+        self.retriever.conan(log4cpp_ref, content)
+
+        content = """
+from conans import ConanFile
+
+class LoggerInterfaceConan(ConanFile):
+    name = "LoggerInterface"
+    version = "0.1.1"
+    requires = "log4cpp/[~1.1]@memsharded/testing"
+"""
+        logiface_ref = ConanFileReference.loads("LoggerInterface/0.1.1@memsharded/testing")
+        self.retriever.conan(logiface_ref, content)
+
+        content = """
+from conans import ConanFile
+
+class OtherConan(ConanFile):
+    name = "other"
+    version = "2.0.11549"
+    requires = "LoggerInterface/[~0.1]@memsharded/testing"
+"""
+        other_ref = ConanFileReference.loads("other/2.0.11549@memsharded/testing")
+        self.retriever.conan(other_ref, content)
+
+        content = """
+from conans import ConanFile
+
+class Project(ConanFile):
+    requires = "LoggerInterface/[~0.1]@memsharded/testing", "other/[~2.0]@memsharded/testing"
+"""
+        deps_graph = self.root(content)
+
+        log4cpp = _get_nodes(deps_graph, "log4cpp")[0]
+        logger_interface = _get_nodes(deps_graph, "LoggerInterface")[0]
+        other = _get_nodes(deps_graph, "other")[0]
+
+        self.assertEqual(4, len(deps_graph.nodes))
+
+        self.assertEqual(log4cpp.conan_ref, log4cpp_ref)
+        conanfile = log4cpp.conanfile
+        self.assertEqual(conanfile.version, "1.1.1")
+        self.assertEqual(conanfile.name, "log4cpp")
+
+        self.assertEqual(logger_interface.conan_ref, logiface_ref)
+        conanfile = logger_interface.conanfile
+        self.assertEqual(conanfile.version, "0.1.1")
+        self.assertEqual(conanfile.name, "LoggerInterface")
+
+        self.assertEqual(other.conan_ref, other_ref)
+        conanfile = other.conanfile
+        self.assertEqual(conanfile.version, "2.0.11549")
+        self.assertEqual(conanfile.name, "other")
