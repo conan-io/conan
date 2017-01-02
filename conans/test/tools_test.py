@@ -183,7 +183,7 @@ class HelloConan(ConanFile):
                            retry=3, retry_wait=0)
 
         # Not found error
-        self.assertIn("Waiting 0 seconds to retry...\nWaiting 0 seconds to retry...", str(out))
+        self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
         with self.assertRaisesRegexp(ConanException, "Error 404 downloading file"):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,

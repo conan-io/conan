@@ -30,7 +30,8 @@ from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.log import logger
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, load, save_files
+from conans.util.files import rmdir, load, save_files, decode_text,\
+    exception_message_safe
 from conans.util.config_parser import get_bool_from_text_value
 from conans.client.printer import Printer
 
@@ -938,10 +939,10 @@ The 'list' subcommand will always use the default user 'conan/profiles' folder. 
             logger.error(exc)
             errors = True
         except ConanException as exc:
-            msg = str(exc)
-#             import traceback
-#             logger.debug(traceback.format_exc())
+            # import traceback
+            # logger.debug(traceback.format_exc())
             errors = True
+            msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
 
         return errors

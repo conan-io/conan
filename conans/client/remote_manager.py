@@ -57,6 +57,7 @@ class RemoteManager(object):
 
         self._output.rewrite_line("Checking package integrity...")
         if CONANINFO not in rel_files or CONAN_MANIFEST not in rel_files:
+            logger.error("Missing info or manifest in uploading files: %s" % (str(rel_files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
 
         the_files = {filename: os.path.join(package_folder, filename) for filename in rel_files}
@@ -82,6 +83,8 @@ class RemoteManager(object):
                     os.unlink(tgz_path)
                 except Exception:
                     pass
+            logger.error("Manifests doesn't match!: %s != %s" % (str(read_manifest.file_sums),
+                                                                 str(expected_manifest.file_sums)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
         else:
             self._output.rewrite_line("Package integrity OK!")
