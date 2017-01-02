@@ -13,6 +13,7 @@ from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE,
     rm_conandir
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
+from conans.model.manifest import discarded_file
 
 
 class RemoteManager(object):
@@ -57,23 +58,15 @@ class RemoteManager(object):
 
         self._output.rewrite_line("Checking package integrity...")
         if CONANINFO not in rel_files or CONAN_MANIFEST not in rel_files:
+            logger.error("Missing info or manifest in uploading files: %s" % (str(rel_files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
 
-        the_files = {filename: os.path.join(package_folder, filename) for filename in rel_files}
+        the_files = {filename: os.path.join(package_folder, filename) for filename in rel_files if
+                     not discarded_file(filename)}
         logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         # If package has been modified remove tgz to regenerate it
         read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
-
-        # Deals with the problem of generated .pyc, which is an issue for python packages
-        # TODO: refactor and improve the reading files + Manifests prior to upload for both
-        # recipes and packages
-        diff = set(expected_manifest.file_sums.keys()).difference(read_manifest.file_sums.keys())
-        for d in diff:
-            if d.endswith(".pyc"):
-                del expected_manifest.file_sums[d]
-                # It has to be in files, otherwise couldn't be in expected_manifest
-                del the_files[d]
 
         if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
             if PACKAGE_TGZ_NAME in the_files:
@@ -82,6 +75,8 @@ class RemoteManager(object):
                     os.unlink(tgz_path)
                 except Exception:
                     pass
+            logger.error("Manifests doesn't match!: %s != %s" % (str(read_manifest.file_sums),
+                                                                 str(expected_manifest.file_sums)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
         else:
             self._output.rewrite_line("Package integrity OK!")

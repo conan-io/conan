@@ -4,6 +4,7 @@ from conans.model.ref import PackageReference, is_a_reference,\
     ConanFileReference
 from conans.util.log import logger
 import time
+from conans.util.files import exception_message_safe
 
 
 class ConanUploader(object):
@@ -99,6 +100,7 @@ def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
             if counter == (retry - 1):
                 raise
             else:
-                logger.error(exc)
+                msg = exception_message_safe(exc)
+                out.error(msg)
                 out.info("Waiting %d seconds to retry..." % retry_wait)
                 time.sleep(retry_wait)

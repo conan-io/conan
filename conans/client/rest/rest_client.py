@@ -27,7 +27,8 @@ def handle_return_deserializer(deserializer=None):
             ret = method(*argc, **argv)
             if ret.status_code != 200:
                 ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-                raise get_exception_from_error(ret.status_code)(ret.text)
+                text = ret.text if ret.status_code != 404 else "404 Not found"
+                raise get_exception_from_error(ret.status_code)(text)
             return deserializer(ret.content) if deserializer else decode_text(ret.content)
         return inner
     return handle_return
