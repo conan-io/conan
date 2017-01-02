@@ -32,3 +32,14 @@ class ManifestTest(unittest.TestCase):
         for filepath, md5readed in manifest.file_sums.items():
             content = files[filepath]
             self.assertEquals(md5(content), md5readed)
+
+    def already_pyc_in_manifest_test(self):
+        tmp_dir = temp_folder()
+        save(os.path.join(tmp_dir, "man.txt"), "1478122267\nconanfile.pyc: "
+                                               "2bcac725a0e6843ef351f4d18cf867ec\n"
+                                               "conanfile.py: 2bcac725a0e6843ef351f4d18cf867ec")
+
+        read_manifest = FileTreeManifest.loads(load(os.path.join(tmp_dir, "man.txt")))
+        # Not included the pycs or pyo
+        self.assertEquals(set(read_manifest.file_sums.keys()),
+                          set(["conanfile.py"]))
