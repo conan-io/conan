@@ -219,14 +219,14 @@ class ConanProxy(object):
 
         raise ConanException("No remote defined")
 
-    def upload_conan(self, conan_reference):
+    def upload_conan(self, conan_reference, retry, retry_wait):
         """ upload to defined remote in (-r=remote), to current remote
         or to default remote, in that order.
         If the remote is not set, set it
         """
         remote, ref_remote = self._get_remote(conan_reference)
 
-        result = self._remote_manager.upload_conan(conan_reference, remote)
+        result = self._remote_manager.upload_conan(conan_reference, remote, retry, retry_wait)
         if not ref_remote:
             self._registry.set_ref(conan_reference, remote)
         return result
@@ -243,13 +243,13 @@ class ConanProxy(object):
                 remote = self._registry.default_remote
         return remote, ref_remote
 
-    def upload_package(self, package_ref):
+    def upload_package(self, package_ref, retry, retry_wait):
         remote, current_remote = self._get_remote(package_ref.conan)
 
         if not current_remote:
             self._out.warn("Remote for '%s' not defined, uploading to %s"
                            % (str(package_ref.conan), remote.name))
-        result = self._remote_manager.upload_package(package_ref, remote)
+        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait)
         if not current_remote:
             self._registry.set_ref(package_ref.conan, remote)
         return result

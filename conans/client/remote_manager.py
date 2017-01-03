@@ -6,8 +6,9 @@ import traceback
 
 from requests.exceptions import ConnectionError
 
-from conans.errors import ConanException, ConanConnectionError, UploadException
-from conans.util.files import tar_extract, relative_dirs, rmdir
+from conans.errors import ConanException, ConanConnectionError
+from conans.util.files import tar_extract, relative_dirs, rmdir,\
+    exception_message_safe
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
     rm_conandir
@@ -24,7 +25,7 @@ class RemoteManager(object):
         self._output = output
         self._remote_client = remote_client
 
-    def upload_conan(self, conan_reference, remote):
+    def upload_conan(self, conan_reference, remote, retry, retry_wait):
         """Will upload the conans to the first remote"""
         export_folder = self._client_cache.export(conan_reference)
         rel_files = relative_dirs(export_folder)
@@ -37,7 +38,8 @@ class RemoteManager(object):
         the_files = compress_conan_files(the_files, export_folder, EXPORT_TGZ_NAME,
                                          CONANFILE, self._output)
 
-        ret = self._call_remote(remote, "upload_conan", conan_reference, the_files)
+        ret = self._call_remote(remote, "upload_conan", conan_reference, the_files, 
+                                retry, retry_wait)
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
         # FIXME: server dependent
         if remote.url == "https://server.conan.io":
@@ -48,7 +50,7 @@ class RemoteManager(object):
 
         return ret
 
-    def upload_package(self, package_reference, remote):
+    def upload_package(self, package_reference, remote, retry, retry_wait):
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
@@ -92,7 +94,8 @@ class RemoteManager(object):
         the_files = compress_conan_files(the_files, package_folder, PACKAGE_TGZ_NAME,
                                          CONANINFO, self._output)
 
-        tmp = self._call_remote(remote, "upload_package", package_reference, the_files)
+        tmp = self._call_remote(remote, "upload_package", package_reference, the_files, 
+                                retry, retry_wait)
         logger.debug("====> Time remote_manager upload_package: %f" % (time.time() - t1))
         return tmp
 
@@ -186,11 +189,8 @@ class RemoteManager(object):
         except ConnectionError as exc:
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))
-        except UploadException as exc:
-            msg = "Execute upload again to retry upload the failed files: [%s]" % str(exc)
-            raise ConanException("Upload to remote '%s' failed! %s" % (remote.name, msg))
-        except ConanException:
-            raise
+        except ConanException as exc:
+            raise exc.__class__("%s. [Remote: %s]" % (exception_message_safe(exc), remote.name))
         except Exception as exc:
             logger.error(traceback.format_exc())
             raise ConanException(exc)

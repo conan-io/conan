@@ -1,9 +1,9 @@
 from conans.errors import ConanException, ConanConnectionError
 from conans.util.log import logger
 import traceback
-from conans.util.files import save, sha1sum
+from conans.util.files import save, sha1sum, exception_message_safe
 import os
-from conans.client.uploader import call_with_retry
+import time
 
 
 class Uploader(object):
@@ -14,7 +14,7 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, abs_path, auth=None, dedup=False):
+    def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0):
         if dedup:
             headers = {"X-Checksum-Deploy": "true",
                        "X-Checksum-Sha1": sha1sum(abs_path)}
@@ -32,8 +32,19 @@ class Uploader(object):
         # Now it will print progress in each iteration
         iterable_to_file = IterableToFileAdapter(it, file_size)
         # Now it is prepared to work with request
-        ret = self.requester.put(url, data=iterable_to_file, verify=self.verify, headers=None, auth=auth)
+        ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
+                              data=iterable_to_file, headers=None, auth=auth)
+
         return ret
+
+    def _upload_file(self, url, data,  headers, auth):
+        try:
+            response = self.requester.put(url, data=data, verify=self.verify,
+                                          headers=headers, auth=auth)
+        except Exception as exc:
+            raise ConanException(exception_message_safe(exc))
+
+        return response
 
 
 class IterableToFileAdapter(object):
@@ -146,7 +157,7 @@ class Downloader(object):
         try:
             response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
         except Exception as exc:
-            raise ConanException("Error downloading file %s: %s" % (url, str(exc)))
+            raise ConanException("Error downloading file %s: '%s'" % (url, exception_message_safe(exc)))
 
         return response
 
@@ -158,3 +169,17 @@ def progress_units(progress, total):
 def print_progress(output, units):
     if output.is_terminal():
         output.rewrite_line("[%s%s]" % ('=' * units, ' ' * (50 - units)))
+
+
+def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
+    for counter in range(retry):
+        try:
+            return method(*args, **kwargs)
+        except ConanException as exc:
+            if counter == (retry - 1):
+                raise
+            else:
+                msg = exception_message_safe(exc)
+                out.error(msg)
+                out.info("Waiting %d seconds to retry..." % retry_wait)
+                time.sleep(retry_wait)
