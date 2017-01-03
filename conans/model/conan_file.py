@@ -188,9 +188,6 @@ class ConanFile(object):
     def source(self):
         pass
 
-    def requirements(self):
-        pass
-
     def system_requirements(self):
         """ this method can be overwritten to implement logic for system package
         managers, as apt-get
