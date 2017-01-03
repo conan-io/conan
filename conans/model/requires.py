@@ -92,7 +92,8 @@ class Requirements(OrderedDict):
 
     def copy(self):
         """ We need a custom copy as the normal one requires __init__ to be
-        properly defined
+        properly defined. This is not a deep-copy, in fact, requirements in the dict
+        are changed by RequireResolver, and are propagated upstream
         """
         result = Requirements()
         for name, req in self.items():

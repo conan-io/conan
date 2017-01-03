@@ -301,7 +301,9 @@ class DepsGraphBuilder(object):
         new_reqs, new_options = self._config_node(conanfile, conanref, down_reqs, down_ref,
                                                   down_options)
 
-        # Expand each one of the current requirements
+        # Resolve possible version ranges of the current node requirements
+        # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
+        # RequireResolver are also done in new_reqs, and then propagated!
         for name, require in conanfile.requires.items():
             self._resolver.resolve(require, conanref)
 
@@ -364,8 +366,13 @@ class DepsGraphBuilder(object):
                 # it could happen that one execution path of requirements() defines a package
                 # and another one a different package raising Duplicate dependency error
                 # Or the two consecutive calls, adding 2 different dependencies for the two paths
-                # requirements is then MUTUALLY EXCLUSIVE with "requires" field
-                conanfile.requires.clear()
+                # So it is necessary to save the "requires" state and restore it before a second
+                # execution of requirements(). It is a shallow copy, if first iteration is
+                # RequireResolve'd or overridden, the inner requirements are modified
+                if not hasattr(conanfile, "_original_requires"):
+                    conanfile._original_requires = conanfile.requires.copy()
+                else:
+                    conanfile.requires = conanfile._original_requires.copy()
                 conanfile.requirements()
 
             new_options = conanfile.options.values
