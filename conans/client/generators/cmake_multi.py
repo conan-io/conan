@@ -53,16 +53,16 @@ class CMakeMultiGenerator(Generator):
                                   CONAN_FULLPATH_LIBS_{uname}_RELEASE)
 
     add_library({name} INTERFACE IMPORTED)
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES {deps} $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}}>
-                                                                      $<$<CONFIG:Debug>:${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES {deps} $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
+                                                                      $<$<CONFIG:Debug>:${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG}}>)
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:Debug>:${{CONAN_INCLUDE_DIRS_{uname}_DEBUG}}>)
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS $<$<CONFIG:Release>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:Debug>:${{CONAN_COMPILE_DEFINITIONS_{uname}_DEBUG}}>)
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS $<$<CONFIG:Release>:${{CONAN_CFLAGS_{uname}_RELEASE}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE}}>
                                                                   $<$<CONFIG:Debug>:${{CONAN_CFLAGS_{uname}_DEBUG}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG}}>)
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS $<$<CONFIG:Release>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
-                                                             $<$<CONFIG:Debug>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG}}  ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG}}>)
+    # set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS $<$<CONFIG:Release>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
+    #                                                         $<$<CONFIG:Debug>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG}}  ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG}}>)
 """
         existing_deps = self.deps_build_info.deps
 
