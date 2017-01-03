@@ -154,8 +154,8 @@ class UploadTest(unittest.TestCase):
         client.run("export frodo/stable")
         client.run("upload Hello* --confirm --retry 1 --retry_wait=1", ignore_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
-        self.assertIn("ERROR: Upload to remote 'default' failed! Execute upload again"
-                      " to retry upload the failed files: [conanmanifest.txt]", client.user_io.out)
+        self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
+                      "conanmanifest.txt. [Remote: default]", client.user_io.out)
 
         # Try with broken connection even with 10 retries
         client = self._get_client(TerribleConnectionUploader)
@@ -164,21 +164,16 @@ class UploadTest(unittest.TestCase):
         client.run("export frodo/stable")
         client.run("upload Hello* --confirm --retry 10 --retry_wait=0", ignore_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
-        self.assertIn("ERROR: Upload to remote 'default' failed! Execute upload again"
-                      " to retry upload the failed files", client.user_io.out)
+        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.user_io.out)
 
-        # Try the package retry, will fail the pair files, we can do it with 3 attempts
+        # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
         client.run("upload Hello* --confirm --retry 3 --retry_wait=0 --all")
-        self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
-        self.assertIn("Error uploading file: conan_export.tgz, 'Pair file, error!'",
-                      client.user_io.out)
-        self.assertIn("Error uploading file: conan_package.tgz, 'Pair file, error!'",
-                      client.user_io.out)
+        self.assertEquals(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")
