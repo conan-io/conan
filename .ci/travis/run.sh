@@ -10,4 +10,4 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     pyenv activate conan
 fi
 
-nosetests --with-coverage
+nosetests --with-coverage conans.test
