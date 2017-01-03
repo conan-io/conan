@@ -43,12 +43,10 @@ from conans import ConanFile
 class HelloConan2(ConanFile):
     name = "test"
     version = "1.9"
+    requires = "lib/0.1@user/channel"
     options = {"test_option": [1, 2, 3]}
     default_options="test_option=2"
     my_flag = False
-
-    def requirements(self):
-        self.requires("lib/0.1@user/channel")
 
     def build(self):
         self.output.info("MyFlag %s" % self.my_flag)
@@ -64,7 +62,6 @@ class DevConanFile(HelloConan2):
         self.options["otherlib"].otherlib_option = 1
 
     def requirements(self):
-        super(DevConanFile, self).requirements()
         self.requires("otherlib/0.2@user/channel")
 
     '''
