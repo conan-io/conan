@@ -5,7 +5,6 @@ import re
 import sys
 import os
 import requests
-from argparse import RawTextHelpFormatter
 from collections import defaultdict
 
 from conans import __version__ as CLIENT_VERSION
@@ -30,7 +29,8 @@ from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.log import logger
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, load, save_files
+from conans.util.files import rmdir, load, save_files, decode_text,\
+    exception_message_safe
 from conans.util.config_parser import get_bool_from_text_value
 from conans.client.printer import Printer
 
@@ -179,10 +179,10 @@ path to the CMake binary directory, like this:
  """ % (test_folder_name))
 
     def new(self, *args):
-        """ create a new package template conanfile.py and other optional files
+        """Creates a new package recipe template with a 'conanfile.py'.
+        And optionally, 'test_package' package testing files.
         """
-        parser = argparse.ArgumentParser(description=self.new.__doc__, prog="conan new",
-                                         formatter_class=RawTextHelpFormatter)
+        parser = argparse.ArgumentParser(description=self.new.__doc__, prog="conan new")
         parser.add_argument("name", help='Package name, e.g.: Poco/1.7.3@user/testing')
         parser.add_argument("-t", "--test", action='store_true', default=False,
                             help='Create test_package skeleton to test package')
@@ -225,17 +225,19 @@ path to the CMake binary directory, like this:
             self._user_io.out.success("File saved: %s" % f)
 
     def test_package(self, *args):
-        """ build and run your package test. Must have conanfile.py with "test"
-        method and "test_package" subfolder with package consumer test project
+        """ Export, build package and test it with a consumer project.
+        The consumer project must have a 'conanfile.py' with a 'test()' method, and should be
+        located in a subfolder, named 'test_package` by default. It must 'require' the package
+        under testing.
         """
         parser = argparse.ArgumentParser(description=self.test_package.__doc__,
-                                         prog="conan test_package",
-                                         formatter_class=RawTextHelpFormatter)
+                                         prog="conan test_package")
         parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
                             'e.g. /my_project/')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile before test execution')
-        parser.add_argument("-f", "--folder", help='alternative test folder name')
+        parser.add_argument("-f", "--folder",
+                            help='alternative test folder name, by default is "test_package"')
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Use the specified scope in the install command')
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
@@ -302,7 +304,8 @@ path to the CMake binary directory, like this:
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
             # convert to list from ItemViews required for python3
-            conanfile.requirements()
+            if hasattr(conanfile, "requirements"):
+                conanfile.requirements()
             reqs = list(conanfile.requires.items())
             first_dep = reqs[0][1].conan_reference
         except Exception:
@@ -347,15 +350,14 @@ path to the CMake binary directory, like this:
 
     def install(self, *args):
         """Installs the requirements specified in a 'conanfile.py' or 'conanfile.txt'.
-It can also be used to install a concrete recipe/package specified by the reference parameter.
-If the recipe is not found in the local cache it will retrieve the recipe from the remotes sequentially.
-When the recipe has been downloaded it will try to download a binary package matching the specified settings.
-If no binary package is found you can build the package from sources using the '--build' option.
-
-        EX: conan install opencv/2.4.10@lasote/testing
+        It can also be used to install a concrete recipe/package specified by the reference parameter.
+        If the recipe is not found in the local cache it will retrieve the recipe from a remote,
+        looking for it sequentially in the available configured remotes.
+        When the recipe has been downloaded it will try to download a binary package matching
+        the specified settings, only from the remote from which the recipe was retrieved.
+        If no binary package is found you can build the package from sources using the '--build' option.
         """
-        parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install",
-                                         formatter_class=RawTextHelpFormatter)
+        parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
         parser.add_argument("reference", nargs='?', default="",
                             help='package recipe reference'
                             'e.g., MyPackage/1.2@user/channel or ./my_project/')
@@ -455,12 +457,11 @@ If no binary package is found you can build the package from sources using the '
                                   no_imports=args.no_imports)
 
     def info(self, *args):
-        """Prints information about a package recipe's dependency tree.
-You can use it for your current project (just point to the path if you want), or for any
-existing package in your local cache.
+        """Prints information about a package recipe's dependency graph.
+        You can use it for your current project (just point to the path of your conanfile
+        if you want), or for any existing package in your local cache.
         """
-        parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info",
-                                         formatter_class=RawTextHelpFormatter)
+        parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info")
         parser.add_argument("reference", nargs='?', default="",
                             help='reference name or path to conanfile file, '
                             'e.g., MyPackage/1.2@user/channel or ./my_project/')
@@ -513,10 +514,11 @@ existing package in your local cache.
                            scopes=scopes)
 
     def build(self, *args):
-        """ Utility command to run your current project 'conanfile.py' `build()` method. It doesn't
-work for 'conanfile.txt'. It is convenient for automatic translation of conan settings and options,
-for example to CMake syntax, as it can be done by the CMake helper. It is also a good starting point
-if you would like to create a package from your current project.
+        """ Utility command to run your current project 'conanfile.py' build() method.
+        It doesn't work for 'conanfile.txt'. It is convenient for automatic translation
+        of conan settings and options, for example to CMake syntax, as it can be done by
+        the CMake helper. It is also a good starting point if you would like to create
+        a package from your current project.
         """
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
         parser.add_argument("path", nargs="?",
@@ -533,22 +535,22 @@ if you would like to create a package from your current project.
         self._manager.build(root_path, current_path, filename=args.file, profile_name=args.profile)
 
     def package(self, *args):
-        """ Calls your conanfile.py "package" method for a specific package recipe. It
-won't create a new package, use 'install' or 'test_package' instead for
-creating packages in the conan local cache, or `build' for conanfile.py in user space.
+        """ Calls your conanfile.py 'package' method for a specific package recipe.
+        It won't create a new package, use 'install' or 'test_package' instead for
+        creating packages in the conan local cache, or 'build' for conanfile.py in user space.
 
-Intended for package creators, for regenerating a package without recompiling
-the source, i.e. for troubleshooting, and fixing the package() method, not
-normal operation.
+        Intended for package creators, for regenerating a package without recompiling
+        the source, i.e. for troubleshooting, and fixing the package() method, not
+        normal operation.
 
-It requires the package has been built locally, it won't
-re-package otherwise. When used in a user space project, it
-will execute from the build folder specified as parameter, and the current
-directory. This is useful while creating package recipes or just for
-extracting artifacts from the current project, without even being a package
+        It requires the package has been built locally, it won't
+        re-package otherwise. When used in a user space project, it
+        will execute from the build folder specified as parameter, and the current
+        directory. This is useful while creating package recipes or just for
+        extracting artifacts from the current project, without even being a package
 
-This command also works locally, in the user space, and it will copy artifacts from the provided
-folder to the current one.
+        This command also works locally, in the user space, and it will copy artifacts from the provided
+        folder to the current one.
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("reference", help='package recipe reference '
@@ -589,7 +591,7 @@ folder to the current one.
         return current_path, reference
 
     def source(self, *args):
-        """ Calls your conanfile.py "source" method to configure the source directory.
+        """ Calls your conanfile.py 'source()' method to configure the source directory.
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
@@ -610,8 +612,8 @@ folder to the current one.
         self._manager.source(current_path, reference, args.force)
 
     def imports(self, *args):
-        """ Execute the ``imports`` stage of a conanfile.txt or a conanfile.py. It requires
-        to have been previously installed and have a conanbuildinfo.txt generated file.
+        """ Execute the 'imports' stage of a conanfile.txt or a conanfile.py.
+        It requires to have been previously installed and have a conanbuildinfo.txt generated file.
         """
         parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
         parser.add_argument("reference", nargs='?', default="",
@@ -641,9 +643,9 @@ folder to the current one.
             self._manager.imports(current_path, reference, args.file, dest_folder)
 
     def export(self, *args):
-        """ Copies the package recipe (conanfile.py and associated files) to your local cache,
-        where it can be shared and reused in other projects.
-        From the local cache, it can be uploaded to any remote with the "upload" command.
+        """ Copies the package recipe (conanfile.py and associated files) to your local cache.
+        From the local cache it can be shared and reused in other projects.
+        Also, from the local cache, it can be uploaded to any remote with the "upload" command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
         parser.add_argument("user", help='user_name[/channel]. By default, channel is '
@@ -661,7 +663,9 @@ folder to the current one.
         self._manager.export(args.user, current_path, keep_source)
 
     def remove(self, *args):
-        """ Remove any package recipe folders matching a pattern, or their package and/or build folders.
+        """Remove any package recipe or binary matching a pattern.
+        It can also be used to remove temporary source or build folders in the local conan cache.
+        If no remote is specified, the removal will be done by default in the local conan cache.
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
         parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
@@ -687,8 +691,9 @@ folder to the current one.
                              src=args.src, force=args.force, remote=args.remote)
 
     def copy(self, *args):
-        """ Copy conan recipes and packages to another user/channel. Useful to promote packages (e.g. from "beta" to "stable"). 
-Also for moving packages from an user to another.
+        """ Copy conan recipes and packages to another user/channel.
+        Useful to promote packages (e.g. from "beta" to "stable").
+        Also for moving packages from one user to another.
         """
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
         parser.add_argument("reference", default="",
@@ -716,9 +721,11 @@ Also for moving packages from an user to another.
         self._manager.copy(reference, args.package, new_ref.user, new_ref.channel, args.force)
 
     def user(self, *parameters):
-        """ Update your cached user name [and password] to avoid it being requested later, e.g. while you're uploading a package.
-You can have more than one user (one per remote). Changing the user, or introducing the password is only necessary to upload 
-packages to a remote. """
+        """ Update your cached user name (and auth token) to avoid it being requested later.
+        e.g. while you're uploading a package.
+        You can have more than one user (one per remote). Changing the user, or introducing the
+        password is only necessary to upload packages to a remote.
+        """
         parser = argparse.ArgumentParser(description=self.user.__doc__, prog="conan user")
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. '
@@ -738,11 +745,11 @@ packages to a remote. """
         self._manager.user(args.remote, args.name, args.password)
 
     def search(self, *args):
-        """ Search both package recipes and package binaries in the local cache or a remote server.
-If you provide a pattern, then it will search for existing package recipes matching that pattern.
-
-You can search in a remote or in the local cache, if nothing is specified, the local conan cache is
-assumed"""
+        """ Search package recipes and binaries in the local cache or in a remote server.
+        If you provide a pattern, then it will search for existing package recipes matching that pattern.
+        You can search in a remote or in the local cache, if nothing is specified, the local conan cache is
+        assumed
+        """
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
         parser.add_argument('pattern', nargs='?', help='Pattern name, e.g. openssl/* or package'
                                                        ' recipe reference if "-q" is used. e.g. '
@@ -774,7 +781,7 @@ assumed"""
                              packages_query=args.query)
 
     def upload(self, *args):
-        """ Uploads recipes and binary packages from your local cache to a remote server
+        """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
@@ -862,10 +869,10 @@ assumed"""
             registry.update_ref(args.reference, args.remote)
 
     def profile(self, *args):
-        """ List all the profiles existing in the '.conan/profiles' folder, or show details for a given profile.
-The 'list' subcommand will always use the default user 'conan/profiles' folder. But the 
-'show' subcommand is able to resolve absolute and relative paths, as well as to map names to 
-'.conan/profiles' folder, in the same way as the '--profile' install argument.
+        """ List profiles in the '.conan/profiles' folder, or show profile details.
+        The 'list' subcommand will always use the default user 'conan/profiles' folder. But the
+        'show' subcommand is able to resolve absolute and relative paths, as well as to map names to
+        '.conan/profiles' folder, in the same way as the '--profile' install argument.
         """
         parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
@@ -938,10 +945,10 @@ The 'list' subcommand will always use the default user 'conan/profiles' folder. 
             logger.error(exc)
             errors = True
         except ConanException as exc:
-            msg = str(exc)
-#             import traceback
-#             logger.debug(traceback.format_exc())
+            # import traceback
+            # logger.debug(traceback.format_exc())
             errors = True
+            msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
 
         return errors

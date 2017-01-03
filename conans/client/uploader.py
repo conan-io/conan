@@ -43,8 +43,7 @@ class ConanUploader(object):
             self._check_package_date(conan_ref)
 
         self._user_io.out.info("Uploading %s" % str(conan_ref))
-        call_with_retry(self._user_io.out, retry, retry_wait,
-                        self._remote_proxy.upload_conan, conan_ref)
+        self._remote_proxy.upload_conan(conan_ref, retry, retry_wait)
 
         if all_packages:
             self.check_reference(conan_ref)
@@ -71,9 +70,7 @@ class ConanUploader(object):
         msg = ("Uploading package %d/%d: %s" % (index, total, str(package_ref.package_id)))
         t1 = time.time()
         self._user_io.out.info(msg)
-
-        call_with_retry(self._user_io.out, retry, retry_wait,
-                        self._remote_proxy.upload_package, package_ref)
+        self._remote_proxy.upload_package(package_ref, retry, retry_wait)
 
         logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
 
@@ -89,16 +86,3 @@ class ConanUploader(object):
             raise ConanException("Remote recipe is newer than local recipe: "
                                  "\n Remote date: %s\n Local date: %s" %
                                  (remote_conan_digest.time, local_digest.time))
-
-
-def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
-    for counter in range(retry):
-        try:
-            return method(*args, **kwargs)
-        except ConanException as exc:
-            if counter == (retry - 1):
-                raise
-            else:
-                logger.error(exc)
-                out.info("Waiting %d seconds to retry..." % retry_wait)
-                time.sleep(retry_wait)

@@ -221,9 +221,9 @@ class RestApiTest(unittest.TestCase):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_package(package_reference, abs_paths)
+        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0)
 
-    def _upload_conan(self, conan_reference, base_files=None):
+    def _upload_conan(self, conan_reference, base_files=None, retry=1, retry_wait=0):
 
         files = hello_source_files(3, [1, 12])
         if base_files:
@@ -248,4 +248,4 @@ class MyConan(ConanFile):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_conan(conan_reference, abs_paths)
+        self.api.upload_conan(conan_reference, abs_paths, retry, retry_wait)

@@ -1,5 +1,5 @@
 from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
-    ConanException, UploadException
+    ConanException
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
@@ -27,7 +27,8 @@ def handle_return_deserializer(deserializer=None):
             ret = method(*argc, **argv)
             if ret.status_code != 200:
                 ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-                raise get_exception_from_error(ret.status_code)(ret.text)
+                text = ret.text if ret.status_code != 404 else "404 Not found"
+                raise get_exception_from_error(ret.status_code)(text)
             return deserializer(ret.content) if deserializer else decode_text(ret.content)
         return inner
     return handle_return
@@ -169,7 +170,7 @@ class RestApiClient(object):
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def upload_conan(self, conan_reference, the_files):
+    def upload_conan(self, conan_reference, the_files, retry, retry_wait):
         """
         the_files: dict with relative_path: content
         """
@@ -190,11 +191,11 @@ class RestApiClient(object):
             filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
                          for filename, abs_path in files_to_upload.items()}
             urls = self._get_json(url, data=filesizes)
-            self.upload_files(urls, files_to_upload, self._output)
+            self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
-    def upload_package(self, package_reference, the_files):
+    def upload_package(self, package_reference, the_files, retry, retry_wait):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload
@@ -220,7 +221,7 @@ class RestApiClient(object):
             urls = self._get_json(url, data=filesizes)
             self._output.rewrite_line("Requesting upload permissions...Done!")
             self._output.writeln("")
-            self.upload_files(urls, files_to_upload, self._output)
+            self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         else:
             self._output.rewrite_line("Package is up to date.")
             self._output.writeln("")
@@ -443,7 +444,7 @@ class RestApiClient(object):
             ret[filename] = abs_path
         return ret
 
-    def upload_files(self, file_urls, files, output):
+    def upload_files(self, file_urls, files, output, retry, retry_wait):
         t1 = time.time()
         failed = []
         uploader = Uploader(self.requester, output, self.verify_ssl)
@@ -453,7 +454,8 @@ class RestApiClient(object):
             output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
-                response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup)
+                response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
+                                           retry=retry, retry_wait=retry_wait)
                 output.writeln("")
                 if not response.ok:
                     output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
@@ -465,7 +467,6 @@ class RestApiClient(object):
                 failed.append(filename)
 
         if failed:
-            logger.debug(failed)
-            raise UploadException(", ".join(failed))
+            raise ConanException("Execute upload again to retry upload the failed files: %s" % ", ".join(failed))
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))

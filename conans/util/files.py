@@ -229,3 +229,10 @@ def list_folder_subdirs(basedir="", level=None):
         else:
             ret.append("/".join(dir_split))
     return ret
+
+
+def exception_message_safe(exc):
+    try:
+        return str(exc)
+    except:
+        return decode_text(repr(exc))
