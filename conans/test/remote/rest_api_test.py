@@ -6,15 +6,15 @@ from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
 import sys
 from conans.client.output import ConanOutput, Color
 from conans.model.info import ConanInfo
-import os
 from conans.server.test.utils.server_launcher import TestServerLauncher
 import requests
-from conans.model.manifest import FileTreeManifest
-from conans.util.files import md5, save
 from conans.test.utils.test_files import temp_folder
 from conans.model.version import Version
 from conans.server.rest.bottle_plugins.version_checker import VersionCheckerPlugin
 import platform
+import os
+from conans.util.files import md5, save
+from conans.model.manifest import FileTreeManifest
 
 
 class RestApiTest(unittest.TestCase):
@@ -88,6 +88,32 @@ class RestApiTest(unittest.TestCase):
         package = self.api.get_package(package_reference, tmp_dir)
         self.assertIsNotNone(package)
         self.assertIn("hello.cpp", package)
+
+    def get_package_info_test(self):
+        # Upload a conans
+        conan_reference = ConanFileReference.loads("conan3/1.0.0@private_user/testing")
+        self._upload_conan(conan_reference)
+
+        # Upload an package
+        package_reference = PackageReference(conan_reference, "1F23223EFDA")
+        conan_info = """[settings]
+    arch=x86_64
+    compiler=gcc
+    os=Linux
+[options]
+    386=False
+[requires]
+    Hello
+    Bye/2.9
+    Say/2.1@user/testing
+    Chat/2.1@user/testing:SHA_ABC
+"""
+        self._upload_package(package_reference, {CONANINFO: conan_info})
+
+        # Get the package info
+        info = self.api.get_package_info(package_reference)
+        self.assertIsInstance(info, ConanInfo)
+        self.assertEquals(info, ConanInfo.loads(conan_info))
 
     def upload_huge_conan_test(self):
         if platform.system() != "Windows":
@@ -195,9 +221,9 @@ class RestApiTest(unittest.TestCase):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_package(package_reference, abs_paths)
+        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0)
 
-    def _upload_conan(self, conan_reference, base_files=None):
+    def _upload_conan(self, conan_reference, base_files=None, retry=1, retry_wait=0):
 
         files = hello_source_files(3, [1, 12])
         if base_files:
@@ -222,4 +248,4 @@ class MyConan(ConanFile):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_conan(conan_reference, abs_paths)
+        self.api.upload_conan(conan_reference, abs_paths, retry, retry_wait)

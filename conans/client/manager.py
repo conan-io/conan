@@ -1,11 +1,11 @@
 import os
 import time
-from collections import OrderedDict
+from collections import OrderedDict, Counter
 
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, CONANENV)
 from conans.client.loader import ConanFileLoader
 from conans.client.export import export_conanfile
-from conans.client.deps_builder import DepsBuilder
+from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.userio import UserIO
 from conans.client.installer import ConanInstaller
 from conans.util.files import save, load, rmdir, normalize
@@ -181,7 +181,7 @@ class ConanManager(object):
         # build deps graph and install it
         local_search = None if update else self._search_manager
         resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
-        builder = DepsBuilder(remote_proxy, self._user_io.out, loader, resolver)
+        builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         deps_graph = builder.load(None, conanfile)
         # These lines are so the conaninfo stores the correct complete info
         if is_txt:
@@ -196,7 +196,7 @@ class ConanManager(object):
 
     def info(self, reference, current_path, remote=None, options=None, settings=None,
              info=None, filename=None, update=False, check_updates=False, scopes=None,
-             build_order=None, package_settings=None):
+             build_order=None, build_mode=None, package_settings=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -205,21 +205,41 @@ class ConanManager(object):
         @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
         @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
         """
+
+        def read_dates(deps_graph):
+            ret = {}
+            for ref, _ in sorted(deps_graph.nodes):
+                if ref:
+                    manifest = self._client_cache.load_manifest(ref)
+                    ret[ref] = manifest.time_str
+            return ret
+
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, None, scopes, package_settings, None, None)
-        (builder, deps_graph, project_reference, registry, _, _, _) = objects
+        (builder, deps_graph, project_reference, registry, _, remote_proxy, _) = objects
 
         if build_order:
             result = deps_graph.build_order(build_order)
             self._user_io.out.info(", ".join(str(s) for s in result))
             return
+
+        if build_mode is not False:  # sim_install is a policy or list of names (same as install build param)
+            installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
+            nodes = installer.nodes_to_build(deps_graph, build_mode)
+            counter = Counter(ref.conan.name for ref, _ in nodes)
+            self._user_io.out.info(", ".join((str(ref)
+                                              if counter[ref.conan.name] > 1 else str(ref.conan))
+                                             for ref, _ in nodes))
+            return
+
         if check_updates:
             graph_updates_info = builder.get_graph_updates_info(deps_graph)
         else:
             graph_updates_info = {}
+
         Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                               info, registry, graph_updates_info,
-                                              remote)
+                                              remote, read_dates(deps_graph))
 
     def read_profile(self, profile_name, cwd):
         if not profile_name:
@@ -500,30 +520,25 @@ If not:
             trace = traceback.format_exc().split('\n')
             raise ConanException("Unable to build it successfully\n%s" % '\n'.join(trace[3:]))
 
-    def upload(self, conan_reference, package_id=None, remote=None, all_packages=None,
-               force=False):
+    def upload(self, conan_reference_or_pattern, package_id=None, remote=None, all_packages=None,
+               force=False, confirm=False, retry=0, retry_wait=0):
+        """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
 
         t1 = time.time()
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-        uploader = ConanUploader(self._client_cache, self._user_io, remote_proxy)
-
-        # Load conanfile to check if the build policy is set to always
-        try:
-            conanfile_path = self._client_cache.conanfile(conan_reference)
-            conan_file = self._loader().load_class(conanfile_path)
-        except NotFoundException:
-            raise NotFoundException("There is no local conanfile exported as %s"
-                                    % str(conan_reference))
-
-        # Can't use build_policy_always here because it's not loaded (only load_class)
-        if conan_file.build_policy == "always" and (all_packages or package_id):
-            raise ConanException("Conanfile has build_policy='always', "
-                                 "no packages can be uploaded")
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
+                                  remote)
+        uploader = ConanUploader(self._client_cache, self._user_io, remote_proxy,
+                                 self._search_manager, self._loader())
 
         if package_id:  # Upload package
-            uploader.upload_package(PackageReference(conan_reference, package_id))
+            ref = ConanFileReference.loads(conan_reference_or_pattern)
+            uploader.check_reference(ref)
+            uploader.upload_package(PackageReference(ref, package_id), retry=retry,
+                                    retry_wait=retry_wait)
         else:  # Upload conans
-            uploader.upload_conan(conan_reference, all_packages=all_packages, force=force)
+            uploader.upload_conan(conan_reference_or_pattern, all_packages=all_packages,
+                                  force=force, confirm=confirm,
+                                  retry=retry, retry_wait=retry_wait)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 

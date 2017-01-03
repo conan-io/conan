@@ -5,6 +5,7 @@ from conans.paths import CONANFILE, CONANINFO
 from conans.model.ref import ConanFileReference
 from conans.util.files import load
 import os
+from conans import tools
 
 
 class SettingsOverrideTest(unittest.TestCase):
@@ -67,6 +68,19 @@ class SettingsOverrideTest(unittest.TestCase):
 
         self.assertIn("COMPILER=> MinGWBuild Visual Studio", self.client.user_io.out)
         self.assertIn("COMPILER=> VisualBuild Visual Studio", self.client.user_io.out)
+
+    def test_override_setting_with_env_variables(self):
+        files = cpp_hello_conan_files(name="VisualBuild",
+                                      version="0.1", build=False, deps=["MinGWBuild/0.1@lasote/testing"])
+        self._patch_build_to_print_compiler(files)
+        self.client.save(files)
+        self.client.run("export lasote/testing")
+        with tools.environment_append({"CONAN_ENV_COMPILER": "Visual Studio",
+                                       "CONAN_ENV_COMPILER_VERSION": "14",
+                                       "CONAN_ENV_COMPILER_RUNTIME": "MD"}):
+            self.client.run("install VisualBuild/0.1@lasote/testing --build missing")
+
+        self.assertIn("COMPILER=> MinGWBuild Visual Studio", self.client.user_io.out)
 
     def _patch_build_to_print_compiler(self, files):
         files[CONANFILE] = files[CONANFILE] + '''

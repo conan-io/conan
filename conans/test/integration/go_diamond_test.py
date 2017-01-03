@@ -5,8 +5,10 @@ import platform
 import os
 from conans.test.utils.context_manager import CustomEnvPath
 from conans.test.utils.test_files import hello_conan_files
+from nose.plugins.attrib import attr
 
 
+@attr('golang')
 class GoDiamondTest(unittest.TestCase):
 
     def setUp(self):

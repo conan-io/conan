@@ -7,12 +7,14 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError
-from conans.util.files import tar_extract, relative_dirs, rmdir
+from conans.util.files import tar_extract, relative_dirs, rmdir,\
+    exception_message_safe
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
     rm_conandir
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
+from conans.model.manifest import discarded_file
 
 
 class RemoteManager(object):
@@ -23,7 +25,7 @@ class RemoteManager(object):
         self._output = output
         self._remote_client = remote_client
 
-    def upload_conan(self, conan_reference, remote):
+    def upload_conan(self, conan_reference, remote, retry, retry_wait):
         """Will upload the conans to the first remote"""
         export_folder = self._client_cache.export(conan_reference)
         rel_files = relative_dirs(export_folder)
@@ -36,9 +38,19 @@ class RemoteManager(object):
         the_files = compress_conan_files(the_files, export_folder, EXPORT_TGZ_NAME,
                                          CONANFILE, self._output)
 
-        return self._call_remote(remote, "upload_conan", conan_reference, the_files)
+        ret = self._call_remote(remote, "upload_conan", conan_reference, the_files, 
+                                retry, retry_wait)
+        msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
+        # FIXME: server dependent
+        if remote.url == "https://server.conan.io":
+            msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
+        else:
+            msg += ": %s" % remote.url
+        self._output.info(msg)
 
-    def upload_package(self, package_reference, remote):
+        return ret
+
+    def upload_package(self, package_reference, remote, retry, retry_wait):
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
@@ -48,31 +60,31 @@ class RemoteManager(object):
 
         self._output.rewrite_line("Checking package integrity...")
         if CONANINFO not in rel_files or CONAN_MANIFEST not in rel_files:
+            logger.error("Missing info or manifest in uploading files: %s" % (str(rel_files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
 
-        the_files = {filename: os.path.join(package_folder, filename) for filename in rel_files}
+        the_files = {filename: os.path.join(package_folder, filename) for filename in rel_files if
+                     not discarded_file(filename)}
         logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         # If package has been modified remove tgz to regenerate it
         read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
 
-        # Deals with the problem of generated .pyc, which is an issue for python packages
-        # TODO: refactor and improve the reading files + Manifests prior to upload for both
-        # recipes and packages
-        diff = set(expected_manifest.file_sums.keys()).difference(read_manifest.file_sums.keys())
-        for d in diff:
-            if d.endswith(".pyc"):
-                del expected_manifest.file_sums[d]
-                # It has to be in files, otherwise couldn't be in expected_manifest
-                del the_files[d]
-
         if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
+            self._output.writeln("")
+            for fname in read_manifest.file_sums.keys():
+                if read_manifest.file_sums[fname] != expected_manifest.file_sums[fname]:
+                    self._output.warn("Mismatched checksum for file %s (checksum: %s, expected: %s)" %
+                                      (fname, read_manifest.file_sums[fname], expected_manifest.file_sums[fname]))
+
             if PACKAGE_TGZ_NAME in the_files:
                 try:
                     tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
                     os.unlink(tgz_path)
                 except Exception:
                     pass
+            logger.error("Manifests doesn't match!: %s != %s" % (str(read_manifest.file_sums),
+                                                                 str(expected_manifest.file_sums)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
         else:
             self._output.rewrite_line("Package integrity OK!")
@@ -82,7 +94,8 @@ class RemoteManager(object):
         the_files = compress_conan_files(the_files, package_folder, PACKAGE_TGZ_NAME,
                                          CONANINFO, self._output)
 
-        tmp = self._call_remote(remote, "upload_package", package_reference, the_files)
+        tmp = self._call_remote(remote, "upload_package", package_reference, the_files, 
+                                retry, retry_wait)
         logger.debug("====> Time remote_manager upload_package: %f" % (time.time() - t1))
         return tmp
 
@@ -101,6 +114,14 @@ class RemoteManager(object):
 
         returns (ConanDigest, remote_name)"""
         return self._call_remote(remote, "get_package_digest", package_reference)
+
+    def get_package_info(self, package_reference, remote):
+        """
+        Read a package ConanInfo from remotes
+        Will iterate the remotes to find the conans unless remote was specified
+
+        returns (ConanInfo, remote_name)"""
+        return self._call_remote(remote, "get_package_info", package_reference)
 
     def get_recipe(self, conan_reference, dest_folder, remote):
         """
@@ -168,8 +189,8 @@ class RemoteManager(object):
         except ConnectionError as exc:
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))
-        except ConanException:
-            raise
+        except ConanException as exc:
+            raise exc.__class__("%s. [Remote: %s]" % (exception_message_safe(exc), remote.name))
         except Exception as exc:
             logger.error(traceback.format_exc())
             raise ConanException(exc)

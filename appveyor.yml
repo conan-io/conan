@@ -3,7 +3,6 @@ build: false
 environment:
   matrix:
     - PYTHON: "C:\\Python27"
-    - PYTHON: "C:\\Python33"
     - PYTHON: "C:\\Python34"
     - PYTHON: "C:\\Python35"
 
@@ -11,6 +10,7 @@ init:
   - "ECHO %PYTHON%"
 
 install:
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
   - "set CONAN_LOGGING_LEVEL=10"
   - "set CONAN_COMPILER=Visual Studio"
@@ -20,4 +20,8 @@ install:
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt"
 
 test_script:
-  - "%PYTHON%/Scripts/nosetests"
+  - "nosetests --with-coverage"
+  
+after_test:
+  - "codecov"
+ 

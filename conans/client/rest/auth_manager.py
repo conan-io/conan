@@ -127,12 +127,12 @@ class ConanApiAuthManager(object):
     # ######### CONAN API METHODS ##########
 
     @input_credentials_if_unauthorized
-    def upload_conan(self, conan_reference, the_files):
-        return self._rest_client.upload_conan(conan_reference, the_files)
+    def upload_conan(self, conan_reference, the_files, retry, retry_wait):
+        return self._rest_client.upload_conan(conan_reference, the_files, retry, retry_wait)
 
     @input_credentials_if_unauthorized
-    def upload_package(self, package_reference, the_files):
-        return self._rest_client.upload_package(package_reference, the_files)
+    def upload_package(self, package_reference, the_files, retry, retry_wait):
+        return self._rest_client.upload_package(package_reference, the_files, retry, retry_wait)
 
     @input_credentials_if_unauthorized
     def get_conan_digest(self, conan_reference):
@@ -149,6 +149,10 @@ class ConanApiAuthManager(object):
     @input_credentials_if_unauthorized
     def get_package(self, package_reference, dest_folder):
         return self._rest_client.get_package(package_reference, dest_folder)
+
+    @input_credentials_if_unauthorized
+    def get_package_info(self, package_reference):
+        return self._rest_client.get_package_info(package_reference)
 
     @input_credentials_if_unauthorized
     def search(self, pattern, ignorecase):

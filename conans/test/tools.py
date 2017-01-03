@@ -291,6 +291,7 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
         self.servers = servers or {}
@@ -386,12 +387,8 @@ class TestClient(object):
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
     def init_dynamic_vars(self, user_io=None):
-
-        self._init_collaborators(user_io)
-
         # Migration system
         self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
-                                                         manager=self.remote_manager,
                                                          storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations
@@ -422,6 +419,8 @@ class TestClient(object):
         if not ignore_error and error:
             logger.error(self.user_io.out)
             raise Exception("Command failed:\n%s" % command_line)
+
+        self.all_output += str(self.user_io.out)
         return error
 
     def save(self, files, path=None, clean_first=False):

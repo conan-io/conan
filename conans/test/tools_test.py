@@ -4,9 +4,11 @@ import os
 from conans.test.utils.test_files import temp_folder
 from conans import tools
 from conans.test.utils.visual_project_files import get_vs_project_files
-from conans.test.tools import TestClient
+from conans.test.tools import TestClient, TestBufferConanOutput
 from conans.paths import CONANFILE
 import platform
+from requests.exceptions import ConnectionError
+from conans.errors import ConanException
 
 
 class RunnerMock(object):
@@ -170,3 +172,27 @@ class HelloConan(ConanFile):
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertTrue("Debug|x86", client.user_io.out)
         self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+
+    def download_retries_test(self):
+        out = TestBufferConanOutput()
+
+        # Connection error
+        with self.assertRaisesRegexp(ConanException, "HTTPConnectionPool"):
+            tools.download("http://fakeurl3.es/nonexists",
+                           os.path.join(temp_folder(), "file.txt"), out=out,
+                           retry=3, retry_wait=0)
+
+        # Not found error
+        self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
+        with self.assertRaisesRegexp(ConanException, "Error 404 downloading file"):
+            tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
+                           os.path.join(temp_folder(), "README.txt"), out=out,
+                           retry=3, retry_wait=0)
+
+        # And OK
+        dest = os.path.join(temp_folder(), "README.txt")
+        tools.download("https://raw.githubusercontent.com/conan-io/conan/develop/README.rst",
+                       dest, out=out,
+                       retry=3, retry_wait=0)
+
+        self.assertTrue(os.path.exists(dest))

@@ -40,7 +40,7 @@ class Printer(object):
         self._out.writeln("")
 
     def print_info(self, deps_graph, project_reference, _info, registry, graph_updates_info=None,
-                   remote=None):
+                   remote=None, node_times=None):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -107,6 +107,10 @@ class Printer(object):
                 }
                 self._out.writeln("    Updates: %s" % update_messages[update][0],
                                   update_messages[update][1])
+
+            if node_times and node_times.get(ref, None):
+                self._out.writeln("    Creation date: %s" % node_times.get(ref, None), 
+                                  Color.BRIGHT_GREEN)
 
             dependants = deps_graph.inverse_neighbors(node)
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes

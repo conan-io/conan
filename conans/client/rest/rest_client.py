@@ -3,7 +3,7 @@ from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
-from conans.paths import CONANFILE, CONAN_MANIFEST
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
 from conans.util.files import decode_text, md5sum
@@ -14,6 +14,7 @@ from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
+from conans.model.info import ConanInfo
 
 
 def handle_return_deserializer(deserializer=None):
@@ -26,7 +27,8 @@ def handle_return_deserializer(deserializer=None):
             ret = method(*argc, **argv)
             if ret.status_code != 200:
                 ret.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
-                raise get_exception_from_error(ret.status_code)(ret.text)
+                text = ret.text if ret.status_code != 404 else "404 Not found"
+                raise get_exception_from_error(ret.status_code)(text)
             return deserializer(ret.content) if deserializer else decode_text(ret.content)
         return inner
     return handle_return
@@ -108,7 +110,7 @@ class RestApiClient(object):
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
 
     def get_package_digest(self, package_reference):
-        """Gets a FileTreeManifest from conans"""
+        """Gets a FileTreeManifest from a package"""
 
         # Obtain the URLs
         url = "%s/conans/%s/packages/%s/digest" % (self._remote_api_url,
@@ -121,6 +123,25 @@ class RestApiClient(object):
         # Unroll generator and decode shas (plain text)
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return FileTreeManifest.loads(contents[CONAN_MANIFEST])
+
+    def get_package_info(self, package_reference):
+        """Gets a ConanInfo file from a package"""
+
+        url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
+                                                          "/".join(package_reference.conan),
+                                                          package_reference.package_id)
+        urls = self._get_json(url)
+        if not urls:
+            raise NotFoundException("Package not found!")
+
+        if CONANINFO not in urls:
+            raise NotFoundException("Package %s doesn't have the %s file!" % (package_reference,
+                                                                              CONANINFO))
+        # Get the info (in memory)
+        contents = self.download_files({CONANINFO: urls[CONANINFO]})
+        # Unroll generator and decode shas (plain text)
+        contents = {key: decode_text(value) for key, value in dict(contents).items()}
+        return ConanInfo.loads(contents[CONANINFO])
 
     def get_recipe(self, conan_reference, dest_folder):
         """Gets a dict of filename:contents from conans"""
@@ -149,7 +170,7 @@ class RestApiClient(object):
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def upload_conan(self, conan_reference, the_files):
+    def upload_conan(self, conan_reference, the_files, retry, retry_wait):
         """
         the_files: dict with relative_path: content
         """
@@ -170,11 +191,11 @@ class RestApiClient(object):
             filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
                          for filename, abs_path in files_to_upload.items()}
             urls = self._get_json(url, data=filesizes)
-            self.upload_files(urls, files_to_upload, self._output)
+            self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
 
-    def upload_package(self, package_reference, the_files):
+    def upload_package(self, package_reference, the_files, retry, retry_wait):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload
@@ -200,7 +221,7 @@ class RestApiClient(object):
             urls = self._get_json(url, data=filesizes)
             self._output.rewrite_line("Requesting upload permissions...Done!")
             self._output.writeln("")
-            self.upload_files(urls, files_to_upload, self._output)
+            self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         else:
             self._output.rewrite_line("Package is up to date.")
             self._output.writeln("")
@@ -423,28 +444,29 @@ class RestApiClient(object):
             ret[filename] = abs_path
         return ret
 
-    def upload_files(self, file_urls, files, output):
+    def upload_files(self, file_urls, files, output, retry, retry_wait):
         t1 = time.time()
-        failed = {}
+        failed = []
         uploader = Uploader(self.requester, output, self.verify_ssl)
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
             output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
-            response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup)
-            output.writeln("")
-            if not response.ok:
-                output.error("\nError uploading file: %s" % filename)
-                logger.debug(response.content)
-                failed[filename] = resource_url
-            else:
-                pass
+            try:
+                response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
+                                           retry=retry, retry_wait=retry_wait)
+                output.writeln("")
+                if not response.ok:
+                    output.error("\nError uploading file: %s, '%s'" % (filename, response.content))
+                    failed.append(filename)
+                else:
+                    pass
+            except Exception as exc:
+                output.error("\nError uploading file: %s, '%s'" % (filename, exc))
+                failed.append(filename)
 
         if failed:
-            logger.debug(failed)
-            output.warn("\nThe upload of some files has failed. "
-                        "Execute upload again to retry upload the failed files.")
-            raise ConanException("Upload failed!")
+            raise ConanException("Execute upload again to retry upload the failed files: %s" % ", ".join(failed))
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))

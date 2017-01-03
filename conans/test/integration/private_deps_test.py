@@ -18,15 +18,89 @@ class PrivateDepsTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def _export_upload(self, name=0, version=None, deps=None, msg=None, static=True, build=True,
-                       upload=True):
+                       upload=True, cmake_targets=False):
         dll_export = self.client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files(name, version, deps, msg=msg, static=static,
-                                      private_includes=True, dll_export=dll_export, build=build)
+                                      private_includes=True, dll_export=dll_export, build=build,
+                                      cmake_targets=cmake_targets)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)
         self.client.run("export lasote/stable")
         if upload:
             self.client.run("upload %s" % str(conan_ref))
+
+    def _export(self, name=0, version=None, deps=None):
+        files = cpp_hello_conan_files(name, version, deps,
+                                      private_includes=True, build=False,
+                                      cmake_targets=True)
+        self.client.save(files, clean_first=True)
+        self.client.run("export lasote/stable")
+
+    def modern_cmake_test(self):
+        self._export("zlib", "0.1")
+        self._export("libpng", "0.1", deps=["zlib/0.1@lasote/stable"])
+        self._export("glew", "0.1")
+        self._export("glm", "0.1")
+        self._export("imgui", "0.1")
+        self._export("gf", "0.1", deps=["glew/0.1@lasote/stable",
+                                        "glm/0.1@lasote/stable",
+                                        "libpng/0.1@lasote/stable"])
+
+        self._export("ImGuiTest", "0.1", deps=["glew/0.1@lasote/stable",
+                                               "gf/0.1@lasote/stable",
+                                               "glm/0.1@lasote/stable",
+                                               "imgui/0.1@lasote/stable"])
+
+        # Consuming project
+        self._export("Project", "0.1", deps=["ImGuiTest/0.1@lasote/stable"])
+
+        # Build packages for both recipes
+        self.client.run('install . --build=missing')
+        conanbuildinfo_cmake = load(os.path.join(self.client.current_folder,
+                                                 "conanbuildinfo.cmake"))
+
+        self.assertIn("CONAN_PKG::ImGuiTest PROPERTY INTERFACE_LINK_LIBRARIES "
+                      "${CONAN_FULLPATH_LIBS_IMGUITEST} CONAN_PKG::gf CONAN_PKG::imgui "
+                      "CONAN_PKG::glew CONAN_PKG::glm CONAN_PKG::libpng CONAN_PKG::zlib",
+                      conanbuildinfo_cmake)
+
+    def consumer_force_build_test(self):
+        """If a conanfile requires another private conanfile, but in the install is forced
+        the build, the private node has to be downloaded and built"""
+        self._export_upload("Hello0", "0.1", build=False, upload=False)
+        self._export_upload("Hello1", "0.1", deps=[("Hello0/0.1@lasote/stable", "private")],
+                            build=False, upload=False)
+
+        # Build packages for both recipes
+        self.client.run('install Hello1/0.1@lasote/stable --build missing')
+
+        # Upload them to remote
+        self.client.run("upload Hello0/0.1@lasote/stable --all")
+        self.client.run("upload Hello1/0.1@lasote/stable --all")
+
+        # Remove local recipes and packages
+        self.client.run('remove Hello* -f')
+
+        # Install them without force build, private is not retrieved
+        self.client.run('install Hello1/0.1@lasote/stable --build missing')
+        # FIXME: recipe should not be retrieved either
+        # self.assertNotIn("Hello0/0.1@lasote/stable", self.client.user_io.out)
+        self.assertNotIn("Hello0/0.1@lasote/stable: Package installed", self.client.user_io.out)
+
+        # Remove local recipes and packages
+        self.client.run('remove Hello* -f')
+
+        # Install them without force build, private is not retrieved
+        self.client.run('install Hello1/0.1@lasote/stable ')
+        self.assertNotIn("Hello0/0.1@lasote/stable: Package installed", self.client.user_io.out)
+
+        # Remove local recipes and packages
+        self.client.run('remove Hello* -f')
+
+        # Install them without forcing build
+        self.client.run('install Hello1/0.1@lasote/stable --build Hello1')
+        self.assertIn("Hello0/0.1@lasote/stable: Package installed", self.client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Building your package", self.client.user_io.out)
 
     def consumer_private_test(self):
         self._export_upload("Hello0", "0.1", build=False, upload=False)
