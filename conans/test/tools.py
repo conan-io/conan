@@ -18,7 +18,7 @@ import uuid
 from webtest.app import TestApp
 from conans.client.rest.rest_client import RestApiClient
 from six.moves.urllib.parse import urlsplit, urlunsplit
-from conans.server.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
+from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
                                                       TestServerLauncher)
 from conans.util.env_reader import get_env

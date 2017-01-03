@@ -6,7 +6,7 @@ from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
 import sys
 from conans.client.output import ConanOutput, Color
 from conans.model.info import ConanInfo
-from conans.server.test.utils.server_launcher import TestServerLauncher
+from conans.test.server.utils.server_launcher import TestServerLauncher
 import requests
 from conans.test.utils.test_files import temp_folder
 from conans.model.version import Version
