@@ -1113,6 +1113,143 @@ class ChatConan(ConanFile):
                          "Hello/1.2@diego/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
                          "Say/0.1@diego/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
+    def test_conditional_diamond(self):
+        zlib_content = """
+from conans import ConanFile
+
+class ZlibConan(ConanFile):
+    name = "Zlib"
+    version = "0.1"
+"""
+        png_content = """
+from conans import ConanFile
+
+class ZlibConan(ConanFile):
+    name = "png"
+    version = "0.1"
+"""
+        say_content = """
+from conans import ConanFile
+
+class SayConan(ConanFile):
+    name = "Say"
+    version = "0.1"
+    options = {"zip": [True, False]}
+    default_options = "zip=False"
+
+    def requirements(self):
+        if self.options.zip:
+            print "Requiring ZLib"
+            self.requires("Zlib/0.1@diego/testing")
+        else:
+            print "Requiring png"
+            self.requires("png/0.1@diego/testing")
+"""
+        hello_content = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    requires = "Say/0.1@diego/testing"
+    default_options = "Say:zip=True"
+"""
+        chat_content = """
+from conans import ConanFile
+
+class ChatConan(ConanFile):
+    name = "Chat"
+    version = "2.3"
+    requires = "Say/0.1@diego/testing", "Hello/1.2@diego/testing"
+"""
+        zlib_ref = ConanFileReference.loads("Zlib/0.1@diego/testing")
+        png_ref = ConanFileReference.loads("png/0.1@diego/testing")
+        self.retriever.conan(zlib_ref, zlib_content)
+        self.retriever.conan(png_ref, png_content)
+        self.retriever.conan(say_ref, say_content)
+        self.retriever.conan(hello_ref, hello_content)
+
+        deps_graph = self.root(chat_content)
+        self.assertEqual(self.output, "")
+        self.assertEqual(4, len(deps_graph.nodes))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        zlib = _get_nodes(deps_graph, "Zlib")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
+                                                  Edge(say, zlib)})
+
+        conanfile = say.conanfile
+        self.assertEqual(conanfile.version, "0.1")
+        self.assertEqual(conanfile.name, "Say")
+        self.assertEqual(conanfile.options.values.dumps(), "zip=True")
+        self.assertEqual(conanfile.settings.fields, [])
+        self.assertEqual(conanfile.settings.values.dumps(), "")
+        self.assertEqual(conanfile.requires, Requirements(str(zlib_ref)))
+
+        conaninfo = conanfile.info
+        self.assertEqual(conaninfo.settings.dumps(), "")
+        self.assertEqual(conaninfo.full_settings.dumps(), "")
+        self.assertEqual(conaninfo.options.dumps(),  "zip=True")
+        self.assertEqual(conaninfo.full_options.dumps(),  "zip=True")
+        self.assertEqual(conaninfo.requires.dumps(), "Zlib/2.Y.Z")
+        self.assertEqual(conaninfo.full_requires.dumps(),
+                         "Zlib/2.1@diego/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+
+        chat_content2 = """
+from conans import ConanFile
+
+class ChatConan(ConanFile):
+    name = "Chat"
+    version = "2.3"
+    requires = "Hello/1.2@diego/testing", "Bye/0.2@diego/testing"
+    default_options = "Say:zip=False"
+"""
+        deps_graph = self.root(chat_content2)
+        self.assertEqual(self.output, "")
+        self.assertEqual(4, len(deps_graph.nodes))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        bye = _get_nodes(deps_graph, "Bye")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello),
+                                                  Edge(bye, say), Edge(chat, bye)})
+
+        conanfile = say.conanfile
+        self.assertEqual(conanfile.version, "0.1")
+        self.assertEqual(conanfile.name, "Say")
+        self.assertEqual(conanfile.options.values.dumps(), "zip=False")
+        self.assertEqual(conanfile.settings.fields, [])
+        self.assertEqual(conanfile.settings.values.dumps(), "")
+        self.assertEqual(conanfile.requires, Requirements())
+
+        conaninfo = conanfile.info
+        self.assertEqual(conaninfo.settings.dumps(), "")
+        self.assertEqual(conaninfo.full_settings.dumps(), "")
+        self.assertEqual(conaninfo.options.dumps(),  "zip=False")
+        self.assertEqual(conaninfo.full_options.dumps(),  "zip=False")
+        self.assertEqual(conaninfo.requires.dumps(), "")
+        self.assertEqual(conaninfo.full_requires.dumps(), "")
+
+        conanfile = chat.conanfile
+        self.assertEqual(conanfile.version, "2.3")
+        self.assertEqual(conanfile.name, "Chat")
+        self.assertEqual(conanfile.options.values.dumps(), "Say:zip=False")
+        self.assertEqual(conanfile.settings.fields, [])
+        self.assertEqual(conanfile.settings.values.dumps(), "")
+        self.assertEqual(conanfile.requires, Requirements(str(hello_ref), str(bye_ref)))
+
+        conaninfo = conanfile.info
+        self.assertEqual(conaninfo.settings.dumps(), "")
+        self.assertEqual(conaninfo.full_settings.dumps(), "")
+        self.assertEqual(conaninfo.options.dumps(),  "")
+        self.assertEqual(conaninfo.full_options.dumps(),  "Say:zip=False")
+        self.assertEqual(conaninfo.requires.dumps(), "Bye/0.2\nHello/1.Y.Z")
+        self.assertEqual(conaninfo.full_requires.dumps(),
+                         "Bye/0.2@diego/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
+                         "Hello/1.2@diego/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
+                         "Say/0.1@diego/testing:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+
     def test_transitive_private(self):
         hello_content = """
 from conans import ConanFile
