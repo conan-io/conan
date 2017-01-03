@@ -69,6 +69,12 @@ class RemoteManager(object):
         read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
 
         if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
+            self._output.writeln("")
+            for fname in read_manifest.file_sums.keys():
+                if read_manifest.file_sums[fname] != expected_manifest.file_sums[fname]:
+                    self._output.warn("Mismatched checksum for file %s (checksum: %s, expected: %s)" %
+                                      (fname, read_manifest.file_sums[fname], expected_manifest.file_sums[fname]))
+
             if PACKAGE_TGZ_NAME in the_files:
                 try:
                     tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
