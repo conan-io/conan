@@ -359,7 +359,15 @@ class DepsGraphBuilder(object):
             conanfile.options.validate()
 
             # Update requirements (overwrites), computing new upstream
-            conanfile.requirements()
+            if hasattr(conanfile, "requirements"):
+                # If re-evaluating the recipe, in a diamond graph, with different options,
+                # it could happen that one execution path of requirements() defines a package
+                # and another one a different package raising Duplicate dependency error
+                # Or the two consecutive calls, adding 2 different dependencies for the two paths
+                # requirements is then MUTUALLY EXCLUSIVE with "requires" field
+                conanfile.requires.clear()
+                conanfile.requirements()
+
             new_options = conanfile.options.values
             new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
         except ConanException as e:
