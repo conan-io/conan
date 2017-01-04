@@ -64,8 +64,6 @@ class CMakeGenerator(Generator):
     # Not working
     # set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
 """
-        existing_deps = self.deps_build_info.deps
-
         sections.append("\n###  Definition of macros and functions ###\n")
         sections.append('macro(conan_define_targets)\n'
                         '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
@@ -73,7 +71,7 @@ class CMakeGenerator(Generator):
                         '    endif()  # CMAKE > 3.x\n')
 
         for dep_name, dep_info in self.deps_build_info.dependencies:
-            use_deps = ["CONAN_PKG::%s" % d for d in dep_info.deps if d in existing_deps]
+            use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
             deps = "" if not use_deps else " ".join(use_deps)
             sections.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                             uname=dep_name.upper()))
