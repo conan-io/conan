@@ -53,7 +53,7 @@ class CMakeGenerator(Generator):
 
         # TARGETS
         template = """
-    conan_find_libraries_abs_path(${{CONAN_LIBS_{uname}}} ${{CONAN_LIB_DIRS_{uname}}}
+    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
                                   CONAN_FULLPATH_LIBS_{uname})
 
     add_library({name} INTERFACE IMPORTED)

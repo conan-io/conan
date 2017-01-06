@@ -47,9 +47,9 @@ class CMakeMultiGenerator(Generator):
         sections = []
         # TARGETS
         template = """
-    conan_find_libraries_abs_path(${{CONAN_LIBS_{uname}_DEBUG}} ${{CONAN_LIB_DIRS_{uname}_DEBUG}}
+    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
                                   CONAN_FULLPATH_LIBS_{uname}_DEBUG)
-    conan_find_libraries_abs_path(${{CONAN_LIBS_{uname}_RELEASE}} ${{CONAN_LIB_DIRS_{uname}_RELEASE}}
+    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
                                   CONAN_FULLPATH_LIBS_{uname}_RELEASE)
 
     add_library({name} INTERFACE IMPORTED)
