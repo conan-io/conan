@@ -5,9 +5,20 @@ import os
 import platform
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE
+from conans.tools import replace_in_file
 
 
 class ConanEnvTest(unittest.TestCase):
+
+    def test_package_env_working(self):
+        client = TestClient()
+        client.run("new envtest/1.0@lasote/testing -t")
+        replace = "def build(self):"
+        with_replace = "def build(self):\n        self.output.warn('MYVAR==>%s' % os.environ.get('MYVAR', ""))"
+        conanfile_path = os.path.join(client.current_folder, "test_package", "conanfile.py")
+        replace_in_file(conanfile_path, replace, with_replace)
+        client.run("test_package -e MYVAR=MYVALUE", ignore_error=True)  # Ignore the test_package error returning -1
+        self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
 
     def dual_compiler_settings_and_env_test(self):
 
