@@ -1,6 +1,7 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
 from collections import OrderedDict
+from conans.util.files import load
 
 
 class RemoteTest(unittest.TestCase):
@@ -38,6 +39,27 @@ class RemoteTest(unittest.TestCase):
         self.client.run("remote list")
         output = str(self.client.user_io.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
+
+    def verify_ssl_test(self):
+        client = TestClient()
+        client.run("remote add my-remote http://someurl TRUE")
+        client.run("remote add my-remote2 http://someurl2 yes")
+        client.run("remote add my-remote3 http://someurl3 FALse")
+        client.run("remote add my-remote4 http://someurl4 No")
+        registry = load(client.client_cache.registry)
+        self.assertIn("my-remote http://someurl True", registry)
+        self.assertIn("my-remote2 http://someurl2 True", registry)
+        self.assertIn("my-remote3 http://someurl3 False", registry)
+        self.assertIn("my-remote4 http://someurl4 False", registry)
+
+    def verify_ssl_error_test(self):
+        client = TestClient()
+        error = client.run("remote add my-remote http://someurl some_invalid_option=foo",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Unrecognized boolean value 'some_invalid_option=foo'",
+                      client.user_io.out)
+        self.assertEqual("", load(client.client_cache.registry))
 
     def errors_test(self):
         self.client.run("remote update origin url", ignore_error=True)

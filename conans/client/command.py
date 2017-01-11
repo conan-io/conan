@@ -29,9 +29,8 @@ from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.log import logger
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, load, save_files, decode_text,\
-    exception_message_safe
-from conans.util.config_parser import get_bool_from_text_value
+from conans.util.files import rmdir, load, save_files, exception_message_safe
+from conans.util.config_parser import get_bool_from_text
 from conans.client.printer import Printer
 
 
@@ -851,12 +850,12 @@ path to the CMake binary directory, like this:
             for r in registry.remotes:
                 self._user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
         elif args.subcommand == "add":
-            verify = get_bool_from_text_value(args.verify_ssl)
-            registry.add(args.remote, args.url, args.verify_ssl)
+            verify = get_bool_from_text(args.verify_ssl)
+            registry.add(args.remote, args.url, verify)
         elif args.subcommand == "remove":
             registry.remove(args.remote)
         elif args.subcommand == "update":
-            verify = get_bool_from_text_value(args.verify_ssl)
+            verify = get_bool_from_text(args.verify_ssl)
             registry.update(args.remote, args.url, verify)
         elif args.subcommand == "list_ref":
             for ref, remote in registry.refs.items():
