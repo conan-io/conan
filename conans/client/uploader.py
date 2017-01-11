@@ -29,6 +29,9 @@ class ConanUploader(object):
         else:
             references = self._search_manager.search(pattern)
 
+        if not references:
+            raise NotFoundException("No packages found matching pattern '%s'" % pattern)
+
         for conan_ref in references:
             upload = True
             if not confirm:
