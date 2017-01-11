@@ -3,9 +3,8 @@ import unittest
 from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.client.generators.cmake import CMakeGenerator
-from conans.model.build_info import DepsCppInfo
+from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
-from conans.client.generators.cmake_common import cmake_macros
 
 
 class CMakeGeneratorTest(unittest.TestCase):
@@ -17,11 +16,11 @@ class CMakeGeneratorTest(unittest.TestCase):
     def variables_setup_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
-        cpp_info = DepsCppInfo()
+        cpp_info = CppInfo("dummy_root_folder1")
         cpp_info.defines = ["MYDEFINE1"]
         conanfile.deps_cpp_info.update(cpp_info, ref)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
-        cpp_info = DepsCppInfo()
+        cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.defines = ["MYDEFINE2"]
         conanfile.deps_cpp_info.update(cpp_info, ref)
         generator = CMakeGenerator(conanfile)

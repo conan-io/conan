@@ -493,7 +493,6 @@ If not:
                 env = profile.env
                 package_env = profile.package_env
 
-            env = profile.env if profile else None
             package_env = profile.package_env if profile else None
             loader = self._loader(current_path, env=env, package_env=package_env)
             conan_file = loader.load_conan(conanfile_file, output, consumer=True)

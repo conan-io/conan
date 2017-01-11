@@ -164,7 +164,8 @@ class ConanInstaller(object):
     def _propagate_info(self, conan_ref, conan_file, flat):
         # Get deps_cpp_info from upstream nodes
         node_order = self._deps_graph.ordered_closure((conan_ref, conan_file), flat)
-        conan_file.cpp_info.deps = [n.conan_ref.name for n in node_order]
+        public_deps = [name for name, req in conan_file.requires.items() if not req.private]
+        conan_file.cpp_info.public_deps = public_deps
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
