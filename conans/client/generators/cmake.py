@@ -53,18 +53,17 @@ class CMakeGenerator(Generator):
 
         # TARGETS
         template = """
-    conan_find_libraries_abs_path(${{CONAN_LIBS_{uname}}} ${{CONAN_LIB_DIRS_{uname}}}
+    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
                                   CONAN_FULLPATH_LIBS_{uname})
 
     add_library({name} INTERFACE IMPORTED)
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} {deps})
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} {deps} ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}})
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}})
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
+    # Not working
+    # set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
 """
-        existing_deps = self.deps_build_info.deps
-
         sections.append("\n###  Definition of macros and functions ###\n")
         sections.append('macro(conan_define_targets)\n'
                         '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
@@ -72,7 +71,7 @@ class CMakeGenerator(Generator):
                         '    endif()  # CMAKE > 3.x\n')
 
         for dep_name, dep_info in self.deps_build_info.dependencies:
-            use_deps = ["CONAN_PKG::%s" % d for d in dep_info.deps if d in existing_deps]
+            use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
             deps = "" if not use_deps else " ".join(use_deps)
             sections.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                             uname=dep_name.upper()))
