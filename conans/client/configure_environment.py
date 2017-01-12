@@ -99,7 +99,7 @@ class ConfigureEnvironment(object):
     @property
     def command_line_env(self):
         if self.os == "Linux" or self.os == "Macos" or self.os == "FreeBSD" or self.os == "SunOS":
-            if self.compiler == "gcc" or "clang" in str(self.compiler) or "cc" in str(self.compiler):
+            if self.compiler == "gcc" or "clang" in str(self.compiler) or "sun-cc" in str(self.compiler):
                 return self._gcc_env()
         elif self.os == "Windows":
             commands = []

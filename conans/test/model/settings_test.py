@@ -61,8 +61,8 @@ class SettingsTest(unittest.TestCase):
         settings = Settings.loads("""os: [Windows, Linux, Macos, Android, FreeBSD, SunOS]
 arch: [x86, x86_64, arm]
 compiler:
-    cc:
-        version: ["5.11"]
+    sun-cc:
+        version: ["5.10", "5.11"]
     gcc:
         version: ["4.8", "4.9", "5.0"]
     Visual Studio:

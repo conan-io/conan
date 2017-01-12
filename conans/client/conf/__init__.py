@@ -14,8 +14,8 @@ MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 default_settings_yml = """os: [Windows, Linux, Macos, Android, iOS, FreeBSD, SunOS]
 arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8]
 compiler:
-    cc:
-       version: ["5.11"]
+    sun-cc:
+       version: ["5.10", "5.11"]
        threads: [None, posix]
        libcxx: [libstdcxx, libCstd]
     gcc:
