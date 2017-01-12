@@ -41,10 +41,30 @@ class RemoteTest(unittest.TestCase):
 
     def errors_test(self):
         self.client.run("remote update origin url", ignore_error=True)
-        self.assertIn("ERROR: origin not found in remotes", self.client.user_io.out)
+        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
 
         self.client.run("remote remove origin", ignore_error=True)
-        self.assertIn("ERROR: origin not found in remotes", self.client.user_io.out)
+        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
+
+    def duplicated_error_tests(self):
+        """ check remote name and URL are not duplicated
+        """
+        error = self.client.run("remote add remote1 http://otherurl", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use update to modify)",
+                      self.client.user_io.out)
+
+        self.client.run("remote list")
+        url = str(self.client.user_io.out).split()[1]
+        error = self.client.run("remote add newname %s" % url, ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Remote 'remote0' already exists with same URL",
+                      self.client.user_io.out)
+
+        error = self.client.run("remote update remote1 %s" % url, ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Remote 'remote0' already exists with same URL",
+                      self.client.user_io.out)
 
     def basic_refs_test(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")
