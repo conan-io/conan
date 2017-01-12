@@ -77,7 +77,7 @@ else:
 
 def is_case_insensitive_os():
     system = platform.system()
-    return system != "Linux" and system != "FreeBSD"
+    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
 
 
 if is_case_insensitive_os():

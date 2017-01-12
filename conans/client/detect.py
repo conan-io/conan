@@ -129,6 +129,9 @@ def _detect_compiler_version(result, output):
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc" in compiler:
             result.append(("compiler.libcxx", "libstdc++"))
+        elif compiler == "cc" in compiler:
+            if platform.system() == "SunOS":
+                result.append(("compiler.libstdcxx", "libstdcxx4"))
         elif compiler == "clang" in compiler:
             if platform.system() == "FreeBSD":
                 result.append(("compiler.libcxx", "libc++"))

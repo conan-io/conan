@@ -65,6 +65,9 @@ class CMake(object):
         if operating_system == "FreeBSD":
             if compiler in ["gcc", "clang", "apple-clang"]:
                 return "Unix Makefiles"
+        if operating_system == "SunOS":
+            if compiler in ["cc", "gcc"]:
+                return "Unix Makefiles"
 
         raise ConanException("Unknown cmake generator for these settings")
 
