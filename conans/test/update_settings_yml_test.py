@@ -28,8 +28,8 @@ os: [Windows, Linux, Macos, Android, FreeBSD, SunOS]
 arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
 compiler:
     sun-cc:
-        version: ["5.10", "5.11"]
-        libcxx: [libstdcxx, libCstd]
+        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
+        libcxx: [libCstd, libstdcxx libstlport, libstdc++]
     gcc:
         version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3"]
         libcxx: [libstdc++, libstdc++11]
