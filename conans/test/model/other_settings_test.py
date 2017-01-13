@@ -93,7 +93,7 @@ from conans import ConanFile
 class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
-    settings = {"os": ["Windows", "Linux", "Macos", "FreeBSD"], "compiler": ["Visual Studio"]}
+    settings = {"os": ["Windows", "Linux", "Macos", "FreeBSD", "SunOS"], "compiler": ["Visual Studio"]}
 """
 
         self.client.save({CONANFILE: content})
@@ -146,7 +146,7 @@ class SayConan(ConanFile):
         self.client.save({CONANFILE: content})
         self.client.run("install -s os=ChromeOS --build missing", ignore_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
-                                    ['Android', 'FreeBSD', 'Linux', 'Macos', 'Windows', 'iOS']),
+                                    ['Android', 'FreeBSD', 'Linux', 'Macos', 'SunOS', 'Windows', 'iOS']),
                       str(self.client.user_io.out))
 
         # Now add new settings to config and try again

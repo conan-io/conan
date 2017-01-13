@@ -226,6 +226,7 @@ class OSInfo(object):
         print(os_info.is_windows) # True/False
         print(os_info.is_macos) # True/False
         print(os_info.is_freebsd) # True/False
+        print(os_info.is_solaris) # True/False
 
         print(os_info.linux_distro)  # debian, ubuntu, fedora, centos...
 
@@ -246,6 +247,7 @@ class OSInfo(object):
         self.is_windows = platform.system() == "Windows"
         self.is_macos = platform.system() == "Darwin"
         self.is_freebsd = platform.system() == "FreeBSD"
+        self.is_solaris = platform.system() == "SunOS"
 
         if self.is_linux:
             tmp = platform.linux_distribution(full_distribution_name=0)
@@ -264,6 +266,9 @@ class OSInfo(object):
         elif self.is_freebsd:
             self.os_version = self.get_freebsd_version()
             self.os_version_name = "FreeBSD %s" % self.os_version
+        elif self.is_solaris:
+            self.os_version = self.get_solaris_version()
+            self.os_version_name = "SunOS %s" % self.os_version
 
     @property
     def with_apt(self):
@@ -366,6 +371,9 @@ class OSInfo(object):
             return "Cheetha"
 
     def get_freebsd_version(self):
+        return platform.release().split("-")[0]
+
+    def get_solaris_version(self):
         return platform.release().split("-")[0]
 
 try:

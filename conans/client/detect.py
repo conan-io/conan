@@ -127,9 +127,12 @@ def _detect_compiler_version(result, output):
             result.append(("compiler.runtime", "MD"))
         elif compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
-        elif compiler == "gcc" in compiler:
+        elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
-        elif compiler == "clang" in compiler:
+        elif compiler == "cc":
+            if platform.system() == "SunOS":
+                result.append(("compiler.libstdcxx", "libstdcxx4"))
+        elif compiler == "clang":
             if platform.system() == "FreeBSD":
                 result.append(("compiler.libcxx", "libc++"))
             else:
