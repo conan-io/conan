@@ -91,7 +91,9 @@ class ConfigureEnvironment(object):
         include_paths = ":".join(['"%s"' % lib for lib in self._deps_cpp_info.include_paths])
         headers_flags = ('C_INCLUDE_PATH=$C_INCLUDE_PATH:{0} '
                          'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:{0}'.format(include_paths))
-        command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
+        pkg_config_paths = ":".join(['"%s/pkgconfig"' % lib for lib in self._deps_cpp_info.lib_paths])
+        pkg_config_flags = 'PKG_CONFIG_PATH=%s' % pkg_config_paths
+        command = "env %s %s %s %s %s %s" % (pkg_config_flags, libs, ldflags, cflags, cpp_flags, headers_flags)
         # Do not include "export" command, they are passed to env
         command += " ".join(get_setenv_variables_commands(self._deps_env_info, ""))
         return command
@@ -127,6 +129,10 @@ class ConfigureEnvironment(object):
                 lib_paths = ";".join([lib for lib in self._deps_cpp_info.lib_paths])
                 commands.append('if defined LIBRARY_PATH (SET "LIBRARY_PATH=%LIBRARY_PATH%;{0}")'
                                 ' else (SET "LIBRARY_PATH={0}")'.format(lib_paths))
+
+                pkgconfig_paths = "/pkgconfig;".join([lib for lib in self._deps_cpp_info.lib_paths])
+                commands.append('if defined PKG_CONFIG_PATH (SET "PKG_CONFIG_PATH=%PKG_CONFIG_PATH%;{0}")'
+                                ' else (SET "PKG_CONFIG_PATH={0}")'.format(pkgconfig_paths))
 
             commands.extend(get_setenv_variables_commands(self._deps_env_info, "SET"))
             save("_conan_env.bat", "\r\n".join(commands))
