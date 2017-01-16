@@ -58,7 +58,7 @@ compiler:
         self.assertNotIn("build_type", load(client.paths.conan_conf_path))
         self.assertNotIn("build_type", client.paths.conan_config.settings_defaults.dumps())
 
-        client.run("install test/1.9@lasote/testing --build -s compiler=gcc "
+        client.run("install test/1.9@lasote/testing --build -s arch=x86_64 -s compiler=gcc "
                    "-s compiler.version=4.9 -s os=Windows -s compiler.libcxx=libstdc++")
         self.assertIn("390146894f59dda18c902ee25e649ef590140732", client.user_io.out)
 
@@ -68,7 +68,7 @@ compiler:
         client.save(files)
         client.run("export lasote/testing")
 
-        client.run("install test/1.9@lasote/testing --build -s compiler=gcc "
+        client.run("install test/1.9@lasote/testing --build -s arch=x86_64 -s compiler=gcc "
                    "-s compiler.version=4.9 -s os=Windows -s build_type=None -s compiler.libcxx=libstdc++")
         self.assertIn("build_type", load(client.paths.settings_path))
         self.assertIn("390146894f59dda18c902ee25e649ef590140732", client.user_io.out)
