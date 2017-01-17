@@ -1,7 +1,7 @@
 from conans.errors import ConanException
 from conans.model.settings import Settings
 import os
-
+import platform
 
 class CMake(object):
 
@@ -53,7 +53,11 @@ class CMake(object):
 
         if operating_system == "Windows":
             if compiler == "gcc":
-                return "MinGW Makefiles"
+                if platform.system == "Windows":
+                    return "MinGW Makefiles" #it is valid only under Windows
+                else:
+                    return "Unix Makefiles"
+
             if compiler in ["clang", "apple-clang"]:
                 return "MinGW Makefiles"
         if operating_system == "Linux":
@@ -113,12 +117,15 @@ class CMake(object):
         arch = str(self._settings.arch) if self._settings.arch else None
         comp = str(self._settings.compiler) if self._settings.compiler else None
         comp_version = self._settings.compiler.version
+        host_platform = platform.system()
 
         flags = []
         if op_system == "Windows":
             if comp == "clang":
                 flags.append("-DCMAKE_C_COMPILER=clang")
                 flags.append("-DCMAKE_CXX_COMPILER=clang++")
+            if host_platform != "Windows":
+                flags.append("-DCMAKE_SYSTEM_NAME=Windows")
         if comp:
             flags.append('-DCONAN_COMPILER="%s"' % comp)
         if comp_version:
@@ -128,14 +135,22 @@ class CMake(object):
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m32",
                               "-DCONAN_C_FLAGS=-m32"])
+            elif op_system == "Windows" and host_platform != "Windows":
+                flags.extend(["-DCMAKE_C_COMPILER=i686-w64-mingw32-gcc",
+                              "-DCMAKE_CXX_COMPILER=i686-w64-mingw32-g++"])
             elif op_system == "Macos":
                 flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
-
+        elif arch == "x86_64":
+            if op_system == "Windows" and host_platform != "Windows":
+                flags.extend(["-DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc",
+                              "-DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++"])
         try:
             libcxx = self._settings.compiler.libcxx
             flags.append('-DCONAN_LIBCXX="%s"' % libcxx)
         except:
             pass
+
+        print("Flags: " + " ".join(flags))
         return " ".join(flags)
 
     @property
