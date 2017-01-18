@@ -308,6 +308,10 @@ class Options(object):
         # are not public, not overridable
         self._deps_package_values = {}  # {name("Boost": PackageValues}
 
+    @property
+    def deps_package_values(self):
+        return self._deps_package_values
+
     def clear(self):
         self._package_options.clear()
 
@@ -344,14 +348,17 @@ class Options(object):
         for k, v in v._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
-    def propagate_upstream(self, values, down_ref, own_ref, output):
+    def propagate_upstream(self, down_package_values, down_ref, own_ref, output):
         """ used to propagate from downstream the options to the upper requirements
         """
-        if values is not None:
-            assert isinstance(values, OptionsValues)
-            own_values = values.pop(own_ref.name)
-            self._package_options.propagate_upstream(own_values, down_ref, own_ref, output)
-            for name, option_values in sorted(list(values._reqs_options.items())):
+        if not down_package_values:
+            return
+
+        assert isinstance(down_package_values, dict)
+        option_values = down_package_values.get(own_ref.name)
+        self._package_options.propagate_upstream(option_values, down_ref, own_ref, output)
+        for name, option_values in sorted(list(down_package_values.items())):
+            if name != own_ref.name:
                 pkg_values = self._deps_package_values.setdefault(name, PackageValues())
                 pkg_values.propagate_upstream(option_values, down_ref, own_ref, output, name)
 

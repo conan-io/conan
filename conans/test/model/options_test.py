@@ -54,7 +54,7 @@ class OptionsTest(unittest.TestCase):
         down_ref = ConanFileReference.loads("Hello0/0.1@diego/testing")
         own_ref = ConanFileReference.loads("Hello1/0.1@diego/testing")
         output = TestBufferConanOutput()
-        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options._reqs_options, down_ref, own_ref, output)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "4"),
                                                      ("path", "NOTDEF"),
                                                      ("static", "False"),
@@ -73,7 +73,7 @@ class OptionsTest(unittest.TestCase):
         Hello1:optimized=2
         """)
         down_ref = ConanFileReference.loads("Hello2/0.1@diego/testing")
-        self.sut.propagate_upstream(options2, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options2._reqs_options, down_ref, own_ref, output)
         self.assertIn("""WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option optimized to 2
 but it was already assigned to 4 by Hello0/0.1@diego/testing
 WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option static to True
