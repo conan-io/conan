@@ -5,11 +5,27 @@ import yaml
 import six
 
 
+_falsey_options = ["false", "none", "0", "off", ""]
+
+
+class PackageValue(str):
+    def __bool__(self):
+        return self.lower() not in _falsey_options
+
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def __eq__(self, other):
+        return str(other).__eq__(self)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 class PackageValues(object):
-    def __init__(self, value="values"):
-        self._value = str(value)
-        self._dict = {}  # {key: PackageValues()}
-        self._modified = {}  # {"compiler.version.arch": (old_value, old_reference)}
+    def __init__(self):
+        self._dict = {}  # {option_name: PackageValue}
+        self._modified = {}
 
     def __getattr__(self, attr):
         if attr not in self._dict:
@@ -18,20 +34,16 @@ class PackageValues(object):
 
     def clear(self):
         self._dict.clear()
-        self._value = ""
 
     def __setattr__(self, attr, value):
         if attr[0] == "_":
             return super(PackageValues, self).__setattr__(attr, value)
-        self._dict[attr] = PackageValues(value)
+        self._dict[attr] = PackageValue(value)
 
     def copy(self):
-        """ deepcopy, recursive
-        """
-        cls = type(self)
-        result = cls(self._value)
+        result = PackageValues()
         for k, v in self._dict.items():
-            result._dict[k] = v.copy()
+            result._dict[k] = v
         return result
 
     @property
@@ -40,81 +52,47 @@ class PackageValues(object):
         """
         return sorted(list(self._dict.keys()))
 
-    def __bool__(self):
-        return self._value.lower() not in ["false", "none", "0", "off", ""]
-
-    def __nonzero__(self):
-        return self.__bool__()
-
-    def __str__(self):
-        return self._value
-
-    def __eq__(self, other):
-        return str(other) == self.__str__()
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-    @classmethod
-    def loads(cls, text):
+    @staticmethod
+    def loads(text):
         result = []
         for line in text.splitlines():
             if not line.strip():
                 continue
             name, value = line.split("=")
             result.append((name.strip(), value.strip()))
-        return cls.from_list(result)
+        return PackageValues.from_list(result)
 
     def as_list(self, list_all=True):
         result = []
         for field in self.fields:
-            value = getattr(self, field)
+            value = self._dict[field]
             if value or list_all:
                 result.append((field, str(value)))
-                child_lines = value.as_list()
-                for (child_name, child_value) in child_lines:
-                    result.append(("%s.%s" % (field, child_name), child_value))
         return result
 
-    @classmethod
-    def from_list(cls, data):
-        result = cls()
+    @staticmethod
+    def from_list(data):
+        result = PackageValues()
         for (field, value) in data:
-            tokens = field.split(".")
-            attr = result
-            for token in tokens[:-1]:
-                attr = getattr(attr, token)
-                if attr is None:
-                    raise ConanException("%s not defined for %s\n"
-                                         "Please define %s value first too"
-                                         % (token, field, token))
-            setattr(attr, tokens[-1], PackageValues(value))
+            result._dict[field] = PackageValue(value)
         return result
 
     def add(self, option_text):
         assert isinstance(option_text, six.string_types)
         name, value = option_text.split("=")
-        tokens = name.strip().split(".")
-        attr = self
-        for token in tokens[:-1]:
-            attr = getattr(attr, token)
-        setattr(attr, tokens[-1], PackageValues(value.strip()))
+        self._dict[name.strip()] = PackageValue(value.strip())
 
     def update(self, other):
         assert isinstance(other, PackageValues)
-        self._value = other._value
-        for k, v in other._dict.items():
-            if k in self._dict:
-                self._dict[k].update(v)
-            else:
-                self._dict[k] = v.copy()
+        self._dict.update(other._dict)
 
-    def propagate_upstream(self, other, down_ref, own_ref, output, package_name):
-        if not other:
+    def propagate_upstream(self, down_package_values, down_ref, own_ref, output, package_name):
+        if not down_package_values:
             return
 
+        assert isinstance(down_package_values, PackageValues)
         current_values = {k: v for (k, v) in self.as_list()}
-        for (name, value) in other.as_list():
+        for (name, value) in down_package_values.as_list():
             current_value = current_values.get(name)
             if value == current_value:
                 continue
@@ -122,20 +100,13 @@ class PackageValues(object):
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
-                if modified_value == value:
-                    continue
-                else:
-                    output.werror("%s tried to change %s option %s:%s to %s\n"
-                                  "but it was already assigned to %s by %s"
-                                  % (down_ref, own_ref, package_name, name, value,
-                                     modified_value, modified_ref))
+                output.werror("%s tried to change %s option %s:%s to %s\n"
+                              "but it was already assigned to %s by %s"
+                              % (down_ref, own_ref, package_name, name, value,
+                                 modified_value, modified_ref))
             else:
                 self._modified[name] = (value, down_ref)
-                list_settings = name.split(".")
-                attr = self
-                for setting in list_settings[:-1]:
-                    attr = getattr(attr, setting)
-                setattr(attr, list_settings[-1], str(value))
+                self._dict[name] = value
 
     def dumps(self):
         """ produces a text string with lines containine a flattened version:
@@ -148,9 +119,9 @@ class PackageValues(object):
     def serialize(self):
         return self.as_list()
 
-    @classmethod
-    def deserialize(cls, data):
-        return cls.from_list(data)
+    @staticmethod
+    def deserialize(data):
+        return PackageValues.from_list(data)
 
     @property
     def sha(self):
