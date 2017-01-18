@@ -231,12 +231,10 @@ class ConanFile(object):
         """ runs such a command in the folder the Conan
         is defined
         """
-        log_file = None
         if self._conanfile_directory:
-            log_file = os.path.join(self._conanfile_directory, RUN_LOG_NAME)
-            self.output.info("Logging run output to '%s' file" % log_file)
+            self.output.info("Logging run output to '%s' file" % os.path.abspath(RUN_LOG_NAME))
 
-        retcode = self._runner(command, output, log_file, cwd)
+        retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME), cwd)
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
