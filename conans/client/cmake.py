@@ -30,6 +30,7 @@ class CMake(object):
         operating_system = str(self._settings.os) if self._settings.os else None
         compiler = str(self._settings.compiler) if self._settings.compiler else None
         arch = str(self._settings.arch) if self._settings.arch else None
+        host_platform = platform.system()
 
         if "CONAN_CMAKE_GENERATOR" in os.environ:
             return os.environ["CONAN_CMAKE_GENERATOR"]
@@ -52,14 +53,11 @@ class CMake(object):
                 return base
 
         if operating_system == "Windows":
-            if compiler == "gcc":
-                if platform.system == "Windows":
-                    return "MinGW Makefiles" #it is valid only under Windows
-                else:
-                    return "Unix Makefiles"
-
-            if compiler in ["clang", "apple-clang"]:
-                return "MinGW Makefiles"
+            non_msvc = True if compiler != "Visual Studio" else False
+            if host_platform == operating_system and non_msvc:
+                return "MinGW Makefiles" #it is valid only under Windows
+            elif non_msvc:
+                return "Unix Makefiles"
         if operating_system == "Linux":
             if compiler in ["gcc", "clang", "apple-clang"]:
                 return "Unix Makefiles"
@@ -124,7 +122,7 @@ class CMake(object):
             if comp == "clang":
                 flags.append("-DCMAKE_C_COMPILER=clang")
                 flags.append("-DCMAKE_CXX_COMPILER=clang++")
-            if host_platform != "Windows":
+            if host_platform != op_system:
                 flags.append("-DCMAKE_SYSTEM_NAME=Windows")
         if comp:
             flags.append('-DCONAN_COMPILER="%s"' % comp)
@@ -135,13 +133,13 @@ class CMake(object):
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m32",
                               "-DCONAN_C_FLAGS=-m32"])
-            elif op_system == "Windows" and host_platform != "Windows":
+            elif op_system == "Windows" and host_platform != op_system and comp == "gcc":
                 flags.extend(["-DCMAKE_C_COMPILER=i686-w64-mingw32-gcc",
                               "-DCMAKE_CXX_COMPILER=i686-w64-mingw32-g++"])
             elif op_system == "Macos":
                 flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
         elif arch == "x86_64":
-            if op_system == "Windows" and host_platform != "Windows":
+            if op_system == "Windows" and host_platform != op_system and comp == "gcc":
                 flags.extend(["-DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc",
                               "-DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++"])
         try:
@@ -149,8 +147,6 @@ class CMake(object):
             flags.append('-DCONAN_LIBCXX="%s"' % libcxx)
         except:
             pass
-
-        print("Flags: " + " ".join(flags))
         return " ".join(flags)
 
     @property
