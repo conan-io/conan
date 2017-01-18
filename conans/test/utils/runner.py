@@ -9,5 +9,5 @@ class TestRunner(object):
         self._output = output
         self.runner = ConanRunner()
 
-    def __call__(self, command, output=None, cwd=None):
-        return self.runner(command, output=self._output, cwd=cwd)
+    def __call__(self, command, output=None, log_filepath=None, cwd=None):
+        return self.runner(command, output=self._output, log_filepath=log_filepath, cwd=cwd)

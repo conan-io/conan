@@ -32,6 +32,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files, exception_message_safe
 from conans.util.config_parser import get_bool_from_text
 from conans.client.printer import Printer
+from conans.util.tracer import log_command, log_exception
 
 
 class Extender(argparse.Action):
@@ -193,6 +194,7 @@ path to the CMake binary directory, like this:
                                  'in the configure method')
 
         args = parser.parse_args(*args)
+        log_command("new", vars(args))
 
         root_folder = os.getcwd()
         try:
@@ -250,6 +252,7 @@ path to the CMake binary directory, like this:
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
+        log_command("test_package", vars(args))
 
         current_path = os.getcwd()
         root_folder = os.path.normpath(os.path.join(current_path, args.path))
@@ -396,6 +399,7 @@ path to the CMake binary directory, like this:
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
+        log_command("install", vars(args))
         self._user_io.out.werror_active = args.werror
 
         current_path = os.getcwd()
@@ -488,6 +492,7 @@ path to the CMake binary directory, like this:
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Use the specified scope in the info command')
         args = parser.parse_args(*args)
+        log_command("info", vars(args))
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         settings, package_settings = self._get_simple_and_package_tuples(args.settings)
@@ -526,6 +531,7 @@ path to the CMake binary directory, like this:
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--profile", "-pr", default=None, help='Apply a profile')
         args = parser.parse_args(*args)
+        log_command("build", vars(args))
         current_path = os.getcwd()
         if args.path:
             root_path = os.path.abspath(args.path)
@@ -563,6 +569,7 @@ path to the CMake binary directory, like this:
                                  're-packaged')
 
         args = parser.parse_args(*args)
+        log_command("package", vars(args))
 
         current_path = os.getcwd()
         try:
@@ -606,6 +613,7 @@ path to the CMake binary directory, like this:
                                  " do nothing.")
 
         args = parser.parse_args(*args)
+        log_command("source", vars(args))
 
         current_path, reference = self._get_reference(args)
         self._manager.source(current_path, reference, args.force)
@@ -629,6 +637,7 @@ path to the CMake binary directory, like this:
                             help="Undo imports. Remove imported files")
 
         args = parser.parse_args(*args)
+        log_command("imports", vars(args))
 
         if args.undo:
             if not os.path.isabs(args.reference):
@@ -656,6 +665,7 @@ path to the CMake binary directory, like this:
                             help='Optional. Do not remove the source folder in the local cache. '
                                  'Use for testing purposes only')
         args = parser.parse_args(*args)
+        log_command("export", vars(args))
 
         current_path = os.path.abspath(args.path or os.getcwd())
         keep_source = args.keep_source
@@ -680,6 +690,7 @@ path to the CMake binary directory, like this:
                             action='store_true', help='Remove without requesting a confirmation')
         parser.add_argument('-r', '--remote', help='Will remove from the specified remote')
         args = parser.parse_args(*args)
+        log_command("remove", vars(args))
 
         if args.packages:
             args.packages = args.packages.split(",")
@@ -710,6 +721,7 @@ path to the CMake binary directory, like this:
                             default=False,
                             help='Override destination packages and the package recipe')
         args = parser.parse_args(*args)
+        log_command("copy", vars(args))
 
         reference = ConanFileReference.loads(args.reference)
         new_ref = ConanFileReference.loads("%s/%s@%s" % (reference.name,
@@ -735,6 +747,7 @@ path to the CMake binary directory, like this:
         parser.add_argument('-c', '--clean', default=False,
                             action='store_true', help='Remove user and tokens for all remotes')
         args = parser.parse_args(*parameters)  # To enable -h
+        log_command("user", vars(args))
 
         if args.clean:
             localdb = LocalDB(self._client_cache.localdb)
@@ -763,6 +776,7 @@ path to the CMake binary directory, like this:
                                                                 'reference: MyPackage/1.2'
                                                                 '@user/channel')
         args = parser.parse_args(*args)
+        log_command("search", vars(args))
 
         reference = None
         if args.pattern:
@@ -801,6 +815,7 @@ path to the CMake binary directory, like this:
                             help='Waits specified seconds before retry again')
 
         args = parser.parse_args(*args)
+        log_command("upload", vars(args))
 
         if args.package and not is_a_reference(args.pattern):
             raise ConanException("-p parameter only allowed with a valid recipe reference, not with a pattern")
@@ -844,6 +859,7 @@ path to the CMake binary directory, like this:
         parser_pupd.add_argument('reference',  help='package recipe reference')
         parser_pupd.add_argument('remote',  help='name of the remote')
         args = parser.parse_args(*args)
+        log_command("remote", vars(args))
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         if args.subcommand == "list":
@@ -883,6 +899,7 @@ path to the CMake binary directory, like this:
                                                          ' a profile file in  any location.')
         parser_show.add_argument('profile',  help='name of the profile')
         args = parser.parse_args(*args)
+        log_command("profile", vars(args))
 
         if args.subcommand == "list":
             folder = self._client_cache.profiles_path
@@ -949,6 +966,11 @@ path to the CMake binary directory, like this:
             errors = True
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
+            log_exception(exc, msg)
+        except Exception as exc:
+            msg = exception_message_safe(exc)
+            log_exception(exc, msg)
+            raise exc
 
         return errors
 

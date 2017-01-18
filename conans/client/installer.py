@@ -17,6 +17,7 @@ from conans.model.env_info import EnvInfo
 from conans.client.source import config_source
 from conans.client.generators.env import ConanEnvGenerator
 from conans.tools import environment_append
+from conans.util.tracer import log_package_built
 
 
 def init_package_info(deps_graph, paths):
@@ -130,6 +131,7 @@ class ConanInstaller(object):
                 build_allowed = self._build_allowed(conan_ref, build_mode, conan_file)
                 if not build_allowed:
                     self._raise_package_not_found_error(conan_ref, conan_file)
+
                 output = ScopedOutput(str(conan_ref), self._out)
                 package_ref = PackageReference(conan_ref, package_id)
                 package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
@@ -138,6 +140,7 @@ class ConanInstaller(object):
                 elif self._build_forced(conan_ref, build_mode, conan_file):
                     output.warn('Forced build from source')
 
+                t1 = time.time()
                 # Assign to node the propagated info
                 self._propagate_info(conan_ref, conan_file, flat)
 
@@ -149,6 +152,9 @@ class ConanInstaller(object):
 
                 # Call the info method
                 self._package_info_conanfile(conan_ref, conan_file)
+
+                duration = time.time() - t1
+                log_package_built(package_ref, duration)
             else:
                 # Get the package, we have a not outdated remote package
                 if conan_ref:
