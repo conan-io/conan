@@ -1,8 +1,7 @@
 import unittest
-from conans.model.options import OptionsValues, PackageOptions, Options
+from conans.model.options import OptionsValues, PackageOptions, Options, PackageValues
 from conans.model.ref import ConanFileReference
 from conans.test.tools import TestBufferConanOutput
-from conans.model.values import Values
 from conans.errors import ConanException
 
 
@@ -12,7 +11,7 @@ class OptionsTest(unittest.TestCase):
         package_options = PackageOptions.loads("""{static: [True, False],
         optimized: [2, 3, 4],
         path: ANY}""")
-        package_options.values = Values.loads("static=True\noptimized=3\npath=NOTDEF")
+        package_options.values = PackageValues.loads("static=True\noptimized=3\npath=NOTDEF")
         self.sut = Options(package_options)
 
     def items_test(self):

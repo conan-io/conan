@@ -1,18 +1,436 @@
-from conans.model.config_dict import ConfigDict
-from conans.model.values import Values
 from conans.util.sha import sha1
 from collections import defaultdict
 from conans.errors import ConanException
+import yaml
+import six
 
 
-class PackageOptions(ConfigDict):
+class PackageValues(object):
+    def __init__(self, value="values"):
+        self._value = str(value)
+        self._dict = {}  # {key: PackageValues()}
+        self._modified = {}  # {"compiler.version.arch": (old_value, old_reference)}
+
+    def __getattr__(self, attr):
+        if attr not in self._dict:
+            return None
+        return self._dict[attr]
+
+    def clear(self):
+        self._dict.clear()
+        self._value = ""
+
+    def __setattr__(self, attr, value):
+        if attr[0] == "_":
+            return super(PackageValues, self).__setattr__(attr, value)
+        self._dict[attr] = PackageValues(value)
+
+    def copy(self):
+        """ deepcopy, recursive
+        """
+        cls = type(self)
+        result = cls(self._value)
+        for k, v in self._dict.items():
+            result._dict[k] = v.copy()
+        return result
+
+    @property
+    def fields(self):
+        """ return a sorted list of fields: [compiler, os, ...]
+        """
+        return sorted(list(self._dict.keys()))
+
+    def __bool__(self):
+        return self._value.lower() not in ["false", "none", "0", "off", ""]
+
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def __str__(self):
+        return self._value
+
+    def __eq__(self, other):
+        return str(other) == self.__str__()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    @classmethod
+    def loads(cls, text):
+        result = []
+        for line in text.splitlines():
+            if not line.strip():
+                continue
+            name, value = line.split("=")
+            result.append((name.strip(), value.strip()))
+        return cls.from_list(result)
+
+    def as_list(self, list_all=True):
+        result = []
+        for field in self.fields:
+            value = getattr(self, field)
+            if value or list_all:
+                result.append((field, str(value)))
+                child_lines = value.as_list()
+                for (child_name, child_value) in child_lines:
+                    result.append(("%s.%s" % (field, child_name), child_value))
+        return result
+
+    @classmethod
+    def from_list(cls, data):
+        result = cls()
+        for (field, value) in data:
+            tokens = field.split(".")
+            attr = result
+            for token in tokens[:-1]:
+                attr = getattr(attr, token)
+                if attr is None:
+                    raise ConanException("%s not defined for %s\n"
+                                         "Please define %s value first too"
+                                         % (token, field, token))
+            setattr(attr, tokens[-1], PackageValues(value))
+        return result
+
+    def add(self, option_text):
+        assert isinstance(option_text, six.string_types)
+        name, value = option_text.split("=")
+        tokens = name.strip().split(".")
+        attr = self
+        for token in tokens[:-1]:
+            attr = getattr(attr, token)
+        setattr(attr, tokens[-1], PackageValues(value.strip()))
+
+    def update(self, other):
+        assert isinstance(other, PackageValues)
+        self._value = other._value
+        for k, v in other._dict.items():
+            if k in self._dict:
+                self._dict[k].update(v)
+            else:
+                self._dict[k] = v.copy()
+
+    def propagate_upstream(self, other, down_ref, own_ref, output, package_name):
+        if not other:
+            return
+
+        current_values = {k: v for (k, v) in self.as_list()}
+        for (name, value) in other.as_list():
+            current_value = current_values.get(name)
+            if value == current_value:
+                continue
+
+            modified = self._modified.get(name)
+            if modified is not None:
+                modified_value, modified_ref = modified
+                if modified_value == value:
+                    continue
+                else:
+                    output.werror("%s tried to change %s option %s:%s to %s\n"
+                                  "but it was already assigned to %s by %s"
+                                  % (down_ref, own_ref, package_name, name, value,
+                                     modified_value, modified_ref))
+            else:
+                self._modified[name] = (value, down_ref)
+                list_settings = name.split(".")
+                attr = self
+                for setting in list_settings[:-1]:
+                    attr = getattr(attr, setting)
+                setattr(attr, list_settings[-1], str(value))
+
+    def dumps(self):
+        """ produces a text string with lines containine a flattened version:
+        compiler.arch = XX
+        compiler.arch.speed = YY
+        """
+        return "\n".join(["%s=%s" % (field, value)
+                          for (field, value) in self.as_list()])
+
+    def serialize(self):
+        return self.as_list()
+
+    @classmethod
+    def deserialize(cls, data):
+        return cls.from_list(data)
+
+    @property
+    def sha(self):
+        result = []
+        for (name, value) in self.as_list(list_all=False):
+            # It is important to discard None values, so migrations in settings can be done
+            # without breaking all existing packages SHAs, by adding a first "None" option
+            # that doesn't change the final sha
+            if value != "None":
+                result.append("%s=%s" % (name, value))
+        return sha1('\n'.join(result).encode())
+
+
+def bad_value_msg(name, value, value_range):
+    tip = ""
+    if "settings" in name:
+        tip = "\nCheck your settings ~/.conan/settings.yml or read the docs FAQ"
+
+    return ("'%s' is not a valid '%s' value.\nPossible values are %s%s"
+            % (value, name, value_range, tip))
+
+
+def undefined_field(name, field, fields=None, value=None):
+    value_str = " for '%s'" % value if value else ""
+    result = ["'%s.%s' doesn't exist%s" % (name, field, value_str)]
+    result.append("'%s' possible configurations are %s" % (name, fields or "none"))
+    return "\n".join(result)
+
+
+def undefined_value(name):
+    return "'%s' value not defined" % name
+
+
+class ConfigItem(object):
+    def __init__(self, definition, name, cls):
+        self._name = name
+        self._value = None
+        self._cls = cls
+        self._definition = {}
+        if isinstance(definition, dict):
+            # recursive
+            for k, v in definition.items():
+                k = str(k)
+                self._definition[k] = cls(v, name, k)
+        elif definition == "ANY":
+            self._definition = "ANY"
+        else:
+            # list or tuple of possible values
+            self._definition = sorted([str(v) for v in definition])
+
+    def copy(self):
+        """ deepcopy, recursive
+        """
+        cls = type(self)
+        result = cls({}, name=self._name, cls=self._cls)
+        result._value = self._value
+        if self.is_final:
+            result._definition = self._definition[:]
+        else:
+            result._definition = {k: v.copy() for k, v in self._definition.items()}
+        return result
+
+    @property
+    def is_final(self):
+        return not isinstance(self._definition, dict)
+
+    def __bool__(self):
+        if not self._value:
+            return False
+        return self._value.lower() not in ["false", "none", "0", "off"]
+
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def __str__(self):
+        return self._value
+
+    def __eq__(self, other):
+        if other is None:
+            return self._value is None
+        other = str(other)
+        if self._definition != "ANY" and other not in self.values_range:
+            raise ConanException(bad_value_msg(self._name, other, self.values_range))
+        return other == self.__str__()
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __delattr__(self, item):
+        """ This is necessary to remove libcxx subsetting from compiler in config()
+           del self.settings.compiler.stdlib
+        """
+        try:
+            self._get_child(self._value).remove(item)
+        except:
+            pass
+
+    def remove(self, values):
+        if not isinstance(values, (list, tuple, set)):
+            values = [values]
+        for v in values:
+            v = str(v)
+            if isinstance(self._definition, dict):
+                self._definition.pop(v, None)
+            elif self._definition != "ANY":
+                if v in self._definition:
+                    self._definition.remove(v)
+        if self._value is not None and self._value not in self._definition:
+            raise ConanException(bad_value_msg(self._name, self._value, self.values_range))
+
+    def _get_child(self, item):
+        if not isinstance(self._definition, dict):
+            raise ConanException(undefined_field(self._name, item, None, self._value))
+        if self._value is None:
+            raise ConanException(undefined_value(self._name))
+        return self._definition[self._value]
+
+    def __getattr__(self, item):
+        item = str(item)
+        sub_config_dict = self._get_child(item)
+        return getattr(sub_config_dict, item)
+
+    def __setattr__(self, item, value):
+        if item[0] == "_" or item.startswith("value"):
+            return super(ConfigItem, self).__setattr__(item, value)
+
+        item = str(item)
+        sub_config_dict = self._get_child(item)
+        return setattr(sub_config_dict, item, value)
+
+    def __getitem__(self, value):
+        value = str(value)
+        try:
+            return self._definition[value]
+        except:
+            raise ConanException(bad_value_msg(self._name, value, self.values_range))
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, v):
+        v = str(v)
+        if self._definition != "ANY" and v not in self._definition:
+            raise ConanException(bad_value_msg(self._name, v, self.values_range))
+        self._value = v
+
+    @property
+    def values_range(self):
+        try:
+            return sorted(list(self._definition.keys()))
+        except:
+            return self._definition
+
+    @property
+    def values_list(self):
+        if self._value is None:
+            return []
+        result = []
+        partial_name = ".".join(self._name.split(".")[1:])
+        result.append((partial_name, self._value))
+        if isinstance(self._definition, dict):
+            sub_config_dict = self._definition[self._value]
+            result.extend(sub_config_dict.values_list)
+        return result
+
+    def validate(self):
+        if self._value is None and "None" not in self._definition:
+            raise ConanException(undefined_value(self._name))
+
+        if isinstance(self._definition, dict):
+            self._definition[self._value].validate()
+
+
+class PackageOptions(object):
     """ Optional configuration of a package. Follows the same syntax as
     settings and all values will be converted to strings
     """
-    def __init__(self, definition=None, name="options", parent_value=None):
-        super(PackageOptions, self).__init__(definition or {}, name, parent_value)
-        self._modified = {}  # {"compiler.version.arch": (old_value, old_reference)}
+    def __init__(self, definition, name="options", parent_value=None):
+        definition = definition or {}
+        self._name = name  # settings, settings.compiler
+        self._parent_value = parent_value  # gcc, x86
+        cls = type(self)
+        self._data = {str(k): ConfigItem(v, "%s.%s" % (name, k), cls)
+                      for k, v in definition.items()}
+        self._modified = {}
 
+    def copy(self):
+        """ deepcopy, recursive
+        """
+        cls = type(self)
+        result = cls({}, name=self._name, parent_value=self._parent_value)
+        for k, v in self._data.items():
+            result._data[k] = v.copy()
+        return result
+
+    @classmethod
+    def loads(cls, text):
+        name = cls.__name__.lower()
+        if name == "packageoptions":
+            name = "options"
+        return cls(yaml.load(text) or {})
+
+    def validate(self):
+        for field in self.fields:
+            child = self._data[field]
+            child.validate()
+
+    @property
+    def fields(self):
+        return sorted(list(self._data.keys()))
+
+    def remove(self, item):
+        if not isinstance(item, (list, tuple, set)):
+            item = [item]
+        for it in item:
+            it = str(it)
+            self._data.pop(it, None)
+
+    def clear(self):
+        self._data = {}
+
+    def _check_field(self, field):
+        if field not in self._data:
+            raise ConanException(undefined_field(self._name, field, self.fields,
+                                                 self._parent_value))
+
+    def __getattr__(self, field):
+        assert field[0] != "_", "ERROR %s" % field
+        self._check_field(field)
+        return self._data[field]
+
+    def __delattr__(self, field):
+        assert field[0] != "_", "ERROR %s" % field
+        self._check_field(field)
+        del self._data[field]
+
+    def __setattr__(self, field, value):
+        if field[0] == "_" or field.startswith("values"):
+            return super(PackageOptions, self).__setattr__(field, value)
+
+        self._check_field(field)
+        self._data[field].value = value
+
+    @property
+    def values(self):
+        return PackageValues.from_list(self.values_list)
+
+    @property
+    def values_list(self):
+        result = []
+        for field in self.fields:
+            config_item = self._data[field]
+            result.extend(config_item.values_list)
+        return result
+
+    def items(self):
+        return self.values_list
+
+    def iteritems(self):
+        return self.values_list
+
+    @values_list.setter
+    def values_list(self, vals):
+        """ receives a list of tuples (compiler.version, value)
+        """
+        assert isinstance(vals, list), vals
+        for (name, value) in vals:
+            list_settings = name.split(".")
+            attr = self
+            for setting in list_settings[:-1]:
+                attr = getattr(attr, setting)
+            setattr(attr, list_settings[-1], str(value))
+
+    @values.setter
+    def values(self, vals):
+        assert isinstance(vals, PackageValues)
+        self.values_list = vals.as_list()
+        
     def propagate_upstream(self, values, down_ref, own_ref, output):
         """ update must be controlled, to not override lower
         projects options
@@ -55,13 +473,13 @@ class Options(object):
         # Addressed only by name, as only 1 configuration is allowed
         # if more than 1 is present, 1 should be "private" requirement and its options
         # are not public, not overridable
-        self._reqs_options = {}  # {name("Boost": Values}
+        self._reqs_options = {}  # {name("Boost": PackageValues}
 
     def clear(self):
         self._options.clear()
 
     def __getitem__(self, item):
-        return self._reqs_options.setdefault(item, Values())
+        return self._reqs_options.setdefault(item, PackageValues())
 
     def __getattr__(self, attr):
         return getattr(self._options, attr)
@@ -80,7 +498,7 @@ class Options(object):
     @property
     def values(self):
         result = OptionsValues()
-        result._options = Values.from_list(self._options.values_list)
+        result._options = PackageValues.from_list(self._options.values_list)
         for k, v in self._reqs_options.items():
             result._reqs_options[k] = v.copy()
         return result
@@ -101,7 +519,7 @@ class Options(object):
             own_values = values.pop(own_ref.name)
             self._options.propagate_upstream(own_values, down_ref, own_ref, output)
             for name, option_values in sorted(list(values._reqs_options.items())):
-                self._reqs_options.setdefault(name, Values()).propagate_upstream(option_values,
+                self._reqs_options.setdefault(name, PackageValues()).propagate_upstream(option_values,
                                                                                  down_ref,
                                                                                  own_ref,
                                                                                  output,
@@ -117,7 +535,7 @@ class Options(object):
                 values._options.update(package_options)
             self._options.values = values._options
             for name, option_values in values._reqs_options.items():
-                self._reqs_options.setdefault(name, Values()).update(option_values)
+                self._reqs_options.setdefault(name, PackageValues()).update(option_values)
 
     def validate(self):
         return self._options.validate()
@@ -144,11 +562,11 @@ class OptionsValues(object):
     Poco.optimized = True
     """
     def __init__(self):
-        self._options = Values()
-        self._reqs_options = {}  # {name("Boost": Values}
+        self._options = PackageValues()
+        self._reqs_options = {}  # {name("Boost": PackageValues}
 
     def __getitem__(self, item):
-        return self._reqs_options.setdefault(item, Values())
+        return self._reqs_options.setdefault(item, PackageValues())
 
     def __setitem__(self, item, value):
         self._reqs_options[item] = value
@@ -200,10 +618,10 @@ class OptionsValues(object):
                 by_package[package.strip()].append((option, v))
             else:
                 by_package[None].append((k, v))
-        result._options = Values.from_list(by_package[None])
+        result._options = PackageValues.from_list(by_package[None])
         for k, v in by_package.items():
             if k is not None:
-                result._reqs_options[k] = Values.from_list(v)
+                result._reqs_options[k] = PackageValues.from_list(v)
         return result
 
     def dumps(self):
@@ -229,7 +647,7 @@ class OptionsValues(object):
             tokens = name.split(":")
             if len(tokens) == 2:
                 package, option = tokens
-                current = result._reqs_options.setdefault(package.strip(), Values())
+                current = result._reqs_options.setdefault(package.strip(), PackageValues())
             else:
                 option = tokens[0].strip()
                 current = result._options
@@ -261,7 +679,7 @@ class OptionsValues(object):
     @staticmethod
     def deserialize(data):
         result = OptionsValues()
-        result._options = Values.deserialize(data["options"])
+        result._options = PackageValues.deserialize(data["options"])
         for name, data_values in data["req_options"].items():
-            result._reqs_options[name] = Values.deserialize(data_values)
+            result._reqs_options[name] = PackageValues.deserialize(data_values)
         return result
