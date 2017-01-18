@@ -64,23 +64,8 @@ class PackageValues(object):
     def fields(self):
         return sorted(list(self._dict.keys()))
 
-    @staticmethod
-    def loads(text):
-        result = PackageValues()
-        for line in text.splitlines():
-            if not line.strip():
-                continue
-            name, value = line.split("=")
-            result._dict[name.strip()] = PackageValue(value.strip())
-        return result
-
-    def as_list(self, list_all=True):
-        result = []
-        for field in self.fields:
-            value = self._dict[field]
-            if value or list_all:
-                result.append((field, str(value)))
-        return result
+    def items(self):
+        return sorted(list(self._dict.items()))
 
     def add(self, option_text):
         assert isinstance(option_text, six.string_types)
@@ -99,9 +84,8 @@ class PackageValues(object):
             return
 
         assert isinstance(down_package_values, PackageValues)
-        current_values = {k: v for (k, v) in self.as_list()}
-        for (name, value) in down_package_values.as_list():
-            current_value = current_values.get(name)
+        for (name, value) in down_package_values.items():
+            current_value = self._dict.get(name)
             if value == current_value:
                 continue
 
@@ -117,24 +101,20 @@ class PackageValues(object):
                 self._dict[name] = value
 
     def dumps(self):
-        """ produces a text string with lines containine a flattened version:
-        compiler.arch = XX
-        compiler.arch.speed = YY
-        """
         return "\n".join(["%s=%s" % (field, value)
-                          for (field, value) in self.as_list()])
+                          for (field, value) in self.items()])
 
     def serialize(self):
-        return self.as_list()
+        return self.items()
 
     @property
     def sha(self):
         result = []
-        for (name, value) in self.as_list(list_all=False):
+        for name, value in self.items():
             # It is important to discard None values, so migrations in settings can be done
             # without breaking all existing packages SHAs, by adding a first "None" option
             # that doesn't change the final sha
-            if value != "None":
+            if value:
                 result.append("%s=%s" % (name, value))
         return sha1('\n'.join(result).encode())
 
@@ -269,8 +249,7 @@ class PackageOptions(object):
     @values.setter
     def values(self, vals):
         assert isinstance(vals, PackageValues)
-        val_list = vals.as_list()
-        for (name, value) in val_list:
+        for (name, value) in vals.items():
             self._check_field(name)
             self._data[name].value = value
 
@@ -278,7 +257,7 @@ class PackageOptions(object):
         if not package_values:
             return
 
-        for (name, value) in package_values.as_list():
+        for (name, value) in package_values.items():
             current_value = self._data.get(name)
             if value == current_value:
                 continue
@@ -401,6 +380,10 @@ class OptionsValues(object):
         self._package_values = PackageValues()
         self._reqs_options = {}  # {name("Boost": PackageValues}
 
+    def scope_options(self, name):
+        self._reqs_options[name] = self._package_values
+        self._package_values = PackageValues()
+
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageValues())
 
@@ -434,12 +417,11 @@ class OptionsValues(object):
 
     def as_list(self):
         result = []
-        options_list = self._package_values.as_list()
+        options_list = self._package_values.items()
         if options_list:
             result.extend(options_list)
         for key in sorted(self._reqs_options.keys()):
-            for line in self._reqs_options[key].as_list():
-                line_key, line_value = line
+            for line_key, line_value in self._reqs_options[key].items():
                 result.append(("%s:%s" % (key, line_key), line_value))
         return result
 

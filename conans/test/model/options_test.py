@@ -11,7 +11,11 @@ class OptionsTest(unittest.TestCase):
         package_options = PackageOptions.loads("""{static: [True, False],
         optimized: [2, 3, 4],
         path: ANY}""")
-        package_options.values = PackageValues.loads("static=True\noptimized=3\npath=NOTDEF")
+        values = PackageValues()
+        values.add_option("static", True)
+        values.add_option("optimized", 3)
+        values.add_option("path", "NOTDEF")
+        package_options.values = values
         self.sut = Options(package_options)
 
     def items_test(self):
@@ -42,19 +46,23 @@ class OptionsTest(unittest.TestCase):
         self.assertTrue(self.sut.static != "True")
 
     def basic_test(self):
-        options = OptionsValues.loads("""other_option=True
-        optimized_var=3
-        Poco:deps_bundled=True
-        Boost:static=False
-        Boost:thread=True
-        Boost:thread.multi=off
-        Hello1:static=False
-        Hello1:optimized=4
-        """)
+        boost_values = PackageValues()
+        boost_values.add_option("static", False)
+        boost_values.add_option("thread", True)
+        boost_values.add_option("thread.multi", "off")
+        poco_values = PackageValues()
+        poco_values.add_option("deps_bundled", True)
+        hello1_values = PackageValues()
+        hello1_values.add_option("static", False)
+        hello1_values.add_option("optimized", 4)
+
+        options = {"Boost": boost_values,
+                   "Poco": poco_values,
+                   "Hello1": hello1_values}
         down_ref = ConanFileReference.loads("Hello0/0.1@diego/testing")
         own_ref = ConanFileReference.loads("Hello1/0.1@diego/testing")
         output = TestBufferConanOutput()
-        self.sut.propagate_upstream(options._reqs_options, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options, down_ref, own_ref, output)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "4"),
                                                      ("path", "NOTDEF"),
                                                      ("static", "False"),
@@ -63,17 +71,20 @@ class OptionsTest(unittest.TestCase):
                                                      ("Boost:thread.multi", "off"),
                                                      ("Poco:deps_bundled", "True")])
 
-        options2 = OptionsValues.loads("""other_option=True
-        optimized_var=3
-        Poco:deps_bundled=What
-        Boost:static=2
-        Boost:thread=Any
-        Boost:thread.multi=on
-        Hello1:static=True
-        Hello1:optimized=2
-        """)
+        boost_values = PackageValues()
+        boost_values.add_option("static", 2)
+        boost_values.add_option("thread", "Any")
+        boost_values.add_option("thread.multi", "on")
+        poco_values = PackageValues()
+        poco_values.add_option("deps_bundled", "What")
+        hello1_values = PackageValues()
+        hello1_values.add_option("static", True)
+        hello1_values.add_option("optimized", "2")
+        options2 = {"Boost": boost_values,
+                    "Poco": poco_values,
+                    "Hello1": hello1_values}
         down_ref = ConanFileReference.loads("Hello2/0.1@diego/testing")
-        self.sut.propagate_upstream(options2._reqs_options, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options2, down_ref, own_ref, output)
         self.assertIn("""WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option optimized to 2
 but it was already assigned to 4 by Hello0/0.1@diego/testing
 WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option static to True
