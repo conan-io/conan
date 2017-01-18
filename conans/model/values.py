@@ -107,34 +107,6 @@ class Values(object):
             else:
                 self._dict[k] = v.copy()
 
-    def propagate_upstream(self, other, down_ref, own_ref, output, package_name):
-        if not other:
-            return
-
-        current_values = {k: v for (k, v) in self.as_list()}
-        for (name, value) in other.as_list():
-            current_value = current_values.get(name)
-            if value == current_value:
-                continue
-
-            modified = self._modified.get(name)
-            if modified is not None:
-                modified_value, modified_ref = modified
-                if modified_value == value:
-                    continue
-                else:
-                    output.werror("%s tried to change %s option %s:%s to %s\n"
-                                  "but it was already assigned to %s by %s"
-                                  % (down_ref, own_ref, package_name, name, value,
-                                     modified_value, modified_ref))
-            else:
-                self._modified[name] = (value, down_ref)
-                list_settings = name.split(".")
-                attr = self
-                for setting in list_settings[:-1]:
-                    attr = getattr(attr, setting)
-                setattr(attr, list_settings[-1], str(value))
-
     def dumps(self):
         """ produces a text string with lines containine a flattened version:
         compiler.arch = XX

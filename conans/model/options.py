@@ -331,7 +331,7 @@ class Options(object):
     @property
     def values(self):
         result = OptionsValues()
-        result._options = self._package_options.values
+        result._package_values = self._package_options.values
         for k, v in self._deps_package_values.items():
             result._reqs_options[k] = v.copy()
         return result
@@ -339,7 +339,7 @@ class Options(object):
     @values.setter
     def values(self, v):
         assert isinstance(v, OptionsValues)
-        self._package_options.values = v._options
+        self._package_options.values = v._package_values
         self._deps_package_values.clear()
         for k, v in v._reqs_options.items():
             self._deps_package_values[k] = v.copy()
@@ -352,11 +352,8 @@ class Options(object):
             own_values = values.pop(own_ref.name)
             self._package_options.propagate_upstream(own_values, down_ref, own_ref, output)
             for name, option_values in sorted(list(values._reqs_options.items())):
-                self._deps_package_values.setdefault(name, PackageValues()).propagate_upstream(option_values,
-                                                                                 down_ref,
-                                                                                 own_ref,
-                                                                                 output,
-                                                                                 name)
+                pkg_values = self._deps_package_values.setdefault(name, PackageValues())
+                pkg_values.propagate_upstream(option_values, down_ref, own_ref, output, name)
 
     def initialize_upstream(self, values, base_name=None):
         """ used to propagate from downstream the options to the upper requirements
@@ -365,8 +362,8 @@ class Options(object):
             assert isinstance(values, OptionsValues)
             package_options = values._reqs_options.pop(base_name, None)
             if package_options:
-                values._options.update(package_options)
-            self._package_options.values = values._options
+                values._package_values.update(package_options)
+            self._package_options.values = values._package_values
             for name, option_values in values._reqs_options.items():
                 self._deps_package_values.setdefault(name, PackageValues()).update(option_values)
 
@@ -375,7 +372,7 @@ class Options(object):
 
     def propagate_downstream(self, ref, options):
         assert isinstance(options, OptionsValues)
-        self._deps_package_values[ref.name] = options._options
+        self._deps_package_values[ref.name] = options._package_values
         for k, v in options._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
@@ -384,9 +381,8 @@ class Options(object):
         that should be the upstream requirements
         """
         existing_names = [r.conan.name for r in references]
-        for name in list(self._deps_package_values.keys()):
-            if name not in existing_names:
-                self._deps_package_values.pop(name)
+        self._deps_package_values = {k: v for k, v in self._deps_package_values.items()
+                                     if k in existing_names}
 
 
 class OptionsValues(object):
@@ -395,7 +391,7 @@ class OptionsValues(object):
     Poco.optimized = True
     """
     def __init__(self):
-        self._options = PackageValues()
+        self._package_values = PackageValues()
         self._reqs_options = {}  # {name("Boost": PackageValues}
 
     def __getitem__(self, item):
@@ -411,11 +407,11 @@ class OptionsValues(object):
         return self.dumps()
 
     def __getattr__(self, attr):
-        return getattr(self._options, attr)
+        return getattr(self._package_values, attr)
 
     def copy(self):
         result = OptionsValues()
-        result._options = self._options.copy()
+        result._package_values = self._package_values.copy()
         for k, v in self._reqs_options.items():
             result._reqs_options[k] = v.copy()
         return result
@@ -423,7 +419,7 @@ class OptionsValues(object):
     def __setattr__(self, attr, value):
         if attr[0] == "_":
             return super(OptionsValues, self).__setattr__(attr, value)
-        return setattr(self._options, attr, value)
+        return setattr(self._package_values, attr, value)
 
     def clear_indirect(self):
         for v in self._reqs_options.values():
@@ -431,7 +427,7 @@ class OptionsValues(object):
 
     def as_list(self):
         result = []
-        options_list = self._options.as_list()
+        options_list = self._package_values.as_list()
         if options_list:
             result.extend(options_list)
         for key in sorted(self._reqs_options.keys()):
@@ -450,7 +446,7 @@ class OptionsValues(object):
                 package_values = result._reqs_options.setdefault(package.strip(), PackageValues())
                 package_values.add_option(option, v)
             else:
-                result._options.add_option(k, v)
+                result._package_values.add_option(k, v)
         return result
 
     def dumps(self):
@@ -479,14 +475,14 @@ class OptionsValues(object):
                 current = result._reqs_options.setdefault(package.strip(), PackageValues())
             else:
                 option = tokens[0].strip()
-                current = result._options
+                current = result._package_values
             option = "%s=%s" % (option, value)
             current.add(option)
         return result
 
     def sha(self, non_dev_requirements):
         result = []
-        result.append(self._options.sha)
+        result.append(self._package_values.sha)
         if non_dev_requirements is None:  # Not filtering
             for key in sorted(list(self._reqs_options.keys())):
                 result.append(self._reqs_options[key].sha)
@@ -499,7 +495,7 @@ class OptionsValues(object):
 
     def serialize(self):
         ret = {}
-        ret["options"] = self._options.serialize()
+        ret["options"] = self._package_values.serialize()
         ret["req_options"] = {}
         for name, values in self._reqs_options.items():
             ret["req_options"][name] = values.serialize()
