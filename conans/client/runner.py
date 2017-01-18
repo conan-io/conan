@@ -31,11 +31,12 @@ class ConanRunner(object):
                 line = the_stream.readline()
                 if not line:
                     break
+                line = decode_text(line)
                 sys.stdout.write(line)
                 if log_handler:
                     log_handler.write(line)
                 if hasattr(output, "write"):
-                    output.write(decode_text(line))
+                    output.write(line)
 
         get_stream_lines(proc.stdout)
         get_stream_lines(proc.stderr)
