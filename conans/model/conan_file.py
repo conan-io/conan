@@ -67,7 +67,7 @@ def create_exports(conanfile):
 
 
 class ConanFile(object):
-    """ The base class for all conans
+    """ The base class for all package recipes
     """
 
     name = None
@@ -81,10 +81,6 @@ class ConanFile(object):
     short_paths = False
 
     def __init__(self, output, runner, settings, conanfile_directory, user=None, channel=None):
-        '''
-        param settings: Settings
-        '''
-
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
         if isinstance(self.generators, str):

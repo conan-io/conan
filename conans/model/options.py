@@ -341,17 +341,16 @@ class Options(object):
                 pkg_values = self._deps_package_values.setdefault(name, PackageValues())
                 pkg_values.propagate_upstream(option_values, down_ref, own_ref, output, name)
 
-    def initialize_upstream(self, values, base_name=None):
+    def initialize_upstream(self, user_values):
         """ used to propagate from downstream the options to the upper requirements
         """
-        if values is not None:
-            assert isinstance(values, OptionsValues)
-            package_options = values._reqs_options.pop(base_name, None)
-            if package_options:
-                values._package_values.update(package_options)
-            self._package_options.values = values._package_values
-            for name, option_values in values._reqs_options.items():
-                self._deps_package_values.setdefault(name, PackageValues()).update(option_values)
+        if user_values is not None:
+            assert isinstance(user_values, OptionsValues)
+            # This values setter implements an update, not an overwrite
+            self._package_options.values = user_values._package_values
+            for package_name, package_values in user_values._reqs_options.items():
+                pkg_values = self._deps_package_values.setdefault(package_name, PackageValues())
+                pkg_values.update(package_values)
 
     def validate(self):
         return self._package_options.validate()
@@ -381,8 +380,13 @@ class OptionsValues(object):
         self._reqs_options = {}  # {name("Boost": PackageValues}
 
     def scope_options(self, name):
-        self._reqs_options[name] = self._package_values
+        self._reqs_options.setdefault(name, PackageValues()).update(self._package_values)
         self._package_values = PackageValues()
+
+    def descope_options(self, name):
+        package_values = self._reqs_options.pop(name, None)
+        if package_values:
+            self._package_values.update(package_values)
 
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageValues())
@@ -420,9 +424,9 @@ class OptionsValues(object):
         options_list = self._package_values.items()
         if options_list:
             result.extend(options_list)
-        for key in sorted(self._reqs_options.keys()):
-            for line_key, line_value in self._reqs_options[key].items():
-                result.append(("%s:%s" % (key, line_key), line_value))
+        for package_name, package_values in sorted(self._reqs_options.items()):
+            for option_name, option_value in package_values.items():
+                result.append(("%s:%s" % (package_name, option_name), option_value))
         return result
 
     @staticmethod
