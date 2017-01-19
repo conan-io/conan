@@ -26,8 +26,7 @@ class Values(object):
     def copy(self):
         """ deepcopy, recursive
         """
-        cls = type(self)
-        result = cls(self._value)
+        result = Values(self._value)
         for k, v in self._dict.items():
             result._dict[k] = v.copy()
         return result

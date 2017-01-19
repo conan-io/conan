@@ -7,7 +7,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
 from conans.client.loader import ConanFileLoader
 from conans.util.files import save
-from conans.model.settings import Settings
+from conans.model.settings import Settings, bad_value_msg
 from conans.errors import ConanException
 from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
@@ -15,7 +15,6 @@ from conans.model.values import Values
 from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
 from conans.model.scope import Scopes
-from conans.model.config_dict import bad_value_msg
 
 
 class Retriever(object):
