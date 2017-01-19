@@ -208,7 +208,7 @@ class PackageOptions(object):
 
     def _check_field(self, field):
         if field not in self._data:
-            raise ConanException(undefined_option(field, self._data.keys()))
+            raise ConanException(undefined_option(field, list(self._data.keys())))
 
     def __getattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
