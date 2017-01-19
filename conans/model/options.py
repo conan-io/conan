@@ -7,22 +7,31 @@ import six
 _falsey_options = ["false", "none", "0", "off", ""]
 
 
-def bad_value_msg(name, value, value_range):
+def option_wrong_value_msg(name, value, value_range):
+    """ The provided value is not among the range of values that it should
+    be
+    """
     return ("'%s' is not a valid 'options.%s' value.\nPossible values are %s"
             % (value, name, value_range))
 
 
-def undefined_option(option_name, existing_options):
+def option_not_exist_msg(option_name, existing_options):
+    """ Someone is referencing an option that is not available in the current package
+    options
+    """
     result = ["'options.%s' doesn't exist" % option_name]
     result.append("Possible options are %s" % existing_options or "none")
     return "\n".join(result)
 
 
-def undefined_value(name):
+def option_undefined_msg(name):
     return "'%s' value not defined" % name
 
 
-class PackageValue(str):
+class PackageOptionValue(str):
+    """ thin wrapper around a string value that allows to check for several false string
+    and also promote other types to string for homegeneous comparison
+    """
     def __bool__(self):
         return self.lower() not in _falsey_options
 
@@ -36,9 +45,16 @@ class PackageValue(str):
         return not self.__eq__(other)
 
 
-class PackageValues(object):
+class PackageOptionValues(object):
+    """ set of key(string)-value(PackageOptionValue) for options of a package.
+    Not prefixed by package name:
+    static: True
+    optimized: 2
+    These are non-validating, not constrained.
+    Used for UserOptions, which is a dict{package_name: PackageOptionValues}
+    """
     def __init__(self):
-        self._dict = {}  # {option_name: PackageValue}
+        self._dict = {}  # {option_name: PackageOptionValue}
         self._modified = {}
 
     def __getattr__(self, attr):
@@ -51,11 +67,11 @@ class PackageValues(object):
 
     def __setattr__(self, attr, value):
         if attr[0] == "_":
-            return super(PackageValues, self).__setattr__(attr, value)
-        self._dict[attr] = PackageValue(value)
+            return super(PackageOptionValues, self).__setattr__(attr, value)
+        self._dict[attr] = PackageOptionValue(value)
 
     def copy(self):
-        result = PackageValues()
+        result = PackageOptionValues()
         for k, v in self._dict.items():
             result._dict[k] = v
         return result
@@ -70,20 +86,20 @@ class PackageValues(object):
     def add(self, option_text):
         assert isinstance(option_text, six.string_types)
         name, value = option_text.split("=")
-        self._dict[name.strip()] = PackageValue(value.strip())
+        self._dict[name.strip()] = PackageOptionValue(value.strip())
 
     def add_option(self, option_name, option_value):
-        self._dict[option_name] = PackageValue(option_value)
+        self._dict[option_name] = PackageOptionValue(option_value)
 
     def update(self, other):
-        assert isinstance(other, PackageValues)
+        assert isinstance(other, PackageOptionValues)
         self._dict.update(other._dict)
 
     def propagate_upstream(self, down_package_values, down_ref, own_ref, output, package_name):
         if not down_package_values:
             return
 
-        assert isinstance(down_package_values, PackageValues)
+        assert isinstance(down_package_values, PackageOptionValues)
         for (name, value) in down_package_values.items():
             current_value = self._dict.get(name)
             if value == current_value:
@@ -119,6 +135,131 @@ class PackageValues(object):
         return sha1('\n'.join(result).encode())
 
 
+class OptionsValues(object):
+    """ static= True,
+    Boost.static = False,
+    Poco.optimized = True
+    """
+    def __init__(self, values=None):
+        self._package_values = PackageOptionValues()
+        self._reqs_options = {}  # {name("Boost": PackageOptionValues}
+
+        if not values:
+            return
+
+        # convert tuple "Pkg:option=value", "..." to list of tuples(name, value)
+        if isinstance(values, tuple):
+            new_values = []
+            for v in values:
+                option, value = v.split("=")
+                new_values.append((option.strip(), value.strip()))
+            values = new_values
+
+        # handle list of tuples (name, value)
+        for (k, v) in values:
+            tokens = k.split(":")
+            if len(tokens) == 2:
+                package, option = tokens
+                package_values = self._reqs_options.setdefault(package.strip(),
+                                                               PackageOptionValues())
+                package_values.add_option(option, v)
+            else:
+                self._package_values.add_option(k, v)
+
+    def scope_options(self, name):
+        self._reqs_options.setdefault(name, PackageOptionValues()).update(self._package_values)
+        self._package_values = PackageOptionValues()
+
+    def descope_options(self, name):
+        package_values = self._reqs_options.pop(name, None)
+        if package_values:
+            self._package_values.update(package_values)
+
+    def __getitem__(self, item):
+        return self._reqs_options.setdefault(item, PackageOptionValues())
+
+    def __setitem__(self, item, value):
+        self._reqs_options[item] = value
+
+    def pop(self, item):
+        return self._reqs_options.pop(item, None)
+
+    def __repr__(self):
+        return self.dumps()
+
+    def __getattr__(self, attr):
+        return getattr(self._package_values, attr)
+
+    def copy(self):
+        result = OptionsValues()
+        result._package_values = self._package_values.copy()
+        for k, v in self._reqs_options.items():
+            result._reqs_options[k] = v.copy()
+        return result
+
+    def __setattr__(self, attr, value):
+        if attr[0] == "_":
+            return super(OptionsValues, self).__setattr__(attr, value)
+        return setattr(self._package_values, attr, value)
+
+    def clear_indirect(self):
+        for v in self._reqs_options.values():
+            v.clear()
+
+    def as_list(self):
+        result = []
+        options_list = self._package_values.items()
+        if options_list:
+            result.extend(options_list)
+        for package_name, package_values in sorted(self._reqs_options.items()):
+            for option_name, option_value in package_values.items():
+                result.append(("%s:%s" % (package_name, option_name), option_value))
+        return result
+
+    def dumps(self):
+        result = []
+        for key, value in self.as_list():
+            result.append("%s=%s" % (key, value))
+        return "\n".join(result)
+
+    @staticmethod
+    def loads(text):
+        """ parses a multiline text in the form
+        Package:option=value
+        other_option=3
+        OtherPack:opt3=12.1
+        """
+        result = []
+        for line in text.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            name, value = line.split("=")
+            result.append((name.strip(), value.strip()))
+        return OptionsValues(result)
+
+    def sha(self, non_dev_requirements):
+        result = []
+        result.append(self._package_values.sha)
+        if non_dev_requirements is None:  # Not filtering
+            for key in sorted(list(self._reqs_options.keys())):
+                result.append(self._reqs_options[key].sha)
+        else:
+            for key in sorted(list(self._reqs_options.keys())):
+                non_dev = key in non_dev_requirements
+                if non_dev:
+                    result.append(self._reqs_options[key].sha)
+        return sha1('\n'.join(result).encode())
+
+    def serialize(self):
+        ret = {}
+        ret["options"] = self._package_values.serialize()
+        ret["req_options"] = {}
+        for name, values in self._reqs_options.items():
+            ret["req_options"][name] = values.serialize()
+        return ret
+
+
 class PackageOption(object):
     def __init__(self, possible_values, name):
         self._name = name
@@ -139,12 +280,17 @@ class PackageOption(object):
     def __str__(self):
         return str(self._value)
 
+    def _check_option_value(self, value):
+        """ checks that the provided value is allowed by current restrictions
+        """
+        if self._possible_values != "ANY" and value not in self._possible_values:
+            raise ConanException(option_wrong_value_msg(self._name, value, self._possible_values))
+
     def __eq__(self, other):
         if other is None:
             return self._value is None
         other = str(other)
-        if self._possible_values != "ANY" and other not in self._possible_values:
-            raise ConanException(bad_value_msg(self._name, other, self._possible_values))
+        self._check_option_value(other)
         return other == self.__str__()
 
     def __ne__(self, other):
@@ -158,8 +304,8 @@ class PackageOption(object):
         values = [str(v) for v in values]
         self._possible_values = [v for v in self._possible_values if v not in values]
 
-        if self._value is not None and self._value not in self._possible_values:
-            raise ConanException(bad_value_msg(self._name, self._value, self._possible_values))
+        if self._value is not None:
+            self._check_option_value(self._value)
 
     @property
     def value(self):
@@ -168,13 +314,12 @@ class PackageOption(object):
     @value.setter
     def value(self, v):
         v = str(v)
-        if self._possible_values != "ANY" and v not in self._possible_values:
-            raise ConanException(bad_value_msg(self._name, v, self._possible_values))
+        self._check_option_value(v)
         self._value = v
 
     def validate(self):
         if self._value is None and "None" not in self._possible_values:
-            raise ConanException(undefined_value(self._name))
+            raise ConanException(option_undefined_msg(self._name))
 
 
 class PackageOptions(object):
@@ -208,7 +353,7 @@ class PackageOptions(object):
 
     def _check_field(self, field):
         if field not in self._data:
-            raise ConanException(undefined_option(field, list(self._data.keys())))
+            raise ConanException(option_not_exist_msg(field, list(self._data.keys())))
 
     def __getattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
@@ -229,7 +374,7 @@ class PackageOptions(object):
 
     @property
     def values(self):
-        result = PackageValues()
+        result = PackageOptionValues()
         for field, package_option in self._data.items():
             result.add_option(field, package_option.value)
         return result
@@ -248,7 +393,7 @@ class PackageOptions(object):
 
     @values.setter
     def values(self, vals):
-        assert isinstance(vals, PackageValues)
+        assert isinstance(vals, PackageOptionValues)
         for (name, value) in vals.items():
             self._check_field(name)
             self._data[name].value = value
@@ -285,7 +430,7 @@ class Options(object):
         # Addressed only by name, as only 1 configuration is allowed
         # if more than 1 is present, 1 should be "private" requirement and its options
         # are not public, not overridable
-        self._deps_package_values = {}  # {name("Boost": PackageValues}
+        self._deps_package_values = {}  # {name("Boost": PackageOptionValues}
 
     @property
     def deps_package_values(self):
@@ -295,7 +440,7 @@ class Options(object):
         self._package_options.clear()
 
     def __getitem__(self, item):
-        return self._deps_package_values.setdefault(item, PackageValues())
+        return self._deps_package_values.setdefault(item, PackageOptionValues())
 
     def __getattr__(self, attr):
         return getattr(self._package_options, attr)
@@ -338,7 +483,7 @@ class Options(object):
         self._package_options.propagate_upstream(option_values, down_ref, own_ref, output)
         for name, option_values in sorted(list(down_package_values.items())):
             if name != own_ref.name:
-                pkg_values = self._deps_package_values.setdefault(name, PackageValues())
+                pkg_values = self._deps_package_values.setdefault(name, PackageOptionValues())
                 pkg_values.propagate_upstream(option_values, down_ref, own_ref, output, name)
 
     def initialize_upstream(self, user_values):
@@ -349,7 +494,7 @@ class Options(object):
             # This values setter implements an update, not an overwrite
             self._package_options.values = user_values._package_values
             for package_name, package_values in user_values._reqs_options.items():
-                pkg_values = self._deps_package_values.setdefault(package_name, PackageValues())
+                pkg_values = self._deps_package_values.setdefault(package_name, PackageOptionValues())
                 pkg_values.update(package_values)
 
     def validate(self):
@@ -368,128 +513,3 @@ class Options(object):
         existing_names = [r.conan.name for r in references]
         self._deps_package_values = {k: v for k, v in self._deps_package_values.items()
                                      if k in existing_names}
-
-
-class OptionsValues(object):
-    """ static= True,
-    Boost.static = False,
-    Poco.optimized = True
-    """
-    def __init__(self):
-        self._package_values = PackageValues()
-        self._reqs_options = {}  # {name("Boost": PackageValues}
-
-    def scope_options(self, name):
-        self._reqs_options.setdefault(name, PackageValues()).update(self._package_values)
-        self._package_values = PackageValues()
-
-    def descope_options(self, name):
-        package_values = self._reqs_options.pop(name, None)
-        if package_values:
-            self._package_values.update(package_values)
-
-    def __getitem__(self, item):
-        return self._reqs_options.setdefault(item, PackageValues())
-
-    def __setitem__(self, item, value):
-        self._reqs_options[item] = value
-
-    def pop(self, item):
-        return self._reqs_options.pop(item, None)
-
-    def __repr__(self):
-        return self.dumps()
-
-    def __getattr__(self, attr):
-        return getattr(self._package_values, attr)
-
-    def copy(self):
-        result = OptionsValues()
-        result._package_values = self._package_values.copy()
-        for k, v in self._reqs_options.items():
-            result._reqs_options[k] = v.copy()
-        return result
-
-    def __setattr__(self, attr, value):
-        if attr[0] == "_":
-            return super(OptionsValues, self).__setattr__(attr, value)
-        return setattr(self._package_values, attr, value)
-
-    def clear_indirect(self):
-        for v in self._reqs_options.values():
-            v.clear()
-
-    def as_list(self):
-        result = []
-        options_list = self._package_values.items()
-        if options_list:
-            result.extend(options_list)
-        for package_name, package_values in sorted(self._reqs_options.items()):
-            for option_name, option_value in package_values.items():
-                result.append(("%s:%s" % (package_name, option_name), option_value))
-        return result
-
-    @staticmethod
-    def from_list(data):
-        result = OptionsValues()
-        for k, v in data:
-            tokens = k.split(":")
-            if len(tokens) == 2:
-                package, option = tokens
-                package_values = result._reqs_options.setdefault(package.strip(), PackageValues())
-                package_values.add_option(option, v)
-            else:
-                result._package_values.add_option(k, v)
-        return result
-
-    def dumps(self):
-        result = []
-        for key, value in self.as_list():
-            result.append("%s=%s" % (key, value))
-        return "\n".join(result)
-
-    @staticmethod
-    def loads(text):
-        """ parses a multiline text in the form
-        Package:option=value
-        other_option=3
-        OtherPack:opt3=12.1
-        """
-        result = OptionsValues()
-        for line in text.splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            # To avoid problems with values containing ":" as URLs
-            name, value = line.split("=")
-            tokens = name.split(":")
-            if len(tokens) == 2:
-                package, option = tokens
-                current = result._reqs_options.setdefault(package.strip(), PackageValues())
-            else:
-                option = tokens[0].strip()
-                current = result._package_values
-            option = "%s=%s" % (option, value)
-            current.add(option)
-        return result
-
-    def sha(self, non_dev_requirements):
-        result = []
-        result.append(self._package_values.sha)
-        if non_dev_requirements is None:  # Not filtering
-            for key in sorted(list(self._reqs_options.keys())):
-                result.append(self._reqs_options[key].sha)
-        else:
-            for key in sorted(list(self._reqs_options.keys())):
-                non_dev = key in non_dev_requirements
-                if non_dev:
-                    result.append(self._reqs_options[key].sha)
-        return sha1('\n'.join(result).encode())
-
-    def serialize(self):
-        ret = {}
-        ret["options"] = self._package_values.serialize()
-        ret["req_options"] = {}
-        for name, values in self._reqs_options.items():
-            ret["req_options"][name] = values.serialize()
-        return ret

@@ -85,7 +85,7 @@ class ConanManager(object):
         if user_options_values is not None:  # Install will pass an empty list []
             # Install OVERWRITES options, existing options in CONANINFO are not taken
             # into account, just those from CONANFILE + user command line
-            options = OptionsValues.from_list(user_options_values)
+            options = OptionsValues(user_options_values)
 
         if scopes:
             conaninfo_scopes.update_scope(scopes)

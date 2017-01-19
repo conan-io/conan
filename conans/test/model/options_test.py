@@ -1,5 +1,6 @@
 import unittest
-from conans.model.options import OptionsValues, PackageOptions, Options, PackageValues
+from conans.model.options import OptionsValues, PackageOptions, Options, PackageOptionValues,\
+    option_undefined_msg
 from conans.model.ref import ConanFileReference
 from conans.test.tools import TestBufferConanOutput
 from conans.errors import ConanException
@@ -11,12 +12,30 @@ class OptionsTest(unittest.TestCase):
         package_options = PackageOptions.loads("""{static: [True, False],
         optimized: [2, 3, 4],
         path: ANY}""")
-        values = PackageValues()
+        values = PackageOptionValues()
         values.add_option("static", True)
         values.add_option("optimized", 3)
         values.add_option("path", "NOTDEF")
         package_options.values = values
         self.sut = Options(package_options)
+
+    def undefined_value_test(self):
+        """ Not assigning a value to options will raise an error at validate() step
+        """
+        package_options = PackageOptions.loads("""{
+        path: ANY}""")
+        with self.assertRaisesRegexp(ConanException, option_undefined_msg("path")):
+            package_options.validate()
+        package_options.path = "Something"
+        package_options.validate()
+
+    def undefined_value_none_test(self):
+        """ The value None is allowed as default, not necessary to default to it
+        """
+        package_options = PackageOptions.loads('{path: [None, "Other"]}')
+        package_options.validate()
+        package_options = PackageOptions.loads('{path: ["None", "Other"]}')
+        package_options.validate()
 
     def items_test(self):
         self.assertEqual(self.sut.items(), [("optimized", "3"), ("path", "NOTDEF"),
@@ -46,13 +65,13 @@ class OptionsTest(unittest.TestCase):
         self.assertTrue(self.sut.static != "True")
 
     def basic_test(self):
-        boost_values = PackageValues()
+        boost_values = PackageOptionValues()
         boost_values.add_option("static", False)
         boost_values.add_option("thread", True)
         boost_values.add_option("thread.multi", "off")
-        poco_values = PackageValues()
+        poco_values = PackageOptionValues()
         poco_values.add_option("deps_bundled", True)
-        hello1_values = PackageValues()
+        hello1_values = PackageOptionValues()
         hello1_values.add_option("static", False)
         hello1_values.add_option("optimized", 4)
 
@@ -71,13 +90,13 @@ class OptionsTest(unittest.TestCase):
                                                      ("Boost:thread.multi", "off"),
                                                      ("Poco:deps_bundled", "True")])
 
-        boost_values = PackageValues()
+        boost_values = PackageOptionValues()
         boost_values.add_option("static", 2)
         boost_values.add_option("thread", "Any")
         boost_values.add_option("thread.multi", "on")
-        poco_values = PackageValues()
+        poco_values = PackageOptionValues()
         poco_values.add_option("deps_bundled", "What")
-        hello1_values = PackageValues()
+        hello1_values = PackageOptionValues()
         hello1_values.add_option("static", True)
         hello1_values.add_option("optimized", "2")
         options2 = {"Boost": boost_values,
@@ -119,7 +138,7 @@ class OptionsValuesTest(unittest.TestCase):
         """)
 
     def test_from_list(self):
-        option_values = OptionsValues.from_list(self.sut.as_list())
+        option_values = OptionsValues(self.sut.as_list())
         self.assertEqual(option_values.dumps(), self.sut.dumps())
 
     def test_dumps(self):

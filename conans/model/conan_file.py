@@ -14,10 +14,8 @@ def create_options(conanfile):
 
         default_options = getattr(conanfile, "default_options", None)
         if default_options:
-            if isinstance(default_options, tuple):
-                default_values = OptionsValues.loads("\n".join(default_options))
-            elif isinstance(default_options, list):
-                default_values = OptionsValues.from_list(default_options)
+            if isinstance(default_options, (list, tuple)):
+                default_values = OptionsValues(default_options)
             elif isinstance(default_options, str):
                 default_values = OptionsValues.loads(default_options)
             else:

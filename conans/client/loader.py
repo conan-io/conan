@@ -214,12 +214,11 @@ class ConanFileLoader(object):
     def load_virtual(self, reference, path):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        self._user_options.scope_options(reference.name)
-
         conanfile = ConanFile(None, self._runner, self._settings.copy(), path)
 
         conanfile.requires.add(str(reference))  # Convert to string necessary
         # conanfile.options.values = options
+        self._user_options.scope_options(reference.name)
         conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []
