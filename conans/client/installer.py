@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, CONANENV
+from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -154,7 +154,10 @@ class ConanInstaller(object):
                 self._package_info_conanfile(conan_ref, conan_file)
 
                 duration = time.time() - t1
-                log_package_built(package_ref, duration)
+                log_file = os.path.join(self._client_cache.build(package_ref, conan_file.short_paths),
+                                        RUN_LOG_NAME)
+                log_file = log_file if os.path.exists(log_file) else None
+                log_package_built(package_ref, duration, log_file)
             else:
                 # Get the package, we have a not outdated remote package
                 if conan_ref:

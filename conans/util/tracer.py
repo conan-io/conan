@@ -6,6 +6,7 @@ import json
 from conans.model.ref import PackageReference, ConanFileReference
 import time
 from conans.paths import conan_expand_user
+from os.path import isdir
 
 TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
                   "DOWNLOADED_RECIPE", "DOWNLOADED_PACKAGE",
@@ -23,16 +24,16 @@ def _validate_action(action_name):
 
 def _get_tracer_file():
     '''
-    If CONAN_TRACE_FILE is "1" will log to ~/.conan/conan_trace.log
     If CONAN_TRACE_FILE is a file in an existing dir will log to it creating the file if needed
     Otherwise won't log anything
     '''
     trace_path = os.environ.get("CONAN_TRACE_FILE", None)
-    if trace_path == "1" or trace_path == "True":
-        trace_path = os.path.join(os.getenv("CONAN_USER_HOME", conan_expand_user("~")),
-                                  ".conan", "conan_trace.log")
-    if trace_path is not None and not os.path.exists(os.path.dirname(trace_path)):
-        raise ConanException("The specified path doesn't exist %s" % trace_path)
+
+    if trace_path is not None:
+        if not os.path.exists(os.path.dirname(trace_path)):
+            raise ConanException("The specified path doesn't exist: '%s'" % trace_path)
+        if isdir(trace_path):
+            raise ConanException("CONAN_TRACE_FILE is a directory. Please, specify a file path")
     return trace_path
 
 
@@ -96,9 +97,9 @@ def log_package_got_from_local_cache(package_ref):
     _append_action("GOT_PACKAGE_FROM_LOCAL_CACHE", {"_id": str(package_ref)})
 
 
-def log_package_built(package_ref, duration):
+def log_package_built(package_ref, duration, log_run=None):
     assert(isinstance(package_ref, PackageReference))
-    _append_action("PACKAGE_BUILT_FROM_SOURCES", {"_id": str(package_ref), "duration": duration})
+    _append_action("PACKAGE_BUILT_FROM_SOURCES", {"_id": str(package_ref), "duration": duration, "log": log_run})
 
 
 def log_client_rest_api_call(url, method, duration, headers):
