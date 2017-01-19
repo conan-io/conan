@@ -1,6 +1,5 @@
 from conans.util.sha import sha1
 from conans.errors import ConanException
-import six
 
 
 class Values(object):
@@ -15,6 +14,7 @@ class Values(object):
         return self._dict[attr]
 
     def clear(self):
+        # TODO: Test. DO not delete, might be used by conan_info() to clear settings values
         self._dict.clear()
         self._value = ""
 
@@ -88,24 +88,6 @@ class Values(object):
             setattr(attr, tokens[-1], Values(value))
         return result
 
-    def add(self, option_text):
-        assert isinstance(option_text, six.string_types)
-        name, value = option_text.split("=")
-        tokens = name.strip().split(".")
-        attr = self
-        for token in tokens[:-1]:
-            attr = getattr(attr, token)
-        setattr(attr, tokens[-1], Values(value.strip()))
-
-    def update(self, other):
-        assert isinstance(other, Values)
-        self._value = other._value
-        for k, v in other._dict.items():
-            if k in self._dict:
-                self._dict[k].update(v)
-            else:
-                self._dict[k] = v.copy()
-
     def dumps(self):
         """ produces a text string with lines containine a flattened version:
         compiler.arch = XX
@@ -116,10 +98,6 @@ class Values(object):
 
     def serialize(self):
         return self.as_list()
-
-    @classmethod
-    def deserialize(cls, data):
-        return cls.from_list(data)
 
     @property
     def sha(self):

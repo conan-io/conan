@@ -116,10 +116,6 @@ class PackageOptionValues(object):
                 self._modified[name] = (value, down_ref)
                 self._dict[name] = value
 
-    def dumps(self):
-        return "\n".join(["%s=%s" % (field, value)
-                          for (field, value) in self.items()])
-
     def serialize(self):
         return self.items()
 
