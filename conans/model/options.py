@@ -166,6 +166,12 @@ class OptionsValues(object):
             else:
                 self._package_values.add_option(k, v)
 
+    def update(self, other):
+        self._package_values.update(other._package_values)
+        for package_name, package_values in other._reqs_options.items():
+            pkg_values = self._reqs_options.setdefault(package_name, PackageOptionValues())
+            pkg_values.update(package_values)
+
     def scope_options(self, name):
         self._reqs_options.setdefault(name, PackageOptionValues()).update(self._package_values)
         self._package_values = PackageOptionValues()
