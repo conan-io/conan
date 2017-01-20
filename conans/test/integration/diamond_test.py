@@ -97,7 +97,6 @@ class DiamondTest(unittest.TestCase):
         client.save(files3)
 
         client.run("%s . --build missing" % install)
-        self.assertNotIn("Skipping version checking of not detected compiler", client.user_io.out)
         if use_cmake:
             if cmake_targets:
                 self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
@@ -106,7 +105,6 @@ class DiamondTest(unittest.TestCase):
                 self.assertIn("Conan: Using cmake global configuration", client.user_io.out)
                 self.assertNotIn("Conan: Using cmake targets configuration", client.user_io.out)
         client.run("build .")
-        self.assertNotIn("Skipping version checking of not detected compiler", client.user_io.out)
         self._check_individual_deps(client)
 
         command = os.sep.join([".", "bin", "say_hello"])
@@ -121,9 +119,7 @@ class DiamondTest(unittest.TestCase):
         wait_until_removed(client.current_folder)
         client.save(files3)
         client.run("%s . --build missing" % install)
-        self.assertNotIn("Skipping version checking of not detected compiler", client.user_io.out)
         client.run("build .")
-        self.assertNotIn("Skipping version checking of not detected compiler", client.user_io.out)
 
         client.runner(command, cwd=client.current_folder)
         self.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
@@ -146,9 +142,7 @@ class DiamondTest(unittest.TestCase):
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         client2.save(files3)
         client2.run("%s . --build missing" % install)
-        self.assertNotIn("Skipping version checking of not detected compiler", client.user_io.out)
         client2.run("build .")
-        self.assertNotIn("Skipping version checking of not detected compiler", client.user_io.out)
 
         self.assertNotIn("libhello0.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)

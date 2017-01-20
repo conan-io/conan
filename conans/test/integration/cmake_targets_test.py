@@ -57,6 +57,7 @@ class CMakeTargetsTest(unittest.TestCase):
 
         client.run('install -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
+        self.assertNotIn("Skipping version checking of not detected compiler", client.user_io.out)
         self.assertIn("Configuring done", client.user_io.out)
         self.assertIn("Generating done", client.user_io.out)
         self.assertIn("Build files have been written", client.user_io.out)
@@ -72,6 +73,8 @@ class CMakeTargetsTest(unittest.TestCase):
             client.run('install %s -s build_type=Debug -g cmake_multi' % debug_install)
             client.run('install %s -s build_type=Release -g cmake_multi' % release_install)
             client.runner("cmake .", cwd=client.current_folder)
+            self.assertNotIn("Skipping version checking of not detected compiler",
+                             client.user_io.out)
             self.assertIn("Configuring done", client.user_io.out)
             self.assertIn("Generating done", client.user_io.out)
             self.assertIn("Build files have been written", client.user_io.out)

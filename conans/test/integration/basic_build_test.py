@@ -28,7 +28,6 @@ class BasicBuildTest(unittest.TestCase):
         client.runner("%s %s" % (ld_path, command), cwd=client.current_folder)
         msg = "Hello" if lang == 0 else "Hola"
         self.assertIn("%s Hello0" % msg, client.user_io.out)
-        self.assertNotIn("Skipping version checking of not detected compiler", client.user_io.out)
         conan_info_path = os.path.join(client.current_folder, CONANINFO)
         conan_info = ConanInfo.loads(load(conan_info_path))
         self.assertTrue(conan_info.full_options.language == lang)
