@@ -55,10 +55,11 @@ class LibcxxSettingTest(unittest.TestCase):
 
     @nowintest
     def test_declared_stdlib_and_passed(self):
+        client = TestClient()
+        client.save(self.files)
+        client.run("export lasote/testing")
+
         if platform.system() == "SunOS":
-            client = TestClient()
-            client.save(self.files)
-            client.run("export lasote/testing")
             client.run('install -s compiler=sun-cc -s compiler.libcxx=libCstd', ignore_error=False)
             client.run('build')
             self.assertIn("-library=Cstd", str(client.user_io.out))
@@ -72,9 +73,6 @@ class LibcxxSettingTest(unittest.TestCase):
             self.assertIn("-library=stlport4", str(client.user_io.out))
 
         else:
-            client = TestClient()
-            client.save(self.files)
-            client.run("export lasote/testing")
             client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++ ', ignore_error=False)
             client.run('build')
             self.assertIn("-stdlib=libstdc++", str(client.user_io.out))
