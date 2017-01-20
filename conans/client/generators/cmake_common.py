@@ -125,7 +125,7 @@ function(conan_get_compiler CONAN_INFO_COMPILER CONAN_INFO_COMPILER_VERSION)
 
     file (READ "${_CONAN_CURRENT_DIR}/conaninfo.txt" CONANINFO)
 
-    string(REGEX MATCH "compiler=([A-Za-z0-9_ ]+)" _MATCHED ${CONANINFO})
+    string(REGEX MATCH "compiler=([-A-Za-z0-9_ ]+)" _MATCHED ${CONANINFO})
     if(DEFINED CMAKE_MATCH_1)
         string(STRIP ${CMAKE_MATCH_1} _CONAN_INFO_COMPILER)
         set(${CONAN_INFO_COMPILER} ${_CONAN_INFO_COMPILER} PARENT_SCOPE)
@@ -157,7 +157,7 @@ function(check_compiler_version)
            conan_error_compiler_version()
         endif()
     else()
-        message("Skipping version checking of not detected compiler...")
+        message(STATUS "WARN: Unknown compiler '${CONAN_COMPILER}', skipping the version check...")
     endif()
 endfunction()
 
