@@ -17,6 +17,7 @@ from conans.model.env_info import EnvInfo
 from conans.client.source import config_source
 from conans.client.generators.env import ConanEnvGenerator
 from conans.tools import environment_append
+from conans.model.info import ConanInfo
 
 
 def init_package_info(deps_graph, paths):
@@ -230,10 +231,29 @@ class ConanInstaller(object):
 
         self._raise_package_not_found_error(conan_ref, conan_file)
 
+    def _build_folder(self, conan_file, package_reference):
+        if hasattr(conan_file, "build_id"):
+            # construct new ConanInfo
+            new_conan_info = ConanInfo()
+            new_conan_info.settings = conan_file.info.settings.copy()
+            new_conan_info.options = conan_file.info.options.copy()
+            new_conan_info.requires = conan_file.info.requires
+            new_conan_info._non_devs_requirements = conan_file.info._non_devs_requirements
+            # Make fields available to function to change
+            conan_file.build_id_settings = new_conan_info.settings
+            conan_file.build_id_options = new_conan_info.options
+            # effectively call the user function to change the package values
+            conan_file.build_id()
+            # compute modified ID
+            new_id = new_conan_info.package_id()
+            package_reference = PackageReference(package_reference.conan, new_id)
+        return self._client_cache.build(package_reference, conan_file.short_paths)
+
     def _build_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
         """Calls the conanfile's build method"""
-
-        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
+        build_folder = self._build_folder(conan_file, package_reference)
+        if os.path.exists(build_folder) and hasattr(conan_file, "build_id"):
+            return
         src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
         export_folder = self._client_cache.export(conan_ref)
 
@@ -247,7 +267,7 @@ class ConanInstaller(object):
 
         # FIXME: Is weak to assign here the recipe_hash
         conan_file.info.recipe_hash = self._client_cache.load_manifest(conan_ref).summary_hash
-        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
+        build_folder = self._build_folder(conan_file, package_reference)
 
         # Creating ***info.txt files
         save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
