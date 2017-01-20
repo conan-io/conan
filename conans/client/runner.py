@@ -30,8 +30,8 @@ class ConanRunner(object):
         if self._print_commands_to_output and stream_output and self._log_run_to_output:
             stream_output.write(call_message)
 
-        # No output has to be redirected to logs or buffer
-        if output is True and not log_filepath:
+        # No output has to be redirected to logs or buffer or omitted
+        if output is True and not log_filepath and self._log_run_to_output:
             return self._simple_os_call(command, cwd)
         elif log_filepath:
             if stream_output:
