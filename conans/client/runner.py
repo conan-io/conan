@@ -7,33 +7,35 @@ from conans.errors import ConanException
 
 class ConanRunner(object):
 
+    def __init__(self, print_commands_to_output=False, generate_run_log=False):
+        self._print_commands_to_output = print_commands_to_output
+        self._generate_run_log = generate_run_log
+
     def __call__(self, command, output, log_filepath=None, cwd=None):
+
+        if not self._generate_run_log:
+            log_filepath = None
+
+        # Log the command call in output and logger
+        call_message = "----Running------\n> %s\n-----------------\n" % command
+        if self._print_commands_to_output:
+            sys.stdout.write(call_message)
 
         # No output has to be redirected to logs or buffer
         if output is True and not log_filepath:
-            return self.simple_os_call(command, cwd)
-
-        if log_filepath:
-            with open(log_filepath, "a+") as logfile:
-                return self.pipe_os_call(command, output, logfile, cwd)
+            return self._simple_os_call(command, cwd)
+        elif log_filepath:
+            sys.stdout.writeln("Logging command output to file '%s'" % log_filepath)
+            with open(log_filepath, "a+") as log_handler:
+                log_handler.write(call_message)
+                return self._pipe_os_call(command, output, log_handler, cwd)
         else:
-            return self.pipe_os_call(command, output, None, cwd)
+            return self._pipe_os_call(command, output, None, cwd)
 
-    def pipe_os_call(self, command, output, log_handler, cwd):
-
-        def print_to_all_outputs(line):
-            sys.stdout.write(line)
-            if log_handler:
-                log_handler.write(line)
-            if hasattr(output, "write"):
-                output.write(line)
+    def _pipe_os_call(self, command, output_stream, log_handler, cwd):
 
         try:
-            # Log the command call in output and logger
-            call_message = "----Running------\n> %s\n-----------------\n" % command
-            print_to_all_outputs(call_message)
             proc = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd)
-
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 
@@ -42,8 +44,12 @@ class ConanRunner(object):
                 line = the_stream.readline()
                 if not line:
                     break
-                line = decode_text(line)
-                print_to_all_outputs(line)
+                decoded_line = decode_text(line)
+                sys.stdout.write(decoded_line)
+                if log_handler:
+                    log_handler.write(line)
+                if hasattr(output_stream, "write"):
+                    output_stream.write(line)
 
         get_stream_lines(proc.stdout)
         get_stream_lines(proc.stderr)
@@ -52,7 +58,7 @@ class ConanRunner(object):
         ret = proc.returncode
         return ret
 
-    def simple_os_call(self, command, cwd):
+    def _simple_os_call(self, command, cwd):
         if not cwd:
             return os.system(command)
         else:
@@ -61,7 +67,8 @@ class ConanRunner(object):
                 os.chdir(cwd)
                 result = os.system(command)
             except Exception as e:
-                raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
+                raise ConanException("Error while executing"
+                                     " '%s'\n\t%s" % (command, str(e)))
             finally:
                 os.chdir(old_dir)
             return result

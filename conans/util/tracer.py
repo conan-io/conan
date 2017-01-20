@@ -5,7 +5,6 @@ from conans.util.log import logger
 import json
 from conans.model.ref import PackageReference, ConanFileReference
 import time
-from conans.paths import conan_expand_user
 from os.path import isdir
 
 TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
