@@ -17,7 +17,7 @@ class ConanRunner(object):
             log_filepath = None
 
         # Log the command call in output and logger
-        call_message = "----Running------\n> %s\n-----------------\n" % command
+        call_message = "\n----Running------\n> %s\n-----------------\n" % command
         if self._print_commands_to_output:
             sys.stdout.write(call_message)
 
@@ -27,7 +27,8 @@ class ConanRunner(object):
         elif log_filepath:
             sys.stdout.write("Logging command output to file '%s'\n" % log_filepath)
             with open(log_filepath, "a+") as log_handler:
-                log_handler.write(call_message)
+                if self._print_commands_to_output:
+                    log_handler.write(call_message)
                 return self._pipe_os_call(command, output, log_handler, cwd)
         else:
             return self._pipe_os_call(command, output, None, cwd)
