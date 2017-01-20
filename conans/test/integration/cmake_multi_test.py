@@ -105,8 +105,8 @@ class CMakeMultiTest(unittest.TestCase):
             output = StringIO()
             runner = TestRunner(output)
             runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
-            self.assertNotIn("Skipping version checking of not detected compiler",
-                             output.getvalue())
+            self.assertNotIn("WARN: Unknown compiler '", output.getvalue())
+            self.assertNotIn("', skipping the version check...", output.getvalue())
             runner('cmake --build . --config Debug', cwd=client.current_folder)
             hello_comand = os.sep.join([".", "bin", "say_hello"])
             runner(hello_comand, cwd=client.current_folder)
