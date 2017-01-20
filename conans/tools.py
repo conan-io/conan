@@ -29,9 +29,11 @@ def pythonpath(conanfile):
 def environment_append(env_vars):
     old_env = dict(os.environ)
     os.environ.update(env_vars)
-    yield
-    os.environ.clear()
-    os.environ.update(old_env)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):

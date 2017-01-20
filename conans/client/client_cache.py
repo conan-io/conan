@@ -79,7 +79,7 @@ class ClientCache(SimplePaths):
             else:
                 content = load(self.settings_path)
                 settings = Settings.loads(content)
-            settings.values = self.conan_config.settings_defaults
+            self.conan_config.settings_defaults_set(settings)
             self._settings = settings
         return self._settings
 
