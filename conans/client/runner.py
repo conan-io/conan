@@ -50,7 +50,7 @@ class ConanRunner(object):
                 if log_handler:
                     log_handler.write(line)
                 if hasattr(output_stream, "write"):
-                    output_stream.write(line)
+                    output_stream.write(decoded_line)
 
         get_stream_lines(proc.stdout)
         get_stream_lines(proc.stderr)
