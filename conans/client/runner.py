@@ -3,6 +3,7 @@ import sys
 from subprocess import Popen, PIPE
 from conans.util.files import decode_text
 from conans.errors import ConanException
+import six
 
 
 class ConanRunner(object):
@@ -48,7 +49,9 @@ class ConanRunner(object):
                 decoded_line = decode_text(line)
                 sys.stdout.write(decoded_line)
                 if log_handler:
-                    log_handler.write(line)
+                    # Write decoded in PY2 causes some ASCII encoding problems
+                    # tried to open the log_handler binary but same result.
+                    log_handler.write(line if six.PY2 else decoded_line)
                 if hasattr(output_stream, "write"):
                     output_stream.write(decoded_line)
 
