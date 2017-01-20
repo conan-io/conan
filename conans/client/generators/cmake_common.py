@@ -291,7 +291,7 @@ endif()
 
 macro(conan_basic_setup)
     conan_check_compiler()
-    conan_output_dirs_setup()
+    # conan_output_dirs_setup()
     if(NOT "${ARGV0}" STREQUAL "TARGETS")
         message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
