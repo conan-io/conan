@@ -45,6 +45,7 @@ class CppInfo(_CppInfo):
         self.bindirs.append(DEFAULT_BIN)
         self.resdirs.append(DEFAULT_RES)
         self.public_deps = []
+        self.package = {"name": "", "components": ""}
 
     @property
     def include_paths(self):
