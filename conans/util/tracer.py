@@ -46,7 +46,7 @@ def _append_to_log(obj):
         filepath = _get_tracer_file()
         with fasteners.InterProcessLock(filepath + ".lock", logger=logger):
             with open(filepath, "a") as logfile:
-                logfile.write(json.dumps(obj, sort_keys=True) + os.linesep)
+                logfile.write(json.dumps(obj, sort_keys=True) + "\n")
 
 
 def _append_action(action_name, props):
