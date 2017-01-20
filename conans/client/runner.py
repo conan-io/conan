@@ -21,8 +21,19 @@ class ConanRunner(object):
 
     def pipe_os_call(self, command, output, log_handler, cwd):
 
+        def print_to_all_outputs(line):
+            sys.stdout.write(line)
+            if log_handler:
+                log_handler.write(line)
+            if hasattr(output, "write"):
+                output.write(line)
+
         try:
+            # Log the command call in output and logger
+            call_message = "----Running------\n> %s\n-----------------\n" % command
+            print_to_all_outputs(call_message)
             proc = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd)
+
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
 
@@ -32,11 +43,7 @@ class ConanRunner(object):
                 if not line:
                     break
                 line = decode_text(line)
-                sys.stdout.write(line)
-                if log_handler:
-                    log_handler.write(line)
-                if hasattr(output, "write"):
-                    output.write(line)
+                print_to_all_outputs(line)
 
         get_stream_lines(proc.stdout)
         get_stream_lines(proc.stderr)
