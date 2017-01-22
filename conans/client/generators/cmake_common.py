@@ -386,5 +386,7 @@ def generate_targets_section(template, dependencies):
         section.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                        uname=dep_name.upper()))
 
+    all_targets = " ".join(["CONAN_PKG::%s" % name for name, _ in dependencies])
+    section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
     section.append('endmacro()\n')
     return section
