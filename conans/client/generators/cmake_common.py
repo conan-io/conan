@@ -274,6 +274,10 @@ macro(conan_global_flags)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_SHARED_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
 endmacro()
+
+macro(conan_target_link_libraries target)
+    target_link_libraries(${target} ${CONAN_LIBS})
+endmacro()
 """ + _cmake_common_macros
 
 
@@ -355,5 +359,14 @@ macro(conan_global_flags)
     set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${CONAN_SHARED_LINKER_FLAGS_DEBUG}")
     set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${CONAN_EXE_LINKER_FLAGS_DEBUG}")
 
+endmacro()
+
+macro(conan_target_link_libraries target)
+    foreach(_LIB ${CONAN_LIBS_RELEASE})
+        target_link_libraries(${target} optimized ${_LIB})
+    endforeach()
+    foreach(_LIB ${CONAN_LIBS_DEBUG})
+        target_link_libraries(${target} debug ${_LIB})
+    endforeach()
 endmacro()
 """ + _cmake_common_macros
