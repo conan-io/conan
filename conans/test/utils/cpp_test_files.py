@@ -46,6 +46,16 @@ conanfile_build_env = """
                     self.run("{} && c++ -o libhello{}.so -shared -fPIC hello.cpp {} {}".
                     format(env, self.name, flags, lang))
             self.run('{} && c++ -o main main.cpp -L. -lhello{} {}'.format(env, self.name, flags))
+        elif self.settings.compiler == "sun-cc":
+            lang = '-DCONAN_LANGUAGE=%s' % self.options.language
+            if self.options.static:
+                self.run("CC -c hello.cpp {} {}".format(lang, flags))
+                self.run("{} && ar rcs libhello{}.a hello.o".format(env, self.name))
+            else:
+                self.run("{} && CC -o libhello{}.so -G -Kpic hello.cpp {} {}".
+                format(env, self.name, flags, lang))
+            self.run('{} && CC -o main main.cpp -L. -lhello{} {}'.format(env, self.name, flags))
+ 
 
         try:
             os.makedirs("bin")

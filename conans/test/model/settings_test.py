@@ -62,7 +62,7 @@ class SettingsTest(unittest.TestCase):
 arch: [x86, x86_64, arm]
 compiler:
     sun-cc:
-        version: ["5.10", "5.11"]
+        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
     gcc:
         version: ["4.8", "4.9", "5.0"]
     Visual Studio:
