@@ -123,12 +123,18 @@ class CMake(object):
             flags.append('-DCONAN_COMPILER="%s"' % comp)
         if comp_version:
             flags.append('-DCONAN_COMPILER_VERSION="%s"' % comp_version)
-        if arch == "x86":
-            if op_system == "Linux":
+
+        if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
+            if arch == "x86":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m32",
                               "-DCONAN_C_FLAGS=-m32"])
-            elif op_system == "Macos":
+            if arch == "x86_64":
+                flags.extend(["-DCONAN_CXX_FLAGS=-m64",
+                              "-DCONAN_SHARED_LINKER_FLAGS=-m64",
+                              "-DCONAN_C_FLAGS=-m64"])
+        elif op_system == "Macos":
+            if arch == "x86":
                 flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
 
         try:

@@ -48,6 +48,48 @@ class CMakeTest(unittest.TestCase):
                          '-DCONAN_SHARED_LINKER_FLAGS=-m32 -DCONAN_C_FLAGS=-m32 -Wno-dev',
                          cmake.command_line)
 
+        settings.arch = "x86_64"
+        cmake = CMake(settings)
+        self.assertEqual('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug  -DCONAN_COMPILER="gcc" '
+                         '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS=-m64 '
+                         '-DCONAN_SHARED_LINKER_FLAGS=-m64 -DCONAN_C_FLAGS=-m64 -Wno-dev',
+                         cmake.command_line)
+
+        settings.os = "FreeBSD"
+        settings.compiler = "clang"
+        settings.compiler.version = "3.8"
+        settings.arch = "x86"
+        cmake = CMake(settings)
+        self.assertEqual('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug  -DCONAN_COMPILER="clang" '
+                         '-DCONAN_COMPILER_VERSION="3.8" -DCONAN_CXX_FLAGS=-m32 '
+                         '-DCONAN_SHARED_LINKER_FLAGS=-m32 -DCONAN_C_FLAGS=-m32 -Wno-dev',
+                         cmake.command_line)
+
+        settings.arch = "x86_64"
+        cmake = CMake(settings)
+        self.assertEqual('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug  -DCONAN_COMPILER="clang" '
+                         '-DCONAN_COMPILER_VERSION="3.8" -DCONAN_CXX_FLAGS=-m64 '
+                         '-DCONAN_SHARED_LINKER_FLAGS=-m64 -DCONAN_C_FLAGS=-m64 -Wno-dev',
+                         cmake.command_line)
+
+        settings.os = "SunOS"
+        settings.compiler = "sun-cc"
+        settings.compiler.version = "5.10"
+        settings.arch = "x86"
+        cmake = CMake(settings)
+        self.assertEqual('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug  -DCONAN_COMPILER="sun-cc" '
+                         '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS=-m32 '
+                         '-DCONAN_SHARED_LINKER_FLAGS=-m32 -DCONAN_C_FLAGS=-m32 -Wno-dev',
+                         cmake.command_line)
+
+        settings.arch = "x86_64"
+        cmake = CMake(settings)
+        self.assertEqual('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug  -DCONAN_COMPILER="sun-cc" '
+                         '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS=-m64 '
+                         '-DCONAN_SHARED_LINKER_FLAGS=-m64 -DCONAN_C_FLAGS=-m64 -Wno-dev',
+                         cmake.command_line)
+
+
     def deleted_os_test(self):
         partial_settings = """
 os: [Linux]
@@ -65,4 +107,6 @@ build_type: [ Release]
 
         cmake = CMake(settings)
         self.assertEqual('-G "Unix Makefiles"   -DCONAN_EXPORTED=1 -DCONAN_COMPILER="gcc" '
-                         '-DCONAN_COMPILER_VERSION="4.9" -Wno-dev', cmake.command_line)
+                         '-DCONAN_COMPILER_VERSION="4.9" -DCONAN_CXX_FLAGS=-m64 '
+                         '-DCONAN_SHARED_LINKER_FLAGS=-m64 -DCONAN_C_FLAGS=-m64 -Wno-dev',
+                         cmake.command_line)
