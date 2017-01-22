@@ -370,3 +370,21 @@ macro(conan_target_link_libraries target)
     endforeach()
 endmacro()
 """ + _cmake_common_macros
+
+
+def generate_targets_section(template, dependencies):
+    section = []
+    section.append("\n###  Definition of macros and functions ###\n")
+    section.append('macro(conan_define_targets)\n'
+                   '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
+                   '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
+                   '    endif()  # CMAKE > 3.x\n')
+
+    for dep_name, dep_info in dependencies:
+        use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
+        deps = "" if not use_deps else " ".join(use_deps)
+        section.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
+                                       uname=dep_name.upper()))
+
+    section.append('endmacro()\n')
+    return section
