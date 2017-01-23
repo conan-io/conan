@@ -95,7 +95,7 @@ class CMake(object):
                 cmake_flags.append("-DCMAKE_C_COMPILER=gcc")
                 cmake_flags.append("-DCMAKE_CXX_COMPILER=g++")
 
-        if target_arch == "x86":
+        if target_arch == "x86" and target_os == "Macos":
             cmake_flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
 
         return cmake_flags
