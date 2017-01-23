@@ -7,6 +7,8 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.tools import TestServer, TestClient
 from conans.util.files import load
 import json
+from conans.paths import CONANFILE, RUN_LOG_NAME
+from conans.client.command import get_conan_runner
 
 
 class ConanTraceTest(unittest.TestCase):
@@ -14,19 +16,66 @@ class ConanTraceTest(unittest.TestCase):
     def setUp(self):
         test_server = TestServer()
         self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-    def testTraceActions(self):
+    def test_run_log_file_package_test(self):
+        '''Check if the log file is generated and packaged'''
+
+        def _install_a_package():
+            runner = get_conan_runner()  # Real runner from environment
+            client = TestClient(servers=self.servers,
+                                users={"default": [("lasote", "mypass")]},
+                                runner=runner)
+            conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
+            files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=True)
+            import_log = 'self.copy(pattern="%s", dst="", keep_path=False)' % RUN_LOG_NAME
+            files[CONANFILE] = files[CONANFILE].replace('def package(self):',
+                                                        'def package(self):\n        %s' % import_log)
+            client.save(files)
+            client.run("user lasote -p mypass -r default")
+            client.run("export lasote/stable")
+            client.run("install %s --build missing" % str(conan_reference))
+            package_dir = client.client_cache.packages(ConanFileReference.loads("Hello0/0.1@lasote/stable"))
+            package_dir = os.path.join(package_dir, os.listdir(package_dir)[0])
+            log_file_packaged = os.path.join(package_dir, RUN_LOG_NAME)
+            return log_file_packaged, client.user_io.out
+
+        with tools.environment_append({"CONAN_LOG_RUN_TO_FILE": "1",
+                                       "CONAN_PRINT_RUN_COMMANDS": "0"}):
+            log_file_packaged, output = _install_a_package()
+            self.assertIn("Copied 1 '.log' files: conan_run.log", output)
+            self.assertTrue(os.path.exists(log_file_packaged))
+            contents = load(log_file_packaged)
+            self.assertIn("Linking CXX executable", contents)
+            self.assertNotIn("----Running------\n> cmake", contents)
+
+        with tools.environment_append({"CONAN_LOG_RUN_TO_FILE": "1",
+                                       "CONAN_PRINT_RUN_COMMANDS": "1"}):
+            log_file_packaged, output = _install_a_package()
+            self.assertIn("Copied 1 '.log' files: conan_run.log", output)
+            self.assertTrue(os.path.exists(log_file_packaged))
+            contents = load(log_file_packaged)
+            self.assertIn("Linking CXX executable", contents)
+            self.assertIn("----Running------\n> cmake", contents)
+
+        with tools.environment_append({"CONAN_LOG_RUN_TO_FILE": "0",
+                                       "CONAN_PRINT_RUN_COMMANDS": "0"}):
+            log_file_packaged, output = _install_a_package()
+            self.assertNotIn("Copied 1 '.log' files: conan_run.log", output)
+            self.assertFalse(os.path.exists(log_file_packaged))
+
+    def test_trace_actions(self):
+        client = TestClient(servers=self.servers,
+                            users={"default": [("lasote", "mypass")]})
         trace_file = os.path.join(temp_folder(), "conan_trace.log")
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             # UPLOAD A PACKAGE
             conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
-            self.client.save(files)
-            self.client.run("user lasote -p mypass -r default")
-            self.client.run("export lasote/stable")
-            self.client.run("install %s --build missing" % str(conan_reference))
-            self.client.run("upload %s --all" % str(conan_reference))
+            client.save(files)
+            client.run("user lasote -p mypass -r default")
+            client.run("export lasote/stable")
+            client.run("install %s --build missing" % str(conan_reference))
+            client.run("upload %s --all" % str(conan_reference))
 
         traces = load(trace_file)
         self.assertNotIn("mypass", traces)
