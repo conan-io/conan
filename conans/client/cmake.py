@@ -53,10 +53,9 @@ class CMake(object):
                 return base
 
         if operating_system == "Windows":
-            non_msvc = (compiler != "Visual Studio")
-            if host_platform == operating_system and non_msvc:
+            if host_platform == operating_system:
                 return "MinGW Makefiles" #it is valid only under Windows
-            elif non_msvc:
+            else:
                 return "Unix Makefiles"
         if operating_system == "Linux":
             if compiler in ["gcc", "clang", "apple-clang"]:
