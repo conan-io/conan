@@ -9,6 +9,7 @@ from conans.util.files import load
 import json
 from conans.paths import CONANFILE, RUN_LOG_NAME
 from conans.client.command import get_conan_runner
+from conans.client.runner import ConanRunner
 
 
 class ConanTraceTest(unittest.TestCase):
@@ -20,16 +21,31 @@ class ConanTraceTest(unittest.TestCase):
     def test_run_log_file_package_test(self):
         '''Check if the log file is generated and packaged'''
 
-        def _install_a_package():
-            runner = get_conan_runner()  # Real runner from environment
+        base = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello0"
+    version = "0.1"
+
+    def build(self):
+        self.run('echo "Simulating cmake..."')
+
+    def package(self):
+        self.copy(pattern="%s", dst="", keep_path=False)
+    ''' % RUN_LOG_NAME
+
+        def _install_a_package(print_commands_to_output, generate_run_log_file):
+
+            runner = ConanRunner(print_commands_to_output, generate_run_log_file, 
+                                 log_run_to_output=True)
+
             client = TestClient(servers=self.servers,
                                 users={"default": [("lasote", "mypass")]},
                                 runner=runner)
             conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
-            files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=True)
-            import_log = 'self.copy(pattern="%s", dst="", keep_path=False)' % RUN_LOG_NAME
-            files[CONANFILE] = files[CONANFILE].replace('def package(self):',
-                                                        'def package(self):\n        %s' % import_log)
+            files = {}
+            files[CONANFILE] = base
             client.save(files)
             client.run("user lasote -p mypass -r default")
             client.run("export lasote/stable")
@@ -39,29 +55,23 @@ class ConanTraceTest(unittest.TestCase):
             log_file_packaged = os.path.join(package_dir, RUN_LOG_NAME)
             return log_file_packaged, client.user_io.out
 
-        with tools.environment_append({"CONAN_LOG_RUN_TO_FILE": "1",
-                                       "CONAN_PRINT_RUN_COMMANDS": "0"}):
-            log_file_packaged, output = _install_a_package()
-            self.assertIn("Copied 1 '.log' files: conan_run.log", output)
-            self.assertTrue(os.path.exists(log_file_packaged))
-            contents = load(log_file_packaged)
-            self.assertIn("Linking CXX executable", contents)
-            self.assertNotIn("----Running------\n> cmake", contents)
+        log_file_packaged, output = _install_a_package(False, True)
+        self.assertIn("Copied 1 '.log' files: conan_run.log", output)
+        self.assertTrue(os.path.exists(log_file_packaged))
+        contents = load(log_file_packaged)
+        self.assertIn("Simulating cmake...", contents)
+        self.assertNotIn("----Running------\n> echo", contents)
 
-        with tools.environment_append({"CONAN_LOG_RUN_TO_FILE": "1",
-                                       "CONAN_PRINT_RUN_COMMANDS": "1"}):
-            log_file_packaged, output = _install_a_package()
-            self.assertIn("Copied 1 '.log' files: conan_run.log", output)
-            self.assertTrue(os.path.exists(log_file_packaged))
-            contents = load(log_file_packaged)
-            self.assertIn("Linking CXX executable", contents)
-            self.assertIn("----Running------\n> cmake", contents)
+        log_file_packaged, output = _install_a_package(True, True)
+        self.assertIn("Copied 1 '.log' files: conan_run.log", output)
+        self.assertTrue(os.path.exists(log_file_packaged))
+        contents = load(log_file_packaged)
+        self.assertIn("Simulating cmake...", contents)
+        self.assertIn("----Running------\n> echo", contents)
 
-        with tools.environment_append({"CONAN_LOG_RUN_TO_FILE": "0",
-                                       "CONAN_PRINT_RUN_COMMANDS": "0"}):
-            log_file_packaged, output = _install_a_package()
-            self.assertNotIn("Copied 1 '.log' files: conan_run.log", output)
-            self.assertFalse(os.path.exists(log_file_packaged))
+        log_file_packaged, output = _install_a_package(False, False)
+        self.assertNotIn("Copied 1 '.log' files: conan_run.log", output)
+        self.assertFalse(os.path.exists(log_file_packaged))
 
     def test_trace_actions(self):
         client = TestClient(servers=self.servers,
