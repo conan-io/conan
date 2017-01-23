@@ -67,8 +67,8 @@ class ConanManager(object):
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
 
-        options = OptionsValues()
         conaninfo_scopes = Scopes()
+        user_options = OptionsValues(user_options_values)
 
         if current_path:
             conan_info_path = os.path.join(current_path, CONANINFO)
@@ -76,23 +76,20 @@ class ConanManager(object):
                 existing_info = ConanInfo.load_file(conan_info_path)
                 settings.values = existing_info.full_settings
                 options = existing_info.full_options  # Take existing options from conaninfo.txt
+                options.update(user_options)
+                user_options = options
                 conaninfo_scopes = existing_info.scope
 
         if user_settings_values:
             aux_values = Values.from_list(user_settings_values)
             settings.values = aux_values
 
-        if user_options_values is not None:  # Install will pass an empty list []
-            # Install OVERWRITES options, existing options in CONANINFO are not taken
-            # into account, just those from CONANFILE + user command line
-            options = OptionsValues.from_list(user_options_values)
-
         if scopes:
             conaninfo_scopes.update_scope(scopes)
 
         self._current_scopes = conaninfo_scopes
         return ConanFileLoader(self._runner, settings, package_settings=package_settings,
-                               options=options, scopes=conaninfo_scopes,
+                               options=user_options, scopes=conaninfo_scopes,
                                env=env, package_env=package_env)
 
     def export(self, user, conan_file_path, keep_source=False):

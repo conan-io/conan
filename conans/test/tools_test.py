@@ -9,6 +9,7 @@ from conans.paths import CONANFILE
 import platform
 from requests.exceptions import ConnectionError
 from conans.errors import ConanException
+from nose.plugins.attrib import attr
 
 
 class RunnerMock(object):
@@ -124,6 +125,7 @@ class ToolsTest(unittest.TestCase):
 
         del os.environ["CONAN_SYSREQUIRES_SUDO"]
 
+    @attr('slow')
     def build_vs_project_test(self):
         if platform.system() != "Windows":
             return

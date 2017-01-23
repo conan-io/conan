@@ -35,7 +35,7 @@ class ConanFileLoader(object):
         assert package_env is None or isinstance(package_env, dict)
         # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
-        self._options = options
+        self._user_options = options
         self._scopes = scopes
         self._package_settings = package_settings
         self._env = env or []
@@ -164,7 +164,8 @@ class ConanFileLoader(object):
             result.env = tmp_env
 
             if consumer:
-                result.options.initialize_upstream(self._options, result.name)
+                self._user_options.descope_options(result.name)
+                result.options.initialize_upstream(self._user_options)
                 # If this is the consumer project, it has no name
                 result.scope = self._scopes.package_scope()
             else:
@@ -202,7 +203,7 @@ class ConanFileLoader(object):
 
         options = OptionsValues.loads(parser.options)
         conanfile.options.values = options
-        conanfile.options.initialize_upstream(self._options, conanfile.name)
+        conanfile.options.initialize_upstream(self._user_options)
 
         # imports method
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
@@ -211,22 +212,14 @@ class ConanFileLoader(object):
         return conanfile
 
     def load_virtual(self, reference, path):
-        fixed_options = []
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        for option_name, option_value in self._options.as_list():
-            if ":" not in option_name:
-                tmp = ("%s:%s" % (reference.name, option_name), option_value)
-            else:
-                tmp = (option_name, option_value)
-            fixed_options.append(tmp)
-        options = OptionsValues.from_list(fixed_options)
-
         conanfile = ConanFile(None, self._runner, self._settings.copy(), path)
 
         conanfile.requires.add(str(reference))  # Convert to string necessary
         # conanfile.options.values = options
-        conanfile.options.initialize_upstream(options)
+        self._user_options.scope_options(reference.name)
+        conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []
         conanfile.scope = self._scopes.package_scope()

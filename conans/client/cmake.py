@@ -12,6 +12,9 @@ class CMake(object):
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
+        """ FIXME: this function seems weird, not tested, not used.
+        Probably should be deprecated
+        """
         result = []
         for option, value in options.values.as_list():
             if value is not None:
