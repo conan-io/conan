@@ -23,11 +23,16 @@ class ConanTraceTest(unittest.TestCase):
             conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
             files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
             self.client.save(files)
+            self.client.run("user lasote -p mypass -r default")
             self.client.run("export lasote/stable")
             self.client.run("install %s --build missing" % str(conan_reference))
             self.client.run("upload %s --all" % str(conan_reference))
 
         traces = load(trace_file)
+        self.assertNotIn("mypass", traces)
+        self.assertIn('"password": "**********"', traces)
+        self.assertIn('"Authorization": "**********"', traces)
+        self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
         self.assertEquals(len(actions), 17)
         for trace in actions:
@@ -35,12 +40,15 @@ class ConanTraceTest(unittest.TestCase):
             self.assertIn("_action", doc)  # Valid jsons
 
         self.assertEquals(json.loads(actions[0])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[0])["name"], "export")
+        self.assertEquals(json.loads(actions[0])["name"], "user")
 
-        self.assertEquals(json.loads(actions[1])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[1])["name"], "install")
+        self.assertEquals(json.loads(actions[2])["_action"], "COMMAND")
+        self.assertEquals(json.loads(actions[2])["name"], "export")
 
-        self.assertEquals(json.loads(actions[2])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
-        self.assertEquals(json.loads(actions[2])["_id"], "Hello0/0.1@lasote/stable")
+        self.assertEquals(json.loads(actions[3])["_action"], "COMMAND")
+        self.assertEquals(json.loads(actions[3])["name"], "install")
+
+        self.assertEquals(json.loads(actions[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
+        self.assertEquals(json.loads(actions[4])["_id"], "Hello0/0.1@lasote/stable")
 
         self.assertEquals(json.loads(actions[-1])["_action"], "UPLOADED_PACKAGE")

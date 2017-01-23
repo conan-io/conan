@@ -6,6 +6,7 @@ import json
 from conans.model.ref import PackageReference, ConanFileReference
 import time
 from os.path import isdir
+import copy
 
 TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
                   "DOWNLOADED_RECIPE", "DOWNLOADED_PACKAGE",
@@ -14,6 +15,8 @@ TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
                   "REST_API_CALL", "COMMAND",
                   "EXCEPTION",
                   "DOWNLOAD"]
+
+MASKED_FIELD = "**********"
 
 
 def _validate_action(action_name):
@@ -106,11 +109,17 @@ def log_package_built(package_ref, duration, log_run=None):
 
 
 def log_client_rest_api_call(url, method, duration, headers):
+    headers = copy.copy(headers)
+    headers["Authorization"] = MASKED_FIELD
+    headers["X-Client-Anonymous-Id"] = MASKED_FIELD
     _append_action("REST_API_CALL", {"method": method, "url": url,
                                      "duration": duration, "headers": headers})
 
 
 def log_command(name, parameters):
+    if name == "user" and "password" in parameters:
+        parameters = copy.copy(parameters)  # Ensure we don't alter any app object like args
+        parameters["password"] = MASKED_FIELD
     _append_action("COMMAND", {"name": name, "parameters": parameters})
 
 

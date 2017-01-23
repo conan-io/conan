@@ -115,7 +115,6 @@ class ConanFile(object):
 
         self._conanfile_directory = conanfile_directory
         self.package_folder = None  # Assigned at runtime
-        self.log_folder = None  # Assigned at runtime
         self._scope = None
 
         # user specified env variables
