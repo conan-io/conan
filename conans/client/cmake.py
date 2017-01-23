@@ -117,7 +117,7 @@ class CMake(object):
         comp = str(self._settings.compiler) if self._settings.compiler else None
         comp_version = self._settings.compiler.version
 
-        flags = []
+        flags = ["-DCONAN_EXPORTED=1"]
         if op_system == "Windows":
             if comp == "clang":
                 flags.append("-DCMAKE_C_COMPILER=clang")
