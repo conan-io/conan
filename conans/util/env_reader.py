@@ -11,18 +11,16 @@ import os
 
 def get_env(env_key, default=None, environment=os.environ):
     '''Get the env variable associated with env_key'''
-
     env_var = environment.get(env_key, default)
     if env_var != default:
         if isinstance(default, str):
             return env_var
+        elif isinstance(default, bool):
+            return env_var == "1"
         elif isinstance(default, int):
             return int(env_var)
         elif isinstance(default, float):
             return float(env_var)
         elif isinstance(default, list):
             return env_var.split(",")
-        elif isinstance(default, bool):
-            return env_var == "1"
-
     return env_var
