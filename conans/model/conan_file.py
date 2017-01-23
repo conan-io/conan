@@ -5,6 +5,8 @@ from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to c
 from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo
 import os
+from conans.util.files import mkdir
+from conans.paths import RUN_LOG_NAME
 
 
 def create_options(conanfile):
@@ -228,7 +230,7 @@ class ConanFile(object):
         """ runs such a command in the folder the Conan
         is defined
         """
-        retcode = self._runner(command, output, cwd)
+        retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME),  cwd)
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
