@@ -99,12 +99,13 @@ class ConanClientConfigParser(ConfigParser):
         except:
             return None
 
-    @property
-    def settings_defaults(self):
+    def settings_defaults(self, settings):
         default_settings = self.get_conf("settings_defaults")
-        default_settings = self._mix_settings_with_env(default_settings)
         values = Values.from_list(default_settings)
-        return values
+        settings.values = values
+        mixed_settings = self._mix_settings_with_env(default_settings)
+        values = Values.from_list(mixed_settings)
+        settings.values = values
 
     def _mix_settings_with_env(self, settings):
         """Reads CONAN_ENV_XXXX variables from environment

@@ -427,7 +427,7 @@ class RestApiClient(object):
 
     @property
     def _remote_api_url(self):
-        return "%s/v1" % self.remote_url
+        return "%s/v1" % self.remote_url.rstrip("/")
 
     def _file_server_capabilities(self, resource_url):
         auth = None
