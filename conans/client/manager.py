@@ -349,6 +349,7 @@ If not:
             output.info("Generated %s" % CONANINFO)
             if not no_imports:
                 run_imports(conanfile, current_path, output)
+            installer.call_system_requirements(conanfile, output)
 
         if manifest_manager:
             manifest_manager.print_log()

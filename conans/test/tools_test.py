@@ -7,18 +7,19 @@ from conans.test.utils.visual_project_files import get_vs_project_files
 from conans.test.tools import TestClient, TestBufferConanOutput
 from conans.paths import CONANFILE
 import platform
-from requests.exceptions import ConnectionError
 from conans.errors import ConanException
 from nose.plugins.attrib import attr
 
 
 class RunnerMock(object):
 
-    def __init__(self):
+    def __init__(self, return_ok=True):
         self.command_called = None
+        self.return_ok = return_ok
 
     def __call__(self, command, output):
         self.command_called = command
+        return 0 if self.return_ok else 1
 
 
 class ReplaceInFileTest(unittest.TestCase):
@@ -73,6 +74,12 @@ class ToolsTest(unittest.TestCase):
         self.assertEquals(os.getenv("A", None), None)
         self.assertEquals(os.getenv("B", None), None)
         self.assertEquals(os.getenv("Z", None), None)
+
+    def system_package_tool_fail_when_not_0_returned_test(self):
+        runner = RunnerMock(return_ok=False)
+        spt = SystemPackageTool(runner=runner)
+        with self.assertRaisesRegexp(ConanException, "Command 'sudo apt-get update' failed"):
+            spt.update()
 
     def system_package_tool_test(self):
 
