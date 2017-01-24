@@ -118,7 +118,7 @@ class ConanManager(object):
                                  "You exported '%s' but already existing '%s'"
                                  % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
-        export_conanfile(output, self._client_cache, conan_file.exports, conan_file_path,
+        export_conanfile(output, self._client_cache, conan_file, conan_file_path,
                          conan_ref, conan_file.short_paths, keep_source)
 
     def download(self, reference, package_ids, remote=None):

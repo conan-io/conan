@@ -3,10 +3,10 @@ from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
-from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum
+from conans.util.files import decode_text, md5sum, save
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -153,7 +153,31 @@ class RestApiClient(object):
         if CONANFILE not in list(urls.keys()):
             raise NotFoundException("Conan '%s' doesn't have a %s!" % (conan_reference, CONANFILE))
 
+        sources_url = urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
+        if sources_url:
+            sources_file = os.path.join(dest_folder, "conan_sources.txt")
+            save(sources_file, "")
+
         # TODO: Get fist an snapshot and compare files and download only required?
+        file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
+        return file_paths
+
+    def get_recipe_sources(self, conan_reference, dest_folder):
+        """Gets a dict of filename:contents from conans"""
+        # Get the conanfile snapshot first
+        sources_file = os.path.join(dest_folder, "conan_sources.txt")
+        if not os.path.exists(sources_file):
+            return
+
+        url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
+        urls = self._get_json(url)
+
+        sources_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
+        if not sources_url:
+            raise NotFoundException("Conan '%s' doesn't have a %s!"
+                                    % (conan_reference, EXPORT_SOURCES_TGZ_NAME))
+
+        urls = {EXPORT_SOURCES_TGZ_NAME: sources_url}
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 

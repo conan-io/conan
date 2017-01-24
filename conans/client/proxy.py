@@ -112,6 +112,15 @@ class ConanProxy(object):
             remote = self._registry.get_ref(package_ref.conan)
             self._manifest_manager.check_package(package_ref, remote)
 
+    def get_recipe_sources(self, conan_reference):
+        export_path = self._client_cache.export(conan_reference)
+        try:
+            current_remote, _ = self._get_remote(conan_reference)
+        except ConanException:
+            pass
+        else:
+            self._remote_manager.get_recipe_sources(conan_reference, export_path, current_remote)
+
     def get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
 

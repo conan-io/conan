@@ -12,13 +12,11 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
-def export_conanfile(output, paths, file_patterns, origin_folder, conan_ref, short_paths,
+def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, short_paths,
                      keep_source):
     destination_folder = paths.export(conan_ref)
-
     previous_digest = _init_export_folder(destination_folder)
-
-    _export(file_patterns, origin_folder, destination_folder, output)
+    _export(conanfile, origin_folder, destination_folder, output)
 
     digest = FileTreeManifest.create(destination_folder)
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
@@ -69,16 +67,20 @@ def _init_export_folder(destination_folder):
     return previous_digest
 
 
-def _export(file_patterns, origin_folder, destination_folder, output):
-    file_patterns = file_patterns or []
+def _export(conanfile, origin_folder, destination_folder, output):
+    exports = conanfile.exports or []
+    exports_sources = conanfile.exports_sources or []
     try:
         os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
     except:
         pass
 
     copier = FileCopier(origin_folder, destination_folder)
-    for pattern in file_patterns:
-        copier(pattern)
+    copied_files = []
+    for pattern in exports:
+        partial_copied_files = copier(pattern)
+        if pattern in exports_sources:
+            copied_files.extend(partial_copied_files)
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)
 

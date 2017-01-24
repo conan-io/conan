@@ -8,10 +8,10 @@ from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError
 from conans.util.files import tar_extract, relative_dirs, rmdir,\
-    exception_message_safe
+    exception_message_safe, save, load
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
-    rm_conandir
+    rm_conandir, EXPORT_SOURCES_TGZ_NAME
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
 from conans.model.manifest import discarded_file
@@ -29,18 +29,35 @@ class RemoteManager(object):
 
     def upload_conan(self, conan_reference, remote, retry, retry_wait):
         """Will upload the conans to the first remote"""
+
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
+        self.get_recipe_sources(conan_reference, export_folder, remote)
         rel_files = relative_dirs(export_folder)
         the_files = {filename: os.path.join(export_folder, filename) for filename in rel_files}
 
         if CONANFILE not in rel_files or CONAN_MANIFEST not in rel_files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
 
+        conan_sources = the_files.pop("conan_sources.txt", None)
+        conan_sources_targz = the_files.pop(EXPORT_SOURCES_TGZ_NAME, None)
+        if conan_sources:
+            content = load(conan_sources)
+            conan_sources_files = content.splitlines()
+            source_files = {k: v for k, v in the_files.items() if k in conan_sources_files}
+            the_files = {k: v for k, v in the_files.items() if k not in conan_sources_files}
+
         # FIXME: Check modified exports by hand?
         the_files = compress_conan_files(the_files, export_folder, EXPORT_TGZ_NAME,
                                          CONANFILE, self._output)
 
+        if conan_sources:
+            if conan_sources_targz:
+                the_files[EXPORT_SOURCES_TGZ_NAME] = conan_sources_targz
+            else:
+                new_files = compress_files(source_files, EXPORT_SOURCES_TGZ_NAME, excluded=[],
+                                           dest_dir=export_folder)
+                the_files[EXPORT_SOURCES_TGZ_NAME] = new_files[EXPORT_SOURCES_TGZ_NAME]
         ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
                                 retry, retry_wait)
         duration = time.time() - t1
@@ -150,6 +167,24 @@ class RemoteManager(object):
                 touch(os.path.join(dirname, fname))
 #       TODO: Download only the CONANFILE file and only download the rest of files
 #       in install if needed (not found remote package)
+        return files
+
+    def get_recipe_sources(self, conan_reference, dest_folder, remote):
+        t1 = time.time()
+        zipped_files = self._call_remote(remote, "get_recipe_sources",
+                                         conan_reference, dest_folder)
+        duration = time.time() - t1
+        log_recipe_download(conan_reference, duration, remote, zipped_files)
+        if not zipped_files:
+            return
+
+        files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_SOURCES_TGZ_NAME)
+        for dirname, _, filenames in os.walk(dest_folder):
+            for fname in filenames:
+                touch(os.path.join(dirname, fname))
+
+        sources_file = os.path.join(dest_folder, "conan_sources.txt")
+        save(sources_file, "\n".join(files))
         return files
 
     def get_package(self, package_reference, dest_folder, remote):
