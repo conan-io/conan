@@ -307,9 +307,9 @@ class TestClient(object):
         search_adapter = DiskSearchAdapter()
         self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
 
-        self.default_settings(get_env("CONAN_COMPILER", "gcc"),
-                              get_env("CONAN_COMPILER_VERSION", "4.8"),
-                              get_env("CONAN_LIBCXX", "libstdc++"))
+        self._default_settings(get_env("CONAN_COMPILER", "gcc"),
+                               get_env("CONAN_COMPILER_VERSION", "4.8"),
+                               get_env("CONAN_LIBCXX", "libstdc++"))
 
         self.requester_class = requester_class
         self.conan_runner = runner
@@ -331,7 +331,7 @@ class TestClient(object):
     def paths(self):
         return self.client_cache
 
-    def default_settings(self, compiler, compiler_version, libcxx):
+    def _default_settings(self, compiler, compiler_version, libcxx):
         """ allows to change the default settings in the file, to change compiler, version
         """
         # Set default settings in global defined

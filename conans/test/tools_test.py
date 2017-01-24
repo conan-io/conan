@@ -58,6 +58,22 @@ class ToolsTest(unittest.TestCase):
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
 
+    def test_environment_nested(self):
+        with tools.environment_append({"A": "1", "Z": "40"}):
+            with tools.environment_append({"A": "1", "B": "2"}):
+                with tools.environment_append({"A": "2", "B": "2"}):
+                    self.assertEquals(os.getenv("A"), "2")
+                    self.assertEquals(os.getenv("B"), "2")
+                    self.assertEquals(os.getenv("Z"), "40")
+                self.assertEquals(os.getenv("A", None), "1")
+                self.assertEquals(os.getenv("B", None), "2")
+            self.assertEquals(os.getenv("A", None), "1")
+            self.assertEquals(os.getenv("Z", None), "40")
+
+        self.assertEquals(os.getenv("A", None), None)
+        self.assertEquals(os.getenv("B", None), None)
+        self.assertEquals(os.getenv("Z", None), None)
+
     def system_package_tool_test(self):
 
         runner = RunnerMock()

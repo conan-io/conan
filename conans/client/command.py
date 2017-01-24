@@ -1029,12 +1029,17 @@ def get_command():
     # Get a search manager
     search_adapter = DiskSearchAdapter()
     search_manager = DiskSearchManager(client_cache, search_adapter)
+
+    command = Command(client_cache, user_io, get_conan_runner(), remote_manager, search_manager)
+    return command
+
+
+def get_conan_runner():
     print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS", False)
     generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE", False)
     log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT", True)
     runner = ConanRunner(print_commands_to_output, generate_run_log_file, log_run_to_output)
-    command = Command(client_cache, user_io, runner, remote_manager, search_manager)
-    return command
+    return runner
 
 
 def main(args):
