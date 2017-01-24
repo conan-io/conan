@@ -1,6 +1,8 @@
 import unittest
 from conans.test.tools import TestClient
 from conans.util.files import load, save
+from conans.client.conf import default_settings_yml
+from conans.model.settings import Settings
 
 
 class UpdateSettingsYmlTest(unittest.TestCase):
@@ -51,12 +53,17 @@ compiler:
         conf = conf.replace("build_type=Release", "")
         self.assertNotIn("build_type", conf)
         save(client.paths.conan_conf_path, conf)
-        self.assertNotIn("build_type", client.paths.conan_config.settings_defaults.dumps())
+
+        settings = Settings.loads(default_settings_yml)
+        client.paths.conan_config.settings_defaults(settings)
+        self.assertNotIn("build_type", settings.values.dumps())
         client.save(files)
         client.run("export lasote/testing")
         self.assertNotIn("build_type", load(client.paths.settings_path))
         self.assertNotIn("build_type", load(client.paths.conan_conf_path))
-        self.assertNotIn("build_type", client.paths.conan_config.settings_defaults.dumps())
+        settings = Settings.loads(default_settings_yml)
+        client.paths.conan_config.settings_defaults(settings)
+        self.assertNotIn("build_type", settings.values.dumps())
 
         client.run("install test/1.9@lasote/testing --build -s arch=x86_64 -s compiler=gcc "
                    "-s compiler.version=4.9 -s os=Windows -s compiler.libcxx=libstdc++")
