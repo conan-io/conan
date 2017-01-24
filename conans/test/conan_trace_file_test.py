@@ -60,14 +60,14 @@ class HelloConan(ConanFile):
         self.assertTrue(os.path.exists(log_file_packaged))
         contents = load(log_file_packaged)
         self.assertIn("Simulating cmake...", contents)
-        self.assertNotIn("----Running------\n> echo", contents)
+        self.assertNotIn("----Running------%s> echo" % os.linesep, contents)
 
         log_file_packaged, output = _install_a_package(True, True)
         self.assertIn("Copied 1 '.log' files: conan_run.log", output)
         self.assertTrue(os.path.exists(log_file_packaged))
         contents = load(log_file_packaged)
         self.assertIn("Simulating cmake...", contents)
-        self.assertIn("----Running------\n> echo", contents)
+        self.assertIn("----Running------%s> echo" % os.linesep, contents)
 
         log_file_packaged, output = _install_a_package(False, False)
         self.assertNotIn("Copied 1 '.log' files: conan_run.log", output)
