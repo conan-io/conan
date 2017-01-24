@@ -174,7 +174,7 @@ class RemoteManager(object):
         zipped_files = self._call_remote(remote, "get_recipe_sources",
                                          conan_reference, dest_folder)
         duration = time.time() - t1
-        log_recipe_download(conan_reference, duration, remote, zipped_files)
+        # log_recipe_download(conan_reference, duration, remote, zipped_files)
         if not zipped_files:
             return
 
