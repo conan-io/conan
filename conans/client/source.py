@@ -1,4 +1,4 @@
-from conans.paths import DIRTY_FILE
+from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR
 import os
 from conans.util.files import rmdir, save
 import six
@@ -39,6 +39,9 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
     if not os.path.exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
         shutil.copytree(export_folder, src_folder)
+        export_sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
+        if os.path.exists(export_sources_folder):
+            shutil.copytree(export_sources_folder, src_folder)
         save(dirty, "")  # Creation of DIRTY flag
         os.chdir(src_folder)
         try:

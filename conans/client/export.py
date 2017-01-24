@@ -5,7 +5,7 @@ to the local store, as an initial step before building or uploading to remotes
 import shutil
 import os
 from conans.util.files import save, load, rmdir
-from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE
+from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE, EXPORT_SOURCES_DIR
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
@@ -76,11 +76,11 @@ def _export(conanfile, origin_folder, destination_folder, output):
         pass
 
     copier = FileCopier(origin_folder, destination_folder)
-    copied_files = []
     for pattern in exports:
-        partial_copied_files = copier(pattern)
-        if pattern in exports_sources:
-            copied_files.extend(partial_copied_files)
+        copier(pattern)
+    copier = FileCopier(origin_folder, os.path.join(destination_folder, EXPORT_SOURCES_DIR))
+    for pattern in exports_sources:
+        copier(pattern)
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)
 

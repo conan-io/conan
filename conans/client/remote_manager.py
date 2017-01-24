@@ -11,7 +11,7 @@ from conans.util.files import tar_extract, relative_dirs, rmdir,\
     exception_message_safe, save, load
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
-    rm_conandir, EXPORT_SOURCES_TGZ_NAME
+    rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
 from conans.model.manifest import discarded_file
@@ -32,6 +32,7 @@ class RemoteManager(object):
 
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
+        # make sure that the recipe is complete, with the sources
         self.get_recipe_sources(conan_reference, export_folder, remote)
         rel_files = relative_dirs(export_folder)
         the_files = {filename: os.path.join(export_folder, filename) for filename in rel_files}
@@ -39,25 +40,24 @@ class RemoteManager(object):
         if CONANFILE not in rel_files or CONAN_MANIFEST not in rel_files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
 
-        conan_sources = the_files.pop("conan_sources.txt", None)
-        conan_sources_targz = the_files.pop(EXPORT_SOURCES_TGZ_NAME, None)
-        if conan_sources:
-            content = load(conan_sources)
-            conan_sources_files = content.splitlines()
-            source_files = {k: v for k, v in the_files.items() if k in conan_sources_files}
-            the_files = {k: v for k, v in the_files.items() if k not in conan_sources_files}
+        sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
+        if os.path.exists(sources_folder):
+            source_files = {k: v for k, v in the_files.items() if k.startswith(EXPORT_SOURCES_DIR)}
+            the_files = {k: v for k, v in the_files.items() if not k.startswith(EXPORT_SOURCES_DIR)}
 
         # FIXME: Check modified exports by hand?
         the_files = compress_conan_files(the_files, export_folder, EXPORT_TGZ_NAME,
                                          CONANFILE, self._output)
 
-        if conan_sources:
-            if conan_sources_targz:
-                the_files[EXPORT_SOURCES_TGZ_NAME] = conan_sources_targz
-            else:
+        if os.path.exists(sources_folder):
+            sources_tgz = source_files.get(EXPORT_SOURCES_TGZ_NAME)
+            if not sources_tgz:
+                # zip
                 new_files = compress_files(source_files, EXPORT_SOURCES_TGZ_NAME, excluded=[],
-                                           dest_dir=export_folder)
-                the_files[EXPORT_SOURCES_TGZ_NAME] = new_files[EXPORT_SOURCES_TGZ_NAME]
+                                           dest_dir=sources_folder)
+                sources_tgz = new_files[EXPORT_SOURCES_TGZ_NAME]
+            the_files[EXPORT_SOURCES_TGZ_NAME] = sources_tgz
+
         ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
                                 retry, retry_wait)
         duration = time.time() - t1
@@ -116,7 +116,7 @@ class RemoteManager(object):
         the_files = compress_conan_files(the_files, package_folder, PACKAGE_TGZ_NAME,
                                          CONANINFO, self._output)
 
-        tmp = self._call_remote(remote, "upload_package", package_reference, the_files, 
+        tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
                                 retry, retry_wait)
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files)
@@ -178,13 +178,12 @@ class RemoteManager(object):
         if not zipped_files:
             return
 
-        files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_SOURCES_TGZ_NAME)
-        for dirname, _, filenames in os.walk(dest_folder):
+        sources_folder = os.path.join(dest_folder, EXPORT_SOURCES_DIR)
+        files = unzip_and_get_files(zipped_files, sources_folder, EXPORT_SOURCES_TGZ_NAME)
+        for dirname, _, filenames in os.walk(sources_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
-        sources_file = os.path.join(dest_folder, "conan_sources.txt")
-        save(sources_file, "\n".join(files))
         return files
 
     def get_package(self, package_reference, dest_folder, remote):
