@@ -12,6 +12,9 @@ class CMake(object):
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
+        """ FIXME: this function seems weird, not tested, not used.
+        Probably should be deprecated
+        """
         result = []
         for option, value in options.values.as_list():
             if value is not None:
@@ -77,7 +80,9 @@ class CMake(object):
         same_platform = (target_os == host_platform)
 
         cmake_flags = []
-        cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % target_os)
+
+        if not same_platform:
+            cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % target_os)
 
         if target_comp == "clang":
             cmake_flags.append("-DCMAKE_C_COMPILER=clang")
@@ -149,6 +154,8 @@ class CMake(object):
             flags.append('-DCONAN_COMPILER="%s"' % comp)
         if comp_version:
             flags.append('-DCONAN_COMPILER_VERSION="%s"' % comp_version)
+
+        flags.append("-DCONAN_EXPORTED=1")
 
         if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
             if arch == "x86":

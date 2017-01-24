@@ -15,6 +15,7 @@ from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
 from conans.model.info import ConanInfo
+from conans.util.tracer import log_client_rest_api_call
 
 
 def handle_return_deserializer(deserializer=None):
@@ -234,9 +235,12 @@ class RestApiClient(object):
     def authenticate(self, user, password):
         '''Sends user + password to get a token'''
         auth = HTTPBasicAuth(user, password)
-        path = "%s/users/authenticate" % self._remote_api_url
-        ret = self.requester.get(path, auth=auth, headers=self.custom_headers,
+        url = "%s/users/authenticate" % self._remote_api_url
+        t1 = time.time()
+        ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
+        duration = time.time() - t1
+        log_client_rest_api_call(url, "GET", duration, self.custom_headers)
         return ret
 
     @handle_return_deserializer()
@@ -244,8 +248,11 @@ class RestApiClient(object):
         """If token is not valid will raise AuthenticationException.
         User will be asked for new user/pass"""
         url = "%s/users/check_credentials" % self._remote_api_url
+        t1 = time.time()
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
+        duration = time.time() - t1
+        log_client_rest_api_call(url, "GET", duration, self.custom_headers)
         return ret
 
     def search(self, pattern=None, ignorecase=True):
@@ -367,19 +374,24 @@ class RestApiClient(object):
         return response
 
     def _get_json(self, url, data=None):
+        t1 = time.time()
+        headers = self.custom_headers
         if data:  # POST request
-            headers = {'Content-type': 'application/json',
-                       'Accept': 'text/plain',
-                       'Accept': 'application/json'}
-            headers.update(self.custom_headers)
+            headers.update({'Content-type': 'application/json',
+                            'Accept': 'text/plain',
+                            'Accept': 'application/json'})
             response = self.requester.post(url, auth=self.auth, headers=headers,
                                            verify=self.verify_ssl,
                                            stream=True,
                                            data=json.dumps(data))
         else:
-            response = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
+            response = self.requester.get(url, auth=self.auth, headers=headers,
                                           verify=self.verify_ssl,
                                           stream=True)
+
+        duration = time.time() - t1
+        method = "POST" if data else "GET"
+        log_client_rest_api_call(url, method, duration, headers)
         if response.status_code != 200:  # Error message is text
             response.charset = "utf-8"  # To be able to access ret.text (ret.content are bytes)
             raise get_exception_from_error(response.status_code)(response.text)

@@ -15,6 +15,8 @@ from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE,
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
 from conans.model.manifest import discarded_file
+from conans.util.tracer import log_package_upload, log_recipe_upload,\
+    log_recipe_download, log_package_download
 
 
 class RemoteManager(object):
@@ -27,6 +29,7 @@ class RemoteManager(object):
 
     def upload_conan(self, conan_reference, remote, retry, retry_wait):
         """Will upload the conans to the first remote"""
+        t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
         rel_files = relative_dirs(export_folder)
         the_files = {filename: os.path.join(export_folder, filename) for filename in rel_files}
@@ -38,8 +41,10 @@ class RemoteManager(object):
         the_files = compress_conan_files(the_files, export_folder, EXPORT_TGZ_NAME,
                                          CONANFILE, self._output)
 
-        ret = self._call_remote(remote, "upload_conan", conan_reference, the_files, 
+        ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
                                 retry, retry_wait)
+        duration = time.time() - t1
+        log_recipe_upload(conan_reference, duration, the_files)
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
         # FIXME: server dependent
         if remote.url == "https://server.conan.io":
@@ -96,7 +101,9 @@ class RemoteManager(object):
 
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files, 
                                 retry, retry_wait)
-        logger.debug("====> Time remote_manager upload_package: %f" % (time.time() - t1))
+        duration = time.time() - t1
+        log_package_upload(package_reference, duration, the_files)
+        logger.debug("====> Time remote_manager upload_package: %f" % (duration))
         return tmp
 
     def get_conan_digest(self, conan_reference, remote):
@@ -130,7 +137,11 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:abs_path , remote_name)"""
         rmdir(dest_folder)  # Remove first the destination folder
+        t1 = time.time()
         zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
+        duration = time.time() - t1
+        log_recipe_download(conan_reference, duration, remote, zipped_files)
+
         files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
         rm_conandir(self._client_cache.source(conan_reference))
@@ -148,7 +159,10 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:abs_path , remote_name)"""
         rm_conandir(dest_folder)  # Remove first the destination folder
+        t1 = time.time()
         zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
+        duration = time.time() - t1
+        log_package_download(package_reference, duration, remote, zipped_files)
         files = unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
         # Issue #214 https://github.com/conan-io/conan/issues/214
         for dirname, _, filenames in os.walk(dest_folder):

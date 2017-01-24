@@ -4,7 +4,7 @@ from conans.test.tools import TestClient
 from conans.paths import CONANFILE, CONANINFO
 from conans.model.info import ConanInfo
 import os
-from conans.model.config_dict import undefined_value, bad_value_msg
+from conans.model.settings import undefined_value, bad_value_msg
 
 
 class SettingsTest(unittest.TestCase):

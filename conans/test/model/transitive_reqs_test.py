@@ -4,15 +4,14 @@ from conans.paths import CONANFILE
 import os
 from conans.client.deps_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
-from conans.model.options import OptionsValues
+from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
 from conans.client.loader import ConanFileLoader
 from conans.util.files import save
-from conans.model.settings import Settings
+from conans.model.settings import Settings, bad_value_msg
 from conans.errors import ConanException
 from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
 from conans.model.values import Values
-from conans.model.config_dict import undefined_field, bad_value_msg
 from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
 from conans.model.scope import Scopes
@@ -730,8 +729,8 @@ class ChatConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(chat_content)
         self.assertEqual(str(cm.exception),
-                         "Say/0.1@diego/testing: %s" % undefined_field("options", "myoption2",
-                                                                       ['myoption']))
+                         "Say/0.1@diego/testing: %s" % option_not_exist_msg("myoption2",
+                                                                            ['myoption']))
 
         chat_content = """
 from conans import ConanFile
@@ -748,7 +747,7 @@ class ChatConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(chat_content)
         self.assertEqual(str(cm.exception),  "Say/0.1@diego/testing: %s"
-                         % bad_value_msg("options.myoption", "235", ["123", "234"]))
+                         % option_wrong_value_msg("myoption", "235", ["123", "234"]))
 
     def test_diamond_no_conflict_options(self):
         say_content = """

@@ -1,7 +1,7 @@
 from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 from conans.client.generators.cmake_common import cmake_single_dep_vars, cmake_multi_dep_vars,\
-    cmake_macros
+    cmake_macros, generate_targets_section
 
 
 class DepsCppCmake(object):
@@ -64,19 +64,7 @@ class CMakeGenerator(Generator):
     # Not working
     # set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
 """
-        sections.append("\n###  Definition of macros and functions ###\n")
-        sections.append('macro(conan_define_targets)\n'
-                        '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
-                        '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
-                        '    endif()  # CMAKE > 3.x\n')
-
-        for dep_name, dep_info in self.deps_build_info.dependencies:
-            use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
-            deps = "" if not use_deps else " ".join(use_deps)
-            sections.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
-                                            uname=dep_name.upper()))
-
-        sections.append('endmacro()\n')
+        sections.extend(generate_targets_section(template, self.deps_build_info.dependencies))
 
         # MACROS
         sections.append(cmake_macros)
