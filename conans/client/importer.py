@@ -51,7 +51,8 @@ def undo_imports(current_path, output):
 def run_imports(conanfile, current_path, output):
     file_importer = FileImporter(conanfile, current_path)
     conanfile.copy = file_importer
-    with environment_append(conanfile.env):
+    # FIXME: The environment has to be properly defined even for "conan imports"
+    with environment_append(conanfile.env or []):
         conanfile.imports()
     copied_files = file_importer.execute()
     import_output = ScopedOutput("%s imports()" % output.scope, output)
