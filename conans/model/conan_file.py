@@ -5,6 +5,8 @@ from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to c
 from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo
 import os
+from conans.util.files import mkdir
+from conans.paths import RUN_LOG_NAME
 
 
 def create_options(conanfile):
@@ -14,10 +16,8 @@ def create_options(conanfile):
 
         default_options = getattr(conanfile, "default_options", None)
         if default_options:
-            if isinstance(default_options, tuple):
-                default_values = OptionsValues.loads("\n".join(default_options))
-            elif isinstance(default_options, list):
-                default_values = OptionsValues.from_list(default_options)
+            if isinstance(default_options, (list, tuple)):
+                default_values = OptionsValues(default_options)
             elif isinstance(default_options, str):
                 default_values = OptionsValues.loads(default_options)
             else:
@@ -67,7 +67,7 @@ def create_exports(conanfile):
 
 
 class ConanFile(object):
-    """ The base class for all conans
+    """ The base class for all package recipes
     """
 
     name = None
@@ -81,10 +81,6 @@ class ConanFile(object):
     short_paths = False
 
     def __init__(self, output, runner, settings, conanfile_directory, user=None, channel=None):
-        '''
-        param settings: Settings
-        '''
-
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
         if isinstance(self.generators, str):
@@ -228,7 +224,7 @@ class ConanFile(object):
         """ runs such a command in the folder the Conan
         is defined
         """
-        retcode = self._runner(command, output, cwd)
+        retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME),  cwd)
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 

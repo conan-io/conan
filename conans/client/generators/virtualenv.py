@@ -15,11 +15,15 @@ def get_setenv_variables_commands(deps_env_info, command_set=None):
         if platform.system() == "Windows":
             ret.append(command_set + ' "' + name + '=' + value + ';%' + name + '%"')
         else:
-            ret.append(command_set + ' ' + name + '=' + value + ':$' + name)
+            # Standard UNIX "sh" does not allow "export VAR=xxx" on one line
+            # So for portability reasons we split into two commands
+            ret.append(name + '=' + value + ':$' + name)
+            ret.append(command_set + ' ' + name)
     for name, value in simple_to_set.items():
         if platform.system() == "Windows":
             ret.append(command_set + ' "' + name + '=' + value + '"')
         else:
+            ret.append(name + '=' + value)
             ret.append(command_set + ' ' + name + '=' + value)
     return ret
 

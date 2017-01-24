@@ -12,6 +12,9 @@ class CMake(object):
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
+        """ FIXME: this function seems weird, not tested, not used.
+        Probably should be deprecated
+        """
         result = []
         for option, value in options.values.as_list():
             if value is not None:
@@ -114,7 +117,7 @@ class CMake(object):
         comp = str(self._settings.compiler) if self._settings.compiler else None
         comp_version = self._settings.compiler.version
 
-        flags = []
+        flags = ["-DCONAN_EXPORTED=1"]
         if op_system == "Windows":
             if comp == "clang":
                 flags.append("-DCMAKE_C_COMPILER=clang")
@@ -123,12 +126,18 @@ class CMake(object):
             flags.append('-DCONAN_COMPILER="%s"' % comp)
         if comp_version:
             flags.append('-DCONAN_COMPILER_VERSION="%s"' % comp_version)
-        if arch == "x86":
-            if op_system == "Linux":
+
+        if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
+            if arch == "x86":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m32",
                               "-DCONAN_C_FLAGS=-m32"])
-            elif op_system == "Macos":
+            if arch == "x86_64":
+                flags.extend(["-DCONAN_CXX_FLAGS=-m64",
+                              "-DCONAN_SHARED_LINKER_FLAGS=-m64",
+                              "-DCONAN_C_FLAGS=-m64"])
+        elif op_system == "Macos":
+            if arch == "x86":
                 flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
 
         try:

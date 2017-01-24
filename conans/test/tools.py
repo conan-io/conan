@@ -283,7 +283,7 @@ class TestClient(object):
     def __init__(self, base_folder=None, current_folder=None,
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
-                 requester_class=None):
+                 requester_class=None, runner=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -312,6 +312,7 @@ class TestClient(object):
                                get_env("CONAN_LIBCXX", "libstdc++"))
 
         self.requester_class = requester_class
+        self.conan_runner = runner
 
         self.init_dynamic_vars()
 
@@ -358,7 +359,7 @@ class TestClient(object):
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
 
-        self.runner = TestRunner(output)
+        self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real
         real_servers = False

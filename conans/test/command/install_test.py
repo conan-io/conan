@@ -216,6 +216,13 @@ class ConanLib(ConanFile):
         info_path = os.path.join(client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("", conan_info.options.dumps())
+        self.assertIn("Hello0:language=1", conan_info.full_options.dumps())
+
+        # it is necessary to clean the cached conaninfo
+        client.save(files, clean_first=True)
+        client.run("install %s --build missing" % self.settings)
+        conan_info = ConanInfo.load_file(info_path)
+        self.assertEqual("", conan_info.options.dumps())
         self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
         self.assertIn("Hello0/0.1@lasote/stable:2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
                       conan_info.full_requires.dumps())
