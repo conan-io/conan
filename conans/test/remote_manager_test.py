@@ -50,7 +50,6 @@ class RemoteManagerTest(unittest.TestCase):
         self.remote_client = MockRemoteClient()
         self.output = TestBufferConanOutput()
         self.client_cache = ClientCache(temp_folder(), temp_folder(), self.output)
-        self.remotes = [("default", "url1"), ("other", "url2"), ("last", "url3")]
         self.manager = RemoteManager(self.client_cache, self.remote_client, self.output)
 
     def test_no_remotes(self):
@@ -61,17 +60,6 @@ class RemoteManagerTest(unittest.TestCase):
         client.run("upload Hello0/0.1@lasote/stable", ignore_error=True)
         self.assertIn("ERROR: No default remote defined", client.user_io.out)
 
-    def remote_selection_test(self):
-        save(os.path.join(self.client_cache.export(self.conan_reference), CONANFILE), "asdasd")
-        save(os.path.join(self.client_cache.export(self.conan_reference), CONAN_MANIFEST), "asdasd")
-
-        # If no remote is specified will look to first
-        self.assertRaises(NotFoundException, self.manager.upload_conan, self.conan_reference, None)
-
-        # If remote is specified took it
-        self.assertRaises(NotFoundException,
-                          self.manager.upload_conan, self.conan_reference, Remote("other", "url"))
-
     def method_called_test(self):
 
         save(os.path.join(self.client_cache.package(self.package_reference), CONANINFO), "asdasd")
@@ -79,17 +67,17 @@ class RemoteManagerTest(unittest.TestCase):
         save(os.path.join(self.client_cache.package(self.package_reference), CONAN_MANIFEST), str(manifest))
 
         self.assertFalse(self.remote_client.upload_package.called)
-        self.manager.upload_package(self.package_reference, Remote("other", "url"))
+        self.manager.upload_package(self.package_reference, Remote("other", "url", True), 1, 0)
         self.assertTrue(self.remote_client.upload_package.called)
 
         self.assertFalse(self.remote_client.get_conan_digest.called)
-        self.manager.get_conan_digest(self.conan_reference, Remote("other", "url"))
+        self.manager.get_conan_digest(self.conan_reference, Remote("other", "url", True))
         self.assertTrue(self.remote_client.get_conan_digest.called)
 
         self.assertFalse(self.remote_client.get_recipe.called)
-        self.manager.get_recipe(self.conan_reference, temp_folder(), Remote("other", "url"))
+        self.manager.get_recipe(self.conan_reference, temp_folder(), Remote("other", "url", True))
         self.assertTrue(self.remote_client.get_recipe.called)
 
         self.assertFalse(self.remote_client.get_package.called)
-        self.manager.get_package(self.package_reference, temp_folder(), Remote("other", "url"))
+        self.manager.get_package(self.package_reference, temp_folder(), Remote("other", "url", True))
         self.assertTrue(self.remote_client.get_package.called)

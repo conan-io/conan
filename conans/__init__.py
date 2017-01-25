@@ -9,5 +9,8 @@ from conans.client.configure_environment import ConfigureEnvironment
 from conans.util.files import load
 import os
 
-__version__ = '0.15.0'
+# complex_search: With ORs and not filtering by not restricted settings
+COMPLEX_SEARCH_CAPABILITY = "complex_search"
+SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
+__version__ = '0.19.0-dev'

@@ -22,7 +22,7 @@ class TestConan(ConanFile):
         files = {CONANFILE: conanfile}
         client.save(files)
         client.run("export lasote/stable")
-        self.assertIn("WARN: Conanfile doesn't have a 'license'", client.user_io.out)
+        self.assertIn("WARN: Conanfile doesn't have 'license'", client.user_io.out)
         client.run("install Hello/1.2@lasote/stable -s os=Windows", ignore_error=True)
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
@@ -54,7 +54,7 @@ class ExportTest(unittest.TestCase):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '5632cf850a7161388ab24f42b9bdb3fd',
+                         'conanfile.py': '0f623a95e7262a618ad140eb2f959c5f',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
@@ -137,7 +137,7 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '5632cf850a7161388ab24f42b9bdb3fd',
+                         'conanfile.py': '0f623a95e7262a618ad140eb2f959c5f',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest2.file_sums)
@@ -170,7 +170,7 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '7f7a5352e781be814b86e8f333593b4f',
+                         'conanfile.py': '6b19dfd1241712a6c694c7c397f909ce',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest3.file_sums)

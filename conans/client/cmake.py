@@ -8,9 +8,13 @@ class CMake(object):
     def __init__(self, settings):
         assert isinstance(settings, Settings)
         self._settings = settings
+        self.generator = self._generator()
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
+        """ FIXME: this function seems weird, not tested, not used.
+        Probably should be deprecated
+        """
         result = []
         for option, value in options.values.as_list():
             if value is not None:
@@ -19,8 +23,7 @@ class CMake(object):
                 result.append("-D%s=%s" % (option, value))
         return ' '.join(result)
 
-    @property
-    def generator(self):
+    def _generator(self):
         if (not self._settings.compiler or
                 not self._settings.compiler.version or
                 not self._settings.arch):
@@ -40,7 +43,8 @@ class CMake(object):
                         '10': '10 2010',
                         '11': '11 2012',
                         '12': '12 2013',
-                        '14': '14 2015'}
+                        '14': '14 2015',
+                        '15': '15 2017'}
             str_ver = str(self._settings.compiler.version)
             base = "Visual Studio %s" % _visuals.get(str_ver, "UnknownVersion %s" % str_ver)
             if arch == "x86_64":
@@ -61,6 +65,12 @@ class CMake(object):
         if operating_system == "Macos":
             if compiler in ["gcc", "clang", "apple-clang"]:
                 return "Unix Makefiles"
+        if operating_system == "FreeBSD":
+            if compiler in ["gcc", "clang", "apple-clang"]:
+                return "Unix Makefiles"
+        if operating_system == "SunOS":
+            if compiler in ["sun-cc", "gcc"]:
+                return "Unix Makefiles"
 
         raise ConanException("Unknown cmake generator for these settings")
 
@@ -68,7 +78,7 @@ class CMake(object):
     def is_multi_configuration(self):
         """ some IDEs are multi-configuration, as Visual. Makefiles or Ninja are single-conf
         """
-        if "Visual" in str(self._settings.compiler):
+        if "Visual" in self.generator:
             return True
         # TODO: complete logic
         return False
@@ -107,7 +117,7 @@ class CMake(object):
         comp = str(self._settings.compiler) if self._settings.compiler else None
         comp_version = self._settings.compiler.version
 
-        flags = []
+        flags = ["-DCONAN_EXPORTED=1"]
         if op_system == "Windows":
             if comp == "clang":
                 flags.append("-DCMAKE_C_COMPILER=clang")
@@ -116,12 +126,18 @@ class CMake(object):
             flags.append('-DCONAN_COMPILER="%s"' % comp)
         if comp_version:
             flags.append('-DCONAN_COMPILER_VERSION="%s"' % comp_version)
-        if arch == "x86":
-            if op_system == "Linux":
+
+        if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
+            if arch == "x86":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m32",
                               "-DCONAN_C_FLAGS=-m32"])
-            elif op_system == "Macos":
+            if arch == "x86_64":
+                flags.extend(["-DCONAN_CXX_FLAGS=-m64",
+                              "-DCONAN_SHARED_LINKER_FLAGS=-m64",
+                              "-DCONAN_C_FLAGS=-m64"])
+        elif op_system == "Macos":
+            if arch == "x86":
                 flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
 
         try:

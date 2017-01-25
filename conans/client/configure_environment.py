@@ -49,14 +49,48 @@ class ConfigureEnvironment(object):
             self.build_type = None
 
         try:
-            self.libcxx = str(self.compiler.libcxx)
+            self.libcxx = str(self._settings.compiler.libcxx)
         except:
             self.libcxx = None
+
+    def _gcc_arch_flags(self):
+        if self.arch == "x86_64":
+            return "-m64"
+        elif self.arch == "x86":
+            return "-m32"
+        else:
+            return "";
+
+    def _gcc_lib_flags(self):
+        lib_flags = []
+        if self.libcxx:
+            if str(self.libcxx) == "libstdc++":
+                lib_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
+            elif str(self.libcxx) == "libstdc++11":
+                lib_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
+
+            if "clang" in str(self.compiler):
+                if str(self.libcxx) == "libc++":
+                    lib_flags.append("-stdlib=libc++")
+                else:
+                    lib_flags.append("-stdlib=libstdc++")
+
+            elif str(self.compiler) == "sun-cc":
+                if str(self.libcxx) == "libCstd":
+                    lib_flags.append("-library=Cstd")
+                elif str(self.libcxx) == "libstdcxx":
+                    lib_flags.append("-library=stdcxx4")
+                elif str(self.libcxx) == "libstlport":
+                    lib_flags.append("-library=stlport4")
+                elif str(self.libcxx) == "libstdc++":
+                    lib_flags.append("-library=stdcpp")
+
+        return lib_flags
 
     def _gcc_env(self):
         libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
         libs = 'LIBS="%s"' % libflags
-        archflag = "-m32" if self.arch == "x86" else ""
+        archflag = self._gcc_arch_flags()
         exe_linker_flags = " ".join(self._deps_cpp_info.exelinkflags)
         shared_linker_flags = " ".join(self._deps_cpp_info.sharedlinkflags)
         lib_paths = " ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths])
@@ -74,17 +108,7 @@ class ConfigureEnvironment(object):
 
         # Append the definition for libcxx
         all_cpp_flags = copy.copy(self._deps_cpp_info.cppflags)
-        if self.libcxx:
-            if str(self.libcxx) == "libstdc++":
-                all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
-            elif str(self.libcxx) == "libstdc++11":
-                all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
-
-            if "clang" in str(self.compiler):
-                if str(self.libcxx) == "libc++":
-                    all_cpp_flags.append("-stdlib=libc++")
-                else:
-                    all_cpp_flags.append("-stdlib=libstdc++")
+        all_cpp_flags.extend(self._gcc_lib_flags())
 
         cpp_flags = 'CPPFLAGS="$CPPFLAGS %s %s %s %s %s"' % (archflag, " ".join(all_cpp_flags),
                                                              debug, include_flags, defines)
@@ -98,8 +122,8 @@ class ConfigureEnvironment(object):
 
     @property
     def command_line_env(self):
-        if self.os == "Linux" or self.os == "Macos":
-            if self.compiler == "gcc" or "clang" in str(self.compiler):
+        if self.os == "Linux" or self.os == "Macos" or self.os == "FreeBSD" or self.os == "SunOS":
+            if self.compiler == "gcc" or "clang" in str(self.compiler) or "sun-cc" in str(self.compiler):
                 return self._gcc_env()
         elif self.os == "Windows":
             commands = []
@@ -140,11 +164,10 @@ class ConfigureEnvironment(object):
 
     @property
     def compile_flags(self):
-        if self.compiler == "gcc" or "clang" in str(self.compiler):
+        if self.compiler == "gcc" or "clang" in str(self.compiler) or self.compiler == "sun-cc":
             flags = []
             flags.extend("-l%s" % lib for lib in self._deps_cpp_info.libs)
-            if self.arch == "x86":
-                flags.append("-m32")
+            flags.append(self._gcc_arch_flags())
             flags.extend(self._deps_cpp_info.exelinkflags)
             flags.extend(self._deps_cpp_info.sharedlinkflags)
             if self.build_type == "Debug":
@@ -155,17 +178,7 @@ class ConfigureEnvironment(object):
             flags.extend('-I"%s"' % i for i in self._deps_cpp_info.include_paths)
             flags.extend('-L"%s"' % i for i in self._deps_cpp_info.lib_paths)
             flags.extend(self._deps_cpp_info.cppflags)
-            if self.libcxx:
-                if str(self.libcxx) == "libstdc++":
-                    flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
-                elif str(self.libcxx) == "libstdc++11":
-                    flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
-
-                if "clang" in str(self.compiler):
-                    if str(self.libcxx) == "libc++":
-                        flags.append("-stdlib=libc++")
-                    else:
-                        flags.append("-stdlib=libstdc++")
+            flags.extend(self._gcc_lib_flags())
 
             return " ".join(flags)
         if self.compiler == "Visual Studio":

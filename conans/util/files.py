@@ -126,18 +126,16 @@ def rmdir(path):
         raise
 
 
-def mkdir(path, raise_if_already_exists=False):
-    """Recursive mkdir. If dir already exists
-    only raise if raise_if_already_exists"""
+def mkdir(path):
+    """Recursive mkdir, doesnt fail if already existing"""
     try:
         os.makedirs(path)
     except OSError as err:
-        if err.errno == EEXIST and not raise_if_already_exists:
-            return
-        raise
+        if err.errno != EEXIST:
+            raise
 
 
-def path_exists(path, basedir=None):
+def path_exists(path, basedir):
     """Case sensitive, for windows, optional
     basedir for skip caps check for tmp folders in testing for example (returned always
     in lowercase for some strange reason)"""
@@ -146,21 +144,14 @@ def path_exists(path, basedir=None):
         return exists
 
     path = os.path.normpath(path)
-
-    if basedir:
-        path = os.path.relpath(path, basedir)
-        chunks = path.split(os.sep)
-        tmp = basedir
-    else:
-        chunks = path.split(os.sep)
-        tmp = chunks[0]  # Skip unit (c:)
-        chunks = chunks[1:]
+    path = os.path.relpath(path, basedir)
+    chunks = path.split(os.sep)
+    tmp = basedir
 
     for chunk in chunks:
-        tmp = tmp + os.sep
         if chunk and chunk not in os.listdir(tmp):
             return False
-        tmp += chunk
+        tmp = os.path.normpath(tmp + os.sep + chunk)
     return True
 
 
@@ -212,7 +203,7 @@ def tar_extract(fileobj, destination_dir):
         base = realpath(abspath("."))
 
         for finfo in members:
-            if badpath(finfo.name, base) or finfo.issym() or finfo.islnk():
+            if badpath(finfo.name, base) or finfo.islnk():
                 continue
             else:
                 # Fixes unzip a windows zipped file in linux
@@ -238,3 +229,10 @@ def list_folder_subdirs(basedir="", level=None):
         else:
             ret.append("/".join(dir_split))
     return ret
+
+
+def exception_message_safe(exc):
+    try:
+        return str(exc)
+    except:
+        return decode_text(repr(exc))

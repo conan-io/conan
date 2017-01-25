@@ -44,6 +44,7 @@ class CppInfo(_CppInfo):
         self.libdirs.append(DEFAULT_LIB)
         self.bindirs.append(DEFAULT_BIN)
         self.resdirs.append(DEFAULT_RES)
+        self.public_deps = []
 
     @property
     def include_paths(self):
@@ -117,11 +118,8 @@ class DepsCppInfo(_CppInfo):
 
         return result
 
-    def update(self, dep_cpp_info, conan_ref=None):
-        if conan_ref is not None:
-            self._dependencies[conan_ref.name] = dep_cpp_info
-        else:
-            self._dependencies.update(dep_cpp_info.dependencies)
+    def update(self, dep_cpp_info, conan_ref):
+        self._dependencies[conan_ref.name] = dep_cpp_info
 
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2

@@ -18,7 +18,7 @@ import uuid
 from webtest.app import TestApp
 from conans.client.rest.rest_client import RestApiClient
 from six.moves.urllib.parse import urlsplit, urlunsplit
-from conans.server.test.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
+from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
                                                       TestServerLauncher)
 from conans.util.env_reader import get_env
@@ -32,7 +32,7 @@ from collections import Counter
 import six
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
 from conans.client.client_cache import ClientCache
-from conans.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager, DiskSearchAdapter
 
 
 class TestingResponse(object):
@@ -168,7 +168,8 @@ class TestServer(object):
     def __init__(self, read_permissions=None,
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_version=Version(SERVER_VERSION),
-                 min_client_compatible_version=Version(MIN_CLIENT_COMPATIBLE_VERSION)):
+                 min_client_compatible_version=Version(MIN_CLIENT_COMPATIBLE_VERSION),
+                 server_capabilities=None):
         """
              'read_permissions' and 'write_permissions' is a list of:
                  [("opencv/2.3.4@lasote/testing", "user1, user2")]
@@ -185,6 +186,7 @@ class TestServer(object):
             write_permissions = []
         if users is None:
             users = {"lasote": "mypass"}
+
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         min_client_ver = min_client_compatible_version
         self.test_server = TestServerLauncher(base_path, read_permissions,
@@ -192,7 +194,8 @@ class TestServer(object):
                                               base_url=self.fake_url + "/v1",
                                               plugins=plugins,
                                               server_version=server_version,
-                                              min_client_compatible_version=min_client_ver)
+                                              min_client_compatible_version=min_client_ver,
+                                              server_capabilities=server_capabilities)
         self.app = TestApp(self.test_server.ra.root_app)
 
     @property
@@ -279,7 +282,8 @@ class TestClient(object):
 
     def __init__(self, base_folder=None, current_folder=None,
                  servers=None, users=None, client_version=CLIENT_VERSION,
-                 min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION):
+                 min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
+                 requester_class=None, runner=None):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -287,6 +291,7 @@ class TestClient(object):
         logins is a list of (user, password) for auto input in order
         if required==> [("lasote", "mypass"), ("other", "otherpass")]
         """
+        self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
         self.servers = servers or {}
@@ -302,9 +307,12 @@ class TestClient(object):
         search_adapter = DiskSearchAdapter()
         self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
 
-        self.default_settings(get_env("CONAN_COMPILER", "gcc"),
-                              get_env("CONAN_COMPILER_VERSION", "4.8"),
-                              get_env("CONAN_LIBCXX", "libstdc++"))
+        self._default_settings(get_env("CONAN_COMPILER", "gcc"),
+                               get_env("CONAN_COMPILER_VERSION", "4.8"),
+                               get_env("CONAN_LIBCXX", "libstdc++"))
+
+        self.requester_class = requester_class
+        self.conan_runner = runner
 
         self.init_dynamic_vars()
 
@@ -323,7 +331,7 @@ class TestClient(object):
     def paths(self):
         return self.client_cache
 
-    def default_settings(self, compiler, compiler_version, libcxx):
+    def _default_settings(self, compiler, compiler_version, libcxx):
         """ allows to change the default settings in the file, to change compiler, version
         """
         # Set default settings in global defined
@@ -351,7 +359,7 @@ class TestClient(object):
         output = TestBufferConanOutput()
         self.user_io = user_io or MockedUserIO(self.users, out=output)
 
-        self.runner = TestRunner(output)
+        self.runner = TestRunner(output, runner=self.conan_runner)
 
         # Check if servers are real
         real_servers = False
@@ -362,7 +370,10 @@ class TestClient(object):
         if real_servers:
             requester = requests
         else:
-            requester = TestRequester(self.servers)
+            if self.requester_class:
+                requester = self.requester_class(self.servers)
+            else:
+                requester = TestRequester(self.servers)
 
         # Verify client version against remotes
         self.requester = VersionCheckerRequester(requester, self.client_version,
@@ -377,12 +388,8 @@ class TestClient(object):
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
     def init_dynamic_vars(self, user_io=None):
-
-        self._init_collaborators(user_io)
-
         # Migration system
         self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
-                                                         manager=self.remote_manager,
                                                          storage_folder=self.storage_folder)
 
         # Maybe something have changed with migrations
@@ -413,6 +420,8 @@ class TestClient(object):
         if not ignore_error and error:
             logger.error(self.user_io.out)
             raise Exception("Command failed:\n%s" % command_line)
+
+        self.all_output += str(self.user_io.out)
         return error
 
     def save(self, files, path=None, clean_first=False):

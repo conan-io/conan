@@ -7,9 +7,8 @@ from conans.client.conf import default_settings_yml
 
 class ClientMigrator(Migrator):
 
-    def __init__(self, client_cache, current_version, out, manager):
+    def __init__(self, client_cache, current_version, out):
         self.client_cache = client_cache
-        self.manager = manager
         super(ClientMigrator, self).__init__(client_cache.conan_folder, client_cache.store,
                                              current_version, out)
 
@@ -37,13 +36,13 @@ class ClientMigrator(Migrator):
         if old_version is None:
             return
 
-        if old_version < Version("0.12"):
+        if old_version < Version("0.16"):
             old_settings = """
 os: [Windows, Linux, Macos, Android, iOS]
-arch: [x86, x86_64, armv6, armv7, armv7hf, armv8]
+arch: [x86, x86_64, ppc64le, armv6, armv7, armv7hf, armv8]
 compiler:
     gcc:
-        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1"]
+        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -51,7 +50,7 @@ compiler:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14"]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0"]

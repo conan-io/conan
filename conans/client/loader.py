@@ -14,22 +14,32 @@ import sys
 from conans.model.conan_generator import Generator
 from conans.client.generators import _save_generator
 from conans.model.scope import Scopes
+from conans.model.values import Values
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, options, scopes):
+    def __init__(self, runner, settings, package_settings, options, scopes, env, package_env):
         '''
-        param settings: Settings object, to assign to ConanFile at load time
-        param options: OptionsValues, necessary so the base conanfile loads the options
+        @param settings: Settings object, to assign to ConanFile at load time
+        @param options: OptionsValues, necessary so the base conanfile loads the options
                         to start propagation, and having them in order to call build()
+        @param package_settings: Dict with {recipe_name: {setting_name: setting_value}}
+        @param env: list of tuples for environment vars: [(var, value), (var2, value2)...]
+        @param package_env: package dict of list of tuples: {"name": [(var, v1), (var2, v2)...]}
         '''
         self._runner = runner
         assert settings is None or isinstance(settings, Settings)
         assert options is None or isinstance(options, OptionsValues)
         assert scopes is None or isinstance(scopes, Scopes)
+        assert env is None or isinstance(env, list)
+        assert package_env is None or isinstance(package_env, dict)
+        # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
-        self._options = options
+        self._user_options = options
         self._scopes = scopes
+        self._package_settings = package_settings
+        self._env = env or []
+        self._package_env = package_env or {}
 
     def _parse_module(self, conanfile_module, consumer, filename):
         """ Parses a python in-memory module, to extract the classes, mainly the main
@@ -119,17 +129,43 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conan(self, conanfile_path, output, consumer=False):
+    def load_conan(self, conanfile_path, output, consumer=False, reference=None):
         """ loads a ConanFile object from the given file
         """
         loaded, filename = self._parse_file(conanfile_path)
         try:
             result = self._parse_module(loaded, consumer, filename)
-            result = result(output, self._runner, self._settings.copy(),
-                            os.path.dirname(conanfile_path))
+
+            # Prepare the settings for the loaded conanfile
+            # Mixing the global settings with the specified for that name if exist
+            tmp_settings = self._settings.copy()
+            if self._package_settings and result.name in self._package_settings:
+                # Update the values, keeping old ones (confusing assign)
+                values_tuple = self._package_settings[result.name]
+                tmp_settings.values = Values.from_list(values_tuple)
+
+            user, channel = (reference.user, reference.channel) if reference else (None, None)
+
+            # Instance the conanfile
+            result = result(output, self._runner, tmp_settings,
+                            os.path.dirname(conanfile_path), user, channel)
+
+            # Prepare the env variables mixing global env vars with the
+            # package ones if name match
+            tmp_env = []
+            # Copy only the global variables not present in package level vars
+            for var_name, value in self._env:
+                if result.name in self._package_env:
+                    if var_name not in self._package_env[result.name]:
+                        tmp_env.append((var_name, value))
+                else:
+                    tmp_env.append((var_name, value))
+            tmp_env.extend(self._package_env.get(result.name, []))
+            result.env = tmp_env
 
             if consumer:
-                result.options.initialize_upstream(self._options, result.name)
+                self._user_options.descope_options(result.name)
+                result.options.initialize_upstream(self._user_options)
                 # If this is the consumer project, it has no name
                 result.scope = self._scopes.package_scope()
             else:
@@ -149,7 +185,11 @@ class ConanFileLoader(object):
         return conanfile
 
     def parse_conan_txt(self, contents, path, output):
-        conanfile = ConanFile(output, self._runner, self._settings.copy(), path)
+        conanfile = ConanFile(output, self._runner, Settings(), path)
+        # It is necessary to copy the settings, because the above is only a constraint of
+        # conanfile settings, and a txt doesn't define settings. Necessary for generators,
+        # as cmake_multi, that check build_type.
+        conanfile.settings = self._settings.copy()
 
         try:
             parser = ConanFileTextLoader(contents)
@@ -163,7 +203,7 @@ class ConanFileLoader(object):
 
         options = OptionsValues.loads(parser.options)
         conanfile.options.values = options
-        conanfile.options.initialize_upstream(self._options, conanfile.name)
+        conanfile.options.initialize_upstream(self._user_options)
 
         # imports method
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
@@ -172,22 +212,14 @@ class ConanFileLoader(object):
         return conanfile
 
     def load_virtual(self, reference, path):
-        fixed_options = []
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        for option_name, option_value in self._options.as_list():
-            if ":" not in option_name:
-                tmp = ("%s:%s" % (reference.name, option_name), option_value)
-            else:
-                tmp = (option_name, option_value)
-            fixed_options.append(tmp)
-        options = OptionsValues.from_list(fixed_options)
-
         conanfile = ConanFile(None, self._runner, self._settings.copy(), path)
 
         conanfile.requires.add(str(reference))  # Convert to string necessary
         # conanfile.options.values = options
-        conanfile.options.initialize_upstream(options)
+        self._user_options.scope_options(reference.name)
+        conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []
         conanfile.scope = self._scopes.package_scope()

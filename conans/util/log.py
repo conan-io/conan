@@ -3,6 +3,7 @@ from logging import StreamHandler
 import sys
 from conans.util.env_reader import get_env
 
+
 # #### LOGGER, MOVED FROM CONF BECAUSE OF MULTIPLE PROBLEM WITH CIRCULAR INCLUDES #####
 CONAN_LOGGING_LEVEL = get_env('CONAN_LOGGING_LEVEL', logging.CRITICAL)
 CONAN_LOGGING_FILE = get_env('CONAN_LOGGING_FILE', None)  # None is stdout

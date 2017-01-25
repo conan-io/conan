@@ -15,16 +15,20 @@ class DiskRemover(object):
         try:
             logger.debug("Removing folder %s" % path)
             rm_conandir(path)
-        except OSError as e:
-            raise ConanException("%s: Unable to remove %s\n\t%s" % (repr(conan_ref), msg, str(e)))
+        except OSError:
+            error_msg = "Folder busy (open or some file open): %s" % path
+            raise ConanException("%s: Unable to remove %s\n\t%s"
+                                 % (repr(conan_ref), msg, error_msg))
 
     def _remove_file(self, path, conan_ref, msg=""):
         try:
             logger.debug("Removing folder %s" % path)
             if os.path.exists(path):
                 os.remove(path)
-        except OSError as e:
-            raise ConanException("Unable to remove %s %s\n\t%s" % (repr(conan_ref), msg, str(e)))
+        except OSError:
+            error_msg = "File busy (open): %s" % path
+            raise ConanException("Unable to remove %s %s\n\t%s"
+                                 % (repr(conan_ref), msg, error_msg))
 
     def remove(self, conan_ref):
         self.remove_src(conan_ref)

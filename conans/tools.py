@@ -29,9 +29,11 @@ def pythonpath(conanfile):
 def environment_append(env_vars):
     old_env = dict(os.environ)
     os.environ.update(env_vars)
-    yield
-    os.environ.clear()
-    os.environ.update(old_env)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
@@ -107,7 +109,7 @@ def human_size(size_bytes):
 
 def unzip(filename, destination="."):
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-        filename.endswith(".tzb2") or filename.endswith(".tar.bz2") or
+        filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
         return untargz(filename, destination)
     import zipfile
@@ -161,14 +163,14 @@ def get(url):
     os.unlink(filename)
 
 
-def download(url, filename, verify=True):
-    out = ConanOutput(sys.stdout, True)
+def download(url, filename, verify=True, out=None, retry=2, retry_wait=5):
+    out = out or ConanOutput(sys.stdout, True)
     if verify:
         # We check the certificate using a list of known verifiers
         import conans.client.rest.cacert as cacert
         verify = cacert.file_path
     downloader = Downloader(requests, out, verify=verify)
-    downloader.download(url, filename)
+    downloader.download(url, filename, retry=retry, retry_wait=retry_wait)
     out.writeln("")
 #     save(filename, content)
 
@@ -203,7 +205,7 @@ def check_sha256(file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def patch(base_path=None, patch_file=None, patch_string=None):
+def patch(base_path=None, patch_file=None, patch_string=None, strip=0):
     """Applies a diff from file (patch_file)  or string (patch_string)
     in base_path directory or current dir if None"""
 
@@ -214,7 +216,7 @@ def patch(base_path=None, patch_file=None, patch_string=None):
     else:
         patchset = fromstring(patch_string.encode())
 
-    if not patchset.apply(root=base_path):
+    if not patchset.apply(root=base_path, strip=strip):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
@@ -225,6 +227,8 @@ class OSInfo(object):
         print(os_info.is_linux) # True/False
         print(os_info.is_windows) # True/False
         print(os_info.is_macos) # True/False
+        print(os_info.is_freebsd) # True/False
+        print(os_info.is_solaris) # True/False
 
         print(os_info.linux_distro)  # debian, ubuntu, fedora, centos...
 
@@ -244,6 +248,8 @@ class OSInfo(object):
         self.linux_distro = None
         self.is_windows = platform.system() == "Windows"
         self.is_macos = platform.system() == "Darwin"
+        self.is_freebsd = platform.system() == "FreeBSD"
+        self.is_solaris = platform.system() == "SunOS"
 
         if self.is_linux:
             tmp = platform.linux_distribution(full_distribution_name=0)
@@ -259,6 +265,12 @@ class OSInfo(object):
         elif self.is_macos:
             self.os_version = Version(platform.mac_ver()[0])
             self.os_version_name = self.get_osx_version_name(self.os_version)
+        elif self.is_freebsd:
+            self.os_version = self.get_freebsd_version()
+            self.os_version_name = "FreeBSD %s" % self.os_version
+        elif self.is_solaris:
+            self.os_version = Version(platform.release())
+            self.os_version_name = self.get_solaris_version_name(self.os_version)
 
     @property
     def with_apt(self):
@@ -360,6 +372,17 @@ class OSInfo(object):
         elif version.minor() == "10.0.Z":
             return "Cheetha"
 
+    def get_freebsd_version(self):
+        return platform.release().split("-")[0]
+
+    def get_solaris_version_name(self, version):
+        if not version:
+            return None
+        elif version.minor() == "5.10":
+            return "Solaris 10"
+        elif version.minor() == "5.11":
+            return "Solaris 11"
+
 try:
     os_info = OSInfo()
 except Exception as exc:
@@ -390,7 +413,8 @@ class SystemPackageTool(object):
 
         if update_command:
             print("Running: %s" % update_command)
-            return self._runner(update_command, True)
+            if self._runner(update_command, True) != 0:
+                raise ConanException("Command '%s' failed" % update_command)
 
     def install(self, package_name):
         '''
@@ -407,7 +431,8 @@ class SystemPackageTool(object):
 
         if install_command:
             print("Running: %s" % install_command)
-            return self._runner(install_command, True)
+            if self._runner(install_command, True) != 0:
+                raise ConanException("Command '%s' failed" % install_command)
         else:
             print("Warn: Only available for linux with apt-get or yum or OSx with brew")
             return None

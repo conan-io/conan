@@ -1,6 +1,6 @@
 The MIT License (MIT)
 
-Copyright (c) 2015 Luis Martinez de Bartolome
+Copyright (c) 2016 JFrog LTD
 
 
 

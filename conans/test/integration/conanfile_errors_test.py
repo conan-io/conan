@@ -119,3 +119,33 @@ class HelloConan(ConanFile):
                       client.user_io.out)
         self.assertIn("'HelloConan' object has no attribute 'copy2'",
                       client.user_io.out)
+
+    def duplicate_requires_test(self):
+        client = TestClient()
+        conanfile = '''
+[requires]
+foo/0.1@user/testing
+foo/0.2@user/testing
+'''
+        files = {"conanfile.txt": conanfile}
+        client.save(files)
+        error = client.run("install . --build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Duplicated requirement", client.user_io.out)
+
+    def duplicate_requires_py_test(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    requires = "foo/0.1@user/testing", "foo/0.2@user/testing"
+'''
+        files = {"conanfile.py": conanfile}
+        client.save(files)
+        error = client.run("install . --build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Error while initializing requirements. Duplicated requirement",
+                      client.user_io.out)

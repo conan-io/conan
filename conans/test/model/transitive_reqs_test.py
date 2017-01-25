@@ -2,17 +2,16 @@ import unittest
 from conans.test.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os
-from conans.client.deps_builder import DepsBuilder
+from conans.client.deps_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
-from conans.model.options import OptionsValues
+from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
 from conans.client.loader import ConanFileLoader
 from conans.util.files import save
-from conans.model.settings import Settings
+from conans.model.settings import Settings, bad_value_msg
 from conans.errors import ConanException
 from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
 from conans.model.values import Values
-from conans.model.config_dict import undefined_field, bad_value_msg
 from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
 from conans.model.scope import Scopes
@@ -117,14 +116,20 @@ def _get_edges(graph):
     return edges
 
 
+class MockRequireResolver(object):
+    def resolve(self, rquire, conanref):  # @UnusedVariable
+        return
+
+
 class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""),
-                                      OptionsValues.loads(""), Scopes())
+        self.loader = ConanFileLoader(None, Settings.loads(""), None,
+                                      OptionsValues.loads(""), Scopes(),
+                                      env=[], package_env={})
         self.retriever = Retriever(self.loader, self.output)
-        self.builder = DepsBuilder(self.retriever, self.output, self.loader)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, MockRequireResolver())
 
     def root(self, content):
         root_conan = self.retriever.root(content)
@@ -724,8 +729,8 @@ class ChatConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(chat_content)
         self.assertEqual(str(cm.exception),
-                         "Say/0.1@diego/testing: %s" % undefined_field("options", "myoption2",
-                                                                       ['myoption']))
+                         "Say/0.1@diego/testing: %s" % option_not_exist_msg("myoption2",
+                                                                            ['myoption']))
 
         chat_content = """
 from conans import ConanFile
@@ -742,7 +747,7 @@ class ChatConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(chat_content)
         self.assertEqual(str(cm.exception),  "Say/0.1@diego/testing: %s"
-                         % bad_value_msg("options.myoption", "235", ["123", "234"]))
+                         % option_wrong_value_msg("myoption", "235", ["123", "234"]))
 
     def test_diamond_no_conflict_options(self):
         say_content = """
@@ -1418,9 +1423,10 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, full_settings, options, Scopes())
+        loader = ConanFileLoader(None, full_settings, None, options, Scopes(),
+                                 env=None, package_env=None)
         retriever = Retriever(loader, self.output)
-        builder = DepsBuilder(retriever, self.output, loader)
+        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
         deps_graph = builder.load(None, root_conan)
         return deps_graph
@@ -1573,7 +1579,7 @@ class SayConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
-                                    ['Android', 'Macos', "Windows", "iOS"]),
+                                    ['Android', 'FreeBSD', 'Macos', 'SunOS', "Windows", "iOS"]),
                       str(cm.exception))
 
     def test_config_remove2(self):
@@ -1697,13 +1703,13 @@ class ChatConan(ConanFile):
     options = {"myoption_chat": ["on", "off"]}
 """
         output = TestBufferConanOutput()
-        loader = ConanFileLoader(None, Settings.loads(""),
+        loader = ConanFileLoader(None, Settings.loads(""), None,
                                  OptionsValues.loads("Say:myoption_say=123\n"
                                                      "Hello:myoption_hello=True\n"
                                                      "myoption_chat=on"),
-                                 Scopes())
+                                 Scopes(), env=None, package_env=None)
         retriever = Retriever(loader, output)
-        builder = DepsBuilder(retriever, output, loader)
+        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver())
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 

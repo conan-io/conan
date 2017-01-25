@@ -34,6 +34,8 @@ PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
 CONAN_LINK = ".conan_link"
 
+RUN_LOG_NAME = "conan_run.log"
+
 
 def conan_expand_user(path):
     """ wrapper to the original expanduser function, to workaround python returning
@@ -45,7 +47,12 @@ def conan_expand_user(path):
         old_env = dict(os.environ)
         try:
             home = os.environ.get("HOME")
-            if home and not os.path.exists(home):
+            # Problematic cases of wrong HOME variable
+            # - HOME = %USERPROFILE% verbatim, as messed by some other tools
+            # - MSYS console, that defines a different user home in /c/mingw/msys/users/xxx
+            # In these cases, it is safe to remove it and rely on USERPROFILE directly
+            if home and (not os.path.exists(home) or
+                         (os.getenv("MSYSTEM") and os.getenv("USERPROFILE"))):
                 del os.environ["HOME"]
             result = os.path.expanduser(path)
         finally:
@@ -68,6 +75,34 @@ if platform.system() == "Windows":
     rm_conandir = _rm_conandir
 else:
     rm_conandir = rmdir
+
+
+def is_case_insensitive_os():
+    system = platform.system()
+    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
+
+
+if is_case_insensitive_os():
+    def _check_ref_case(conan_reference, conan_folder, store_folder):
+        if not os.path.exists(conan_folder):  # If it doesn't exist, not a problem
+            return
+        # If exists, lets check path
+        tmp = store_folder
+        for part in conan_reference:
+            items = os.listdir(tmp)
+            if part not in items:
+                offending = ""
+                for item in items:
+                    if item.lower() == part.lower():
+                        offending = item
+                        break
+                raise ConanException("Requested '%s' but found case incompatible '%s'\n"
+                                     "Case insensitive filesystem can't manage this"
+                                     % (str(conan_reference), offending))
+            tmp = os.path.normpath(tmp + os.sep + part)
+else:
+    def _check_ref_case(conan_reference, conan_folder, store_folder):  # @UnusedVariable
+        pass
 
 
 def _shortener(path, short_paths):
@@ -138,10 +173,12 @@ class SimplePaths(object):
 
     def conanfile(self, conan_reference):
         export = self.export(conan_reference)
+        _check_ref_case(conan_reference, export, self.store)
         return normpath(join(export, CONANFILE))
 
     def digestfile_conanfile(self, conan_reference):
         export = self.export(conan_reference)
+        _check_ref_case(conan_reference, export, self.store)
         return normpath(join(export, CONAN_MANIFEST))
 
     def digestfile_package(self, package_reference, short_paths=False):
