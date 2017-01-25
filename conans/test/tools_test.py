@@ -78,8 +78,13 @@ class ToolsTest(unittest.TestCase):
     def system_package_tool_fail_when_not_0_returned_test(self):
         runner = RunnerMock(return_ok=False)
         spt = SystemPackageTool(runner=runner)
-        with self.assertRaisesRegexp(ConanException, "Command 'sudo apt-get update' failed"):
-            spt.update()
+        if platform.system() != "Windows":
+            msg = "Command 'sudo apt-get update' failed" if platform.system() == "Linux" \
+                                                         else "Command 'brew update' failed"
+            with self.assertRaisesRegexp(ConanException, msg):
+                spt.update()
+        else:
+            spt.update()  # Won't raise anything because won't do anything
 
     def system_package_tool_test(self):
 
