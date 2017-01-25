@@ -152,7 +152,7 @@ class RemoteManager(object):
     def get_recipe_sources(self, conan_reference, dest_folder, remote):
         t1 = time.time()
         zipped_files = self._call_remote(remote, "get_recipe",
-                                         conan_reference, dest_folder, EXPORT_SOURCES_TGZ_NAME)
+                                         conan_reference, dest_folder, retrieve_sources=True)
         duration = time.time() - t1
         # log_recipe_download(conan_reference, duration, remote, zipped_files)
 
@@ -238,7 +238,7 @@ def compress_recipe_files(files, dest_folder, output):
         if not sources_tgz:
             # zip
             new_files = compress_files(source_files, EXPORT_SOURCES_TGZ_NAME, excluded=[],
-                                       dest_dir=sources_folder)
+                                       dest_dir=dest_folder)
             sources_tgz = new_files[EXPORT_SOURCES_TGZ_NAME]
         the_files[EXPORT_SOURCES_TGZ_NAME] = sources_tgz
 

@@ -146,7 +146,7 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])
 
-    def get_recipe(self, conan_reference, dest_folder, filename=None):
+    def get_recipe(self, conan_reference, dest_folder, retrieve_sources=False):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
@@ -157,12 +157,14 @@ class RestApiClient(object):
 
         # If a filename is specified, only retrieve that file
         # if not existing, return None, no need to try to download
-        if filename:
-            file_url = urls.get(filename)
+        if retrieve_sources:
+            file_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
             if file_url:
-                urls = {filename: file_url}
+                urls = {EXPORT_SOURCES_TGZ_NAME: file_url}
             else:
                 return None
+        else:
+            urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
 
         # TODO: Get fist an snapshot and compare files and download only required?
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)

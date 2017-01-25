@@ -39,10 +39,15 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
     if not os.path.exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
         shutil.copytree(export_folder, src_folder)
-        export_sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
-        if os.path.exists(export_sources_folder):
-            from distutils.dir_util import copy_tree
-            copy_tree(export_sources_folder, src_folder)
+        # Now move the export-sources to the right location
+        source_sources_folder = os.path.join(src_folder, EXPORT_SOURCES_DIR)
+        if os.path.exists(source_sources_folder):
+            for filename in os.listdir(source_sources_folder):
+                shutil.move(os.path.join(source_sources_folder, filename),
+                            os.path.join(src_folder, filename))
+            # finally remove copied folder
+            os.rmdir(source_sources_folder)
+
         save(dirty, "")  # Creation of DIRTY flag
         os.chdir(src_folder)
         try:
