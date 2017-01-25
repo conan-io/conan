@@ -41,7 +41,8 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
         shutil.copytree(export_folder, src_folder)
         export_sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
         if os.path.exists(export_sources_folder):
-            shutil.copytree(export_sources_folder, src_folder)
+            from distutils.dir_util import copy_tree
+            copy_tree(export_sources_folder, src_folder)
         save(dirty, "")  # Creation of DIRTY flag
         os.chdir(src_folder)
         try:

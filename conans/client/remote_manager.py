@@ -47,7 +47,7 @@ class RemoteManager(object):
         the_files = compress_conan_files(the_files, export_folder, EXPORT_TGZ_NAME,
                                          CONANFILE, self._output)
 
-        if os.path.exists(sources_folder):
+        if os.path.exists(sources_folder) and source_files:
             sources_tgz = source_files.get(EXPORT_SOURCES_TGZ_NAME)
             if not sources_tgz:
                 # zip
@@ -173,7 +173,7 @@ class RemoteManager(object):
 
         t1 = time.time()
         zipped_files = self._call_remote(remote, "get_recipe",
-                                         conan_reference, dest_folder)
+                                         conan_reference, dest_folder, EXPORT_SOURCES_TGZ_NAME)
         duration = time.time() - t1
         # log_recipe_download(conan_reference, duration, remote, zipped_files)
 

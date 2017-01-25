@@ -79,8 +79,9 @@ def _export(conanfile, origin_folder, destination_folder, output):
     for pattern in exports:
         copier(pattern)
     # create directory for sources, and import them
-    mkdir(EXPORT_SOURCES_DIR)
-    copier = FileCopier(origin_folder, os.path.join(destination_folder, EXPORT_SOURCES_DIR))
+    export_sources_dir = os.path.join(destination_folder, EXPORT_SOURCES_DIR)
+    mkdir(export_sources_dir)
+    copier = FileCopier(origin_folder, export_sources_dir)
     for pattern in exports_sources:
         copier(pattern)
     package_output = ScopedOutput("%s export" % output.scope, output)
