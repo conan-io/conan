@@ -46,7 +46,7 @@ _cmake_common_macros = """
 function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
     foreach(_LIBRARY_NAME ${libraries})
         unset(FOUND_LIBRARY CACHE)
-        find_library(FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir} NO_DEFAULT_PATH)
+        find_library(FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
         if(FOUND_LIBRARY)
             message(STATUS "Library ${_LIBRARY_NAME} found ${FOUND_LIBRARY}")
             set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${FOUND_LIBRARY})
