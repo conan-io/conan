@@ -4,7 +4,7 @@ from conans.test.utils.test_files import hello_source_files, temp_folder,\
     hello_conan_files
 from conans.client.manager import CONANFILE
 import os
-from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
+from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO, EXPORT_SOURCES_DIR
 import platform
 import stat
 from conans.util.files import save
@@ -83,6 +83,9 @@ class UploadTest(unittest.TestCase):
                           "my_lib/debug/libd.a": "//copy",
                           "my_data/readme.txt": "//copy",
                           "my_bin/executable": "//copy"}, path=reg_folder)
+
+        exports_sources_dir = os.path.join(reg_folder, EXPORT_SOURCES_DIR)
+        os.makedirs(exports_sources_dir)
 
         self.package_ref = PackageReference(self.conan_ref, "myfakeid")
         self.server_pack_folder = self.test_server.paths.package(self.package_ref)

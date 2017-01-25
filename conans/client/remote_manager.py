@@ -7,8 +7,7 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError
-from conans.util.files import tar_extract, relative_dirs, rmdir,\
-    exception_message_safe, save, load, mkdir
+from conans.util.files import tar_extract, relative_dirs, rmdir, exception_message_safe, mkdir
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR
@@ -38,23 +37,7 @@ class RemoteManager(object):
         if CONANFILE not in rel_files or CONAN_MANIFEST not in rel_files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
 
-        sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
-        if os.path.exists(sources_folder):
-            source_files = {k: v for k, v in the_files.items() if k.startswith(EXPORT_SOURCES_DIR)}
-            the_files = {k: v for k, v in the_files.items() if not k.startswith(EXPORT_SOURCES_DIR)}
-
-        # FIXME: Check modified exports by hand?
-        the_files = compress_conan_files(the_files, export_folder, EXPORT_TGZ_NAME,
-                                         CONANFILE, self._output)
-
-        if os.path.exists(sources_folder) and source_files:
-            sources_tgz = source_files.get(EXPORT_SOURCES_TGZ_NAME)
-            if not sources_tgz:
-                # zip
-                new_files = compress_files(source_files, EXPORT_SOURCES_TGZ_NAME, excluded=[],
-                                           dest_dir=sources_folder)
-                sources_tgz = new_files[EXPORT_SOURCES_TGZ_NAME]
-            the_files[EXPORT_SOURCES_TGZ_NAME] = sources_tgz
+        the_files = compress_recipe_files(the_files, export_folder, self._output)
 
         ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
                                 retry, retry_wait)
@@ -167,23 +150,18 @@ class RemoteManager(object):
         return files
 
     def get_recipe_sources(self, conan_reference, dest_folder, remote):
-        sources_folder = os.path.join(dest_folder, EXPORT_SOURCES_DIR)
-        if os.path.exists(sources_folder):
-            return
-
         t1 = time.time()
         zipped_files = self._call_remote(remote, "get_recipe",
                                          conan_reference, dest_folder, EXPORT_SOURCES_TGZ_NAME)
         duration = time.time() - t1
         # log_recipe_download(conan_reference, duration, remote, zipped_files)
 
-        mkdir(sources_folder)
-
         if not zipped_files:
+            mkdir(dest_folder)  # create the folder even if no source files
             return
 
-        unzip_and_get_files(zipped_files, sources_folder, EXPORT_SOURCES_TGZ_NAME)
-        for dirname, _, filenames in os.walk(sources_folder):
+        unzip_and_get_files(zipped_files, dest_folder, EXPORT_SOURCES_TGZ_NAME)
+        for dirname, _, filenames in os.walk(dest_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
@@ -245,6 +223,28 @@ class RemoteManager(object):
             raise ConanException(exc)
 
 
+def compress_recipe_files(files, dest_folder, output):
+    sources_folder = os.path.join(dest_folder, EXPORT_SOURCES_DIR)
+    if os.path.exists(sources_folder):
+        source_files = {k: v for k, v in files.items() if k.startswith(EXPORT_SOURCES_DIR)}
+        files = {k: v for k, v in files.items() if not k.startswith(EXPORT_SOURCES_DIR)}
+
+    # FIXME: Check modified exports by hand?
+    the_files = compress_conan_files(files, dest_folder, EXPORT_TGZ_NAME,
+                                     CONANFILE, output)
+
+    if os.path.exists(sources_folder) and source_files:
+        sources_tgz = source_files.get(EXPORT_SOURCES_TGZ_NAME)
+        if not sources_tgz:
+            # zip
+            new_files = compress_files(source_files, EXPORT_SOURCES_TGZ_NAME, excluded=[],
+                                       dest_dir=sources_folder)
+            sources_tgz = new_files[EXPORT_SOURCES_TGZ_NAME]
+        the_files[EXPORT_SOURCES_TGZ_NAME] = sources_tgz
+
+    return the_files
+
+
 def compress_conan_files(files, dest_folder, zipped_name, exclude, output):
     if zipped_name not in files:
         output.rewrite_line("Compressing %s..."
@@ -274,7 +274,7 @@ def compress_files(files, name, excluded, dest_dir):
             info.mode = os.stat(abs_path).st_mode
             if os.path.islink(abs_path):
                 info.type = tarfile.SYMTYPE
-                info.linkname = os.readlink(abs_path)
+                info.linkname = os.readlink(abs_path)  # @UndefinedVariable
                 tar.addfile(tarinfo=info)
             else:
                 with open(abs_path, 'rb') as file_handler:

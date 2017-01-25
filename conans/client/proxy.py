@@ -7,7 +7,7 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
 from conans.client.loader import ConanFileLoader
 import os
-from conans.paths import rm_conandir
+from conans.paths import rm_conandir, EXPORT_SOURCES_DIR
 from conans.client.remover import DiskRemover
 from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
@@ -114,12 +114,16 @@ class ConanProxy(object):
 
     def get_recipe_sources(self, conan_reference):
         export_path = self._client_cache.export(conan_reference)
+        sources_folder = os.path.join(export_path, EXPORT_SOURCES_DIR)
+        if os.path.exists(sources_folder):
+            return
         try:
             current_remote, _ = self._get_remote(conan_reference)
         except ConanException:
-            pass
+            raise ConanException("Error while trying to get recipe sources for %s. "
+                                 "No remote defined" % str(conan_reference))
         else:
-            self._remote_manager.get_recipe_sources(conan_reference, export_path, current_remote)
+            self._remote_manager.get_recipe_sources(conan_reference, sources_folder, current_remote)
 
     def get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
@@ -237,6 +241,13 @@ class ConanProxy(object):
         or to default remote, in that order.
         If the remote is not set, set it
         """
+        export_path = self._client_cache.export(conan_reference)
+        sources_folder = os.path.join(export_path, EXPORT_SOURCES_DIR)
+        if not os.path.exists(sources_folder):
+            # Houston, we got a problem, we are going to upload, and no sources folder here
+            # By now, just retrieve the sources, not optimal
+            self.get_recipe_sources(conan_reference)
+
         remote, ref_remote = self._get_remote(conan_reference)
 
         result = self._remote_manager.upload_conan(conan_reference, remote, retry, retry_wait)
