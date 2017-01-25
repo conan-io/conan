@@ -297,11 +297,7 @@ Package configuration:
         if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
             return
 
-        try:
-            output = conan_file.system_requirements()
-        except Exception as e:
-            coutput.error("while executing system_requirements(): %s" % str(e))
-            raise ConanException("Error in system requirements")
+        output = self.call_system_requirements(conan_file, coutput)
 
         try:
             output = str(output or "")
@@ -312,6 +308,13 @@ Package configuration:
             save(system_reqs_path, output)
         else:
             save(system_reqs_package_path, output)
+
+    def call_system_requirements(self, conan_file, output):
+        try:
+            return conan_file.system_requirements()
+        except Exception as e:
+            output.error("while executing system_requirements(): %s" % str(e))
+            raise ConanException("Error in system requirements")
 
     def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file, output):
         """ builds the package, creating the corresponding build folder if necessary

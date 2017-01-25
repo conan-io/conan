@@ -413,7 +413,8 @@ class SystemPackageTool(object):
 
         if update_command:
             print("Running: %s" % update_command)
-            return self._runner(update_command, True)
+            if self._runner(update_command, True) != 0:
+                raise ConanException("Command '%s' failed" % update_command)
 
     def install(self, package_name):
         '''
@@ -430,7 +431,8 @@ class SystemPackageTool(object):
 
         if install_command:
             print("Running: %s" % install_command)
-            return self._runner(install_command, True)
+            if self._runner(install_command, True) != 0:
+                raise ConanException("Command '%s' failed" % install_command)
         else:
             print("Warn: Only available for linux with apt-get or yum or OSx with brew")
             return None
