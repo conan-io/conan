@@ -8,7 +8,7 @@ from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError
 from conans.util.files import tar_extract, relative_dirs, rmdir,\
-    exception_message_safe, save, load
+    exception_message_safe, save, load, mkdir
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR
@@ -32,8 +32,6 @@ class RemoteManager(object):
 
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
-        # make sure that the recipe is complete, with the sources
-        self.get_recipe_sources(conan_reference, export_folder, remote)
         rel_files = relative_dirs(export_folder)
         the_files = {filename: os.path.join(export_folder, filename) for filename in rel_files}
 
@@ -165,26 +163,29 @@ class RemoteManager(object):
         for dirname, _, filenames in os.walk(dest_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
-#       TODO: Download only the CONANFILE file and only download the rest of files
-#       in install if needed (not found remote package)
+
         return files
 
     def get_recipe_sources(self, conan_reference, dest_folder, remote):
+        sources_folder = os.path.join(dest_folder, EXPORT_SOURCES_DIR)
+        if os.path.exists(sources_folder):
+            return
+
         t1 = time.time()
-        zipped_files = self._call_remote(remote, "get_recipe_sources",
+        zipped_files = self._call_remote(remote, "get_recipe",
                                          conan_reference, dest_folder)
         duration = time.time() - t1
         # log_recipe_download(conan_reference, duration, remote, zipped_files)
+
+        mkdir(sources_folder)
+
         if not zipped_files:
             return
 
-        sources_folder = os.path.join(dest_folder, EXPORT_SOURCES_DIR)
-        files = unzip_and_get_files(zipped_files, sources_folder, EXPORT_SOURCES_TGZ_NAME)
+        unzip_and_get_files(zipped_files, sources_folder, EXPORT_SOURCES_TGZ_NAME)
         for dirname, _, filenames in os.walk(sources_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
-
-        return files
 
     def get_package(self, package_reference, dest_folder, remote):
         """

@@ -146,7 +146,7 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])
 
-    def get_recipe(self, conan_reference, dest_folder):
+    def get_recipe(self, conan_reference, dest_folder, filename=None):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
@@ -155,32 +155,17 @@ class RestApiClient(object):
         if CONANFILE not in list(urls.keys()):
             raise NotFoundException("Conan '%s' doesn't have a %s!" % (conan_reference, CONANFILE))
 
-        sources_url = urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
-        if sources_url:
-            sources_folder = os.path.join(dest_folder, EXPORT_SOURCES_DIR)
-            mkdir(sources_folder)
+        # If a filename is specified, only retrieve that file
+        # if not existing, return None, no need to try to download
+        if filename:
+            file_url = urls.get(filename)
+            if file_url:
+                urls = {filename: file_url}
+            else:
+                return None
 
         # TODO: Get fist an snapshot and compare files and download only required?
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
-        return file_paths
-
-    def get_recipe_sources(self, conan_reference, dest_folder):
-        """Gets a dict of filename:contents from conans"""
-        # Get the conanfile snapshot first
-        sources_folder = os.path.join(dest_folder, EXPORT_SOURCES_DIR)
-        if not os.path.exists(sources_folder) or os.listdir(sources_folder):
-            return
-
-        url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
-        urls = self._get_json(url)
-
-        sources_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
-        if not sources_url:
-            raise NotFoundException("Conan '%s' doesn't have a %s!"
-                                    % (conan_reference, EXPORT_SOURCES_TGZ_NAME))
-
-        urls = {EXPORT_SOURCES_TGZ_NAME: sources_url}
-        file_paths = self.download_files_to_folder(urls, sources_folder, self._output)
         return file_paths
 
     def get_package(self, package_reference, dest_folder):
