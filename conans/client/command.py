@@ -478,7 +478,7 @@ path to the CMake binary directory, like this:
                             help='Settings to build the package, overwriting the defaults.'
                                  ' e.g., -s compiler=gcc',
                             nargs=1, action=Extender)
-        parser.add_argument("--only", "-n",
+        parser.add_argument("--only", "-n", nargs="?", const="None",
                             help='show fields only')
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="check updates exist from upstream remotes")
@@ -510,7 +510,7 @@ path to the CMake binary directory, like this:
                            options=options,
                            settings=settings,
                            package_settings=package_settings,
-                           info=args.only or True,
+                           info=args.only,
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,

@@ -52,12 +52,14 @@ class Printer(object):
                 remote: Remote specified in install command.
                         Could be different from the registry one.
         """
-        def show(field):
-            if _info is True:
+        if _info is None:  # No filter
+            def show(_):
                 return True
-            if field in [s.lower() for s in _info.split(",")]:
-                return True
-            return False
+        else:
+            _info_lower = [s.lower() for s in _info.split(",")]
+
+            def show(field):
+                return field in _info_lower
 
         graph_updates_info = graph_updates_info or {}
         for node in sorted(deps_graph.nodes):
@@ -108,8 +110,8 @@ class Printer(object):
                 self._out.writeln("    Updates: %s" % update_messages[update][0],
                                   update_messages[update][1])
 
-            if node_times and node_times.get(ref, None):
-                self._out.writeln("    Creation date: %s" % node_times.get(ref, None), 
+            if node_times and node_times.get(ref, None) and show("date"):
+                self._out.writeln("    Creation date: %s" % node_times.get(ref, None),
                                   Color.BRIGHT_GREEN)
 
             dependants = deps_graph.inverse_neighbors(node)
