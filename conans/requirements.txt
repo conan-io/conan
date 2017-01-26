@@ -1,5 +1,5 @@
 PyJWT>=1.4.0, <1.5.0
-requests>=2.7.0, <2.13.0
+requests>=2.7.0, <2.14.0
 colorama>=0.3.3, <0.4.0
 PyYAML>=3.11, <3.13.0
 patch==1.16
