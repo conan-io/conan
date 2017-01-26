@@ -117,9 +117,9 @@ class ConanProxy(object):
         sources_folder = os.path.join(export_path, EXPORT_SOURCES_DIR)
         if os.path.exists(sources_folder):
             return
-        try:
-            current_remote, _ = self._get_remote(conan_reference)
-        except ConanException:
+
+        current_remote = self._registry.get_ref(conan_reference)
+        if not current_remote:
             raise ConanException("Error while trying to get recipe sources for %s. "
                                  "No remote defined" % str(conan_reference))
         else:
@@ -243,14 +243,27 @@ class ConanProxy(object):
         """
         export_path = self._client_cache.export(conan_reference)
         sources_folder = os.path.join(export_path, EXPORT_SOURCES_DIR)
+        skip_src_tgz = False
         if not os.path.exists(sources_folder):
-            # Houston, we got a problem, we are going to upload, and no sources folder here
-            # By now, just retrieve the sources, not optimal
-            self.get_recipe_sources(conan_reference)
+            # If not path to sources exists, we have a problem, at least an empty folder
+            # should be there
+            upload_remote, current_remote = self._get_remote(conan_reference)
+            if not current_remote:
+                raise ConanException("Trying to upload a package recipe without sources, "
+                                     "and the remote for the sources no longer exists")
+            if current_remote != upload_remote:
+                # If uploading to a different remote than the one from which the recipe
+                # was retrieved, we definitely need to get the sources, so the recipe is complete
+                self.get_recipe_sources(conan_reference)
+            else:
+                # But if same remote, no need to upload again the TGZ, it is already in the server
+                # But the upload API needs to know it to not remove the server file.
+                skip_src_tgz = True
 
         remote, ref_remote = self._get_remote(conan_reference)
 
-        result = self._remote_manager.upload_conan(conan_reference, remote, retry, retry_wait)
+        result = self._remote_manager.upload_conan(conan_reference, remote, retry, retry_wait,
+                                                   skip_src_tgz=skip_src_tgz)
         if not ref_remote:
             self._registry.set_ref(conan_reference, remote)
         return result

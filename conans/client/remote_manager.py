@@ -26,7 +26,7 @@ class RemoteManager(object):
         self._output = output
         self._remote_client = remote_client
 
-    def upload_conan(self, conan_reference, remote, retry, retry_wait):
+    def upload_conan(self, conan_reference, remote, retry, retry_wait, skip_src_tgz):
         """Will upload the conans to the first remote"""
 
         t1 = time.time()
@@ -40,7 +40,7 @@ class RemoteManager(object):
         the_files = compress_recipe_files(the_files, export_folder, self._output)
 
         ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
-                                retry, retry_wait)
+                                retry, retry_wait, skip_src_tgz)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files)
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
@@ -94,8 +94,7 @@ class RemoteManager(object):
         self._output.writeln("")
         logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
 
-        the_files = compress_conan_files(the_files, package_folder, PACKAGE_TGZ_NAME,
-                                         CONANINFO, self._output)
+        the_files = compress_package_files(the_files, package_folder, self._output)
 
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
                                 retry, retry_wait)
@@ -224,41 +223,51 @@ class RemoteManager(object):
 
 
 def compress_recipe_files(files, dest_folder, output):
-    sources_folder = os.path.join(dest_folder, EXPORT_SOURCES_DIR)
-    if os.path.exists(sources_folder):
-        source_files = {k: v for k, v in files.items() if k.startswith(EXPORT_SOURCES_DIR)}
-        files = {k: v for k, v in files.items() if not k.startswith(EXPORT_SOURCES_DIR)}
+    # This is the minimum recipe
+    result = {CONANFILE: files.pop(CONANFILE),
+              CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
 
-    # FIXME: Check modified exports by hand?
-    the_files = compress_conan_files(files, dest_folder, EXPORT_TGZ_NAME,
-                                     CONANFILE, output)
+    # filter noise
+    files.pop(CONANFILE+"c", None)
+    files.pop(".DS_Store", None)
 
-    if os.path.exists(sources_folder) and source_files:
-        sources_tgz = source_files.get(EXPORT_SOURCES_TGZ_NAME)
-        if not sources_tgz:
-            # zip
-            new_files = compress_files(source_files, EXPORT_SOURCES_TGZ_NAME, excluded=[],
-                                       dest_dir=dest_folder)
-            sources_tgz = new_files[EXPORT_SOURCES_TGZ_NAME]
-        the_files[EXPORT_SOURCES_TGZ_NAME] = sources_tgz
+    export_tgz_path = files.pop(EXPORT_TGZ_NAME, None)
+    sources_tgz_path = files.pop(EXPORT_SOURCES_TGZ_NAME, None)
 
-    return the_files
+    def add_tgz(tgz_name, tgz_path, msg):
+        if tgz_path:
+            result[tgz_name] = tgz_path
+        else:
+            if tgz_name == EXPORT_TGZ_NAME:
+                tgz_files = {f: path for f, path in files.items()
+                             if not f.startswith(EXPORT_SOURCES_DIR)}
+            else:
+                tgz_files = {f: path for f, path in files.items()
+                             if f.startswith(EXPORT_SOURCES_DIR)}
+            if tgz_files:
+                output.rewrite_line(msg)
+                tgz_path = compress_files(tgz_files, tgz_name, dest_folder)
+                result[tgz_name] = tgz_path
 
+    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, "Compressing recipe...")
+    add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, "Compressing recipe sources...")
 
-def compress_conan_files(files, dest_folder, zipped_name, exclude, output):
-    if zipped_name not in files:
-        output.rewrite_line("Compressing %s..."
-                            % ("exported files" if zipped_name == EXPORT_TGZ_NAME else "package"))
-        return compress_files(files, zipped_name,
-                              excluded=(exclude, CONAN_MANIFEST), dest_dir=dest_folder)
-    else:
-        the_files = {zipped_name: files[zipped_name],
-                     exclude: files[exclude],
-                     CONAN_MANIFEST: files[CONAN_MANIFEST]}
-        return the_files
+    return result
 
 
-def compress_files(files, name, excluded, dest_dir):
+def compress_package_files(files, dest_folder, output):
+    tgz_path = files.get(PACKAGE_TGZ_NAME)
+    if not tgz_path:
+        output.rewrite_line("Compressing package...")
+        tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
+        tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, dest_dir=dest_folder)
+
+    return {PACKAGE_TGZ_NAME: tgz_path,
+            CONANINFO: files[CONANINFO],
+            CONAN_MANIFEST: files[CONAN_MANIFEST]}
+
+
+def compress_files(files, name, dest_dir):
     """Compress the package and returns the new dict (name => content) of files,
     only with the conanXX files and the compressed file"""
 
@@ -268,31 +277,21 @@ def compress_files(files, name, excluded, dest_dir):
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
 
-        def addfile(name, abs_path, tar):
-            info = tarfile.TarInfo(name=name)
+        for filename, abs_path in files.items():
+            info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
             info.mode = os.stat(abs_path).st_mode
             if os.path.islink(abs_path):
                 info.type = tarfile.SYMTYPE
                 info.linkname = os.readlink(abs_path)  # @UndefinedVariable
-                tar.addfile(tarinfo=info)
+                tgz.addfile(tarinfo=info)
             else:
                 with open(abs_path, 'rb') as file_handler:
-                    tar.addfile(tarinfo=info, fileobj=file_handler)
-
-        for filename, abs_path in files.items():
-            if filename not in excluded:
-                addfile(filename, abs_path, tgz)
+                    tgz.addfile(tarinfo=info, fileobj=file_handler)
 
         tgz.close()
-        ret = {}
-        for e in excluded:
-            if e in files:
-                ret[e] = files[e]
 
-        ret[name] = tgz_path
-
-    return ret
+    return tgz_path
 
 
 def unzip_and_get_files(files, destination_dir, tgz_name):

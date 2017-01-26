@@ -3,11 +3,10 @@ from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
-from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME,\
-    EXPORT_SOURCES_DIR
+from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum, save, mkdir
+from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -17,7 +16,6 @@ from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
 from conans.model.info import ConanInfo
 from conans.util.tracer import log_client_rest_api_call
-from os import makedirs
 
 
 def handle_return_deserializer(deserializer=None):
@@ -184,7 +182,7 @@ class RestApiClient(object):
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def upload_conan(self, conan_reference, the_files, retry, retry_wait):
+    def upload_conan(self, conan_reference, the_files, retry, retry_wait, skip_src_tgz):
         """
         the_files: dict with relative_path: content
         """
@@ -196,6 +194,8 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
+        if skip_src_tgz and EXPORT_SOURCES_TGZ_NAME in deleted:
+            deleted.remove(EXPORT_SOURCES_TGZ_NAME)
 
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}

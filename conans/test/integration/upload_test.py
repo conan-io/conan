@@ -2,7 +2,6 @@ import unittest
 from conans.test.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from nose.plugins.attrib import attr
 import os
 from conans.test.utils.test_files import uncompress_packaged_files
 
@@ -27,13 +26,13 @@ class CompleteFlowTest(unittest.TestCase):
         self.client.run("export lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
         self.client.run("upload %s --all" % str(conan_reference))
-        self.assertIn("Compressing exported files", self.client.user_io.out)
+        self.assertIn("Compressing recipe", self.client.user_io.out)
         self.assertIn("Compressing package", self.client.user_io.out)
 
         # UPLOAD TO A DIFFERENT CHANNEL WITHOUT COMPRESS AGAIN
         self.client.run("copy %s lasote/testing" % str(conan_reference))
         self.client.run("upload Hello0/0.1@lasote/testing --all")
-        self.assertNotIn("Compressing exported files", self.client.user_io.out)
+        self.assertNotIn("Compressing recipe", self.client.user_io.out)
         self.assertNotIn("Compressing package", self.client.user_io.out)
 
     def reuse_downloaded_tgz_test(self):
@@ -48,7 +47,7 @@ class CompleteFlowTest(unittest.TestCase):
         self.client.run("export lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
         self.client.run("upload %s --all" % str(conan_reference))
-        self.assertIn("Compressing exported files", self.client.user_io.out)
+        self.assertIn("Compressing recipe", self.client.user_io.out)
         self.assertIn("Compressing package", self.client.user_io.out)
 
         # Other user downloads the package
@@ -57,7 +56,7 @@ class CompleteFlowTest(unittest.TestCase):
         other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_client.run("install Hello0/0.1@lasote/stable --all")
         other_client.run("upload Hello0/0.1@lasote/stable --all")
-        self.assertIn("Compressing exported files", self.client.user_io.out)
+        self.assertIn("Compressing recipe", self.client.user_io.out)
         self.assertIn("Compressing package", self.client.user_io.out)
 
     def upload_only_tgz_if_needed_test(self):
@@ -70,11 +69,11 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload conans
         self.client.run("upload %s" % str(conan_reference))
-        self.assertIn("Compressing exported", str(self.client.user_io.out))
+        self.assertIn("Compressing recipe", str(self.client.user_io.out))
 
         # Not needed to tgz again
         self.client.run("upload %s" % str(conan_reference))
-        self.assertNotIn("Compressing exported", str(self.client.user_io.out))
+        self.assertNotIn("Compressing recipe", str(self.client.user_io.out))
 
         # Check that conans exists on server
         server_paths = self.servers["default"].paths

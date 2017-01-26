@@ -250,4 +250,4 @@ class MyConan(ConanFile):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_conan(conan_reference, abs_paths, retry, retry_wait)
+        self.api.upload_conan(conan_reference, abs_paths, retry, retry_wait, False)

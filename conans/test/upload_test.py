@@ -213,11 +213,11 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(pack_path, CONAN_MANIFEST), str(expected_manifest))
 
         self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
-        self.assertIn("Compressing exported files", self.client.user_io.out)
+        self.assertIn("Compressing recipe", self.client.user_io.out)
         self.assertIn("Compressing package", str(self.client.user_io.out))
 
         self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
-        self.assertNotIn("Compressing exported files", self.client.user_io.out)
+        self.assertNotIn("Compressing recipe", self.client.user_io.out)
         self.assertNotIn("Compressing package", str(self.client.user_io.out))
         self.assertIn("Package is up to date", str(self.client.user_io.out))
 
@@ -236,7 +236,7 @@ class TestConan(ConanFile):
         self.client.run("export lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", self.client.user_io.out)
         self.client.run("upload Hello/1.2@lasote/stable", ignore_error=False)
-        self.assertIn("Uploading conan_export.tgz", self.client.user_io.out)
+        self.assertIn("Uploading conanmanifest.txt", self.client.user_io.out)
 
     def simple_test(self):
         """ basic installation of a new conans
