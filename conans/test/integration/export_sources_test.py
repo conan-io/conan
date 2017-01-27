@@ -5,6 +5,7 @@ import os
 from conans.paths import EXPORT_SOURCES_DIR, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from nose_parameterized.parameterized import parameterized
 from conans.util.files import relative_dirs
+import six
 
 conanfile_py = """
 from conans import ConanFile
@@ -26,25 +27,26 @@ class ExportsSourcesTest(unittest.TestCase):
         servers = {"default": server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
 
+        cached = "__pycache__" if six.PY3 else "conanfile.pyc"
         if mode == "exports_sources":
             conanfile = conanfile_py.replace("exports", "exports_sources")
             expected_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanmanifest.txt'])
             expected_exports_sources = ["hello.h"]
-            expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanfile.pyc',
+            expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', cached,
                                            'conanmanifest.txt', EXPORT_SOURCES_TGZ_NAME])
-            expected_install_exports = sorted(['conanfile.py', 'conanfile.pyc', 'conanmanifest.txt'])
+            expected_install_exports = sorted(['conanfile.py', cached, 'conanmanifest.txt'])
             expected_server = sorted([EXPORT_SOURCES_TGZ_NAME, 'conanfile.py', 'conanmanifest.txt'])
         if mode == "exports":
             conanfile = conanfile_py
             expected_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanmanifest.txt',
                                        "hello.h"])
             expected_exports_sources = []
-            expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanfile.pyc',
+            expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', cached,
                                            'conanmanifest.txt', "hello.h", EXPORT_TGZ_NAME])
-            expected_install_exports = sorted(['conanfile.py', 'conanfile.pyc',
+            expected_install_exports = sorted(['conanfile.py', cached,
                                                'conanmanifest.txt', 'hello.h'])
             expected_server = sorted([EXPORT_TGZ_NAME, 'conanfile.py', 'conanmanifest.txt'])
-        expected_sources = sorted(['conanfile.py', 'conanfile.pyc', 'conanmanifest.txt', "hello.h"])
+        expected_sources = sorted(['conanfile.py', 'conanmanifest.txt', "hello.h"])
         expected_package = sorted(["conaninfo.txt", "conanmanifest.txt",
                                    os.sep.join(["include", "hello.h"])])
 

@@ -13,9 +13,9 @@ from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE,
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import touch
-from conans.model.manifest import discarded_file
+from conans.model.manifest import gather_files
 from conans.util.tracer import log_package_upload, log_recipe_upload,\
-    log_recipe_download, log_package_download
+    log_recipe_download, log_package_download, log_recipe_sources_download
 
 
 class RemoteManager(object):
@@ -31,13 +31,12 @@ class RemoteManager(object):
 
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
-        rel_files = relative_dirs(export_folder)
-        the_files = {filename: os.path.join(export_folder, filename) for filename in rel_files}
+        files = gather_files(export_folder)
 
-        if CONANFILE not in rel_files or CONAN_MANIFEST not in rel_files:
+        if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
 
-        the_files = compress_recipe_files(the_files, export_folder, self._output)
+        the_files = compress_recipe_files(files, export_folder, self._output)
 
         ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
                                 retry, retry_wait, skip_src_tgz)
@@ -59,15 +58,13 @@ class RemoteManager(object):
         # existing package, will use short paths if defined
         package_folder = self._client_cache.package(package_reference, short_paths=None)
         # Get all the files in that directory
-        rel_files = relative_dirs(package_folder)
+        files = gather_files(package_folder)
 
         self._output.rewrite_line("Checking package integrity...")
-        if CONANINFO not in rel_files or CONAN_MANIFEST not in rel_files:
-            logger.error("Missing info or manifest in uploading files: %s" % (str(rel_files)))
+        if CONANINFO not in files or CONAN_MANIFEST not in files:
+            logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
 
-        the_files = {filename: os.path.join(package_folder, filename) for filename in rel_files if
-                     not discarded_file(filename)}
         logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
 
         # If package has been modified remove tgz to regenerate it
@@ -80,7 +77,7 @@ class RemoteManager(object):
                     self._output.warn("Mismatched checksum for file %s (checksum: %s, expected: %s)" %
                                       (fname, read_manifest.file_sums[fname], expected_manifest.file_sums[fname]))
 
-            if PACKAGE_TGZ_NAME in the_files:
+            if PACKAGE_TGZ_NAME in files:
                 try:
                     tgz_path = os.path.join(package_folder, PACKAGE_TGZ_NAME)
                     os.unlink(tgz_path)
@@ -94,7 +91,7 @@ class RemoteManager(object):
         self._output.writeln("")
         logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
 
-        the_files = compress_package_files(the_files, package_folder, self._output)
+        the_files = compress_package_files(files, package_folder, self._output)
 
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
                                 retry, retry_wait)
@@ -153,7 +150,7 @@ class RemoteManager(object):
         zipped_files = self._call_remote(remote, "get_recipe",
                                          conan_reference, dest_folder, retrieve_sources=True)
         duration = time.time() - t1
-        # log_recipe_download(conan_reference, duration, remote, zipped_files)
+        log_recipe_sources_download(conan_reference, duration, remote, zipped_files)
 
         if not zipped_files:
             mkdir(dest_folder)  # create the folder even if no source files
@@ -226,10 +223,6 @@ def compress_recipe_files(files, dest_folder, output):
     # This is the minimum recipe
     result = {CONANFILE: files.pop(CONANFILE),
               CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
-
-    # filter noise
-    files.pop(CONANFILE+"c", None)
-    files.pop(".DS_Store", None)
 
     export_tgz_path = files.pop(EXPORT_TGZ_NAME, None)
     sources_tgz_path = files.pop(EXPORT_SOURCES_TGZ_NAME, None)

@@ -85,6 +85,14 @@ def log_recipe_download(conan_reference, duration, remote, files_downloaded):
                                          "files": files_downloaded})
 
 
+def log_recipe_sources_download(conan_reference, duration, remote, files_downloaded):
+    assert(isinstance(conan_reference, ConanFileReference))
+    _append_action("DOWNLOADED_RECIPE", {"_id": str(conan_reference),
+                                         "duration": duration,
+                                         "remote": remote.name,
+                                         "files": files_downloaded})
+
+
 def log_package_download(package_ref, duration, remote, files_downloaded):
     assert(isinstance(package_ref, PackageReference))
     _append_action("DOWNLOADED_PACKAGE", {"_id": str(package_ref),

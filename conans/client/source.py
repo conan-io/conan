@@ -1,4 +1,5 @@
-from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR
+from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME,\
+    CONANFILE
 import os
 from conans.util.files import rmdir, save
 import six
@@ -47,6 +48,15 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
                             os.path.join(src_folder, filename))
             # finally remove copied folder
             os.rmdir(source_sources_folder)
+        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c", CONANFILE+"o"):
+            try:
+                os.remove(os.path.join(src_folder, f))
+            except OSError:
+                pass
+        try:
+            shutil.rmtree(os.path.join(src_folder, "__pycache__"))
+        except OSError:
+            pass
 
         save(dirty, "")  # Creation of DIRTY flag
         os.chdir(src_folder)
