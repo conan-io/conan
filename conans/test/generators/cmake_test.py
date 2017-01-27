@@ -42,6 +42,7 @@ class CMakeGeneratorTest(unittest.TestCase):
     conan_check_compiler()
     conan_output_dirs_setup()
     conan_set_find_library_paths()
+    conan_set_find_paths()
     if(NOT "${ARGV0}" STREQUAL "TARGETS")
         message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
@@ -52,7 +53,6 @@ class CMakeGeneratorTest(unittest.TestCase):
     conan_set_rpath()
     conan_set_vs_runtime()
     conan_set_libcxx()
-    conan_set_find_paths()
 endmacro()""", macro)
 
         # extract the conan_set_find_paths macro

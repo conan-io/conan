@@ -96,7 +96,7 @@ int main(){
 
 
 @attr("slow")
-class CMakeTargetsTest(unittest.TestCase):
+class CMakePackageTest(unittest.TestCase):
 
     def find_package_test(self):
         client = TestClient()

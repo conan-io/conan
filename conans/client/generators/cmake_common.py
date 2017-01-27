@@ -404,7 +404,7 @@ def generate_targets_section(template, dependencies):
         use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
         deps = "" if not use_deps else " ".join(use_deps)
         section.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
-                                       uname=dep_name.upper()))
+                                       uname=dep_name.upper(), pkg = dep_info.package))
 
     all_targets = " ".join(["CONAN_PKG::%s" % name for name, _ in dependencies])
     section.append('    set(CONAN_TARGETS %s)\n' % all_targets)

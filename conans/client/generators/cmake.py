@@ -53,8 +53,8 @@ class CMakeGenerator(Generator):
 
         # TARGETS
         template = """
-    if(NOT "{pkg_name}" STREQUAL "")
-        find_package({pkg_name} REQUIRED {pkg_components})
+    if(NOT "{pkg[name]}" STREQUAL "")
+        find_package({pkg[name]} REQUIRED {pkg[components]})
     else()
         conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
                                       CONAN_FULLPATH_LIBS_{uname})
