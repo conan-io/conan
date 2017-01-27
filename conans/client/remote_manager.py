@@ -7,7 +7,7 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError
-from conans.util.files import tar_extract, relative_dirs, rmdir, exception_message_safe, mkdir
+from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR
@@ -136,14 +136,12 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_download(conan_reference, duration, remote, zipped_files)
 
-        files = unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
+        unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
         rm_conandir(self._client_cache.source(conan_reference))
         for dirname, _, filenames in os.walk(dest_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
-
-        return files
 
     def get_recipe_sources(self, conan_reference, dest_folder, remote):
         t1 = time.time()
@@ -172,13 +170,11 @@ class RemoteManager(object):
         zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
         duration = time.time() - t1
         log_package_download(package_reference, duration, remote, zipped_files)
-        files = unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
+        unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
         # Issue #214 https://github.com/conan-io/conan/issues/214
         for dirname, _, filenames in os.walk(dest_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
-
-        return files
 
     def search(self, remote, pattern=None, ignorecase=True):
         """
@@ -295,8 +291,6 @@ def unzip_and_get_files(files, destination_dir, tgz_name):
     if tgz_file:
         uncompress_file(tgz_file, destination_dir)
         os.remove(tgz_file)
-
-    return relative_dirs(destination_dir)
 
 
 def uncompress_file(src_path, dest_folder):
