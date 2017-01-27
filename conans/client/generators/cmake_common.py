@@ -399,14 +399,24 @@ def generate_targets_section(template, dependencies):
                    '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
                    '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
                    '    endif()  # CMAKE > 3.x\n')
+    outer_template = """
+    if(NOT "{pkg[name]}" STREQUAL "")
+        find_package({pkg[name]} REQUIRED {pkg[components]})
+    else()
+        {template}
+    endif()
+"""
 
+    all_targets = []
     for dep_name, dep_info in dependencies:
         use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
         deps = "" if not use_deps else " ".join(use_deps)
-        section.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
-                                       uname=dep_name.upper(), pkg = dep_info.package))
-
-    all_targets = " ".join(["CONAN_PKG::%s" % name for name, _ in dependencies])
+        all_targets.append("CONAN_PKG::%s" % dep_name if not dep_info.package["name"] else dep_info.package["name"])
+        target_template = template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
+                                       uname=dep_name.upper())
+        section.append(outer_template.format(pkg=dep_info.package, template=target_template))
+    
+    all_targets = " ".join(all_targets)
     section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
     section.append('endmacro()\n')
     return section

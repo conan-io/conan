@@ -53,9 +53,6 @@ class CMakeGenerator(Generator):
 
         # TARGETS
         template = """
-    if(NOT "{pkg[name]}" STREQUAL "")
-        find_package({pkg[name]} REQUIRED {pkg[components]})
-    else()
         conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
                                       CONAN_FULLPATH_LIBS_{uname})
 
@@ -66,7 +63,6 @@ class CMakeGenerator(Generator):
         set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
         # Not working
         # set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
-    endif()
 """
         sections.extend(generate_targets_section(template, self.deps_build_info.dependencies))
 
