@@ -7,7 +7,7 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
 from conans.client.loader import ConanFileLoader
 import os
-from conans.paths import rm_conandir, EXPORT_SOURCES_DIR
+from conans.paths import rm_conandir, EXPORT_SOURCES_DIR, EXPORT_SOURCES_TGZ_NAME
 from conans.client.remover import DiskRemover
 from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
@@ -123,7 +123,7 @@ class ConanProxy(object):
             raise ConanException("Error while trying to get recipe sources for %s. "
                                  "No remote defined" % str(conan_reference))
         else:
-            self._remote_manager.get_recipe_sources(conan_reference, sources_folder, current_remote)
+            self._remote_manager.get_recipe_sources(conan_reference, export_path, current_remote)
 
     def get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
@@ -243,7 +243,7 @@ class ConanProxy(object):
         """
         export_path = self._client_cache.export(conan_reference)
         sources_folder = os.path.join(export_path, EXPORT_SOURCES_DIR)
-        skip_src_tgz = False
+        ignore_deleted_file = None
         if not os.path.exists(sources_folder):
             # If not path to sources exists, we have a problem, at least an empty folder
             # should be there
@@ -258,12 +258,12 @@ class ConanProxy(object):
             else:
                 # But if same remote, no need to upload again the TGZ, it is already in the server
                 # But the upload API needs to know it to not remove the server file.
-                skip_src_tgz = True
+                ignore_deleted_file = EXPORT_SOURCES_TGZ_NAME
 
         remote, ref_remote = self._get_remote(conan_reference)
 
         result = self._remote_manager.upload_conan(conan_reference, remote, retry, retry_wait,
-                                                   skip_src_tgz=skip_src_tgz)
+                                                   ignore_deleted_file=ignore_deleted_file)
         if not ref_remote:
             self._registry.set_ref(conan_reference, remote)
         return result

@@ -1,9 +1,8 @@
-from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException,\
-    ConanException
+from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException, ConanException
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
-from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_TGZ_NAME
+from conans.paths import CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
 from conans.util.files import decode_text, md5sum
@@ -144,25 +143,15 @@ class RestApiClient(object):
         contents = {key: decode_text(value) for key, value in dict(contents).items()}
         return ConanInfo.loads(contents[CONANINFO])
 
-    def get_recipe(self, conan_reference, dest_folder, retrieve_sources=False):
+    def get_recipe(self, conan_reference, dest_folder, filter_files_function):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
         urls = self._get_json(url)
 
-        if CONANFILE not in list(urls.keys()):
-            raise NotFoundException("Conan '%s' doesn't have a %s!" % (conan_reference, CONANFILE))
-
-        # If a filename is specified, only retrieve that file
-        # if not existing, return None, no need to try to download
-        if retrieve_sources:
-            file_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
-            if file_url:
-                urls = {EXPORT_SOURCES_TGZ_NAME: file_url}
-            else:
-                return None
-        else:
-            urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
+        urls = filter_files_function(urls)
+        if not urls:
+            return None
 
         # TODO: Get fist an snapshot and compare files and download only required?
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
@@ -182,7 +171,7 @@ class RestApiClient(object):
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def upload_conan(self, conan_reference, the_files, retry, retry_wait, skip_src_tgz):
+    def upload_conan(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
         """
         the_files: dict with relative_path: content
         """
@@ -194,8 +183,8 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if skip_src_tgz and EXPORT_SOURCES_TGZ_NAME in deleted:
-            deleted.remove(EXPORT_SOURCES_TGZ_NAME)
+        if ignore_deleted_file and ignore_deleted_file in deleted:
+            deleted.remove(ignore_deleted_file)
 
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}

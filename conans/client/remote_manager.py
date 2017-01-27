@@ -16,6 +16,7 @@ from conans.util.files import touch
 from conans.model.manifest import gather_files
 from conans.util.tracer import log_package_upload, log_recipe_upload,\
     log_recipe_download, log_package_download, log_recipe_sources_download
+from boto.kms.exceptions import NotFoundException
 
 
 class RemoteManager(object):
@@ -26,7 +27,7 @@ class RemoteManager(object):
         self._output = output
         self._remote_client = remote_client
 
-    def upload_conan(self, conan_reference, remote, retry, retry_wait, skip_src_tgz):
+    def upload_conan(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file):
         """Will upload the conans to the first remote"""
 
         t1 = time.time()
@@ -39,7 +40,7 @@ class RemoteManager(object):
         the_files = compress_recipe_files(files, export_folder, self._output)
 
         ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
-                                retry, retry_wait, skip_src_tgz)
+                                retry, retry_wait, ignore_deleted_file)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files)
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
@@ -132,7 +133,16 @@ class RemoteManager(object):
         returns (dict relative_filepath:abs_path , remote_name)"""
         rmdir(dest_folder)  # Remove first the destination folder
         t1 = time.time()
-        zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder)
+
+        def filter_function(urls):
+            if CONANFILE not in list(urls.keys()):
+                raise NotFoundException("Conan '%s' doesn't have a %s!"
+                                        % (conan_reference, CONANFILE))
+            urls.pop(EXPORT_SOURCES_TGZ_NAME, None)
+            return urls
+
+        zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder,
+                                         filter_function)
         duration = time.time() - t1
         log_recipe_download(conan_reference, duration, remote, zipped_files)
 
@@ -143,19 +153,29 @@ class RemoteManager(object):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
-    def get_recipe_sources(self, conan_reference, dest_folder, remote):
+    def get_recipe_sources(self, conan_reference, export_folder, remote):
         t1 = time.time()
+
+        def filter_function(urls):
+            file_url = urls.get(EXPORT_SOURCES_TGZ_NAME)
+            if file_url:
+                urls = {EXPORT_SOURCES_TGZ_NAME: file_url}
+            else:
+                return None
+            return urls
+
         zipped_files = self._call_remote(remote, "get_recipe",
-                                         conan_reference, dest_folder, retrieve_sources=True)
+                                         conan_reference, export_folder, filter_function)
         duration = time.time() - t1
         log_recipe_sources_download(conan_reference, duration, remote, zipped_files)
 
+        sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
         if not zipped_files:
-            mkdir(dest_folder)  # create the folder even if no source files
+            mkdir(sources_folder)  # create the folder even if no source files
             return
 
-        unzip_and_get_files(zipped_files, dest_folder, EXPORT_SOURCES_TGZ_NAME)
-        for dirname, _, filenames in os.walk(dest_folder):
+        unzip_and_get_files(zipped_files, export_folder, EXPORT_SOURCES_TGZ_NAME)
+        for dirname, _, filenames in os.walk(sources_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 

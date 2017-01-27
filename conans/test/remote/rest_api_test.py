@@ -61,7 +61,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the conans
         tmp_dir = temp_folder()
-        recipe_paths = self.api.get_recipe(conan_reference, tmp_dir)
+        recipe_paths = self.api.get_recipe(conan_reference, tmp_dir, lambda x: x)
         self.assertIsNotNone(recipe_paths)
         self.assertIn(CONANFILE, recipe_paths)
         self.assertIn(CONAN_MANIFEST, recipe_paths)
