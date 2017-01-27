@@ -97,8 +97,9 @@ int main(){
 
 @attr("slow")
 class CMakePackageTest(unittest.TestCase):
-
+    """ Test find_package mechanisms""" 
     def find_package_test(self):
+        """Simple find_package test based on the exported package description"""
         client = TestClient()
         client.save({"conanfile.py": conanfile_py,
                      "hello.h": hello_h,
