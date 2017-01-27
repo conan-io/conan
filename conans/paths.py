@@ -34,6 +34,8 @@ PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
 CONAN_LINK = ".conan_link"
 
+RUN_LOG_NAME = "conan_run.log"
+
 
 def conan_expand_user(path):
     """ wrapper to the original expanduser function, to workaround python returning

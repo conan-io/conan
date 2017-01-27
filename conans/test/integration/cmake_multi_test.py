@@ -18,6 +18,9 @@ cmake = """
 project(MyHello)
 cmake_minimum_required(VERSION 2.8.12)
 
+# Some cross-building toolchains will define this
+set(CMAKE_FIND_ROOT_PATH "/some/path")
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
 conan_basic_setup()
 
@@ -105,14 +108,17 @@ class CMakeMultiTest(unittest.TestCase):
             output = StringIO()
             runner = TestRunner(output)
             runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
+            self.assertNotIn("WARN: Unknown compiler '", output.getvalue())
+            self.assertNotIn("', skipping the version check...", output.getvalue())
             runner('cmake --build . --config Debug', cwd=client.current_folder)
-            hello_comand = os.sep.join([".", "bin", "say_hello"])
+            hello_comand = os.sep.join([".", "Debug", "say_hello"])
             runner(hello_comand, cwd=client.current_folder)
             outstr = output.getvalue()
             self.assertIn("Hello0:Debug Hello1:Debug", outstr)
             self.assertIn("Hello Hello1", outstr)
             self.assertIn("Hello Hello0", outstr)
             runner('cmake --build . --config Release', cwd=client.current_folder)
+            hello_comand = os.sep.join([".", "Release", "say_hello"])
             runner(hello_comand, cwd=client.current_folder)
             outstr = output.getvalue()
             self.assertIn("Hello0:Release Hello1:Release", outstr)

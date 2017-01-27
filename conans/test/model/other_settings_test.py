@@ -4,7 +4,7 @@ from conans.test.tools import TestClient
 from conans.paths import CONANFILE, CONANINFO
 from conans.model.info import ConanInfo
 import os
-from conans.model.config_dict import undefined_value, bad_value_msg
+from conans.model.settings import undefined_value, bad_value_msg
 
 
 class SettingsTest(unittest.TestCase):
@@ -52,13 +52,14 @@ class SayConan(ConanFile):
     def settings_as_a_dict_conanfile_test(self):
         """Declare settings as a dict"""
         # Now with conanfile as a dict
+        # XXX: this test only works on machines that default arch to "x86" or "x86_64"
         content = """
 from conans import ConanFile
 
 class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
-    settings = {"os": ["Windows"], "arch": ["x86_64"]}
+    settings = {"os": ["Windows"], "arch": ["x86", "x86_64"]}
 """
         self.client.save({CONANFILE: content})
         self.client.run("install -s os=Windows --build missing")

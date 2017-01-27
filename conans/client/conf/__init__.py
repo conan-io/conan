@@ -15,9 +15,9 @@ default_settings_yml = """os: [Windows, Linux, Macos, Android, iOS, FreeBSD, Sun
 arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8]
 compiler:
     sun-cc:
-       version: ["5.10", "5.11"]
+       version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
        threads: [None, posix]
-       libcxx: [libstdcxx, libCstd]
+       libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
         version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3"]
         libcxx: [libstdc++, libstdc++11]
@@ -99,12 +99,13 @@ class ConanClientConfigParser(ConfigParser):
         except:
             return None
 
-    @property
-    def settings_defaults(self):
+    def settings_defaults(self, settings):
         default_settings = self.get_conf("settings_defaults")
-        default_settings = self._mix_settings_with_env(default_settings)
         values = Values.from_list(default_settings)
-        return values
+        settings.values = values
+        mixed_settings = self._mix_settings_with_env(default_settings)
+        values = Values.from_list(mixed_settings)
+        settings.values = values
 
     def _mix_settings_with_env(self, settings):
         """Reads CONAN_ENV_XXXX variables from environment

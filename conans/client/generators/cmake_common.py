@@ -46,7 +46,7 @@ _cmake_common_macros = """
 function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
     foreach(_LIBRARY_NAME ${libraries})
         unset(FOUND_LIBRARY CACHE)
-        find_library(FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir} NO_DEFAULT_PATH)
+        find_library(FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
         if(FOUND_LIBRARY)
             message(STATUS "Library ${_LIBRARY_NAME} found ${FOUND_LIBRARY}")
             set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${FOUND_LIBRARY})
@@ -66,6 +66,17 @@ macro(conan_set_libcxx)
                 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libstdc++")
             elseif(CONAN_LIBCXX STREQUAL "libc++")
                 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
+            endif()
+        endif()
+        if(CONAN_COMPILER STREQUAL "sun-cc")
+            if(CONAN_LIBCXX STREQUAL "libCstd")
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -library=Cstd")
+            elseif(CONAN_LIBCXX STREQUAL "libstdcxx")
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -library=stdcxx4")
+            elseif(CONAN_LIBCXX STREQUAL "libstlport")
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -library=stlport4")
+            elseif(CONAN_LIBCXX STREQUAL "libstdc++")
+                set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -library=stdcpp")
             endif()
         endif()
         if(CONAN_LIBCXX STREQUAL "libstdc++11")
@@ -152,7 +163,7 @@ function(check_compiler_version)
             (CONAN_COMPILER_VERSION STREQUAL "6" AND NOT VERSION_MAJOR STREQUAL "12") )
             conan_error_compiler_version()
         endif()
-    elseif(CONAN_COMPILER STREQUAL "gcc" OR CONAN_COMPILER MATCHES "clang")
+    elseif(CONAN_COMPILER STREQUAL "gcc" OR CONAN_COMPILER MATCHES "clang" OR CONAN_COMPILER STREQUAL "sun-cc")
         if(NOT ${VERSION_MAJOR}.${VERSION_MINOR} VERSION_EQUAL CONAN_COMPILER_VERSION)
            conan_error_compiler_version()
         endif()
@@ -188,7 +199,8 @@ function(conan_check_compiler)
     if( (CONAN_COMPILER STREQUAL "Visual Studio" AND NOT CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR
         (CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
         (CONAN_COMPILER STREQUAL "apple-clang" AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
-        (CONAN_COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") )
+        (CONAN_COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR
+        (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
 
         message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
     endif()
@@ -274,6 +286,14 @@ macro(conan_global_flags)
     set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_SHARED_LINKER_FLAGS}")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
 endmacro()
+
+macro(conan_target_link_libraries target)
+    if(CONAN_TARGETS)
+        target_link_libraries(${target} ${CONAN_TARGETS})
+    else()
+        target_link_libraries(${target} ${CONAN_LIBS})
+    endif()
+endmacro()
 """ + _cmake_common_macros
 
 
@@ -291,7 +311,7 @@ endif()
 
 macro(conan_basic_setup)
     conan_check_compiler()
-    conan_output_dirs_setup()
+    # conan_output_dirs_setup()
     if(NOT "${ARGV0}" STREQUAL "TARGETS")
         message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
@@ -356,4 +376,37 @@ macro(conan_global_flags)
     set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${CONAN_EXE_LINKER_FLAGS_DEBUG}")
 
 endmacro()
+
+macro(conan_target_link_libraries target)
+    if(CONAN_TARGETS)
+        target_link_libraries(${target} ${CONAN_TARGETS})
+    else()
+        foreach(_LIB ${CONAN_LIBS_RELEASE})
+            target_link_libraries(${target} optimized ${_LIB})
+        endforeach()
+        foreach(_LIB ${CONAN_LIBS_DEBUG})
+            target_link_libraries(${target} debug ${_LIB})
+        endforeach()
+    endif()
+endmacro()
 """ + _cmake_common_macros
+
+
+def generate_targets_section(template, dependencies):
+    section = []
+    section.append("\n###  Definition of macros and functions ###\n")
+    section.append('macro(conan_define_targets)\n'
+                   '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
+                   '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
+                   '    endif()  # CMAKE > 3.x\n')
+
+    for dep_name, dep_info in dependencies:
+        use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
+        deps = "" if not use_deps else " ".join(use_deps)
+        section.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
+                                       uname=dep_name.upper()))
+
+    all_targets = " ".join(["CONAN_PKG::%s" % name for name, _ in dependencies])
+    section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
+    section.append('endmacro()\n')
+    return section

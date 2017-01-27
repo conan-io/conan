@@ -15,8 +15,10 @@ import platform
 import os
 from conans.util.files import md5, save
 from conans.model.manifest import FileTreeManifest
+from nose.plugins.attrib import attr
 
 
+@attr('slow')
 class RestApiTest(unittest.TestCase):
     '''Open a real server (sockets) to test rest_api function.'''
 

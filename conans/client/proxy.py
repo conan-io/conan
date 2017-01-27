@@ -9,6 +9,8 @@ from conans.client.loader import ConanFileLoader
 import os
 from conans.paths import rm_conandir
 from conans.client.remover import DiskRemover
+from conans.util.tracer import log_package_got_from_local_cache,\
+    log_recipe_got_from_local_cache
 
 
 class ConanProxy(object):
@@ -93,6 +95,7 @@ class ConanProxy(object):
         if local_package:
             output.info('Already installed!')
             installed = True
+            log_package_got_from_local_cache(package_ref)
         else:
             installed = self._retrieve_remote_package(package_ref, package_folder,
                                                       output)
@@ -129,6 +132,7 @@ class ConanProxy(object):
         conanfile_path = self._client_cache.conanfile(conan_reference)
 
         if os.path.exists(conanfile_path):
+            log_recipe_got_from_local_cache(conan_reference)
             if self._check_updates:
                 ret = self.update_available(conan_reference)
                 if ret != 0:  # Found and not equal
