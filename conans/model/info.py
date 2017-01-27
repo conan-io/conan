@@ -22,11 +22,9 @@ class RequirementInfo(object):
 
         # sha values
         if indirect:
-            self.name = self.version = None
+            self.unrelated_mode()
         else:
-            self.name = self.full_name
-            self.version = self.full_version.stable()
-        self.user = self.channel = self.package_id = None
+            self.semver()
 
     def dumps(self):
         return "/".join([n for n in [self.name, self.version, self.user, self.channel,
@@ -45,24 +43,29 @@ class RequirementInfo(object):
         ret = RequirementInfo(data)
         return ret
 
-    def semver(self):
+    def unrelated_mode(self):
+        self.name = self.version = self.user = self.channel = self.package_id = None
+
+    def semver_mode(self):
         self.name = self.full_name
         self.version = self.full_version.stable()
         self.user = self.channel = self.package_id = None
 
-    def full_version(self):
+    semver = semver_mode
+
+    def full_version_mode(self):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.channel = self.package_id = None
 
-    def full_recipe(self):
+    def full_recipe_mode(self):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.full_user
         self.channel = self.full_channel
         self.package_id = None
 
-    def full_package(self):
+    def full_package_mode(self):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.full_user

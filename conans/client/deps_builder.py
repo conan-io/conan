@@ -122,8 +122,12 @@ class DepsGraph(object):
                                                   indirect_reqs,
                                                   non_devs)
 
-                # Once we are done, call conan_info() to narrow and change possible values
-                conanfile.conan_info()
+                # Once we are done, call package_id() to narrow and change possible values
+                if hasattr(conanfile, "conan_info"):
+                    # Deprecated in 0.19
+                    conanfile.conan_info()
+                else:
+                    conanfile.package_id()
         return ordered
 
     def ordered_closure(self, node, flat):

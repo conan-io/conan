@@ -228,7 +228,7 @@ class ConanFile(object):
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
-    def conan_info(self):
+    def package_id(self):
         """ modify the conans info, typically to narrow values
         eg.: conaninfo.package_references = []
         """

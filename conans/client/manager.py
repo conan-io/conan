@@ -108,6 +108,8 @@ class ConanManager(object):
             if not field_value:
                 self._user_io.out.warn("Conanfile doesn't have '%s'.\n"
                                        "It is recommended to add it as attribute" % field)
+        if getattr(conan_file, "conan_info", None):
+            self._user_io.out.warn("conan_info() method is deprecated, use package_id() instead")
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
         conan_ref_str = str(conan_ref)
