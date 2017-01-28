@@ -1,5 +1,5 @@
 import unittest
-from conans.tools import OSInfo, SystemPackageTool, replace_in_file
+from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool
 import os
 from conans.test.utils.test_files import temp_folder
 from conans import tools
@@ -169,6 +169,34 @@ class ToolsTest(unittest.TestCase):
         self.assertEquals(runner.command_called, "brew install a_package")
 
         del os.environ["CONAN_SYSREQUIRES_SUDO"]
+
+    def system_package_tool_try_multiple_test(self):
+        class RunnerMultipleMock(object):
+            def __init__(self, expected=None):
+                self.calls = 0
+                self.expected = expected
+
+            def __call__(self, command, output):
+                self.calls += 1
+                return 0 if command in self.expected else 1
+
+        packages = ["a_package", "another_package", "yet_another_package"]
+
+        runner = RunnerMultipleMock(["dpkg -s another_package"])
+        spt = SystemPackageTool(runner=runner, tool=AptTool())
+        spt.install(packages)
+        self.assertEquals(2, runner.calls)
+
+        runner = RunnerMultipleMock(["sudo apt-get update", "sudo apt-get install -y yet_another_package"])
+        spt = SystemPackageTool(runner=runner, tool=AptTool())
+        spt.install(packages)
+        self.assertEquals(7, runner.calls)
+
+        runner = RunnerMultipleMock(["sudo apt-get update"])
+        spt = SystemPackageTool(runner=runner, tool=AptTool())
+        with self.assertRaises(ConanException):
+            spt.install(packages)
+        self.assertEquals(7, runner.calls)
 
     def system_package_tool_installed_test(self):
         if platform.system() == "Windows":

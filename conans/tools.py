@@ -418,16 +418,33 @@ class SystemPackageTool(object):
         self._is_up_to_date = True
         self._tool.update()
 
-    def install(self, package_name, update=True, force=False):
+    def install(self, packages, update=True, force=False):
         '''
             Get the system package tool install command.
         '''
-        if not force and self._tool.installed(package_name):
-            print("Package already installed: %s" % package_name)
+        packages = [packages] if isinstance(packages, str) else list(packages)
+        if not force and self._installed(packages):
             return
         if update and not self._is_up_to_date:
             self.update()
-        self._tool.install(package_name)
+        self._install_any(packages)
+
+    def _installed(self, packages):
+        for pkg in packages:
+            if self._tool.installed(pkg):
+                print("Package already installed: %s" % pkg)
+                return True
+        return False
+
+    def _install_any(self, packages):
+        if len(packages) == 1:
+            return self._tool.install(packages[0])
+        for pkg in packages:
+            try:
+                return self._tool.install(pkg)
+            except ConanException:
+                pass
+        raise ConanException("Could not install any of %s" % packages)
 
 
 class NullTool(object):
