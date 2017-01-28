@@ -131,8 +131,10 @@ build_type: [ Release]
 
         if sys.platform == 'win32':
             dot_dir = "."
+            tempdir = self.tempdir
         else:
             dot_dir = "'.'"
+            tempdir = "'" + self.tempdir + "'"
 
         cmake = CMake(settings)
         conan_file = ConanFileMock()
@@ -151,23 +153,21 @@ build_type: [ Release]
         self.assertEqual('cmake --build %s --config Debug' % dot_dir, conan_file.command)
 
         cmake.configure(conan_file, source_dir="/source", build_dir=self.tempdir,
-                        args=["--foo bar"], vars={"SHARED": True})
+                        args=['--foo "bar"'], vars={"SHARED": True})
         if sys.platform == 'win32':
-            escaped_args = '"--foo bar" -DSHARED=True'
-            tempdir = self.tempdir
+            escaped_args = r'"--foo \"bar\"" -DSHARED=True /source'
         else:
-            escaped_args = "'--foo bar' '-DSHARED=True'"
-            tempdir = "'" + self.tempdir + "'"
+            escaped_args = "'--foo \"bar\"' '-DSHARED=True' '/source'"
         self.assertEqual('cd %s && cmake -G "Visual Studio 12 2013" -DCONAN_EXPORTED=1 '
                          '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-                         '-Wno-dev %s /source' % (tempdir, escaped_args),
+                         '-Wno-dev %s' % (tempdir, escaped_args),
                          conan_file.command)
 
-        cmake.build(conan_file, args=["--bar foo"], target="install")
+        cmake.build(conan_file, args=["--bar 'foo'"], target="install")
         if sys.platform == 'win32':
-            escaped_args = '--target install "--bar foo"'
+            escaped_args = '--target install "--bar \'foo\'"'
         else:
-            escaped_args = "'--target' 'install' '--bar foo'"
+            escaped_args = r"'--target' 'install' '--bar '\''foo'\'''"
         self.assertEqual('cmake --build %s --config Debug %s' % (tempdir, escaped_args),
                          conan_file.command)
         
@@ -177,7 +177,7 @@ build_type: [ Release]
         cmake.build(conan_file)
         self.assertEqual('cmake --build %s --config Release' % dot_dir, conan_file.command)
 
-        cmake.build(conan_file, build_dir=tempdir)
+        cmake.build(conan_file, build_dir=self.tempdir)
         self.assertEqual('cmake --build %s --config Release' % tempdir, conan_file.command)
 
 

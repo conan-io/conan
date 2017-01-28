@@ -205,7 +205,7 @@ def _args_to_string(args):
     if sys.platform == 'win32':
         return subprocess.list2cmdline(args)
     else:
-        return " ".join("'" + arg.replace("'", "'\''") + "'" for arg in args)
+        return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
 
 
 def _join_arguments(args):
