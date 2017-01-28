@@ -8,10 +8,10 @@ import sys
 
 class CMake(object):
 
-    def __init__(self, settings):
+    def __init__(self, settings, generator=None):
         assert isinstance(settings, Settings)
         self._settings = settings
-        self.generator = self._generator()
+        self.generator = generator or self._generator()
         self.build_dir = None
 
     @staticmethod

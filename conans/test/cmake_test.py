@@ -26,6 +26,12 @@ class CMakeTest(unittest.TestCase):
                          cmake.command_line)
         self.assertEqual('', cmake.build_config)
 
+        cmake = CMake(settings, generator="Custom Generator")
+        self.assertEqual('-G "Custom Generator" -DCONAN_EXPORTED=1 '
+                         '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+                         cmake.command_line)
+        self.assertEqual('', cmake.build_config)
+
         settings.build_type = "Debug"
         cmake = CMake(settings)
         self.assertEqual('-G "Visual Studio 12 2013" -DCONAN_EXPORTED=1 '
