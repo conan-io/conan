@@ -18,6 +18,9 @@ cmake = """
 project(MyHello)
 cmake_minimum_required(VERSION 2.8.12)
 
+# Some cross-building toolchains will define this
+set(CMAKE_FIND_ROOT_PATH "/some/path")
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
 conan_basic_setup()
 
