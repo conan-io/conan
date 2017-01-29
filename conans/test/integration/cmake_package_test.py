@@ -17,7 +17,7 @@ class HelloConan(ConanFile):
  
     def build(self):
         cmake = CMake(self.settings)
-        prefix = "-DCMAKE_INSTALL_PREFIX='%s'" % self.package_folder
+        prefix = '-DCMAKE_INSTALL_PREFIX="%s"' % self.package_folder
         self.run('cmake . %s %s' % (cmake.command_line, prefix))
         self.run("cmake --build . %s --target install" % cmake.build_config)
 
