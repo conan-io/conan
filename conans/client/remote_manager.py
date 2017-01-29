@@ -6,7 +6,7 @@ import traceback
 
 from requests.exceptions import ConnectionError
 
-from conans.errors import ConanException, ConanConnectionError
+from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.log import logger
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
@@ -16,7 +16,7 @@ from conans.util.files import touch
 from conans.model.manifest import gather_files
 from conans.util.tracer import log_package_upload, log_recipe_upload,\
     log_recipe_download, log_package_download, log_recipe_sources_download
-from boto.kms.exceptions import NotFoundException
+
 
 
 class RemoteManager(object):

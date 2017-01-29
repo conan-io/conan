@@ -179,6 +179,8 @@ class ConanProxy(object):
             self._retrieve_recipe(conan_reference, output)
 
         if self._manifest_manager:
+            # Just make sure that the recipe sources are there to check
+            self.get_recipe_sources(conan_reference)
             remote = self._registry.get_ref(conan_reference)
             self._manifest_manager.check_recipe(conan_reference, remote)
 
