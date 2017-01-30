@@ -169,6 +169,7 @@ class TestServer(object):
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_version=Version(SERVER_VERSION),
                  min_client_compatible_version=Version(MIN_CLIENT_COMPATIBLE_VERSION),
+                 authentication=None,
                  server_capabilities=None):
         """
              'read_permissions' and 'write_permissions' is a list of:
@@ -186,13 +187,16 @@ class TestServer(object):
             write_permissions = []
         if users is None:
             users = {"lasote": "mypass"}
-
+        if authentication is None:
+            authentication = {"basic": ""}
+        
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         min_client_ver = min_client_compatible_version
         self.test_server = TestServerLauncher(base_path, read_permissions,
                                               write_permissions, users,
                                               base_url=self.fake_url + "/v1",
                                               plugins=plugins,
+                                              authentication=authentication,
                                               server_version=server_version,
                                               min_client_compatible_version=min_client_ver,
                                               server_capabilities=server_capabilities)
@@ -202,6 +206,10 @@ class TestServer(object):
     def paths(self):
         return self.test_server.file_manager.paths
 
+    @property
+    def config_path(self):
+        return self.test_server.storage_folder
+    
     def __repr__(self):
         return "TestServer @ " + self.fake_url
 

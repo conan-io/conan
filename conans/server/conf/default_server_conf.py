@@ -51,6 +51,10 @@ updown_secret: {updown_secret}
 # By default all users can read all blocks
 */*@*/*: *
 
+[authentication]
+# define order: top is checked first
+# htpasswd: file
+basic
 
 [users]
 #default_user: defaultpass

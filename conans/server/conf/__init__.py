@@ -42,6 +42,8 @@ class ConanServerConfigParser(ConfigParser):
                            "port": get_env("CONAN_SERVER_PORT", None, environment),
                            "public_port": get_env("CONAN_SERVER_PUBLIC_PORT", None, environment),
                            "host_name": get_env("CONAN_HOST_NAME", None, environment),
+                           # authentication process
+                           "authentication" : get_env("CONAN_SERVER_AUTHENTICATION", None, environment),
                            # "user:pass,user2:pass2"
                            "users": get_env("CONAN_SERVER_USERS", None, environment)}
 
@@ -135,6 +137,14 @@ class ConanServerConfigParser(ConfigParser):
             return self.env_config["write_permissions"]
         else:
             return self._get_file_conf("write_permissions")
+
+    @property
+    def authentication(self):
+        if self.env_config["authentication"]:
+            auth = self.env_config["authentication"].split(",")
+            return {a.split(":") for a in auth}
+        else:
+            return dict(self._get_file_conf("authentication"))
 
     @property
     def users(self):

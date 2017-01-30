@@ -30,7 +30,6 @@ class ConanException(Exception):
     """
     pass
 
-
 class InvalidNameException(ConanException):
     pass
 
