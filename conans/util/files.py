@@ -162,7 +162,7 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
     """
     from tarfile import CompressionError, ReadError
 
-    compresslevel = compresslevel or int(os.getenv("CONAN_COMRESSION_LEVEL", 9))
+    compresslevel = compresslevel or int(os.getenv("CONAN_COMPRESSION_LEVEL", 9))
 
     if mode not in ("r", "w"):
         raise ValueError("mode must be 'r' or 'w'")
