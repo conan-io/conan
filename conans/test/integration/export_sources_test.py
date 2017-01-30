@@ -7,6 +7,7 @@ from nose_parameterized.parameterized import parameterized
 from conans.util.files import relative_dirs, load, save, md5sum
 import six
 from conans.model.manifest import FileTreeManifest
+from collections import OrderedDict
 
 conanfile_py = """
 from conans import ConanFile
@@ -25,8 +26,8 @@ class ExportsSourcesTest(unittest.TestCase):
     def setUp(self):
         self.server = TestServer()
         self.other_server = TestServer()
-        servers = {"default": self.server,
-                   "other": self.other_server}
+        servers = OrderedDict([("default", self.server),
+                               ("other", self.other_server)])
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")],
                                                     "other": [("lasote", "mypass")]})
         self.client = client
