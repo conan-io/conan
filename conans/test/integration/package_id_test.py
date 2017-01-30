@@ -44,7 +44,7 @@ class HelloConan(ConanFile):
         # Build the dependencies with --build missing
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         self.client.run("install --build missing")
-        self.assertIn("Hello2/2.Y.Z", self.conaninfo)
+        self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
 
         # Now change the Hello version and build it, if we install out requires should not be
         # needed the --build needed because Hello2 don't need to be rebuilt
@@ -56,7 +56,7 @@ class HelloConan(ConanFile):
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         self.client.run("install .")
-        self.assertIn("Hello2/2.Y.Z", self.conaninfo)
+        self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
 
         # Try to change user and channel too, should be the same, not rebuilt needed
         self._export("Hello", "1.5.0", package_id_text=None, requires=None, channel="memsharded/testing")
@@ -67,7 +67,7 @@ class HelloConan(ConanFile):
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
         self.client.run("install .")
-        self.assertIn("Hello2/2.Y.Z", self.conaninfo)
+        self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
 
     def test_version_full_version_schema(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
@@ -100,7 +100,8 @@ class HelloConan(ConanFile):
                      requires=["Hello/1.5.0@lasote/stable"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install .", ignore_error=True)
+        with self.assertRaises(Exception):
+            self.client.run("install .")
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
 
     def test_version_full_recipe_schema(self):
@@ -122,7 +123,8 @@ class HelloConan(ConanFile):
                      requires=["Hello/1.2.0@memsharded/testing"])
 
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install .", ignore_error=True)
+        with self.assertRaises(Exception):
+            self.client.run("install .")
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
 
         # If we change only the package ID from hello (one more defaulted option to True) should not affect
@@ -151,7 +153,8 @@ class HelloConan(ConanFile):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None, default_option_value="on")
         self.client.run("install Hello/1.2.0@lasote/stable --build missing")
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install .", ignore_error=True)
+        with self.assertRaises(Exception):
+            self.client.run("install .")
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
 
     def test_nameless_mode(self):
