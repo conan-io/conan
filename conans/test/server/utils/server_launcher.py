@@ -45,12 +45,8 @@ class TestServerLauncher(object):
         mkdir(self.storage_folder)
         # Prepare some test users
         if not read_permissions:
-            read_permissions = server_config.read_permissions
             read_permissions.append(("private_library/1.0.0@private_user/testing", "*"))
             read_permissions.append(("*/*@*/*", "*"))
-
-        if not write_permissions:
-            write_permissions = server_config.write_permissions
 
         if not users:
             users = []
