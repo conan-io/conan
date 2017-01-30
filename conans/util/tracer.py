@@ -35,8 +35,12 @@ def _get_tracer_file():
     if tracer_file is None:
         trace_path = os.environ.get("CONAN_TRACE_FILE", None)
         if trace_path is not None:
+            if not os.path.isabs(trace_path):
+                raise ConanException("Bad CONAN_TRACE_FILE value. The specified "
+                                     "path has to be an absolute path to a file.")
             if not os.path.exists(os.path.dirname(trace_path)):
-                raise ConanException("The specified path doesn't exist: '%s'" % trace_path)
+                raise ConanException("Bad CONAN_TRACE_FILE value. The specified "
+                                     "path doesn't exist: '%s'" % os.path.dirname(trace_path))
             if isdir(trace_path):
                 raise ConanException("CONAN_TRACE_FILE is a directory. Please, specify a file path")
             tracer_file = trace_path
