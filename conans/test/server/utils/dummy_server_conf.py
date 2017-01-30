@@ -51,7 +51,7 @@ def create_dummy_server_conf(storage_path, read_permissions = [("*/*@*/*", "*")]
     else:
         read_permissions = ""
     if write_permissions:
-        "\n".join(_tuple_to_conf(a) for a in write_permissions)
+        write_permissions = "\n".join(_tuple_to_conf(a) for a in write_permissions)
     else:
         write_permissions = ""
     # Create the config

@@ -51,6 +51,9 @@ class TestServerLauncher(object):
 
         if not users:
             users = {}
+        # Default: basic
+        if not authentication:
+            authentication = {"basic" : ""}
         users[TESTING_REMOTE_PRIVATE_USER] = TESTING_REMOTE_PRIVATE_PASS
         # create test server create_dummy_server_conf
         logger.debug("Creating dummy configuration")
