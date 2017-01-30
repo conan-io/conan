@@ -39,7 +39,7 @@ class Version(str):
         stable, so return it as is
         """
         if self.as_list[0] == 0:
-            return self
+            return self.patch()
         return self.major()
 
     def minor(self, fill=True):
@@ -59,10 +59,15 @@ class Version(str):
 
     def pre(self):
         self_list = self.as_list
+        v0 = str(self_list[0]) if len(self_list) > 0 else "0"
+        v1 = str(self_list[1]) if len(self_list) > 1 else "0"
+        v2 = str(self_list[2]) if len(self_list) > 2 else "0"
+        v = ".".join([v0, v1, v2])
         if len(self_list) > 3:
-            return self_list[3]
-        return ""
+            v += "-%s" % self_list[3]
+        return Version(v)
 
+    @property
     def build(self):
         if hasattr(self, "_build"):
             return self._build
