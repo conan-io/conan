@@ -8,7 +8,6 @@ from conans.test.tools import TestServer, TestClient
 from conans.util.files import load
 import json
 from conans.paths import CONANFILE, RUN_LOG_NAME
-from conans.client.command import get_conan_runner
 from conans.client.runner import ConanRunner
 
 

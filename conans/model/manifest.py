@@ -2,9 +2,33 @@ import os
 import calendar
 import time
 from conans.util.files import md5sum, md5
-from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, CONANFILE
+from conans.paths import PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME
 from conans.errors import ConanException
 import datetime
+
+
+def discarded_file(filename):
+    return filename == ".DS_Store" or filename.endswith(".pyc") or filename.endswith(".pyo")
+
+
+def gather_files(folder):
+    file_dict = {}
+
+    for root, dirs, files in os.walk(folder):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
+        for f in files:
+            if discarded_file(f):
+                continue
+            abs_path = os.path.join(root, f)
+            rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
+            if os.path.exists(abs_path):
+                file_dict[rel_path] = abs_path
+            else:
+                raise ConanException("The file is a broken symlink, verify that "
+                                     "you are packaging the needed destination files: '%s'"
+                                     % abs_path)
+
+    return file_dict
 
 
 class FileTreeManifest(object):
@@ -51,23 +75,14 @@ class FileTreeManifest(object):
         """ Walks a folder and create a FileTreeManifest for it, reading file contents
         from disk, and capturing current time
         """
-        filterfiles = (PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, CONANFILE + "c",
-                       ".DS_Store")
+        files = gather_files(folder)
+        for f in (PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME):
+            files.pop(f, None)
+
         file_dict = {}
-        for root, dirs, files in os.walk(folder):
-            dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
-            relative_path = os.path.relpath(root, folder)
-            files = [f for f in files if f not in filterfiles and not discarded_file(f)]  # Avoid md5 of big TGZ files
-            for f in files:
-                abs_path = os.path.join(root, f)
-                rel_path = os.path.normpath(os.path.join(relative_path, f))
-                rel_path = rel_path.replace("\\", "/")
-                if os.path.exists(abs_path):
-                    file_dict[rel_path] = md5sum(abs_path)
-                else:
-                    raise ConanException("The file is a broken symlink, verify that "
-                                         "you are packaging the needed destination files: '%s'"
-                                         % abs_path)
+        for name, filepath in files.items():
+            file_dict[name] = md5sum(filepath)
+
         date = calendar.timegm(time.gmtime())
 
         return cls(date, file_dict)
@@ -77,7 +92,3 @@ class FileTreeManifest(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
-
-def discarded_file(filename):
-    return filename.endswith(".pyc") or filename.endswith(".pyo")

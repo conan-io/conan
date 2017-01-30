@@ -61,7 +61,7 @@ class RestApiTest(unittest.TestCase):
 
         # Get the conans
         tmp_dir = temp_folder()
-        recipe_paths = self.api.get_recipe(conan_reference, tmp_dir)
+        recipe_paths = self.api.get_recipe(conan_reference, tmp_dir, lambda x: x)
         self.assertIsNotNone(recipe_paths)
         self.assertIn(CONANFILE, recipe_paths)
         self.assertIn(CONAN_MANIFEST, recipe_paths)
@@ -126,7 +126,7 @@ class RestApiTest(unittest.TestCase):
 
             # Get the conans
             tmp_dir = temp_folder()
-            pack = self.api.get_recipe(conan_reference, tmp_dir)
+            pack = self.api.get_recipe(conan_reference, tmp_dir, lambda x: x)
             self.assertIsNotNone(pack)
             self.assertIn("file999.cpp", pack)
 
@@ -250,4 +250,4 @@ class MyConan(ConanFile):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_conan(conan_reference, abs_paths, retry, retry_wait)
+        self.api.upload_conan(conan_reference, abs_paths, retry, retry_wait, False)

@@ -1,5 +1,5 @@
 from conans.errors import ConanException, NotFoundException
-from conans.model.conan_file import ConanFile, create_exports
+from conans.model.conan_file import ConanFile, create_exports, create_exports_sources
 from conans.util.files import rmdir
 import inspect
 import uuid
@@ -125,6 +125,7 @@ class ConanFileLoader(object):
             result = self._parse_module(loaded, False, filename)
             # Exports is the only object field, we need to do this, because conan export needs it
             result.exports = create_exports(result)
+            result.exports_sources = create_exports_sources(result)
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
