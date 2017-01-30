@@ -126,7 +126,7 @@ class RestApiTest(unittest.TestCase):
 
             # Get the conans
             tmp_dir = temp_folder()
-            pack = self.api.get_recipe(conan_reference, tmp_dir)
+            pack = self.api.get_recipe(conan_reference, tmp_dir, lambda x: x)
             self.assertIsNotNone(pack)
             self.assertIn("file999.cpp", pack)
 
