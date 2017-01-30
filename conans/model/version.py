@@ -39,7 +39,7 @@ class Version(str):
         stable, so return it as is
         """
         if self.as_list[0] == 0:
-            return self.patch()
+            return self
         return self.major()
 
     def minor(self, fill=True):
