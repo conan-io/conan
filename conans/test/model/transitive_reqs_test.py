@@ -377,8 +377,8 @@ class ChatConan(ConanFile):
     requires = "Hello/1.2@diego/testing"
 
     def conan_info(self):
-        self.info.requires["Hello"].full_package()
-        self.info.requires["Say"].semver()
+        self.info.requires["Hello"].full_package_mode()
+        self.info.requires["Say"].semver_mode()
 """
 
         self.retriever.conan(say_ref, say_content)
