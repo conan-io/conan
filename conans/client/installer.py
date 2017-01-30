@@ -144,6 +144,7 @@ class ConanInstaller(object):
                 # Assign to node the propagated info
                 self._propagate_info(conan_ref, conan_file, flat)
 
+                self._remote_proxy.get_recipe_sources(conan_ref)
                 # Call the conanfile's build method
                 self._build_conanfile(conan_ref, conan_file, package_ref, package_folder, output)
 

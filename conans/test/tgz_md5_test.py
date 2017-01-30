@@ -10,7 +10,7 @@ from conans.client.remote_manager import compress_files
 class TgzMd5Test(unittest.TestCase):
     """The md5 of a tgz should be the same if the files inside are the same"""
 
-    def testMd5Name(self):
+    def test_md5_compress(self):
         folder = temp_folder()
         save(os.path.join(folder, "one_file.txt"), b"The contents")
         save(os.path.join(folder, "Two_file.txt"), b"Two contents")
@@ -20,7 +20,7 @@ class TgzMd5Test(unittest.TestCase):
             "Two_file.txt": os.path.join(folder, "Two_file.txt"),
         }
 
-        compress_files(files, PACKAGE_TGZ_NAME, excluded=[PACKAGE_TGZ_NAME], dest_dir=folder)
+        compress_files(files, PACKAGE_TGZ_NAME, dest_dir=folder)
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_a = md5sum(file_path)
@@ -28,7 +28,7 @@ class TgzMd5Test(unittest.TestCase):
         time.sleep(1)  # Timestamps change
 
         folder = temp_folder()
-        compress_files(files, PACKAGE_TGZ_NAME, excluded=[PACKAGE_TGZ_NAME], dest_dir=folder)
+        compress_files(files, PACKAGE_TGZ_NAME, dest_dir=folder)
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_b = md5sum(file_path)

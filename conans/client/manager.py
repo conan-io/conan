@@ -108,6 +108,8 @@ class ConanManager(object):
             if not field_value:
                 self._user_io.out.warn("Conanfile doesn't have '%s'.\n"
                                        "It is recommended to add it as attribute" % field)
+        if getattr(conan_file, "conan_info", None):
+            self._user_io.out.warn("conan_info() method is deprecated, use package_id() instead")
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
         conan_ref_str = str(conan_ref)
@@ -118,7 +120,7 @@ class ConanManager(object):
                                  "You exported '%s' but already existing '%s'"
                                  % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
-        export_conanfile(output, self._client_cache, conan_file.exports, conan_file_path,
+        export_conanfile(output, self._client_cache, conan_file, conan_file_path,
                          conan_ref, conan_file.short_paths, keep_source)
 
     def download(self, reference, package_ids, remote=None):

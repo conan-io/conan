@@ -7,7 +7,7 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
 from conans.client.loader import ConanFileLoader
 import os
-from conans.paths import rm_conandir
+from conans.paths import rm_conandir, EXPORT_SOURCES_DIR, EXPORT_SOURCES_TGZ_NAME
 from conans.client.remover import DiskRemover
 from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
@@ -112,6 +112,19 @@ class ConanProxy(object):
             remote = self._registry.get_ref(package_ref.conan)
             self._manifest_manager.check_package(package_ref, remote)
 
+    def get_recipe_sources(self, conan_reference):
+        export_path = self._client_cache.export(conan_reference)
+        sources_folder = os.path.join(export_path, EXPORT_SOURCES_DIR)
+        if os.path.exists(sources_folder):
+            return
+
+        current_remote = self._registry.get_ref(conan_reference)
+        if not current_remote:
+            raise ConanException("Error while trying to get recipe sources for %s. "
+                                 "No remote defined" % str(conan_reference))
+        else:
+            self._remote_manager.get_recipe_sources(conan_reference, export_path, current_remote)
+
     def get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
 
@@ -166,6 +179,8 @@ class ConanProxy(object):
             self._retrieve_recipe(conan_reference, output)
 
         if self._manifest_manager:
+            # Just make sure that the recipe sources are there to check
+            self.get_recipe_sources(conan_reference)
             remote = self._registry.get_ref(conan_reference)
             self._manifest_manager.check_recipe(conan_reference, remote)
 
@@ -228,9 +243,29 @@ class ConanProxy(object):
         or to default remote, in that order.
         If the remote is not set, set it
         """
+        export_path = self._client_cache.export(conan_reference)
+        sources_folder = os.path.join(export_path, EXPORT_SOURCES_DIR)
+        ignore_deleted_file = None
+        if not os.path.exists(sources_folder):
+            # If not path to sources exists, we have a problem, at least an empty folder
+            # should be there
+            upload_remote, current_remote = self._get_remote(conan_reference)
+            if not current_remote:
+                raise ConanException("Trying to upload a package recipe without sources, "
+                                     "and the remote for the sources no longer exists")
+            if current_remote != upload_remote:
+                # If uploading to a different remote than the one from which the recipe
+                # was retrieved, we definitely need to get the sources, so the recipe is complete
+                self.get_recipe_sources(conan_reference)
+            else:
+                # But if same remote, no need to upload again the TGZ, it is already in the server
+                # But the upload API needs to know it to not remove the server file.
+                ignore_deleted_file = EXPORT_SOURCES_TGZ_NAME
+
         remote, ref_remote = self._get_remote(conan_reference)
 
-        result = self._remote_manager.upload_conan(conan_reference, remote, retry, retry_wait)
+        result = self._remote_manager.upload_conan(conan_reference, remote, retry, retry_wait,
+                                                   ignore_deleted_file=ignore_deleted_file)
         if not ref_remote:
             self._registry.set_ref(conan_reference, remote)
         return result

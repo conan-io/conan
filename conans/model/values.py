@@ -14,7 +14,7 @@ class Values(object):
         return self._dict[attr]
 
     def clear(self):
-        # TODO: Test. DO not delete, might be used by conan_info() to clear settings values
+        # TODO: Test. DO not delete, might be used by package_id() to clear settings values
         self._dict.clear()
         self._value = ""
 

@@ -5,7 +5,6 @@ from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to c
 from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo
 import os
-from conans.util.files import mkdir
 from conans.paths import RUN_LOG_NAME
 
 
@@ -66,6 +65,15 @@ def create_exports(conanfile):
         return conanfile.exports
 
 
+def create_exports_sources(conanfile):
+    if not hasattr(conanfile, "exports_sources"):
+        return None
+    else:
+        if isinstance(conanfile.exports_sources, str):
+            return (conanfile.exports_sources, )
+        return conanfile.exports_sources
+
+
 class ConanFile(object):
     """ The base class for all package recipes
     """
@@ -91,7 +99,7 @@ class ConanFile(object):
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
         self.exports = create_exports(self)
-
+        self.exports_sources = create_exports_sources(self)
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
@@ -228,7 +236,7 @@ class ConanFile(object):
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
-    def conan_info(self):
+    def package_id(self):
         """ modify the conans info, typically to narrow values
         eg.: conaninfo.package_references = []
         """

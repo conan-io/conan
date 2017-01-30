@@ -4,7 +4,7 @@ from conans.test.utils.test_files import hello_source_files
 from conans.client.manager import CONANFILE
 import os
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONAN_MANIFEST, CONANINFO
+from conans.paths import CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_DIR
 from conans.util.files import save
 from conans.model.manifest import FileTreeManifest
 from conans.client.proxy import ConanProxy
@@ -44,6 +44,8 @@ class DownloadTest(unittest.TestCase):
                      "include/math/lib1.h": "//copy",
                      "my_lib/debug/libd.a": "//copy",
                      "my_data/readme.txt": "//copy"}, path=reg_folder)
+        exports_sources_dir = os.path.join(reg_folder, EXPORT_SOURCES_DIR)
+        os.makedirs(exports_sources_dir)
 
         package_ref = PackageReference(conan_ref, "fakeid")
         package_folder = client.paths.package(package_ref)

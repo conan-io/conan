@@ -9,7 +9,7 @@ from os.path import isdir
 import copy
 
 TRACER_ACTIONS = ["UPLOADED_RECIPE", "UPLOADED_PACKAGE",
-                  "DOWNLOADED_RECIPE", "DOWNLOADED_PACKAGE",
+                  "DOWNLOADED_RECIPE", "DOWNLOADED_RECIPE_SOURCES", "DOWNLOADED_PACKAGE",
                   "PACKAGE_BUILT_FROM_SOURCES",
                   "GOT_RECIPE_FROM_LOCAL_CACHE", "GOT_PACKAGE_FROM_LOCAL_CACHE",
                   "REST_API_CALL", "COMMAND",
@@ -35,8 +35,12 @@ def _get_tracer_file():
     if tracer_file is None:
         trace_path = os.environ.get("CONAN_TRACE_FILE", None)
         if trace_path is not None:
+            if not os.path.isabs(trace_path):
+                raise ConanException("Bad CONAN_TRACE_FILE value. The specified "
+                                     "path has to be an absolute path to a file.")
             if not os.path.exists(os.path.dirname(trace_path)):
-                raise ConanException("The specified path doesn't exist: '%s'" % trace_path)
+                raise ConanException("Bad CONAN_TRACE_FILE value. The specified "
+                                     "path doesn't exist: '%s'" % os.path.dirname(trace_path))
             if isdir(trace_path):
                 raise ConanException("CONAN_TRACE_FILE is a directory. Please, specify a file path")
             tracer_file = trace_path
@@ -83,6 +87,14 @@ def log_recipe_download(conan_reference, duration, remote, files_downloaded):
                                          "duration": duration,
                                          "remote": remote.name,
                                          "files": files_downloaded})
+
+
+def log_recipe_sources_download(conan_reference, duration, remote, files_downloaded):
+    assert(isinstance(conan_reference, ConanFileReference))
+    _append_action("DOWNLOADED_RECIPE_SOURCES", {"_id": str(conan_reference),
+                                                 "duration": duration,
+                                                 "remote": remote.name,
+                                                 "files": files_downloaded})
 
 
 def log_package_download(package_ref, duration, remote, files_downloaded):
