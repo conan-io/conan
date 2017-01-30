@@ -966,10 +966,16 @@ path to the CMake binary directory, like this:
             errors = True
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
-            log_exception(exc, msg)
+            try:
+                log_exception(exc, msg)
+            except:
+                pass
         except Exception as exc:
             msg = exception_message_safe(exc)
-            log_exception(exc, msg)
+            try:
+                log_exception(exc, msg)
+            except:
+                pass
             raise exc
 
         return errors
