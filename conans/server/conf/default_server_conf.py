@@ -54,7 +54,7 @@ updown_secret: {updown_secret}
 [authentication]
 # define order: top is checked first
 # htpasswd: file
-basic
+basic: 
 
 [users]
 #default_user: defaultpass
