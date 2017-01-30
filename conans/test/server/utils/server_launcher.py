@@ -45,11 +45,12 @@ class TestServerLauncher(object):
         mkdir(self.storage_folder)
         # Prepare some test users
         if not read_permissions:
+            read_permissions = []
             read_permissions.append(("private_library/1.0.0@private_user/testing", "*"))
             read_permissions.append(("*/*@*/*", "*"))
 
         if not users:
-            users = []
+            users = {}
         users[TESTING_REMOTE_PRIVATE_USER] = TESTING_REMOTE_PRIVATE_PASS
         # create test server create_dummy_server_conf
         logger.debug("Creating dummy configuration")
