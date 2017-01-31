@@ -1,46 +1,86 @@
 import os
-from subprocess import Popen, PIPE, STDOUT
+import sys
+from subprocess import Popen, PIPE
 from conans.util.files import decode_text
 from conans.errors import ConanException
+import six
 
 
 class ConanRunner(object):
 
-    def __call__(self, command, output, cwd=None):
-        """ There are two options, with or without you (sorry, U2 pun :)
-        With or without output. Probably the Popen approach would be fine for both cases
-        but I found it more error prone, slower, problems with very large outputs (typical
-        when building C/C++ projects...) so I prefer to keep the os.system one for
-        most cases, in which the user does not want to capture the output, and the Popen
-        for cases they want
+    def __init__(self, print_commands_to_output=False, generate_run_log_file=False, log_run_to_output=True):
+        self._print_commands_to_output = print_commands_to_output
+        self._generate_run_log_file = generate_run_log_file
+        self._log_run_to_output = log_run_to_output
+
+    def __call__(self, command, output, log_filepath=None, cwd=None):
         """
-        if output is True:
-            if not cwd:
-                return os.system(command)
-            else:
-                try:
-                    old_dir = os.getcwd()
-                    os.chdir(cwd)
-                    result = os.system(command)
-                except Exception as e:
-                    raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
-                finally:
-                    os.chdir(old_dir)
-                return result
+        @param command: Command to execute
+        @param output: Instead of print to sys.stdout print to that stream. Could be None
+        @param log_filepath: If specified, also log to a file
+        @param cwd: Move to directory to execute
+        """
+        stream_output = output if output and hasattr(output, "write") else sys.stdout
+
+        if not self._generate_run_log_file:
+            log_filepath = None
+
+        # Log the command call in output and logger
+        call_message = "\n----Running------\n> %s\n-----------------\n" % command
+        if self._print_commands_to_output and stream_output and self._log_run_to_output:
+            stream_output.write(call_message)
+
+        # No output has to be redirected to logs or buffer or omitted
+        if output is True and not log_filepath and self._log_run_to_output:
+            return self._simple_os_call(command, cwd)
+        elif log_filepath:
+            if stream_output:
+                stream_output.write("Logging command output to file '%s'\n" % log_filepath)
+            with open(log_filepath, "a+") as log_handler:
+                if self._print_commands_to_output:
+                    log_handler.write(call_message)
+                return self._pipe_os_call(command, stream_output, log_handler, cwd)
         else:
-            proc = Popen(command, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd)
-            if hasattr(output, "write"):
-                while True:
-                    line = proc.stdout.readline()
-                    if not line:
-                        break
-                    output.write(decode_text(line))
-            out, err = proc.communicate()
+            return self._pipe_os_call(command, stream_output, None, cwd)
 
-            if hasattr(output, "write"):
-                if out:
-                    output.write(decode_text(out))
-                if err:
-                    output.write(decode_text(err))
+    def _pipe_os_call(self, command, stream_output, log_handler, cwd):
 
-            return proc.returncode
+        try:
+            proc = Popen(command, shell=True, stdout=PIPE, stderr=PIPE, cwd=cwd)
+        except Exception as e:
+            raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
+
+        def get_stream_lines(the_stream):
+            while True:
+                line = the_stream.readline()
+                if not line:
+                    break
+                decoded_line = decode_text(line)
+                if stream_output and self._log_run_to_output:
+                    stream_output.write(decoded_line)
+                if log_handler:
+                    # Write decoded in PY2 causes some ASCII encoding problems
+                    # tried to open the log_handler binary but same result.
+                    log_handler.write(line if six.PY2 else decoded_line)
+
+        get_stream_lines(proc.stdout)
+        get_stream_lines(proc.stderr)
+
+        proc.communicate()
+        ret = proc.returncode
+        return ret
+
+    def _simple_os_call(self, command, cwd):
+        if not cwd:
+            return os.system(command)
+        else:
+            try:
+                old_dir = os.getcwd()
+                os.chdir(cwd)
+                result = os.system(command)
+            except Exception as e:
+                raise ConanException("Error while executing"
+                                     " '%s'\n\t%s" % (command, str(e)))
+            finally:
+                os.chdir(old_dir)
+            return result

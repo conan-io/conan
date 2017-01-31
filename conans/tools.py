@@ -29,9 +29,11 @@ def pythonpath(conanfile):
 def environment_append(env_vars):
     old_env = dict(os.environ)
     os.environ.update(env_vars)
-    yield
-    os.environ.clear()
-    os.environ.update(old_env)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
@@ -226,6 +228,7 @@ class OSInfo(object):
         print(os_info.is_windows) # True/False
         print(os_info.is_macos) # True/False
         print(os_info.is_freebsd) # True/False
+        print(os_info.is_solaris) # True/False
 
         print(os_info.linux_distro)  # debian, ubuntu, fedora, centos...
 
@@ -246,13 +249,14 @@ class OSInfo(object):
         self.is_windows = platform.system() == "Windows"
         self.is_macos = platform.system() == "Darwin"
         self.is_freebsd = platform.system() == "FreeBSD"
+        self.is_solaris = platform.system() == "SunOS"
 
         if self.is_linux:
-            tmp = platform.linux_distribution(full_distribution_name=0)
-            self.linux_distro = None
-            self.linux_distro = tmp[0].lower()
-            self.os_version = Version(tmp[1])
-            self.os_version_name = tmp[2]
+            import distro
+            self.linux_distro = distro.id()
+            self.os_version = Version(distro.version())
+            version_name = distro.codename()
+            self.os_version_name = version_name if version_name != "n/a" else ""
             if not self.os_version_name and self.linux_distro == "debian":
                 self.os_version_name = self.get_debian_version_name(self.os_version)
         elif self.is_windows:
@@ -264,14 +268,20 @@ class OSInfo(object):
         elif self.is_freebsd:
             self.os_version = self.get_freebsd_version()
             self.os_version_name = "FreeBSD %s" % self.os_version
+        elif self.is_solaris:
+            self.os_version = Version(platform.release())
+            self.os_version_name = self.get_solaris_version_name(self.os_version)
 
     @property
     def with_apt(self):
-        return self.is_linux and self.linux_distro in ("debian", "ubuntu", "knoppix")
+        return self.is_linux and self.linux_distro in \
+            ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian")
 
     @property
     def with_yum(self):
-        return self.is_linux and self.linux_distro in ("centos", "redhat", "fedora")
+        return self.is_linux and self.linux_distro in \
+            ("centos", "redhat", "fedora", "pidora", "scientific",
+             "xenserver", "amazon", "oracle")
 
     def get_win_os_version(self):
         """
@@ -368,6 +378,14 @@ class OSInfo(object):
     def get_freebsd_version(self):
         return platform.release().split("-")[0]
 
+    def get_solaris_version_name(self, version):
+        if not version:
+            return None
+        elif version.minor() == "5.10":
+            return "Solaris 10"
+        elif version.minor() == "5.11":
+            return "Solaris 11"
+
 try:
     os_info = OSInfo()
 except Exception as exc:
@@ -398,7 +416,8 @@ class SystemPackageTool(object):
 
         if update_command:
             print("Running: %s" % update_command)
-            return self._runner(update_command, True)
+            if self._runner(update_command, True) != 0:
+                raise ConanException("Command '%s' failed" % update_command)
 
     def install(self, package_name):
         '''
@@ -415,7 +434,8 @@ class SystemPackageTool(object):
 
         if install_command:
             print("Running: %s" % install_command)
-            return self._runner(install_command, True)
+            if self._runner(install_command, True) != 0:
+                raise ConanException("Command '%s' failed" % install_command)
         else:
             print("Warn: Only available for linux with apt-get or yum or OSx with brew")
             return None

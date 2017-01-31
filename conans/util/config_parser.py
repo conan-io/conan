@@ -3,8 +3,21 @@ from conans.errors import ConanException
 
 
 def get_bool_from_text_value(value):
+    """ to be deprecated
+    It has issues, as accepting into the registry whatever=value, as False, withoug
+    complaining
+    """
     return (value == "1" or value.lower() == "yes" or value.lower() == "y" or
             value.lower() == "true") if value else True
+
+
+def get_bool_from_text(value):
+    value = value.lower()
+    if value in ["1", "yes", "y", "true"]:
+        return True
+    if value in ["0", "no", "n", "false"]:
+        return False
+    raise ConanException("Unrecognized boolean value '%s'" % value)
 
 
 class ConfigParser(object):
