@@ -116,7 +116,7 @@ class ExportsSourcesTest(unittest.TestCase):
                                      ".conan_manifests/Hello/0.1/lasote/testing/export/"
                                      "conanmanifest.txt"))
         if mode == "exports_sources":
-            self.assertIn(".conan_export_sources/hello.h: 5d41402abc4b2a76b9719d911017c592",
+            self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
                           manifest.splitlines())
         else:
             self.assertIn("hello.h: 5d41402abc4b2a76b9719d911017c592",
