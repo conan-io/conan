@@ -10,7 +10,6 @@ from conans.client.rest.uploader_downloader import Downloader
 import requests
 from conans.client.output import ConanOutput
 import platform
-if platform.system() == "Linux": import distro
 from conans.model.version import Version
 from conans.util.log import logger
 from conans.client.runner import ConanRunner
@@ -253,6 +252,7 @@ class OSInfo(object):
         self.is_solaris = platform.system() == "SunOS"
 
         if self.is_linux:
+            import distro
             self.linux_distro = distro.id()
             self.os_version = Version(distro.version())
             version_name = distro.codename()
