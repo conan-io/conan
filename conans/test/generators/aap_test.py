@@ -7,7 +7,7 @@ from conans.model.build_info import DepsCppInfo
 from conans.model.ref import ConanFileReference
 
 
-class SConsGeneratorTest(unittest.TestCase):
+class AapGeneratorTest(unittest.TestCase):
     def variables_setup_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -21,4 +21,4 @@ class SConsGeneratorTest(unittest.TestCase):
         generator = AapGenerator(conanfile)
         content = generator.content
         content_lines = content.splitlines()
-        self.assertIn('DEFINE += -DMYDEFINE1 - DMYDEFINE2', content_lines)
+        self.assertIn('DEFINE += -DMYDEFINE2 -DMYDEFINE1', content_lines)
