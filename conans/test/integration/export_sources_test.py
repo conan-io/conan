@@ -50,7 +50,6 @@ class ExportsSourcesTest(unittest.TestCase):
         self.source_folder = self.client.client_cache.source(self.reference)
         self.package_folder = self.client.client_cache.package(self.package_reference)
         self.export_folder = self.client.client_cache.export(self.reference)
-        self.export_sources_folder = os.path.join(self.export_folder, EXPORT_SOURCES_DIR)
 
     def _check_source_folder(self, mode):
         """ Source folder MUST be always the same
@@ -84,7 +83,7 @@ class ExportsSourcesTest(unittest.TestCase):
         self.assertEqual(sorted(os.listdir(server.paths.export(self.reference))),
                          expected_server)
 
-    def _check_export_folder(self, mode):
+    def _check_export_folder(self, mode, export_folder=None):
         if mode == "exports_sources":
             expected_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanmanifest.txt'])
             expected_exports_sources = ["hello.h"]
@@ -96,10 +95,13 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanmanifest.txt',
                                        "data.txt"])
             expected_exports_sources = ["hello.h"]
+
+        export_folder = export_folder or self.export_folder
+        export_sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
         # The export folder might contain or not temporary Python files
         cached = "__pycache__" if six.PY3 else "conanfile.pyc"
-        exports = [f for f in os.listdir(self.export_folder) if f != cached]
-        exports_sources = [f for f in os.listdir(self.export_sources_folder) if f != cached]
+        exports = [f for f in os.listdir(export_folder) if f != cached]
+        exports_sources = [f for f in os.listdir(export_sources_folder) if f != cached]
         self.assertEqual(sorted(exports), expected_exports)
         self.assertEqual(sorted(exports_sources), expected_exports_sources)
 
@@ -119,13 +121,14 @@ class ExportsSourcesTest(unittest.TestCase):
         if updated:
             expected_exports.append("license.txt")
         expected_exports = sorted(expected_exports)
+        export_sources_folder = os.path.join(self.export_folder, EXPORT_SOURCES_DIR)
         # The export folder might contain or not temporary Python files
         cached = "__pycache__" if six.PY3 else "conanfile.pyc"
         exports = [f for f in os.listdir(self.export_folder) if f != cached]
         self.assertEqual(sorted(exports), expected_exports)
-        self.assertFalse(os.path.exists(self.export_sources_folder))
+        self.assertFalse(os.path.exists(export_sources_folder))
 
-    def _check_export_uploaded_folder(self, mode):
+    def _check_export_uploaded_folder(self, mode, export_folder=None):
         if mode == "exports_sources":
             expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py',
                                            'conanmanifest.txt', EXPORT_SOURCES_TGZ_NAME])
@@ -139,9 +142,11 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py',
                                            'conanmanifest.txt', "hello.h", EXPORT_TGZ_NAME])
             expected_exports_sources = []
+        export_folder = export_folder or self.export_folder
+        export_sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
         cached = "__pycache__" if six.PY3 else "conanfile.pyc"
-        exports = [f for f in os.listdir(self.export_folder) if f != cached]
-        exports_sources = [f for f in os.listdir(self.export_sources_folder) if f != cached]
+        exports = [f for f in os.listdir(export_folder) if f != cached]
+        exports_sources = [f for f in os.listdir(export_sources_folder) if f != cached]
         self.assertEqual(sorted(exports), expected_pkg_exports)
         self.assertEqual(sorted(exports_sources), expected_exports_sources)
 
@@ -168,6 +173,30 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.save({"conanfile.py": conanfile,
                           "hello.h": "hello",
                           "data.txt": "data"})
+
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
+    def copy_test(self, mode):
+        # https://github.com/conan-io/conan/issues/943
+        self._create_code(mode)
+
+        self.client.run("export lasote/testing")
+        self.client.run("install Hello/0.1@lasote/testing --build=missing")
+        self.client.run("upload Hello/0.1@lasote/testing --all")
+        self.client.run('remove Hello/0.1@lasote/testing -f')
+        self.client.run("install Hello/0.1@lasote/testing")
+
+        # new copied package data
+        reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        source_folder = self.client.client_cache.source(reference)
+        export_folder = self.client.client_cache.export(reference)
+
+        self.client.run("copy Hello/0.1@lasote/testing lasote/stable")
+        self._check_export_folder(mode, export_folder)
+
+        self.client.run("upload Hello/0.1@lasote/stable")
+        self.assertFalse(os.path.exists(source_folder))
+        self._check_export_uploaded_folder(mode, export_folder)
+        self._check_server_folder(mode)
 
     @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
     def export_test(self, mode):
