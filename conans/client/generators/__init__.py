@@ -13,6 +13,7 @@ from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
 from .env import ConanEnvGenerator
 from .cmake_multi import CMakeMultiGenerator
+from .aap import AapGenerator
 
 
 def _save_generator(name, klass):
@@ -31,6 +32,7 @@ _save_generator("xcode", XCodeGenerator)
 _save_generator("ycm", YouCompleteMeGenerator)
 _save_generator("virtualenv", VirtualEnvGenerator)
 _save_generator("env", ConanEnvGenerator)
+_save_generator("aap", AapGenerator)
 
 
 def write_generators(conanfile, path, output):

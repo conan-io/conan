@@ -17,6 +17,7 @@ txt
 visual_studio
 xcode
 ycm
+aap
     '''
         files = {"conanfile.txt": base}
         client = TestClient()
@@ -25,5 +26,5 @@ ycm
         self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
-                                 'conanbuildinfo.xcconfig', '.ycm_extra_conf.py']),
+                                 'conanbuildinfo.xcconfig', '.ycm_extra_conf.py', 'conanbuildinfo.aap']),
                          sorted(os.listdir(client.current_folder)))
