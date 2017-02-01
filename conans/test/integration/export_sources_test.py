@@ -20,6 +20,19 @@ class HelloConan(ConanFile):
         self.copy("*.h", "include")
 """
 
+combined_conanfile = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "*.h", "*.cpp"
+    exports = "*.txt"
+    def package(self):
+        self.copy("*.h", "include")
+        self.copy("data.txt", "docs")
+"""
+
 
 class ExportsSourcesTest(unittest.TestCase):
 
@@ -39,17 +52,23 @@ class ExportsSourcesTest(unittest.TestCase):
         self.export_folder = self.client.client_cache.export(self.reference)
         self.export_sources_folder = os.path.join(self.export_folder, EXPORT_SOURCES_DIR)
 
-    def _check_source_folder(self):
+    def _check_source_folder(self, mode):
         """ Source folder MUST be always the same
         """
-        expected_sources = sorted(['conanfile.py', 'conanmanifest.txt', "hello.h"])
+        expected_sources = ['conanfile.py', 'conanmanifest.txt', "hello.h"]
+        if mode == "both":
+            expected_sources.append("data.txt")
+        expected_sources = sorted(expected_sources)
         self.assertEqual(sorted(os.listdir(self.source_folder)), expected_sources)
 
-    def _check_package_folder(self):
+    def _check_package_folder(self, mode):
         """ Package folder must be always the same (might have tgz after upload)
         """
-        expected_package = sorted(["conaninfo.txt", "conanmanifest.txt",
-                                   os.sep.join(["include", "hello.h"])])
+        expected_package = ["conaninfo.txt", "conanmanifest.txt",
+                            os.sep.join(["include", "hello.h"])]
+        if mode == "both":
+            expected_package.append(os.sep.join(["docs", "data.txt"]))
+        expected_package = sorted(expected_package)
         self.assertEqual(sorted(relative_dirs(self.package_folder)), expected_package)
 
     def _check_server_folder(self, mode, server=None):
@@ -58,6 +77,9 @@ class ExportsSourcesTest(unittest.TestCase):
                                       'conanmanifest.txt'])
         if mode == "exports":
             expected_server = sorted([EXPORT_TGZ_NAME, 'conanfile.py', 'conanmanifest.txt'])
+        if mode == "both":
+            expected_server = sorted([EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, 'conanfile.py',
+                                      'conanmanifest.txt'])
         server = server or self.server
         self.assertEqual(sorted(os.listdir(server.paths.export(self.reference))),
                          expected_server)
@@ -70,6 +92,10 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanmanifest.txt',
                                        "hello.h"])
             expected_exports_sources = []
+        if mode == "both":
+            expected_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanmanifest.txt',
+                                       "data.txt"])
+            expected_exports_sources = ["hello.h"]
         # The export folder might contain or not temporary Python files
         cached = "__pycache__" if six.PY3 else "conanfile.pyc"
         exports = [f for f in os.listdir(self.export_folder) if f != cached]
@@ -82,7 +108,10 @@ class ExportsSourcesTest(unittest.TestCase):
         """
         if mode == "exports_sources":
             expected_exports = ['conanfile.py', 'conanmanifest.txt']
-
+        if mode == "both":
+            expected_exports = ['conanfile.py', 'conanmanifest.txt', "data.txt"]
+            if reuploaded:
+                expected_exports.append("conan_export.tgz")
         if mode == "exports":
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "hello.h"]
             if reuploaded:
@@ -101,6 +130,11 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py',
                                            'conanmanifest.txt', EXPORT_SOURCES_TGZ_NAME])
             expected_exports_sources = ["hello.h"]
+        if mode == "both":
+            expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py',
+                                           'conanmanifest.txt', "data.txt", EXPORT_TGZ_NAME,
+                                           EXPORT_SOURCES_TGZ_NAME])
+            expected_exports_sources = ["hello.h"]
         if mode == "exports":
             expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py',
                                            'conanmanifest.txt', "hello.h", EXPORT_TGZ_NAME])
@@ -118,16 +152,26 @@ class ExportsSourcesTest(unittest.TestCase):
         if mode == "exports_sources":
             self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
                           manifest.splitlines())
-        else:
+        elif mode == "exports":
             self.assertIn("hello.h: 5d41402abc4b2a76b9719d911017c592",
                           manifest.splitlines())
+        else:
+            self.assertIn("data.txt: 8d777f385d3dfec8815d20f7496026dc", manifest.splitlines())
+            self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
+                          manifest.splitlines())
 
-    @parameterized.expand([("exports", ), ("exports_sources", )])
-    def export_test(self, mode):
+    def _create_code(self, mode):
         conanfile = conanfile_py if mode == "exports" else conanfile_py.replace("exports",
                                                                                 "exports_sources")
+        if mode == "both":
+            conanfile = combined_conanfile
         self.client.save({"conanfile.py": conanfile,
-                          "hello.h": "hello"})
+                          "hello.h": "hello",
+                          "data.txt": "data"})
+
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
+    def export_test(self, mode):
+        self._create_code(mode)
 
         self.client.run("export lasote/testing")
         self._check_export_folder(mode)
@@ -136,8 +180,8 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         # Source folder and package should be exatly the same
         self._check_export_folder(mode)
-        self._check_source_folder()
-        self._check_package_folder()
+        self._check_source_folder(mode)
+        self._check_package_folder(mode)
 
         # upload to remote
         self.client.run("upload Hello/0.1@lasote/testing --all")
@@ -152,14 +196,14 @@ class ExportsSourcesTest(unittest.TestCase):
         self.client.run("install Hello/0.1@lasote/testing")
         self.assertFalse(os.path.exists(self.source_folder))
         self._check_export_installed_folder(mode)
-        self._check_package_folder()
+        self._check_package_folder(mode)
 
         # Manifests must work too!
         self.client.run("install Hello/0.1@lasote/testing --manifests")
         self.assertFalse(os.path.exists(self.source_folder))
         # The manifests retrieve the normal state, as it retrieves sources
         self._check_export_folder(mode)
-        self._check_package_folder()
+        self._check_package_folder(mode)
         self._check_manifest(mode)
 
         # lets try to verify
@@ -169,15 +213,12 @@ class ExportsSourcesTest(unittest.TestCase):
         self.assertFalse(os.path.exists(self.source_folder))
         # The manifests retrieve the normal state, as it retrieves sources
         self._check_export_folder(mode)
-        self._check_package_folder()
+        self._check_package_folder(mode)
         self._check_manifest(mode)
 
-    @parameterized.expand([("exports", ), ("exports_sources", )])
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
     def export_upload_test(self, mode):
-        conanfile = conanfile_py if mode == "exports" else conanfile_py.replace("exports",
-                                                                                "exports_sources")
-        self.client.save({"conanfile.py": conanfile,
-                          "hello.h": "hello"})
+        self._create_code(mode)
 
         self.client.run("export lasote/testing")
 
@@ -193,24 +234,21 @@ class ExportsSourcesTest(unittest.TestCase):
         # install from remote
         self.client.run("install Hello/0.1@lasote/testing --build")
         self._check_export_folder(mode)
-        self._check_source_folder()
-        self._check_package_folder()
+        self._check_source_folder(mode)
+        self._check_package_folder(mode)
 
         # Manifests must work too!
         self.client.run("install Hello/0.1@lasote/testing --manifests")
         # The manifests retrieve the normal state, as it retrieves sources
         self._check_export_folder(mode)
-        self._check_package_folder()
+        self._check_package_folder(mode)
         self._check_manifest(mode)
 
-    @parameterized.expand([("exports", ), ("exports_sources", )])
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
     def reupload_test(self, mode):
         """ try to reupload to same and other remote
         """
-        conanfile = conanfile_py if mode == "exports" else conanfile_py.replace("exports",
-                                                                                "exports_sources")
-        self.client.save({"conanfile.py": conanfile,
-                          "hello.h": "hello"})
+        self._create_code(mode)
 
         self.client.run("export lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
@@ -227,12 +265,9 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode, self.other_server)
 
-    @parameterized.expand([("exports", ), ("exports_sources", )])
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
     def update_test(self, mode):
-        conanfile = conanfile_py if mode == "exports" else conanfile_py.replace("exports",
-                                                                                "exports_sources")
-        self.client.save({"conanfile.py": conanfile,
-                          "hello.h": "hello"})
+        self._create_code(mode)
 
         self.client.run("export lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
