@@ -580,6 +580,11 @@ If not:
         @param channel: Destination channel
         @param remote: install only from that remote
         """
+        # It is necessary to make sure the sources are complete before proceeding
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, None)
+        remote_proxy.complete_recipe_sources(reference)
+
+        # Now we can actually copy
         output = ScopedOutput(str(reference), self._user_io.out)
         conan_file_path = self._client_cache.conanfile(reference)
         conanfile = self._loader().load_conan(conan_file_path, output)
