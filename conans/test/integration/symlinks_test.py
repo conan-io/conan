@@ -89,12 +89,14 @@ class SymLinksTest(unittest.TestCase):
         package_ref = PackageReference(conan_ref,
                                        "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
-        export_directory = client.paths.export(conan_ref)
-        exported_lib = os.path.join(export_directory, lib_name)
-        exported_link = os.path.join(export_directory, link_name)
+        for folder in [client.paths.export(conan_ref), client.paths.source(conan_ref),
+                       client.paths.build(package_ref), client.paths.package(package_ref)]:
+            exported_lib = os.path.join(folder, lib_name)
+            exported_link = os.path.join(folder, link_name)
+            self.assertEqual(os.readlink(exported_link), lib_name)
 
-        self.assertEqual(load(exported_lib), load(exported_link))
-        self.assertTrue(os.path.islink(exported_link))
+            self.assertEqual(load(exported_lib), load(exported_link))
+            self.assertTrue(os.path.islink(exported_link))
 
         self._check(client, package_ref)
 
