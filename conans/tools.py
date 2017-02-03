@@ -252,11 +252,11 @@ class OSInfo(object):
         self.is_solaris = platform.system() == "SunOS"
 
         if self.is_linux:
-            tmp = platform.linux_distribution(full_distribution_name=0)
-            self.linux_distro = None
-            self.linux_distro = tmp[0].lower()
-            self.os_version = Version(tmp[1])
-            self.os_version_name = tmp[2]
+            import distro
+            self.linux_distro = distro.id()
+            self.os_version = Version(distro.version())
+            version_name = distro.codename()
+            self.os_version_name = version_name if version_name != "n/a" else ""
             if not self.os_version_name and self.linux_distro == "debian":
                 self.os_version_name = self.get_debian_version_name(self.os_version)
         elif self.is_windows:
@@ -274,11 +274,14 @@ class OSInfo(object):
 
     @property
     def with_apt(self):
-        return self.is_linux and self.linux_distro in ("debian", "ubuntu", "knoppix")
+        return self.is_linux and self.linux_distro in \
+            ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian")
 
     @property
     def with_yum(self):
-        return self.is_linux and self.linux_distro in ("centos", "redhat", "fedora")
+        return self.is_linux and self.linux_distro in \
+            ("centos", "redhat", "fedora", "pidora", "scientific",
+             "xenserver", "amazon", "oracle")
 
     def get_win_os_version(self):
         """
