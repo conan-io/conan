@@ -47,7 +47,7 @@ class MyTest(ConanFile):
         client.save(files)
         client.run("export lasote/stable")
 
-        files = cpp_hello_conan_files("Hello1", "1.0", 
+        files = cpp_hello_conan_files("Hello1", "1.0",
                                       deps=["Hello0/1.0@lasote/stable"], build=False)
         files[CONANFILE] = patch_conanfile(files[CONANFILE])
         client.save(files)

@@ -33,6 +33,7 @@ from conans.util.files import rmdir, load, save_files, exception_message_safe
 from conans.util.config_parser import get_bool_from_text
 from conans.client.printer import Printer
 from conans.util.tracer import log_command, log_exception
+from conans.model.env import EnvValues
 
 
 class Extender(argparse.Action):
@@ -284,6 +285,7 @@ path to the CMake binary directory, like this:
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         env, package_env = self._get_simple_and_package_tuples(args.env)
+        env_values = self._get_env_values(env, package_env)
         settings, package_settings = self._get_simple_and_package_tuples(args.settings)
         scopes = Scopes.from_list(args.scope) if args.scope else None
 
@@ -296,13 +298,12 @@ path to the CMake binary directory, like this:
             except ConanException as exc:
                 raise ConanException("Error reading '%s' profile: %s" % (args.profile, exc))
             else:
-                profile.update_env(env)
-                profile.update_packages_env(package_env)
-                env = profile.env
-                package_env = profile.package_env
+                env_values.update(profile.env_values)
 
-        loader = manager._loader(current_path=None, user_settings_values=settings, user_options_values=options,
-                                 scopes=scopes, package_settings=package_settings, env=env, package_env=package_env)
+        loader = manager._loader(current_path=None, user_settings_values=settings,
+                                 user_options_values=options, scopes=scopes,
+                                 package_settings=package_settings, env_values=env_values)
+
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
             # convert to list from ItemViews required for python3
@@ -337,12 +338,19 @@ path to the CMake binary directory, like this:
                               update=args.update,
                               generators=["env", "txt"],
                               profile_name=args.profile,
-                              env=env,
-                              package_env=package_env
+                              env_values=env_values
                               )
         self._test_check(test_folder, test_folder_name)
-        self._manager.build(test_folder, build_folder, test=True, profile_name=args.profile,
-                            env=env, package_env=package_env)
+        self._manager.build(test_folder, build_folder, test=True)
+
+    def _get_env_values(self, env, package_env):
+        env_values = EnvValues()
+        for name, value in env:
+            env_values.add(name, value)
+        for package, data in package_env.items():
+            for name, value in data:
+                env_values.add(name, value, package)
+        return env_values
 
     # Alias to test
     def test(self, *args):
@@ -421,6 +429,7 @@ path to the CMake binary directory, like this:
             options = self._get_tuples_list_from_extender_arg(args.options)
             settings, package_settings = self._get_simple_and_package_tuples(args.settings)
             env, package_env = self._get_simple_and_package_tuples(args.env)
+            env_values = self._get_env_values(env, package_env)
 
             scopes = Scopes.from_list(args.scope) if args.scope else None
             if args.manifests and args.manifests_interactive:
@@ -455,8 +464,7 @@ path to the CMake binary directory, like this:
                                   generators=args.generator,
                                   profile_name=args.profile,
                                   package_settings=package_settings,
-                                  env=env,
-                                  package_env=package_env,
+                                  env_values=env_values,
                                   no_imports=args.no_imports)
 
     def info(self, *args):
@@ -529,7 +537,6 @@ path to the CMake binary directory, like this:
                             help='path to conanfile.py, e.g., conan build .',
                             default="")
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("--profile", "-pr", default=None, help='Apply a profile')
         args = parser.parse_args(*args)
         log_command("build", vars(args))
         current_path = os.getcwd()
@@ -537,7 +544,7 @@ path to the CMake binary directory, like this:
             root_path = os.path.abspath(args.path)
         else:
             root_path = current_path
-        self._manager.build(root_path, current_path, filename=args.file, profile_name=args.profile)
+        self._manager.build(root_path, current_path, filename=args.file)
 
     def package(self, *args):
         """ Calls your conanfile.py 'package' method for a specific package recipe.
@@ -961,8 +968,8 @@ path to the CMake binary directory, like this:
             logger.error(exc)
             errors = True
         except ConanException as exc:
-            # import traceback
-            # logger.debug(traceback.format_exc())
+            import traceback
+            logger.debug(traceback.format_exc())
             errors = True
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
@@ -971,6 +978,8 @@ path to the CMake binary directory, like this:
             except:
                 pass
         except Exception as exc:
+            import traceback
+            logger.debug(traceback.format_exc())
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)

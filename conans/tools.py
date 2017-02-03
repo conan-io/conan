@@ -20,7 +20,8 @@ import multiprocessing
 @contextmanager
 def pythonpath(conanfile):
     old_path = sys.path[:]
-    sys.path.extend(conanfile.deps_env_info.PYTHONPATH)
+    if conanfile.env.get("PYTHONPATH", None):
+        sys.path.append(conanfile.env["PYTHONPATH"])
     yield
     sys.path = old_path
 

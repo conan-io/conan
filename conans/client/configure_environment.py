@@ -1,7 +1,7 @@
 from conans.model.settings import Settings
 import copy
 from conans.client.generators.virtualenv import get_setenv_variables_commands
-from conans.model.env_info import DepsEnvInfo
+from conans.model.env import DepsEnvInfo
 from conans.util.files import save
 from conans import tools
 from conans.client.output import ConanOutput

@@ -176,18 +176,22 @@ class Printer(object):
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings)
-        self._print_profile_section("env", profile.env)
+
+        envs = profile.env_values.global_values()
+        envs.extend(profile.env_values.all_package_values())
+
+        self._print_profile_section("env", envs, separator='=')
         scopes = profile.scopes.dumps().splitlines()
         self._print_colored_line("[scopes]")
         for scope in scopes:
             self._print_colored_line(scope, indent=1)
 
-    def _print_profile_section(self, name, items, indent=0):
+    def _print_profile_section(self, name, items, indent=0, separator=": "):
         self._print_colored_line("[%s]" % name, indent=indent)
         for key, value in items:
-            self._print_colored_line(key, value=str(value), indent=indent+1)
+            self._print_colored_line(key, value=str(value), indent=indent+1, separator=separator)
 
-    def _print_colored_line(self, text, value=None, indent=0):
+    def _print_colored_line(self, text, value=None, indent=0, separator=": "):
         """ Print a colored line depending on its indentation level
             Attributes:
                 text: string line
@@ -202,7 +206,7 @@ class Printer(object):
         indent_text = ' ' * Printer.INDENT_SPACES * indent
         if value is not None:
             value_color = Color.BRIGHT_WHITE
-            self._out.write('%s%s: ' % (indent_text, text), text_color)
+            self._out.write('%s%s%s' % (indent_text, text, separator), text_color)
             self._out.writeln(value, value_color)
         else:
             self._out.writeln('%s%s' % (indent_text, text), text_color)

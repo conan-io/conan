@@ -150,7 +150,7 @@ class PythonBuildTest(unittest.TestCase):
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export lasote/stable")
-        client.run("install -g txt -g env")
+        client.run("install -g txt")
         client.run("source Consumer/0.1@lasote/stable")
         self.assertIn("Hello Baz", client.user_io.out)
         self.assertNotIn("Hello Foo", client.user_io.out)

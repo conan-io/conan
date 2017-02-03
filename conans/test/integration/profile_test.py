@@ -3,7 +3,6 @@ from conans.test.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import save, load
 import os
-import platform
 from conans.paths import CONANFILE
 from collections import OrderedDict
 from conans.test.utils.test_files import temp_folder
@@ -111,27 +110,9 @@ class ProfileTest(unittest.TestCase):
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
     @parameterized.expand([("", ), ("./local_profiles/", ), (temp_folder() + "/", )])
-    def build_with_profile_test(self, path):
-        if path == "":
-            folder = self.client.client_cache.profiles_path
-        elif path == "./local_profiles/":
-            folder = os.path.join(self.client.current_folder, "local_profiles")
-        else:
-            folder = path
-        create_profile(folder, "scopes_env", settings={},
-                       scopes={},  # undefined scope do not apply to my packages
-                       env=[("CXX", "/path/tomy/g++_build"),
-                            ("CC", "/path/tomy/gcc_build")])
-
+    def install_with_missing_profile_test(self, path):
         self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run('build -pr "%sscopes_env"' % path)
-        self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
-        self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")
-
-    @parameterized.expand([("", ), ("./local_profiles/", ), (temp_folder() + "/", )])
-    def build_with_missing_profile_test(self, path):
-        self.client.save({CONANFILE: conanfile_scope_env})
-        error = self.client.run('build -pr "%sscopes_env"' % path, ignore_error=True)
+        error = self.client.run('install -pr "%sscopes_env"' % path, ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Specified profile '%sscopes_env' doesn't exist" % path,
                       self.client.user_io.out)

@@ -13,7 +13,7 @@ from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
-from conans.model.env_info import EnvInfo
+from conans.model.env import EnvInfo
 from conans.client.source import config_source
 from conans.client.generators.env import ConanEnvGenerator
 from conans.tools import environment_append
@@ -179,6 +179,10 @@ class ConanInstaller(object):
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
+
+        # Update the env_values with the inherited from dependencies
+        conan_file.env_values.update(conan_file.deps_env_info)
+        conan_file.info.env_values = conan_file.env_values
 
     def _get_nodes(self, nodes_by_level, skip_nodes, build_mode):
         """Install the available packages if needed/allowed and return a list

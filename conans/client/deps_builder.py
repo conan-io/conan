@@ -10,6 +10,7 @@ from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
 from collections import defaultdict
+import copy
 
 
 class Node(namedtuple("Node", "conan_ref conanfile")):
@@ -116,11 +117,13 @@ class DepsGraph(object):
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
                 non_devs = self.non_dev_nodes(node)
+
                 conanfile.info = ConanInfo.create(conanfile.settings.values,
                                                   conanfile.options.values,
                                                   direct_reqs,
                                                   indirect_reqs,
-                                                  non_devs)
+                                                  non_devs,
+                                                  conanfile.env_values)
 
                 # Once we are done, call package_id() to narrow and change possible values
                 if hasattr(conanfile, "conan_info"):

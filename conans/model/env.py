@@ -4,6 +4,62 @@ import os
 import re
 
 
+class EnvValues(object):
+    """ Object to represent the introduced env values entered by the user
+    with the -e or profiles etc.
+    """
+
+    def __init__(self):
+        self._data = {}
+
+    def add(self, name, value, package=None):
+        # It prioritizes the data already introduced
+        if (package, name) not in self._data:
+            self._data[(package, name)] = value
+
+    def global_values(self):
+        '''return [(name, value), (name, value)] for global env variables'''
+        return [(name, value) for (pname, name), value in sorted(self._data.items())
+                if pname is None]
+
+    def package_values(self, package):
+        """return the environment variables that apply for a given package name:
+        [(name, value), (name, value)] for the specified package"""
+        return [(name, value) for (pname, name), value in sorted(self._data.items())
+                if package is None or pname == package]
+
+    def all_package_values(self):
+        return sorted([("%s:%s" % (pname, name), value) for (pname, name), value in self._data.items()
+                       if pname])
+
+    def update(self, env_obj):
+        """accepts other EnvValues object or DepsEnvInfo
+           it prioritize the values that are already at self._data
+        """
+        if env_obj:
+            if isinstance(env_obj, EnvValues):
+                for (package_name, name), value in env_obj._data.items():
+                    self.add(name, value, package_name)
+            else:  # DepsEnvInfo
+                for _, env_info in env_obj.dependencies:
+                    for (name, value) in env_info.vars.items():
+                        name = name.upper() if name.lower() == "path" else name
+                        if isinstance(value, list):
+                            value = os.pathsep.join(value)
+                        self.add(name, value)
+
+    def env_dict(self, name):
+        """Returns a dict of env variables that applies to package 'name' """
+        ret = {}
+        ret.update(dict(self.global_values()))
+        # Scoped variables are prioritized over the global ones
+        ret.update(self.package_values(name))
+        return ret
+
+    def __repr__(self, *args, **kwargs):
+        return str(self.global_values()) + str(self.all_package_values())
+
+
 class EnvInfo(object):
     """ Object that stores all the environment variables required:
 

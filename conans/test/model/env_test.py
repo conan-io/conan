@@ -1,6 +1,30 @@
 import unittest
-from conans.model.env_info import DepsEnvInfo
+from conans.model.env import DepsEnvInfo, EnvValues
 from conans.model.ref import ConanFileReference
+
+
+class EnvValuesTest(unittest.TestCase):
+
+    def test_model(self):
+        env = EnvValues()
+        env.add("Z", "1")
+        self.assertEquals(env.all_package_values(), [])
+        self.assertEquals(env.global_values(), [("Z", "1")])
+        env.add("Z", "2")
+        self.assertEquals(env.global_values(), [("Z", "1")])
+        env.add("B", "223")
+        self.assertEquals(env.global_values(), [("B", "223"), ("Z", "1")])
+        env.add("B", "224", "package1")
+        self.assertEquals(env.global_values(), [("B", "223"), ("Z", "1")])
+        self.assertEquals(env.package_values("package1"), [("B", "224")])
+        env.add("A", "1", "package1")
+        self.assertEquals(env.package_values("package1"), [("A", "1"), ("B", "224")])
+        self.assertEquals(env.all_package_values(), [('package1:A', '1'), ('package1:B', '224')])
+        env.add("J", "21", "package21")
+        self.assertEquals(env.all_package_values(), [('package1:A', '1'),
+                                                     ('package1:B', '224'), ('package21:J', '21')])
+
+        self.assertEquals(env.global_values(), [("B", "223"), ("Z", "1")])
 
 
 class EnvInfoTest(unittest.TestCase):
