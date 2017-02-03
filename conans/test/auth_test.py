@@ -19,8 +19,9 @@ class OpenSSLConan(ConanFile):
 
 class AuthorizeTest(unittest.TestCase):
 
-    def setUp(self):
-        unittest.TestCase.setUp(self)
+    @classmethod
+    def setUpClass(self):
+        print("I am called")
         self.servers = {}
         self.conan_reference = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
         users = {"lasote": "mypass", "pepe": "pepepass"}
@@ -47,7 +48,7 @@ class AuthorizeTest(unittest.TestCase):
                                                                        ("pepe", "pepepass")]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export lasote")
-        errors = self.conan.run("upload %s" % str(self.conan_reference))
+        errors = self.conan.run("upload %s --remote default" % str(self.conan_reference))
         # Check that return was  ok
         self.assertFalse(errors)
         # Check that upload was granted
@@ -63,7 +64,7 @@ class AuthorizeTest(unittest.TestCase):
                                                                     ("baduser3", "badpass3")]})
         save(os.path.join(self.conan.current_folder, CONANFILE), conan_content)
         self.conan.run("export lasote -p ./ ")
-        errors = self.conan.run("upload %s" % str(self.conan_reference), ignore_error=True)
+        errors = self.conan.run("upload %s --remote default" % str(self.conan_reference), ignore_error=True)
         # Check that return was not ok
         self.assertTrue(errors)
         # Check that upload was not granted
@@ -89,7 +90,7 @@ class AuthorizeTest(unittest.TestCase):
         self.assertEquals(self.conan.user_io.login_index["htpasswd"], 3)
 
     def max_retries_htpasswd_test(self):
-        """Bad login 3 times"""
+        """Bad login 3 times using htpasswd"""
         self.conan = TestClient(servers=self.servers, users={"htpasswd": [("baduser", "badpass"),
                                                                     ("baduser", "badpass2"),
                                                                     ("baduser3", "badpass3")]})
