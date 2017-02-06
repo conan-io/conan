@@ -1,14 +1,13 @@
 #!/usr/bin/python
 from conans.server.service.authorize import BasicAuthorizer, AuthorizeManager
 import os
-from conans.server.conf import get_file_manager
+from conans.server.conf import ConanServerConfigParser, get_file_manager
 from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.util.log import logger
 from conans.util.files import mkdir, save
 from conans.test.utils.test_files import temp_folder
-from conans.server.migrate import migrate_and_get_server_config
 from conans.search.search import DiskSearchAdapter, DiskSearchManager
 from conans.paths import SimplePaths
 import time
@@ -60,7 +59,8 @@ class TestServerLauncher(object):
         config = create_dummy_server_conf(self.storage_folder, read_permissions, write_permissions, users, authentication)
         save(os.path.join(base_path, ".conan_server", "server.conf"), config)
         # now load the config
-        server_config = migrate_and_get_server_config(base_path, self.storage_folder)
+        # don't use migrate here, as no version info string is present!
+        server_config = ConanServerConfigParser(base_path, storage_folder=self.storage_folder)
 
         if TestServerLauncher.port == 0:
             TestServerLauncher.port = server_config.port

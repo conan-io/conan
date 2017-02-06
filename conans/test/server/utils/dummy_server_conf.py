@@ -21,13 +21,13 @@ disk_storage_path: {storage_path}
 disk_authorize_timeout: 1800
 updown_secret: {updown_secret}
 
+authentication: {authentication}
+htpasswd_file: .htpasswd
 
 [write_permissions]
 {write_permissions}
 [read_permissions]
 {read_permissions}
-[authentication]
-{authentication}
 [users]
 {users}
 """
@@ -36,7 +36,7 @@ def _tuple_to_conf(t):
     # Converts a tuple to a config string
     return "%s: %s" % (t[0],t[1])
 
-def create_dummy_server_conf(storage_path, read_permissions = [("*/*@*/*", "*")], write_permissions = [], users={"demo":"demo"}, authentication={"basic": ""}):
+def create_dummy_server_conf(storage_path, read_permissions = [("*/*@*/*", "*")], write_permissions = [], users={"demo":"demo"}, authentication=["basic"]):
     """ Creates a dummy server conf
     storage_path: the path to the data
     read_permissions: default access to read
@@ -61,7 +61,7 @@ def create_dummy_server_conf(storage_path, read_permissions = [("*/*@*/*", "*")]
             users="\n".join(key + ": " + users[key] for key in users),
             read_permissions=read_permissions,
             write_permissions=write_permissions,
-            authentication="\n".join(key + ": " + authentication[key] for key in authentication))
+            authentication=",".join(key for key in authentication))
     return server_conf
  
 def create_dummy_htpasswd(loc, users):
