@@ -168,9 +168,8 @@ class PythonBuildTest(unittest.TestCase):
         # BUILD_INFO is created by default, remove it to check message
         os.remove(os.path.join(client.current_folder, BUILD_INFO))
         client.run("source Consumer/0.1@lasote/stable", ignore_error=True)
-        self.assertIn("Consumer/0.1@lasote/stable: WARN: conanenv.txt file not found",
-                      client.user_io.out)
         self.assertIn("Consumer/0.1@lasote/stable: WARN: conanbuildinfo.txt file not found",
                       client.user_io.out)
         # Output in py3 is different, uses single quote
-        self.assertIn("No module named mytest", str(client.user_io.out).replace("'", ""))
+        # Now it works automatically without the env generator file
+        self.assertNotIn("No module named mytest", str(client.user_io.out).replace("'", ""))

@@ -46,7 +46,13 @@ class EnvValues(object):
                         name = name.upper() if name.lower() == "path" else name
                         if isinstance(value, list):
                             value = os.pathsep.join(value)
-                        self.add(name, value)
+                            if (None, name) in self._data:
+                                self._data[(None, name)] = '%s%s%s' % (self._data[(None, name)],
+                                                                       os.pathsep, value)
+                            else:
+                                self.add(name, value)
+                        else:
+                            self.add(name, value)
 
     def env_dict(self, name):
         """Returns a dict of env variables that applies to package 'name' """

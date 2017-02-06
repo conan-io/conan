@@ -127,9 +127,7 @@ class ConanFile(object):
 
     @property
     def env(self):  # Retrocompatibility
-        tmp = copy.copy(self.env_values)
-        tmp.update(self.deps_env_info)
-        return tmp.env_dict(self.name)
+        return self.env_values.env_dict(self.name)
 
     @property
     def channel(self):

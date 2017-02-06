@@ -380,11 +380,9 @@ from conans import ConanFile, ConfigureEnvironment
 class AConan(ConanFile):
     settings = "os"
     requires = "Hello/0.1@lasote/testing"
-    generators = "env"
 
     def build(self):
-        env = ConfigureEnvironment(self)
-        self.run(env.command_line + (" && SET" if self.settings.os=="Windows" else " && env"))
+        self.run("SET" if self.settings.os=="Windows" else "env")
 """
 
 conanfile_dep = """
@@ -399,7 +397,7 @@ class AConan(ConanFile):
 """
 
 
-class ConfigureEnvironmentTest(unittest.TestCase):
+class ProfilesEnvironmentTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
@@ -423,9 +421,11 @@ class ConfigureEnvironmentTest(unittest.TestCase):
         self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
 
     def _create_profile(self, name, settings, scopes=None, env=None):
+        env = env or {}
         profile = Profile()
         profile._settings = settings or {}
         if scopes:
             profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
-        profile._env = env or {}
+        for varname, value in env.items():
+            profile.env_values.add(varname, value)
         save(self.client.client_cache.profile_path(name), profile.dumps())

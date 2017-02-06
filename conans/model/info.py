@@ -191,7 +191,7 @@ class ConanInfo(object):
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
                                      "requires", "full_requires", "scope", "recipe_hash",
-                                     "environment"])
+                                     "env"])
 
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
@@ -203,7 +203,7 @@ class ConanInfo(object):
         result.recipe_hash = parser.recipe_hash or None
         # TODO: Missing handling paring of requires, but not necessary now
         result.scope = Scopes.loads(parser.scope)
-        result.env_values = ConanInfo._parse_env_text(parser.environment)
+        result.env_values = ConanInfo._parse_env_text(parser.env)
         return result
 
     @staticmethod
@@ -248,7 +248,7 @@ class ConanInfo(object):
         if self.scope:
             result.append(indent(self.scope.dumps()))
         result.append("\n[recipe_hash]\n%s" % self.recipe_hash)
-        result.append("\n[environment]")
+        result.append("\n[env]")
 
         for (name, value) in self.env_values.global_values():
             result.append(indent("%s=%s\n" % (name, value)))
