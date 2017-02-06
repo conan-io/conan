@@ -141,10 +141,9 @@ class ConanServerConfigParser(ConfigParser):
     @property
     def authentication(self):
         if self.env_config["authentication"]:
-            auth = self.env_config["authentication"].split(",")
-            return {a.split(":") for a in auth}
+            return self.env_config["authentication"].split(",")
         else:
-            return dict(self._get_file_conf("authentication"))
+            return list(self._get_file_conf("server", "authentication"))
 
     @property
     def users(self):

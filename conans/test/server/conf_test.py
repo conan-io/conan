@@ -33,7 +33,8 @@ class ServerConfTest(unittest.TestCase):
 
     def setUp(self):
         self.file_path = temp_folder()
-        server_conf = os.path.join(self.file_path, '.conan_server/server.conf')
+        self.conf_path = os.path.join(self.file_path, ".conan_server")
+        server_conf = os.path.join(self.conf_path, 'server.conf')
         self.storage_path = os.path.join(self.file_path, "storage")
         save(server_conf, fileconfig % self.storage_path)
         self.environ = {}
@@ -69,3 +70,26 @@ class ServerConfTest(unittest.TestCase):
         self.assertEquals(config.read_permissions, [("*/*@*/*", "*"),
                                                     ("openssl/2.0.1@lasote/testing", "pepe")])
         self.assertEquals(config.users, {"lasote": "lasotepass", "pepe2": "pepepass2"})
+    
+    def writeVersion(self, version):
+        # A version.txt file 
+        save(os.path.join(self.conf_path, "version.txt"), version)
+
+    def test_migration_from_0_1(self):
+        # Should delete all files
+        self.writeVersion("0.1")
+        migrate_and_get_server_config(self.file_path, self.storage_path)
+        self.assertFalse(os.path.exists(self.storage_path))
+        self.assertFalse(os.path.exists(self.conf_path))
+    
+    def test_migration_from_0_19(self):
+        # Should add authentication and htpasswd_file
+        migrate_and_get_server_config(self.file_path, self.storage_path)
+        self.assertEquals(config.authentication, ["basic"])
+        # assumes that the conig file has been loaded
+        self.assertEquals(config.get("server", "htpasswd_file"), "")
+    
+    def test_auto_creates_conf(self):
+        os.remove(os.path.join(self.conf_path, "server.conf"))
+        config = ConanServerConfigParser(self.file_path, environment=self.environ)
+        self.assertTrue(config.jwt_secret != None)

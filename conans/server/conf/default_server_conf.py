@@ -22,6 +22,12 @@ disk_storage_path: ~/.conan_server/data
 disk_authorize_timeout: 1800
 updown_secret: {updown_secret}
 
+# authentication middleware: processed in order
+# Default is: basic (uses the users list in this config)
+authentication: basic
+
+# For the htpasswd middleware: add path to htpasswd file
+htpasswd_file: 
 
 [write_permissions]
 
@@ -50,11 +56,6 @@ updown_secret: {updown_secret}
 #
 # By default all users can read all blocks
 */*@*/*: *
-
-[authentication]
-# define order: top is checked first
-# htpasswd: file
-basic: 
 
 [users]
 #default_user: defaultpass
