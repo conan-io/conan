@@ -87,7 +87,7 @@ class BasicAuthenticator(Authenticator):
     users is {username: plain-text-passwd} 
     """
 
-    def __init__(self, _, server_config):
+    def __init__(self, server_config):
         # server_config: the server config object
         self.users = dict(server_config.users)
 
