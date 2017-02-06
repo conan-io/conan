@@ -104,8 +104,9 @@ class HTPasswdAuthenticator(Authenticator):
     Handles the user authentication for htpasswd files
     htpasswd is the location of the htpasswd to use
     """
-    def __init__(self, htfile, server_config):
+    def __init__(self, server_config):
         # server_config: the server config object
+        htfile = server_config.htpasswd_file
         if not os.path.isabs(htfile):
             htfile = os.path.join(server_config.conan_folder, htfile)
         self.htpasswd = HtpasswdFile(htfile)
@@ -140,7 +141,7 @@ class AuthorizeManager(Authenticator):
             logger.debug("Creating entry %s" % auth)
             if auth not in self.known_authenticators:
                 raise ConanException("Unknown authenticator provided: %s" % auth)
-            self.auths.append(self.known_authenticators[auth](authentication[auth], server_config))
+            self.auths.append(self.known_authenticators[auth](server_config))
     
     def valid_user(self, username, plain_password):
         for m in self.auths:

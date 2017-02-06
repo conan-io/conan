@@ -85,10 +85,18 @@ class ServerConfTest(unittest.TestCase):
     def test_migration_from_0_19(self):
         # Should add authentication and htpasswd_file
         migrate_and_get_server_config(self.file_path, self.storage_path)
+        # load it
+        config = ConanServerConfigParser(self.file_path, environment=self.environ)
         self.assertEquals(config.authentication, ["basic"])
         # assumes that the conig file has been loaded
         self.assertEquals(config.get("server", "htpasswd_file"), "")
-    
+        # now check with
+        self.environ["CONAN_SERVER_AUTHENTICATION"] = "htpasswd,ldap,test"
+        self.environ["CONAN_HTPASSWD_FILE"] = "fancyfile"
+        config = ConanServerConfigParser(self.file_path, environment=self.environ)
+        self.assertEquals(config.authentication, ["htpasswd", "ldap", "test"])
+        self.assertEquals(config.htpasswd_file, "fancyfile")
+
     def test_auto_creates_conf(self):
         os.remove(os.path.join(self.conf_path, "server.conf"))
         config = ConanServerConfigParser(self.file_path, environment=self.environ)

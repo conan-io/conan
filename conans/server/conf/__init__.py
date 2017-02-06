@@ -44,6 +44,7 @@ class ConanServerConfigParser(ConfigParser):
                            "host_name": get_env("CONAN_HOST_NAME", None, environment),
                            # authentication process
                            "authentication" : get_env("CONAN_SERVER_AUTHENTICATION", None, environment),
+                           "htpasswd_file" : get_env("CONAN_HTPASSWD_FILE", None, environment),
                            # "user:pass,user2:pass2"
                            "users": get_env("CONAN_SERVER_USERS", None, environment)}
 
@@ -144,6 +145,13 @@ class ConanServerConfigParser(ConfigParser):
             return self.env_config["authentication"].split(",")
         else:
             return list(self._get_file_conf("server", "authentication"))
+
+    @property
+    def htpasswd_file(self):
+        if self.env_config["htpasswd_file"]:
+            return self.env_config["htpasswd_file"]
+        else:
+            return self._get_file_conf("server", "htpasswd_file")
 
     @property
     def users(self):
