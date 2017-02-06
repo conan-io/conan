@@ -2,12 +2,13 @@ from conans.migrations import Migrator
 from conans.model.version import Version
 from conans.util.files import rmdir
 from conans.server.conf import ConanServerConfigParser
+import os
 
 class ServerMigrator(Migrator):
 
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
-
+        
         # VERSION 0.1
         if old_version == Version("0.1"):
             # Remove config, conans, all!
@@ -17,13 +18,13 @@ class ServerMigrator(Migrator):
             if self.store_path:
                 rmdir(self.store_path)
         # VERSION 0.19
-        if old_version < Version("0.19.1"):
+        elif old_version < Version("0.19.1"):
             self.out.warn("Upgrading to new authentication middleware ...")
-            config = ConanServerConfigParser(self.base_folder)
+            config = ConanServerConfigParser(os.path.join(self.conf_path, ".."))
             config.read(config.config_filename)
             config.set("server", "authentication", "basic")
             config.set("server", "htpasswd_file", "")
-            with open(config.config_filename) as fp:
+            with open(config.config_filename, 'w') as fp:
                 config.write(fp)
 
         # ########################################################################

@@ -1,7 +1,7 @@
 from conans.server.conf import ConanServerConfigParser
 from conans.server.migrations import ServerMigrator
-from conans.util.log import logger
 from conans.model.version import Version
+from conans.util.log import logger
 from conans import __version__ as SERVER_VERSION
 
 
@@ -11,6 +11,7 @@ def migrate_and_get_server_config(base_folder, storage_folder=None):
     if server_config.store_adapter == "disk":
         storage_path = server_config.disk_storage_path
     else:
+        
         storage_path = None
 
     migrator = ServerMigrator(server_config.conan_folder, storage_path,
