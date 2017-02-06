@@ -20,26 +20,24 @@ class OpenSSLConan(ConanFile):
 class AuthorizeTest(unittest.TestCase):
 
     @classmethod
-    def setUpClass(self):
-        print("I am called")
-        self.servers = {}
-        self.conan_reference = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
+    def setUpClass(cls):
+        cls.servers = {}
+        cls.conan_reference = ConanFileReference.loads("openssl/2.0.1@lasote/testing")
         users = {"lasote": "mypass", "pepe": "pepepass"}
         # Create a default remote. R/W is not authorized for conan_reference, just for pepe and owner
-        self.test_server = TestServer([(str(self.conan_reference), "pepe")],  # read permissions
-                                      [(str(self.conan_reference), "pepe")],  # write permissions
+        cls.test_server = TestServer([(str(cls.conan_reference), "pepe")],  # read permissions
+                                      [(str(cls.conan_reference), "pepe")],  # write permissions
                                       users=users)  # exported users and passwords
-        self.servers["default"] = self.test_server
+        cls.servers["default"] = cls.test_server
         #create htpasswd remote
         base_path = temp_folder()
         mkdir(os.path.join(base_path,".conan_server"))
         create_dummy_htpasswd(os.path.join(base_path,".conan_server", ".htpasswd"), users)
-        self.test_server2 = TestServer([(str(self.conan_reference), "pepe")],  # read permissions
-                                      [(str(self.conan_reference), "pepe")],  # write permissions
+        cls.test_server2 = TestServer([(str(cls.conan_reference), "pepe")],  # read permissions
+                                      [(str(cls.conan_reference), "pepe")],  # write permissions
                                       base_path=base_path,#custom base path here due to .htpasswd file
                                       authentication={"htpasswd": ".htpasswd"})
-        self.servers["htpasswd"] = self.test_server2
-        
+        cls.servers["htpasswd"] = cls.test_server2
 
     def retries_test(self):
         """Bad login 2 times"""
