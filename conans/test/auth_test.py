@@ -1,4 +1,5 @@
 import unittest
+from conans.errors import ConanException
 from conans.test.tools import TestServer, TestClient
 from conans.test.server.utils.dummy_server_conf import create_dummy_htpasswd
 from conans.paths import CONANFILE
@@ -102,3 +103,7 @@ class AuthorizeTest(unittest.TestCase):
 
         # Check that login failed all times
         self.assertEquals(self.conan.user_io.login_index["htpasswd"], 3)
+
+    def invalid_authorizer_test(self):
+        with self.assertRaises(ConanException):
+            TestServer(authentication="unknown")
