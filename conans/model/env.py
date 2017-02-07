@@ -167,7 +167,6 @@ class DepsEnvInfo(EnvInfo):
                 if isinstance(value, list):
                     self.vars[varname] = merge_lists(self.vars[varname], value)
                 else:
-                    if value not in self.vars[varname]:
-                        self.vars[varname].append(value)
+                    self.vars[varname] = merge_lists(self.vars[varname], [value])
             else:
                 logger.warn("DISCARDED variable %s=%s from %s" % (varname, value, str(conan_ref)))
