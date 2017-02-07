@@ -182,7 +182,7 @@ class ConanInstaller(object):
 
         # Update the env_values with the inherited from dependencies
         conan_file.env_values.update(conan_file.deps_env_info)
-        conan_file.info.env_values = conan_file.env_values
+        conan_file.info.env_values.update(conan_file.env_values)
 
     def _get_nodes(self, nodes_by_level, skip_nodes, build_mode):
         """Install the available packages if needed/allowed and return a list

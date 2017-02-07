@@ -4,7 +4,7 @@ from conans.util.files import load
 import os
 import platform
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, CONANINFO
 
 
 class ConanEnvTest(unittest.TestCase):
@@ -133,3 +133,105 @@ class HelloConan(ConanFile):
 
         self.assertIn('var1=', deactivate_contents)
         self.assertIn('var2=', deactivate_contents)
+
+    def test_conan_info_cache_and_priority(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    def package_info(self):
+        self.env_info.VAR1="99"
+'''
+        reuse = '''
+import os
+from conans import ConanFile
+
+class Hello2Conan(ConanFile):
+    requires="Hello/0.1@lasote/stable"
+
+    def build(self):
+        self.output.info("VAR1=>%s" % os.environ.get("VAR1"))
+
+'''
+        files = {}
+        files["conanfile.py"] = conanfile
+        client.save(files)
+        client.run("export lasote/stable")
+
+        files = {}
+        files["conanfile.py"] = reuse
+        client.save(files)
+        client.run("install . --build missing")
+        client.run("build")
+        self.assertIn("VAR1=>99", client.user_io.out)
+
+        # Now specify a different value in command Line, but conaninfo already exists
+        # So you cannot override it from command line without deleting the conaninfo.TXTGenerator
+        client.run("install . -e VAR1=100 --build missing")
+        client.run("build")
+        self.assertIn("VAR1=>99", client.user_io.out)
+
+        # Remove conaninfo
+        os.remove(os.path.join(client.current_folder, CONANINFO))
+        client.run("install . -e VAR1=100 --build missing")
+        client.run("build")
+        self.assertIn("VAR1=>100", client.user_io.out)
+
+        # Now from a profile
+        os.remove(os.path.join(client.current_folder, CONANINFO))
+        client.save({"myprofile": "[env]\nVAR1=102"}, clean_first=False)
+        client.run("install . --profile ./myprofile --build missing")
+        client.run("build")
+        self.assertIn("VAR1=>102", client.user_io.out)
+
+    def test_complex_deps_propagation(self):
+        client = TestClient()
+        self._export(client, "A", [], {"VAR1": "900", "VAR2": "23"})
+        self._export(client, "B1", ["A"], {"VAR1": "800", "VAR2": "24"})
+        self._export(client, "B2", ["A"], {"VAR1": "700", "VAR3": "22"})
+        self._export(client, "C", ["B1", "B2"], {})
+
+        reuse = '''
+import os
+from conans import ConanFile
+
+class Hello2Conan(ConanFile):
+    requires="LIB_C/1.0@lasote/stable"
+
+    def build(self):
+        self.output.info("VAR1=>%s" % os.environ.get("VAR1"))
+        self.output.info("VAR2=>%s" % os.environ.get("VAR2"))
+        self.output.info("VAR3=>%s" % os.environ.get("VAR3"))
+'''
+        client.save({"conanfile.py": reuse})
+        client.run("install . --build missing")
+        client.run("build")
+        self.assertIn("VAR1=>800", client.user_io.out)
+        self.assertIn("VAR2=>24", client.user_io.out)
+        self.assertIn("VAR3=>22", client.user_io.out)
+
+    def _export(self, client, name, requires, env_vars):
+            hello_file = """
+from conans import ConanFile
+
+class HelloLib%sConan(ConanFile):
+    name = "LIB_%s"
+    version = "1.0"
+""" % (name, name)
+
+            if requires:
+                hello_file += "\n    requires="
+                hello_file += ", ".join('"LIB_%s/1.0@lasote/stable"' % require for require in requires)
+
+            if env_vars:
+                hello_file += """
+
+    def package_info(self):
+        %s
+""" % "\n        ".join(["self.env_info.%s = '%s'" % (name, value) for name, value in env_vars.items()])
+
+            client.save({"conanfile.py": hello_file}, clean_first=True)
+            client.run("export lasote/stable")

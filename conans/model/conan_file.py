@@ -6,7 +6,6 @@ from conans.errors import ConanException
 from conans.model.env import DepsEnvInfo, EnvValues
 import os
 from conans.paths import RUN_LOG_NAME
-import copy
 
 
 def create_options(conanfile):
@@ -121,13 +120,17 @@ class ConanFile(object):
         self._scope = None
 
         # user specified env variables
-        self.env_values = EnvValues()  # Assigned at runtime, user specified -e
+        self._env_values = EnvValues()  # Updated at runtime, user specified -e
         self._user = user
         self._channel = channel
 
     @property
     def env(self):  # Retrocompatibility
-        return self.env_values.env_dict(self.name)
+        return self._env_values.env_dict(self.name)
+
+    @property
+    def env_values(self):
+        return self._env_values
 
     @property
     def channel(self):

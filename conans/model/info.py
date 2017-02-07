@@ -187,6 +187,9 @@ class ConanInfo(object):
         result.env_values = env_values
         return result
 
+    def updateenv_values(self, env_values):
+        self.env_values.update(env_values)
+
     @staticmethod
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
@@ -229,6 +232,8 @@ class ConanInfo(object):
 
     def dumps(self):
         def indent(text):
+            if not text:
+                return ""
             return '\n'.join("    " + line for line in text.splitlines())
         result = []
 
@@ -247,12 +252,12 @@ class ConanInfo(object):
         result.append("\n[scope]")
         if self.scope:
             result.append(indent(self.scope.dumps()))
-        result.append("\n[recipe_hash]\n%s" % self.recipe_hash)
+        result.append("\n[recipe_hash]\n%s" % indent(self.recipe_hash))
         result.append("\n[env]")
 
-        for (name, value) in self.env_values.global_values():
+        for (name, value) in sorted(self.env_values.global_values()):
             result.append(indent("%s=%s\n" % (name, value)))
-        for (name, value) in self.env_values.all_package_values():
+        for (name, value) in sorted(self.env_values.all_package_values()):
             result.append(indent("%s=%s\n" % (name, value)))
 
         return '\n'.join(result) + "\n"

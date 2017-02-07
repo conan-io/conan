@@ -1,5 +1,5 @@
 import unittest
-from conans.model.env import DepsEnvInfo, EnvValues
+from conans.model.env import DepsEnvInfo, EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
 
 
@@ -25,6 +25,38 @@ class EnvValuesTest(unittest.TestCase):
                                                      ('package1:B', '224'), ('package21:J', '21')])
 
         self.assertEquals(env.global_values(), [("B", "223"), ("Z", "1")])
+
+    def test_update_concat(self):
+        env_info = EnvInfo()
+        env_info.path.append("SOME/PATH")
+        deps_info = DepsEnvInfo()
+        deps_info.update(env_info, ConanFileReference.loads("lib/1.0@lasote/stable"))
+
+        deps_info2 = DepsEnvInfo()
+        deps_info2.update(env_info, ConanFileReference.loads("lib2/1.0@lasote/stable"))
+
+        env = EnvValues()
+        env.add("PATH", "MYPATH")
+        env.update(deps_info)
+
+        self.assertEquals(env.env_dict(None), {'PATH': 'MYPATH:SOME/PATH'})
+
+        env.update(deps_info2)
+
+        self.assertEquals(env.env_dict(None), {'PATH': 'MYPATH:SOME/PATH:SOME/PATH'})
+
+    def update_priority_test(self):
+
+        env = EnvValues()
+        env.add("VAR", "VALUE1")
+
+        env2 = EnvValues()
+        env2.add("VAR", "VALUE2")
+
+        env.update(env2)
+
+        # Already set by env, discarded new value
+        self.assertEquals(env.env_dict(None), {'VAR': 'VALUE1'})
 
 
 class EnvInfoTest(unittest.TestCase):

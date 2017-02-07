@@ -11,6 +11,7 @@ import time
 from conans.util.log import logger
 from collections import defaultdict
 import copy
+from conans.model.env import EnvValues
 
 
 class Node(namedtuple("Node", "conan_ref conanfile")):
