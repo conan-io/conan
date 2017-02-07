@@ -7,6 +7,7 @@ import re
 class EnvValues(object):
     """ Object to represent the introduced env values entered by the user
     with the -e or profiles etc.
+        self._data is a dictionary with: {(package, var): value}. "package" can be None if the var is global.
     """
 
     def __init__(self):
@@ -16,6 +17,11 @@ class EnvValues(object):
     def data(self):
         return self._data
 
+    @property
+    def sorted_data(self):
+        # Python 3 can't compare None with strings, so if None we order just with the var name
+        return sorted(self._data.items(), key=lambda x: "%s_%s" % x if x[0] else x[1])
+
     def add(self, name, value, package=None):
         # It prioritizes the data already introduced
         if (package, name) not in self._data:
@@ -23,14 +29,15 @@ class EnvValues(object):
 
     def global_values(self):
         '''return [(name, value), (name, value)] for global env variables'''
-        return [(name, value) for (pname, name), value in sorted(self._data.items())
+        return [(name, value) for (pname, name), value in self.sorted_data
                 if pname is None]
 
     def package_values(self, package):
         """return the environment variables that apply for a given package name:
         [(name, value), (name, value)] for the specified package"""
-        return [(name, value) for (pname, name), value in sorted(self._data.items())
-                if package is None or pname == package]
+        assert(package is not None)
+        return [(name, value) for (pname, name), value in self.sorted_data
+                if pname == package]
 
     def all_package_values(self):
         return sorted([("%s:%s" % (pname, name), value) for (pname, name), value in self.data.items()
@@ -62,7 +69,8 @@ class EnvValues(object):
         ret = {}
         ret.update(dict(self.global_values()))
         # Scoped variables are prioritized over the global ones
-        ret.update(self.package_values(name))
+        if name:
+            ret.update(self.package_values(name))
         return ret
 
     def __repr__(self, *args, **kwargs):

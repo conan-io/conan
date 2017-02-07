@@ -240,6 +240,8 @@ class Hello2Conan(ConanFile):
         self.assertIn("VAR2=>24:23*", client.user_io.out)
         self.assertIn("VAR3=>SIMPLE*", client.user_io.out)
 
+    def test_override_simple(self):
+        client = TestClient()
         # Try injecting some package level ENV in the install
         self._export(client, "A", [], {}, {"VAR1": "900", "VAR2": "23", "VAR3": "-23"})
         self._export(client, "B", ["A"], {}, {"VAR1": "800", "VAR2": "24"})
@@ -247,6 +249,32 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e LIB_A:VAR3=override")
+        client.run("build")
+        self.assertIn("VAR1=>700:800:900", client.user_io.out)
+        self.assertIn("VAR2=>24:23*", client.user_io.out)
+        self.assertIn("VAR3=>-23*", client.user_io.out)
+
+    def test_override_simple2(self):
+        client = TestClient()
+        # Try injecting some package level ENV in the install
+        self._export(client, "A", [], {"VAR3": "-23"}, {"VAR1": "900", "VAR2": "23"})
+        self._export(client, "B", ["A"], {}, {"VAR1": "800", "VAR2": "24"})
+        self._export(client, "C", ["B"], {}, {"VAR1": "700"})
+
+        client.save({"conanfile.py": reuse})
+        client.run("install . --build missing -e VAR3=override")
+        self.assertIn("Building LIB_A, VAR1:None", client.user_io.out)
+        self.assertIn("Building LIB_A, VAR2:None", client.user_io.out)
+        self.assertIn("Building LIB_A, VAR3:override", client.user_io.out)
+
+        self.assertIn("Building LIB_B, VAR1:900", client.user_io.out)
+        self.assertIn("Building LIB_B, VAR2:23", client.user_io.out)
+        self.assertIn("Building LIB_B, VAR3:override", client.user_io.out)
+
+        self.assertIn("Building LIB_C, VAR1:800", client.user_io.out)
+        self.assertIn("Building LIB_C, VAR2:24", client.user_io.out)
+        self.assertIn("Building LIB_C, VAR3:override", client.user_io.out)
+
         client.run("build")
         self.assertIn("VAR1=>700:800:900", client.user_io.out)
         self.assertIn("VAR2=>24:23*", client.user_io.out)
@@ -261,10 +289,24 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e LIB_B:VAR3=override")
+        self.assertIn("Building LIB_A, VAR1:None", client.user_io.out)
+        self.assertIn("Building LIB_A, VAR2:None", client.user_io.out)
+        self.assertIn("Building LIB_A, VAR3:None", client.user_io.out)
+
+        self.assertIn("Building LIB_B, VAR1:900", client.user_io.out)
+        self.assertIn("Building LIB_B, VAR2:23", client.user_io.out)
+        self.assertIn("Building LIB_B, VAR3:override", client.user_io.out)
+
+        self.assertIn("Building LIB_C, VAR1:800", client.user_io.out)
+        self.assertIn("Building LIB_C, VAR2:24", client.user_io.out)
+        self.assertIn("Building LIB_C, VAR3:-23", client.user_io.out)
+
         client.run("build")
         self.assertIn("VAR1=>700:800:900", client.user_io.out)
         self.assertIn("VAR2=>24:23*", client.user_io.out)
-        self.assertIn("VAR3=>override*", client.user_io.out)
+        self.assertIn("VAR3=>bestvalue*", client.user_io.out)
+
+
 
     def test_conaninfo_filtered(self):
         client = TestClient()
@@ -323,6 +365,7 @@ class Hello2Conan(ConanFile):
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """
+import os
 from conans import ConanFile
 
 class HelloLib%sConan(ConanFile):
@@ -350,6 +393,13 @@ class HelloLib%sConan(ConanFile):
 """ % "\n        ".join(["self.env_info.%s.append('%s')" % (name, value)
                          for name, value in env_vars_append.items()])
 
+            hello_file += """
+    def build(self):
+        self.output.info("Building %s, VAR1:%s*" % (self.name, os.environ.get("VAR1", None)))
+        self.output.info("Building %s, VAR2:%s*" % (self.name, os.environ.get("VAR2", None)))
+        self.output.info("Building %s, VAR3:%s*" % (self.name, os.environ.get("VAR3", None)))
+
+"""
             client.save({"conanfile.py": hello_file}, clean_first=True)
             client.run("export lasote/stable")
 
