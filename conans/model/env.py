@@ -12,6 +12,10 @@ class EnvValues(object):
     def __init__(self):
         self._data = {}
 
+    @property
+    def data(self):
+        return self._data
+
     def add(self, name, value, package=None):
         # It prioritizes the data already introduced
         if (package, name) not in self._data:
@@ -29,7 +33,7 @@ class EnvValues(object):
                 if package is None or pname == package]
 
     def all_package_values(self):
-        return sorted([("%s:%s" % (pname, name), value) for (pname, name), value in self._data.items()
+        return sorted([("%s:%s" % (pname, name), value) for (pname, name), value in self.data.items()
                        if pname])
 
     def update(self, env_obj):

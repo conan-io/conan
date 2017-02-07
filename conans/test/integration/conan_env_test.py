@@ -5,6 +5,8 @@ import os
 import platform
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE, CONANINFO
+from conans.model.ref import ConanFileReference
+from conans.model.info import ConanInfo
 
 
 class ConanEnvTest(unittest.TestCase):
@@ -264,6 +266,61 @@ class Hello2Conan(ConanFile):
         self.assertIn("VAR2=>24:23*", client.user_io.out)
         self.assertIn("VAR3=>override*", client.user_io.out)
 
+    def test_conaninfo_filtered(self):
+        client = TestClient()
+        # Try injecting some package level ENV in the install, but without priority
+        self._export(client, "A", [], {}, {"VAR1": "900", "VAR2": "23", "VAR3": "-23"})
+        self._export(client, "B", ["A"], {}, {"VAR1": "800", "VAR2": "24"})
+        self._export(client, "B2", ["A"], {}, {"VAR1": "800_2", "VAR2": "24_2"})
+        self._export(client, "C", ["B", "B2"], {"VAR3": "bestvalue"}, {"VAR1": "700"})
+
+        def load_conaninfo(lib):
+            # Read the LIB_A conaninfo
+            packages_path = client.client_cache.packages(ConanFileReference.loads("LIB_%s/1.0@lasote/stable" % lib))
+            package_path = os.path.join(packages_path, os.listdir(packages_path)[0])
+            info = ConanInfo.loads(load(os.path.join(package_path, CONANINFO)))
+            return info
+
+        # Test "A" conaninfo, should filter the FAKE_LIB
+        client.save({"conanfile.py": reuse})
+        client.run("install . --build missing -e LIB_A:VAR3=override "
+                   "-e GLOBAL=99 -e FAKE_LIB:VAR1=-90 -e LIB_B:VAR2=222 -e LIB_B2:NEWVAR=VALUE")
+
+        info = load_conaninfo("A")
+        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override")])
+        self.assertEquals(info.env_values.global_values(), [("GLOBAL", "99")])
+
+        info = load_conaninfo("B")
+        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override"),
+                                                                 ("LIB_B:VAR2", "222")])
+        self.assertEquals(info.env_values.global_values(), [("GLOBAL", "99"), (u'VAR1', u'900'),
+                                                            (u'VAR2', u'23'), (u'VAR3', u'-23')])
+
+        info = load_conaninfo("B2")
+        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override"),
+                                                                 ("LIB_B2:NEWVAR", "VALUE")])
+        self.assertEquals(info.env_values.global_values(), [("GLOBAL", "99"), (u'VAR1', u'900'),
+                                                            (u'VAR2', u'23'), (u'VAR3', u'-23')])
+
+        info = load_conaninfo("C")
+        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override"),
+                                                                 ("LIB_B2:NEWVAR", "VALUE"),
+                                                                 ("LIB_B:VAR2", "222")])
+        self.assertEquals(info.env_values.global_values(), [('GLOBAL', '99'),
+                                                            ('VAR1', '800:800_2:900'),
+                                                            ('VAR2', '24:24_2:23'),
+                                                            ('VAR3', '-23')])
+
+        # Now check the info for the project
+        info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
+        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override"),
+                                                                 ("LIB_B2:NEWVAR", "VALUE"),
+                                                                 ("LIB_B:VAR2", "222")])
+        self.assertEquals(info.env_values.global_values(), [('GLOBAL', '99'),
+                                                            ('VAR1', '700:800:800_2:900'),
+                                                            ('VAR2', '24:24_2:23'),
+                                                            ('VAR3', 'bestvalue')])
+
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """
 from conans import ConanFile
@@ -293,7 +350,6 @@ class HelloLib%sConan(ConanFile):
 """ % "\n        ".join(["self.env_info.%s.append('%s')" % (name, value)
                          for name, value in env_vars_append.items()])
 
-            print(hello_file)
             client.save({"conanfile.py": hello_file}, clean_first=True)
             client.run("export lasote/stable")
 

@@ -10,7 +10,6 @@ from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
 from collections import defaultdict
-import copy
 from conans.model.env import EnvValues
 
 
@@ -124,7 +123,7 @@ class DepsGraph(object):
                                                   direct_reqs,
                                                   indirect_reqs,
                                                   non_devs,
-                                                  conanfile.env_values)
+                                                  EnvValues())
 
                 # Once we are done, call package_id() to narrow and change possible values
                 if hasattr(conanfile, "conan_info"):
