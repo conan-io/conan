@@ -208,14 +208,14 @@ def check_sha256(file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def patch(base_path=None, patch_file=None, patch_string=None, strip=0):
+def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=None):
     """Applies a diff from file (patch_file)  or string (patch_string)
     in base_path directory or current dir if None"""
 
     class PatchLogHandler(logging.Handler):
         def __init__(self):
             logging.Handler.__init__(self, logging.DEBUG)
-            self.output = ConanOutput(sys.stdout, True)
+            self.output = output or ConanOutput(sys.stdout, True)
             self.patchname = patch_file if patch_file else "patch"
 
         def emit(self, record):
