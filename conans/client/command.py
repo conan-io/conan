@@ -481,11 +481,11 @@ path to the CMake binary directory, like this:
                 key, value = args.item.split("=", 1)
             except:
                 raise ConanException("Please specify key=value")
-            config_parser.set(key.strip(), value.strip())
+            config_parser.set_item(key.strip(), value.strip())
         elif args.subcommand == "get":
-            config_parser.get(args.item, self._user_io.out)
+            config_parser.get_item(args.item, self._user_io.out)
         elif args.subcommand == "rm":
-            config_parser.rm(args.item)
+            config_parser.rm_item(args.item)
 
     def info(self, *args):
         """Prints information about a package recipe's dependency graph.

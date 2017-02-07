@@ -63,7 +63,7 @@ class ConanClientConfigParser(ConfigParser, object):
     # So keys are not converted to lowercase, we override the default optionxform
     optionxform = str
 
-    def get(self, item, output):
+    def get_item(self, item, output):
         if not item:
             output.info(load(self.filename))
             return
@@ -87,7 +87,7 @@ class ConanClientConfigParser(ConfigParser, object):
                 raise ConanException("'%s' doesn't exist in [%s]" % (key, section_name))
             output.info(value)
 
-    def set(self, key, value):
+    def set_item(self, key, value):
         tokens = key.split(".", 1)
         section_name = tokens[0]
         if not self.has_section(section_name):
@@ -102,7 +102,7 @@ class ConanClientConfigParser(ConfigParser, object):
         with open(self.filename, "w") as f:
             self.write(f)
 
-    def rm(self, item):
+    def rm_item(self, item):
         tokens = item.split(".", 1)
         section_name = tokens[0]
         if not self.has_section(section_name):
