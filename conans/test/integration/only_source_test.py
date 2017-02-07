@@ -1,7 +1,8 @@
 import unittest
+import os
+
 from conans.test.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
-import os
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
@@ -179,15 +180,21 @@ class MyPackage(ConanFile):
 
         # Use an invalid pattern and check that its not builded from source
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        other_conan.run("install %s --build HelloInvalid" % str(conan_reference))
+        error = other_conan.run("install %s --build HelloInvalid" % str(conan_reference),
+                                ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("No package matching 'HelloInvalid*' pattern", other_conan.user_io.out)
         self.assertFalse(os.path.exists(other_conan.paths.builds(conan_reference)))
-        self.assertTrue(os.path.exists(other_conan.paths.packages(conan_reference)))
+        self.assertFalse(os.path.exists(other_conan.paths.packages(conan_reference)))
 
         # Use another valid pattern and check that its not builded from source
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        other_conan.run("install %s --build HelloInvalid -b Hello" % str(conan_reference))
-        self.assertTrue(os.path.exists(other_conan.paths.builds(conan_reference)))
-        self.assertTrue(os.path.exists(other_conan.paths.packages(conan_reference)))
+        error = other_conan.run("install %s --build HelloInvalid -b Hello" % str(conan_reference),
+                                ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("No package matching 'HelloInvalid*' pattern", other_conan.user_io.out)
+        self.assertFalse(os.path.exists(other_conan.paths.builds(conan_reference)))
+        self.assertFalse(os.path.exists(other_conan.paths.packages(conan_reference)))
 
         # Now even if the package is in local store, check that's rebuilded
         other_conan.run("install %s -b Hello*" % str(conan_reference))

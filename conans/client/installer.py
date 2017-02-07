@@ -216,6 +216,16 @@ class ConanInstaller(object):
 
                 nodes_to_build.append((conan_ref, package_id, conan_file, build_node))
 
+        # A check to be sure that if introduced a pattern, something is going to be built
+        if isinstance(build_mode, list):
+            to_build = [n[0] for n in nodes_to_build if n[3]]
+            for pattern in build_mode:
+                if pattern == "*":
+                    continue
+                matched = any([fnmatch.fnmatch(str(ref), pattern) for ref in to_build])
+                if not matched:
+                    raise ConanException("No package matching '%s' pattern" % pattern)
+
         return nodes_to_build
 
     def _get_package(self, conan_ref, conan_file):
