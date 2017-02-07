@@ -41,18 +41,17 @@ class EnvValues(object):
                 for (package_name, name), value in env_obj._data.items():
                     self.add(name, value, package_name)
             else:  # DepsEnvInfo
-                for _, env_info in env_obj.dependencies:
-                    for (name, value) in env_info.vars.items():
-                        name = name.upper() if name.lower() == "path" else name
-                        if isinstance(value, list):
-                            value = os.pathsep.join(value)
-                            if (None, name) in self._data:
-                                self._data[(None, name)] = '%s%s%s' % (self._data[(None, name)],
-                                                                       os.pathsep, value)
-                            else:
-                                self.add(name, value)
+                for (name, value) in env_obj.vars.items():
+                    name = name.upper() if name.lower() == "path" else name
+                    if isinstance(value, list):
+                        value = os.pathsep.join(value)
+                        if (None, name) in self._data:
+                            self._data[(None, name)] = '%s%s%s' % (self._data[(None, name)],
+                                                                   os.pathsep, value)
                         else:
                             self.add(name, value)
+                    else:
+                        self.add(name, value)
 
     def env_dict(self, name):
         """Returns a dict of env variables that applies to package 'name' """
@@ -157,14 +156,18 @@ class DepsEnvInfo(EnvInfo):
     def update(self, dep_env_info, conan_ref):
         self._dependencies_[conan_ref.name] = dep_env_info
 
+        def merge_lists(seq1, seq2):
+            return [s for s in seq1 if s not in seq2] + seq2
+
         # With vars if its setted the keep the setted value
         for varname, value in dep_env_info.vars.items():
             if varname not in self.vars:
                 self.vars[varname] = value
             elif isinstance(self.vars[varname], list):
                 if isinstance(value, list):
-                    self.vars[varname].extend(value)
+                    self.vars[varname] = merge_lists(self.vars[varname], value)
                 else:
-                    self.vars[varname].append(value)
+                    if value not in self.vars[varname]:
+                        self.vars[varname].append(value)
             else:
                 logger.warn("DISCARDED variable %s=%s from %s" % (varname, value, str(conan_ref)))

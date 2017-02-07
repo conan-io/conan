@@ -202,18 +202,43 @@ class Hello2Conan(ConanFile):
     requires="LIB_C/1.0@lasote/stable"
 
     def build(self):
-        self.output.info("VAR1=>%s" % os.environ.get("VAR1"))
-        self.output.info("VAR2=>%s" % os.environ.get("VAR2"))
-        self.output.info("VAR3=>%s" % os.environ.get("VAR3"))
+        self.output.info("VAR1=>%s*" % os.environ.get("VAR1"))
+        self.output.info("VAR2=>%s*" % os.environ.get("VAR2"))
+        self.output.info("VAR3=>%s*" % os.environ.get("VAR3"))
 '''
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
         client.run("build")
-        self.assertIn("VAR1=>800", client.user_io.out)
-        self.assertIn("VAR2=>24", client.user_io.out)
-        self.assertIn("VAR3=>22", client.user_io.out)
+        self.assertIn("VAR1=>800*", client.user_io.out)
+        self.assertIn("VAR2=>24*", client.user_io.out)
+        self.assertIn("VAR3=>22*", client.user_io.out)
 
-    def _export(self, client, name, requires, env_vars):
+    def test_complex_deps_propagation_append(self):
+        client = TestClient()
+        self._export(client, "A", [], {}, {"VAR1": "900", "VAR2": "23"})
+        self._export(client, "B", ["A"], {}, {"VAR1": "800", "VAR2": "24"})
+        self._export(client, "C", ["B"], {}, {"VAR1": "700"})
+
+        reuse = '''
+import os
+from conans import ConanFile
+
+class Hello2Conan(ConanFile):
+    requires="LIB_C/1.0@lasote/stable"
+
+    def build(self):
+        self.output.info("VAR1=>%s*" % os.environ.get("VAR1"))
+        self.output.info("VAR2=>%s*" % os.environ.get("VAR2"))
+        self.output.info("VAR3=>%s*" % os.environ.get("VAR3"))
+'''
+        client.save({"conanfile.py": reuse})
+        client.run("install . --build missing")
+        client.run("build")
+        self.assertIn("VAR1=>700:800:900*", client.user_io.out)
+        self.assertIn("VAR2=>24:23*", client.user_io.out)
+        self.assertIn("VAR3=>None*", client.user_io.out)
+
+    def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """
 from conans import ConanFile
 
@@ -231,7 +256,16 @@ class HelloLib%sConan(ConanFile):
 
     def package_info(self):
         %s
-""" % "\n        ".join(["self.env_info.%s = '%s'" % (name, value) for name, value in env_vars.items()])
+""" % "\n        ".join(["self.env_info.%s = '%s'" % (name, value)
+                         for name, value in env_vars.items()])
+
+            if env_vars_append:
+                hello_file += """
+
+    def package_info(self):
+        %s
+""" % "\n        ".join(["self.env_info.%s.append('%s')" % (name, value)
+                         for name, value in env_vars_append.items()])
 
             client.save({"conanfile.py": hello_file}, clean_first=True)
             client.run("export lasote/stable")
