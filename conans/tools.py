@@ -69,8 +69,15 @@ def vcvars_command(settings):
                                  "Current settings visual version: %s"
                                  % (existing_version, settings.compiler.version))
     else:
-        command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
-                   % (settings.compiler.version, param))
+        print ("VERSION ", settings.compiler.version)
+        if settings.compiler.version != "15":
+            command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
+                       % (settings.compiler.version, param))
+            print ("USING OLD***********!!!!!")
+        else:
+            command = ('call "%%vs%s0comntools%%../../VC/Auxiliary/Build/vcvarsall.bat" %s'
+                       % (settings.compiler.version, param))
+            print ("USING NEW!!!!!")
     return command
 
 

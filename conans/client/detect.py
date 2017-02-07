@@ -80,9 +80,10 @@ def _visual_compiler(output, version):
 
 def _visual_compiler_last(output):
     last_version = None
-    for version in ["8.0", "9.0", "10.0", "11.0", "12.0", "14.0"]:
+    for version in ["8.0", "9.0", "10.0", "11.0", "12.0", "14.0", "15.0"]:
         vs = _visual_compiler(output, version)
         last_version = vs or last_version
+        last_version = ("Visual Studio", "15")
     return last_version
 
 
