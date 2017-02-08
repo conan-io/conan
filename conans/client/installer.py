@@ -186,9 +186,10 @@ class ConanInstaller(object):
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
         subtree_libnames = [ref.name for (ref, _) in node_order]
-        for (package_name, name), value in conan_file.env_values.data.items():
-            if not package_name or package_name in subtree_libnames or package_name == conan_file.name:
-                conan_file.info.env_values.add(name, value, package_name)
+        for package_name, env_vars in conan_file.env_values.data.items():
+            for name, value in env_vars.items():
+                if not package_name or package_name in subtree_libnames or package_name == conan_file.name:
+                    conan_file.info.env_values.add(name, value, package_name)
 
     def _get_nodes(self, nodes_by_level, skip_nodes, build_mode):
         """Install the available packages if needed/allowed and return a list

@@ -1,6 +1,6 @@
 import os
 import re
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from conans.util.log import logger
 
@@ -8,11 +8,11 @@ from conans.util.log import logger
 class EnvValues(object):
     """ Object to represent the introduced env values entered by the user
     with the -e or profiles etc.
-        self._data is a dictionary with: {(package, var): value}. "package" can be None if the var is global.
+        self._data is a dictionary with: {package: {var: value}}. "package" can be None if the var is global.
     """
 
     def __init__(self):
-        self._data = {}
+        self._data = defaultdict(dict)
 
     @staticmethod
     def loads(text):
@@ -49,28 +49,37 @@ class EnvValues(object):
     @property
     def _sorted_data(self):
         # Python 3 can't compare None with strings, so if None we order just with the var name
-        return sorted(self._data.items(), key=lambda x: "%s_%s" % x if x[0] else x[1])
+        return [(key, self._data[key]) for key in sorted(self._data, key=lambda x: x if x else "a")]
 
     def add(self, name, value, package=None):
         # It prioritizes the data already introduced
-        if (package, name) not in self._data:
-            self._data[(package, name)] = value
+        if name not in self._data[package]:
+            self._data[package][name] = value
 
     def _global_values(self):
         """return [(name, value), (name, value)] for global env variables"""
-        return [(name, value) for (pname, name), value in self._sorted_data
-                if pname is None]
+        ret = []
+        for package, env_vars in self._sorted_data:
+            if package is None:
+                ret.extend([(name, value) for name, value in sorted(env_vars.items())])
+        return ret
 
-    def _package_values(self, package):
+    def _package_values(self, package_name):
         """return the environment variables that apply for a given package name:
         [(name, value), (name, value)] for the specified package"""
-        assert(package is not None)
-        return [(name, value) for (pname, name), value in self._sorted_data
-                if pname == package]
+        assert(package_name is not None)
+        ret = []
+        for package, env_vars in self._sorted_data:
+            if package == package_name:
+                ret.extend([(name, value) for name, value in sorted(env_vars.items())])
+        return ret
 
     def _all_package_values(self):
-        return sorted([("%s:%s" % (pname, name), value) for (pname, name), value in self.data.items()
-                       if pname])
+        ret = []
+        for package, env_vars in self._sorted_data:
+            if package is not None:
+                ret.extend([("%s:%s" % (package, name), value) for name, value in sorted(env_vars.items())])
+        return ret
 
     def update(self, env_obj):
         """accepts other EnvValues object or DepsEnvInfo
@@ -78,17 +87,18 @@ class EnvValues(object):
         """
         if env_obj:
             if isinstance(env_obj, EnvValues):
-                for (package_name, name), value in env_obj._data.items():
-                    self.add(name, value, package_name)
+                for package_name, env_vars in env_obj.data.items():
+                    for name, value in env_vars.items():
+                        self.add(name, value, package_name)
             else:  # DepsEnvInfo. the OLD values are always kept, never overwrite,
                 for (name, value) in env_obj.vars.items():
                     name = name.upper() if name.lower() == "path" else name
                     if isinstance(value, list):
                         # Append to OLD value, not overwrite it.
                         value = os.pathsep.join(value)
-                        if (None, name) in self._data:
-                            self._data[(None, name)] = '%s%s%s' % (self._data[(None, name)],
-                                                                   os.pathsep, value)
+                        if name in self._data[None]:
+                            self._data[None][name] = '%s%s%s' % (self._data[None][name],
+                                                                 os.pathsep, value)
                         else:
                             self.add(name, value)
                     else:

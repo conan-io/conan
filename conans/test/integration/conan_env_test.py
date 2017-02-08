@@ -352,8 +352,8 @@ class Hello2Conan(ConanFile):
 
         info = load_conaninfo("C")
         self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
-                                                                 ("LIB_B2:NEWVAR", "VALUE"),
-                                                                 ("LIB_B:VAR2", "222")])
+                                                                  ("LIB_B:VAR2", "222"),
+                                                                  ("LIB_B2:NEWVAR", "VALUE")])
 
         self.assertEquals(info.env_values._global_values(), [('GLOBAL', '99'),
                                                             ('VAR1', self.replace_sep('800:800_2:900')),
@@ -363,8 +363,8 @@ class Hello2Conan(ConanFile):
         # Now check the info for the project
         info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
         self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
-                                                                 ("LIB_B2:NEWVAR", "VALUE"),
-                                                                 ("LIB_B:VAR2", "222")])
+                                                                  ("LIB_B:VAR2", "222"),
+                                                                  ("LIB_B2:NEWVAR", "VALUE")])
 
         self.assertEquals(info.env_values._global_values(), [('GLOBAL', '99'),
                                                             ('VAR1',  self.replace_sep('700:800:800_2:900')),

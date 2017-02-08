@@ -146,7 +146,8 @@ class Printer(object):
     def print_search_packages(self, packages_props, reference, recipe_hash, packages_query):
         if not packages_props:
             if packages_query:
-                warn_msg = "There are no packages for reference '%s' matching the query '%s'" % (str(reference), packages_query)
+                warn_msg = "There are no packages for reference '%s' matching the query '%s'" % (str(reference),
+                                                                                                 packages_query)
             else:
                 warn_msg = "There are no packages for pattern '%s'" % str(reference)
             self._out.info(warn_msg)
@@ -169,7 +170,8 @@ class Printer(object):
                         for key in sorted(attrs):
                             self._print_colored_line(key, indent=3)
             package_recipe_hash = properties.get("recipe_hash", None)
-            # Always compare outdated with local recipe, simplification, if a remote check is needed install recipe first
+            # Always compare outdated with local recipe, simplification,
+            # if a remote check is needed install recipe first
             if recipe_hash:
                 self._print_colored_line("outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
             self._out.writeln("")
@@ -177,8 +179,12 @@ class Printer(object):
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings)
-        envs = [("%s:%s" % (package, name) if package else name, value)
-                for (package, name), value in profile.env_values.data.items()]
+
+        envs = []
+        for package, env_vars in profile.env_values.data.items():
+            for name, value in env_vars.items():
+                key = "%s:%s" % (package, name) if package else name
+                envs.append((key, value))
         self._print_profile_section("env", envs, separator='=')
         scopes = profile.scopes.dumps().splitlines()
         self._print_colored_line("[scopes]")
