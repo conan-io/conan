@@ -8,6 +8,7 @@ from conans.test.utils.test_files import temp_folder
 from conans.model.scope import Scopes
 from conans import tools
 from nose_parameterized.parameterized import parameterized
+from conans.test.tools import TestBufferConanOutput, TestClient
 
 
 base_conanfile = '''
@@ -91,6 +92,20 @@ class ConanfileToolsTest(unittest.TestCase):
 '''
         tmp_dir, file_path, text_file = self._save_files(file_content)
         self._build_and_check(tmp_dir, file_path, text_file, "ONE TWO DOH!")
+
+    def test_error_patch(self):
+        file_content = base_conanfile + '''
+    def build(self):
+        patch_content = "some corrupted patch"
+        patch(patch_string=patch_content, output=self.output)
+
+'''
+        client = TestClient()
+        client.save({"conanfile.py": file_content})
+        error = client.run("build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("patch: error: no patch data found!", client.user_io.out)
+        self.assertIn("ERROR: Failed to parse patch: string", client.user_io.out)
 
     def _save_files(self, file_content):
         tmp_dir = temp_folder()
