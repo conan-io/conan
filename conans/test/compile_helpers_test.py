@@ -12,6 +12,7 @@ from conans.model.profile import Profile
 from conans.model.scope import Scopes
 from conans.util.files import save
 from conans.paths import CONANFILE
+from conans.errors import ConanException
 
 
 class MockCompiler(object):
@@ -27,7 +28,7 @@ class MockCompiler(object):
 
 class MockSettings(Settings):
 
-    def __init__(self, build_type="Release", os=None, arch=None, 
+    def __init__(self, build_type="Release", os=None, arch=None,
                  compiler_name=None, libcxx=None, version=None):
         self._build_type = build_type
         self._libcxx = libcxx or "libstdc++"
@@ -201,15 +202,18 @@ class CompileHelpersTest(unittest.TestCase):
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
                                              '-L"path/to/lib2" cppflag1 -library=stdcxx4')
 
-
     def configure_environment_test(self):
         win_settings = MockSettings("Release", os="Windows", arch="x86",
                                     compiler_name="Visual Studio", libcxx=None, version="14")
 
         env = ConfigureEnvironment(BuildInfoMock(), win_settings)
 
-        expected = 'call "%vs140comntools%../../VC/vcvarsall.bat" x86 && call _conan_env.bat'
-        self.assertEquals(env.command_line, expected)
+        if platform.system() == "Windows":
+            expected = 'call ".+VC/vcvarsall.bat" x86 && call _conan_env.bat'
+            self.assertRegexpMatches(env.command_line, expected)
+        else:
+            with self.assertRaisesRegexp(ConanException, "variable not defined"):
+                env.command_line
 
         linux_s = MockSettings("Release", os="Linux", arch="x86",
                                compiler_name="gcc", libcxx="libstdc++", version="4.9")
