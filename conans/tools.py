@@ -3,6 +3,9 @@
 from __future__ import print_function
 import sys
 import os
+
+import logging
+
 from conans.errors import ConanException
 from conans.util.files import _generic_algorithm_sum, load
 from patch import fromfile, fromstring
@@ -213,9 +216,27 @@ def check_sha256(file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def patch(base_path=None, patch_file=None, patch_string=None, strip=0):
+def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=None):
     """Applies a diff from file (patch_file)  or string (patch_string)
     in base_path directory or current dir if None"""
+
+    class PatchLogHandler(logging.Handler):
+        def __init__(self):
+            logging.Handler.__init__(self, logging.DEBUG)
+            self.output = output or ConanOutput(sys.stdout, True)
+            self.patchname = patch_file if patch_file else "patch"
+
+        def emit(self, record):
+            logstr = self.format(record)
+            if record.levelno == logging.WARN:
+                self.output.warn("%s: %s" % (self.patchname, logstr))
+            else:
+                self.output.info("%s: %s" % (self.patchname, logstr))
+
+    patchlog = logging.getLogger("patch")
+    if patchlog:
+        patchlog.handlers = []
+        patchlog.addHandler(PatchLogHandler())
 
     if not patch_file and not patch_string:
         return
@@ -223,6 +244,9 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0):
         patchset = fromfile(patch_file)
     else:
         patchset = fromstring(patch_string.encode())
+
+    if not patchset:
+        raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
     if not patchset.apply(root=base_path, strip=strip):
         raise ConanException("Failed to apply patch: %s" % patch_file)

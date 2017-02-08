@@ -40,7 +40,7 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
 
     if not os.path.exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
-        shutil.copytree(export_folder, src_folder)
+        shutil.copytree(export_folder, src_folder, symlinks=True)
         # Now move the export-sources to the right location
         source_sources_folder = os.path.join(src_folder, EXPORT_SOURCES_DIR)
         if os.path.exists(source_sources_folder):

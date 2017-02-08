@@ -10,7 +10,7 @@ import requests
 
 from conans import __version__ as CLIENT_VERSION
 from conans.client.client_cache import ClientCache
-from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
+from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, Color
@@ -49,7 +49,7 @@ class Extender(argparse.Action):
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
         # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
         dest = getattr(namespace, self.dest, None)
-        if(not hasattr(dest, 'extend') or dest == self.default):
+        if not hasattr(dest, 'extend') or dest == self.default:
             dest = []
             setattr(namespace, self.dest, dest)
             # if default isn't set to None, this method might be called
@@ -467,6 +467,34 @@ path to the CMake binary directory, like this:
                                   package_settings=package_settings,
                                   env_values=env_values,
                                   no_imports=args.no_imports)
+
+    def config(self, *args):
+        """Manages conan.conf information
+        """
+        parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
+
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        rm_subparser = subparsers.add_parser('rm', help='rm an existing config element')
+        set_subparser = subparsers.add_parser('set', help='set/add value')
+        get_subparser = subparsers.add_parser('get', help='get the value of existing element')
+
+        rm_subparser.add_argument("item", help="item to remove")
+        get_subparser.add_argument("item", nargs="?", help="item to print")
+        set_subparser.add_argument("item", help="key=value to set")
+
+        args = parser.parse_args(*args)
+
+        config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
+        if args.subcommand == "set":
+            try:
+                key, value = args.item.split("=", 1)
+            except:
+                raise ConanException("Please specify key=value")
+            config_parser.set_item(key.strip(), value.strip())
+        elif args.subcommand == "get":
+            config_parser.get_item(args.item, self._user_io.out)
+        elif args.subcommand == "rm":
+            config_parser.rm_item(args.item)
 
     def info(self, *args):
         """Prints information about a package recipe's dependency graph.
