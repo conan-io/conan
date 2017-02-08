@@ -1,3 +1,4 @@
+import os
 import unittest
 from conans.model.env_info import DepsEnvInfo, EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
@@ -39,11 +40,11 @@ class EnvValuesTest(unittest.TestCase):
         env.add("PATH", "MYPATH")
         env.update(deps_info)
 
-        self.assertEquals(env.env_dict(None), {'PATH': 'MYPATH:SOME/PATH'})
+        self.assertEquals(env.env_dict(None), {'PATH': 'MYPATH%sSOME/PATH' % os.pathsep})
 
         env.update(deps_info2)
 
-        self.assertEquals(env.env_dict(None), {'PATH': 'MYPATH:SOME/PATH:SOME/PATH'})
+        self.assertEquals(env.env_dict(None), {'PATH': 'MYPATH%sSOME/PATH%sSOME/PATH' % (os.pathsep, os.pathsep)})
 
     def update_priority_test(self):
 

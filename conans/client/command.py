@@ -1,39 +1,40 @@
 import argparse
-import inspect
 import hashlib
+import inspect
+import os
 import re
 import sys
-import os
-import requests
 from collections import defaultdict
+
+import requests
 
 from conans import __version__ as CLIENT_VERSION
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
+from conans.client.output import ConanOutput, Color
+from conans.client.printer import Printer
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.version_checker import VersionCheckerRequester
-from conans.client.output import ConanOutput, Color
 from conans.client.runner import ConanRunner
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import ConanException
+from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference, is_a_reference
 from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
-from conans.util.log import logger
+from conans.util.config_parser import get_bool_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files, exception_message_safe
-from conans.util.config_parser import get_bool_from_text
-from conans.client.printer import Printer
+from conans.util.log import logger
 from conans.util.tracer import log_command, log_exception
-from conans.model.env_info import EnvValues
 
 
 class Extender(argparse.Action):

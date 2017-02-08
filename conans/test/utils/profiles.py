@@ -1,7 +1,8 @@
+import os
+
 from conans.model.profile import Profile
 from conans.model.scope import Scopes
 from conans.util.files import save
-import os
 
 
 def create_profile(folder, name, settings=None, scopes=None, package_settings=None, env=None,

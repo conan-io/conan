@@ -1,12 +1,13 @@
-import unittest
-from conans.test.tools import TestClient
-from conans.util.files import load
 import os
 import platform
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE, CONANINFO
-from conans.model.ref import ConanFileReference
+import unittest
+
 from conans.model.info import ConanInfo
+from conans.model.ref import ConanFileReference
+from conans.paths import CONANFILE, CONANINFO
+from conans.test.tools import TestClient
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.util.files import load
 
 
 class ConanEnvTest(unittest.TestCase):
@@ -158,12 +159,12 @@ class Hello2Conan(ConanFile):
         self.output.info("VAR1=>%s" % os.environ.get("VAR1"))
 
 '''
-        files = {}
+        files = dict()
         files["conanfile.py"] = conanfile
         client.save(files)
         client.run("export lasote/stable")
 
-        files = {}
+        files = dict()
         files["conanfile.py"] = reuse
         client.save(files)
         client.run("install . --build missing")
@@ -203,6 +204,13 @@ class Hello2Conan(ConanFile):
         self.assertIn("VAR2=>24*", client.user_io.out)
         self.assertIn("VAR3=>22*", client.user_io.out)
 
+    def assertInSep(self, string, output):
+        string = string.replace(":", os.pathsep)
+        self.assertIn(string, output)
+
+    def replace_sep(self, string):
+        return string.replace(":", os.pathsep)
+
     def test_complex_deps_propagation_append(self):
         client = TestClient()
         self._export(client, "A", [], {"VAR3": "-23"}, {"VAR1": "900", "VAR2": "23"})
@@ -212,9 +220,9 @@ class Hello2Conan(ConanFile):
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
         client.run("build")
-        self.assertIn("VAR1=>700:800:900*", client.user_io.out)
-        self.assertIn("VAR2=>24:23*", client.user_io.out)
-        self.assertIn("VAR3=>45*", client.user_io.out)
+        self.assertInSep("VAR1=>700:800:900*" % {"sep": os.pathsep}, client.user_io.out)
+        self.assertInSep("VAR2=>24:23*" % {"sep": os.pathsep}, client.user_io.out)
+        self.assertInSep("VAR3=>45*", client.user_io.out)
 
         # Try other configuration
         self._export(client, "A", [], {}, {"VAR1": "900", "VAR2": "23", "VAR3": "-23"})
@@ -224,9 +232,9 @@ class Hello2Conan(ConanFile):
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
         client.run("build")
-        self.assertIn("VAR1=>700:800:900*", client.user_io.out)
-        self.assertIn("VAR2=>24:23*", client.user_io.out)
-        self.assertIn("VAR3=>23*", client.user_io.out)
+        self.assertInSep("VAR1=>700:800:900*", client.user_io.out)
+        self.assertInSep("VAR2=>24:23*", client.user_io.out)
+        self.assertInSep("VAR3=>23*", client.user_io.out)
 
         # Try injecting some ENV in the install
         self._export(client, "A", [], {}, {"VAR1": "900", "VAR2": "23", "VAR3": "-23"})
@@ -236,8 +244,8 @@ class Hello2Conan(ConanFile):
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e VAR1=override -e VAR3=SIMPLE")
         client.run("build")
-        self.assertIn("VAR1=>override:700:800:900", client.user_io.out)
-        self.assertIn("VAR2=>24:23*", client.user_io.out)
+        self.assertInSep("VAR1=>override:700:800:900", client.user_io.out)
+        self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertIn("VAR3=>SIMPLE*", client.user_io.out)
 
     def test_override_simple(self):
@@ -250,8 +258,8 @@ class Hello2Conan(ConanFile):
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e LIB_A:VAR3=override")
         client.run("build")
-        self.assertIn("VAR1=>700:800:900", client.user_io.out)
-        self.assertIn("VAR2=>24:23*", client.user_io.out)
+        self.assertInSep("VAR1=>700:800:900", client.user_io.out)
+        self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertIn("VAR3=>-23*", client.user_io.out)
 
     def test_override_simple2(self):
@@ -276,9 +284,9 @@ class Hello2Conan(ConanFile):
         self.assertIn("Building LIB_C, VAR3:override", client.user_io.out)
 
         client.run("build")
-        self.assertIn("VAR1=>700:800:900", client.user_io.out)
-        self.assertIn("VAR2=>24:23*", client.user_io.out)
-        self.assertIn("VAR3=>override*", client.user_io.out)
+        self.assertInSep("VAR1=>700:800:900", client.user_io.out)
+        self.assertInSep("VAR2=>24:23*", client.user_io.out)
+        self.assertInSep("VAR3=>override*", client.user_io.out)
 
     def test_complex_deps_propagation_override(self):
         client = TestClient()
@@ -302,11 +310,9 @@ class Hello2Conan(ConanFile):
         self.assertIn("Building LIB_C, VAR3:-23", client.user_io.out)
 
         client.run("build")
-        self.assertIn("VAR1=>700:800:900", client.user_io.out)
-        self.assertIn("VAR2=>24:23*", client.user_io.out)
-        self.assertIn("VAR3=>bestvalue*", client.user_io.out)
-
-
+        self.assertInSep("VAR1=>700:800:900", client.user_io.out)
+        self.assertInSep("VAR2=>24:23*", client.user_io.out)
+        self.assertInSep("VAR3=>bestvalue*", client.user_io.out)
 
     def test_conaninfo_filtered(self):
         client = TestClient()
@@ -348,9 +354,10 @@ class Hello2Conan(ConanFile):
         self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
                                                                  ("LIB_B2:NEWVAR", "VALUE"),
                                                                  ("LIB_B:VAR2", "222")])
+
         self.assertEquals(info.env_values._global_values(), [('GLOBAL', '99'),
-                                                            ('VAR1', '800:800_2:900'),
-                                                            ('VAR2', '24:24_2:23'),
+                                                            ('VAR1', self.replace_sep('800:800_2:900')),
+                                                            ('VAR2',  self.replace_sep('24:24_2:23')),
                                                             ('VAR3', '-23')])
 
         # Now check the info for the project
@@ -358,9 +365,10 @@ class Hello2Conan(ConanFile):
         self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
                                                                  ("LIB_B2:NEWVAR", "VALUE"),
                                                                  ("LIB_B:VAR2", "222")])
+
         self.assertEquals(info.env_values._global_values(), [('GLOBAL', '99'),
-                                                            ('VAR1', '700:800:800_2:900'),
-                                                            ('VAR2', '24:24_2:23'),
+                                                            ('VAR1',  self.replace_sep('700:800:800_2:900')),
+                                                            ('VAR2',  self.replace_sep('24:24_2:23')),
                                                             ('VAR3', 'bestvalue')])
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):

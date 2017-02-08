@@ -1,7 +1,8 @@
-from conans.client.output import Color
-from conans.model.ref import PackageReference
-from conans.model.ref import ConanFileReference
 from collections import OrderedDict
+
+from conans.client.output import Color
+from conans.model.ref import ConanFileReference
+from conans.model.ref import PackageReference
 
 
 class Printer(object):

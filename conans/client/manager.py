@@ -2,39 +2,39 @@ import os
 import time
 from collections import OrderedDict, Counter
 
-from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO, CONANENV)
-from conans.client.loader import ConanFileLoader
-from conans.client.export import export_conanfile
+from conans.client import packager
+from conans.client.client_cache import ClientCache
 from conans.client.deps_builder import DepsGraphBuilder
-from conans.client.userio import UserIO
-from conans.client.installer import ConanInstaller
-from conans.util.files import save, load, rmdir, normalize
-from conans.util.log import logger
-from conans.client.uploader import ConanUploader
-from conans.client.printer import Printer
-from conans.errors import NotFoundException, ConanException
+from conans.client.detect import detected_os
+from conans.client.export import export_conanfile
 from conans.client.generators import write_generators
 from conans.client.importer import run_imports, undo_imports
-from conans.model.ref import ConanFileReference, PackageReference
-from conans.client.remover import ConanRemover
-from conans.model.info import ConanInfo
-from conans.model.values import Values
-from conans.model.options import OptionsValues
-from conans.model.build_info import DepsCppInfo, CppInfo
-from conans.client import packager
-from conans.client.detect import detected_os
-from conans.client.package_copier import PackageCopier
+from conans.client.installer import ConanInstaller
+from conans.client.loader import ConanFileLoader
+from conans.client.manifest_manager import ManifestManager
 from conans.client.output import ScopedOutput
+from conans.client.package_copier import PackageCopier
+from conans.client.printer import Printer
 from conans.client.proxy import ConanProxy
 from conans.client.remote_registry import RemoteRegistry
-from conans.model.scope import Scopes
-from conans.client.client_cache import ClientCache
-from conans.client.source import config_source, config_source_local
-from conans.client.manifest_manager import ManifestManager
-from conans.model.env_info import EnvInfo, DepsEnvInfo, EnvValues
-from conans.tools import environment_append
+from conans.client.remover import ConanRemover
 from conans.client.require_resolver import RequireResolver
+from conans.client.source import config_source, config_source_local
+from conans.client.uploader import ConanUploader
+from conans.client.userio import UserIO
+from conans.errors import NotFoundException, ConanException
+from conans.model.build_info import DepsCppInfo, CppInfo
+from conans.model.env_info import EnvInfo, EnvValues
+from conans.model.info import ConanInfo
+from conans.model.options import OptionsValues
 from conans.model.profile import Profile
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.scope import Scopes
+from conans.model.values import Values
+from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
+from conans.tools import environment_append
+from conans.util.files import save, load, rmdir, normalize
+from conans.util.log import logger
 
 
 def get_user_channel(text):

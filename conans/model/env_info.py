@@ -1,7 +1,8 @@
-from collections import OrderedDict
-from conans.util.log import logger
 import os
 import re
+from collections import OrderedDict
+
+from conans.util.log import logger
 
 
 class EnvValues(object):

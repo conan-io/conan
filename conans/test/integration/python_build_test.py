@@ -241,4 +241,4 @@ class ToolsTest(ConanFile):
         client.run("build")
         info = ConanInfo.loads(load(os.path.join(client.current_folder, "conaninfo.txt")))
         pythonpath = info.env_values.env_dict(None)["PYTHONPATH"]
-        self.assertTrue(pythonpath.startswith("%s:" % external_dir))
+        self.assertTrue(pythonpath.startswith("%s%s" % (external_dir, os.pathsep)))

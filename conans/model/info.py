@@ -1,12 +1,12 @@
-from conans.util.sha import sha1
-from conans.model.ref import PackageReference
 from conans.errors import ConanException
+from conans.model.env_info import EnvValues
+from conans.model.options import OptionsValues
+from conans.model.ref import PackageReference
+from conans.model.scope import Scopes
+from conans.model.values import Values
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
-from conans.model.values import Values
-from conans.model.options import OptionsValues
-from conans.model.scope import Scopes
-from conans.model.env_info import EnvValues
+from conans.util.sha import sha1
 
 
 class RequirementInfo(object):
