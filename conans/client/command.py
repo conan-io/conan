@@ -9,7 +9,7 @@ from collections import defaultdict
 
 from conans import __version__ as CLIENT_VERSION
 from conans.client.client_cache import ClientCache
-from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
+from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.remote_manager import RemoteManager
@@ -29,9 +29,10 @@ from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.log import logger
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, load, save_files, exception_message_safe
+from conans.util.files import rmdir, load, save_files, exception_message_safe, save
 from conans.util.config_parser import get_bool_from_text
 from conans.client.printer import Printer
+from conans.util.tracer import log_command, log_exception
 
 
 class Extender(argparse.Action):
@@ -193,6 +194,7 @@ path to the CMake binary directory, like this:
                                  'in the configure method')
 
         args = parser.parse_args(*args)
+        log_command("new", vars(args))
 
         root_folder = os.getcwd()
         try:
@@ -250,6 +252,7 @@ path to the CMake binary directory, like this:
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
+        log_command("test_package", vars(args))
 
         current_path = os.getcwd()
         root_folder = os.path.normpath(os.path.join(current_path, args.path))
@@ -396,6 +399,7 @@ path to the CMake binary directory, like this:
         self._parse_args(parser)
 
         args = parser.parse_args(*args)
+        log_command("install", vars(args))
         self._user_io.out.werror_active = args.werror
 
         current_path = os.getcwd()
@@ -455,6 +459,34 @@ path to the CMake binary directory, like this:
                                   package_env=package_env,
                                   no_imports=args.no_imports)
 
+    def config(self, *args):
+        """Manages conan.conf information
+        """
+        parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
+
+        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        rm_subparser = subparsers.add_parser('rm', help='rm an existing config element')
+        set_subparser = subparsers.add_parser('set', help='set/add value')
+        get_subparser = subparsers.add_parser('get', help='get the value of existing element')
+
+        rm_subparser.add_argument("item", help="item to remove")
+        get_subparser.add_argument("item", nargs="?", help="item to print")
+        set_subparser.add_argument("item", help="key=value to set")
+
+        args = parser.parse_args(*args)
+
+        config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
+        if args.subcommand == "set":
+            try:
+                key, value = args.item.split("=", 1)
+            except:
+                raise ConanException("Please specify key=value")
+            config_parser.set_item(key.strip(), value.strip())
+        elif args.subcommand == "get":
+            config_parser.get_item(args.item, self._user_io.out)
+        elif args.subcommand == "rm":
+            config_parser.rm_item(args.item)
+
     def info(self, *args):
         """Prints information about a package recipe's dependency graph.
         You can use it for your current project (just point to the path of your conanfile
@@ -474,7 +506,7 @@ path to the CMake binary directory, like this:
                             help='Settings to build the package, overwriting the defaults.'
                                  ' e.g., -s compiler=gcc',
                             nargs=1, action=Extender)
-        parser.add_argument("--only", "-n",
+        parser.add_argument("--only", "-n", nargs="?", const="None",
                             help='show fields only')
         parser.add_argument("--update", "-u", action='store_true', default=False,
                             help="check updates exist from upstream remotes")
@@ -488,6 +520,7 @@ path to the CMake binary directory, like this:
         parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
                             help='Use the specified scope in the info command')
         args = parser.parse_args(*args)
+        log_command("info", vars(args))
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         settings, package_settings = self._get_simple_and_package_tuples(args.settings)
@@ -505,7 +538,7 @@ path to the CMake binary directory, like this:
                            options=options,
                            settings=settings,
                            package_settings=package_settings,
-                           info=args.only or True,
+                           info=args.only,
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
@@ -526,6 +559,7 @@ path to the CMake binary directory, like this:
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--profile", "-pr", default=None, help='Apply a profile')
         args = parser.parse_args(*args)
+        log_command("build", vars(args))
         current_path = os.getcwd()
         if args.path:
             root_path = os.path.abspath(args.path)
@@ -563,6 +597,7 @@ path to the CMake binary directory, like this:
                                  're-packaged')
 
         args = parser.parse_args(*args)
+        log_command("package", vars(args))
 
         current_path = os.getcwd()
         try:
@@ -606,6 +641,7 @@ path to the CMake binary directory, like this:
                                  " do nothing.")
 
         args = parser.parse_args(*args)
+        log_command("source", vars(args))
 
         current_path, reference = self._get_reference(args)
         self._manager.source(current_path, reference, args.force)
@@ -629,6 +665,7 @@ path to the CMake binary directory, like this:
                             help="Undo imports. Remove imported files")
 
         args = parser.parse_args(*args)
+        log_command("imports", vars(args))
 
         if args.undo:
             if not os.path.isabs(args.reference):
@@ -656,6 +693,7 @@ path to the CMake binary directory, like this:
                             help='Optional. Do not remove the source folder in the local cache. '
                                  'Use for testing purposes only')
         args = parser.parse_args(*args)
+        log_command("export", vars(args))
 
         current_path = os.path.abspath(args.path or os.getcwd())
         keep_source = args.keep_source
@@ -680,6 +718,7 @@ path to the CMake binary directory, like this:
                             action='store_true', help='Remove without requesting a confirmation')
         parser.add_argument('-r', '--remote', help='Will remove from the specified remote')
         args = parser.parse_args(*args)
+        log_command("remove", vars(args))
 
         if args.packages:
             args.packages = args.packages.split(",")
@@ -710,6 +749,7 @@ path to the CMake binary directory, like this:
                             default=False,
                             help='Override destination packages and the package recipe')
         args = parser.parse_args(*args)
+        log_command("copy", vars(args))
 
         reference = ConanFileReference.loads(args.reference)
         new_ref = ConanFileReference.loads("%s/%s@%s" % (reference.name,
@@ -735,6 +775,7 @@ path to the CMake binary directory, like this:
         parser.add_argument('-c', '--clean', default=False,
                             action='store_true', help='Remove user and tokens for all remotes')
         args = parser.parse_args(*parameters)  # To enable -h
+        log_command("user", vars(args))
 
         if args.clean:
             localdb = LocalDB(self._client_cache.localdb)
@@ -763,6 +804,7 @@ path to the CMake binary directory, like this:
                                                                 'reference: MyPackage/1.2'
                                                                 '@user/channel')
         args = parser.parse_args(*args)
+        log_command("search", vars(args))
 
         reference = None
         if args.pattern:
@@ -801,6 +843,7 @@ path to the CMake binary directory, like this:
                             help='Waits specified seconds before retry again')
 
         args = parser.parse_args(*args)
+        log_command("upload", vars(args))
 
         if args.package and not is_a_reference(args.pattern):
             raise ConanException("-p parameter only allowed with a valid recipe reference, not with a pattern")
@@ -844,6 +887,7 @@ path to the CMake binary directory, like this:
         parser_pupd.add_argument('reference',  help='package recipe reference')
         parser_pupd.add_argument('remote',  help='name of the remote')
         args = parser.parse_args(*args)
+        log_command("remote", vars(args))
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         if args.subcommand == "list":
@@ -883,6 +927,7 @@ path to the CMake binary directory, like this:
                                                          ' a profile file in  any location.')
         parser_show.add_argument('profile',  help='name of the profile')
         args = parser.parse_args(*args)
+        log_command("profile", vars(args))
 
         if args.subcommand == "list":
             folder = self._client_cache.profiles_path
@@ -949,6 +994,17 @@ path to the CMake binary directory, like this:
             errors = True
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
+            try:
+                log_exception(exc, msg)
+            except:
+                pass
+        except Exception as exc:
+            msg = exception_message_safe(exc)
+            try:
+                log_exception(exc, msg)
+            except:
+                pass
+            raise exc
 
         return errors
 
@@ -1007,8 +1063,17 @@ def get_command():
     # Get a search manager
     search_adapter = DiskSearchAdapter()
     search_manager = DiskSearchManager(client_cache, search_adapter)
-    command = Command(client_cache, user_io, ConanRunner(), remote_manager, search_manager)
+
+    command = Command(client_cache, user_io, get_conan_runner(), remote_manager, search_manager)
     return command
+
+
+def get_conan_runner():
+    print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS", False)
+    generate_run_log_file = get_env("CONAN_LOG_RUN_TO_FILE", False)
+    log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT", True)
+    runner = ConanRunner(print_commands_to_output, generate_run_log_file, log_run_to_output)
+    return runner
 
 
 def main(args):

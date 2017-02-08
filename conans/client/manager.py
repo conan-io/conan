@@ -67,8 +67,8 @@ class ConanManager(object):
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
 
-        options = OptionsValues()
         conaninfo_scopes = Scopes()
+        user_options = OptionsValues(user_options_values)
 
         if current_path:
             conan_info_path = os.path.join(current_path, CONANINFO)
@@ -76,23 +76,20 @@ class ConanManager(object):
                 existing_info = ConanInfo.load_file(conan_info_path)
                 settings.values = existing_info.full_settings
                 options = existing_info.full_options  # Take existing options from conaninfo.txt
+                options.update(user_options)
+                user_options = options
                 conaninfo_scopes = existing_info.scope
 
         if user_settings_values:
             aux_values = Values.from_list(user_settings_values)
             settings.values = aux_values
 
-        if user_options_values is not None:  # Install will pass an empty list []
-            # Install OVERWRITES options, existing options in CONANINFO are not taken
-            # into account, just those from CONANFILE + user command line
-            options = OptionsValues.from_list(user_options_values)
-
         if scopes:
             conaninfo_scopes.update_scope(scopes)
 
         self._current_scopes = conaninfo_scopes
         return ConanFileLoader(self._runner, settings, package_settings=package_settings,
-                               options=options, scopes=conaninfo_scopes,
+                               options=user_options, scopes=conaninfo_scopes,
                                env=env, package_env=package_env)
 
     def export(self, user, conan_file_path, keep_source=False):
@@ -111,6 +108,8 @@ class ConanManager(object):
             if not field_value:
                 self._user_io.out.warn("Conanfile doesn't have '%s'.\n"
                                        "It is recommended to add it as attribute" % field)
+        if getattr(conan_file, "conan_info", None):
+            self._user_io.out.warn("conan_info() method is deprecated, use package_id() instead")
 
         conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
         conan_ref_str = str(conan_ref)
@@ -121,7 +120,7 @@ class ConanManager(object):
                                  "You exported '%s' but already existing '%s'"
                                  % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
-        export_conanfile(output, self._client_cache, conan_file.exports, conan_file_path,
+        export_conanfile(output, self._client_cache, conan_file, conan_file_path,
                          conan_ref, conan_file.short_paths, keep_source)
 
     def download(self, reference, package_ids, remote=None):
@@ -352,6 +351,7 @@ If not:
             output.info("Generated %s" % CONANINFO)
             if not no_imports:
                 run_imports(conanfile, current_path, output)
+            installer.call_system_requirements(conanfile, output)
 
         if manifest_manager:
             manifest_manager.print_log()
@@ -580,6 +580,11 @@ If not:
         @param channel: Destination channel
         @param remote: install only from that remote
         """
+        # It is necessary to make sure the sources are complete before proceeding
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, None)
+        remote_proxy.complete_recipe_sources(reference)
+
+        # Now we can actually copy
         output = ScopedOutput(str(reference), self._user_io.out)
         conan_file_path = self._client_cache.conanfile(reference)
         conanfile = self._loader().load_conan(conan_file_path, output)

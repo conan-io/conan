@@ -15,6 +15,9 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(v1 < "1.2.3.2")
         self.assertEqual(v1.major(), "1.Y.Z")  # 1.X.Y
         self.assertEqual(v1.minor(), "1.2.Z")  # 1.2.Y
+        self.assertEqual(v1.patch(), "1.2.3")
+        self.assertEqual(v1.pre(), "1.2.3")
+        self.assertEqual(v1.build, "")
         self.assertTrue(v1.compatible("1.X"))
         self.assertTrue(v1.compatible("1.2.Y"))
         self.assertFalse(v1.compatible("0.X"))
@@ -35,3 +38,28 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(Version("1.2.1-dev") > Version("1.2"))
         self.assertTrue(Version("1.2.1-dev") > Version("1.2.alpha"))
         self.assertTrue(Version("1.2.1-dev") > Version("1.2-alpha"))
+
+    def patch_test(self):
+        v1 = Version("1.2.3-alpha1+build2")
+        self.assertEqual(v1.major(), "1.Y.Z")
+        self.assertEqual(v1.minor(), "1.2.Z")
+        self.assertEqual(v1.patch(), "1.2.3")
+        self.assertEqual(v1.pre(), "1.2.3-alpha1")
+        self.assertEqual(v1.build, "build2")
+        self.assertEqual(v1.stable(), "1.Y.Z")
+
+        v1 = Version("1.2.3+build2")
+        self.assertEqual(v1.major(), "1.Y.Z")
+        self.assertEqual(v1.minor(), "1.2.Z")
+        self.assertEqual(v1.patch(), "1.2.3")
+        self.assertEqual(v1.pre(), "1.2.3")
+        self.assertEqual(v1.build, "build2")
+        self.assertEqual(v1.stable(), "1.Y.Z")
+
+        v1 = Version("0.2.3-alpha1+build2")
+        self.assertEqual(v1.major(), "0.Y.Z")
+        self.assertEqual(v1.minor(), "0.2.Z")
+        self.assertEqual(v1.patch(), "0.2.3")
+        self.assertEqual(v1.pre(), "0.2.3-alpha1")
+        self.assertEqual(v1.build, "build2")
+        self.assertEqual(v1.stable(), "0.2.3-alpha1+build2")

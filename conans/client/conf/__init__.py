@@ -15,9 +15,9 @@ default_settings_yml = """os: [Windows, Linux, Macos, Android, iOS, FreeBSD, Sun
 arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8]
 compiler:
     sun-cc:
-       version: ["5.10", "5.11"]
+       version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
        threads: [None, posix]
-       libcxx: [libstdcxx, libCstd]
+       libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
         version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3"]
         libcxx: [libstdc++, libstdc++11]
@@ -39,25 +39,85 @@ build_type: [None, Debug, Release]
 
 default_client_conf = '''[storage]
 # This is the default path, but you can write your own
-path: ~/.conan/data
+path = ~/.conan/data
 
 [proxies]
 # Empty section will try to use system proxies.
 # If don't want proxy at all, remove section [proxies]
 # As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
-# http: http://user:pass@10.10.1.10:3128/
-# http: http://10.10.1.10:3128
-# https: http://10.10.1.10:1080
+# http = http://user:pass@10.10.1.10:3128/
+# http = http://10.10.1.10:3128
+# https = http://10.10.1.10:1080
 
 [settings_defaults]
 '''
 
 
-class ConanClientConfigParser(ConfigParser):
+class ConanClientConfigParser(ConfigParser, object):
 
     def __init__(self, filename):
         ConfigParser.__init__(self)
         self.read(filename)
+        self.filename = filename
+
+    # So keys are not converted to lowercase, we override the default optionxform
+    optionxform = str
+
+    def get_item(self, item, output):
+        if not item:
+            output.info(load(self.filename))
+            return
+
+        tokens = item.split(".", 1)
+        section_name = tokens[0]
+        try:
+            section = self.items(section_name)
+        except NoSectionError:
+            raise ConanException("'%s' is not a section of conan.conf" % section_name)
+        if len(tokens) == 1:
+            result = []
+            for item in section:
+                result.append(" = ".join(item))
+            output.info("\n".join(result))
+        else:
+            key = tokens[1]
+            try:
+                value = dict(section)[key]
+            except KeyError:
+                raise ConanException("'%s' doesn't exist in [%s]" % (key, section_name))
+            output.info(value)
+
+    def set_item(self, key, value):
+        tokens = key.split(".", 1)
+        section_name = tokens[0]
+        if not self.has_section(section_name):
+            self.add_section(section_name)
+
+        if len(tokens) == 1:  # defining full section
+            raise ConanException("You can't set a full section, please specify a key=value")
+
+        key = tokens[1]
+        super(ConanClientConfigParser, self).set(section_name, key, value)
+
+        with open(self.filename, "w") as f:
+            self.write(f)
+
+    def rm_item(self, item):
+        tokens = item.split(".", 1)
+        section_name = tokens[0]
+        if not self.has_section(section_name):
+            raise ConanException("'%s' is not a section of conan.conf" % section_name)
+
+        if len(tokens) == 1:
+            self.remove_section(tokens[0])
+        else:
+            key = tokens[1]
+            if not self.has_option(section_name, key):
+                raise ConanException("'%s' doesn't exist in [%s]" % (key, section_name))
+            self.remove_option(section_name, key)
+
+        with open(self.filename, "w") as f:
+            self.write(f)
 
     def get_conf(self, varname):
         """Gets the section from config file or raises an exception"""
@@ -99,12 +159,13 @@ class ConanClientConfigParser(ConfigParser):
         except:
             return None
 
-    @property
-    def settings_defaults(self):
+    def settings_defaults(self, settings):
         default_settings = self.get_conf("settings_defaults")
-        default_settings = self._mix_settings_with_env(default_settings)
         values = Values.from_list(default_settings)
-        return values
+        settings.values = values
+        mixed_settings = self._mix_settings_with_env(default_settings)
+        values = Values.from_list(mixed_settings)
+        settings.values = values
 
     def _mix_settings_with_env(self, settings):
         """Reads CONAN_ENV_XXXX variables from environment

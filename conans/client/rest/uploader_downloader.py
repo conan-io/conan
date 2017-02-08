@@ -4,6 +4,7 @@ import traceback
 from conans.util.files import save, sha1sum, exception_message_safe
 import os
 import time
+from conans.util.tracer import log_download
 
 
 class Uploader(object):
@@ -112,6 +113,7 @@ class Downloader(object):
             # Should not happen, better to raise, probably we had to remove the dest folder before
             raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
+        t1 = time.time()
         ret = bytearray()
         response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth)
         if not response.ok:  # Do not retry if not found or whatever controlled error
@@ -142,6 +144,10 @@ class Downloader(object):
                         if self.output:
                             print_progress(self.output, units)
                         last_progress = units
+
+            duration = time.time() - t1
+            log_download(url, duration)
+
             if not file_path:
                 return bytes(ret)
             else:
