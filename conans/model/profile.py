@@ -3,7 +3,7 @@ from conans.util.config_parser import ConfigParser
 from conans.model.scope import Scopes, _root
 from conans.errors import ConanException
 from collections import defaultdict
-from conans.model.env import EnvValues
+from conans.model.env_info import EnvValues
 
 
 def _clean_value(value):
@@ -112,8 +112,7 @@ class Profile(object):
         result.append(scopes_txt)
 
         result.append("[env]")
-        dump_simple_items(self.env_values.global_values(), result)
-        dump_simple_items(self.env_values.all_package_values(), result)
+        result.append(self.env_values.dumps())
 
         return "\n".join(result).replace("\n\n", "\n")
 

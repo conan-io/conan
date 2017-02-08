@@ -1,21 +1,21 @@
+import imp
+import inspect
+import os
+import sys
+import uuid
+
+from conans.client.generators import _save_generator
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile, create_exports, create_exports_sources
-from conans.util.files import rmdir
-import copy
-import inspect
-import uuid
-import imp
-import os
-from conans.util.files import load
-from conans.util.config_parser import ConfigParser
+from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
-from conans.model.settings import Settings
-import sys
-from conans.model.conan_generator import Generator
-from conans.client.generators import _save_generator
 from conans.model.scope import Scopes
+from conans.model.settings import Settings
 from conans.model.values import Values
+from conans.util.config_parser import ConfigParser
+from conans.util.files import load
+from conans.util.files import rmdir
 
 
 class ConanFileLoader(object):

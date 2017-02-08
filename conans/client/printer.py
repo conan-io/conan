@@ -176,10 +176,8 @@ class Printer(object):
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings)
-
-        envs = profile.env_values.global_values()
-        envs.extend(profile.env_values.all_package_values())
-
+        envs = [("%s:%s" % (package, name) if package else name, value)
+                for (package, name), value in profile.env_values.data.items()]
         self._print_profile_section("env", envs, separator='=')
         scopes = profile.scopes.dumps().splitlines()
         self._print_colored_line("[scopes]")

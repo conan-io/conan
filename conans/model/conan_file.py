@@ -3,7 +3,7 @@ from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.errors import ConanException
-from conans.model.env import DepsEnvInfo, EnvValues
+from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
 from conans.paths import RUN_LOG_NAME
 

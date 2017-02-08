@@ -5,7 +5,7 @@ from conans.util.files import load, save
 import os
 from conans.test.utils.test_files import temp_folder
 from conans.model.info import ConanInfo
-from conans.model.env import EnvValues
+from conans.model.env_info import EnvValues
 
 
 conanfile = """from conans import ConanFile

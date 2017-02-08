@@ -6,7 +6,7 @@ from conans.util.files import load
 from conans.model.values import Values
 from conans.model.options import OptionsValues
 from conans.model.scope import Scopes
-from conans.model.env import EnvValues
+from conans.model.env_info import EnvValues
 
 
 class RequirementInfo(object):
@@ -170,7 +170,7 @@ class RequirementsList(list):
 class ConanInfo(object):
 
     @staticmethod
-    def create(settings, options, requires, indirect_requires, non_devs_requirements, env_values):
+    def create(settings, options, requires, indirect_requires, non_devs_requirements):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
@@ -184,11 +184,8 @@ class ConanInfo(object):
         result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
         result._non_devs_requirements = non_devs_requirements  # Can be None
-        result.env_values = env_values
+        result.env_values = EnvValues()
         return result
-
-    def updateenv_values(self, env_values):
-        self.env_values.update(env_values)
 
     @staticmethod
     def loads(text):
@@ -206,36 +203,15 @@ class ConanInfo(object):
         result.recipe_hash = parser.recipe_hash or None
         # TODO: Missing handling paring of requires, but not necessary now
         result.scope = Scopes.loads(parser.scope)
-        result.env_values = ConanInfo._parse_env_text(parser.env)
+        result.env_values = EnvValues.loads(parser.env)
         return result
-
-    @staticmethod
-    def _parse_env_text(text):
-        ret = EnvValues()
-        for env_def in text.splitlines():
-            try:
-                tmp = env_def.split("=", 1)
-                name = tmp[0]
-                value = tmp[1].strip()
-                package = None
-                if ":" in name:
-                    tmp = name.split(":", 1)
-                    package = tmp[0].strip()
-                    name = tmp[1].strip()
-                else:
-                    name = name.strip()
-                ret.add(name, value, package)
-            except Exception:
-                pass
-
-        return ret
 
     def dumps(self):
         def indent(text):
             if not text:
                 return ""
             return '\n'.join("    " + line for line in text.splitlines())
-        result = []
+        result = list()
 
         result.append("[settings]")
         result.append(indent(self.settings.dumps()))
@@ -254,11 +230,7 @@ class ConanInfo(object):
             result.append(indent(self.scope.dumps()))
         result.append("\n[recipe_hash]\n%s" % indent(self.recipe_hash))
         result.append("\n[env]")
-
-        for (name, value) in sorted(self.env_values.global_values()):
-            result.append(indent("%s=%s\n" % (name, value)))
-        for (name, value) in sorted(self.env_values.all_package_values()):
-            result.append(indent("%s=%s\n" % (name, value)))
+        result.append(indent(self.env_values.dumps()))
 
         return '\n'.join(result) + "\n"
 
@@ -277,7 +249,7 @@ class ConanInfo(object):
         try:
             config_text = load(conan_info_path)
         except IOError:
-            raise ConanException("Does not exist %s" % (conan_info_path))
+            raise ConanException("Does not exist %s" % conan_info_path)
         else:
             return ConanInfo.loads(config_text)
 

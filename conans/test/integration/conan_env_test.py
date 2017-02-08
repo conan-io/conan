@@ -329,36 +329,36 @@ class Hello2Conan(ConanFile):
                    "-e GLOBAL=99 -e FAKE_LIB:VAR1=-90 -e LIB_B:VAR2=222 -e LIB_B2:NEWVAR=VALUE")
 
         info = load_conaninfo("A")
-        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override")])
-        self.assertEquals(info.env_values.global_values(), [("GLOBAL", "99")])
+        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override")])
+        self.assertEquals(info.env_values._global_values(), [("GLOBAL", "99")])
 
         info = load_conaninfo("B")
-        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override"),
+        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
                                                                  ("LIB_B:VAR2", "222")])
-        self.assertEquals(info.env_values.global_values(), [("GLOBAL", "99"), (u'VAR1', u'900'),
+        self.assertEquals(info.env_values._global_values(), [("GLOBAL", "99"), (u'VAR1', u'900'),
                                                             (u'VAR2', u'23'), (u'VAR3', u'-23')])
 
         info = load_conaninfo("B2")
-        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override"),
+        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
                                                                  ("LIB_B2:NEWVAR", "VALUE")])
-        self.assertEquals(info.env_values.global_values(), [("GLOBAL", "99"), (u'VAR1', u'900'),
+        self.assertEquals(info.env_values._global_values(), [("GLOBAL", "99"), (u'VAR1', u'900'),
                                                             (u'VAR2', u'23'), (u'VAR3', u'-23')])
 
         info = load_conaninfo("C")
-        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override"),
+        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
                                                                  ("LIB_B2:NEWVAR", "VALUE"),
                                                                  ("LIB_B:VAR2", "222")])
-        self.assertEquals(info.env_values.global_values(), [('GLOBAL', '99'),
+        self.assertEquals(info.env_values._global_values(), [('GLOBAL', '99'),
                                                             ('VAR1', '800:800_2:900'),
                                                             ('VAR2', '24:24_2:23'),
                                                             ('VAR3', '-23')])
 
         # Now check the info for the project
         info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(info.env_values.all_package_values(), [("LIB_A:VAR3", "override"),
+        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
                                                                  ("LIB_B2:NEWVAR", "VALUE"),
                                                                  ("LIB_B:VAR2", "222")])
-        self.assertEquals(info.env_values.global_values(), [('GLOBAL', '99'),
+        self.assertEquals(info.env_values._global_values(), [('GLOBAL', '99'),
                                                             ('VAR1', '700:800:800_2:900'),
                                                             ('VAR2', '24:24_2:23'),
                                                             ('VAR3', 'bestvalue')])

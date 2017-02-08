@@ -13,12 +13,40 @@ class EnvValues(object):
     def __init__(self):
         self._data = {}
 
+    @staticmethod
+    def loads(text):
+        ret = EnvValues()
+        for env_def in text.splitlines():
+            try:
+                tmp = env_def.split("=", 1)
+                name = tmp[0]
+                value = tmp[1].strip()
+                package = None
+                if ":" in name:
+                    tmp = name.split(":", 1)
+                    package = tmp[0].strip()
+                    name = tmp[1].strip()
+                else:
+                    name = name.strip()
+                ret.add(name, value, package)
+            except Exception:
+                pass
+        return ret
+
+    def dumps(self):
+        result = []
+        for (name, value) in sorted(self._global_values()):
+            result.append("%s=%s" % (name, value))
+        for (name, value) in sorted(self._all_package_values()):
+            result.append("%s=%s" % (name, value))
+        return "\n".join(result)
+
     @property
     def data(self):
         return self._data
 
     @property
-    def sorted_data(self):
+    def _sorted_data(self):
         # Python 3 can't compare None with strings, so if None we order just with the var name
         return sorted(self._data.items(), key=lambda x: "%s_%s" % x if x[0] else x[1])
 
@@ -27,19 +55,19 @@ class EnvValues(object):
         if (package, name) not in self._data:
             self._data[(package, name)] = value
 
-    def global_values(self):
-        '''return [(name, value), (name, value)] for global env variables'''
-        return [(name, value) for (pname, name), value in self.sorted_data
+    def _global_values(self):
+        """return [(name, value), (name, value)] for global env variables"""
+        return [(name, value) for (pname, name), value in self._sorted_data
                 if pname is None]
 
-    def package_values(self, package):
+    def _package_values(self, package):
         """return the environment variables that apply for a given package name:
         [(name, value), (name, value)] for the specified package"""
         assert(package is not None)
-        return [(name, value) for (pname, name), value in self.sorted_data
+        return [(name, value) for (pname, name), value in self._sorted_data
                 if pname == package]
 
-    def all_package_values(self):
+    def _all_package_values(self):
         return sorted([("%s:%s" % (pname, name), value) for (pname, name), value in self.data.items()
                        if pname])
 
@@ -51,10 +79,11 @@ class EnvValues(object):
             if isinstance(env_obj, EnvValues):
                 for (package_name, name), value in env_obj._data.items():
                     self.add(name, value, package_name)
-            else:  # DepsEnvInfo
+            else:  # DepsEnvInfo. the OLD values are always kept, never overwrite,
                 for (name, value) in env_obj.vars.items():
                     name = name.upper() if name.lower() == "path" else name
                     if isinstance(value, list):
+                        # Append to OLD value, not overwrite it.
                         value = os.pathsep.join(value)
                         if (None, name) in self._data:
                             self._data[(None, name)] = '%s%s%s' % (self._data[(None, name)],
@@ -64,17 +93,17 @@ class EnvValues(object):
                     else:
                         self.add(name, value)
 
-    def env_dict(self, name):
+    def env_dict(self, package_name):
         """Returns a dict of env variables that applies to package 'name' """
         ret = {}
-        ret.update(dict(self.global_values()))
+        ret.update(dict(self._global_values()))
         # Scoped variables are prioritized over the global ones
-        if name:
-            ret.update(self.package_values(name))
+        if package_name:
+            ret.update(self._package_values(package_name))
         return ret
 
     def __repr__(self, *args, **kwargs):
-        return str(self.global_values()) + str(self.all_package_values())
+        return str(self._global_values()) + str(self._all_package_values())
 
 
 class EnvInfo(object):

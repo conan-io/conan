@@ -3,7 +3,7 @@ import os
 from conans.model.build_info import DepsCppInfo, CppInfo
 from conans.client.generators import TXTGenerator
 from collections import namedtuple
-from conans.model.env import DepsEnvInfo
+from conans.model.env_info import DepsEnvInfo
 from conans.test.utils.test_files import temp_folder
 import platform
 

@@ -33,7 +33,7 @@ from conans.util.files import rmdir, load, save_files, exception_message_safe
 from conans.util.config_parser import get_bool_from_text
 from conans.client.printer import Printer
 from conans.util.tracer import log_command, log_exception
-from conans.model.env import EnvValues
+from conans.model.env_info import EnvValues
 
 
 class Extender(argparse.Action):
@@ -968,8 +968,8 @@ path to the CMake binary directory, like this:
             logger.error(exc)
             errors = True
         except ConanException as exc:
-            import traceback
-            logger.debug(traceback.format_exc())
+            # import traceback
+            # logger.debug(traceback.format_exc())
             errors = True
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
@@ -978,8 +978,8 @@ path to the CMake binary directory, like this:
             except:
                 pass
         except Exception as exc:
-            import traceback
-            logger.debug(traceback.format_exc())
+            # import traceback
+            # logger.debug(traceback.format_exc())
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)

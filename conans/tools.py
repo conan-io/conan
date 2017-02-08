@@ -20,14 +20,17 @@ import multiprocessing
 @contextmanager
 def pythonpath(conanfile):
     old_path = sys.path[:]
-    if conanfile.env.get("PYTHONPATH", None):
+    try:
         sys.path.extend(conanfile.env["PYTHONPATH"].split(os.pathsep))
+    except KeyError:
+        pass
     yield
     sys.path = old_path
 
 
 @contextmanager
-def environment_append(env_vars, keep_vars=["PATH", "PYTHONPATH"]):
+def environment_append(env_vars, keep_vars=None):
+    keep_vars = keep_vars or ["PATH", "PYTHONPATH"]
     old_env = dict(os.environ)
     if keep_vars:
         for keep_var in keep_vars:

@@ -31,7 +31,7 @@ class ProfileTest(unittest.TestCase):
         self.assertEquals(new_profile._settings["compiler.version"], "12")
         self.assertEquals(new_profile._settings["compiler"], "Visual Studio")
 
-        self.assertEquals(new_profile.env_values.global_values(), [("CC", "path/to/my/compiler/gcc"), 
+        self.assertEquals(new_profile.env_values._global_values(), [("CC", "path/to/my/compiler/gcc"),
                                                                    ("CXX", "path/to/my/compiler/g++")])
 
         self.assertEquals(dict(new_profile.scopes)["p1"]["conaning"], '1')
@@ -70,7 +70,7 @@ CXX_FLAGS="-DAAA=0"
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env_values.global_values(), [("CXX_FLAGS", "-DAAA=0")])
+        self.assertEquals(new_profile.env_values._global_values(), [("CXX_FLAGS", "-DAAA=0")])
 
         prof = '''[env]
 CXX_FLAGS="-DAAA=0"
@@ -80,8 +80,8 @@ OtherPackage:ONE=ONE
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env_values.global_values(), [("CXX_FLAGS", "-DAAA=0")])
-        self.assertEquals(new_profile.env_values.all_package_values(), [("MyPackage:OTHER", "2"),
+        self.assertEquals(new_profile.env_values._global_values(), [("CXX_FLAGS", "-DAAA=0")])
+        self.assertEquals(new_profile.env_values._all_package_values(), [("MyPackage:OTHER", "2"),
                                                                         ("MyPackage:VAR", "1"),
                                                                         ("OtherPackage:ONE", "ONE")])
 
@@ -90,21 +90,21 @@ CXX_FLAGS='-DAAA=0'
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env_values.global_values(), [("CXX_FLAGS", "-DAAA=0")])
+        self.assertEquals(new_profile.env_values._global_values(), [("CXX_FLAGS", "-DAAA=0")])
 
         prof = '''[env]
 CXX_FLAGS=-DAAA=0
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env_values.global_values(), [("CXX_FLAGS", "-DAAA=0")])
+        self.assertEquals(new_profile.env_values._global_values(), [("CXX_FLAGS", "-DAAA=0")])
 
         prof = '''[env]
 CXX_FLAGS="-DAAA=0
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env_values.global_values(), [("CXX_FLAGS", "\"-DAAA=0")])
+        self.assertEquals(new_profile.env_values._global_values(), [("CXX_FLAGS", "\"-DAAA=0")])
 
         prof = '''
 [settings]
@@ -123,7 +123,7 @@ compiler=Visual Studio
         profile._settings["arch"] = "x86_64"
         profile._settings["compiler"] = "Visual Studio"
 
-        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=12\nzlib:compiler=gcc\n[scopes]\n[env]',
+        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=12\nzlib:compiler=gcc\n[scopes]\n[env]\n',
                          profile.dumps())
 
     def apply_test(self):
