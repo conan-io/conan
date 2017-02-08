@@ -4,11 +4,12 @@ from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
 from conans.client.detect import detect_defaults_settings
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.paths import SimplePaths, CONANINFO
 from genericpath import isdir
 from conans.model.info import ConanInfo
+from conans.errors import ConanException
 
 
 CONAN_CONF = 'conan.conf'
@@ -16,6 +17,30 @@ CONAN_SETTINGS = "settings.yml"
 LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
 PROFILES_FOLDER = "profiles"
+_CACHED_BUILD_ID = "_conn_b_id"  # no collision with existing user vars
+
+
+def has_build_id(conanfile):
+    return hasattr(conanfile, _CACHED_BUILD_ID)
+
+
+def build_id(conanfile):
+    if hasattr(conanfile, "build_id"):
+        # Caching build_id, to avoid recomputing it
+        if not hasattr(conanfile, _CACHED_BUILD_ID):
+            # construct new ConanInfo
+            build_id_info = conanfile.info.copy()
+            conanfile.info_build = build_id_info
+            # effectively call the user function to change the package values
+            try:
+                conanfile.build_id()
+            except Exception as e:
+                raise ConanException("Error in 'build_id()': %s" % str(e))
+            # compute modified ID
+            new_id = build_id_info.package_id()
+            setattr(conanfile, _CACHED_BUILD_ID, new_id)
+        return new_id
+    return None
 
 
 class ClientCache(SimplePaths):
@@ -104,6 +129,12 @@ class ClientCache(SimplePaths):
         except:  # if there isn't any package folder
             builds = []
         return builds
+
+    def build_folder(self, package_reference, conanfile):
+        new_id = build_id(conanfile)
+        if new_id:
+            package_reference = PackageReference(package_reference.conan, new_id)
+        return self.build(package_reference, conanfile.short_paths)
 
     def load_manifest(self, conan_reference):
         '''conan_id = sha(zip file)'''

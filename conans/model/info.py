@@ -168,6 +168,16 @@ class RequirementsList(list):
 
 class ConanInfo(object):
 
+    def copy(self):
+        """ Useful for build_id() implementation
+        """
+        result = ConanInfo()
+        result.settings = self.settings.copy()
+        result.options = self.options.copy()
+        result.requires = self.requires
+        result._non_devs_requirements = self._non_devs_requirements
+        return result
+
     @staticmethod
     def create(settings, options, requires, indirect_requires, non_devs_requirements):
         result = ConanInfo()

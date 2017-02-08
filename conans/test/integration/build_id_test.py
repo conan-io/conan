@@ -14,7 +14,7 @@ class MyTest(ConanFile):
     build_policy = "missing"
 
     def build_id(self):
-        self.build_id_settings.build_type = "Any"
+        self.info_build.settings.build_type = "Any"
 
     def build(self):
         self.output.info("Building my code!")
