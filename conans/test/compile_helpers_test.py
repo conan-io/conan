@@ -218,7 +218,7 @@ class CompileHelpersTest(unittest.TestCase):
                                             '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
                                             'CFLAGS="$CFLAGS -m32 cflag1 -s -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
-                                            'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -D_GLIBCXX_USE_CXX11_ABI=0 -s -DNDEBUG '
+                                            'CXXFLAGS="$CXXFLAGS -m32 cppflag1 -D_GLIBCXX_USE_CXX11_ABI=0 -s -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
@@ -232,7 +232,7 @@ class CompileHelpersTest(unittest.TestCase):
                                             '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
                                             'CFLAGS="$CFLAGS -m32 cflag1 -s -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
-                                            'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -D_GLIBCXX_USE_CXX11_ABI=1 -s -DNDEBUG '
+                                            'CXXFLAGS="$CXXFLAGS -m32 cppflag1 -D_GLIBCXX_USE_CXX11_ABI=1 -s -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
@@ -246,7 +246,7 @@ class CompileHelpersTest(unittest.TestCase):
                                             '-Lpath/to/lib2 -m64 -framework thing -framework thing2 $LDFLAGS" '
                                             'CFLAGS="$CFLAGS -m64 cflag1 -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
-                                            'CPPFLAGS="$CPPFLAGS -m64 cppflag1 -stdlib=libc++ -DNDEBUG '
+                                            'CXXFLAGS="$CXXFLAGS -m64 cppflag1 -stdlib=libc++ -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
@@ -260,7 +260,7 @@ class CompileHelpersTest(unittest.TestCase):
                                             '-Lpath/to/lib2 -m64 -framework thing -framework thing2 $LDFLAGS" '
                                             'CFLAGS="$CFLAGS -m64 cflag1 -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
-                                            'CPPFLAGS="$CPPFLAGS -m64 cppflag1 -stdlib=libstdc++ -DNDEBUG '
+                                            'CXXFLAGS="$CXXFLAGS -m64 cppflag1 -stdlib=libstdc++ -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
@@ -274,7 +274,7 @@ class CompileHelpersTest(unittest.TestCase):
                                             '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
                                             'CFLAGS="$CFLAGS -m32 cflag1 -g '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
-                                            'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -stdlib=libstdc++ -g '
+                                            'CXXFLAGS="$CXXFLAGS -m32 cppflag1 -stdlib=libstdc++ -g '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
@@ -288,7 +288,7 @@ class CompileHelpersTest(unittest.TestCase):
                                             '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
                                             'CFLAGS="$CFLAGS -m32 cflag1 -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
-                                            'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -stdlib=libc++ -DNDEBUG '
+                                            'CXXFLAGS="$CXXFLAGS -m32 cppflag1 -stdlib=libc++ -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
@@ -302,7 +302,7 @@ class CompileHelpersTest(unittest.TestCase):
                                             '-Lpath/to/lib2 -m64 -framework thing -framework thing2 $LDFLAGS" '
                                             'CFLAGS="$CFLAGS -m64 cflag1 -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
-                                            'CPPFLAGS="$CPPFLAGS -m64 cppflag1 -library=stlport4 -DNDEBUG '
+                                            'CXXFLAGS="$CXXFLAGS -m64 cppflag1 -library=stlport4 -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
@@ -334,7 +334,7 @@ class CompileHelpersTest(unittest.TestCase):
         runner = ConanRunner()
         if platform.system() != "Windows":
             os.environ["LDFLAGS"] = "ldflag=23 otherldflag=33"
-            os.environ["CPPFLAGS"] = "-cppflag -othercppflag"
+            os.environ["CXXFLAGS"] = "-cppflag -othercppflag"
             os.environ["CFLAGS"] = "-cflag"
             os.environ["C_INCLUDE_PATH"] = "/path/to/c_include_path:/anotherpath"
             os.environ["CPLUS_INCLUDE_PATH"] = "/path/to/cpp_include_path:/anotherpathpp"
@@ -344,14 +344,14 @@ class CompileHelpersTest(unittest.TestCase):
             env = ConfigureEnvironment(BuildInfoMock(), c11settings_release)
             runner(env.command_line, output=output)
             self.assertIn("LDFLAGS=-Lpath/to/lib1 -Lpath/to/lib2 -m32 -framework thing -framework thing2 ldflag=23 otherldflag=33\n", output)
-            self.assertIn("CPPFLAGS=-cppflag -othercppflag -m32 cppflag1 -D_GLIBCXX_USE_CXX11_ABI=1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2\n", output)
+            self.assertIn("CXXFLAGS=-cppflag -othercppflag -m32 cppflag1 -D_GLIBCXX_USE_CXX11_ABI=1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2\n", output)
             self.assertIn("CFLAGS=-cflag -m32 cflag1 -s -DNDEBUG -Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2\n", output)
             self.assertIn("C_INCLUDE_PATH=/path/to/c_include_path:/anotherpath:path/to/includes/lib1:path/to/includes/lib2\n", output)
             self.assertIn("CPLUS_INCLUDE_PATH=/path/to/cpp_include_path:/anotherpathpp:path/to/includes/lib1:path/to/includes/lib2\n", output)
 
             # Reset env vars to not mess with other tests
             os.environ["LDFLAGS"] = ""
-            os.environ["CPPFLAGS"] = ""
+            os.environ["CXXFLAGS"] = ""
             os.environ["CFLAGS"] = ""
             os.environ["C_INCLUDE_PATH"] = ""
             os.environ["CPLUS_INCLUDE_PATH"] = ""
