@@ -2,6 +2,7 @@ import os
 import re
 from collections import OrderedDict, defaultdict
 
+from conans.errors import ConanException
 from conans.util.log import logger
 
 
@@ -17,21 +18,32 @@ class EnvValues(object):
     @staticmethod
     def loads(text):
         ret = EnvValues()
+        if not text:
+            return ret
         for env_def in text.splitlines():
             try:
-                tmp = env_def.split("=", 1)
-                name = tmp[0]
-                value = tmp[1].strip()
-                package = None
-                if ":" in name:
-                    tmp = name.split(":", 1)
-                    package = tmp[0].strip()
-                    name = tmp[1].strip()
-                else:
-                    name = name.strip()
-                ret.add(name, value, package)
-            except Exception:
-                pass
+                if env_def:
+                    if "=" not in env_def:
+                        raise ConanException("Invalid env line '%s'" % env_def)
+                    tmp = env_def.split("=", 1)
+                    name = tmp[0]
+                    value = tmp[1].strip()
+                    for quote in ['"', "'"]:  # Peel the quotes from text
+                        if value.startswith(quote) and value.endswith(quote) and len(value) > 1:
+                            value = value[1:-1]
+                    package = None
+                    if ":" in name:
+                        tmp = name.split(":", 1)
+                        package = tmp[0].strip()
+                        name = tmp[1].strip()
+                    else:
+                        name = name.strip()
+                    ret.add(name, value, package)
+            except ConanException:
+                raise
+            except Exception as exc:
+                raise ConanException("Error parsing the env values: %s" % str(exc))
+
         return ret
 
     def dumps(self):

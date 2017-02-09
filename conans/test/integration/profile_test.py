@@ -1,4 +1,7 @@
 import unittest
+
+from conans.model.env_info import EnvValues
+from conans.model.profile import Profile
 from conans.test.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import save, load
@@ -136,7 +139,8 @@ class ProfileTest(unittest.TestCase):
         self._assert_env_variable_printed("OTHER_VAR", "2")
 
         # Override package var with package var
-        self.client.run("install Hello0/0.1@lasote/stable --build -pr envs -e Hello0:A_VAR=OTHER_VALUE -e Hello0:OTHER_VAR=3")
+        self.client.run("install Hello0/0.1@lasote/stable --build -pr envs "
+                        "-e Hello0:A_VAR=OTHER_VALUE -e Hello0:OTHER_VAR=3")
         self._assert_env_variable_printed("A_VAR", "OTHER_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "3")
 
@@ -230,6 +234,10 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
+    def test_empty_env(self):
+        profile = Profile.loads("[settings]")
+        self.assertTrue(isinstance(profile.env_values, EnvValues))
+
     def test_package_test(self):
         test_conanfile = '''from conans.model.conan_file import ConanFile
 from conans import CMake
@@ -253,9 +261,8 @@ class DefaultNameConan(ConanFile):
         pass
 
 '''
-        files = {}
-        files["conanfile.py"] = conanfile_scope_env
-        files["test_package/conanfile.py"] = test_conanfile
+        files = {"conanfile.py": conanfile_scope_env,
+                 "test_package/conanfile.py": test_conanfile}
         # Create a profile and use it
         create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={},
                        scopes={}, env=[("ONE_VAR", "ONE_VALUE")])

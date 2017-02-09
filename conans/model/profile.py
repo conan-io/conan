@@ -70,17 +70,7 @@ class Profile(object):
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())
 
-            for env in doc.env.splitlines():
-                env = env.strip()
-                if env and not env.startswith("#"):
-                    if "=" not in env:
-                        raise ConanException("Invalid env line '%s'" % env)
-                    package_name, name, value = get_package_name_value(env)
-                    if package_name:
-                        obj.env_values.add(name, value, package_name)
-                    else:
-                        obj.env_values.add(name, value)
-
+            obj.env_values = EnvValues.loads(doc.env)
             obj._order()
             return obj
         except ConanException:
