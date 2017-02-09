@@ -30,22 +30,6 @@ class _CppInfo(object):
         self.exelinkflags = []  # linker flags
         self.rootpath = ""
 
-
-class CppInfo(_CppInfo):
-    """ Build Information declared to be used by the CONSUMERS of a
-    conans. That means that consumers must use this flags and configs i order
-    to build properly.
-    Defined in user CONANFILE, directories are relative at user definition time
-    """
-    def __init__(self, root_folder):
-        super(CppInfo, self).__init__()
-        self.rootpath = root_folder  # the full path of the package in which the conans is found
-        self.includedirs.append(DEFAULT_INCLUDE)
-        self.libdirs.append(DEFAULT_LIB)
-        self.bindirs.append(DEFAULT_BIN)
-        self.resdirs.append(DEFAULT_RES)
-        self.public_deps = []
-
     @property
     def include_paths(self):
         return [os.path.join(self.rootpath, p)
@@ -62,14 +46,42 @@ class CppInfo(_CppInfo):
                 if not os.path.isabs(p) else p for p in self.bindirs]
 
 
+class CppInfo(_CppInfo):
+    """ Build Information declared to be used by the CONSUMERS of a
+    conans. That means that consumers must use this flags and configs i order
+    to build properly.
+    Defined in user CONANFILE, directories are relative at user definition time
+    """
+    def __init__(self, root_folder):
+        super(CppInfo, self).__init__()
+        self.rootpath = root_folder  # the full path of the package in which the conans is found
+        self.includedirs.append(DEFAULT_INCLUDE)
+        self.libdirs.append(DEFAULT_LIB)
+        self.bindirs.append(DEFAULT_BIN)
+        self.resdirs.append(DEFAULT_RES)
+        self.public_deps = []
+        self.configs = {}
+
+    def __getattr__(self, config):
+
+        def _get_cpp_info():
+            result = _CppInfo()
+            result.rootpath = self.rootpath
+            result.includedirs.append(DEFAULT_INCLUDE)
+            result.libdirs.append(DEFAULT_LIB)
+            result.bindirs.append(DEFAULT_BIN)
+            result.resdirs.append(DEFAULT_RES)
+            return result
+
+        return self.configs.setdefault(config, _get_cpp_info())
+
+
 class DepsCppInfo(_CppInfo):
     """ Build Information necessary to build a given conans. It contains the
     flags, directories and options if its dependencies. The conans CONANFILE
     should use these flags to pass them to the underlaying build system (Cmake, make),
     so deps info is managed
     """
-    fields = ["includedirs", "libdirs", "bindirs", "libs", "defines", "cppflags",
-              "cflags", "sharedlinkflags", "exelinkflags", "rootpath"]
 
     def __init__(self):
         super(DepsCppInfo, self).__init__()
