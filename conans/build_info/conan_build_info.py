@@ -10,15 +10,18 @@ from conans.util.files import load
 
 def _extract_uploads_from_conan_trace(path):
     modules = defaultdict(dict)  # dict of {conan_ref: [abs_path1, abs_path2]}
+    try:
+        with open(path, "r") as traces:
+            for line in traces.readlines():
+                doc = json.loads(line)
+                if doc["_action"] in ("UPLOADED_RECIPE", "UPLOADED_PACKAGE"):
+                    module_type = "recipe" if doc["_action"] == "UPLOADED_RECIPE" else "package"
+                    modules[doc["_id"]] = {"remote": doc["remote"], "files": [], "type": module_type}
+                    for file_doc in doc["files"]:
+                        modules[doc["_id"]]["files"].append(file_doc)
+    except ValueError as exc:
+        raise Exception("INVALID TRACE FILE! %s" % exc)
 
-    with open(path, "r") as traces:
-        for line in traces.readlines():
-            doc = json.loads(line)
-            if doc["_action"] in ("UPLOADED_RECIPE", "UPLOADED_PACKAGE"):
-                module_type = "recipe" if doc["_action"] == "UPLOADED_RECIPE" else "package"
-                modules[doc["_id"]] = {"remote": doc["remote"], "files": [], "type": module_type}
-                for file_doc in doc["files"]:
-                    modules[doc["_id"]]["files"].append(file_doc)
     return modules
 
 
@@ -81,7 +84,6 @@ def _build_modules(trace_path):
 
         # Add dependencies, for each module dep modules
         for mod_dep_id in deps[module_id]:
-            print(mod_dep_id)
             if mod_dep_id in downloaded_modules:
                 down_module = downloaded_modules[mod_dep_id]
                 # Check if the remote from the uploaded package matches the remote from the downloaded dependency

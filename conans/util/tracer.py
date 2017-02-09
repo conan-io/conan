@@ -26,28 +26,23 @@ def _validate_action(action_name):
     if action_name not in TRACER_ACTIONS:
         raise ConanException("Unknown action %s" % action_name)
 
-tracer_file = None
-
 
 def _get_tracer_file():
     """
     If CONAN_TRACE_FILE is a file in an existing dir will log to it creating the file if needed
     Otherwise won't log anything
     """
-    global tracer_file
-    if tracer_file is None:
-        trace_path = os.environ.get("CONAN_TRACE_FILE", None)
-        if trace_path is not None:
-            if not os.path.isabs(trace_path):
-                raise ConanException("Bad CONAN_TRACE_FILE value. The specified "
-                                     "path has to be an absolute path to a file.")
-            if not os.path.exists(os.path.dirname(trace_path)):
-                raise ConanException("Bad CONAN_TRACE_FILE value. The specified "
-                                     "path doesn't exist: '%s'" % os.path.dirname(trace_path))
-            if isdir(trace_path):
-                raise ConanException("CONAN_TRACE_FILE is a directory. Please, specify a file path")
-            tracer_file = trace_path
-    return tracer_file
+    trace_path = os.environ.get("CONAN_TRACE_FILE", None)
+    if trace_path is not None:
+        if not os.path.isabs(trace_path):
+            raise ConanException("Bad CONAN_TRACE_FILE value. The specified "
+                                 "path has to be an absolute path to a file.")
+        if not os.path.exists(os.path.dirname(trace_path)):
+            raise ConanException("Bad CONAN_TRACE_FILE value. The specified "
+                                 "path doesn't exist: '%s'" % os.path.dirname(trace_path))
+        if isdir(trace_path):
+            raise ConanException("CONAN_TRACE_FILE is a directory. Please, specify a file path")
+    return trace_path
 
 
 def _append_to_log(obj):

@@ -971,8 +971,6 @@ path to the CMake binary directory, like this:
             except:
                 pass
         except Exception as exc:
-            # import traceback
-            # logger.debug(traceback.format_exc())
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
