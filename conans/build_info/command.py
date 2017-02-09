@@ -2,7 +2,7 @@ import argparse
 import json
 import os
 
-from build_info.conan_build_info import get_build_info
+from conans.build_info.conan_build_info import get_build_info
 
 
 def run():
@@ -17,8 +17,12 @@ def run():
         print("Error, conan trace log not found! '%s'" % args.trace_path)
         exit(1)
 
-    info = get_build_info(args.trace_path)
-    print(json.dumps(info.serialize()))
+    try:
+        info = get_build_info(args.trace_path)
+        print(json.dumps(info.serialize()))
+    except Exception as exc:
+        print(exc)
+        exit(1)
 
 if __name__ == "__main__":
     run()
