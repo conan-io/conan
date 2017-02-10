@@ -30,6 +30,8 @@ def pythonpath(conanfile):
 
 @contextmanager
 def environment_append(env_vars):
+    # None values means not define the var
+    env_vars = {key: value for key, value in env_vars.items() if value is not None}
     old_env = dict(os.environ)
     os.environ.update(env_vars)
     try:

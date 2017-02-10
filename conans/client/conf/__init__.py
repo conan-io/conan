@@ -66,9 +66,11 @@ path = ~/.conan/data
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
 
+%s
+
 [settings_defaults]
 
-''' + new_default_confs_from_env
+''' % new_default_confs_from_env
 
 
 class ConanClientConfigParser(ConfigParser, object):

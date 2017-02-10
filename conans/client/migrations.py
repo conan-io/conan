@@ -1,5 +1,6 @@
 from conans.client.client_cache import CONAN_CONF
 from conans.migrations import Migrator
+from conans.tools import replace_in_file
 from conans.util.files import load, save
 from conans.model.version import Version
 import os
@@ -86,8 +87,7 @@ build_type: [None, Debug, Release]
             old_conf = load(conf_path)
             save(backup_path, old_conf)
 
-            new_conf = "%s\n%s" % (old_conf, new_default_confs_from_env)
-            save(conf_path, new_conf)
+            replace_in_file(conf_path, "[settings_defaults]", "%s\n[settings_defaults]" % new_default_confs_from_env)
             self.out.warn("*" * 40)
             self.out.warn("A new %s has been defined" % CONAN_CONF)
             self.out.warn("Your old %s has been backup'd to: %s" % (CONAN_CONF, backup_path))
