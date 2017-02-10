@@ -32,24 +32,6 @@ class ClientMigrator(Migrator):
             self.out.warn("*" * 40)
         save(self.client_cache.settings_path, default_settings_yml)
 
-    def _update_conan_conf(self, old_settings):
-        settings_path = self.client_cache.settings_path
-        if not os.path.exists(settings_path):
-            self.out.warn("Migration: This conan installation doesn't have settings yet")
-            self.out.warn("Nothing to migrate here, settings will be generated automatically")
-            return
-
-        self.out.warn("Migration: Updating settings.yml")
-        current_settings = load(self.client_cache.settings_path)
-        if current_settings != old_settings:
-            backup_path = self.client_cache.settings_path + ".backup"
-            save(backup_path, current_settings)
-            self.out.warn("*" * 40)
-            self.out.warn("A new settings.yml has been defined")
-            self.out.warn("Your old settings.yml has been backup'd to: %s" % backup_path)
-            self.out.warn("*" * 40)
-        save(self.client_cache.settings_path, default_settings_yml)
-
     def _make_migrations(self, old_version):
         # ############### FILL THIS METHOD WITH THE REQUIRED ACTIONS ##############
         # VERSION 0.1
