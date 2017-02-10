@@ -47,10 +47,8 @@ print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
 [general]
 compression_level = 9       # environment CONAN_COMPRESSION_LEVEL
-sysrequires_sudo = False    # environment CONAN_SYSREQUIRES_SUDO
+sysrequires_sudo = True     # environment CONAN_SYSREQUIRES_SUDO
 # cmake_generator           # environment CONAN_CMAKE_GENERATOR
-color_display = True        # environment CONAN_COLOR_DISPLAY
-color_dark = False          # environment CONAN_COLOR_DARK
 
 '''
 
@@ -93,10 +91,9 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
-               "CONAN_COLOR_DISPLAY": self._env_c("general.color_display", "CONAN_CMAKE_GENERATOR", "True"),
-               "CONAN_COLOR_DARK": self._env_c("general.color_dark", "CONAN_COLOR_DARK", "False")
                }
-        return ret
+        # Filter None values
+        return {name: value for name, value in ret.items() if value is not None}
 
     def _env_c(self, var_name, env_var_name, default_value):
         env = os.environ.get(env_var_name, None)
@@ -126,6 +123,8 @@ class ConanClientConfigParser(ConfigParser, object):
             key = tokens[1]
             try:
                 value = dict(section)[key]
+                if " #" in value:  # Comments
+                    value = value[:value.find(" #")].strip()
             except KeyError:
                 raise ConanException("'%s' doesn't exist in [%s]" % (key, section_name))
             return value

@@ -23,16 +23,22 @@ import multiprocessing
 @contextmanager
 def pythonpath(conanfile):
     old_path = sys.path[:]
-    sys.path.extend(conanfile.deps_env_info.PYTHONPATH)
+    try:
+        sys.path.extend(conanfile.env["PYTHONPATH"].split(os.pathsep))
+    except KeyError:
+        pass
     yield
     sys.path = old_path
 
 
 @contextmanager
-def environment_append(env_vars):
-    # None values means not define the var
-    env_vars = {key: value for key, value in env_vars.items() if value is not None}
+def environment_append(env_vars, keep_vars=None):
     old_env = dict(os.environ)
+    keep_vars = keep_vars if keep_vars is not None else ["PATH", "PYTHONPATH"]
+    if keep_vars:
+        for keep_var in keep_vars:
+            if keep_var in env_vars and keep_var in old_env:
+                env_vars[keep_var] += os.pathsep + old_env[keep_var]
     os.environ.update(env_vars)
     try:
         yield
