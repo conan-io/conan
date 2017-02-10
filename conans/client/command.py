@@ -1000,8 +1000,8 @@ path to the CMake binary directory, like this:
             logger.error(exc)
             errors = True
         except ConanException as exc:
-            import traceback
-            logger.debug(traceback.format_exc())
+            # import traceback
+            # logger.debug(traceback.format_exc())
             errors = True
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
