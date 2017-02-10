@@ -175,7 +175,7 @@ class Hello2Conan(ConanFile):
         # So you cannot override it from command line without deleting the conaninfo.TXTGenerator
         client.run("install . -e VAR1=100 --build missing")
         client.run("build")
-        self.assertIn("VAR1=>99", client.user_io.out)
+        self.assertIn("VAR1=>100", client.user_io.out)
 
         # Remove conaninfo
         os.remove(os.path.join(client.current_folder, CONANINFO))
