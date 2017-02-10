@@ -26,26 +26,37 @@ class TXTGenerator(Generator):
 
     @property
     def content(self):
-        deps = DepsCppTXT(self.deps_build_info)
-
-        template = ('[includedirs{dep}]\n{deps.include_paths}\n\n'
-                    '[libdirs{dep}]\n{deps.lib_paths}\n\n'
-                    '[bindirs{dep}]\n{deps.bin_paths}\n\n'
-                    '[libs{dep}]\n{deps.libs}\n\n'
-                    '[defines{dep}]\n{deps.defines}\n\n'
-                    '[cppflags{dep}]\n{deps.cppflags}\n\n'
-                    '[cflags{dep}]\n{deps.cflags}\n\n'
-                    '[sharedlinkflags{dep}]\n{deps.sharedlinkflags}\n\n'
-                    '[exelinkflags{dep}]\n{deps.exelinkflags}\n\n')
+        template = ('[includedirs{dep}{config}]\n{deps.include_paths}\n\n'
+                    '[libdirs{dep}{config}]\n{deps.lib_paths}\n\n'
+                    '[bindirs{dep}{config}]\n{deps.bin_paths}\n\n'
+                    '[libs{dep}{config}]\n{deps.libs}\n\n'
+                    '[defines{dep}{config}]\n{deps.defines}\n\n'
+                    '[cppflags{dep}{config}]\n{deps.cppflags}\n\n'
+                    '[cflags{dep}{config}]\n{deps.cflags}\n\n'
+                    '[sharedlinkflags{dep}{config}]\n{deps.sharedlinkflags}\n\n'
+                    '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n')
 
         sections = []
-        all_flags = template.format(dep="", deps=deps)
+        deps = DepsCppTXT(self.deps_build_info)
+        all_flags = template.format(dep="", deps=deps, config="")
         sections.append(all_flags)
+
+        for config, cpp_info in self.deps_build_info.configs.items():
+            deps = DepsCppTXT(cpp_info)
+            all_flags = template.format(dep="", deps=deps, config=":" + config)
+            sections.append(all_flags)
+
         template_deps = template + '[rootpath{dep}]\n{deps.rootpath}\n\n'
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+            dep = "_" + dep_name
             deps = DepsCppTXT(dep_cpp_info)
-            dep_flags = template_deps.format(dep="_" + dep_name, deps=deps)
+            dep_flags = template_deps.format(dep=dep, deps=deps, config="")
             sections.append(dep_flags)
+
+            for config, cpp_info in dep_cpp_info.configs.items():
+                deps = DepsCppTXT(cpp_info)
+                all_flags = template.format(dep=dep, deps=deps, config=":" + config)
+                sections.append(all_flags)
 
         return "\n".join(sections)
