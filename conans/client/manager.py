@@ -70,6 +70,7 @@ class ConanManager(object):
         conaninfo_scopes = Scopes()
         user_options = OptionsValues(user_options_values)
         mixed_env_values = EnvValues()
+        mixed_env_values.update(env_values)
 
         if current_path:
             conan_info_path = os.path.join(current_path, CONANINFO)
@@ -80,9 +81,8 @@ class ConanManager(object):
                 options.update(user_options)
                 user_options = options
                 conaninfo_scopes = existing_info.scope
+                # Update with info (prioritize user input)
                 mixed_env_values.update(existing_info.env_values)
-
-        mixed_env_values.update(env_values)  # Update with the user input (prioritize cached info)
 
         if user_settings_values:
             aux_values = Values.from_list(user_settings_values)

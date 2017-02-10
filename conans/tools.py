@@ -33,8 +33,8 @@ def pythonpath(conanfile):
 
 @contextmanager
 def environment_append(env_vars, keep_vars=None):
-    keep_vars = keep_vars if keep_vars is not None else ["PATH", "PYTHONPATH"]
     old_env = dict(os.environ)
+    keep_vars = keep_vars if keep_vars is not None else ["PATH", "PYTHONPATH"]
     if keep_vars:
         for keep_var in keep_vars:
             if keep_var in env_vars and keep_var in old_env:

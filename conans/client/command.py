@@ -3,12 +3,11 @@ import hashlib
 import inspect
 import os
 import re
-import sys
-from collections import defaultdict
-
 import requests
-
-from conans import __version__ as CLIENT_VERSION
+import sys
+import conans
+from collections import defaultdict
+from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager
@@ -33,7 +32,7 @@ from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.config_parser import get_bool_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files, exception_message_safe
-from conans.util.log import logger
+from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
 
 
@@ -76,6 +75,10 @@ class Command(object):
         self._user_io = user_io
         self._runner = runner
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
+
+    @property
+    def client_cache(self):
+        return self._client_cache
 
     def _parse_args(self, parser):
         parser.add_argument("-r", "--remote", help='look in the specified remote server')
@@ -492,7 +495,7 @@ path to the CMake binary directory, like this:
                 raise ConanException("Please specify key=value")
             config_parser.set_item(key.strip(), value.strip())
         elif args.subcommand == "get":
-            config_parser.get_item(args.item, self._user_io.out)
+            self._user_io.out.info(config_parser.get_item(args.item))
         elif args.subcommand == "rm":
             config_parser.rm_item(args.item)
 
@@ -1067,14 +1070,18 @@ def get_command():
         out.error(str(e))
         sys.exit(True)
 
-    # Get the new command instance after migrations have been done
-    remote_manager = instance_remote_manager(client_cache)
+    with tools.environment_append(client_cache.conan_config.env_vars):
+        # Adjust CONAN_LOGGING_LEVEL with the env readed
+        conans.util.log.logger = configure_logger()
 
-    # Get a search manager
-    search_adapter = DiskSearchAdapter()
-    search_manager = DiskSearchManager(client_cache, search_adapter)
+        # Get the new command instance after migrations have been done
+        remote_manager = instance_remote_manager(client_cache)
 
-    command = Command(client_cache, user_io, get_conan_runner(), remote_manager, search_manager)
+        # Get a search manager
+        search_adapter = DiskSearchAdapter()
+        search_manager = DiskSearchManager(client_cache, search_adapter)
+        command = Command(client_cache, user_io, get_conan_runner(), remote_manager, search_manager)
+
     return command
 
 
@@ -1100,7 +1107,8 @@ def main(args):
             sys.exit(0)
 
         signal.signal(signal.SIGINT, sigint_handler)
-        error = command.run(args)
+        with tools.environment_append(command.client_cache.conan_config.env_vars):
+            error = command.run(args)
     finally:
         os.chdir(current_dir)
     sys.exit(error)
