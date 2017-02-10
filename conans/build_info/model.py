@@ -1,9 +1,11 @@
+from collections import namedtuple
+
 import conans
 
 
 class BuildInfo(object):
 
-    def __init__(self, name=None, number=None, started=None):
+    def __init__(self):
         self.modules = []
 
     def serialize(self):
@@ -21,37 +23,11 @@ class BuildInfoModule(object):
 
     def serialize(self):
         return {"id": self.id,
-                "artifacts": [ar.serialize() for ar in self.artifacts],
-                "dependencies": [dep.serialize() for dep in self.dependencies]}
+                "artifacts": [vars(ar) for ar in self.artifacts],
+                "dependencies": [vars(dep) for dep in self.dependencies]}
 
 
-class BuildInfoModuleArtifact(object):
-
-    def __init__(self, the_type, sha1, md5, name):
-        # Each file in package
-        self._type = the_type
-        self._sha1 = sha1
-        self._md5 = md5
-        self._name = name
-
-    def serialize(self):
-        return {"type": self._type,
-                "sha1": self._sha1,
-                "md5": self._md5,
-                "name": self._name}
+BuildInfoModuleArtifact = namedtuple("BuildInfoModuleArtifact", ['type', 'sha1', 'md5', 'name'])
+BuildInfoModuleDependency = namedtuple('BuildInfoModuleDependency', ['id', 'type', 'sha1', 'md5'])
 
 
-class BuildInfoModuleDependency(object):
-
-    def __init__(self, the_id, the_type, sha1, md5):
-        # Each file in package
-        self._the_id = the_id
-        self._type = the_type
-        self._sha1 = sha1
-        self._md5 = md5
-
-    def serialize(self):
-        return {"type": self._type,
-                "sha1": self._sha1,
-                "md5": self._md5,
-                "id": self._the_id}

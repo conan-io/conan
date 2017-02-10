@@ -17,8 +17,7 @@ def _extract_uploads_from_conan_trace(path):
                 if doc["_action"] in ("UPLOADED_RECIPE", "UPLOADED_PACKAGE"):
                     module_type = "recipe" if doc["_action"] == "UPLOADED_RECIPE" else "package"
                     modules[doc["_id"]] = {"remote": doc["remote"], "files": [], "type": module_type}
-                    for file_doc in doc["files"]:
-                        modules[doc["_id"]]["files"].append(file_doc)
+                    modules[doc["_id"]]["files"].extend(doc["files"])
     except ValueError as exc:
         raise Exception("INVALID TRACE FILE! %s" % exc)
 
