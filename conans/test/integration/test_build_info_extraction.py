@@ -49,7 +49,6 @@ class MyBuildInfo(unittest.TestCase):
         with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
             self.client.run("install Hello0/1.0@lasote/stable")
             self.client.run("upload '*' -c --all")
-            print(os.path.exists(trace_file))
             data = get_build_info(trace_file).serialize()
             # Only uploaded 2 modules, the Hello0 recipe and the Hello0 package
             # without dependencies

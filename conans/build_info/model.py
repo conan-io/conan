@@ -23,8 +23,8 @@ class BuildInfoModule(object):
 
     def serialize(self):
         return {"id": self.id,
-                "artifacts": [vars(ar) for ar in self.artifacts],
-                "dependencies": [vars(dep) for dep in self.dependencies]}
+                "artifacts": [ar._asdict() for ar in self.artifacts],
+                "dependencies": [dep._asdict() for dep in self.dependencies]}
 
 
 BuildInfoModuleArtifact = namedtuple("BuildInfoModuleArtifact", ['type', 'sha1', 'md5', 'name'])
