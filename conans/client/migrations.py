@@ -1,8 +1,9 @@
+from conans.client.client_cache import CONAN_CONF
 from conans.migrations import Migrator
 from conans.util.files import load, save
 from conans.model.version import Version
 import os
-from conans.client.conf import default_settings_yml
+from conans.client.conf import default_settings_yml, new_default_confs_from_env
 
 
 class ClientMigrator(Migrator):
@@ -13,6 +14,24 @@ class ClientMigrator(Migrator):
                                              current_version, out)
 
     def _update_settings_yml(self, old_settings):
+        settings_path = self.client_cache.settings_path
+        if not os.path.exists(settings_path):
+            self.out.warn("Migration: This conan installation doesn't have settings yet")
+            self.out.warn("Nothing to migrate here, settings will be generated automatically")
+            return
+
+        self.out.warn("Migration: Updating settings.yml")
+        current_settings = load(self.client_cache.settings_path)
+        if current_settings != old_settings:
+            backup_path = self.client_cache.settings_path + ".backup"
+            save(backup_path, current_settings)
+            self.out.warn("*" * 40)
+            self.out.warn("A new settings.yml has been defined")
+            self.out.warn("Your old settings.yml has been backup'd to: %s" % backup_path)
+            self.out.warn("*" * 40)
+        save(self.client_cache.settings_path, default_settings_yml)
+
+    def _update_conan_conf(self, old_settings):
         settings_path = self.client_cache.settings_path
         if not os.path.exists(settings_path):
             self.out.warn("Migration: This conan installation doesn't have settings yet")
@@ -59,3 +78,17 @@ compiler:
 build_type: [None, Debug, Release]
 """
             self._update_settings_yml(old_settings)
+
+        if old_version < Version("0.20"):
+            self.out.warn("Migration: Updating %s file" % CONAN_CONF)
+            conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
+            backup_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF + ".backup")
+            old_conf = load(conf_path)
+            save(backup_path, old_conf)
+
+            new_conf = "%s\n%s" % (old_conf, new_default_confs_from_env)
+            save(conf_path, new_conf)
+            self.out.warn("*" * 40)
+            self.out.warn("A new %s has been defined" % CONAN_CONF)
+            self.out.warn("Your old %s has been backup'd to: %s" % (CONAN_CONF, backup_path))
+            self.out.warn("*" * 40)
