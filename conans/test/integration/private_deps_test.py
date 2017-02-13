@@ -54,10 +54,10 @@ class PrivateDepsTest(unittest.TestCase):
                                                  "conanbuildinfo.cmake"))
 
         self.assertIn("CONAN_PKG::gf PROPERTY INTERFACE_LINK_LIBRARIES "
-                      "${CONAN_FULLPATH_LIBS_GF} CONAN_PKG::glew ${CONAN_SHARED_LINKER_FLAGS_GF}",
+                      "CONAN_PKG::glew ${CONAN_FULLPATH_LIBS_GF} ${CONAN_SHARED_LINKER_FLAGS_GF}",
                       conanbuildinfo_cmake)
         self.assertIn("CONAN_PKG::ImGuiTest PROPERTY INTERFACE_LINK_LIBRARIES "
-                      "${CONAN_FULLPATH_LIBS_IMGUITEST} CONAN_PKG::glm CONAN_PKG::gf",
+                      "CONAN_PKG::glm CONAN_PKG::gf ${CONAN_FULLPATH_LIBS_IMGUITEST}",
                       conanbuildinfo_cmake)
 
     def consumer_force_build_test(self):

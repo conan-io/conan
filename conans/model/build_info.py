@@ -13,8 +13,8 @@ DEFAULT_RES = "res"
 
 
 class _CppInfo(object):
-    """ Object that stores all the necessary information to build in C/C++ a
-    given conans. It is intended to be system independent, translation to
+    """ Object that stores all the necessary information to build in C/C++.
+    It is intended to be system independent, translation to
     specific systems will be produced from this info
     """
     def __init__(self):

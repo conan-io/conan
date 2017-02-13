@@ -22,7 +22,8 @@ class DepsCppCmake(object):
         self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
         self.bin_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
                                          for p in deps_cpp_info.bin_paths)
-
+        self.build_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
+                                           for p in deps_cpp_info.build_paths)
         self.rootpath = '"%s"' % deps_cpp_info.rootpath.replace("\\", "/")
 
 
@@ -41,7 +42,7 @@ class CMakeGenerator(Generator):
             dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)
 
-            for config, cpp_info in dep_cpp_info.config.items():
+            for config, cpp_info in dep_cpp_info.configs.items():
                 deps = DepsCppCmake(cpp_info)
                 dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=config)
                 sections.append(dep_flags)
@@ -56,25 +57,13 @@ class CMakeGenerator(Generator):
         all_flags = cmake_global_vars(deps=deps)
         sections.append(all_flags)
 
-        for config, cpp_info in self.deps_build_info.config.items():
+        for config, cpp_info in self.deps_build_info.configs.items():
             deps = DepsCppCmake(cpp_info)
             dep_flags = cmake_global_vars(deps=deps, build_type=config)
             sections.append(dep_flags)
 
         # TARGETS
-        template = """
-    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
-                                  CONAN_FULLPATH_LIBS_{uname})
-
-    add_library({name} INTERFACE IMPORTED)
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} {deps} ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
-    set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}})
-    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}})
-    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}})
-    # Not working
-    # set_property(TARGET {name} PROPERTY INTERFACE_LINK_FLAGS ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}})
-"""
-        sections.extend(generate_targets_section(template, self.deps_build_info.dependencies))
+        sections.extend(generate_targets_section(self.deps_build_info.dependencies))
 
         # MACROS
         sections.append(cmake_macros)
