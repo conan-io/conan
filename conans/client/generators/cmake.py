@@ -1,7 +1,8 @@
 from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
-from conans.client.generators.cmake_common import cmake_single_dep_vars, cmake_multi_dep_vars,\
-    cmake_macros, generate_targets_section
+from conans.client.generators.cmake_common import cmake_dependency_vars,\
+    cmake_macros, generate_targets_section, cmake_dependencies, cmake_package_info,\
+    cmake_global_vars
 
 
 class DepsCppCmake(object):
@@ -37,19 +38,28 @@ class CMakeGenerator(Generator):
         # Per requirement variables
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             deps = DepsCppCmake(dep_cpp_info)
-            dep_flags = cmake_single_dep_vars(dep_name, deps=deps)
+            dep_flags = cmake_dependency_vars(dep_name, deps=deps)
             sections.append(dep_flags)
 
-        # GENERAL VARIABLES
-        deps = DepsCppCmake(self.deps_build_info)
-        rootpaths = [DepsCppCmake(dep_cpp_info).rootpath for _, dep_cpp_info
-                     in self.deps_build_info.dependencies]
-        all_flags = cmake_multi_dep_vars(deps=deps, root_paths=rootpaths,
-                                         dependencies=self.deps_build_info.deps,
-                                         name=self.conanfile.name, version=self.conanfile.version)
+            for config, cpp_info in dep_cpp_info.config.items():
+                deps = DepsCppCmake(cpp_info)
+                dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=config)
+                sections.append(dep_flags)
 
+        # GENERAL VARIABLES
         sections.append("\n### Definition of global aggregated variables ###\n")
+        sections.append(cmake_package_info(name=self.conanfile.name,
+                                           version=self.conanfile.version))
+        all_flags = cmake_dependencies(dependencies=self.deps_build_info.deps)
         sections.append(all_flags)
+        deps = DepsCppCmake(self.deps_build_info)
+        all_flags = cmake_global_vars(deps=deps)
+        sections.append(all_flags)
+
+        for config, cpp_info in self.deps_build_info.config.items():
+            deps = DepsCppCmake(cpp_info)
+            dep_flags = cmake_global_vars(deps=deps, build_type=config)
+            sections.append(dep_flags)
 
         # TARGETS
         template = """

@@ -19,10 +19,11 @@ class _CppInfo(object):
     """
     def __init__(self):
         self.includedirs = []  # Ordered list of include paths
-        self.libs = []  # The libs to link against
         self.libdirs = []  # Directories to find libraries
         self.resdirs = []  # Directories to find resources, data, etc
         self.bindirs = []  # Directories to find executables and shared libs
+        self.builddirs = []
+        self.libs = []  # The libs to link against
         self.defines = []  # preprocessor definitions
         self.cflags = []  # pure C flags
         self.cppflags = []  # C++ compilation flags
@@ -45,6 +46,11 @@ class _CppInfo(object):
         return [os.path.join(self.rootpath, p)
                 if not os.path.isabs(p) else p for p in self.bindirs]
 
+    @property
+    def build_paths(self):
+        return [os.path.join(self.rootpath, p)
+                if not os.path.isabs(p) else p for p in self.builddirs]
+
 
 class CppInfo(_CppInfo):
     """ Build Information declared to be used by the CONSUMERS of a
@@ -59,6 +65,7 @@ class CppInfo(_CppInfo):
         self.libdirs.append(DEFAULT_LIB)
         self.bindirs.append(DEFAULT_BIN)
         self.resdirs.append(DEFAULT_RES)
+        self.builddirs.append("")
         self.public_deps = []
         self.configs = {}
 
@@ -71,6 +78,7 @@ class CppInfo(_CppInfo):
             result.libdirs.append(DEFAULT_LIB)
             result.bindirs.append(DEFAULT_BIN)
             result.resdirs.append(DEFAULT_RES)
+            result.builddirs.append("")
             return result
 
         return self.configs.setdefault(config, _get_cpp_info())
@@ -89,6 +97,7 @@ class _BaseDepsCppInfo(_CppInfo):
         self.libdirs = merge_lists(self.libdirs, dep_cpp_info.lib_paths)
         self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
+        self.builddirs = merge_lists(self.builddirs, dep_cpp_info.builddirs)
 
         # Note these are in reverse order
         self.defines = merge_lists(dep_cpp_info.defines, self.defines)
@@ -108,6 +117,10 @@ class _BaseDepsCppInfo(_CppInfo):
     @property
     def bin_paths(self):
         return self.bindirs
+
+    @property
+    def build_paths(self):
+        return self.builddirs
 
 
 class DepsCppInfo(_BaseDepsCppInfo):
@@ -161,7 +174,7 @@ class DepsCppInfo(_BaseDepsCppInfo):
                 field = tokens[0]
                 if len(tokens) == 2:
                     dep = tokens[1]
-                    dep_cpp_info = result._dependencies.setdefault(dep, DepsCppInfo())
+                    dep_cpp_info = result._dependencies.setdefault(dep, CppInfo(root_folder=""))
                     if field == "rootpath":
                         lines = lines[0]
                     item_to_apply = dep_cpp_info
@@ -179,6 +192,7 @@ class DepsCppInfo(_BaseDepsCppInfo):
         return result
 
     def update(self, dep_cpp_info, conan_ref):
+        assert isinstance(dep_cpp_info, CppInfo)
         self._dependencies[conan_ref.name] = dep_cpp_info
 
         super(DepsCppInfo, self).update(dep_cpp_info)

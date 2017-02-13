@@ -2,6 +2,7 @@ _cmake_single_dep_vars = """set(CONAN_{dep}_ROOT{build_type} {deps.rootpath})
 set(CONAN_INCLUDE_DIRS_{dep}{build_type} {deps.include_paths})
 set(CONAN_LIB_DIRS_{dep}{build_type} {deps.lib_paths})
 set(CONAN_BIN_DIRS_{dep}{build_type} {deps.bin_paths})
+set(CONAN_BUILD_DIRS_{dep}{build_type} {deps.build_paths})
 set(CONAN_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
@@ -13,13 +14,33 @@ set(CONAN_C_FLAGS_{dep}{build_type} "{deps.cflags}")
 """
 
 
-def cmake_single_dep_vars(name, deps, build_type=""):
+def _build_type_str(build_type):
+    if build_type:
+        return "_" + str(build_type).upper()
+
+
+def cmake_dependency_vars(name, deps, build_type=""):
+    build_type = _build_type_str(build_type)
     return _cmake_single_dep_vars.format(dep=name.upper(), deps=deps, build_type=build_type)
 
 
-_cmake_multi_dep_vars = """set(CONAN_PACKAGE_NAME {name})
+_cmake_package_info = """set(CONAN_PACKAGE_NAME {name})
 set(CONAN_PACKAGE_VERSION {version})
-set(CONAN_DEPENDENCIES{build_type} {dependencies})
+"""
+
+
+def cmake_package_info(name, version):
+    return _cmake_package_info.format(name=name, version=version)
+
+
+def cmake_dependencies(dependencies, build_type=""):
+    build_type = _build_type_str(build_type)
+    dependencies = " ".join(dependencies)
+    return "set(CONAN_DEPENDENCIES{build_type} {dependencies})".format(dependencies=dependencies,
+                                                                       build_type=build_type)
+
+
+_cmake_multi_dep_vars = """
 set(CONAN_INCLUDE_DIRS{build_type} {deps.include_paths} ${{CONAN_INCLUDE_DIRS{build_type}}})
 set(CONAN_LIB_DIRS{build_type} {deps.lib_paths} ${{CONAN_LIB_DIRS{build_type}}})
 set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
@@ -29,16 +50,12 @@ set(CONAN_CXX_FLAGS{build_type} "{deps.cppflags} ${{CONAN_CXX_FLAGS{build_type}}
 set(CONAN_SHARED_LINKER_FLAGS{build_type} "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS{build_type}}}")
 set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS{build_type}}}")
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
-set(CONAN_CMAKE_MODULE_PATH{build_type} {module_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
+set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
 """
 
 
-def cmake_multi_dep_vars(name, version, deps, dependencies, root_paths, build_type=""):
-    module_paths = " ".join(root_paths)
-    dependencies = " ".join(dependencies)
-    return _cmake_multi_dep_vars.format(deps=deps, module_paths=module_paths,
-                                        dependencies=dependencies, name=name, version=version,
-                                        build_type=build_type)
+def cmake_global_vars(deps, build_type=""):
+    return _cmake_multi_dep_vars.format(deps=deps, build_type=_build_type_str(build_type))
 
 
 _cmake_common_macros = """

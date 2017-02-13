@@ -1,13 +1,33 @@
 from conans.model import Generator
-from conans.client.generators.cmake_common import cmake_single_dep_vars, cmake_multi_dep_vars,\
-    cmake_macros_multi, generate_targets_section
+from conans.client.generators.cmake_common import cmake_dependency_vars, cmake_package_info,\
+    cmake_macros_multi, generate_targets_section, cmake_dependencies, cmake_global_vars
 from conans.client.generators.cmake import DepsCppCmake
+from conans.model.build_info import CppInfo
+
+
+def extend(cpp_info, config):
+    """ adds the specific config configuration to the common one
+    """
+    config_info = cpp_info.configs.get(config)
+    if config_info:
+        result = CppInfo()
+        result.rootpath = config_info.rootpath
+        result.includedirs = cpp_info.includedirs + config_info.includedirs
+        result.libdirs = cpp_info.libdirs + config_info.libdirs
+        result.bindirs = cpp_info.bindirs + config_info.bindirs
+        result.resdirs = cpp_info.resdirs + config_info.resdirs
+        result.builddirs = cpp_info.builddirs + config_info.builddirs
+        result.libs = cpp_info.libs + config_info.libs
+        result.defines = cpp_info.defines + config_info.defines
+        result.cflags = cpp_info.cflags + config_info.cflags
+        result.cppflags = cpp_info.cppflags + config_info.cppflags
+        result.sharedlinkflags = cpp_info.sharedlinkflags + config_info.sharedlinkflags
+        result.exelinkflags = cpp_info.exelinkflags + config_info.exelinkflags
+        return result
+    return cpp_info
 
 
 class CMakeMultiGenerator(Generator):
-    @property
-    def build_type(self):
-        return "_" + str(self.conanfile.settings.build_type).upper()
 
     @property
     def content(self):
@@ -23,28 +43,33 @@ class CMakeMultiGenerator(Generator):
     def content_type(self):
         sections = []
 
+        build_type = str(self.conanfile.settings.build_type).lower()
         # Per requirement variables
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+            # Only the specific of the build_type
+            dep_cpp_info = extend(dep_cpp_info, build_type)
             deps = DepsCppCmake(dep_cpp_info)
-            dep_flags = cmake_single_dep_vars(dep_name, deps=deps, build_type=self.build_type)
+            dep_flags = cmake_dependency_vars(dep_name, deps=deps, build_type=self.build_type)
             sections.append(dep_flags)
 
         # GENERAL VARIABLES
-        deps = DepsCppCmake(self.deps_build_info)
-        rootpaths = [DepsCppCmake(dep_cpp_info).rootpath for _, dep_cpp_info
-                     in self.deps_build_info.dependencies]
-        all_flags = cmake_multi_dep_vars(deps=deps, root_paths=rootpaths,
-                                         dependencies=self.deps_build_info.deps,
-                                         name=self.conanfile.name, version=self.conanfile.version,
-                                         build_type=self.build_type)
-
         sections.append("\n### Definition of global aggregated variables ###\n")
+        all_flags = cmake_dependencies(dependencies=self.deps_build_info.deps,
+                                       build_type=build_type)
+        sections.append(all_flags)
+
+        dep_cpp_info = extend(self.deps_build_info, build_type)
+        deps = DepsCppCmake(dep_cpp_info)
+        all_flags = cmake_global_vars(deps=deps, build_type=build_type)
         sections.append(all_flags)
         return "\n".join(sections)
 
     @property
     def content_multi(self):
         sections = []
+        sections.append(cmake_package_info(name=self.conanfile.name,
+                                           version=self.conanfile.version))
+
         # TARGETS
         template = """
     conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
@@ -65,4 +90,7 @@ class CMakeMultiGenerator(Generator):
     #                                                         $<$<CONFIG:Debug>:${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG}}  ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG}}>)
 """
         sections.extend(generate_targets_section(template, self.deps_build_info.dependencies))
-        return cmake_macros_multi + "\n\n" + "\n".join(sections)
+        # MACROS
+        sections.append(cmake_macros_multi)
+
+        return "\n".join(sections)
