@@ -68,9 +68,10 @@ _target_template = """
 
     add_library({name} INTERFACE IMPORTED)
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES {deps} ${{CONAN_FULLPATH_LIBS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}}
-                                                                        $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
-                                                                        $<$<CONFIG:Debug>:${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}}
+                                                                 $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
+                                                                 $<$<CONFIG:Debug>:${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG}}>
+                                                                 {deps})
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:Debug>:${{CONAN_INCLUDE_DIRS_{uname}_DEBUG}}>)
@@ -279,12 +280,12 @@ endfunction()
 macro(conan_global_flags)
     if(CONAN_SYSTEM_INCLUDES)
         include_directories(SYSTEM ${CONAN_INCLUDE_DIRS}
-                                   "$<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>"
-                                   "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
+                                   $<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>
+                                   $<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>)
     else()
         include_directories(${CONAN_INCLUDE_DIRS}
-                            "$<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>"
-                            "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
+                            $<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>
+                            $<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>)
     endif()
 
     link_directories(${CONAN_LIB_DIRS})
@@ -295,8 +296,8 @@ macro(conan_global_flags)
                                   CONAN_LIBS_RELEASE)
 
     add_compile_options(${CONAN_DEFINES}
-                        "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
-                        "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>")
+                        $<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>
+                        $<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>)
 
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CXX_FLAGS}")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_C_FLAGS}")
