@@ -62,7 +62,8 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
         save(dirty, "")  # Creation of DIRTY flag
         os.chdir(src_folder)
         try:
-            with tools.environment_append(*conan_file.env_values_dicts):
+            simple_env_vars, multiple_env_vars = conan_file.env_values_dicts
+            with tools.environment_append(simple_env_vars, multiple_env_vars):
                 conan_file.source()
             os.remove(dirty)  # Everything went well, remove DIRTY flag
         except Exception as e:
@@ -91,7 +92,8 @@ def config_source_local(export_folder, current_path, conan_file, output):
 
     save(dirty, "")  # Creation of DIRTY flag
     try:
-        with tools.environment_append(*conan_file.env_values_dicts):
+        simple_env_vars, multiple_env_vars = conan_file.env_values_dicts
+        with tools.environment_append(simple_env_vars, multiple_env_vars):
             conan_file.source()
         os.remove(dirty)  # Everything went well, remove DIRTY flag
     except Exception as e:

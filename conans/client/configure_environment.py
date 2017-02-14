@@ -1,33 +1,24 @@
-from conans.model.settings import Settings
 import copy
-from conans.client.generators.virtualenv import get_setenv_variables_commands
-from conans.model.env_info import DepsEnvInfo
-from conans.util.files import save
+
 from conans import tools
-from conans.client.output import ConanOutput
-import sys
+from conans.client.generators.virtualenv import get_setenv_variables_commands
+from conans.model.settings import Settings
+from conans.util.files import save
 
 
 class ConfigureEnvironment(object):
 
-    def __init__(self, *args):
-        if len(args) == 2:
-            deps_cpp_info = args[0]
-            deps_env_info = DepsEnvInfo()
-            settings = args[1]
-            self.output = ConanOutput(sys.stdout)
-        elif len(args) == 1:  # conanfile (new interface)
-            self.conanfile = args[0]
-            self.output = self.conanfile.output
-            deps_cpp_info = self.conanfile.deps_cpp_info
-            deps_env_info = self.conanfile.deps_env_info
-            settings = self.conanfile.settings
+    def __init__(self, conanfile):
+        self.conanfile = conanfile
+        self.output = self.conanfile.output
+        deps_cpp_info = self.conanfile.deps_cpp_info
+        self.simple_env_vars, self.multiple_env_vars = self.conanfile.env_values_dicts
+        settings = self.conanfile.settings
 
         assert isinstance(settings, Settings)
 
         self._settings = settings
         self._deps_cpp_info = deps_cpp_info
-        self._deps_env_info = deps_env_info
         try:
             self.compiler = str(self._settings.compiler)
         except:
@@ -117,7 +108,7 @@ class ConfigureEnvironment(object):
                          'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:{0}'.format(include_paths))
         command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
         # Do not include "export" command, they are passed to env
-        command += " ".join(get_setenv_variables_commands(self._deps_env_info, ""))
+        command += " ".join(get_setenv_variables_commands(self.multiple_env_vars, self.simple_env_vars, ""))
         return command
 
     @property
@@ -126,8 +117,7 @@ class ConfigureEnvironment(object):
             if self.compiler == "gcc" or "clang" in str(self.compiler) or "sun-cc" in str(self.compiler):
                 return self._gcc_env()
         elif self.os == "Windows":
-            commands = []
-            commands.append("@echo off")
+            commands = ["@echo off", ]
             vcvars = ""
             if self.compiler == "Visual Studio":
                 cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
@@ -152,12 +142,12 @@ class ConfigureEnvironment(object):
                 commands.append('if defined LIBRARY_PATH (SET "LIBRARY_PATH=%LIBRARY_PATH%;{0}")'
                                 ' else (SET "LIBRARY_PATH={0}")'.format(lib_paths))
 
-            commands.extend(get_setenv_variables_commands(self._deps_env_info, "SET"))
+            commands.extend(get_setenv_variables_commands(self.multiple_env_vars, self.simple_env_vars, "SET"))
             save("_conan_env.bat", "\r\n".join(commands))
             command = "%scall _conan_env.bat" % vcvars
             return command
 
-        return " && ".join(get_setenv_variables_commands(self._deps_env_info))
+        return " && ".join(get_setenv_variables_commands(self.multiple_env_vars, self.simple_env_vars))
 
     # alias for backward compatibility
     command_line = command_line_env

@@ -218,7 +218,7 @@ class ConanToolPackage(ConanFile):
         self.assertRaises(Exception, client.run, "install conantool/1.0@lasote/stable --build missing")
 
         # But we can inject the PYTHONPATH
-        client.run("install conantool/1.0@lasote/stable -e PYTHONPATH='%s'" % external_dir)
+        client.run("install conantool/1.0@lasote/stable -e PYTHONPATH=['%s']" % external_dir)
 
         # Now we want to reuse the package and access both external stuff and mytest.py stuff
 
