@@ -32,13 +32,18 @@ def pythonpath(conanfile):
 
 
 @contextmanager
-def environment_append(env_vars, keep_vars=None):
+def environment_append(env_vars, list_env_vars=None):
+    """
+    :param env_vars: List of simple environment vars. {name: value, name2: value2} => e.j: MYVAR=1
+    :param list_env_vars: List of appendable environment vars. {name: [value, value2]} => e.j. PATH=/path/1:/path/2
+    :return: None
+    """
     old_env = dict(os.environ)
-    keep_vars = keep_vars if keep_vars is not None else ["PATH", "PYTHONPATH"]
-    if keep_vars:
-        for keep_var in keep_vars:
-            if keep_var in env_vars and keep_var in old_env:
-                env_vars[keep_var] += os.pathsep + old_env[keep_var]
+    if list_env_vars:
+        for name, value in list_env_vars.items():
+            env_vars[name] = os.pathsep.join(value)
+            if name in old_env:
+                env_vars[name] += os.pathsep + old_env[name]
     os.environ.update(env_vars)
     try:
         yield
@@ -48,13 +53,13 @@ def environment_append(env_vars, keep_vars=None):
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
-    '''
+    """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
         env = ConfigureEnvironment(self)
         command = "%s && %s" % (env.command_line_env, build_command)
         self.run(command)
-    '''
+    """
     targets = targets or []
     command = "devenv %s /upgrade && " % sln_path if upgrade_project else ""
     command += "msbuild %s /p:Configuration=%s" % (sln_path, settings.build_type)

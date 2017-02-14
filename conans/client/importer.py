@@ -52,7 +52,7 @@ def run_imports(conanfile, current_path, output):
     file_importer = FileImporter(conanfile, current_path)
     conanfile.copy = file_importer
     # FIXME: The environment has to be properly defined even for "conan imports"
-    with environment_append(conanfile.env or []):
+    with environment_append(*conanfile.env_values_dicts):
         conanfile.imports()
     copied_files = file_importer.execute()
     import_output = ScopedOutput("%s imports()" % output.scope, output)

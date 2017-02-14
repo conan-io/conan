@@ -270,7 +270,7 @@ class ConanInstaller(object):
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
-        with environment_append(conan_file.env):
+        with environment_append(*conan_file.env_values_dicts):
             self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
 
     def _package_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
@@ -289,7 +289,7 @@ class ConanInstaller(object):
         output.info("Generated %s" % CONANENV)
 
         os.chdir(build_folder)
-        with environment_append(conan_file.env):
+        with environment_append(*conan_file.env_values_dicts):
             create_package(conan_file, build_folder, package_folder, output)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
 

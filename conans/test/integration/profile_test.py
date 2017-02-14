@@ -125,7 +125,7 @@ class ProfileTest(unittest.TestCase):
         files["conanfile.py"] = conanfile_scope_env
 
         create_profile(self.client.client_cache.profiles_path, "envs", settings={},
-                       env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", 2)]})
+                       env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", "2")]})
 
         self.client.save(files)
         self.client.run("export lasote/stable")

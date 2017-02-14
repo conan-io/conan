@@ -997,10 +997,10 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
 def _get_env_values(env, package_env):
     env_values = EnvValues()
     for name, value in env:
-        env_values.add(name, value)
+        env_values.add(name, EnvValues.load_value(value))
     for package, data in package_env.items():
         for name, value in data:
-            env_values.add(name, value, package)
+            env_values.add(name, EnvValues.load_value(value), package)
     return env_values
 
 
