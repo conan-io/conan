@@ -62,7 +62,8 @@ def gen_ps1_lines(name, simple_to_set, multiple_to_set):
         activate_lines.append("$env:%s = \"%s\" + \";$env:%s\"" % (name, value, name))
     for name, value in simple_to_set.items():
         activate_lines.append("$env:%s = \"%s\"" % (name, value))
-    return (activate_lines, deactivate_lines)
+    return activate_lines, deactivate_lines
+
 
 class VirtualEnvGenerator(Generator):
 
