@@ -113,6 +113,10 @@ class RequirementsInfo(object):
         return self._data[self._get_key(item)]
 
     @property
+    def pkg_names(self):
+        return [r.conan.name for r in self._data.keys()]
+
+    @property
     def sha(self):
         result = []
         # Remove requirements without a name, i.e. indirect transitive requirements
@@ -170,12 +174,12 @@ class RequirementsList(list):
 class ConanInfo(object):
 
     def copy(self):
-        """ Useful for build_id() implementation
+        """ Useful for build_id implementation
         """
         result = ConanInfo()
         result.settings = self.settings.copy()
         result.options = self.options.copy()
-        result.requires = self.requires
+        result.requires = self.requires.copy()
         result._non_devs_requirements = self._non_devs_requirements
         return result
 
@@ -272,6 +276,7 @@ class ConanInfo(object):
             return computed_id
         result = []
         result.append(self.settings.sha)
+        self.requires.pkg_names
         result.append(self.options.sha(self._non_devs_requirements))
         result.append(self.requires.sha)
         self._package_id = sha1('\n'.join(result).encode())

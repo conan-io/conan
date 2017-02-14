@@ -36,6 +36,21 @@ def init_package_info(deps_graph, paths):
             conan_file.env_info = EnvInfo(package_folder)
 
 
+def build_id(conanfile):
+    if hasattr(conanfile, "build_id"):
+        # construct new ConanInfo
+        build_id_info = conanfile.info.copy()
+        conanfile.info_build = build_id_info
+        # effectively call the user function to change the package values
+        try:
+            conanfile.build_id()
+        except Exception as e:
+            raise ConanException("Error in 'build_id()': %s" % str(e))
+        # compute modified ID
+        return build_id_info.package_id()
+    return None
+
+
 class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
@@ -264,9 +279,13 @@ class ConanInstaller(object):
 
     def _build_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
         """Calls the conanfile's build method"""
-        build_folder = self._client_cache.build_folder(package_reference, conan_file)
+        new_id = build_id(conan_file)
+        if new_id:
+            package_reference = PackageReference(package_reference.conan, new_id)
+        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
         if os.path.exists(build_folder) and hasattr(conan_file, "build_id"):
             return build_folder
+        # build_id is not caching the build folder, so actually rebuild the package
         src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
         export_folder = self._client_cache.export(conan_ref)
 

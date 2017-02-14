@@ -9,7 +9,6 @@ from conans.model.build_info import DEFAULT_RES, DEFAULT_BIN, DEFAULT_LIB, DEFAU
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
-from conans.client.client_cache import has_build_id
 
 
 def create_package(conanfile, build_folder, package_folder, output, local=False):
@@ -58,7 +57,7 @@ def _create_aux_files(build_folder, package_folder, conanfile):
     """
 
     logger.debug("Creating config files to %s" % package_folder)
-    if has_build_id(conanfile):
+    if hasattr(conanfile, "build_id"):
         # It is important to create a new fresh CONANINFO, because for shared
         # build_id folders, the existing one in the build folders is wrong
         save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
