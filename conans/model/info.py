@@ -80,6 +80,10 @@ class RequirementsInfo(object):
         self._non_devs_requirements = non_devs_requirements
         self._data = {r: RequirementInfo(str(r)) for r in requires}
 
+    def copy(self):
+        return RequirementsInfo(self._data.keys(), self._non_devs_requirements.copy()
+                                if self._non_devs_requirements else None)
+
     def clear(self):
         self._data = {}
 
@@ -276,7 +280,9 @@ class ConanInfo(object):
             return computed_id
         result = []
         result.append(self.settings.sha)
-        self.requires.pkg_names
+        # Only are valid requires for OPtions those Non-Dev who are still in requires
+
+        self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha(self._non_devs_requirements))
         result.append(self.requires.sha)
         self._package_id = sha1('\n'.join(result).encode())

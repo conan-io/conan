@@ -41,11 +41,12 @@ consumer_py = """from conans import ConanFile
 
 
 class MyTest(ConanFile):
+    name = "MyTest"
+    version = "0.1"
     settings = "build_type"
     requires = "Pkg/0.1@user/channel"
 
     def build_id(self):
-        print "Calling consumer BUILD_ID"
         self.info_build.settings.build_type = "Any"
         self.info_build.requires.clear()
 
@@ -169,8 +170,35 @@ class BuildIdTest(unittest.TestCase):
             client.save({"conanfile.txt": consumer}, clean_first=True)
         client.run('install -s build_type=Debug')
         client.run('install -s build_type=Release')
-        client.run("info")
-        print client.user_io.out
-        """client.run('install -s build_type=Debug')
-        client.run("info")
-        print client.user_io.out"""
+        client.run("info")  # Uses release
+
+        def _check():
+            build_ids = str(client.user_io.out).count("BuildID:"
+                                                      " 18b7fe8d22ef48b0476252ca1a28aed3812fe609")
+            build_nones = str(client.user_io.out).count("BuildID: None")
+            if python_consumer:
+                self.assertEqual(2, build_ids)
+                self.assertEqual(0, build_nones)
+            else:
+                self.assertEqual(1, build_ids)
+                self.assertEqual(1, build_nones)
+
+        _check()
+        self.assertIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
+        self.assertNotIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
+
+        client.run("info -s build_type=Debug")
+        _check()
+        self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
+        self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
+
+        if python_consumer:
+            client.run("export user/channel")
+            client.run("info MyTest/0.1@user/channel -s build_type=Debug")
+            _check()
+            self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
+            self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
+            client.run("info MyTest/0.1@user/channel -s build_type=Release")
+            _check()
+            self.assertIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
+            self.assertNotIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)

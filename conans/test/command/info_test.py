@@ -68,6 +68,8 @@ class InfoTest(unittest.TestCase):
         self.client.run("info -u")
 
         self.assertIn("Creation date: ", self.client.user_io.out)
+        self.assertIn("ID: ", self.client.user_io.out)
+        self.assertIn("BuildID: ", self.client.user_io.out)
 
         expected_output = textwrap.dedent(
             """\
@@ -93,12 +95,14 @@ class InfoTest(unittest.TestCase):
                 Requires:
                     Hello0/0.1@lasote/stable""")
 
-        def clean_dates(output):
+        def clean_output(output):
             return "\n".join([line for line in str(output).splitlines()
-                              if not line.strip().startswith("Creation date")])
+                              if not line.strip().startswith("Creation date") and
+                              not line.strip().startswith("ID") and
+                              not line.strip().startswith("BuildID")])
 
         # The timestamp is variable so we can't check the equality
-        self.assertIn(expected_output, clean_dates(self.client.user_io.out))
+        self.assertIn(expected_output, clean_output(self.client.user_io.out))
 
         self.client.run("info -u --only=url")
         expected_output = textwrap.dedent(
@@ -109,7 +113,7 @@ class InfoTest(unittest.TestCase):
                 URL: myurl
             Hello1/0.1@lasote/stable
                 URL: myurl""")
-        self.assertIn(expected_output, clean_dates(self.client.user_io.out))
+        self.assertIn(expected_output, clean_output(self.client.user_io.out))
         self.client.run("info -u --only=url,license")
         expected_output = textwrap.dedent(
             """\
@@ -122,7 +126,7 @@ class InfoTest(unittest.TestCase):
             Hello1/0.1@lasote/stable
                 URL: myurl
                 License: MIT""")
-        self.assertIn(expected_output, clean_dates(self.client.user_io.out))
+        self.assertIn(expected_output, clean_output(self.client.user_io.out))
 
     def build_order_test(self):
         self.client = TestClient()
