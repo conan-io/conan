@@ -289,6 +289,7 @@ class ConanInstaller(object):
         output.info("Generated %s" % CONANENV)
 
         os.chdir(build_folder)
+
         simple_env_vars, multiple_env_vars = conan_file.env_values_dicts
         with environment_append(simple_env_vars, multiple_env_vars):
             create_package(conan_file, build_folder, package_folder, output)

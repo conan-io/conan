@@ -1,11 +1,13 @@
+import os
+import shutil
+
+import six
+
+from conans import tools
+from conans.errors import ConanException, format_conanfile_exception
 from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME,\
     CONANFILE
-import os
 from conans.util.files import rmdir, save
-import six
-from conans.errors import ConanException, format_conanfile_exception
-import shutil
-from conans import tools
 
 
 def config_source(export_folder, src_folder, conan_file, output, force=False):

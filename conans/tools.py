@@ -88,8 +88,16 @@ def vcvars_command(settings):
                                  "Current settings visual version: %s"
                                  % (existing_version, settings.compiler.version))
     else:
-        command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
-                   % (settings.compiler.version, param))
+        env_var = "vs%s0comntools" % settings.compiler.version
+        try:
+            vs_path = os.environ[env_var]
+        except KeyError:
+            raise ConanException("VS '%s' variable not defined. Please install VS or define "
+                                 "the variable (VS2017)" % env_var)
+        if settings.compiler.version != "15":
+            command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
+        else:
+            command = ('call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
     return command
 
 
