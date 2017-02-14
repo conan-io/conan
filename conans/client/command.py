@@ -1,37 +1,38 @@
 import argparse
-import inspect
 import hashlib
-import re
-import sys
+import inspect
 import os
+import re
 import requests
+import sys
+import conans
 from collections import defaultdict
-
-from conans import __version__ as CLIENT_VERSION
+from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
+from conans.client.output import ConanOutput, Color
+from conans.client.printer import Printer
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.version_checker import VersionCheckerRequester
-from conans.client.output import ConanOutput, Color
 from conans.client.runner import ConanRunner
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import ConanException
+from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference, is_a_reference
 from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
-from conans.util.log import logger
-from conans.util.env_reader import get_env
-from conans.util.files import rmdir, load, save_files, exception_message_safe, save
 from conans.util.config_parser import get_bool_from_text
-from conans.client.printer import Printer
+from conans.util.env_reader import get_env
+from conans.util.files import rmdir, load, save_files, exception_message_safe
+from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
 
 
@@ -47,7 +48,7 @@ class Extender(argparse.Action):
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
         # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
         dest = getattr(namespace, self.dest, None)
-        if(not hasattr(dest, 'extend') or dest == self.default):
+        if not hasattr(dest, 'extend') or dest == self.default:
             dest = []
             setattr(namespace, self.dest, dest)
             # if default isn't set to None, this method might be called
@@ -74,6 +75,10 @@ class Command(object):
         self._user_io = user_io
         self._runner = runner
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
+
+    @property
+    def client_cache(self):
+        return self._client_cache
 
     def _parse_args(self, parser):
         parser.add_argument("-r", "--remote", help='look in the specified remote server')
@@ -284,6 +289,7 @@ path to the CMake binary directory, like this:
 
         options = self._get_tuples_list_from_extender_arg(args.options)
         env, package_env = self._get_simple_and_package_tuples(args.env)
+        env_values = self._get_env_values(env, package_env)
         settings, package_settings = self._get_simple_and_package_tuples(args.settings)
         scopes = Scopes.from_list(args.scope) if args.scope else None
 
@@ -296,13 +302,12 @@ path to the CMake binary directory, like this:
             except ConanException as exc:
                 raise ConanException("Error reading '%s' profile: %s" % (args.profile, exc))
             else:
-                profile.update_env(env)
-                profile.update_packages_env(package_env)
-                env = profile.env
-                package_env = profile.package_env
+                env_values.update(profile.env_values)
 
-        loader = manager._loader(current_path=None, user_settings_values=settings, user_options_values=options,
-                                 scopes=scopes, package_settings=package_settings, env=env, package_env=package_env)
+        loader = manager._loader(current_path=None, user_settings_values=settings,
+                                 user_options_values=options, scopes=scopes,
+                                 package_settings=package_settings, env_values=env_values)
+
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
             # convert to list from ItemViews required for python3
@@ -337,12 +342,19 @@ path to the CMake binary directory, like this:
                               update=args.update,
                               generators=["env", "txt"],
                               profile_name=args.profile,
-                              env=env,
-                              package_env=package_env
+                              env_values=env_values
                               )
         self._test_check(test_folder, test_folder_name)
-        self._manager.build(test_folder, build_folder, test=True, profile_name=args.profile,
-                            env=env, package_env=package_env)
+        self._manager.build(test_folder, build_folder, test=True)
+
+    def _get_env_values(self, env, package_env):
+        env_values = EnvValues()
+        for name, value in env:
+            env_values.add(name, value)
+        for package, data in package_env.items():
+            for name, value in data:
+                env_values.add(name, value, package)
+        return env_values
 
     # Alias to test
     def test(self, *args):
@@ -421,6 +433,7 @@ path to the CMake binary directory, like this:
             options = self._get_tuples_list_from_extender_arg(args.options)
             settings, package_settings = self._get_simple_and_package_tuples(args.settings)
             env, package_env = self._get_simple_and_package_tuples(args.env)
+            env_values = self._get_env_values(env, package_env)
 
             scopes = Scopes.from_list(args.scope) if args.scope else None
             if args.manifests and args.manifests_interactive:
@@ -455,8 +468,7 @@ path to the CMake binary directory, like this:
                                   generators=args.generator,
                                   profile_name=args.profile,
                                   package_settings=package_settings,
-                                  env=env,
-                                  package_env=package_env,
+                                  env_values=env_values,
                                   no_imports=args.no_imports)
 
     def config(self, *args):
@@ -483,7 +495,7 @@ path to the CMake binary directory, like this:
                 raise ConanException("Please specify key=value")
             config_parser.set_item(key.strip(), value.strip())
         elif args.subcommand == "get":
-            config_parser.get_item(args.item, self._user_io.out)
+            self._user_io.out.info(config_parser.get_item(args.item))
         elif args.subcommand == "rm":
             config_parser.rm_item(args.item)
 
@@ -557,7 +569,6 @@ path to the CMake binary directory, like this:
                             help='path to conanfile.py, e.g., conan build .',
                             default="")
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("--profile", "-pr", default=None, help='Apply a profile')
         args = parser.parse_args(*args)
         log_command("build", vars(args))
         current_path = os.getcwd()
@@ -565,7 +576,7 @@ path to the CMake binary directory, like this:
             root_path = os.path.abspath(args.path)
         else:
             root_path = current_path
-        self._manager.build(root_path, current_path, filename=args.file, profile_name=args.profile)
+        self._manager.build(root_path, current_path, filename=args.file)
 
     def package(self, *args):
         """ Calls your conanfile.py 'package' method for a specific package recipe.
@@ -999,6 +1010,8 @@ path to the CMake binary directory, like this:
             except:
                 pass
         except Exception as exc:
+            # import traceback
+            # logger.debug(traceback.format_exc())
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
@@ -1057,14 +1070,18 @@ def get_command():
         out.error(str(e))
         sys.exit(True)
 
-    # Get the new command instance after migrations have been done
-    remote_manager = instance_remote_manager(client_cache)
+    with tools.environment_append(client_cache.conan_config.env_vars):
+        # Adjust CONAN_LOGGING_LEVEL with the env readed
+        conans.util.log.logger = configure_logger()
 
-    # Get a search manager
-    search_adapter = DiskSearchAdapter()
-    search_manager = DiskSearchManager(client_cache, search_adapter)
+        # Get the new command instance after migrations have been done
+        remote_manager = instance_remote_manager(client_cache)
 
-    command = Command(client_cache, user_io, get_conan_runner(), remote_manager, search_manager)
+        # Get a search manager
+        search_adapter = DiskSearchAdapter()
+        search_manager = DiskSearchManager(client_cache, search_adapter)
+        command = Command(client_cache, user_io, get_conan_runner(), remote_manager, search_manager)
+
     return command
 
 
@@ -1090,7 +1107,8 @@ def main(args):
             sys.exit(0)
 
         signal.signal(signal.SIGINT, sigint_handler)
-        error = command.run(args)
+        with tools.environment_append(command.client_cache.conan_config.env_vars):
+            error = command.run(args)
     finally:
         os.chdir(current_dir)
     sys.exit(error)

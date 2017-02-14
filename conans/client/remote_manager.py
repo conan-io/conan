@@ -7,16 +7,15 @@ import traceback
 from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
-from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
-from conans.util.log import logger
+from conans.model.manifest import gather_files
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
     rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR
 from conans.util.files import gzopen_without_timestamps
+from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch
-from conans.model.manifest import gather_files
+from conans.util.log import logger
 from conans.util.tracer import log_package_upload, log_recipe_upload,\
-    log_recipe_download, log_package_download, log_recipe_sources_download
-
+    log_recipe_download, log_package_download, log_recipe_sources_download, log_uncompressed_file, log_compressed_files
 
 
 class RemoteManager(object):
@@ -42,7 +41,7 @@ class RemoteManager(object):
         ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
                                 retry, retry_wait, ignore_deleted_file)
         duration = time.time() - t1
-        log_recipe_upload(conan_reference, duration, the_files)
+        log_recipe_upload(conan_reference, duration, the_files, remote)
         msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
         # FIXME: server dependent
         if remote.url == "https://server.conan.io":
@@ -97,8 +96,8 @@ class RemoteManager(object):
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
                                 retry, retry_wait)
         duration = time.time() - t1
-        log_package_upload(package_reference, duration, the_files)
-        logger.debug("====> Time remote_manager upload_package: %f" % (duration))
+        log_package_upload(package_reference, duration, the_files, remote)
+        logger.debug("====> Time remote_manager upload_package: %f" % duration)
         return tmp
 
     def get_conan_digest(self, conan_reference, remote):
@@ -279,7 +278,7 @@ def compress_package_files(files, dest_folder, output):
 def compress_files(files, name, dest_dir):
     """Compress the package and returns the new dict (name => content) of files,
     only with the conanXX files and the compressed file"""
-
+    t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
     with open(tgz_path, "wb") as tgz_handle:
@@ -300,12 +299,15 @@ def compress_files(files, name, dest_dir):
 
         tgz.close()
 
+    duration = time.time() - t1
+    log_compressed_files(files, duration, tgz_path)
+
     return tgz_path
 
 
 def unzip_and_get_files(files, destination_dir, tgz_name):
-    '''Moves all files from package_files, {relative_name: tmp_abs_path}
-    to destination_dir, unzipping the "tgz_name" if found'''
+    """Moves all files from package_files, {relative_name: tmp_abs_path}
+    to destination_dir, unzipping the "tgz_name" if found"""
 
     tgz_file = files.pop(tgz_name, None)
     if tgz_file:
@@ -314,6 +316,7 @@ def unzip_and_get_files(files, destination_dir, tgz_name):
 
 
 def uncompress_file(src_path, dest_folder):
+    t1 = time.time()
     try:
         with open(src_path, 'rb') as file_handler:
             tar_extract(file_handler, dest_folder)
@@ -327,3 +330,6 @@ def uncompress_file(src_path, dest_folder):
         except Exception as e:
             error_msg += "Folder not removed, files/package might be damaged, remove manually"
         raise ConanException(error_msg)
+
+    duration = time.time() - t1
+    log_uncompressed_file(src_path, duration, dest_folder)

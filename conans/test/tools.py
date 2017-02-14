@@ -1,38 +1,40 @@
-from conans.client.output import ConanOutput
-from conans.client.command import Command, migrate_and_get_client_cache
-from io import StringIO
-import shlex
-from conans.util.files import save_files, load, save
-from conans.test.utils.runner import TestRunner
 import os
-from conans.client.remote_manager import RemoteManager
-from conans.client.store.localdb import LocalDB
-from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.userio import UserIO
-import sys
-from conans.util.log import logger
+import shlex
 import shutil
-import requests
-from mock import Mock
+import sys
 import uuid
-from webtest.app import TestApp
-from conans.client.rest.rest_client import RestApiClient
+from collections import Counter
+from io import StringIO
+
+import requests
+import six
+from mock import Mock
 from six.moves.urllib.parse import urlsplit, urlunsplit
+from webtest.app import TestApp
+
+from conans import __version__ as CLIENT_VERSION
+from conans.client.client_cache import ClientCache
+from conans.client.command import Command, migrate_and_get_client_cache
+from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
+from conans.client.output import ConanOutput
+from conans.client.remote_manager import RemoteManager
+from conans.client.remote_registry import RemoteRegistry
+from conans.client.rest.auth_manager import ConanApiAuthManager
+from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.uploader_downloader import IterableToFileAdapter
+from conans.client.rest.version_checker import VersionCheckerRequester
+from conans.client.store.localdb import LocalDB
+from conans.client.userio import UserIO
+from conans.model.version import Version
+from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
                                                       TestServerLauncher)
-from conans.util.env_reader import get_env
-from conans import __version__ as CLIENT_VERSION
-from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
-from conans.client.rest.version_checker import VersionCheckerRequester
-from conans.model.version import Version
+from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.client.remote_registry import RemoteRegistry
-from collections import Counter
-import six
-from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.client_cache import ClientCache
-from conans.search.search import DiskSearchManager, DiskSearchAdapter
+from conans.util.env_reader import get_env
+from conans.util.files import save_files, load, save
+from conans.util.log import logger
 
 
 class TestingResponse(object):

@@ -23,14 +23,22 @@ import multiprocessing
 @contextmanager
 def pythonpath(conanfile):
     old_path = sys.path[:]
-    sys.path.extend(conanfile.deps_env_info.PYTHONPATH)
+    try:
+        sys.path.extend(conanfile.env["PYTHONPATH"].split(os.pathsep))
+    except KeyError:
+        pass
     yield
     sys.path = old_path
 
 
 @contextmanager
-def environment_append(env_vars):
+def environment_append(env_vars, keep_vars=None):
     old_env = dict(os.environ)
+    keep_vars = keep_vars if keep_vars is not None else ["PATH", "PYTHONPATH"]
+    if keep_vars:
+        for keep_var in keep_vars:
+            if keep_var in env_vars and keep_var in old_env:
+                env_vars[keep_var] += os.pathsep + old_env[keep_var]
     os.environ.update(env_vars)
     try:
         yield
@@ -72,8 +80,16 @@ def vcvars_command(settings):
                                  "Current settings visual version: %s"
                                  % (existing_version, settings.compiler.version))
     else:
-        command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
-                   % (settings.compiler.version, param))
+        env_var = "vs%s0comntools" % settings.compiler.version
+        try:
+            vs_path = os.environ[env_var]
+        except KeyError:
+            raise ConanException("VS '%s' variable not defined. Please install VS or define "
+                                 "the variable (VS2017)" % env_var)
+        if settings.compiler.version != "15":
+            command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
+        else:
+            command = ('call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
     return command
 
 
