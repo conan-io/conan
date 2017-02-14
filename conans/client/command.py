@@ -37,13 +37,13 @@ from conans.util.tracer import log_command, log_exception
 
 
 class Extender(argparse.Action):
-    '''Allows to use the same flag several times in a command and creates a list with the values.
+    """Allows to use the same flag several times in a command and creates a list with the values.
        For example:
            conan install MyPackage/1.2@user/channel -o qt:value -o mode:2 -s cucumber:true
            It creates:
            options = ['qt:value', 'mode:2']
            settings = ['cucumber:true']
-    '''
+    """
 
     def __call__(self, parser, namespace, values, option_strings=None):  # @UnusedVariable
         # Need None here incase `argparse.SUPPRESS` was supplied for `dest`
@@ -80,77 +80,6 @@ class Command(object):
     def client_cache(self):
         return self._client_cache
 
-    def _parse_args(self, parser):
-        parser.add_argument("-r", "--remote", help='look in the specified remote server')
-        parser.add_argument("--options", "-o",
-                            help='Options to build the package, overwriting the defaults. e.g., -o with_qt=true',
-                            nargs=1, action=Extender)
-        parser.add_argument("--settings", "-s",
-                            help='Settings to build the package, overwriting the defaults. e.g., -s compiler=gcc',
-                            nargs=1, action=Extender)
-        parser.add_argument("--env", "-e",
-                            help='Environment variables that will be set during the package build, -e CXX=/usr/bin/clang++',
-                            nargs=1, action=Extender)
-        parser.add_argument("--build", "-b", action=Extender, nargs="*",
-                            help='''Optional, use it to choose if you want to build from sources:
-
---build            Build all from sources, do not use binary packages.
---build=never      Default option. Never build, use binary packages or fail if a binary package is not found.
---build=missing    Build from code if a binary package is not found.
---build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
---build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
-''')
-
-    def _get_tuples_list_from_extender_arg(self, items):
-        if not items:
-            return []
-        # Validate the pairs
-        for item in items:
-            chunks = item.split("=")
-            if len(chunks) != 2:
-                raise ConanException("Invalid input '%s', use 'name=value'" % item)
-        return [(item[0], item[1]) for item in [item.split("=") for item in items]]
-
-    def _get_simple_and_package_tuples(self, items):
-        ''' Parse items like "thing:item=value or item2=value2 and returns a tuple list for
-        the simple items (name, value) and a dict for the package items
-        {package: [(item, value)...)], ...}
-        '''
-        simple_items = []
-        package_items = defaultdict(list)
-        tuples = self._get_tuples_list_from_extender_arg(items)
-        for name, value in tuples:
-            if ":" in name:  # Scoped items
-                tmp = name.split(":", 1)
-                ref_name = tmp[0]
-                name = tmp[1]
-                package_items[ref_name].append((name, value))
-            else:
-                simple_items.append((name, value))
-        return simple_items, package_items
-
-    def _get_build_sources_parameter(self, build_param):
-        # returns True if we want to build the missing libraries
-        #         False if building is forbidden
-        #         A list with patterns: Will force build matching libraries,
-        #                               will look for the package for the rest
-        #         "outdated" if will build when the package is not generated with
-        #                    the current exported recipe
-
-        if isinstance(build_param, list):
-            if len(build_param) == 0:  # All packages from source
-                return ["*"]
-            elif len(build_param) == 1 and build_param[0] == "never":
-                return False  # Default
-            elif len(build_param) == 1 and build_param[0] == "missing":
-                return True
-            elif len(build_param) == 1 and build_param[0] == "outdated":
-                return "outdated"
-            else:  # A list of expressions to match (if matches, will build from source)
-                return ["%s*" % ref_expr for ref_expr in build_param]
-        else:
-            return False  # Nothing is built
-
     def _test_check(self, test_folder, test_folder_name):
         """ To ensure that the 0.9 version new layout is detected and users warned
         """
@@ -167,7 +96,7 @@ path to the conanfile_directory, something like:
 
     self.run('cmake %%s %%s' %% (self.conanfile_directory, cmake.command_line))
 
- """ % (test_folder_name))
+ """ % test_folder_name)
 
         # Test the CMakeLists, if existing
         test_cmake = os.path.join(test_folder, "CMakeLists.txt")
@@ -181,7 +110,7 @@ path to the CMake binary directory, like this:
 
    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 
- """ % (test_folder_name))
+ """ % test_folder_name)
 
     def new(self, *args):
         """Creates a new package recipe template with a 'conanfile.py'.
@@ -244,17 +173,11 @@ path to the CMake binary directory, like this:
                             help='Do not export the conanfile before test execution')
         parser.add_argument("-f", "--folder",
                             help='alternative test folder name, by default is "test_package"')
-        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
-                            help='Use the specified scope in the install command')
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
-        parser.add_argument("--update", "-u", action='store_true', default=False,
-                            help="update with new upstream packages, "
-                                 "overwriting the local cache if needed.")
-        parser.add_argument("--profile", "-pr", default=None,
-                            help='Apply the specified profile to the install command')
-        self._parse_args(parser)
+
+        _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
         log_command("test_package", vars(args))
@@ -287,10 +210,10 @@ path to the CMake binary directory, like this:
         rmdir(build_folder)
         # shutil.copytree(test_folder, build_folder)
 
-        options = self._get_tuples_list_from_extender_arg(args.options)
-        env, package_env = self._get_simple_and_package_tuples(args.env)
-        env_values = self._get_env_values(env, package_env)
-        settings, package_settings = self._get_simple_and_package_tuples(args.settings)
+        options = _get_tuples_list_from_extender_arg(args.options)
+        env, package_env = _get_simple_and_package_tuples(args.env)
+        env_values = _get_env_values(env, package_env)
+        settings, package_settings = _get_simple_and_package_tuples(args.settings)
         scopes = Scopes.from_list(args.scope) if args.scope else None
 
         manager = self._manager
@@ -329,7 +252,7 @@ path to the CMake binary directory, like this:
         if args.build is None and lib_to_test:  # Not specified, force build the tested library
             args.build = [lib_to_test]
         else:
-            args.build = self._get_build_sources_parameter(args.build)
+            args.build = _get_build_sources_parameter(args.build)
 
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
@@ -346,15 +269,6 @@ path to the CMake binary directory, like this:
                               )
         self._test_check(test_folder, test_folder_name)
         self._manager.build(test_folder, build_folder, test=True)
-
-    def _get_env_values(self, env, package_env):
-        env_values = EnvValues()
-        for name, value in env:
-            env_values.add(name, value)
-        for package, data in package_env.items():
-            for name, value in data:
-                env_values.add(name, value, package)
-        return env_values
 
     # Alias to test
     def test(self, *args):
@@ -380,13 +294,6 @@ path to the CMake binary directory, like this:
         parser.add_argument("--all", action='store_true', default=False,
                             help='Install all packages from the specified package recipe')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("--update", "-u", action='store_true', default=False,
-                            help="update with new upstream packages, overwriting the local"
-                            " cache if needed.")
-        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
-                            help='Use the specified scope in the install command')
-        parser.add_argument("--profile", "-pr", default=None,
-                            help='Apply the specified profile to the install command')
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("--werror", action='store_true', default=False,
@@ -408,7 +315,7 @@ path to the CMake binary directory, like this:
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
 
-        self._parse_args(parser)
+        _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
         log_command("install", vars(args))
@@ -429,11 +336,11 @@ path to the CMake binary directory, like this:
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
             # Get False or a list of patterns to check
-            args.build = self._get_build_sources_parameter(args.build)
-            options = self._get_tuples_list_from_extender_arg(args.options)
-            settings, package_settings = self._get_simple_and_package_tuples(args.settings)
-            env, package_env = self._get_simple_and_package_tuples(args.env)
-            env_values = self._get_env_values(env, package_env)
+            args.build = _get_build_sources_parameter(args.build)
+            options = _get_tuples_list_from_extender_arg(args.options)
+            settings, package_settings = _get_simple_and_package_tuples(args.settings)
+            env, package_env = _get_simple_and_package_tuples(args.env)
+            env_values = _get_env_values(env, package_env)
 
             scopes = Scopes.from_list(args.scope) if args.scope else None
             if args.manifests and args.manifests_interactive:
@@ -509,35 +416,26 @@ path to the CMake binary directory, like this:
                             help='reference name or path to conanfile file, '
                             'e.g., MyPackage/1.2@user/channel or ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("-r", "--remote", help='look in the specified remote server')
-        parser.add_argument("--options", "-o",
-                            help='Options to build the package, overwriting the defaults.'
-                                 ' e.g., -o with_qt=true',
-                            nargs=1, action=Extender)
-        parser.add_argument("--settings", "-s",
-                            help='Settings to build the package, overwriting the defaults.'
-                                 ' e.g., -s compiler=gcc',
-                            nargs=1, action=Extender)
         parser.add_argument("--only", "-n", nargs="?", const="None",
                             help='show fields only')
-        parser.add_argument("--update", "-u", action='store_true', default=False,
-                            help="check updates exist from upstream remotes")
         parser.add_argument("--build_order", "-bo",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
-        parser.add_argument("--build", "-b", action=Extender, nargs="*",
-                            help='given a build policy (same install command "build" parameter), '
-                                 'return an ordered list of packages that would be built from '
-                                 'sources in install command (simulation)')
-        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
-                            help='Use the specified scope in the info command')
+        build_help = 'given a build policy (same install command "build" parameter), return an ordered list of  ' \
+                     'packages that would be built from sources in install command (simulation)'
+
+        _add_common_install_arguments(parser, build_help=build_help)
+
         args = parser.parse_args(*args)
+
         log_command("info", vars(args))
 
-        options = self._get_tuples_list_from_extender_arg(args.options)
-        settings, package_settings = self._get_simple_and_package_tuples(args.settings)
+        options = _get_tuples_list_from_extender_arg(args.options)
+        settings, package_settings =_get_simple_and_package_tuples(args.settings)
+        env, package_env = _get_simple_and_package_tuples(args.env)
+        env_values = _get_env_values(env, package_env)
         # Get False or a list of patterns to check
-        args.build = self._get_build_sources_parameter(args.build)
+        args.build = _get_build_sources_parameter(args.build)
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -555,7 +453,9 @@ path to the CMake binary directory, like this:
                            filename=args.file,
                            build_order=args.build_order,
                            build_mode=args.build,
-                           scopes=scopes)
+                           scopes=scopes,
+                           env_values=env_values,
+                           profile_name=args.profile)
 
     def build(self, *args):
         """ Utility command to run your current project 'conanfile.py' build() method.
@@ -622,19 +522,6 @@ path to the CMake binary directory, like this:
                 build_folder = os.path.normpath(os.path.join(current_path, build_folder))
             self._manager.local_package(current_path, build_folder)
 
-    def _get_reference(self, args):
-        current_path = os.getcwd()
-        try:
-            reference = ConanFileReference.loads(args.reference)
-        except:
-            if "@" in args.reference:
-                raise
-            if not os.path.isabs(args.reference):
-                reference = os.path.normpath(os.path.join(current_path, args.reference))
-            else:
-                reference = args.reference
-        return current_path, reference
-
     def source(self, *args):
         """ Calls your conanfile.py 'source()' method to configure the source directory.
             I.e., downloads and unzip the package source.
@@ -654,7 +541,7 @@ path to the CMake binary directory, like this:
         args = parser.parse_args(*args)
         log_command("source", vars(args))
 
-        current_path, reference = self._get_reference(args)
+        current_path, reference = _get_reference(args)
         self._manager.source(current_path, reference, args.force)
 
     def imports(self, *args):
@@ -686,7 +573,7 @@ path to the CMake binary directory, like this:
             self._manager.imports_undo(current_path)
         else:
             dest_folder = args.dest
-            current_path, reference = self._get_reference(args)
+            current_path, reference = _get_reference(args)
             self._manager.imports(current_path, reference, args.file, dest_folder)
 
     def export(self, *args):
@@ -1020,6 +907,115 @@ path to the CMake binary directory, like this:
             raise exc
 
         return errors
+
+
+def _add_common_install_arguments(parser, build_help):
+    parser.add_argument("--update", "-u", action='store_true', default=False,
+                        help="check updates exist from upstream remotes")
+    parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                        help='Use the specified scope in the install command')
+    parser.add_argument("--profile", "-pr", default=None,
+                        help='Apply the specified profile to the install command')
+    parser.add_argument("-r", "--remote", help='look in the specified remote server')
+    parser.add_argument("--options", "-o",
+                        help='Options to build the package, overwriting the defaults. e.g., -o with_qt=true',
+                        nargs=1, action=Extender)
+    parser.add_argument("--settings", "-s",
+                        help='Settings to build the package, overwriting the defaults. e.g., -s compiler=gcc',
+                        nargs=1, action=Extender)
+    parser.add_argument("--env", "-e",
+                        help='Environment variables that will be set during the package build, -e CXX=/usr/bin/clang++',
+                        nargs=1, action=Extender)
+
+    parser.add_argument("--build", "-b", action=Extender, nargs="*", help=build_help)
+
+
+def _get_tuples_list_from_extender_arg(items):
+    if not items:
+        return []
+    # Validate the pairs
+    for item in items:
+        chunks = item.split("=")
+        if len(chunks) != 2:
+            raise ConanException("Invalid input '%s', use 'name=value'" % item)
+    return [(item[0], item[1]) for item in [item.split("=") for item in items]]
+
+
+def _get_simple_and_package_tuples(items):
+    """Parse items like "thing:item=value or item2=value2 and returns a tuple list for
+    the simple items (name, value) and a dict for the package items
+    {package: [(item, value)...)], ...}
+    """
+
+    simple_items = []
+    package_items = defaultdict(list)
+    tuples = _get_tuples_list_from_extender_arg(items)
+    for name, value in tuples:
+        if ":" in name:  # Scoped items
+            tmp = name.split(":", 1)
+            ref_name = tmp[0]
+            name = tmp[1]
+            package_items[ref_name].append((name, value))
+        else:
+            simple_items.append((name, value))
+    return simple_items, package_items
+
+
+def _get_build_sources_parameter(build_param):
+    """returns True if we want to build the missing libraries
+             False if building is forbidden
+             A list with patterns: Will force build matching libraries,
+                                   will look for the package for the rest
+             "outdated" if will build when the package is not generated with
+                        the current exported recipe
+    """
+    if isinstance(build_param, list):
+        if len(build_param) == 0:  # All packages from source
+            return ["*"]
+        elif len(build_param) == 1 and build_param[0] == "never":
+            return False  # Default
+        elif len(build_param) == 1 and build_param[0] == "missing":
+            return True
+        elif len(build_param) == 1 and build_param[0] == "outdated":
+            return "outdated"
+        else:  # A list of expressions to match (if matches, will build from source)
+            return ["%s*" % ref_expr for ref_expr in build_param]
+    else:
+        return False  # Nothing is built
+
+
+_help_build_policies = '''Optional, use it to choose if you want to build from sources:
+
+        --build            Build all from sources, do not use binary packages.
+        --build=never      Default option. Never build, use binary packages or fail if a binary package is not found.
+        --build=missing    Build from code if a binary package is not found.
+        --build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
+        --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
+'''
+
+
+def _get_env_values(env, package_env):
+    env_values = EnvValues()
+    for name, value in env:
+        env_values.add(name, EnvValues.load_value(value))
+    for package, data in package_env.items():
+        for name, value in data:
+            env_values.add(name, EnvValues.load_value(value), package)
+    return env_values
+
+
+def _get_reference( args):
+    current_path = os.getcwd()
+    try:
+        reference = ConanFileReference.loads(args.reference)
+    except:
+        if "@" in args.reference:
+            raise
+        if not os.path.isabs(args.reference):
+            reference = os.path.normpath(os.path.join(current_path, args.reference))
+        else:
+            reference = args.reference
+    return current_path, reference
 
 
 def migrate_and_get_client_cache(base_folder, out, storage_folder=None):

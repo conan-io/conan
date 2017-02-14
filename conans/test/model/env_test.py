@@ -9,23 +9,28 @@ class EnvValuesTest(unittest.TestCase):
     def test_model(self):
         env = EnvValues()
         env.add("Z", "1")
-        self.assertEquals(env._all_package_values(), [])
-        self.assertEquals(env._global_values(), [("Z", "1")])
+        self.assertEquals(env.env_dicts(""), ({"Z": "1"}, {}))
         env.add("Z", "2")
-        self.assertEquals(env._global_values(), [("Z", "1")])
+        self.assertEquals(env.env_dicts(""), ({"Z": "1"}, {}))
         env.add("B", "223")
-        self.assertEquals(env._global_values(), [("B", "223"), ("Z", "1")])
+        self.assertEquals(env.env_dicts(""), ({"Z": "1", "B": "223"}, {}))
         env.add("B", "224", "package1")
-        self.assertEquals(env._global_values(), [("B", "223"), ("Z", "1")])
-        self.assertEquals(env._package_values("package1"), [("B", "224")])
+        self.assertEquals(env.env_dicts(""), ({"Z": "1", "B": "223"}, {}))
+        self.assertEquals(env.env_dicts("package1"), ({"Z": "1", "B": "224"}, {}))
         env.add("A", "1", "package1")
-        self.assertEquals(env._package_values("package1"), [("A", "1"), ("B", "224")])
-        self.assertEquals(env._all_package_values(), [('package1:A', '1'), ('package1:B', '224')])
+        self.assertEquals(env.env_dicts("package1"), ({"Z": "1", "B": "224", "A": "1"}, {}))
+        self.assertEquals(env.env_dicts(""), ({"Z": "1", "B": "223"}, {}))
         env.add("J", "21", "package21")
-        self.assertEquals(env._all_package_values(), [('package1:A', '1'),
-                                                     ('package1:B', '224'), ('package21:J', '21')])
+        self.assertEquals(env.env_dicts(""), ({"Z": "1", "B": "223"}, {}))
+        self.assertEquals(env.env_dicts("package1"), ({"Z": "1", "B": "224", "A": "1"}, {}))
+        env.add("A", ["99"], "package1")
+        self.assertEquals(env.env_dicts("package1"), ({"Z": "1", "B": "224", "A": "1"}, {}))
+        env.add("M", ["99"], "package1")
+        self.assertEquals(env.env_dicts("package1"), ({"Z": "1", "B": "224", "A": "1"}, {"M": ["99"]}))
+        env.add("M", "100", "package1")
+        self.assertEquals(env.env_dicts("package1"), ({"Z": "1", "B": "224", "A": "1"}, {"M": ["99", "100"]}))
 
-        self.assertEquals(env._global_values(), [("B", "223"), ("Z", "1")])
+        self.assertEquals(env.env_dicts(""), ({"Z": "1", "B": "223"}, {}))
 
     def test_update_concat(self):
         env_info = EnvInfo()
@@ -37,14 +42,14 @@ class EnvValuesTest(unittest.TestCase):
         deps_info2.update(env_info, ConanFileReference.loads("lib2/1.0@lasote/stable"))
 
         env = EnvValues()
-        env.add("PATH", "MYPATH")
+        env.add("PATH", ["MYPATH"])
         env.update(deps_info)
 
-        self.assertEquals(env.env_dict(None), {'PATH': 'MYPATH%sSOME/PATH' % os.pathsep})
+        self.assertEquals(env.env_dicts(None), ({}, {'PATH': ['MYPATH', 'SOME/PATH']}))
 
         env.update(deps_info2)
 
-        self.assertEquals(env.env_dict(None), {'PATH': 'MYPATH%sSOME/PATH%sSOME/PATH' % (os.pathsep, os.pathsep)})
+        self.assertEquals(env.env_dicts(None), ({}, {'PATH': ['MYPATH', 'SOME/PATH', 'SOME/PATH']}))
 
     def update_priority_test(self):
 
@@ -57,7 +62,19 @@ class EnvValuesTest(unittest.TestCase):
         env.update(env2)
 
         # Already set by env, discarded new value
-        self.assertEquals(env.env_dict(None), {'VAR': 'VALUE1'})
+        self.assertEquals(env.env_dicts(None),  ({'VAR': 'VALUE1'}, {}))
+
+        # Updates with lists and values
+        env = EnvValues()
+        env.add("VAR", ["1"])
+        env.add("VAR", "2")
+        self.assertEquals(env.env_dicts(None), ({}, {'VAR': ['1', '2']}))
+
+        # If the first value is not a list won't append
+        env = EnvValues()
+        env.add("VAR", "1")
+        env.add("VAR", ["2"])
+        self.assertEquals(env.env_dicts(None), ({'VAR': '1'}, {}))
 
 
 class EnvInfoTest(unittest.TestCase):

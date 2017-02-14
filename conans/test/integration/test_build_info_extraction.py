@@ -129,8 +129,9 @@ class MyBuildInfo(unittest.TestCase):
         sys.argv = ['conan_build_info', trace_file]
         run()
 
-        the_json = json.loads(sys.stdout.getvalue())
-        self.assertTrue(the_json["modules"][0]["id"], "Hello0/1.0@lasote/stable")
+        if not isinstance(sys.stdout, file):  # in IDEs or with --nocapture it will fail
+            the_json = json.loads(sys.stdout.getvalue())
+            self.assertTrue(the_json["modules"][0]["id"], "Hello0/1.0@lasote/stable")
 
 
 def _get_module(data, the_id):

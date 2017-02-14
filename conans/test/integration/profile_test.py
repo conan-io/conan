@@ -125,7 +125,7 @@ class ProfileTest(unittest.TestCase):
         files["conanfile.py"] = conanfile_scope_env
 
         create_profile(self.client.client_cache.profiles_path, "envs", settings={},
-                       env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", 2)]})
+                       env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", "2")]})
 
         self.client.save(files)
         self.client.run("export lasote/stable")
@@ -296,3 +296,57 @@ class DefaultNameConan(ConanFile):
 
     def _assert_env_variable_printed(self, name, value):
         self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
+
+    def info_with_profiles_test(self):
+
+        self.client.run("remove '*' -f")
+        # Create a simple recipe to require
+        winreq_conanfile = '''
+from conans.model.conan_file import ConanFile
+
+class WinRequireDefaultNameConan(ConanFile):
+    name = "WinRequire"
+    version = "0.1"
+    settings = "os", "compiler", "arch", "build_type"
+
+'''
+
+        files = {"conanfile.py": winreq_conanfile}
+        self.client.save(files)
+        self.client.run("export lasote/stable")
+
+        # Now require the first recipe depending on OS=windows
+        conanfile = '''from conans.model.conan_file import ConanFile
+import os
+
+class DefaultNameConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    settings = "os", "compiler", "arch", "build_type"
+
+    def config(self):
+        if self.settings.os == "Windows":
+            self.requires.add("WinRequire/0.1@lasote/stable")
+
+'''
+        files = {"conanfile.py": conanfile}
+        self.client.save(files)
+        self.client.run("export lasote/stable")
+
+        # Create a profile that doesn't activate the require
+        create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={"os": "Linux"},
+                       scopes={})
+
+        # Install with the previous profile
+        self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
+        self.assertNotIn('''Requires:
+                WinRequire/0.1@lasote/stable''', self.client.user_io.out)
+
+        # Create a profile that activate the require
+        create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={"os": "Windows"},
+                       scopes={})
+
+        # Install with the previous profile
+        self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
+        self.assertIn('''Requires:
+        WinRequire/0.1@lasote/stable''', self.client.user_io.out)

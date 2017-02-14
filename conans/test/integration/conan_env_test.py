@@ -242,7 +242,7 @@ class Hello2Conan(ConanFile):
         self._export(client, "C", ["B"], {"VAR3": "23"}, {"VAR1": "700"})
 
         client.save({"conanfile.py": reuse})
-        client.run("install . --build missing -e VAR1=override -e VAR3=SIMPLE")
+        client.run("install . --build missing -e VAR1=[override] -e VAR3=SIMPLE")
         client.run("build")
         self.assertInSep("VAR1=>override:700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
@@ -332,44 +332,44 @@ class Hello2Conan(ConanFile):
         # Test "A" conaninfo, should filter the FAKE_LIB
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e LIB_A:VAR3=override "
-                   "-e GLOBAL=99 -e FAKE_LIB:VAR1=-90 -e LIB_B:VAR2=222 -e LIB_B2:NEWVAR=VALUE")
+                   "-e GLOBAL=99 -e FAKE_LIB:VAR1=-90 -e LIB_B:VAR2=222 "
+                   "-e LIB_B2:NEWVAR=VALUE -e VAR3=[newappend]")
 
         info = load_conaninfo("A")
-        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override")])
-        self.assertEquals(info.env_values._global_values(), [("GLOBAL", "99")])
+        self.assertEquals(info.env_values.env_dicts("LIB_A"), ({"VAR3": "override", "GLOBAL": "99"}, {}))
+        self.assertEquals(info.env_values.env_dicts(""), ({'GLOBAL': '99'}, {'VAR3': ['newappend']}))
 
         info = load_conaninfo("B")
-        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
-                                                                 ("LIB_B:VAR2", "222")])
-        self.assertEquals(info.env_values._global_values(), [("GLOBAL", "99"), (u'VAR1', u'900'),
-                                                            (u'VAR2', u'23'), (u'VAR3', u'-23')])
+        self.assertEquals(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': "override"},
+                                                               {'VAR2': ['23'], 'VAR1': ['900']}))
+
+        self.assertEquals(info.env_values.env_dicts("LIB_B"), ({'GLOBAL': '99', "VAR2": "222"},
+                                                               {'VAR3': ['newappend', '-23'], 'VAR1': ["900"]}))
 
         info = load_conaninfo("B2")
-        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
-                                                                 ("LIB_B2:NEWVAR", "VALUE")])
-        self.assertEquals(info.env_values._global_values(), [("GLOBAL", "99"), (u'VAR1', u'900'),
-                                                            (u'VAR2', u'23'), (u'VAR3', u'-23')])
+        self.assertEquals(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': 'override'},
+                                                               {'VAR2': ['23'], 'VAR1': ['900']}))
+
+        self.assertEquals(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
+                                                                {'VAR2': ['23'], 'VAR1': ['900'],
+                                                                 'VAR3': ['newappend', '-23']}))
 
         info = load_conaninfo("C")
-        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
-                                                                  ("LIB_B:VAR2", "222"),
-                                                                  ("LIB_B2:NEWVAR", "VALUE")])
-
-        self.assertEquals(info.env_values._global_values(), [('GLOBAL', '99'),
-                                                            ('VAR1', self.replace_sep('800:800_2:900')),
-                                                            ('VAR2',  self.replace_sep('24:24_2:23')),
-                                                            ('VAR3', '-23')])
+        self.assertEquals(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
+                                                                {'VAR3': ['newappend', '-23'],
+                                                                 'VAR1': ['800', '800_2', '900'],
+                                                                 'VAR2': ['24', '24_2', '23']}))
+        self.assertEquals(info.env_values.env_dicts("LIB_C"), ({'GLOBAL': '99'},
+                                                               {'VAR2': ['24', '24_2', '23'],
+                                                                'VAR1': ['800', '800_2', '900'],
+                                                                'VAR3': ['newappend', "-23"]}))
 
         # Now check the info for the project
         info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
-        self.assertEquals(info.env_values._all_package_values(), [("LIB_A:VAR3", "override"),
-                                                                  ("LIB_B:VAR2", "222"),
-                                                                  ("LIB_B2:NEWVAR", "VALUE")])
-
-        self.assertEquals(info.env_values._global_values(), [('GLOBAL', '99'),
-                                                            ('VAR1',  self.replace_sep('700:800:800_2:900')),
-                                                            ('VAR2',  self.replace_sep('24:24_2:23')),
-                                                            ('VAR3', 'bestvalue')])
+        self.assertEquals(info.env_values.env_dicts("PROJECT"), ({'GLOBAL': '99'},
+                                                                 {'VAR2': ['24', '24_2', '23'],
+                                                                  'VAR1': ['700', '800', '800_2', '900'],
+                                                                  'VAR3': ['newappend', 'bestvalue']}))
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """
