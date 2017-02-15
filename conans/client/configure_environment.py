@@ -1,24 +1,78 @@
-import copy
+import os
+import platform
 
-from conans import tools
-from conans.client.generators.virtualenv import get_setenv_variables_commands
 from conans.model.settings import Settings
+import copy
+from conans.model.env_info import DepsEnvInfo
 from conans.util.files import save
+from conans import tools
+from conans.client.output import ConanOutput
+import sys
+
+
+# MOVED DEPRECATED FUNCTIONS HERE TO DEPRECATE THE WHOLE MODULE
+
+def get_setenv_variables_commands(deps_env_info, command_set=None):
+    if command_set is None:
+        command_set = "SET" if platform.system() == "Windows" else "export"
+
+    multiple_to_set, simple_to_set = get_dict_values(deps_env_info)
+    ret = []
+    for name, value in multiple_to_set.items():
+        if platform.system() == "Windows":
+            ret.append(command_set + ' "' + name + '=' + value + ';%' + name + '%"')
+        else:
+            # Standard UNIX "sh" does not allow "export VAR=xxx" on one line
+            # So for portability reasons we split into two commands
+            ret.append(name + '=' + value + ':$' + name)
+            ret.append(command_set + ' ' + name)
+    for name, value in simple_to_set.items():
+        if platform.system() == "Windows":
+            ret.append(command_set + ' "' + name + '=' + value + '"')
+        else:
+            ret.append(name + '=' + value)
+            ret.append(command_set + ' ' + name + '=' + value)
+    return ret
+
+
+def get_dict_values(deps_env_info):
+    def adjust_var_name(name):
+        return "PATH" if name.lower() == "path" else name
+    multiple_to_set = {}
+    simple_to_set = {}
+    for name, value in deps_env_info.vars.items():
+        name = adjust_var_name(name)
+        if isinstance(value, list):
+            # Allow path with spaces in non-windows platforms
+            if platform.system() != "Windows" and name in ["PATH", "PYTHONPATH"]:
+                value = ['"%s"' % v for v in value]
+            multiple_to_set[name] = os.pathsep.join(value).replace("\\", "/")
+        else:
+            #  It works in windows too using "/" and allows to use MSYS shell
+            simple_to_set[name] = value.replace("\\", "/")
+    return multiple_to_set, simple_to_set
 
 
 class ConfigureEnvironment(object):
 
-    def __init__(self, conanfile):
-        self.conanfile = conanfile
-        self.output = self.conanfile.output
-        deps_cpp_info = self.conanfile.deps_cpp_info
-        self.simple_env_vars, self.multiple_env_vars = self.conanfile.env_values_dicts
-        settings = self.conanfile.settings
+    def __init__(self, *args):
+        if len(args) == 2:
+            deps_cpp_info = args[0]
+            deps_env_info = DepsEnvInfo()
+            settings = args[1]
+            self.output = ConanOutput(sys.stdout)
+        elif len(args) == 1:  # conanfile (new interface)
+            self.conanfile = args[0]
+            self.output = self.conanfile.output
+            deps_cpp_info = self.conanfile.deps_cpp_info
+            deps_env_info = self.conanfile.deps_env_info
+            settings = self.conanfile.settings
 
         assert isinstance(settings, Settings)
 
         self._settings = settings
         self._deps_cpp_info = deps_cpp_info
+        self._deps_env_info = deps_env_info
         try:
             self.compiler = str(self._settings.compiler)
         except:
@@ -108,7 +162,7 @@ class ConfigureEnvironment(object):
                          'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:{0}'.format(include_paths))
         command = "env %s %s %s %s %s" % (libs, ldflags, cflags, cpp_flags, headers_flags)
         # Do not include "export" command, they are passed to env
-        command += " ".join(get_setenv_variables_commands(self.multiple_env_vars, self.simple_env_vars, ""))
+        command += " ".join(get_setenv_variables_commands(self._deps_env_info, ""))
         return command
 
     @property
@@ -117,7 +171,8 @@ class ConfigureEnvironment(object):
             if self.compiler == "gcc" or "clang" in str(self.compiler) or "sun-cc" in str(self.compiler):
                 return self._gcc_env()
         elif self.os == "Windows":
-            commands = ["@echo off", ]
+            commands = []
+            commands.append("@echo off")
             vcvars = ""
             if self.compiler == "Visual Studio":
                 cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
@@ -142,12 +197,12 @@ class ConfigureEnvironment(object):
                 commands.append('if defined LIBRARY_PATH (SET "LIBRARY_PATH=%LIBRARY_PATH%;{0}")'
                                 ' else (SET "LIBRARY_PATH={0}")'.format(lib_paths))
 
-            commands.extend(get_setenv_variables_commands(self.multiple_env_vars, self.simple_env_vars, "SET"))
+            commands.extend(get_setenv_variables_commands(self._deps_env_info, "SET"))
             save("_conan_env.bat", "\r\n".join(commands))
             command = "%scall _conan_env.bat" % vcvars
             return command
 
-        return " && ".join(get_setenv_variables_commands(self.multiple_env_vars, self.simple_env_vars))
+        return " && ".join(get_setenv_variables_commands(self._deps_env_info))
 
     # alias for backward compatibility
     command_line = command_line_env

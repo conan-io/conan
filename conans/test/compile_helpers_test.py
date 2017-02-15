@@ -1,18 +1,19 @@
-
-import unittest
-from conans.client.configure_environment import ConfigureEnvironment
-from conans.model.settings import Settings
-from conans.client.gcc import GCC
-import platform
 import os
+import platform
+import unittest
+
+from conans.client.configure_environment import ConfigureEnvironment
+from conans.client.gcc import GCC
 from conans.client.runner import ConanRunner
-from conans.test.tools import TestBufferConanOutput, TestClient
-from conans.test.utils.test_files import temp_folder
+from conans.errors import ConanException
+from conans.model.env_info import DepsEnvInfo
 from conans.model.profile import Profile
 from conans.model.scope import Scopes
-from conans.util.files import save
+from conans.model.settings import Settings
 from conans.paths import CONANFILE
-from conans.errors import ConanException
+from conans.test.tools import TestBufferConanOutput, TestClient
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
 
 
 class MockCompiler(object):
@@ -107,6 +108,10 @@ class MockConanfile(object):
     @property
     def deps_cpp_info(self):
         return BuildInfoMock()
+
+    @property
+    def deps_env_info(self):
+        return DepsEnvInfo()
 
     @property
     def env_values_dicts(self):

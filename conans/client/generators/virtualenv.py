@@ -5,30 +5,6 @@ import platform
 from conans.model import Generator
 
 
-def get_setenv_variables_commands(multiple_to_set, simple_to_set, command_set=None):
-    if command_set is None:
-        command_set = "SET" if platform.system() == "Windows" else "export"
-
-    ret = []
-    for name, values in multiple_to_set.items():
-        if platform.system() == "Windows":
-            value = os.pathsep.join(values)
-            ret.append(command_set + ' "' + name + '=' + value + ';%' + name + '%"')
-        else:
-            value = os.pathsep.join(['"%s"' % val for val in values])
-            # Standard UNIX "sh" does not allow "export VAR=xxx" on one line
-            # So for portability reasons we split into two commands
-            ret.append(name + '=' + value + ':$' + name)
-            ret.append(command_set + ' ' + name)
-    for name, value in simple_to_set.items():
-        if platform.system() == "Windows":
-            ret.append(command_set + ' "' + name + '=' + value + '"')
-        else:
-            ret.append(name + '=' + value)
-            ret.append(command_set + ' ' + name + '=' + value)
-    return ret
-
-
 class VirtualEnvGenerator(Generator):
 
     def __init__(self, conanfile):
@@ -39,6 +15,27 @@ class VirtualEnvGenerator(Generator):
     def filename(self):
         return
 
+    def _get_setenv_variables_commands(self):
+        command_set = "SET" if platform.system() == "Windows" else "export"
+        ret = []
+        for name, values in self.multiple_env_vars.items():
+            if platform.system() == "Windows":
+                value = os.pathsep.join(values)
+                ret.append(command_set + ' "' + name + '=' + value + ';%' + name + '%"')
+            else:
+                value = os.pathsep.join(['"%s"' % val for val in values])
+                # Standard UNIX "sh" does not allow "export VAR=xxx" on one line
+                # So for portability reasons we split into two commands
+                ret.append(name + '=' + value + ':$' + name)
+                ret.append(command_set + ' ' + name)
+        for name, value in self.simple_env_vars.items():
+            if platform.system() == "Windows":
+                ret.append(command_set + ' "' + name + '=' + value + '"')
+            else:
+                ret.append(name + '=' + value)
+                ret.append(command_set + ' ' + name + '=' + value)
+        return ret
+
     def _activate_lines(self, venv_name):
         activate_lines = ["@echo off"] if platform.system() == "Windows" else []
         if platform.system() == "Windows":
@@ -47,7 +44,7 @@ class VirtualEnvGenerator(Generator):
             activate_lines.append("export OLD_PS1=\"$PS1\"")
             activate_lines.append("export PS1=\"(%s) " % venv_name + "$PS1\"")
 
-        activate_commands = get_setenv_variables_commands(self.multiple_env_vars, self.simple_env_vars)
+        activate_commands = self._get_setenv_variables_commands()
         activate_lines.extend(activate_commands)
         return activate_lines
 
