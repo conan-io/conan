@@ -51,7 +51,7 @@ class DefaultNameConan(ConanFile):
         # and by default no packages are built
         error = client.run("test", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn('Try to build from sources with "--build Hello0"', client.user_io.out)
+        self.assertIn('Try to build it from sources with "--build Hello0"', client.user_io.out)
 
         # We generate the package for Hello0/0.0
         client.run("install Hello0/0.0@lasote/stable --build Hello0")
@@ -59,7 +59,7 @@ class DefaultNameConan(ConanFile):
         # Still missing Hello1/1.1
         error = client.run("test", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn('Try to build from sources with "--build Hello1"', client.user_io.out)
+        self.assertIn('Try to build it from sources with "--build Hello1"', client.user_io.out)
 
         # We generate the package for Hello1/1.1
         client.run("install Hello1/1.1@lasote/stable --build Hello1")
