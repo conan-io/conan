@@ -4,10 +4,11 @@ from conans.model.ref import ConanFileReference, PackageReference
 import os
 from conans.paths import EXPORT_SOURCES_DIR, EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
 from nose_parameterized.parameterized import parameterized
-from conans.util.files import relative_dirs, load, save, md5sum
-import six
+from conans.util.files import load, save, md5sum
 from conans.model.manifest import FileTreeManifest
 from collections import OrderedDict
+from conans.test.utils.test_files import scan_folder
+
 
 conanfile_py = """
 from conans import ConanFile
@@ -20,6 +21,7 @@ class HelloConan(ConanFile):
         self.copy("*.h", "include")
 """
 
+
 combined_conanfile = """
 from conans import ConanFile
 
@@ -31,6 +33,34 @@ class HelloConan(ConanFile):
     def package(self):
         self.copy("*.h", "include")
         self.copy("data.txt", "docs")
+"""
+
+
+nested_conanfile = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "src/*.h", "src/*.cpp"
+    exports = "src/*.txt"
+    def package(self):
+        self.copy("*.h", "include")
+        self.copy("*data.txt", "docs")
+"""
+
+
+overlap_conanfile = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    exports_sources = "src/*.h", "*.txt"
+    exports = "src/*.txt", "*.h"
+    def package(self):
+        self.copy("*.h", "include")
+        self.copy("*data.txt", "docs")
 """
 
 
@@ -57,53 +87,57 @@ class ExportsSourcesTest(unittest.TestCase):
         expected_sources = ['conanfile.py', 'conanmanifest.txt', "hello.h"]
         if mode == "both":
             expected_sources.append("data.txt")
+        if mode == "nested" or mode == "overlap":
+            expected_sources = ['conanfile.py', 'conanmanifest.txt', "src/hello.h", "src/data.txt"]
         expected_sources = sorted(expected_sources)
-        self.assertEqual(sorted(os.listdir(self.source_folder)), expected_sources)
+        self.assertEqual(scan_folder(self.source_folder), expected_sources)
 
     def _check_package_folder(self, mode):
         """ Package folder must be always the same (might have tgz after upload)
         """
-        expected_package = ["conaninfo.txt", "conanmanifest.txt",
-                            os.sep.join(["include", "hello.h"])]
+        if mode in ["exports", "exports_sources"]:
+            expected_package = ["conaninfo.txt", "conanmanifest.txt", "include/hello.h"]
         if mode == "both":
-            expected_package.append(os.sep.join(["docs", "data.txt"]))
-        expected_package = sorted(expected_package)
-        self.assertEqual(sorted(relative_dirs(self.package_folder)), expected_package)
+            expected_package = ["conaninfo.txt", "conanmanifest.txt", "include/hello.h",
+                                "docs/data.txt"]
+        if mode == "nested" or mode == "overlap":
+            expected_package = ["conaninfo.txt", "conanmanifest.txt", "include/src/hello.h",
+                                "docs/src/data.txt"]
+
+        self.assertEqual(scan_folder(self.package_folder), sorted(expected_package))
 
     def _check_server_folder(self, mode, server=None):
         if mode == "exports_sources":
-            expected_server = sorted([EXPORT_SOURCES_TGZ_NAME, 'conanfile.py',
-                                      'conanmanifest.txt'])
+            expected_server = [EXPORT_SOURCES_TGZ_NAME, 'conanfile.py', 'conanmanifest.txt']
         if mode == "exports":
-            expected_server = sorted([EXPORT_TGZ_NAME, 'conanfile.py', 'conanmanifest.txt'])
-        if mode == "both":
-            expected_server = sorted([EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, 'conanfile.py',
-                                      'conanmanifest.txt'])
+            expected_server = [EXPORT_TGZ_NAME, 'conanfile.py', 'conanmanifest.txt']
+        if mode == "both" or mode == "nested" or mode == "overlap":
+            expected_server = [EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, 'conanfile.py',
+                               'conanmanifest.txt']
+
         server = server or self.server
-        self.assertEqual(sorted(os.listdir(server.paths.export(self.reference))),
-                         expected_server)
+        self.assertEqual(scan_folder(server.paths.export(self.reference)), expected_server)
 
     def _check_export_folder(self, mode, export_folder=None):
         if mode == "exports_sources":
-            expected_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanmanifest.txt'])
-            expected_exports_sources = ["hello.h"]
+            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "hello.h"),
+                                'conanfile.py', 'conanmanifest.txt']
         if mode == "exports":
-            expected_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanmanifest.txt',
-                                       "hello.h"])
-            expected_exports_sources = []
+            expected_exports = ["hello.h", 'conanfile.py', 'conanmanifest.txt']
         if mode == "both":
-            expected_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py', 'conanmanifest.txt',
-                                       "data.txt"])
-            expected_exports_sources = ["hello.h"]
+            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "hello.h"),
+                                'conanfile.py', 'conanmanifest.txt', "data.txt"]
+        if mode == "nested":
+            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "src/hello.h"),
+                                "src/data.txt", 'conanfile.py', 'conanmanifest.txt']
+        if mode == "overlap":
+            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "src/hello.h"),
+                                "%s/%s" % (EXPORT_SOURCES_DIR, "src/data.txt"),
+                                "src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt']
 
         export_folder = export_folder or self.export_folder
-        export_sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
-        # The export folder might contain or not temporary Python files
-        cached = "__pycache__" if six.PY3 else "conanfile.pyc"
-        exports = [f for f in os.listdir(export_folder) if f != cached]
-        exports_sources = [f for f in os.listdir(export_sources_folder) if f != cached]
-        self.assertEqual(sorted(exports), expected_exports)
-        self.assertEqual(sorted(exports_sources), expected_exports_sources)
+        self.assertTrue(os.path.exists(os.path.join(export_folder, EXPORT_SOURCES_DIR)))
+        self.assertEqual(scan_folder(export_folder), sorted(expected_exports))
 
     def _check_export_installed_folder(self, mode, reuploaded=False, updated=False):
         """ Just installed, no EXPORT_SOURCES_DIR is present
@@ -118,37 +152,44 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "hello.h"]
             if reuploaded:
                 expected_exports.append("conan_export.tgz")
+        if mode == "nested":
+            expected_exports = ['conanfile.py', 'conanmanifest.txt', "src/data.txt"]
+            if reuploaded:
+                expected_exports.append("conan_export.tgz")
+        if mode == "overlap":
+            expected_exports = ['conanfile.py', 'conanmanifest.txt', "src/data.txt", "src/hello.h"]
+            if reuploaded:
+                expected_exports.append("conan_export.tgz")
         if updated:
             expected_exports.append("license.txt")
-        expected_exports = sorted(expected_exports)
-        export_sources_folder = os.path.join(self.export_folder, EXPORT_SOURCES_DIR)
-        # The export folder might contain or not temporary Python files
-        cached = "__pycache__" if six.PY3 else "conanfile.pyc"
-        exports = [f for f in os.listdir(self.export_folder) if f != cached]
-        self.assertEqual(sorted(exports), expected_exports)
-        self.assertFalse(os.path.exists(export_sources_folder))
+
+        self.assertEqual(scan_folder(self.export_folder), sorted(expected_exports))
+        self.assertFalse(os.path.exists(os.path.join(self.export_folder, EXPORT_SOURCES_DIR)))
 
     def _check_export_uploaded_folder(self, mode, export_folder=None):
         if mode == "exports_sources":
-            expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py',
-                                           'conanmanifest.txt', EXPORT_SOURCES_TGZ_NAME])
-            expected_exports_sources = ["hello.h"]
-        if mode == "both":
-            expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py',
-                                           'conanmanifest.txt', "data.txt", EXPORT_TGZ_NAME,
-                                           EXPORT_SOURCES_TGZ_NAME])
-            expected_exports_sources = ["hello.h"]
+            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "hello.h"),
+                                'conanfile.py', 'conanmanifest.txt', EXPORT_SOURCES_TGZ_NAME]
         if mode == "exports":
-            expected_pkg_exports = sorted([EXPORT_SOURCES_DIR, 'conanfile.py',
-                                           'conanmanifest.txt', "hello.h", EXPORT_TGZ_NAME])
-            expected_exports_sources = []
+            expected_exports = ["hello.h", 'conanfile.py', 'conanmanifest.txt', EXPORT_TGZ_NAME]
+        if mode == "both":
+            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "hello.h"),
+                                'conanfile.py', 'conanmanifest.txt', "data.txt",
+                                EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
+        if mode == "nested":
+            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "src/hello.h"),
+                                "src/data.txt", 'conanfile.py', 'conanmanifest.txt',
+                                EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
+
+        if mode == "overlap":
+            expected_exports = ["%s/%s" % (EXPORT_SOURCES_DIR, "src/hello.h"),
+                                "%s/%s" % (EXPORT_SOURCES_DIR, "src/data.txt"),
+                                "src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt',
+                                EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
+
         export_folder = export_folder or self.export_folder
-        export_sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
-        cached = "__pycache__" if six.PY3 else "conanfile.pyc"
-        exports = [f for f in os.listdir(export_folder) if f != cached]
-        exports_sources = [f for f in os.listdir(export_sources_folder) if f != cached]
-        self.assertEqual(sorted(exports), expected_pkg_exports)
-        self.assertEqual(sorted(exports_sources), expected_exports_sources)
+        self.assertTrue(os.path.exists(os.path.join(export_folder, EXPORT_SOURCES_DIR)))
+        self.assertEqual(scan_folder(export_folder), sorted(expected_exports))
 
     def _check_manifest(self, mode):
         manifest = load(os.path.join(self.client.current_folder,
@@ -160,21 +201,49 @@ class ExportsSourcesTest(unittest.TestCase):
         elif mode == "exports":
             self.assertIn("hello.h: 5d41402abc4b2a76b9719d911017c592",
                           manifest.splitlines())
-        else:
+        elif mode == "both":
             self.assertIn("data.txt: 8d777f385d3dfec8815d20f7496026dc", manifest.splitlines())
             self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
                           manifest.splitlines())
+        elif mode == "nested":
+            self.assertIn("src/data.txt: 8d777f385d3dfec8815d20f7496026dc",
+                          manifest.splitlines())
+            self.assertIn("%s/src/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
+                          manifest.splitlines())
+        else:
+            assert mode == "overlap"
+            self.assertIn("src/data.txt: 8d777f385d3dfec8815d20f7496026dc",
+                          manifest.splitlines())
+            self.assertIn("src/hello.h: 5d41402abc4b2a76b9719d911017c592",
+                          manifest.splitlines())
+            self.assertIn("%s/src/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
+                          manifest.splitlines())
+            self.assertIn("%s/src/data.txt: 8d777f385d3dfec8815d20f7496026dc" % EXPORT_SOURCES_DIR,
+                          manifest.splitlines())
 
     def _create_code(self, mode):
-        conanfile = conanfile_py if mode == "exports" else conanfile_py.replace("exports",
-                                                                                "exports_sources")
-        if mode == "both":
+        if mode == "exports":
+            conanfile = conanfile_py
+        elif mode == "exports_sources":
+            conanfile = conanfile_py.replace("exports", "exports_sources")
+        elif mode == "both":
             conanfile = combined_conanfile
-        self.client.save({"conanfile.py": conanfile,
-                          "hello.h": "hello",
-                          "data.txt": "data"})
+        elif mode == "nested":
+            conanfile = nested_conanfile
+        elif mode == "overlap":
+            conanfile = overlap_conanfile
 
-    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
+        if mode in ["nested", "overlap"]:
+            self.client.save({"conanfile.py": conanfile,
+                              "src/hello.h": "hello",
+                              "src/data.txt": "data"})
+        else:
+            self.client.save({"conanfile.py": conanfile,
+                              "hello.h": "hello",
+                              "data.txt": "data"})
+
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
+                           ("overlap", )])
     def copy_test(self, mode):
         # https://github.com/conan-io/conan/issues/943
         self._create_code(mode)
@@ -198,7 +267,8 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_export_uploaded_folder(mode, export_folder)
         self._check_server_folder(mode)
 
-    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
+                           ("overlap", )])
     def export_test(self, mode):
         self._create_code(mode)
 
@@ -245,7 +315,8 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_package_folder(mode)
         self._check_manifest(mode)
 
-    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
+                           ("overlap", )])
     def export_upload_test(self, mode):
         self._create_code(mode)
 
@@ -273,7 +344,8 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_package_folder(mode)
         self._check_manifest(mode)
 
-    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
+                           ("overlap", )])
     def reupload_test(self, mode):
         """ try to reupload to same and other remote
         """
@@ -294,7 +366,8 @@ class ExportsSourcesTest(unittest.TestCase):
         self._check_export_uploaded_folder(mode)
         self._check_server_folder(mode, self.other_server)
 
-    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", )])
+    @parameterized.expand([("exports", ), ("exports_sources", ), ("both", ), ("nested", ),
+                           ("overlap", )])
     def update_test(self, mode):
         self._create_code(mode)
 
