@@ -26,7 +26,7 @@ def pythonpath(conanfile):
     old_path = sys.path[:]
 
     simple_vars, multiple_vars = conanfile.env_values_dicts
-    python_path = multiple_vars.get("PYTHONPATH", None) or simple_vars.get("PYTHONPATH", None)
+    python_path = multiple_vars.get("PYTHONPATH", None) or [simple_vars.get("PYTHONPATH", None)]
     if python_path:
         sys.path.extend(python_path)
 
