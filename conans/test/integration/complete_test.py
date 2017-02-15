@@ -33,7 +33,7 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload conans
         self.client.run("upload %s" % str(conan_reference))
-        self.assertIn("Compressing exported", str(self.client.user_io.out))
+        self.assertIn("Compressing recipe", str(self.client.user_io.out))
 
         # Not needed to tgz again
         self.client.run("upload %s" % str(conan_reference))

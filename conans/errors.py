@@ -87,9 +87,6 @@ class UserInterfaceErrorException(RequestErrorException):
     pass
 
 
-class UploadException(ConanException):
-    pass
-
 EXCEPTION_CODE_MAPPING = {InternalErrorException: 500,
                           RequestErrorException: 400,
                           AuthenticationException: 401,

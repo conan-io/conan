@@ -44,6 +44,21 @@ class InfoTest(unittest.TestCase):
             self.client.run("export lasote/stable")
             self.assertNotIn("WARN: Conanfile doesn't have 'url'", self.client.user_io.out)
 
+    def only_names_test(self):
+        self.client = TestClient()
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+
+        self.client.run("info --only")
+        self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable",
+                          "Hello1/0.1@lasote/stable"], str(self.client.user_io.out).splitlines())
+        self.client.run("info --only=date")
+        lines = [(line if "date" not in line else "Date")
+                 for line in str(self.client.user_io.out).splitlines()]
+        self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable", "Date",
+                          "Hello1/0.1@lasote/stable", "Date"], lines)
+
     def reuse_test(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")

@@ -4,7 +4,7 @@ from conans.test.utils.test_files import hello_source_files, temp_folder,\
     hello_conan_files
 from conans.client.manager import CONANFILE
 import os
-from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
+from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO, EXPORT_SOURCES_DIR
 import platform
 import stat
 from conans.util.files import save
@@ -84,6 +84,9 @@ class UploadTest(unittest.TestCase):
                           "my_data/readme.txt": "//copy",
                           "my_bin/executable": "//copy"}, path=reg_folder)
 
+        exports_sources_dir = os.path.join(reg_folder, EXPORT_SOURCES_DIR)
+        os.makedirs(exports_sources_dir)
+
         self.package_ref = PackageReference(self.conan_ref, "myfakeid")
         self.server_pack_folder = self.test_server.paths.package(self.package_ref)
 
@@ -154,8 +157,8 @@ class UploadTest(unittest.TestCase):
         client.run("export frodo/stable")
         client.run("upload Hello* --confirm --retry 1 --retry_wait=1", ignore_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
-        self.assertIn("ERROR: Upload to remote 'default' failed! Execute upload again"
-                      " to retry upload the failed files: [conanmanifest.txt]", client.user_io.out)
+        self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
+                      "conanmanifest.txt. [Remote: default]", client.user_io.out)
 
         # Try with broken connection even with 10 retries
         client = self._get_client(TerribleConnectionUploader)
@@ -164,21 +167,16 @@ class UploadTest(unittest.TestCase):
         client.run("export frodo/stable")
         client.run("upload Hello* --confirm --retry 10 --retry_wait=0", ignore_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
-        self.assertIn("ERROR: Upload to remote 'default' failed! Execute upload again"
-                      " to retry upload the failed files", client.user_io.out)
+        self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.user_io.out)
 
-        # Try the package retry, will fail the pair files, we can do it with 3 attempts
+        # For each file will fail the first time and will success in the second one
         client = self._get_client(FailPairFilesUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
         client.run("upload Hello* --confirm --retry 3 --retry_wait=0 --all")
-        self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
-        self.assertIn("Error uploading file: conan_export.tgz, 'Pair file, error!'",
-                      client.user_io.out)
-        self.assertIn("Error uploading file: conan_package.tgz, 'Pair file, error!'",
-                      client.user_io.out)
+        self.assertEquals(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")
@@ -215,11 +213,11 @@ class UploadTest(unittest.TestCase):
         save(os.path.join(pack_path, CONAN_MANIFEST), str(expected_manifest))
 
         self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
-        self.assertIn("Compressing exported files", self.client.user_io.out)
+        self.assertIn("Compressing recipe", self.client.user_io.out)
         self.assertIn("Compressing package", str(self.client.user_io.out))
 
         self.client.run("upload %s --all" % str(self.conan_ref), ignore_error=False)
-        self.assertNotIn("Compressing exported files", self.client.user_io.out)
+        self.assertNotIn("Compressing recipe", self.client.user_io.out)
         self.assertNotIn("Compressing package", str(self.client.user_io.out))
         self.assertIn("Package is up to date", str(self.client.user_io.out))
 
@@ -238,7 +236,7 @@ class TestConan(ConanFile):
         self.client.run("export lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", self.client.user_io.out)
         self.client.run("upload Hello/1.2@lasote/stable", ignore_error=False)
-        self.assertIn("Uploading conan_export.tgz", self.client.user_io.out)
+        self.assertIn("Uploading conanmanifest.txt", self.client.user_io.out)
 
     def simple_test(self):
         """ basic installation of a new conans

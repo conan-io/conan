@@ -1,9 +1,11 @@
-from conans.paths import DIRTY_FILE
+from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME,\
+    CONANFILE
 import os
 from conans.util.files import rmdir, save
 import six
 from conans.errors import ConanException, format_conanfile_exception
 import shutil
+from conans import tools
 
 
 def config_source(export_folder, src_folder, conan_file, output, force=False):
@@ -38,11 +40,30 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
 
     if not os.path.exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
-        shutil.copytree(export_folder, src_folder)
+        shutil.copytree(export_folder, src_folder, symlinks=True)
+        # Now move the export-sources to the right location
+        source_sources_folder = os.path.join(src_folder, EXPORT_SOURCES_DIR)
+        if os.path.exists(source_sources_folder):
+            for filename in os.listdir(source_sources_folder):
+                shutil.move(os.path.join(source_sources_folder, filename),
+                            os.path.join(src_folder, filename))
+            # finally remove copied folder
+            os.rmdir(source_sources_folder)
+        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c", CONANFILE+"o"):
+            try:
+                os.remove(os.path.join(src_folder, f))
+            except OSError:
+                pass
+        try:
+            shutil.rmtree(os.path.join(src_folder, "__pycache__"))
+        except OSError:
+            pass
+
         save(dirty, "")  # Creation of DIRTY flag
         os.chdir(src_folder)
         try:
-            conan_file.source()
+            with tools.environment_append(*conan_file.env_values_dicts):
+                conan_file.source()
             os.remove(dirty)  # Everything went well, remove DIRTY flag
         except Exception as e:
             os.chdir(export_folder)
@@ -70,7 +91,8 @@ def config_source_local(export_folder, current_path, conan_file, output):
 
     save(dirty, "")  # Creation of DIRTY flag
     try:
-        conan_file.source()
+        with tools.environment_append(*conan_file.env_values_dicts):
+            conan_file.source()
         os.remove(dirty)  # Everything went well, remove DIRTY flag
     except Exception as e:
         msg = format_conanfile_exception(output.scope, "source", e)

@@ -4,15 +4,14 @@ from conans.paths import CONANFILE
 import os
 from conans.client.deps_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
-from conans.model.options import OptionsValues
+from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
 from conans.client.loader import ConanFileLoader
 from conans.util.files import save
-from conans.model.settings import Settings
+from conans.model.settings import Settings, bad_value_msg
 from conans.errors import ConanException
 from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
 from conans.model.values import Values
-from conans.model.config_dict import undefined_field, bad_value_msg
 from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
 from conans.model.scope import Scopes
@@ -128,7 +127,7 @@ class ConanRequirementsTest(unittest.TestCase):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, Settings.loads(""), None,
                                       OptionsValues.loads(""), Scopes(),
-                                      env=[], package_env={})
+                                      None)
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, MockRequireResolver())
 
@@ -378,8 +377,8 @@ class ChatConan(ConanFile):
     requires = "Hello/1.2@diego/testing"
 
     def conan_info(self):
-        self.info.requires["Hello"].full_package()
-        self.info.requires["Say"].semver()
+        self.info.requires["Hello"].full_package_mode()
+        self.info.requires["Say"].semver_mode()
 """
 
         self.retriever.conan(say_ref, say_content)
@@ -730,8 +729,8 @@ class ChatConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(chat_content)
         self.assertEqual(str(cm.exception),
-                         "Say/0.1@diego/testing: %s" % undefined_field("options", "myoption2",
-                                                                       ['myoption']))
+                         "Say/0.1@diego/testing: %s" % option_not_exist_msg("myoption2",
+                                                                            ['myoption']))
 
         chat_content = """
 from conans import ConanFile
@@ -748,7 +747,7 @@ class ChatConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(chat_content)
         self.assertEqual(str(cm.exception),  "Say/0.1@diego/testing: %s"
-                         % bad_value_msg("options.myoption", "235", ["123", "234"]))
+                         % option_wrong_value_msg("myoption", "235", ["123", "234"]))
 
     def test_diamond_no_conflict_options(self):
         say_content = """
@@ -1561,8 +1560,7 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
         options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, full_settings, None, options, Scopes(),
-                                 env=None, package_env=None)
+        loader = ConanFileLoader(None, full_settings, None, options, Scopes(), None)
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
@@ -1717,7 +1715,7 @@ class SayConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
-                                    ['Android', 'FreeBSD', 'Macos', "Windows", "iOS"]),
+                                    ['Android', 'FreeBSD', 'Macos', 'SunOS', "Windows", "iOS"]),
                       str(cm.exception))
 
     def test_config_remove2(self):
@@ -1845,7 +1843,7 @@ class ChatConan(ConanFile):
                                  OptionsValues.loads("Say:myoption_say=123\n"
                                                      "Hello:myoption_hello=True\n"
                                                      "myoption_chat=on"),
-                                 Scopes(), env=None, package_env=None)
+                                 Scopes(), env_values=None)
         retriever = Retriever(loader, output)
         builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver())
         retriever.conan(say_ref, say_content)

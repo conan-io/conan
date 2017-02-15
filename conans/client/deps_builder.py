@@ -10,6 +10,7 @@ from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
 from collections import defaultdict
+from conans.model.env_info import EnvValues
 
 
 class Node(namedtuple("Node", "conan_ref conanfile")):
@@ -116,14 +117,19 @@ class DepsGraph(object):
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
                 non_devs = self.non_dev_nodes(node)
+
                 conanfile.info = ConanInfo.create(conanfile.settings.values,
                                                   conanfile.options.values,
                                                   direct_reqs,
                                                   indirect_reqs,
                                                   non_devs)
 
-                # Once we are done, call conan_info() to narrow and change possible values
-                conanfile.conan_info()
+                # Once we are done, call package_id() to narrow and change possible values
+                if hasattr(conanfile, "conan_info"):
+                    # Deprecated in 0.19
+                    conanfile.conan_info()
+                else:
+                    conanfile.package_id()
         return ordered
 
     def ordered_closure(self, node, flat):
@@ -325,7 +331,7 @@ class DepsGraphBuilder(object):
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name)
                 # RECURSION!
                 self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
-                                new_options.copy(), new_loop_ancestors)
+                                new_options, new_loop_ancestors)
             else:  # a public node already exist with this name
                 if previous_node.conan_ref != require.conan_reference:
                     self._output.werror("Conflict in %s\n"
@@ -337,7 +343,7 @@ class DepsGraphBuilder(object):
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 self._load_deps(previous_node, new_reqs, dep_graph, public_deps, conanref,
-                                new_options.copy(), new_loop_ancestors)
+                                new_options, new_loop_ancestors)
 
     def _config_node(self, conanfile, conanref, down_reqs, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual
@@ -375,7 +381,7 @@ class DepsGraphBuilder(object):
                     conanfile.requires = conanfile._original_requires.copy()
                 conanfile.requirements()
 
-            new_options = conanfile.options.values
+            new_options = conanfile.options.deps_package_values
             new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))

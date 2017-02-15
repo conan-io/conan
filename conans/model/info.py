@@ -1,11 +1,12 @@
-from conans.util.sha import sha1
-from conans.model.ref import PackageReference
 from conans.errors import ConanException
+from conans.model.env_info import EnvValues
+from conans.model.options import OptionsValues
+from conans.model.ref import PackageReference
+from conans.model.scope import Scopes
+from conans.model.values import Values
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
-from conans.model.values import Values
-from conans.model.options import OptionsValues
-from conans.model.scope import Scopes
+from conans.util.sha import sha1
 
 
 class RequirementInfo(object):
@@ -22,11 +23,9 @@ class RequirementInfo(object):
 
         # sha values
         if indirect:
-            self.name = self.version = None
+            self.unrelated_mode()
         else:
-            self.name = self.full_name
-            self.version = self.full_version.stable()
-        self.user = self.channel = self.package_id = None
+            self.semver()
 
     def dumps(self):
         return "/".join([n for n in [self.name, self.version, self.user, self.channel,
@@ -45,24 +44,29 @@ class RequirementInfo(object):
         ret = RequirementInfo(data)
         return ret
 
-    def semver(self):
+    def unrelated_mode(self):
+        self.name = self.version = self.user = self.channel = self.package_id = None
+
+    def semver_mode(self):
         self.name = self.full_name
         self.version = self.full_version.stable()
         self.user = self.channel = self.package_id = None
 
-    def full_version(self):
+    semver = semver_mode
+
+    def full_version_mode(self):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.channel = self.package_id = None
 
-    def full_recipe(self):
+    def full_recipe_mode(self):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.full_user
         self.channel = self.full_channel
         self.package_id = None
 
-    def full_package(self):
+    def full_package_mode(self):
         self.name = self.full_name
         self.version = self.full_version
         self.user = self.full_user
@@ -180,12 +184,14 @@ class ConanInfo(object):
         result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
         result._non_devs_requirements = non_devs_requirements  # Can be None
+        result.env_values = EnvValues()
         return result
 
     @staticmethod
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
-                                     "requires", "full_requires", "scope", "recipe_hash"])
+                                     "requires", "full_requires", "scope", "recipe_hash",
+                                     "env"])
 
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
@@ -197,12 +203,15 @@ class ConanInfo(object):
         result.recipe_hash = parser.recipe_hash or None
         # TODO: Missing handling paring of requires, but not necessary now
         result.scope = Scopes.loads(parser.scope)
+        result.env_values = EnvValues.loads(parser.env)
         return result
 
     def dumps(self):
         def indent(text):
+            if not text:
+                return ""
             return '\n'.join("    " + line for line in text.splitlines())
-        result = []
+        result = list()
 
         result.append("[settings]")
         result.append(indent(self.settings.dumps()))
@@ -219,8 +228,11 @@ class ConanInfo(object):
         result.append("\n[scope]")
         if self.scope:
             result.append(indent(self.scope.dumps()))
-        result.append("\n[recipe_hash]\n%s" % self.recipe_hash)
-        return '\n'.join(result)
+        result.append("\n[recipe_hash]\n%s" % indent(self.recipe_hash))
+        result.append("\n[env]")
+        result.append(indent(self.env_values.dumps()))
+
+        return '\n'.join(result) + "\n"
 
     def __eq__(self, other):
         """ currently just for testing purposes
@@ -237,7 +249,7 @@ class ConanInfo(object):
         try:
             config_text = load(conan_info_path)
         except IOError:
-            raise ConanException("Does not exist %s" % (conan_info_path))
+            raise ConanException("Does not exist %s" % conan_info_path)
         else:
             return ConanInfo.loads(config_text)
 

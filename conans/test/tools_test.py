@@ -7,17 +7,19 @@ from conans.test.utils.visual_project_files import get_vs_project_files
 from conans.test.tools import TestClient, TestBufferConanOutput
 from conans.paths import CONANFILE
 import platform
-from requests.exceptions import ConnectionError
 from conans.errors import ConanException
+from nose.plugins.attrib import attr
 
 
 class RunnerMock(object):
 
-    def __init__(self):
+    def __init__(self, return_ok=True):
         self.command_called = None
+        self.return_ok = return_ok
 
     def __call__(self, command, output):
         self.command_called = command
+        return 0 if self.return_ok else 1
 
 
 class ReplaceInFileTest(unittest.TestCase):
@@ -56,6 +58,33 @@ class ToolsTest(unittest.TestCase):
         cpus = tools.cpu_count()
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
+
+    def test_environment_nested(self):
+        with tools.environment_append({"A": "1", "Z": "40"}):
+            with tools.environment_append({"A": "1", "B": "2"}):
+                with tools.environment_append({"A": "2", "B": "2"}):
+                    self.assertEquals(os.getenv("A"), "2")
+                    self.assertEquals(os.getenv("B"), "2")
+                    self.assertEquals(os.getenv("Z"), "40")
+                self.assertEquals(os.getenv("A", None), "1")
+                self.assertEquals(os.getenv("B", None), "2")
+            self.assertEquals(os.getenv("A", None), "1")
+            self.assertEquals(os.getenv("Z", None), "40")
+
+        self.assertEquals(os.getenv("A", None), None)
+        self.assertEquals(os.getenv("B", None), None)
+        self.assertEquals(os.getenv("Z", None), None)
+
+    def system_package_tool_fail_when_not_0_returned_test(self):
+        runner = RunnerMock(return_ok=False)
+        spt = SystemPackageTool(runner=runner)
+        if platform.system() != "Windows":
+            msg = "Command 'sudo apt-get update' failed" if platform.system() == "Linux" \
+                                                         else "Command 'brew update' failed"
+            with self.assertRaisesRegexp(ConanException, msg):
+                spt.update()
+        else:
+            spt.update()  # Won't raise anything because won't do anything
 
     def system_package_tool_test(self):
 
@@ -124,6 +153,7 @@ class ToolsTest(unittest.TestCase):
 
         del os.environ["CONAN_SYSREQUIRES_SUDO"]
 
+    @attr('slow')
     def build_vs_project_test(self):
         if platform.system() != "Windows":
             return

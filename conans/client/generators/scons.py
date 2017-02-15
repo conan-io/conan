@@ -13,7 +13,7 @@ class SConsGenerator(Generator):
                     '        "BINPATH"     : {info.bin_paths},\n'
                     '        "LIBS"        : {info.libs},\n'
                     '        "CPPDEFINES"  : {info.defines},\n'
-                    '        "CPPFLAGS"    : {info.cppflags},\n'
+                    '        "CXXFLAGS"    : {info.cppflags},\n'
                     '        "CCFLAGS"     : {info.cflags},\n'
                     '        "SHLINKFLAGS" : {info.sharedlinkflags},\n'
                     '        "LINKFLAGS"   : {info.exelinkflags},\n'

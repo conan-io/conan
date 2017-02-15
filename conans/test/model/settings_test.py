@@ -1,7 +1,6 @@
 from conans.errors import ConanException
 import unittest
-from conans.model.settings import Settings
-from conans.model.config_dict import bad_value_msg, undefined_field, undefined_value
+from conans.model.settings import Settings, bad_value_msg, undefined_value, undefined_field
 
 
 class SettingsTest(unittest.TestCase):
@@ -58,9 +57,11 @@ class SettingsTest(unittest.TestCase):
         self.assertEqual(self.sut.os, "Linux")
 
     def loads_default_test(self):
-        settings = Settings.loads("""os: [Windows, Linux, Macos, Android, FreeBSD]
+        settings = Settings.loads("""os: [Windows, Linux, Macos, Android, FreeBSD, SunOS]
 arch: [x86, x86_64, arm]
 compiler:
+    sun-cc:
+        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
     gcc:
         version: ["4.8", "4.9", "5.0"]
     Visual Studio:
@@ -280,7 +281,7 @@ os: [Windows, Linux]
         with self.assertRaises(ConanException) as cm:
             self.sut.compiler.version = "123"
         self.assertEqual(str(cm.exception),
-                             bad_value_msg("settings.compiler.version", "123", ['10', '11', '12']))
+                         bad_value_msg("settings.compiler.version", "123", ['10', '11', '12']))
 
         self.sut.compiler.version = "12"
         self.assertEqual(self.sut.compiler.version, "12")

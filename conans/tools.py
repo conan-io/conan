@@ -3,6 +3,9 @@
 from __future__ import print_function
 import sys
 import os
+
+import logging
+
 from conans.errors import ConanException
 from conans.util.files import _generic_algorithm_sum, load
 from patch import fromfile, fromstring
@@ -20,28 +23,43 @@ import multiprocessing
 @contextmanager
 def pythonpath(conanfile):
     old_path = sys.path[:]
-    sys.path.extend(conanfile.deps_env_info.PYTHONPATH)
+    try:
+        sys.path.extend(conanfile.env["PYTHONPATH"].split(os.pathsep))
+    except KeyError:
+        pass
     yield
     sys.path = old_path
 
 
 @contextmanager
-def environment_append(env_vars):
+def environment_append(env_vars, list_env_vars=None):
+    """
+    :param env_vars: List of simple environment vars. {name: value, name2: value2} => e.j: MYVAR=1
+    :param list_env_vars: List of appendable environment vars. {name: [value, value2]} => e.j. PATH=/path/1:/path/2
+    :return: None
+    """
     old_env = dict(os.environ)
+    if list_env_vars:
+        for name, value in list_env_vars.items():
+            env_vars[name] = os.pathsep.join(value)
+            if name in old_env:
+                env_vars[name] += os.pathsep + old_env[name]
     os.environ.update(env_vars)
-    yield
-    os.environ.clear()
-    os.environ.update(old_env)
+    try:
+        yield
+    finally:
+        os.environ.clear()
+        os.environ.update(old_env)
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
-    '''
+    """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
         env = ConfigureEnvironment(self)
         command = "%s && %s" % (env.command_line_env, build_command)
         self.run(command)
-    '''
+    """
     targets = targets or []
     command = "devenv %s /upgrade && " % sln_path if upgrade_project else ""
     command += "msbuild %s /p:Configuration=%s" % (sln_path, settings.build_type)
@@ -67,8 +85,16 @@ def vcvars_command(settings):
                                  "Current settings visual version: %s"
                                  % (existing_version, settings.compiler.version))
     else:
-        command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
-                   % (settings.compiler.version, param))
+        env_var = "vs%s0comntools" % settings.compiler.version
+        try:
+            vs_path = os.environ[env_var]
+        except KeyError:
+            raise ConanException("VS '%s' variable not defined. Please install VS or define "
+                                 "the variable (VS2017)" % env_var)
+        if settings.compiler.version != "15":
+            command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
+        else:
+            command = ('call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
     return command
 
 
@@ -203,9 +229,27 @@ def check_sha256(file_path, signature):
     check_with_algorithm_sum("sha256", file_path, signature)
 
 
-def patch(base_path=None, patch_file=None, patch_string=None, strip=0):
+def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=None):
     """Applies a diff from file (patch_file)  or string (patch_string)
     in base_path directory or current dir if None"""
+
+    class PatchLogHandler(logging.Handler):
+        def __init__(self):
+            logging.Handler.__init__(self, logging.DEBUG)
+            self.output = output or ConanOutput(sys.stdout, True)
+            self.patchname = patch_file if patch_file else "patch"
+
+        def emit(self, record):
+            logstr = self.format(record)
+            if record.levelno == logging.WARN:
+                self.output.warn("%s: %s" % (self.patchname, logstr))
+            else:
+                self.output.info("%s: %s" % (self.patchname, logstr))
+
+    patchlog = logging.getLogger("patch")
+    if patchlog:
+        patchlog.handlers = []
+        patchlog.addHandler(PatchLogHandler())
 
     if not patch_file and not patch_string:
         return
@@ -213,6 +257,9 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0):
         patchset = fromfile(patch_file)
     else:
         patchset = fromstring(patch_string.encode())
+
+    if not patchset:
+        raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
     if not patchset.apply(root=base_path, strip=strip):
         raise ConanException("Failed to apply patch: %s" % patch_file)
@@ -226,6 +273,7 @@ class OSInfo(object):
         print(os_info.is_windows) # True/False
         print(os_info.is_macos) # True/False
         print(os_info.is_freebsd) # True/False
+        print(os_info.is_solaris) # True/False
 
         print(os_info.linux_distro)  # debian, ubuntu, fedora, centos...
 
@@ -246,13 +294,14 @@ class OSInfo(object):
         self.is_windows = platform.system() == "Windows"
         self.is_macos = platform.system() == "Darwin"
         self.is_freebsd = platform.system() == "FreeBSD"
+        self.is_solaris = platform.system() == "SunOS"
 
         if self.is_linux:
-            tmp = platform.linux_distribution(full_distribution_name=0)
-            self.linux_distro = None
-            self.linux_distro = tmp[0].lower()
-            self.os_version = Version(tmp[1])
-            self.os_version_name = tmp[2]
+            import distro
+            self.linux_distro = distro.id()
+            self.os_version = Version(distro.version())
+            version_name = distro.codename()
+            self.os_version_name = version_name if version_name != "n/a" else ""
             if not self.os_version_name and self.linux_distro == "debian":
                 self.os_version_name = self.get_debian_version_name(self.os_version)
         elif self.is_windows:
@@ -264,14 +313,20 @@ class OSInfo(object):
         elif self.is_freebsd:
             self.os_version = self.get_freebsd_version()
             self.os_version_name = "FreeBSD %s" % self.os_version
+        elif self.is_solaris:
+            self.os_version = Version(platform.release())
+            self.os_version_name = self.get_solaris_version_name(self.os_version)
 
     @property
     def with_apt(self):
-        return self.is_linux and self.linux_distro in ("debian", "ubuntu", "knoppix")
+        return self.is_linux and self.linux_distro in \
+            ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian")
 
     @property
     def with_yum(self):
-        return self.is_linux and self.linux_distro in ("centos", "redhat", "fedora")
+        return self.is_linux and self.linux_distro in \
+            ("centos", "redhat", "fedora", "pidora", "scientific",
+             "xenserver", "amazon", "oracle")
 
     def get_win_os_version(self):
         """
@@ -368,6 +423,14 @@ class OSInfo(object):
     def get_freebsd_version(self):
         return platform.release().split("-")[0]
 
+    def get_solaris_version_name(self, version):
+        if not version:
+            return None
+        elif version.minor() == "5.10":
+            return "Solaris 10"
+        elif version.minor() == "5.11":
+            return "Solaris 11"
+
 try:
     os_info = OSInfo()
 except Exception as exc:
@@ -398,7 +461,8 @@ class SystemPackageTool(object):
 
         if update_command:
             print("Running: %s" % update_command)
-            return self._runner(update_command, True)
+            if self._runner(update_command, True) != 0:
+                raise ConanException("Command '%s' failed" % update_command)
 
     def install(self, package_name):
         '''
@@ -415,7 +479,8 @@ class SystemPackageTool(object):
 
         if install_command:
             print("Running: %s" % install_command)
-            return self._runner(install_command, True)
+            if self._runner(install_command, True) != 0:
+                raise ConanException("Command '%s' failed" % install_command)
         else:
             print("Warn: Only available for linux with apt-get or yum or OSx with brew")
             return None

@@ -44,7 +44,7 @@ class CppInfo(_CppInfo):
         self.libdirs.append(DEFAULT_LIB)
         self.bindirs.append(DEFAULT_BIN)
         self.resdirs.append(DEFAULT_RES)
-        self.deps = None
+        self.public_deps = []
 
     @property
     def include_paths(self):

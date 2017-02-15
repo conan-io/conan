@@ -18,11 +18,11 @@ class PrivateDepsTest(unittest.TestCase):
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
     def _export_upload(self, name=0, version=None, deps=None, msg=None, static=True, build=True,
-                       upload=True, cmake_targets=False):
+                       upload=True):
         dll_export = self.client.default_compiler_visual_studio and not static
         files = cpp_hello_conan_files(name, version, deps, msg=msg, static=static,
                                       private_includes=True, dll_export=dll_export, build=build,
-                                      cmake_targets=cmake_targets)
+                                      cmake_targets=False)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)
         self.client.run("export lasote/stable")
@@ -37,19 +37,13 @@ class PrivateDepsTest(unittest.TestCase):
         self.client.run("export lasote/stable")
 
     def modern_cmake_test(self):
-        self._export("zlib", "0.1")
-        self._export("libpng", "0.1", deps=["zlib/0.1@lasote/stable"])
         self._export("glew", "0.1")
         self._export("glm", "0.1")
-        self._export("imgui", "0.1")
-        self._export("gf", "0.1", deps=["glew/0.1@lasote/stable",
-                                        "glm/0.1@lasote/stable",
-                                        "libpng/0.1@lasote/stable"])
+        self._export("gf", "0.1", deps=[("glm/0.1@lasote/stable", "private"),
+                                        "glew/0.1@lasote/stable"])
 
-        self._export("ImGuiTest", "0.1", deps=["glew/0.1@lasote/stable",
-                                               "gf/0.1@lasote/stable",
-                                               "glm/0.1@lasote/stable",
-                                               "imgui/0.1@lasote/stable"])
+        self._export("ImGuiTest", "0.1", deps=["glm/0.1@lasote/stable",
+                                               "gf/0.1@lasote/stable"])
 
         # Consuming project
         self._export("Project", "0.1", deps=["ImGuiTest/0.1@lasote/stable"])
@@ -59,9 +53,11 @@ class PrivateDepsTest(unittest.TestCase):
         conanbuildinfo_cmake = load(os.path.join(self.client.current_folder,
                                                  "conanbuildinfo.cmake"))
 
+        self.assertIn("CONAN_PKG::gf PROPERTY INTERFACE_LINK_LIBRARIES "
+                      "${CONAN_FULLPATH_LIBS_GF} CONAN_PKG::glew ${CONAN_SHARED_LINKER_FLAGS_GF}",
+                      conanbuildinfo_cmake)
         self.assertIn("CONAN_PKG::ImGuiTest PROPERTY INTERFACE_LINK_LIBRARIES "
-                      "${CONAN_FULLPATH_LIBS_IMGUITEST} CONAN_PKG::gf CONAN_PKG::imgui "
-                      "CONAN_PKG::glew CONAN_PKG::glm CONAN_PKG::libpng CONAN_PKG::zlib",
+                      "${CONAN_FULLPATH_LIBS_IMGUITEST} CONAN_PKG::glm CONAN_PKG::gf",
                       conanbuildinfo_cmake)
 
     def consumer_force_build_test(self):
