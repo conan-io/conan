@@ -305,8 +305,8 @@ class DepsGraphBuilder(object):
                                  "evaluations of 'requirements'\n"
                                  "    Previous requirements: %s\n"
                                  "    New requirements: %s"
-                                 % (conanref, conanfile.requires.values(),
-                                    conanfile._evaluated_requires.values()))
+                                 % (conanref, list(conanfile.requires.values()),
+                                    list(conanfile._evaluated_requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
                    loop_ancestors):
