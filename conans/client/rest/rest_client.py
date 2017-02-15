@@ -410,13 +410,13 @@ class RestApiClient(object):
     def _file_server_capabilities(self, resource_url):
         auth = None
         dedup = False
-        if resource_url.startswith(self._remote_api_url):
-            urltokens = urlsplit(resource_url)
-            query_string = urltokens[3]
-            if "signature" not in parse_qs(query_string):
-                # If monolithic server, we can use same auth, and server understand dedup
-                auth = self.auth
-                dedup = True
+        urltokens = urlsplit(resource_url)
+        query_string = urltokens[3]
+        parsed_string_dict = parse_qs(query_string)
+        if "signature" not in parsed_string_dict and "Signature" not in parsed_string_dict:
+            # If monolithic server, we can use same auth, and server understand dedup
+            auth = self.auth
+            dedup = True
         return auth, dedup
 
     def download_files(self, file_urls, output=None):
@@ -481,6 +481,7 @@ class RestApiClient(object):
                 failed.append(filename)
 
         if failed:
-            raise ConanException("Execute upload again to retry upload the failed files: %s" % ", ".join(failed))
+            raise ConanException("Execute upload again to retry upload the failed files: %s"
+                                 % ", ".join(failed))
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
