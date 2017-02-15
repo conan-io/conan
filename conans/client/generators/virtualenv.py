@@ -11,10 +11,11 @@ def get_setenv_variables_commands(multiple_to_set, simple_to_set, command_set=No
 
     ret = []
     for name, values in multiple_to_set.items():
-        value = os.pathsep.join(['"%s"' % val for val in values])
         if platform.system() == "Windows":
+            value = os.pathsep.join(values)
             ret.append(command_set + ' "' + name + '=' + value + ';%' + name + '%"')
         else:
+            value = os.pathsep.join(['"%s"' % val for val in values])
             # Standard UNIX "sh" does not allow "export VAR=xxx" on one line
             # So for portability reasons we split into two commands
             ret.append(name + '=' + value + ':$' + name)
@@ -80,7 +81,7 @@ class VirtualEnvGenerator(Generator):
         activate_lines.append("function global:_old_conan_prompt {\"\"}")
         activate_lines.append("$function:_old_conan_prompt = $function:prompt")
         activate_lines.append(
-            "function global:prompt { write-host \"(%s) \" -nonewline; & $function:_old_conan_prompt }" % name)
+            "function global:prompt { write-host \"(%s) \" -nonewline; & $function:_old_conan_prompt }" % venv_name)
         deactivate_lines.append("$function:prompt = $function:_old_conan_prompt")
         deactivate_lines.append("remove-item function:\\_old_conan_prompt")
         for var_name in all_vars.keys():
@@ -104,10 +105,10 @@ class VirtualEnvGenerator(Generator):
         ext = "bat" if platform.system() == "Windows" else "sh"
         result = {"activate.%s" % ext: os.linesep.join(activate_lines),
                   "deactivate.%s" % ext: os.linesep.join(deactivate_lines)}
-        alt_shell = {}
+
         if platform.system() == "Windows":
             ps1_activate, ps1_deactivate = self._ps1_lines(venv_name)
             alt_shell = {"activate.ps1": os.linesep.join(ps1_activate),
                          "deactivate.ps1": os.linesep.join(ps1_deactivate)}
-        result.update(alt_shell)
+            result.update(alt_shell)
         return result
