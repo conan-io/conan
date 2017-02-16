@@ -4,6 +4,7 @@ from conans.paths import CONANFILE
 conanfile_template = r"""
 from conans import ConanFile, tools
 import sys
+import os
 
 class {name}Conan(ConanFile):
     name = "{name}"

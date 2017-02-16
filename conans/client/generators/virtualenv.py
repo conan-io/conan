@@ -2,7 +2,6 @@ from conans.model import Generator
 import platform
 import os
 import copy
-from conans.errors import ConanException
 
 
 def get_setenv_variables_commands(deps_env_info, command_set=None):
@@ -45,6 +44,7 @@ def get_dict_values(deps_env_info):
             simple_to_set[name] = value.replace("\\", "/")
     return multiple_to_set, simple_to_set
 
+
 def gen_ps1_lines(name, simple_to_set, multiple_to_set):
     deactivate_lines = []
     activate_lines = []
@@ -62,7 +62,8 @@ def gen_ps1_lines(name, simple_to_set, multiple_to_set):
         activate_lines.append("$env:%s = \"%s\" + \";$env:%s\"" % (name, value, name))
     for name, value in simple_to_set.items():
         activate_lines.append("$env:%s = \"%s\"" % (name, value))
-    return (activate_lines, deactivate_lines)
+    return activate_lines, deactivate_lines
+
 
 class VirtualEnvGenerator(Generator):
 

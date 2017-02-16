@@ -3,7 +3,7 @@ from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.errors import ConanException
-from conans.model.env_info import DepsEnvInfo
+from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
 from conans.paths import RUN_LOG_NAME
 
@@ -120,9 +120,27 @@ class ConanFile(object):
         self._scope = None
 
         # user specified env variables
-        self.env = None  # Assigned at runtime
+        self._env_values = EnvValues()  # Updated at runtime, user specified -e
         self._user = user
         self._channel = channel
+
+    @property
+    def env(self):  # Only for retro-compatibility
+        simple_values, list_values = self._env_values.env_dicts(self.name)
+        ret = {}
+        for name, value in list_values.items():  # Iterate to copy the values
+            ret[name] = os.pathsep.join(value)
+        for name, value in simple_values.items():  # Iterate to copy the values
+            ret[name] = value
+        return ret
+
+    @property
+    def env_values(self):
+        return self._env_values
+
+    @property
+    def env_values_dicts(self):
+        return self._env_values.env_dicts(self.name)
 
     @property
     def channel(self):

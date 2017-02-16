@@ -180,6 +180,17 @@ class ConanInstaller(object):
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
 
+        # Update the env_values with the inherited from dependencies
+        conan_file.env_values.update(conan_file.deps_env_info)
+
+        # Update the info but filtering the package values that not apply to the subtree
+        # of this current node and its dependencies.
+        subtree_libnames = [ref.name for (ref, _) in node_order]
+        for package_name, env_vars in conan_file.env_values.data.items():
+            for name, value in env_vars.items():
+                if not package_name or package_name in subtree_libnames or package_name == conan_file.name:
+                    conan_file.info.env_values.add(name, value, package_name)
+
     def _get_nodes(self, nodes_by_level, skip_nodes, build_mode):
         """Install the available packages if needed/allowed and return a list
         of nodes to build (tuples (conan_file, conan_ref))
@@ -259,7 +270,7 @@ class ConanInstaller(object):
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
-        with environment_append(conan_file.env):
+        with environment_append(*conan_file.env_values_dicts):
             self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
 
     def _package_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
@@ -278,7 +289,7 @@ class ConanInstaller(object):
         output.info("Generated %s" % CONANENV)
 
         os.chdir(build_folder)
-        with environment_append(conan_file.env):
+        with environment_append(*conan_file.env_values_dicts):
             create_package(conan_file, build_folder, package_folder, output)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
 

@@ -23,14 +23,27 @@ import multiprocessing
 @contextmanager
 def pythonpath(conanfile):
     old_path = sys.path[:]
-    sys.path.extend(conanfile.deps_env_info.PYTHONPATH)
+    try:
+        sys.path.extend(conanfile.env["PYTHONPATH"].split(os.pathsep))
+    except KeyError:
+        pass
     yield
     sys.path = old_path
 
 
 @contextmanager
-def environment_append(env_vars):
+def environment_append(env_vars, list_env_vars=None):
+    """
+    :param env_vars: List of simple environment vars. {name: value, name2: value2} => e.j: MYVAR=1
+    :param list_env_vars: List of appendable environment vars. {name: [value, value2]} => e.j. PATH=/path/1:/path/2
+    :return: None
+    """
     old_env = dict(os.environ)
+    if list_env_vars:
+        for name, value in list_env_vars.items():
+            env_vars[name] = os.pathsep.join(value)
+            if name in old_env:
+                env_vars[name] += os.pathsep + old_env[name]
     os.environ.update(env_vars)
     try:
         yield
@@ -40,13 +53,13 @@ def environment_append(env_vars):
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
-    '''
+    """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
         env = ConfigureEnvironment(self)
         command = "%s && %s" % (env.command_line_env, build_command)
         self.run(command)
-    '''
+    """
     targets = targets or []
     command = "devenv %s /upgrade && " % sln_path if upgrade_project else ""
     command += "msbuild %s /p:Configuration=%s" % (sln_path, settings.build_type)
@@ -72,8 +85,16 @@ def vcvars_command(settings):
                                  "Current settings visual version: %s"
                                  % (existing_version, settings.compiler.version))
     else:
-        command = ('call "%%vs%s0comntools%%../../VC/vcvarsall.bat" %s'
-                   % (settings.compiler.version, param))
+        env_var = "vs%s0comntools" % settings.compiler.version
+        try:
+            vs_path = os.environ[env_var]
+        except KeyError:
+            raise ConanException("VS '%s' variable not defined. Please install VS or define "
+                                 "the variable (VS2017)" % env_var)
+        if settings.compiler.version != "15":
+            command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
+        else:
+            command = ('call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
     return command
 
 
@@ -419,47 +440,111 @@ except Exception as exc:
 
 class SystemPackageTool(object):
 
-    def __init__(self, runner=None):
-        self._runner = runner or ConanRunner()
+    def __init__(self, runner=None, os_info=None, tool=None):
         env_sudo = os.environ.get("CONAN_SYSREQUIRES_SUDO", None)
         self._sudo = (env_sudo != "False" and env_sudo != "0")
-        self._os_info = OSInfo()
+        os_info = os_info or OSInfo()
+        self._is_up_to_date = False
+        self._tool = tool or self._create_tool(os_info)
+        self._tool._sudo_str = "sudo " if self._sudo else ""
+        self._tool._runner = runner or ConanRunner()
+
+    def _create_tool(self, os_info):
+        if os_info.with_apt:
+            return AptTool()
+        elif os_info.with_yum:
+            return YumTool()
+        elif os_info.is_macos:
+            return BrewTool()
+        else:
+            return NullTool()
 
     def update(self):
         """
             Get the system package tool update command
         """
-        sudo_str = "sudo " if self._sudo else ""
-        update_command = None
-        if self._os_info.with_apt:
-            update_command = "%sapt-get update" % sudo_str
-        elif self._os_info.with_yum:
-            update_command = "%syum check-update" % sudo_str
-        elif self._os_info.is_macos:
-            update_command = "brew update"
+        self._is_up_to_date = True
+        self._tool.update()
 
-        if update_command:
-            print("Running: %s" % update_command)
-            if self._runner(update_command, True) != 0:
-                raise ConanException("Command '%s' failed" % update_command)
-
-    def install(self, package_name):
+    def install(self, packages, update=True, force=False):
         '''
             Get the system package tool install command.
         '''
-        sudo_str = "sudo " if self._sudo else ""
-        install_command = None
-        if self._os_info.with_apt:
-            install_command = "%sapt-get install -y %s" % (sudo_str, package_name)
-        elif self._os_info.with_yum:
-            install_command = "%syum install -y %s" % (sudo_str, package_name)
-        elif self._os_info.is_macos:
-            install_command = "brew install %s" % package_name
+        packages = [packages] if isinstance(packages, str) else list(packages)
+        if not force and self._installed(packages):
+            return
+        if update and not self._is_up_to_date:
+            self.update()
+        self._install_any(packages)
 
-        if install_command:
-            print("Running: %s" % install_command)
-            if self._runner(install_command, True) != 0:
-                raise ConanException("Command '%s' failed" % install_command)
-        else:
-            print("Warn: Only available for linux with apt-get or yum or OSx with brew")
-            return None
+    def _installed(self, packages):
+        for pkg in packages:
+            if self._tool.installed(pkg):
+                print("Package already installed: %s" % pkg)
+                return True
+        return False
+
+    def _install_any(self, packages):
+        if len(packages) == 1:
+            return self._tool.install(packages[0])
+        for pkg in packages:
+            try:
+                return self._tool.install(pkg)
+            except ConanException:
+                pass
+        raise ConanException("Could not install any of %s" % packages)
+
+
+class NullTool(object):
+    def update(self):
+        pass
+
+    def install(self, package_name):
+        print("Warn: Only available for linux with apt-get or yum or OSx with brew")
+
+    def installed(self, package_name):
+        return False
+
+
+class AptTool(object):
+    def update(self):
+        _run(self._runner, "%sapt-get update" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%sapt-get install -y %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner("dpkg -s %s" % package_name, None)
+        return exit_code == 0
+
+
+class YumTool(object):
+    def update(self):
+        _run(self._runner, "%syum check-update" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%syum install -y %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner("rpm -q %s" % package_name, None)
+        return exit_code == 0
+
+
+class BrewTool(object):
+    def update(self):
+        _run(self._runner, "brew update")
+
+    def install(self, package_name):
+        _run(self._runner, "brew install %s" % package_name)
+
+    def installed(self, package_name):
+        exit_code = self._runner('test -n "$(brew ls --versions %s)"' % package_name, None)
+        return exit_code == 0
+
+
+
+def _run(runner, command):
+    print("Running: %s" % command)
+    if runner(command, True) != 0:
+        raise ConanException("Command '%s' failed" % command)
+
