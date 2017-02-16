@@ -99,8 +99,7 @@ class HelloConan(ConanFile):
         self.env_info.var3="Another value"
         self.env_info.path = "/dir"
 '''
-        files = {}
-        files["conanfile.py"] = conanfile
+        files = {"conanfile.py": conanfile}
         client.save(files)
         client.run("export lasote/stable")
         conanfile = '''

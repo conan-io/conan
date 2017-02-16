@@ -6,6 +6,8 @@ from conans.model.settings import Settings
 from conans.client.cmake import CMake
 from conans.client.gcc import GCC
 from conans.client.configure_environment import ConfigureEnvironment
+from conans.client.configure_build_environment import (ConfigureBuildEnvironment, GCCBuildEnvironment,
+                                                       AutoToolsBuildEnvironment, VisualStudioBuildEnvironment)
 from conans.util.files import load
 import os
 

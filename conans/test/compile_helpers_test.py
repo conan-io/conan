@@ -2,6 +2,8 @@ import os
 import platform
 import unittest
 
+import sys
+
 from conans.client.configure_environment import ConfigureEnvironment
 from conans.client.gcc import GCC
 from conans.client.runner import ConanRunner
@@ -104,6 +106,7 @@ class MockConanfile(object):
 
     def __init__(self, settings):
         self.settings = settings
+        self.output = TestBufferConanOutput()
 
     @property
     def deps_cpp_info(self):
@@ -116,10 +119,6 @@ class MockConanfile(object):
     @property
     def env_values_dicts(self):
         return {}, {}
-
-    @property
-    def output(self):
-        return None
 
 
 class CompileHelpersTest(unittest.TestCase):

@@ -70,6 +70,21 @@ class ConfigureEnvironment(object):
 
         assert isinstance(settings, Settings)
 
+        self.output.warn("""
+***********************************************************************
+
+    WARNING!!!
+
+    ConfigureEnvironment class is deprecated and will be removed soon.
+    With ConfigureEnvironment, env variables from profiles and/or
+    command line are not applied.
+
+    Use ConfigureBuildEnvironment instead, check docs.conan.io
+
+
+***********************************************************************
+        """)
+
         self._settings = settings
         self._deps_cpp_info = deps_cpp_info
         self._deps_env_info = deps_env_info

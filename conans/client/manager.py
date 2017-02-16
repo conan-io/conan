@@ -442,8 +442,7 @@ If not:
                                           reference=package_reference.conan)
             _load_info_file(build_folder, conanfile, output)
             rmdir(package_folder)
-            simple_env_vars, multiple_env_vars = conanfile.env_values_dicts
-            with environment_append(simple_env_vars, multiple_env_vars):
+            with environment_append(conanfile.env):
                 packager.create_package(conanfile, build_folder, package_folder, output)
 
     def build(self, conanfile_path, current_path, test=False, filename=None):
@@ -474,8 +473,7 @@ If not:
             _load_info_file(current_path, conan_file, output)
             os.chdir(current_path)
             conan_file._conanfile_directory = conanfile_path
-            simple_env_vars, multiple_env_vars = conan_file.env_values_dicts
-            with environment_append(simple_env_vars, multiple_env_vars):
+            with environment_append(conan_file.env):
                 conan_file.build()
 
             if test:

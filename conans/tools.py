@@ -24,26 +24,27 @@ from conans.util.log import logger
 @contextmanager
 def pythonpath(conanfile):
     old_path = sys.path[:]
-
-    simple_vars, multiple_vars = conanfile.env_values_dicts
-    python_path = multiple_vars.get("PYTHONPATH", None) or [simple_vars.get("PYTHONPATH", None)]
+    python_path = conanfile.env.get("PYTHONPATH", None)
     if python_path:
-        sys.path.extend(python_path)
-
+        if isinstance(python_path, list):
+            sys.path.extend(python_path)
+        else:
+            sys.path.append(python_path)
     yield
     sys.path = old_path
 
 
 @contextmanager
-def environment_append(env_vars, list_env_vars=None):
+def environment_append(env_vars):
     """
     :param env_vars: List of simple environment vars. {name: value, name2: value2} => e.j: MYVAR=1
-    :param list_env_vars: List of appendable environment vars. {name: [value, value2]} => e.j. PATH=/path/1:/path/2
+                     The values can also be lists of appendable environment vars. {name: [value, value2]}
+                      => e.j. PATH=/path/1:/path/2
     :return: None
     """
     old_env = dict(os.environ)
-    if list_env_vars:
-        for name, value in list_env_vars.items():
+    for name, value in env_vars.items():
+        if isinstance(value, list):
             env_vars[name] = os.pathsep.join(value)
             if name in old_env:
                 env_vars[name] += os.pathsep + old_env[name]
