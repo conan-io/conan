@@ -51,6 +51,11 @@ class _CppInfo(object):
         return [os.path.join(self.rootpath, p)
                 if not os.path.isabs(p) else p for p in self.builddirs]
 
+    @property
+    def res_paths(self):
+        return [os.path.join(self.rootpath, p)
+                if not os.path.isabs(p) else p for p in self.resdirs]
+
 
 class CppInfo(_CppInfo):
     """ Build Information declared to be used by the CONSUMERS of a
@@ -96,8 +101,9 @@ class _BaseDepsCppInfo(_CppInfo):
         self.includedirs = merge_lists(self.includedirs, dep_cpp_info.include_paths)
         self.libdirs = merge_lists(self.libdirs, dep_cpp_info.lib_paths)
         self.bindirs = merge_lists(self.bindirs, dep_cpp_info.bin_paths)
+        self.resdirs = merge_lists(self.resdirs, dep_cpp_info.res_paths)
+        self.builddirs = merge_lists(self.builddirs, dep_cpp_info.build_paths)
         self.libs = merge_lists(self.libs, dep_cpp_info.libs)
-        self.builddirs = merge_lists(self.builddirs, dep_cpp_info.builddirs)
 
         # Note these are in reverse order
         self.defines = merge_lists(dep_cpp_info.defines, self.defines)
@@ -121,6 +127,10 @@ class _BaseDepsCppInfo(_CppInfo):
     @property
     def build_paths(self):
         return self.builddirs
+
+    @property
+    def res_paths(self):
+        return self.resdirs
 
 
 class DepsCppInfo(_BaseDepsCppInfo):

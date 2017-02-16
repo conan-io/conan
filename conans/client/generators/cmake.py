@@ -7,23 +7,22 @@ from conans.client.generators.cmake_common import cmake_dependency_vars,\
 
 class DepsCppCmake(object):
     def __init__(self, deps_cpp_info):
-        self.include_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
-                                             for p in deps_cpp_info.include_paths)
-        self.lib_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
-                                         for p in deps_cpp_info.lib_paths)
-        self.libs = " ".join(deps_cpp_info.libs)
+        def multiline(field):
+            return "\n\t\t\t".join('"%s"' % p.replace("\\", "/") for p in field)
 
+        self.include_paths = multiline(deps_cpp_info.include_paths)
+        self.lib_paths = multiline(deps_cpp_info.lib_paths)
+        self.res_paths = multiline(deps_cpp_info.res_paths)
+        self.bin_paths = multiline(deps_cpp_info.bin_paths)
+        self.build_paths = multiline(deps_cpp_info.build_paths)
+
+        self.libs = " ".join(deps_cpp_info.libs)
         self.defines = "\n\t\t\t".join("-D%s" % d for d in deps_cpp_info.defines)
         self.compile_definitions = "\n\t\t\t".join(deps_cpp_info.defines)
-
         self.cppflags = " ".join(deps_cpp_info.cppflags)
         self.cflags = " ".join(deps_cpp_info.cflags)
         self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
         self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
-        self.bin_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
-                                         for p in deps_cpp_info.bin_paths)
-        self.build_paths = "\n\t\t\t".join('"%s"' % p.replace("\\", "/")
-                                           for p in deps_cpp_info.build_paths)
         self.rootpath = '"%s"' % deps_cpp_info.rootpath.replace("\\", "/")
 
 

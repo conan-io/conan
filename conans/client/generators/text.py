@@ -8,6 +8,10 @@ class DepsCppTXT(object):
                                        for p in deps_cpp_info.include_paths)
         self.lib_paths = "\n".join(p.replace("\\", "/")
                                    for p in deps_cpp_info.lib_paths)
+        self.res_paths = "\n".join(p.replace("\\", "/")
+                                   for p in deps_cpp_info.res_paths)
+        self.build_paths = "\n".join(p.replace("\\", "/")
+                                     for p in deps_cpp_info.build_paths)
         self.libs = "\n".join(deps_cpp_info.libs)
         self.defines = "\n".join(deps_cpp_info.defines)
         self.cppflags = "\n".join(deps_cpp_info.cppflags)
@@ -29,6 +33,8 @@ class TXTGenerator(Generator):
         template = ('[includedirs{dep}{config}]\n{deps.include_paths}\n\n'
                     '[libdirs{dep}{config}]\n{deps.lib_paths}\n\n'
                     '[bindirs{dep}{config}]\n{deps.bin_paths}\n\n'
+                    '[resdirs{dep}{config}]\n{deps.res_paths}\n\n'
+                    '[builddirs{dep}{config}]\n{deps.build_paths}\n\n'
                     '[libs{dep}{config}]\n{deps.libs}\n\n'
                     '[defines{dep}{config}]\n{deps.defines}\n\n'
                     '[cppflags{dep}{config}]\n{deps.cppflags}\n\n'
