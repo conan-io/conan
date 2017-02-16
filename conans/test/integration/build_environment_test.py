@@ -11,8 +11,6 @@ class BuildEnvironmenTest(unittest.TestCase):
 
     def test_gcc_environment(self):
 
-        if platform.system() == "Windows":  # FIXME, use MinGW too
-            return
         # CREATE A DUMMY LIBRARY WITH GCC (could be generated with other build system)
         mylib = '''
 double mean(double a, double b) {
@@ -67,11 +65,12 @@ from conans.tools import environment_append
 class ConanReuseLib(ConanFile):
 
     requires = "Mean/0.1@lasote/stable"
+    generators = "gcc"
 
     def build(self):
         build_env = GCCBuildEnvironment(self)
         with environment_append(build_env.vars):
-            self.run("g++ example.c -l%s -o mean_exe " % self.deps_cpp_info.libs[0])
+            self.run("g++ example.c @conanbuildinfo.gcc -o mean_exe ")
         self.run("./mean_exe");
 '''
 

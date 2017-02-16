@@ -11,27 +11,36 @@ conanfile_build_cmake = """    def build(self):
         self.run(cmd)
         self.run("cmake --build . %s" % cmake.build_config)"""
 
+# PENDING AUTOTOOLS BUILD!! try with GCC and let CLANG use the GCCBuildEnvironment
+
 conanfile_build_new_env = """
     def build(self):
         import os
-        from conans.tools environment_append
+        from conans import GCCBuildEnvironment, VisualStudioBuildEnvironment
+        from conans.tools import environment_append, vcvars_command
 
-        with environment_append(env_build.vars):
-            if self.settings.compiler == "Visual Studio":
-                env_build = VisualStudioBuildEnvironment(self)
+
+        if self.settings.compiler == "Visual Studio":
+            env_build = VisualStudioBuildEnvironment(self)
+            with environment_append(env_build.vars):
+                vcvars = vcvars_command(self.settings)
                 flags = " ".join("%s.lib" % lib for lib in self.deps_cpp_info.libs)
                 lang = '/DCONAN_LANGUAGE=%s' % self.options.language
                 if self.options.static:
-                    self.run('cl /c /EHsc hello.cpp {}'.format(lang))
-                    self.run('{} && lib hello.obj -OUT:hello{}.lib'.format(self.name))
+                    self.run('{} && cl /c /EHsc hello.cpp {}'.format(vcvars, lang))
+                    self.run('{} && lib hello.obj -OUT:hello{}.lib'.format(vcvars, self.name))
                 else:
-                    self.run('cl /EHsc /LD hello.cpp {} {} /link /IMPLIB:hello{}.lib '
-                             '/link /OUT:hello{}.dll'.format(lang, flags, self.name, self.name))
+                    self.run('{} && cl /EHsc /LD hello.cpp {} {} /link /IMPLIB:hello{}.lib '
+                             '/link /OUT:hello{}.dll'.format(vcvars, lang, flags, self.name, self.name))
 
-                command = ('cl /EHsc main.cpp hello{}.lib {}'.format(self.name, flags))
+                command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(vcvars, self.name, flags))
                 self.run(command)
-            elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
-                env_build = GCCBuildEnvironment(self)
+        elif self.settings.compiler == "gcc" and self.settings.os == "Linux":
+            # PENDING TO USE AUTOTOOLS TO GENERATE A PROJECT AND INVOKE MAKE
+
+        elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
+            env_build = GCCBuildEnvironment(self)
+            with environment_append(env_build.vars):
                 lang = '-DCONAN_LANGUAGE=%s' % self.options.language
                 if self.options.static:
                     self.run("c++ -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
@@ -45,7 +54,9 @@ conanfile_build_new_env = """
                         self.run("c++ -o libhello{}.so -shared -fPIC hello.cpp {} @conanbuildinfo.gcc".
                         format(self.name, lang))
                 self.run('c++ -o main main.cpp -L. -lhello{} @conanbuildinfo.gcc'.format(self.name))
-            elif self.settings.compiler == "sun-cc":
+        elif self.settings.compiler == "sun-cc":
+            env_build = GCCBuildEnvironment(self)
+            with environment_append(env_build.vars):
                 lang = '-DCONAN_LANGUAGE=%s' % self.options.language
                 if self.options.static:
                     self.run("CC -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
