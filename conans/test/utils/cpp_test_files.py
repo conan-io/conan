@@ -11,13 +11,11 @@ conanfile_build_cmake = """    def build(self):
         self.run(cmd)
         self.run("cmake --build . %s" % cmake.build_config)"""
 
-# PENDING AUTOTOOLS BUILD!! try with GCC and let CLANG use the GCCBuildEnvironment
-
 conanfile_build_new_env = """
     def build(self):
         import os
-        from conans import GCCBuildEnvironment, VisualStudioBuildEnvironment
-        from conans.tools import environment_append, vcvars_command
+        from conans import GCCBuildEnvironment, VisualStudioBuildEnvironment, AutoToolsBuildEnvironment
+        from conans.tools import environment_append, vcvars_command, save
 
 
         if self.settings.compiler == "Visual Studio":
@@ -36,7 +34,35 @@ conanfile_build_new_env = """
                 command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(vcvars, self.name, flags))
                 self.run(command)
         elif self.settings.compiler == "gcc" and self.settings.os == "Linux":
-            # PENDING TO USE AUTOTOOLS TO GENERATE A PROJECT AND INVOKE MAKE
+            makefile_am = '''
+bin_PROGRAMS = main
+lib_LIBRARIES = libhello{}.a
+libhello{}_a_SOURCES = hello.cpp
+main_SOURCES = main.cpp
+main_LDADD = libhello{}.a
+'''.format(self.name, self.name, self.name)
+
+            configure_ac = '''
+AC_INIT([main], [1.0], [luism@jfrog.com])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AC_PROG_CXX
+AC_PROG_RANLIB
+AM_PROG_AR
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+'''
+            save("Makefile.am", makefile_am)
+            save("configure.ac", configure_ac)
+            self.run("aclocal")
+            self.run("autoconf")
+            self.run("automake --add-missing --foreign")
+
+            env_build = AutoToolsBuildEnvironment(self)
+            env_build.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
+
+            with environment_append(env_build.vars):
+                self.run("./configure")
+                self.run("make")
 
         elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
             env_build = GCCBuildEnvironment(self)

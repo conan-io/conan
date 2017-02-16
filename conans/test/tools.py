@@ -285,7 +285,7 @@ class TestClient(object):
     def __init__(self, base_folder=None, current_folder=None,
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
-                 requester_class=None, runner=None):
+                 requester_class=None, runner=None, path_with_spaces=True):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -301,7 +301,7 @@ class TestClient(object):
         self.client_version = Version(str(client_version))
         self.min_server_compatible_version = Version(str(min_server_compatible_version))
 
-        self.base_folder = base_folder or temp_folder()
+        self.base_folder = base_folder or temp_folder(path_with_spaces)
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())

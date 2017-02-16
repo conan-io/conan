@@ -1,37 +1,31 @@
 import os
-import platform
 import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.tools import TestClient
+from conans.util.files import md5sum
 
-
-class BuildEnvironmenTest(unittest.TestCase):
-
-    def test_gcc_environment(self):
-
-        # CREATE A DUMMY LIBRARY WITH GCC (could be generated with other build system)
-        mylib = '''
-double mean(double a, double b) {
-  return (a+b) / 2;
-}
-'''
-        mylibh = '''
+mylibh = '''
 double mean(double a, double b);
 '''
-        conanfile = '''
+conanfile = '''
 from conans import ConanFile
 
 class ConanMeanLib(ConanFile):
     name = "Mean"
     version = "0.1"
     exports_sources = "mean*"
-    settings = "os", "compiler", "build_type"
+    settings = "os", "compiler", "build_type", "arch"
+    options = {"activate_define": [True, False], "optimize": [True, False]}
+    default_options = """activate_define=True
+optimize=False
+"""
+    generators = "gcc"
 
     def build(self):
         self.output.info("Running source!")
-        self.run("g++ -c -o mean.o mean.c")
+        self.run("g++ -c -o mean.o @conanbuildinfo.gcc mean.c")
         self.run("ar rcs libmean.a mean.o")
 
     def package(self):
@@ -40,25 +34,80 @@ class ConanMeanLib(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs.append("mean")
+        if self.options.activate_define:
+            self.cpp_info.defines.append("ACTIVE_VAR=1")
+        if self.options.optimize:
+            self.cpp_info.cflags.append("-O2")
 '''
 
-        client = TestClient()
-        client.save({CONANFILE: conanfile, "mean.c": mylib, "mean.h": mylibh})
-        client.run("export lasote/stable")
-        client.run("install Mean/0.1@lasote/stable --build")
-        ref = ConanFileReference.loads("Mean/0.1@lasote/stable")
-        packages = client.client_cache.packages(ref)
+mylib = '''
+double mean(double a, double b) {
+  return (a+b) / 2;
+}
+'''
 
-        # Reuse the mean library using the GCCBuildEnvironment
-        example = '''
+example = '''
 #include "mean.h"
 #include <iostream>
 
 int main(){
     std::cout << mean(10, 20) << std::endl;
+    #ifdef ACTIVE_VAR
+    std::cout << "Active var!!!" << std::endl;
+    #endif
 }
     '''
-        reuse = '''
+
+
+class BuildEnvironmenTest(unittest.TestCase):
+
+    def test_autotools_environment(self):
+        pass
+
+    def test_gcc_environment_without_gcc_generator(self):
+        """The environment for gcc is very limited, just sets the library and include paths
+        try if it works without the gcc generator"""
+
+        client = TestClient()
+        client.save({CONANFILE: conanfile, "mean.c": mylib, "mean.h": mylibh})
+        client.run("export lasote/stable")
+        client.run("install Mean/0.1@lasote/stable --build")
+
+        reuse_gcc_conanfile = '''
+from conans import ConanFile, GCCBuildEnvironment
+from conans.tools import environment_append
+
+class ConanReuseLib(ConanFile):
+
+    requires = "Mean/0.1@lasote/stable"
+    settings = "os", "compiler", "build_type", "arch"
+
+    def build(self):
+        build_env = GCCBuildEnvironment(self)
+        with environment_append(build_env.vars):
+            self.run("g++ example.c -o mean_exe -lmean ")
+        self.run("./mean_exe");
+        '''
+
+        client.save({CONANFILE: reuse_gcc_conanfile, "example.c": example})
+        client.run("install . --build missing")
+        client.run("build .")
+        self.assertIn("15", client.user_io.out)
+
+        # Definitions are not passed
+        self.assertNotIn("Active var!!!", client.user_io.out)
+
+    def test_gcc_and_environment(self):
+
+        # CREATE A DUMMY LIBRARY WITH GCC (could be generated with other build system)
+        client = TestClient()
+        client.save({CONANFILE: conanfile, "mean.c": mylib, "mean.h": mylibh})
+        client.run("export lasote/stable")
+        client.run("install Mean/0.1@lasote/stable --build")
+
+        # Reuse the mean library using the GCCBuildEnvironment
+
+        reuse_gcc_conanfile = '''
 from conans import ConanFile, GCCBuildEnvironment
 from conans.tools import environment_append
 
@@ -66,6 +115,7 @@ class ConanReuseLib(ConanFile):
 
     requires = "Mean/0.1@lasote/stable"
     generators = "gcc"
+    settings = "os", "compiler", "build_type", "arch"
 
     def build(self):
         build_env = GCCBuildEnvironment(self)
@@ -74,7 +124,39 @@ class ConanReuseLib(ConanFile):
         self.run("./mean_exe");
 '''
 
-        client.save({CONANFILE: reuse, "example.c": example})
+        client.save({CONANFILE: reuse_gcc_conanfile, "example.c": example})
         client.run("install . --build missing")
         client.run("build .")
         self.assertIn("15", client.user_io.out)
+        self.assertIn("Active var!!!", client.user_io.out)
+
+        client.run("install . --build missing -o Mean:activate_define=False")
+        client.run("build .")
+        self.assertIn("15", client.user_io.out)
+        self.assertNotIn("Active var!!!", client.user_io.out)
+
+        client.run("install . --build missing -o Mean:activate_define=False -s arch=x86")
+        client.run("build .")
+        self.assertIn("15", client.user_io.out)
+        self.assertNotIn("Active var!!!", client.user_io.out)
+        md5_binary = md5sum(os.path.join(client.current_folder, "mean_exe"))
+
+        # Pass the optimize option that will append a cflag to -O2, the binary will be different
+        client.run("install . --build missing -o Mean:activate_define=False -o Mean:optimize=True -s arch=x86")
+        client.run("build .")
+        self.assertIn("15", client.user_io.out)
+        self.assertNotIn("Active var!!!", client.user_io.out)
+        md5_binary2 = md5sum(os.path.join(client.current_folder, "mean_exe"))
+
+        self.assertNotEquals(md5_binary, md5_binary2)
+
+        # Rebuid the same binary, same md5sum
+        client.run("install . --build missing -o Mean:activate_define=False -o Mean:optimize=True -s arch=x86")
+        client.run("build .")
+        self.assertIn("15", client.user_io.out)
+        self.assertNotIn("Active var!!!", client.user_io.out)
+        md5_binary = md5sum(os.path.join(client.current_folder, "mean_exe"))
+
+        self.assertEquals(md5_binary, md5_binary2)
+
+

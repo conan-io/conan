@@ -46,7 +46,7 @@ class AutoToolsBuildEnvironment(object):
         self.include_paths = copy.copy(self._deps_cpp_info.include_paths)
         self.library_paths = copy.copy(self._deps_cpp_info.lib_paths)
 
-        self.definitions = self._configure_definitions()
+        self.defines = self._configure_defines()
         # Will go to CFLAGS and CXXFLAGS ["-m64" "-m32", "-g", "-s"]
         self.compilation_flags = self._configure_compilation_flags()
         # Only c++ flags [-stdlib, -library], will go to CXXFLAGS
@@ -82,7 +82,7 @@ class AutoToolsBuildEnvironment(object):
                 ret.append(flag)
         return ret
 
-    def _configure_definitions(self):
+    def _configure_defines(self):
         # requires declared defines
         ret = copy.copy(self._deps_cpp_info.defines)
 
@@ -111,11 +111,16 @@ class AutoToolsBuildEnvironment(object):
         def append(*args):
             ret = []
             for arg in args:
-                ret.extend(arg)
+                if arg:
+                    if isinstance(arg, list):
+                        ret.extend(arg)
+                    else:
+                        ret.append(arg)
             return ret
 
-        ld_flags = append(self._configure_linker_flags(), "-L".join(self.library_paths))
-        cpp_flags = append("-I".join(self.include_paths), "-D".join(self.definitions))
+        ld_flags = append(self._configure_linker_flags(), ['-L%s' % x for x in self.library_paths])
+        cpp_flags = append(['-I%s' % x for x in self.include_paths], ["-D%s" % x for x in self.defines])
+        libs = ['-l%s' % lib for lib in self.libs]
 
         tmp_compilation_flags = copy.copy(self.compilation_flags)
         if self.fpic:
@@ -124,12 +129,14 @@ class AutoToolsBuildEnvironment(object):
         cxx_flags = append(tmp_compilation_flags, self.only_cpp_compilation_flags)
         c_flags = tmp_compilation_flags
 
-        return {"CPPFLAGS": cpp_flags,
-                "CXXFLAGS": cxx_flags,
-                "CFLAGS": c_flags,
-                "LDFLAGS": ld_flags,
-                "LIBS": self.libs,
-                }
+        ret = {"CPPFLAGS": " ".join(cpp_flags),
+               "CXXFLAGS": " ".join(cxx_flags),
+               "CFLAGS": " ".join(c_flags),
+               "LDFLAGS": " ".join(ld_flags),
+               "LIBS": " ".join(libs),
+               }
+
+        return ret
 
 
 class GCCBuildEnvironment(object):

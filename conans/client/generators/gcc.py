@@ -20,9 +20,9 @@ class GCCGenerator(Generator):
         """
         flags = []
         flags.extend(["-D%s" % x for x in self._deps_build_info.defines])
-        flags.extend(["-I%s" % x.replace("\\", "/") for x in self._deps_build_info.include_paths])
-        flags.extend(["-Wl,-rpath=%s" % x.replace("\\", "/") for x in self._deps_build_info.lib_paths]) # rpaths
-        flags.extend(["-L%s" % x.replace("\\", "/") for x in self._deps_build_info.lib_paths])
+        flags.extend(['-I"%s"' % x.replace("\\", "/") for x in self._deps_build_info.include_paths])
+        flags.extend(['-Wl,-rpath="%s"' % x.replace("\\", "/") for x in self._deps_build_info.lib_paths]) # rpaths
+        flags.extend(['-L"%s"' % x.replace("\\", "/") for x in self._deps_build_info.lib_paths])
         flags.extend(["-l%s" % x for x in self._deps_build_info.libs])
         flags.extend(self._deps_build_info.cppflags)
         flags.extend(self._deps_build_info.cflags)

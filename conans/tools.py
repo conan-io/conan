@@ -17,7 +17,8 @@ from conans.client.rest.uploader_downloader import Downloader
 from conans.client.runner import ConanRunner
 from conans.errors import ConanException
 from conans.model.version import Version
-from conans.util.files import _generic_algorithm_sum, load
+# noinspection PyUnresolvedReferences
+from conans.util.files import _generic_algorithm_sum, load, save
 from conans.util.log import logger
 
 
