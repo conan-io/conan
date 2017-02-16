@@ -3,6 +3,18 @@ import yaml
 from conans.model.values import Values
 
 
+def get_setting_str_safe(settings, name):
+    try:
+        tmp = settings
+        for prop in name.split("."):
+            tmp = getattr(tmp, prop, None)
+    except ConanException:
+        return None
+    if tmp is not None:
+        return str(tmp)
+    return None
+
+
 def bad_value_msg(name, value, value_range):
     tip = ""
     if "settings" in name:

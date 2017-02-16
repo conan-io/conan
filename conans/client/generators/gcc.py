@@ -1,5 +1,11 @@
 from conans.model import Generator
+from conans.model.settings import get_setting_str_safe
 from conans.paths import BUILD_INFO_GCC
+
+sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
+                            "libstdcxx": "-library=stdcxx4",
+                            "libstlport": "-library=stlport4",
+                            "libstdc++": "-library=stdcpp"}
 
 
 class GCCGenerator(Generator):
@@ -12,17 +18,37 @@ class GCCGenerator(Generator):
         """With gcc_flags you can invoke gcc like that:
         $ gcc main.c @conanbuildinfo.gcc -o main
         """
-        defines = " ".join("-D%s" % x for x in self._deps_build_info.defines)
-        include_paths = " ".join("-I%s"
-                                 % x.replace("\\", "/") for x in self._deps_build_info.include_paths)
-        rpaths = " ".join("-Wl,-rpath=%s"
-                          % x.replace("\\", "/") for x in self._deps_build_info.lib_paths)
-        lib_paths = " ".join("-L%s" % x.replace("\\", "/") for x in self._deps_build_info.lib_paths)
-        libs = " ".join("-l%s" % x for x in self._deps_build_info.libs)
-        other_flags = " ".join(self._deps_build_info.cppflags +
-                               self._deps_build_info.cflags +
-                               self._deps_build_info.sharedlinkflags +
-                               self._deps_build_info.exelinkflags)
-        flags = ("%s %s %s %s %s %s"
-                 % (defines, include_paths, lib_paths, rpaths, libs, other_flags))
-        return flags
+        flags = []
+        flags.extend(["-D%s" % x for x in self._deps_build_info.defines])
+        flags.extend(["-I%s" % x.replace("\\", "/") for x in self._deps_build_info.include_paths])
+        flags.extend(["-Wl,-rpath=%s" % x.replace("\\", "/") for x in self._deps_build_info.lib_paths]) # rpaths
+        flags.extend(["-L%s" % x.replace("\\", "/") for x in self._deps_build_info.lib_paths])
+        flags.extend(["-l%s" % x for x in self._deps_build_info.libs])
+        flags.extend(self._deps_build_info.cppflags)
+        flags.extend(self._deps_build_info.cflags)
+        flags.extend(self._deps_build_info.sharedlinkflags)
+        flags.extend(self._deps_build_info.exelinkflags)
+        flags.extend(self._libcxx_flags())
+        arch = get_setting_str_safe(self.conanfile.settings, "arch")
+        flags.append({"x86_64": "-m64", "x86": "-m32"}.get(arch, ""))
+        return " ".join(flags)
+
+    def _libcxx_flags(self):
+        libcxx = get_setting_str_safe(self.conanfile.settings, "compiler.libcxx")
+        compiler = get_setting_str_safe(self.conanfile.settings, "compiler")
+
+        lib_flags = []
+        if libcxx:
+            if libcxx == "libstdc++":
+                lib_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
+            elif str(libcxx) == "libstdc++11":
+                lib_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
+
+            if "clang" in compiler:
+                lib_flags.append({"libc++": "-stdlib=libc++"}.get(libcxx, "-stdlib=libstdc++"))
+
+            elif compiler == "sun-cc":
+                lib_flags.append(sun_cc_libcxx_flags_dict.get(libcxx, ""))
+
+        return lib_flags
+

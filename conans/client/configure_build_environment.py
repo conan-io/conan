@@ -1,19 +1,9 @@
 import copy
 import os
 
+from conans.client.generators.gcc import sun_cc_libcxx_flags_dict
 from conans.errors import ConanException
-
-
-def safe_get_setting(settings, name):
-    try:
-        tmp = settings
-        for prop in name.split("."):
-            tmp = getattr(tmp, prop, None)
-    except ConanException:
-        return None
-    if tmp is not None:
-        return str(tmp)
-    return None
+from conans.model.settings import get_setting_str_safe
 
 
 class VisualStudioBuildEnvironment(object):
@@ -45,10 +35,10 @@ class AutoToolsBuildEnvironment(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._deps_cpp_info = conanfile.deps_cpp_info
-        self._arch = safe_get_setting(conanfile.settings, "arch")
-        self._build_type = safe_get_setting(conanfile.settings, "build_type")
-        self._compiler = safe_get_setting(conanfile.settings, "compiler")
-        self._libcxx = safe_get_setting(conanfile.settings, "compiler.libcxx")
+        self._arch = get_setting_str_safe(conanfile.settings, "arch")
+        self._build_type = get_setting_str_safe(conanfile.settings, "build_type")
+        self._compiler = get_setting_str_safe(conanfile.settings, "compiler")
+        self._libcxx = get_setting_str_safe(conanfile.settings, "compiler.libcxx")
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
@@ -87,10 +77,7 @@ class AutoToolsBuildEnvironment(object):
                 ret.append("-stdlib=libstdc++")
 
         elif str(self._compiler) == "sun-cc":
-            flag = {"libCstd": "-library=Cstd",
-                    "libstdcxx": "-library=stdcxx4",
-                    "libstlport": "-library=stlport4",
-                    "libstdc++": "-library=stdcpp"}.get(self._libcxx, None)
+            flag = sun_cc_libcxx_flags_dict.get(self._libcxx, None)
             if flag:
                 ret.append(flag)
         return ret
@@ -172,7 +159,10 @@ class GCCBuildEnvironment(object):
     """
 
     def __init__(self, conanfile):
+        self._conanfile = conanfile
         self._deps_cpp_info = conanfile.deps_cpp_info
+        self._libcxx = get_setting_str_safe(conanfile.settings, "compiler.libcxx")
+        self._compiler = get_setting_str_safe(conanfile.settings, "compiler")
 
     @property
     def _library_path(self):
@@ -187,31 +177,3 @@ class GCCBuildEnvironment(object):
         ret = {"LIBRARY_PATH": self._library_path,
                "C_PATH": self._path}
         return ret
-
-
-class ConfigureBuildEnvironment(object):
-
-    def __init__(self, conanfile):
-        self._conanfile = conanfile
-
-    @property
-    def vars(self):
-        # Autodetect vars
-        the_os = safe_get_setting(self._conanfile.settings, "os")
-        if the_os != "Windows":
-            gcc_b = GCCBuildEnvironment(self._conanfile)
-            autotools_b = AutoToolsBuildEnvironment(self._conanfile)
-            gcc_b.vars.update(autotools_b.vars)
-            return gcc_b.vars
-        else:
-            compiler = safe_get_setting(self._conanfile.settings, "compiler")
-            if compiler == "gcc":
-                return GCCBuildEnvironment(self._conanfile).vars
-            elif compiler == "Visual Studio":
-                return VisualStudioBuildEnvironment(self._conanfile).vars
-            else:
-                raise ConanException("Unknown build environment, please, use GCCBuildEnvironment, "
-                                     "VisualStudioBuildEnvironment or  AutoToolsBuildEnvironment instead of "
-                                     "ConfigureBuildEnvironment")
-
-

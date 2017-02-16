@@ -79,7 +79,12 @@ class ConfigureEnvironment(object):
     With ConfigureEnvironment, env variables from profiles and/or
     command line are not applied.
 
-    Use ConfigureBuildEnvironment instead, check docs.conan.io
+    Replace it with the right one according your needs:
+      - AutoToolsBuildEnvironment
+      - VisualStudioBuildEnvironment
+      - GccBuildEnvironment
+
+    Check docs.conan.io
 
 
 ***********************************************************************

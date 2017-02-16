@@ -11,52 +11,49 @@ conanfile_build_cmake = """    def build(self):
         self.run(cmd)
         self.run("cmake --build . %s" % cmake.build_config)"""
 
-conanfile_build_env = """
+conanfile_build_new_env = """
     def build(self):
         import os
-        from conans import ConfigureEnvironment
+        from conans.tools environment_append
 
-        environment = ConfigureEnvironment(self)
-        env = environment.command_line_env
-        flags = environment.compile_flags
-
-        if self.settings.compiler == "Visual Studio":
-            lang = '/DCONAN_LANGUAGE=%s' % self.options.language
-            if self.options.static:
-                self.run('{}  && cl /c /EHsc hello.cpp {}'.format(env, lang))
-                self.run('{} && lib hello.obj -OUT:hello{}.lib'.format(env, self.name))
-            else:
-                self.run('{} && cl /EHsc /LD hello.cpp {} {} /link /IMPLIB:hello{}.lib '
-                         '/link /OUT:hello{}.dll'.format(env, lang, flags, self.name, self.name))
-
-            command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(env, self.name, flags))
-            self.run(command)
-        elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
-            # libs = " ".join("-l%s" % lib for lib in self.deps_cpp_info.libs)
-            lang = '-DCONAN_LANGUAGE=%s' % self.options.language
-            if self.options.static:
-                self.run("c++ -c hello.cpp {} {}".format(lang, flags))
-                self.run("{} && ar rcs libhello{}.a hello.o".format(env, self.name))
-            else:
-                if self.settings.os == "Windows":
-                    self.run("{} && c++ -o libhello{}.dll -shared -fPIC hello.cpp {} {} "
-                             "-Wl,--out-implib,libhello{}.a".
-                             format(env, self.name, lang, flags, self.name))
+        with environment_append(env_build.vars):
+            if self.settings.compiler == "Visual Studio":
+                env_build = VisualStudioBuildEnvironment(self)
+                flags = " ".join("%s.lib" % lib for lib in self.deps_cpp_info.libs)
+                lang = '/DCONAN_LANGUAGE=%s' % self.options.language
+                if self.options.static:
+                    self.run('cl /c /EHsc hello.cpp {}'.format(lang))
+                    self.run('{} && lib hello.obj -OUT:hello{}.lib'.format(self.name))
                 else:
-                    self.run("{} && c++ -o libhello{}.so -shared -fPIC hello.cpp {} {}".
-                    format(env, self.name, flags, lang))
-            self.run('{} && c++ -o main main.cpp -L. -lhello{} {}'.format(env, self.name, flags))
-        elif self.settings.compiler == "sun-cc":
-            lang = '-DCONAN_LANGUAGE=%s' % self.options.language
-            if self.options.static:
-                self.run("CC -c hello.cpp {} {}".format(lang, flags))
-                self.run("{} && ar rcs libhello{}.a hello.o".format(env, self.name))
-            else:
-                self.run("{} && CC -o libhello{}.so -G -Kpic hello.cpp {} {}".
-                format(env, self.name, flags, lang))
-            self.run('{} && CC -o main main.cpp -L. -lhello{} {}'.format(env, self.name, flags))
- 
+                    self.run('cl /EHsc /LD hello.cpp {} {} /link /IMPLIB:hello{}.lib '
+                             '/link /OUT:hello{}.dll'.format(lang, flags, self.name, self.name))
 
+                command = ('cl /EHsc main.cpp hello{}.lib {}'.format(self.name, flags))
+                self.run(command)
+            elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
+                env_build = GCCBuildEnvironment(self)
+                lang = '-DCONAN_LANGUAGE=%s' % self.options.language
+                if self.options.static:
+                    self.run("c++ -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
+                    self.run("ar rcs libhello{}.a hello.o".format(self.name))
+                else:
+                    if self.settings.os == "Windows":
+                        self.run("c++ -o libhello{}.dll -shared -fPIC hello.cpp {} @conanbuildinfo.gcc "
+                                 "-Wl,--out-implib,libhello{}.a".
+                                 format(self.name, lang, self.name))
+                    else:
+                        self.run("c++ -o libhello{}.so -shared -fPIC hello.cpp {} @conanbuildinfo.gcc".
+                        format(self.name, lang))
+                self.run('c++ -o main main.cpp -L. -lhello{} @conanbuildinfo.gcc'.format(self.name))
+            elif self.settings.compiler == "sun-cc":
+                lang = '-DCONAN_LANGUAGE=%s' % self.options.language
+                if self.options.static:
+                    self.run("CC -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
+                    self.run("ar rcs libhello{}.a hello.o".format(self.name))
+                else:
+                    self.run("CC -o libhello{}.so -G -Kpic hello.cpp {} @conanbuildinfo.gcc".
+                    format(self.name, lang))
+                self.run('CC -o main main.cpp -L. -lhello{} @conanbuildinfo.gcc'.format(self.name))
         try:
             os.makedirs("bin")
         except:
@@ -87,7 +84,7 @@ class {name}Conan(ConanFile):
                         static= {static}'''
     requires = ({requires})
     settings = "os", "compiler", "arch"
-    generators = "cmake"
+    generators = "cmake", "gcc"
     exports = '*'
 
     def config(self):
@@ -311,7 +308,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                         dll_export=dll_export, need_patch=need_patch,
                                         pure_c=pure_c, cmake_targets=cmake_targets)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
-    build_env = conanfile_build_cmake if use_cmake else conanfile_build_env
+    build_env = conanfile_build_cmake if use_cmake else conanfile_build_new_env
     conanfile = conanfile_template.format(name=name,
                                           version=version,
                                           requires=requires,
@@ -328,7 +325,6 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     if not config:
         conanfile = conanfile.replace("config(", "config2(")
     if collect_libs:
-        conanfile = conanfile.replace('["hello%s"]' % name,
-                                      "self.collect_libs()")
+        conanfile = conanfile.replace('["hello%s"]' % name, "self.collect_libs()")
     base_files[CONANFILE] = conanfile
     return base_files

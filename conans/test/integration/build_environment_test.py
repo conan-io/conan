@@ -79,11 +79,3 @@ class ConanReuseLib(ConanFile):
         client.run("install . --build missing")
         client.run("build .")
         self.assertIn("15", client.user_io.out)
-
-        # Now try directly with ConfigureBuildEnvironment
-        reuse = reuse.replace("GCCBuildEnvironment", "ConfigureBuildEnvironment")
-        client.save({CONANFILE: reuse, "example.c": example})
-        client.run("install . --build missing")
-        client.run("build .")
-        self.assertIn("15", client.user_io.out)
-

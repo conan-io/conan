@@ -19,6 +19,7 @@ CONANFILE_TXT = "conanfile.txt"
 CONAN_MANIFEST = "conanmanifest.txt"
 BUILD_INFO = 'conanbuildinfo.txt'
 BUILD_INFO_GCC = 'conanbuildinfo.gcc'
+BUILD_INFO_GPP = 'conanbuildinfo.g++'
 BUILD_INFO_CMAKE = 'conanbuildinfo.cmake'
 BUILD_INFO_QMAKE = 'conanbuildinfo.pri'
 BUILD_INFO_QBS = 'conanbuildinfo.qbs'
