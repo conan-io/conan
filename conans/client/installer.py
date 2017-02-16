@@ -144,6 +144,7 @@ class ConanInstaller(object):
                 # Assign to node the propagated info
                 self._propagate_info(conan_ref, conan_file, flat)
 
+                self._remote_proxy.get_recipe_sources(conan_ref)
                 # Call the conanfile's build method
                 self._build_conanfile(conan_ref, conan_file, package_ref, package_folder, output)
 
@@ -178,6 +179,17 @@ class ConanInstaller(object):
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
+
+        # Update the env_values with the inherited from dependencies
+        conan_file.env_values.update(conan_file.deps_env_info)
+
+        # Update the info but filtering the package values that not apply to the subtree
+        # of this current node and its dependencies.
+        subtree_libnames = [ref.name for (ref, _) in node_order]
+        for package_name, env_vars in conan_file.env_values.data.items():
+            for name, value in env_vars.items():
+                if not package_name or package_name in subtree_libnames or package_name == conan_file.name:
+                    conan_file.info.env_values.add(name, value, package_name)
 
     def _get_nodes(self, nodes_by_level, skip_nodes, build_mode):
         """Install the available packages if needed/allowed and return a list
@@ -215,6 +227,16 @@ class ConanInstaller(object):
 
                 nodes_to_build.append((conan_ref, package_id, conan_file, build_node))
 
+        # A check to be sure that if introduced a pattern, something is going to be built
+        if isinstance(build_mode, list):
+            to_build = [n[0] for n in nodes_to_build if n[3]]
+            for pattern in build_mode:
+                if pattern == "*":
+                    continue
+                matched = any([fnmatch.fnmatch(str(ref), pattern) for ref in to_build])
+                if not matched:
+                    raise ConanException("No package matching '%s' pattern" % pattern)
+
         return nodes_to_build
 
     def _get_package(self, conan_ref, conan_file):
@@ -248,7 +270,7 @@ class ConanInstaller(object):
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
 
-        with environment_append(conan_file.env):
+        with environment_append(*conan_file.env_values_dicts):
             self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
 
     def _package_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
@@ -267,7 +289,7 @@ class ConanInstaller(object):
         output.info("Generated %s" % CONANENV)
 
         os.chdir(build_folder)
-        with environment_append(conan_file.env):
+        with environment_append(*conan_file.env_values_dicts):
             create_package(conan_file, build_folder, package_folder, output)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
 

@@ -10,6 +10,7 @@ from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
 from collections import defaultdict
+from conans.model.env_info import EnvValues
 
 
 class Node(namedtuple("Node", "conan_ref conanfile")):
@@ -116,14 +117,19 @@ class DepsGraph(object):
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
                 non_devs = self.non_dev_nodes(node)
+
                 conanfile.info = ConanInfo.create(conanfile.settings.values,
                                                   conanfile.options.values,
                                                   direct_reqs,
                                                   indirect_reqs,
                                                   non_devs)
 
-                # Once we are done, call conan_info() to narrow and change possible values
-                conanfile.conan_info()
+                # Once we are done, call package_id() to narrow and change possible values
+                if hasattr(conanfile, "conan_info"):
+                    # Deprecated in 0.19
+                    conanfile.conan_info()
+                else:
+                    conanfile.package_id()
         return ordered
 
     def ordered_closure(self, node, flat):

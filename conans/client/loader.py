@@ -1,45 +1,42 @@
-from conans.errors import ConanException, NotFoundException
-from conans.model.conan_file import ConanFile, create_exports
-from conans.util.files import rmdir
-import inspect
-import uuid
 import imp
+import inspect
 import os
-from conans.util.files import load
-from conans.util.config_parser import ConfigParser
+import sys
+import uuid
+
+from conans.client.generators import _save_generator
+from conans.errors import ConanException, NotFoundException
+from conans.model.conan_file import ConanFile, create_exports, create_exports_sources
+from conans.model.conan_generator import Generator
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
-from conans.model.settings import Settings
-import sys
-from conans.model.conan_generator import Generator
-from conans.client.generators import _save_generator
 from conans.model.scope import Scopes
+from conans.model.settings import Settings
 from conans.model.values import Values
+from conans.util.config_parser import ConfigParser
+from conans.util.files import load
+from conans.util.files import rmdir
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, package_settings, options, scopes, env, package_env):
+    def __init__(self, runner, settings, package_settings, options, scopes, env_values):
         '''
         @param settings: Settings object, to assign to ConanFile at load time
         @param options: OptionsValues, necessary so the base conanfile loads the options
                         to start propagation, and having them in order to call build()
         @param package_settings: Dict with {recipe_name: {setting_name: setting_value}}
-        @param env: list of tuples for environment vars: [(var, value), (var2, value2)...]
-        @param package_env: package dict of list of tuples: {"name": [(var, v1), (var2, v2)...]}
+        @param cached_env_values: EnvValues object
         '''
         self._runner = runner
         assert settings is None or isinstance(settings, Settings)
         assert options is None or isinstance(options, OptionsValues)
         assert scopes is None or isinstance(scopes, Scopes)
-        assert env is None or isinstance(env, list)
-        assert package_env is None or isinstance(package_env, dict)
         # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
         self._user_options = options
         self._scopes = scopes
         self._package_settings = package_settings
-        self._env = env or []
-        self._package_env = package_env or {}
+        self._env_values = env_values
 
     def _parse_module(self, conanfile_module, consumer, filename):
         """ Parses a python in-memory module, to extract the classes, mainly the main
@@ -125,6 +122,7 @@ class ConanFileLoader(object):
             result = self._parse_module(loaded, False, filename)
             # Exports is the only object field, we need to do this, because conan export needs it
             result.exports = create_exports(result)
+            result.exports_sources = create_exports_sources(result)
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
@@ -135,7 +133,6 @@ class ConanFileLoader(object):
         loaded, filename = self._parse_file(conanfile_path)
         try:
             result = self._parse_module(loaded, consumer, filename)
-
             # Prepare the settings for the loaded conanfile
             # Mixing the global settings with the specified for that name if exist
             tmp_settings = self._settings.copy()
@@ -150,18 +147,8 @@ class ConanFileLoader(object):
             result = result(output, self._runner, tmp_settings,
                             os.path.dirname(conanfile_path), user, channel)
 
-            # Prepare the env variables mixing global env vars with the
-            # package ones if name match
-            tmp_env = []
-            # Copy only the global variables not present in package level vars
-            for var_name, value in self._env:
-                if result.name in self._package_env:
-                    if var_name not in self._package_env[result.name]:
-                        tmp_env.append((var_name, value))
-                else:
-                    tmp_env.append((var_name, value))
-            tmp_env.extend(self._package_env.get(result.name, []))
-            result.env = tmp_env
+            # Assign environment
+            result.env_values.update(self._env_values)
 
             if consumer:
                 self._user_options.descope_options(result.name)
@@ -209,6 +196,7 @@ class ConanFileLoader(object):
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
                                                                parser.import_parameters)
         conanfile.scope = self._scopes.package_scope()
+        conanfile.env_values.update(self._env_values)
         return conanfile
 
     def load_virtual(self, reference, path):

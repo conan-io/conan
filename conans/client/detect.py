@@ -189,7 +189,7 @@ def detect_defaults_settings(output):
     """ try to deduce current machine values without any
     constraints at all
     """
-    output.writeln("\nIt seems to be the first time you run conan", Color.BRIGHT_YELLOW)
+    output.writeln("\nIt seems to be the first time you've ran conan", Color.BRIGHT_YELLOW)
     output.writeln("Auto detecting your dev setup to initialize conan.conf", Color.BRIGHT_YELLOW)
 
     result = []

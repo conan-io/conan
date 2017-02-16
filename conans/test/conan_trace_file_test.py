@@ -8,7 +8,6 @@ from conans.test.tools import TestServer, TestClient
 from conans.util.files import load
 import json
 from conans.paths import CONANFILE, RUN_LOG_NAME
-from conans.client.command import get_conan_runner
 from conans.client.runner import ConanRunner
 
 
@@ -93,7 +92,7 @@ class HelloConan(ConanFile):
         self.assertIn('"Authorization": "**********"', traces)
         self.assertIn('"X-Client-Anonymous-Id": "**********"', traces)
         actions = traces.splitlines()
-        self.assertEquals(len(actions), 17)
+        self.assertEquals(len(actions), 19)
         for trace in actions:
             doc = json.loads(trace)
             self.assertIn("_action", doc)  # Valid jsons

@@ -110,7 +110,7 @@ class ConfigureEnvironment(object):
         all_cpp_flags = copy.copy(self._deps_cpp_info.cppflags)
         all_cpp_flags.extend(self._gcc_lib_flags())
 
-        cpp_flags = 'CPPFLAGS="$CPPFLAGS %s %s %s %s %s"' % (archflag, " ".join(all_cpp_flags),
+        cpp_flags = 'CXXFLAGS="$CXXFLAGS %s %s %s %s %s"' % (archflag, " ".join(all_cpp_flags),
                                                              debug, include_flags, defines)
         include_paths = ":".join(['"%s"' % lib for lib in self._deps_cpp_info.include_paths])
         headers_flags = ('C_INCLUDE_PATH=$C_INCLUDE_PATH:{0} '

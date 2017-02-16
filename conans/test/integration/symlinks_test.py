@@ -1,7 +1,7 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
 from conans.util.files import load, save
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 import os
 import platform
 
@@ -13,6 +13,7 @@ import os
 class HelloConan(ConanFile):
     name = "Hello"
     version = "0.1"
+    exports = "*"
 
     def build(self):
         save("file1.txt", "Hello1")
@@ -20,6 +21,7 @@ class HelloConan(ConanFile):
 
     def package(self):
         self.copy("*.txt*", links=True)
+        self.copy("*.so*", links=True)
 """
 
 test_conanfile = """[requires]
@@ -64,6 +66,39 @@ class SymLinksTest(unittest.TestCase):
 
         client.run("install --build -f=conanfile.txt")
         self._check(client, ref)
+
+    def export_test(self):
+        if platform.system() == "Windows":
+            return
+
+        lib_name = "libtest.so.2"
+        lib_contents = "TestLib"
+        link_name = "libtest.so"
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "conanfile.txt": test_conanfile,
+                     lib_name: lib_contents})
+
+        pre_export_link = os.path.join(client.current_folder, link_name)
+        os.symlink(lib_name, pre_export_link)
+
+        client.run("export lasote/stable")
+        client.run("install --build -f=conanfile.txt")
+        conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        package_ref = PackageReference(conan_ref,
+                                       "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+
+        for folder in [client.paths.export(conan_ref), client.paths.source(conan_ref),
+                       client.paths.build(package_ref), client.paths.package(package_ref)]:
+            exported_lib = os.path.join(folder, lib_name)
+            exported_link = os.path.join(folder, link_name)
+            self.assertEqual(os.readlink(exported_link), lib_name)
+
+            self.assertEqual(load(exported_lib), load(exported_link))
+            self.assertTrue(os.path.islink(exported_link))
+
+        self._check(client, package_ref)
 
     def upload_test(self):
         if platform.system() == "Windows":

@@ -3,9 +3,8 @@ from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.errors import ConanException
-from conans.model.env_info import DepsEnvInfo
+from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
-from conans.util.files import mkdir
 from conans.paths import RUN_LOG_NAME
 
 
@@ -66,6 +65,15 @@ def create_exports(conanfile):
         return conanfile.exports
 
 
+def create_exports_sources(conanfile):
+    if not hasattr(conanfile, "exports_sources"):
+        return None
+    else:
+        if isinstance(conanfile.exports_sources, str):
+            return (conanfile.exports_sources, )
+        return conanfile.exports_sources
+
+
 class ConanFile(object):
     """ The base class for all package recipes
     """
@@ -91,7 +99,7 @@ class ConanFile(object):
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
         self.exports = create_exports(self)
-
+        self.exports_sources = create_exports_sources(self)
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
@@ -112,9 +120,27 @@ class ConanFile(object):
         self._scope = None
 
         # user specified env variables
-        self.env = None  # Assigned at runtime
+        self._env_values = EnvValues()  # Updated at runtime, user specified -e
         self._user = user
         self._channel = channel
+
+    @property
+    def env(self):  # Only for retro-compatibility
+        simple_values, list_values = self._env_values.env_dicts(self.name)
+        ret = {}
+        for name, value in list_values.items():  # Iterate to copy the values
+            ret[name] = os.pathsep.join(value)
+        for name, value in simple_values.items():  # Iterate to copy the values
+            ret[name] = value
+        return ret
+
+    @property
+    def env_values(self):
+        return self._env_values
+
+    @property
+    def env_values_dicts(self):
+        return self._env_values.env_dicts(self.name)
 
     @property
     def channel(self):
@@ -228,7 +254,7 @@ class ConanFile(object):
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
-    def conan_info(self):
+    def package_id(self):
         """ modify the conans info, typically to narrow values
         eg.: conaninfo.package_references = []
         """
