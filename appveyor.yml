@@ -10,8 +10,8 @@ init:
   - "ECHO %PYTHON%"
 
 install:
-  - appveyor DownloadFile "https://qa.debian.org/watch/sf.php/mingw-w64/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.3.0/threads-posix/sjlj/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
-  - 7z e x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc:\
+  - curl -fsS -o mingw.7z "https://qa.debian.org/watch/sf.php/mingw-w64/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.3.0/threads-posix/sjlj/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
+  - 7z e mingw.7z -oc:\
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw-w64\\bin;%PATH%"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
   - "set CONAN_LOGGING_LEVEL=10"
