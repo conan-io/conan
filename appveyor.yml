@@ -12,7 +12,7 @@ init:
   - "ECHO %PYTHON%"
 
 install:
-  - If Not Exist "C:\mingw64" ( curl -L -o mingw.7z "https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.3.0/threads-posix/sjlj/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z/download")
+  - If Not Exist "C:\mingw64" ( curl -L "https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.3.0/threads-posix/sjlj/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z/download" > mingw.7z )
   - 7z e mingw.7z -oc:\
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw64\\bin;%PATH%"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
