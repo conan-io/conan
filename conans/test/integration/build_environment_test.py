@@ -179,3 +179,52 @@ class ConanBash(ConanFile):
         client.run("install bash/0.1@lasote/stable --build")
         expected_curdir_base = unix_path(client.client_cache.conan(ConanFileReference.loads("bash/0.1@lasote/stable")))
         self.assertIn(expected_curdir_base, client.user_io.out)
+
+    def use_build_virtualenv_test(self):
+        if platform.system() == "Windows":
+            return
+        client = TestClient()
+        client.save({CONANFILE: conanfile, "mean.c": mylib, "mean.h": mylibh})
+        client.run("export lasote/stable")
+
+        makefile_am = '''
+bin_PROGRAMS = main
+main_SOURCES = main.cpp
+'''
+
+        configure_ac = '''
+AC_INIT([main], [1.0], [luism@jfrog.com])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AC_PROG_CXX
+AC_PROG_RANLIB
+AM_PROG_AR
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
+'''
+
+        reuse_conanfile = '''
+import platform
+from conans import ConanFile
+
+class ConanReuseLib(ConanFile):
+
+    requires = "Mean/0.1@lasote/stable"
+    generators = "virtualbuildenv"
+    settings = "os", "compiler", "build_type", "arch"
+    exports_sources = "*"
+
+    def build(self):
+        self.run("aclocal")
+        self.run("autoconf")
+        self.run("automake --add-missing --foreign")
+
+        self.run("activate_build && ./configure")
+        self.run("activate_build && make")
+        self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
+'''
+        client.save({CONANFILE: reuse_conanfile,
+                     "Makefile.am": makefile_am,
+                     "configure.ac": configure_ac,
+                     "main.cpp": example})
+        client.run("install --build missing")
+        client.run("build .")

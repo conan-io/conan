@@ -37,7 +37,7 @@ def escape_windows_cmd(command):
         1. Adds escapes so the argument can be unpacked by CommandLineToArgvW()
         2. Adds escapes for cmd.exe so the argument survives cmd.exe's substitutions.
 
-        Useful to !!!!!!!!!!!!!!!!!!!
+        Useful to escape commands to be executed in a windows bash (msys2, cygwin etc)
     """
     quoted_arg = subprocess.list2cmdline([command])
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])

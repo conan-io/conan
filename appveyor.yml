@@ -20,6 +20,7 @@ install:
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt"
 
 test_script:
+  - "dir C:\mingw-w64\"
   - "nosetests --with-coverage conans.test"
   
 after_test:

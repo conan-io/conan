@@ -2,7 +2,6 @@ import copy
 import os
 
 from conans.client.generators.gcc import sun_cc_libcxx_flags_dict
-from conans.errors import ConanException
 from conans.model.settings import get_setting_str_safe
 
 
@@ -28,8 +27,6 @@ class AutoToolsBuildEnvironment(object):
     - CFLAGS (not CPPFLAGS nor LDFLAGS, used for optimization or debugging)
     - CXXFLAGS (the CFLAGS for c++)
     - LDFLAGS (-L, others like -m64 -m32) linker
-    - LIBS (-l)
-    - FPIC HELPER!!!? <== CFLAGS -fPIC
     """
 
     def __init__(self, conanfile):
@@ -103,11 +100,6 @@ class AutoToolsBuildEnvironment(object):
 
     @property
     def vars(self):
-        # cpp_flags = []  # Preprocessor -I, -D
-        # cxx_flags = []  # Compilation flags "-march, -O2, -pipe, -fomit-frame-pointer, -m3dnow ...etc
-        # ld_flags = []  # Linker flags -L
-        # libs = []  # Linker libs -l
-
         def append(*args):
             ret = []
             for arg in args:
