@@ -76,6 +76,7 @@ class BuildEnvironmenTest(unittest.TestCase):
         client.run("install Mean/0.1@lasote/stable --build")
 
         reuse_gcc_conanfile = '''
+import platform
 from conans import ConanFile, GCCBuildEnvironment
 from conans.tools import environment_append
 
@@ -87,8 +88,8 @@ class ConanReuseLib(ConanFile):
     def build(self):
         build_env = GCCBuildEnvironment(self)
         with environment_append(build_env.vars):
-            self.run("g++ example.c -o mean_exe -lmean ")
-        self.run("./mean_exe");
+            self.run("c++ example.c -o mean_exe -lmean ")
+        self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
         '''
 
         client.save({CONANFILE: reuse_gcc_conanfile, "example.c": example})
@@ -110,6 +111,7 @@ class ConanReuseLib(ConanFile):
         # Reuse the mean library using the GCCBuildEnvironment
 
         reuse_gcc_conanfile = '''
+import platform
 from conans import ConanFile, GCCBuildEnvironment
 from conans.tools import environment_append
 
@@ -122,8 +124,8 @@ class ConanReuseLib(ConanFile):
     def build(self):
         build_env = GCCBuildEnvironment(self)
         with environment_append(build_env.vars):
-            self.run("g++ example.c @conanbuildinfo.gcc -o mean_exe ")
-        self.run("./mean_exe");
+            self.run("c++ example.c @conanbuildinfo.gcc -o mean_exe ")
+        self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
 '''
 
         client.save({CONANFILE: reuse_gcc_conanfile, "example.c": example})
@@ -137,29 +139,24 @@ class ConanReuseLib(ConanFile):
         self.assertIn("15", client.user_io.out)
         self.assertNotIn("Active var!!!", client.user_io.out)
 
-        client.run("install . --build missing -o Mean:activate_define=False -s arch=x86")
-        client.run("build .")
-        self.assertIn("15", client.user_io.out)
-        self.assertNotIn("Active var!!!", client.user_io.out)
-        md5_binary = md5sum(os.path.join(client.current_folder, "mean_exe"))
+        if platform.system() != "Windows":  # MinGW 32 bits apps not running correctly
+            client.run("install . --build missing -o Mean:activate_define=False -s arch=x86")
+            client.run("build .")
+            md5_binary = md5sum(os.path.join(client.current_folder, "mean_exe"))
 
-        # Pass the optimize option that will append a cflag to -O2, the binary will be different
-        client.run("install . --build missing -o Mean:activate_define=False -o Mean:optimize=True -s arch=x86")
-        client.run("build .")
-        self.assertIn("15", client.user_io.out)
-        self.assertNotIn("Active var!!!", client.user_io.out)
-        md5_binary2 = md5sum(os.path.join(client.current_folder, "mean_exe"))
+            # Pass the optimize option that will append a cflag to -O2, the binary will be different
+            client.run("install . --build missing -o Mean:activate_define=False -o Mean:optimize=True -s arch=x86")
+            client.run("build .")
+            md5_binary2 = md5sum(os.path.join(client.current_folder, "mean_exe"))
 
-        self.assertNotEquals(md5_binary, md5_binary2)
+            self.assertNotEquals(md5_binary, md5_binary2)
 
-        # Rebuid the same binary, same md5sum
-        client.run("install . --build missing -o Mean:activate_define=False -o Mean:optimize=True -s arch=x86")
-        client.run("build .")
-        self.assertIn("15", client.user_io.out)
-        self.assertNotIn("Active var!!!", client.user_io.out)
-        md5_binary = md5sum(os.path.join(client.current_folder, "mean_exe"))
+            # Rebuid the same binary, same md5sum
+            client.run("install . --build missing -o Mean:activate_define=False -o Mean:optimize=True -s arch=x86")
+            client.run("build .")
+            md5_binary = md5sum(os.path.join(client.current_folder, "mean_exe"))
 
-        self.assertEquals(md5_binary, md5_binary2)
+            self.assertEquals(md5_binary, md5_binary2)
 
     def run_in_windows_bash_test(self):
         if platform.system() != "Windows":
