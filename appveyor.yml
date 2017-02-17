@@ -10,7 +10,9 @@ init:
   - "ECHO %PYTHON%"
 
 install:
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw-w64\\i686-5.3.0-posix-dwarf-rt_v4-rev0\\mingw32\\bin;%PATH%"
+  - appveyor DownloadFile https://heanet.dl.sourceforge.net/project/mingw-w64/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.3.0/threads-posix/sjlj/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z
+  - 7z e x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc:\
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw-w64\\bin;%PATH%"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
   - "set CONAN_LOGGING_LEVEL=10"
   - "set CONAN_COMPILER=Visual Studio"
@@ -18,6 +20,7 @@ install:
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements.txt"
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_dev.txt"
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt"
+
 
 test_script:
   - "dir C:\\mingw-w64\\"
