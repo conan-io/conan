@@ -27,7 +27,7 @@ optimize=False
 
     def build(self):
         self.output.info("Running source!")
-        self.run("g++ -c -o mean.o @conanbuildinfo.gcc mean.c")
+        self.run("c++ -c -o mean.o @conanbuildinfo.gcc mean.c")
         self.run("ar rcs libmean.a mean.o")
 
     def package(self):

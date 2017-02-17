@@ -1,3 +1,5 @@
+import platform
+
 from conans.paths import CONANFILE, BUILD_INFO_CMAKE
 
 
@@ -356,7 +358,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
 
     if pure_c:
         conanfile = conanfile.replace("hello.cpp", "hello.c").replace("main.cpp", "main.c")
-        conanfile = conanfile.replace("c++", "cc")
+        conanfile = conanfile.replace("c++", "cc" if platform.system()!="Windows" else "gcc")
     if not build:
         conanfile = conanfile.replace("build(", "build2(")
     if not config:
