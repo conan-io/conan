@@ -89,8 +89,9 @@ class ConanReuseLib(ConanFile):
         build_env = GCCBuildEnvironment(self)
         with environment_append(build_env.vars):
             if platform.system() == "Windows":
-                print(os.environ)
-                print(os.listdir("C:\\mingw-w64\\i686-5.3.0-posix-dwarf-rt_v4-rev0\\mingw32\\bin"))
+                self.out.warn("POLLA")
+                self.out.warn(os.environ)
+                self.out.warn(os.listdir("C:\\mingw-w64\\i686-5.3.0-posix-dwarf-rt_v4-rev0\\mingw32\\bin"))
             self.run("c++ example.c -o mean_exe -lmean ")
         self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
         '''
@@ -128,8 +129,9 @@ class ConanReuseLib(ConanFile):
         build_env = GCCBuildEnvironment(self)
         with environment_append(build_env.vars):
             if platform.system() == "Windows":
-                print(os.environ)
-                print(os.listdir("C:\\mingw-w64\\i686-5.3.0-posix-dwarf-rt_v4-rev0\\mingw32\\bin"))
+                self.out.warn("POLLA")
+                self.out.warn(os.environ)
+                self.out.warn(os.listdir("C:\\mingw-w64\\i686-5.3.0-posix-dwarf-rt_v4-rev0\\mingw32\\bin"))
             self.run("c++ example.c @conanbuildinfo.gcc -o mean_exe ")
         self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
 '''
