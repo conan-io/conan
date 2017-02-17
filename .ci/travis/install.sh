@@ -40,7 +40,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     esac
     pyenv rehash
     pyenv activate conan
-then
+else
     sudo apt-get install gcc-multilib g++-multilib
 fi
 
