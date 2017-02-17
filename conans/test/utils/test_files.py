@@ -50,9 +50,12 @@ def uncompress_packaged_files(paths, package_reference):
 
 def scan_folder(folder):
     scanned_files = []
-    for root, _, files in os.walk(folder):
+    for root, dirs, files in os.walk(folder):
+        dirs[:] = [d for d in dirs if d != "__pycache__"]
         relative_path = os.path.relpath(root, folder)
         for f in files:
+            if f.endswith(".pyc"):
+                continue
             relative_name = os.path.normpath(os.path.join(relative_path, f)).replace("\\", "/")
             scanned_files.append(relative_name)
 
