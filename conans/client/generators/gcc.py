@@ -1,11 +1,7 @@
+from conans.client.configure_build_environment import sun_cc_libcxx_flags_dict
 from conans.model import Generator
 from conans.model.settings import get_setting_str_safe
 from conans.paths import BUILD_INFO_GCC
-
-sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
-                            "libstdcxx": "-library=stdcxx4",
-                            "libstlport": "-library=stlport4",
-                            "libstdc++": "-library=stdcpp"}
 
 
 class GCCGenerator(Generator):

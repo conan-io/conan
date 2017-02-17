@@ -33,7 +33,7 @@ class VirtualEnvGenerator(Generator):
                     ret.append(command_set + ' ' + name)
                 else:
                     ret.append(name + '=' + value)
-                    ret.append(command_set + ' ' + name + '=' + value)
+                    ret.append(command_set + ' ' + name)
 
         return ret
 

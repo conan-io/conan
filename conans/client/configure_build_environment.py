@@ -1,8 +1,12 @@
 import copy
 import os
 
-from conans.client.generators.gcc import sun_cc_libcxx_flags_dict
 from conans.model.settings import get_setting_str_safe
+
+sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
+                            "libstdcxx": "-library=stdcxx4",
+                            "libstlport": "-library=stlport4",
+                            "libstdc++": "-library=stdcpp"}
 
 
 class VisualStudioBuildEnvironment(object):
@@ -110,8 +114,11 @@ class AutoToolsBuildEnvironment(object):
                         ret.append(arg)
             return ret
 
-        ld_flags = append(self._configure_linker_flags(), ['-L%s' % x for x in self.library_paths])
-        cpp_flags = append(['-I%s' % x for x in self.include_paths], ["-D%s" % x for x in self.defines])
+        lib_paths = ['-L%s' % x for x in self.library_paths]
+        include_paths = ['-I%s' % x for x in self.include_paths]
+
+        ld_flags = append(self._configure_linker_flags(), lib_paths)
+        cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])
         libs = ['-l%s' % lib for lib in self.libs]
 
         tmp_compilation_flags = copy.copy(self.compilation_flags)
@@ -125,7 +132,7 @@ class AutoToolsBuildEnvironment(object):
                "CXXFLAGS": " ".join(cxx_flags),
                "CFLAGS": " ".join(c_flags),
                "LDFLAGS": " ".join(ld_flags),
-               "LIBS": " ".join(libs),
+               "LIBS": " ".join(libs)
                }
 
         return ret

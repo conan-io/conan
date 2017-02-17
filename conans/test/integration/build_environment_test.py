@@ -183,7 +183,7 @@ class ConanBash(ConanFile):
     def use_build_virtualenv_test(self):
         if platform.system() == "Windows":
             return
-        client = TestClient()
+        client = TestClient(path_with_spaces=False)
         client.save({CONANFILE: conanfile, "mean.c": mylib, "mean.h": mylibh})
         client.run("export lasote/stable")
 
@@ -217,10 +217,10 @@ class ConanReuseLib(ConanFile):
         self.run("aclocal")
         self.run("autoconf")
         self.run("automake --add-missing --foreign")
-
-        self.run("activate_build && ./configure")
-        self.run("activate_build && make")
-        self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
+        self.run("ls")
+        self.run("bash -c 'source activate_build.sh && ./configure'")
+        self.run("bash -c 'source activate_build.sh && make'")
+        self.run("./main")
 '''
         client.save({CONANFILE: reuse_conanfile,
                      "Makefile.am": makefile_am,
@@ -228,3 +228,4 @@ class ConanReuseLib(ConanFile):
                      "main.cpp": example})
         client.run("install --build missing")
         client.run("build .")
+        self.assertIn("15", client.user_io.out)

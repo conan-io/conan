@@ -327,7 +327,7 @@ class TestClient(object):
                 registry.add(name, server)
 
         logger.debug("Client storage = %s" % self.storage_folder)
-        self.current_folder = current_folder or temp_folder()
+        self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     @property
     def paths(self):
