@@ -10,7 +10,7 @@ init:
   - "ECHO %PYTHON%"
 
 install:
-  - appveyor DownloadFile https://heanet.dl.sourceforge.net/project/mingw-w64/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.3.0/threads-posix/sjlj/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z
+  - appveyor DownloadFile "https://heanet.dl.sourceforge.net/project/mingw-w64/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.3.0/threads-posix/sjlj/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
   - 7z e x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc:\
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw-w64\\bin;%PATH%"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
