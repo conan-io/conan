@@ -124,10 +124,10 @@ class ConanReuseLib(ConanFile):
     def build(self):
         build_env = GCCBuildEnvironment(self)
         with environment_append(build_env.vars):
-
             self.run("c++ example.c @conanbuildinfo.gcc -o mean_exe ")
         self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
 '''
+
         client.save({CONANFILE: reuse_gcc_conanfile, "example.c": example})
         client.run("install . --build missing")
         client.run("build .")

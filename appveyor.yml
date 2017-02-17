@@ -20,10 +20,7 @@ install:
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt"
 
 test_script:
-  - echo %PATH%
-  - dir "C:/mingw/bin"
-  - dir "C:/mingw-w64/i686-5.3.0-posix-dwarf-rt_v4-rev0/mingw32/bin"
-  - g++ --help
+  - "nosetests --with-coverage conans.test"
   
 after_test:
   - "codecov"
