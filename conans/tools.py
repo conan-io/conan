@@ -6,7 +6,10 @@ import logging
 import multiprocessing
 import os
 import platform
+import re
+import subprocess
 import sys
+
 from contextlib import contextmanager
 
 import requests
@@ -20,6 +23,56 @@ from conans.model.version import Version
 # noinspection PyUnresolvedReferences
 from conans.util.files import _generic_algorithm_sum, load, save
 from conans.util.log import logger
+
+
+def unix_path(path):
+    """"Used to translate windows paths to MSYS unix paths like
+    c/users/path/to/file"""
+    pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
+    return pattern.sub('/\\1/', path).replace('\\', '/').lower()
+
+
+def escape_windows_cmd(command):
+    """ To use in a regular windows cmd.exe
+        1. Adds escapes so the argument can be unpacked by CommandLineToArgvW()
+        2. Adds escapes for cmd.exe so the argument survives cmd.exe's substitutions.
+
+        Useful to !!!!!!!!!!!!!!!!!!!
+    """
+    quoted_arg = subprocess.list2cmdline([command])
+    return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
+
+
+def run_in_windows_bash(conanfile, bashcmd, cwd=None):
+    """ Will run a unix command inside the msys2 environment
+        It requires to have MSYS2 in the path and MinGW
+    """
+    if platform.system() != "Windows":
+        raise ConanException("Command only for Windows operating system")
+    # This needs to be set so that msys2 bash profile will set up the environment correctly.
+    try:
+        arch = conanfile.settings.arch # Maybe arch doesn't exist
+    except:
+        arch = None
+    env_vars = {"MSYSTEM": "MINGW32" if arch == "x86" else "MINGW64",
+                "MSYS2_PATH_TYPE": "inherit"}
+    with environment_append(env_vars):
+        curdir = unix_path(cwd or os.path.abspath(os.path.curdir))
+        # Needed to change to that dir inside the bash shell
+        to_run = 'cd "%s" && %s ' % (curdir, bashcmd)
+        wincmd = 'bash --login -c %s' % escape_windows_cmd(to_run)
+        conanfile.output.warn('run_msys2_cmd: %s' % wincmd)
+        conanfile.run(wincmd)
+
+
+@contextmanager
+def chdir(newdir):
+    old_path = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)
 
 
 @contextmanager
@@ -138,7 +191,7 @@ def human_size(size_bytes):
 
 def unzip(filename, destination="."):
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-        filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
         return untargz(filename, destination)
     import zipfile
@@ -201,6 +254,8 @@ def download(url, filename, verify=True, out=None, retry=2, retry_wait=5):
     downloader = Downloader(requests, out, verify=verify)
     downloader.download(url, filename, retry=retry, retry_wait=retry_wait)
     out.writeln("")
+
+
 #     save(filename, content)
 
 
@@ -213,7 +268,6 @@ def replace_in_file(file_path, search, replace):
 
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
-
     real_signature = _generic_algorithm_sum(file_path, algorithm_name)
     if real_signature != signature:
         raise ConanException("%s signature failed for '%s' file."
@@ -325,13 +379,13 @@ class OSInfo(object):
     @property
     def with_apt(self):
         return self.is_linux and self.linux_distro in \
-            ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian")
+                                 ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian")
 
     @property
     def with_yum(self):
         return self.is_linux and self.linux_distro in \
-            ("centos", "redhat", "fedora", "pidora", "scientific",
-             "xenserver", "amazon", "oracle")
+                                 ("centos", "redhat", "fedora", "pidora", "scientific",
+                                  "xenserver", "amazon", "oracle")
 
     def get_win_os_version(self):
         """
@@ -346,7 +400,7 @@ class OSInfo(object):
                         ('dwMinorVersion', ctypes.c_ulong),
                         ('dwBuildNumber', ctypes.c_ulong),
                         ('dwPlatformId', ctypes.c_ulong),
-                        ('szCSDVersion', ctypes.c_wchar*128),
+                        ('szCSDVersion', ctypes.c_wchar * 128),
                         ('wServicePackMajor', ctypes.c_ushort),
                         ('wServicePackMinor', ctypes.c_ushort),
                         ('wSuiteMask', ctypes.c_ushort),
@@ -436,6 +490,7 @@ class OSInfo(object):
         elif version.minor() == "5.11":
             return "Solaris 11"
 
+
 try:
     os_info = OSInfo()
 except Exception as exc:
@@ -444,7 +499,6 @@ except Exception as exc:
 
 
 class SystemPackageTool(object):
-
     def __init__(self, runner=None):
         self._runner = runner or ConanRunner()
         env_sudo = os.environ.get("CONAN_SYSREQUIRES_SUDO", None)

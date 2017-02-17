@@ -1,9 +1,11 @@
 import os
+import platform
 import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.tools import TestClient
+from conans.tools import unix_path
 from conans.util.files import md5sum
 
 mylibh = '''
@@ -159,4 +161,24 @@ class ConanReuseLib(ConanFile):
 
         self.assertEquals(md5_binary, md5_binary2)
 
+    def run_in_windows_bash_test(self):
+        if platform.system() != "Windows":
+            return
+        conanfile = '''
+from conans import ConanFile, tools
 
+class ConanBash(ConanFile):
+    name = "bash"
+    version = "0.1"
+    settings = "os", "compiler", "build_type", "arch"
+
+    def build(self):
+        tools.run_in_windows_bash(self, "pwd")
+
+        '''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("export lasote/stable")
+        client.run("install bash/0.1@lasote/stable --build")
+        expected_curdir_base = unix_path(client.client_cache.conan(ConanFileReference.loads("bash/0.1@lasote/stable")))
+        self.assertIn(expected_curdir_base, client.user_io.out)

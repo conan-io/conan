@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME
+from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME, CONANFILE
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -402,6 +402,7 @@ Package configuration:
             self._out.writeln("")
             output.error("Package '%s' build failed" % conan_file.info.package_id())
             output.warn("Build folder %s" % build_folder)
+            _show_partial_trace(output, CONANFILE)
             raise ConanException("%s: %s" % (conan_file.name, str(e)))
         finally:
             conan_file._conanfile_directory = export_folder
@@ -449,3 +450,18 @@ Package configuration:
 
     def _check_outdated(self, build_mode):
         return build_mode == "outdated"
+
+
+def _show_partial_trace(output, start_keyword):
+    try:
+        import traceback
+        traces = traceback.format_exc()
+        active = False
+        for trace in traces.splitlines():
+            if start_keyword in trace:
+                active = True
+            if active:
+                output.warn(trace)
+    except:
+        # Any error (encoding or whatever, just ignore it)
+        pass
