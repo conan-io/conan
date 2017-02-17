@@ -14,12 +14,16 @@ class VisualStudioBuildEnvironment(object):
     - LIB: library paths with semicolon separator
     - CL: /I (include paths)
     """
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, quote_paths=True):
         self._deps_cpp_info = conanfile.deps_cpp_info
+        self.quote_paths = quote_paths
 
     @property
     def vars(self):
-        cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
+        if self.quote_paths:
+            cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
+        else:
+            cl_args = " ".join(['/I%s' % lib for lib in self._deps_cpp_info.include_paths])
         lib_paths = ";".join(['%s' % lib for lib in self._deps_cpp_info.lib_paths])
         return {"CL": cl_args,
                 "LIB": lib_paths}

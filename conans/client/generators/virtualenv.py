@@ -7,6 +7,7 @@ from conans.model import Generator
 class VirtualEnvGenerator(Generator):
 
     def __init__(self, conanfile):
+        self.conanfile = conanfile
         self.env = conanfile.env
         super(VirtualEnvGenerator, self).__init__(conanfile)
 
@@ -21,9 +22,9 @@ class VirtualEnvGenerator(Generator):
             if platform.system() == "Windows":
                 if isinstance(value, list):
                     value = os.pathsep.join(value)
-                    ret.append(command_set + ' "' + name + '=' + value + ';%' + name + '%"')
+                    ret.append(command_set + ' ' + name + '=' + value + ';%' + name + '%')
                 else:
-                    ret.append(command_set + ' "' + name + '=' + value + '"')
+                    ret.append(command_set + ' ' + name + '=' + value)
             else:
                 if isinstance(value, list):
                     value = os.pathsep.join(['"%s"' % val for val in value])
@@ -57,7 +58,7 @@ class VirtualEnvGenerator(Generator):
             for name in var_names:
                 old_value = os.environ.get(name, "")
                 if platform.system() == "Windows":
-                    ret.append('SET "%s=%s"' % (name, old_value))
+                    ret.append('SET %s=%s' % (name, old_value))
                 else:
                     ret.append('export %s=%s' % (name, old_value))
 

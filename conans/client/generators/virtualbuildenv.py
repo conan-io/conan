@@ -13,7 +13,7 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
 
         compiler = get_setting_str_safe(conanfile.settings, "compiler")
         self.env = {}
-        if compiler != "VisualStudio":
+        if compiler != "Visual Studio":
             auto_tools_b = AutoToolsBuildEnvironment(conanfile)
             gcc_b = GCCBuildEnvironment(conanfile)
             tmp = {var: '"%s"' % value for var, value in auto_tools_b.vars.items()}
@@ -21,7 +21,7 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
             tmp.update(tmp2)
             self.env = tmp
         else:
-            visual_b = VisualStudioBuildEnvironment(conanfile)
+            visual_b = VisualStudioBuildEnvironment(conanfile, quote_paths=False)
             self.env = visual_b.vars
 
     @property
