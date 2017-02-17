@@ -1,4 +1,6 @@
 build: false
+cache:
+    - C:\mingw64-> appveyor.yml
 
 environment:
   matrix:
@@ -10,9 +12,9 @@ init:
   - "ECHO %PYTHON%"
 
 install:
-  - curl -L -o mingw.7z "https://qa.debian.org/watch/sf.php/mingw-w64/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.3.0/threads-posix/sjlj/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
+  - If Not Exist "C:\mingw64" ( curl -L -o mingw.7z "https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win64/Personal%20Builds/mingw-builds/6.3.0/threads-posix/sjlj/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z/download")
   - 7z e mingw.7z -oc:\
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw-w64\\bin;%PATH%"
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw64\\bin;%PATH%"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
   - "set CONAN_LOGGING_LEVEL=10"
   - "set CONAN_COMPILER=Visual Studio"
@@ -23,7 +25,6 @@ install:
 
 
 test_script:
-  - "dir C:\\mingw-w64\\"
   - "nosetests --with-coverage conans.test"
   
 after_test:
