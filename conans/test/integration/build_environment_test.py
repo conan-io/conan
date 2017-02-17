@@ -8,11 +8,6 @@ from conans.test.tools import TestClient
 from conans.tools import unix_path
 from conans.util.files import md5sum
 
-if platform.system() == "Windows":
-    print("POLLA")
-    print(os.environ)
-    print(os.listdir("C:\\mingw-w64\\i686-5.3.0-posix-dwarf-rt_v4-rev0\\mingw32\\bin"))
-
 mylibh = '''
 double mean(double a, double b);
 '''
