@@ -13,7 +13,7 @@ init:
 
 install:
   - If Not Exist "C:\mingw64" appveyor DownloadFile "https://s3-eu-west-1.amazonaws.com/downloads.conan.io/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
-  - 7z e mingw.7z -oc:\
+  - 7z e x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc:\
   - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw64\\bin;%PATH%"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
   - "set CONAN_LOGGING_LEVEL=10"
