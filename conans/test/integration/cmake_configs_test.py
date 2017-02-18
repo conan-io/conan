@@ -1,6 +1,7 @@
 import unittest
 from conans.test.tools import TestClient
 from nose.plugins.attrib import attr
+import os
 
 
 conanfile = """
@@ -178,9 +179,10 @@ class CMakeConfigsTest(unittest.TestCase):
 
         client.run('install . --build missing')
         client.run("build")
-        client.runner("bin\say_hello", cwd=client.current_folder)
+        cmd = os.sep.join([".", "bin", "say_hello"])
+        client.runner(cmd, cwd=client.current_folder)
         self.assertIn("Hello Release Hello2 Hello Release Hello1 Hello Release Hello0",
                       " ".join(str(client.user_io.out).splitlines()))
-        client.runner("bin\say_hello_d", cwd=client.current_folder)
+        client.runner(cmd + "_d", cwd=client.current_folder)
         self.assertIn("Hello Debug Hello2 Hello Debug Hello1 Hello Debug Hello0",
                       " ".join(str(client.user_io.out).splitlines()))
