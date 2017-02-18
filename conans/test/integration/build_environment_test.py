@@ -27,7 +27,7 @@ optimize=False
 
     def build(self):
         self.output.info("Running source!")
-        self.run("c++ -c -o mean.o @conanbuildinfo.gcc mean.c")
+        self.run("c++ -c -o mean.o @conanbuildinfo.gcc mean.cpp")
         self.run("ar rcs libmean.a mean.o")
 
     def package(self):
@@ -71,7 +71,7 @@ class BuildEnvironmenTest(unittest.TestCase):
         try if it works without the gcc generator"""
 
         client = TestClient()
-        client.save({CONANFILE: conanfile, "mean.c": mylib, "mean.h": mylibh})
+        client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
         client.run("export lasote/stable")
         client.run("install Mean/0.1@lasote/stable --build")
 
@@ -104,7 +104,7 @@ class ConanReuseLib(ConanFile):
 
         # CREATE A DUMMY LIBRARY WITH GCC (could be generated with other build system)
         client = TestClient()
-        client.save({CONANFILE: conanfile, "mean.c": mylib, "mean.h": mylibh})
+        client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
         client.run("export lasote/stable")
         client.run("install Mean/0.1@lasote/stable --build")
 
@@ -124,13 +124,14 @@ class ConanReuseLib(ConanFile):
     def build(self):
         build_env = GCCBuildEnvironment(self)
         with environment_append(build_env.vars):
-            self.run("c++ example.c @conanbuildinfo.gcc -o mean_exe ")
+            self.run("c++ example.cpp @conanbuildinfo.gcc -o mean_exe ")
         self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
 '''
 
-        client.save({CONANFILE: reuse_gcc_conanfile, "example.c": example})
+        client.save({CONANFILE: reuse_gcc_conanfile, "example.cpp": example})
         client.run("install . --build missing")
         client.run("build .")
+
         self.assertIn("15", client.user_io.out)
         self.assertIn("Active var!!!", client.user_io.out)
 
@@ -181,10 +182,10 @@ class ConanBash(ConanFile):
         self.assertIn(expected_curdir_base, client.user_io.out)
 
     def use_build_virtualenv_test(self):
-        if platform.system() == "Windows":
+        if platform.system() != "Linux":
             return
         client = TestClient(path_with_spaces=False)
-        client.save({CONANFILE: conanfile, "mean.c": mylib, "mean.h": mylibh})
+        client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
         client.run("export lasote/stable")
 
         makefile_am = '''

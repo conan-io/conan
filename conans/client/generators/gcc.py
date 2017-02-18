@@ -2,6 +2,7 @@ from conans.client.configure_build_environment import sun_cc_libcxx_flags_dict
 from conans.model import Generator
 from conans.model.settings import get_setting_str_safe
 from conans.paths import BUILD_INFO_GCC
+import platform
 
 
 class GCCGenerator(Generator):
@@ -17,7 +18,9 @@ class GCCGenerator(Generator):
         flags = []
         flags.extend(["-D%s" % x for x in self._deps_build_info.defines])
         flags.extend(['-I"%s"' % x.replace("\\", "/") for x in self._deps_build_info.include_paths])
-        flags.extend(['-Wl,-rpath="%s"' % x.replace("\\", "/") for x in self._deps_build_info.lib_paths]) # rpaths
+        rpath_separator = "," if platform.system() == "Darwin" else "="
+        flags.extend(['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/")) 
+                      for x in self._deps_build_info.lib_paths]) # rpaths
         flags.extend(['-L"%s"' % x.replace("\\", "/") for x in self._deps_build_info.lib_paths])
         flags.extend(["-l%s" % x for x in self._deps_build_info.libs])
         flags.extend(self._deps_build_info.cppflags)
