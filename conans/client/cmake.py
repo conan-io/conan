@@ -72,6 +72,11 @@ class CMake(object):
             if compiler in ["sun-cc", "gcc"]:
                 return "Unix Makefiles"
 
+        if compiler == "arm-none-eabi-gcc":
+            return "Unix Makefiles"
+        if compiler == "avr-gcc":
+            return "Unix Makefiles"
+
         raise ConanException("Unknown cmake generator for these settings")
 
     @property

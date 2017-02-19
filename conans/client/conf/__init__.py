@@ -32,6 +32,12 @@ compiler:
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0"]
         libcxx: [libstdc++, libc++]
+    arm-none-eabi-gcc:
+        version: ["5.2"]
+        libcxx: [None]
+    avr-gcc:
+        version: ["4.9"]
+        libcxx: [None]
 
 build_type: [None, Debug, Release]
 """
