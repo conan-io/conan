@@ -147,6 +147,11 @@ def unzip(filename, destination="."):
         def print_progress(extracted_size, uncompress_size):
             pass
 
+    def extract_adjust_perms(the_file, full_path):
+        z.extract(the_file, full_path)
+        perm = file_.external_attr >> 16 & 0xFFF
+        os.chmod(os.path.join(full_path, the_file.filename), perm)
+
     with zipfile.ZipFile(filename, "r") as z:
         uncompress_size = sum((file_.file_size for file_ in z.infolist()))
         print("Unzipping %s, this can take a while" % human_size(uncompress_size))
@@ -159,7 +164,7 @@ def unzip(filename, destination="."):
                     # Win path limit is 260 chars
                     if len(file_.filename) + len(full_path) >= 260:
                         raise ValueError("Filename too long")
-                    z.extract(file_, full_path)
+                    extract_adjust_perms(file_, full_path)
                 except Exception as e:
                     print("Error extract %s\n%s" % (file_.filename, str(e)))
         else:  # duplicated for, to avoid a platform check for each zipped file
@@ -167,7 +172,7 @@ def unzip(filename, destination="."):
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
                 try:
-                    z.extract(file_, full_path)
+                    extract_adjust_perms(file_, full_path)
                 except Exception as e:
                     print("Error extract %s\n%s" % (file_.filename, str(e)))
 
