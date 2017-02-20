@@ -61,7 +61,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None):
         # Needed to change to that dir inside the bash shell
         to_run = 'cd "%s" && %s ' % (curdir, bashcmd)
         wincmd = 'bash --login -c %s' % escape_windows_cmd(to_run)
-        conanfile.output.warn('run_msys2_cmd: %s' % wincmd)
+        conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         conanfile.run(wincmd)
 
 
