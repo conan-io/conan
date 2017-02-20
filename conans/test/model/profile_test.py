@@ -130,6 +130,19 @@ compiler=Visual Studio
                          'compiler.version=12\nzlib:compiler=gcc\n[scopes]\n[env]\n',
                          profile.dumps())
 
+    def profile_loads_win_test(self):
+        prof = '''[env]
+QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin
+QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
+'''
+        new_profile = Profile.loads(prof)
+        self.assertEqual(new_profile.env_values.data[None]["QTPATH"],
+                         "C:/QtCommercial/5.8/msvc2015_64/bin")
+        self.assertEqual(new_profile.env_values.data[None]["QTPATH2"],
+                         "C:/QtCommercial2/5.8/msvc2015_64/bin")
+        self.assertIn("QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin", new_profile.dumps())
+        self.assertIn("QTPATH2=C:/QtCommercial2/5.8/msvc2015_64/bin", new_profile.dumps())
+
     def apply_test(self):
         # Settings
         profile = Profile()
