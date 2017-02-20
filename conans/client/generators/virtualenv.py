@@ -67,7 +67,6 @@ class VirtualEnvGenerator(Generator):
             else:
                 ret.append('export PS1="$OLD_PS1"')
             return ret
-
         deactivate_lines.extend(append_deactivate_lines(self.env.keys()))
         return deactivate_lines
 
@@ -88,6 +87,7 @@ class VirtualEnvGenerator(Generator):
                 activate_lines.append("$env:%s = \"%s\" + \";$env:%s\"" % (name, value, name))
             else:
                 activate_lines.append("$env:%s = \"%s\"" % (name, value))
+
         return activate_lines, deactivate_lines
 
     @property

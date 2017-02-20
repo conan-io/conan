@@ -10,6 +10,7 @@ import re
 import subprocess
 import sys
 
+
 from contextlib import contextmanager
 
 import requests
@@ -84,6 +85,7 @@ def pythonpath(conanfile):
             sys.path.extend(python_path)
         else:
             sys.path.append(python_path)
+
     yield
     sys.path = old_path
 
@@ -600,7 +602,6 @@ class BrewTool(object):
     def installed(self, package_name):
         exit_code = self._runner('test -n "$(brew ls --versions %s)"' % package_name, None)
         return exit_code == 0
-
 
 
 def _run(runner, command):

@@ -58,6 +58,8 @@ endmacro()""", macro)
         # extract the conan_set_find_paths macro
         macro = self._extract_macro("conan_set_find_paths", aux_cmake_test_setup)
         self.assertEqual("""macro(conan_set_find_paths)
+    # CMAKE_MODULE_PATH does not have Debug/Release config, but there are variables
+    # CONAN_CMAKE_MODULE_PATH_DEBUG to be used by the consumer
     # CMake can find findXXX.cmake files in the root of packages
     set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
 

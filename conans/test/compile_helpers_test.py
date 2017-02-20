@@ -2,8 +2,6 @@ import os
 import platform
 import unittest
 
-import sys
-
 from conans.client.configure_environment import ConfigureEnvironment
 from conans.client.gcc import GCC
 from conans.client.runner import ConanRunner

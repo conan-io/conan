@@ -413,6 +413,12 @@ If not:
         if not os.path.exists(conan_file_path):
             raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
+        loader = self._loader()
+        conanfile = loader.load_conan(conan_file_path, self._user_io.out, reference=reference)
+        if hasattr(conanfile, "build_id"):
+            raise ConanException("package command does not support recipes with 'build_id'\n"
+                                 "To repackage them use 'conan install'")
+
         if not package_id:
             packages = [PackageReference(reference, packid)
                         for packid in self._client_cache.conan_builds(reference)]
@@ -438,8 +444,8 @@ If not:
             output = ScopedOutput(str(reference), self._user_io.out)
             output.info("Re-packaging %s" % package_reference.package_id)
             loader = self._loader(build_folder)
-            conanfile = loader.load_conan(conan_file_path, self._user_io.out,
-                                          reference=package_reference.conan)
+
+            conanfile = loader.load_conan(conan_file_path, self._user_io.out, reference=reference)
             _load_info_file(build_folder, conanfile, output)
             rmdir(package_folder)
             with environment_append(conanfile.env):

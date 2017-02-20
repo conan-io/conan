@@ -18,9 +18,9 @@ def get_setting_str_safe(settings, name):
 def bad_value_msg(name, value, value_range):
     tip = ""
     if "settings" in name:
-        tip = "\nCheck your settings ~/.conan/settings.yml or read the docs FAQ"
+        tip = '\nRead "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-invalid-setting"'
 
-    return ("'%s' is not a valid '%s' value.\nPossible values are %s%s"
+    return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s%s"
             % (value, name, value_range, tip))
 
 
