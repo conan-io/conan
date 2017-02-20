@@ -39,7 +39,6 @@ class ClientCache(SimplePaths):
 
     def read_put_headers(self):
         ret = {}
-        print(self.put_headers_path)
         if not os.path.exists(self.put_headers_path):
             save(self.put_headers_path, "")
             return ret

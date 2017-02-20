@@ -35,7 +35,7 @@ class Uploader(object):
         iterable_to_file = IterableToFileAdapter(it, file_size)
         # Now it is prepared to work with request
         ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
-                              data=iterable_to_file, headers=None, auth=auth)
+                              data=iterable_to_file, headers=headers, auth=auth)
 
         return ret
 

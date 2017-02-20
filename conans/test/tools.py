@@ -381,7 +381,8 @@ class TestClient(object):
         self.requester = VersionCheckerRequester(requester, self.client_version,
                                                  self.min_server_compatible_version, output)
 
-        self.rest_api_client = RestApiClient(output, requester=self.requester)
+        put_headers = self.client_cache.read_put_headers()
+        self.rest_api_client = RestApiClient(output, requester=self.requester, put_headers=put_headers)
         # To store user and token
         self.localdb = LocalDB(self.client_cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
