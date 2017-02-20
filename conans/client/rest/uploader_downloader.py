@@ -15,10 +15,11 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0):
+    def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
         if dedup:
-            headers = {"X-Checksum-Deploy": "true",
-                       "X-Checksum-Sha1": sha1sum(abs_path)}
+            headers = headers or {}
+            headers["X-Checksum-Deploy"] = "true"
+            headers["X-Checksum-Sha1"] = sha1sum(abs_path)
             response = self.requester.put(url, data="", verify=self.verify, headers=headers,
                                           auth=auth)
             if response.status_code != 404:
