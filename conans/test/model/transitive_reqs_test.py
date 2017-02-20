@@ -1126,7 +1126,7 @@ class ZlibConan(ConanFile):
         png_content = """
 from conans import ConanFile
 
-class ZlibConan(ConanFile):
+class PngConan(ConanFile):
     name = "png"
     version = "0.1"
 """
