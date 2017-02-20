@@ -36,6 +36,21 @@ def init_package_info(deps_graph, paths):
             conan_file.env_info = EnvInfo(package_folder)
 
 
+def build_id(conanfile):
+    if hasattr(conanfile, "build_id"):
+        # construct new ConanInfo
+        build_id_info = conanfile.info.copy()
+        conanfile.info_build = build_id_info
+        # effectively call the user function to change the package values
+        try:
+            conanfile.build_id()
+        except Exception as e:
+            raise ConanException("Error in 'build_id()': %s" % str(e))
+        # compute modified ID
+        return build_id_info.package_id()
+    return None
+
+
 class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
@@ -146,17 +161,18 @@ class ConanInstaller(object):
 
                 self._remote_proxy.get_recipe_sources(conan_ref)
                 # Call the conanfile's build method
-                self._build_conanfile(conan_ref, conan_file, package_ref, package_folder, output)
+                build_folder = self._build_conanfile(conan_ref, conan_file, package_ref,
+                                                     package_folder, output)
 
                 # Call the conanfile's package method
-                self._package_conanfile(conan_ref, conan_file, package_ref, package_folder, output)
+                self._package_conanfile(conan_ref, conan_file, package_ref, build_folder,
+                                        package_folder, output)
 
                 # Call the info method
                 self._package_info_conanfile(conan_ref, conan_file)
 
                 duration = time.time() - t1
-                log_file = os.path.join(self._client_cache.build(package_ref, conan_file.short_paths),
-                                        RUN_LOG_NAME)
+                log_file = os.path.join(build_folder, RUN_LOG_NAME)
                 log_file = log_file if os.path.exists(log_file) else None
                 log_package_built(package_ref, duration, log_file)
             else:
@@ -263,8 +279,13 @@ class ConanInstaller(object):
 
     def _build_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
         """Calls the conanfile's build method"""
-
+        new_id = build_id(conan_file)
+        if new_id:
+            package_reference = PackageReference(package_reference.conan, new_id)
         build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
+        if os.path.exists(build_folder) and hasattr(conan_file, "build_id"):
+            return build_folder
+        # build_id is not caching the build folder, so actually rebuild the package
         src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
         export_folder = self._client_cache.export(conan_ref)
 
@@ -272,13 +293,14 @@ class ConanInstaller(object):
 
         with environment_append(*conan_file.env_values_dicts):
             self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
+        return build_folder
 
-    def _package_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
+    def _package_conanfile(self, conan_ref, conan_file, package_reference, build_folder,
+                           package_folder, output):
         """Generate the info txt files and calls the conanfile package method"""
 
         # FIXME: Is weak to assign here the recipe_hash
         conan_file.info.recipe_hash = self._client_cache.load_manifest(conan_ref).summary_hash
-        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
 
         # Creating ***info.txt files
         save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
