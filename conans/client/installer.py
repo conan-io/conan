@@ -318,16 +318,16 @@ class ConanInstaller(object):
     def _raise_package_not_found_error(self, conan_ref, conan_file):
         settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
         options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
-        author_contact = " at '%s'" % conan_file.url if conan_file.url else ""
 
-        raise ConanException('''Can't find a '%s' package for the specified options and settings
-
-- Try to build from sources with "--build %s" parameter
-- If it fails, you could try to contact the package author %s, report your configuration and try to collaborate to support it.
-
-Package configuration:
+        self._out.warn('''Can't find a '%s' package for the specified options and settings:
 - Settings: %s
-- Options: %s''' % (conan_ref, conan_ref.name, author_contact, settings_text, options_text))
+- Options: %s
+''' % (conan_ref, settings_text, options_text))
+
+        raise ConanException('''Missing prebuilt package for '%s'
+Try to build it from sources with "--build %s"
+Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
+''' % (conan_ref, conan_ref.name))
 
     def _handle_system_requirements(self, conan_ref, package_reference, conan_file, coutput):
         """ check first the system_reqs/system_requirements.txt existence, if not existing
