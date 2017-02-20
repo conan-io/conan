@@ -1,32 +1,35 @@
 """ ConanFile user tools, as download, etc
 """
 from __future__ import print_function
-import sys
-import os
 
 import logging
-
-from conans.errors import ConanException
-from conans.util.files import _generic_algorithm_sum, load
-from patch import fromfile, fromstring
-from conans.client.rest.uploader_downloader import Downloader
-import requests
-from conans.client.output import ConanOutput
-import platform
-from conans.model.version import Version
-from conans.util.log import logger
-from conans.client.runner import ConanRunner
-from contextlib import contextmanager
 import multiprocessing
+import os
+import platform
+import sys
+from contextlib import contextmanager
+
+import requests
+from patch import fromfile, fromstring
+
+from conans.client.output import ConanOutput
+from conans.client.rest.uploader_downloader import Downloader
+from conans.client.runner import ConanRunner
+from conans.errors import ConanException
+from conans.model.version import Version
+from conans.util.files import _generic_algorithm_sum, load
+from conans.util.log import logger
 
 
 @contextmanager
 def pythonpath(conanfile):
     old_path = sys.path[:]
-    try:
-        sys.path.extend(conanfile.env["PYTHONPATH"].split(os.pathsep))
-    except KeyError:
-        pass
+
+    simple_vars, multiple_vars = conanfile.env_values_dicts
+    python_path = multiple_vars.get("PYTHONPATH", None) or [simple_vars.get("PYTHONPATH", None)]
+    if python_path:
+        sys.path.extend(python_path)
+
     yield
     sys.path = old_path
 
