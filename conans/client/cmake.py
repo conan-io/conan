@@ -33,7 +33,6 @@ class CMake(object):
         operating_system = str(self._settings.os) if self._settings.os else None
         compiler = str(self._settings.compiler) if self._settings.compiler else None
         arch = str(self._settings.arch) if self._settings.arch else None
-        host_platform = platform.system()
 
         if "CONAN_CMAKE_GENERATOR" in os.environ:
             return os.environ["CONAN_CMAKE_GENERATOR"]
@@ -56,52 +55,26 @@ class CMake(object):
                 return base
 
         if operating_system == "Windows":
-            if host_platform == operating_system:
-                return "MinGW Makefiles" #it is valid only under Windows
-            else:
-                return "Unix Makefiles"
-        if operating_system == "Linux":
-            if compiler in ["gcc", "clang", "apple-clang"]:
-                return "Unix Makefiles"
-        if operating_system == "Macos":
-            if compiler in ["gcc", "clang", "apple-clang"]:
-                return "Unix Makefiles"
-        if operating_system == "FreeBSD":
-            if compiler in ["gcc", "clang", "apple-clang"]:
-                return "Unix Makefiles"
-        if operating_system == "SunOS":
-            if compiler in ["sun-cc", "gcc"]:
-                return "Unix Makefiles"
-
-        raise ConanException("Unknown cmake generator for these settings")
-
-    def _cmake_compiler_options(self, target_os, target_arch, target_comp):
-        host_platform = platform.system()
-        same_platform = (target_os == host_platform)
-
+            return "MinGW Makefiles" # it is valid only under Windows
+        
+        return "Unix Makefiles"
+        
+    def _cmake_compiler_options(self, os, os_ver, arch):
         cmake_flags = []
 
-        if not same_platform:
-            cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % target_os)
-
-        if target_comp == "clang":
-            cmake_flags.append("-DCMAKE_C_COMPILER=clang")
-            cmake_flags.append("-DCMAKE_CXX_COMPILER=clang++")
-        elif target_comp == "gcc":
-            if target_os == "Windows" and not same_platform:
-                if target_arch == "x86":
-                    cmake_flags.append("-DCMAKE_C_COMPILER=i686-w64-mingw32-gcc")
-                    cmake_flags.append("-DCMAKE_CXX_COMPILER=i686-w64-mingw32-g++")
-                else:
-                    cmake_flags.append("-DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc")
-                    cmake_flags.append("-DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++")
-            else:
-                cmake_flags.append("-DCMAKE_C_COMPILER=gcc")
-                cmake_flags.append("-DCMAKE_CXX_COMPILER=g++")
-
-        if target_arch == "x86" and target_os == "Macos":
-            cmake_flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
-
+        if str(os).lower() == "macos":
+            if arch == "x86":
+                cmake_flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
+            # CMake defines MacOS as Darwin
+            os = "Darwin"
+        
+        if os:
+            cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % os)
+            if os_ver:
+                cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
+        else:
+            cmake_flags.append("-DCMAKE_SYSTEM_NAME=Generic")
+       
         return cmake_flags
 
     @property
@@ -145,10 +118,15 @@ class CMake(object):
         op_system = str(self._settings.os) if self._settings.os else None
         arch = str(self._settings.arch) if self._settings.arch else None
         comp = str(self._settings.compiler) if self._settings.compiler else None
-        comp_version = self._settings.compiler.version
+        comp_version = self._settings.compiler.version     
+
+        try:
+            op_system_version = str(self._settings.os.version) if self._settings.os.version else None
+        except:
+            op_system_version = None
 
         flags = []
-        flags = self._cmake_compiler_options(target_os=op_system, target_arch=arch, target_comp=comp)
+        flags = self._cmake_compiler_options(os=op_system, os_ver=op_system_version, arch=arch)
 
         if comp:
             flags.append('-DCONAN_COMPILER="%s"' % comp)
@@ -157,6 +135,7 @@ class CMake(object):
 
         flags.append("-DCONAN_EXPORTED=1")
 
+        # Force compiler flags -- TODO: give as environment/setting parameter?
         if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
             if arch == "x86":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
