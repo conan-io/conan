@@ -44,6 +44,21 @@ class InfoTest(unittest.TestCase):
             self.client.run("export lasote/stable")
             self.assertNotIn("WARN: Conanfile doesn't have 'url'", self.client.user_io.out)
 
+    def only_names_test(self):
+        self.client = TestClient()
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+
+        self.client.run("info --only")
+        self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable",
+                          "Hello1/0.1@lasote/stable"], str(self.client.user_io.out).splitlines())
+        self.client.run("info --only=date")
+        lines = [(line if "date" not in line else "Date")
+                 for line in str(self.client.user_io.out).splitlines()]
+        self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable", "Date",
+                          "Hello1/0.1@lasote/stable", "Date"], lines)
+
     def reuse_test(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
@@ -53,6 +68,8 @@ class InfoTest(unittest.TestCase):
         self.client.run("info -u")
 
         self.assertIn("Creation date: ", self.client.user_io.out)
+        self.assertIn("ID: ", self.client.user_io.out)
+        self.assertIn("BuildID: ", self.client.user_io.out)
 
         expected_output = textwrap.dedent(
             """\
@@ -78,12 +95,14 @@ class InfoTest(unittest.TestCase):
                 Requires:
                     Hello0/0.1@lasote/stable""")
 
-        def clean_dates(output):
+        def clean_output(output):
             return "\n".join([line for line in str(output).splitlines()
-                              if not line.strip().startswith("Creation date")])
+                              if not line.strip().startswith("Creation date") and
+                              not line.strip().startswith("ID") and
+                              not line.strip().startswith("BuildID")])
 
         # The timestamp is variable so we can't check the equality
-        self.assertIn(expected_output, clean_dates(self.client.user_io.out))
+        self.assertIn(expected_output, clean_output(self.client.user_io.out))
 
         self.client.run("info -u --only=url")
         expected_output = textwrap.dedent(
@@ -94,7 +113,7 @@ class InfoTest(unittest.TestCase):
                 URL: myurl
             Hello1/0.1@lasote/stable
                 URL: myurl""")
-        self.assertIn(expected_output, clean_dates(self.client.user_io.out))
+        self.assertIn(expected_output, clean_output(self.client.user_io.out))
         self.client.run("info -u --only=url,license")
         expected_output = textwrap.dedent(
             """\
@@ -107,7 +126,7 @@ class InfoTest(unittest.TestCase):
             Hello1/0.1@lasote/stable
                 URL: myurl
                 License: MIT""")
-        self.assertIn(expected_output, clean_dates(self.client.user_io.out))
+        self.assertIn(expected_output, clean_output(self.client.user_io.out))
 
     def build_order_test(self):
         self.client = TestClient()

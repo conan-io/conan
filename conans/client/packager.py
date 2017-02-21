@@ -1,10 +1,11 @@
-from conans.util.files import mkdir, save, rmdir
 import os
+import shutil
+
+from conans.util.files import mkdir, save, rmdir
 from conans.util.log import logger
 from conans.paths import CONANINFO, CONAN_MANIFEST
 from conans.errors import ConanException, format_conanfile_exception
 from conans.model.build_info import DEFAULT_RES, DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE
-import shutil
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
@@ -46,31 +47,27 @@ def create_package(conanfile, build_folder, package_folder, output, local=False)
         msg = format_conanfile_exception(output.scope, "package", e)
         raise ConanException(msg)
 
-    _create_aux_files(build_folder, package_folder)
+    _create_aux_files(build_folder, package_folder, conanfile)
     output.success("Package '%s' created" % os.path.basename(package_folder))
 
 
-def generate_manifest(package_folder):
+def _create_aux_files(build_folder, package_folder, conanfile):
+    """ auxiliary method that creates CONANINFO and manifest in
+    the package_folder
+    """
+
+    logger.debug("Creating config files to %s" % package_folder)
+    if hasattr(conanfile, "build_id"):
+        # It is important to create a new fresh CONANINFO, because for shared
+        # build_id folders, the existing one in the build folders is wrong
+        save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
+    else:
+        try:
+            shutil.copy(os.path.join(build_folder, CONANINFO), package_folder)
+        except IOError:
+            raise ConanException("%s does not exist inside of your %s folder. "
+                                 "Try to re-build it again to solve it."
+                                 % (CONANINFO, build_folder))
     # Create the digest for the package
     digest = FileTreeManifest.create(package_folder)
     save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
-
-
-def _create_aux_files(build_folder, package_folder):
-    """ auxiliary method that creates CONANINFO in
-    the package_folder
-    """
-    try:
-        logger.debug("Creating config files to %s" % package_folder)
-        shutil.copy(os.path.join(build_folder, CONANINFO), package_folder)
-
-    except IOError:
-        raise ConanException("%s does not exist inside of your %s folder. Try to re-build it again"
-                             " to solve it." % (CONANINFO, build_folder))
-
-    try:
-        # Create the digest for the package
-        generate_manifest(package_folder)
-    except IOError as exc:
-        raise ConanException("Cannot create the manifest file, Try to re-build it again"
-                             " to solve it: %s" % exc)

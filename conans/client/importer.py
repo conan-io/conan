@@ -1,14 +1,14 @@
-import os
+import calendar
 import fnmatch
+import os
+import time
 
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
-from conans.model.manifest import FileTreeManifest
-from conans.util.files import save, md5sum, load
-import calendar
-import time
 from conans.errors import ConanException
-
+from conans.model.manifest import FileTreeManifest
+from conans.tools import environment_append
+from conans.util.files import save, md5sum, load
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
@@ -50,7 +50,10 @@ def undo_imports(current_path, output):
 def run_imports(conanfile, current_path, output):
     file_importer = FileImporter(conanfile, current_path)
     conanfile.copy = file_importer
-    conanfile.imports()
+    # FIXME: The environment has to be properly defined even for "conan imports"
+    simple_env_vars, multiple_env_vars = conanfile.env_values_dicts
+    with environment_append(simple_env_vars, multiple_env_vars):
+        conanfile.imports()
     copied_files = file_importer.execute()
     import_output = ScopedOutput("%s imports()" % output.scope, output)
     report_copied_files(copied_files, import_output)

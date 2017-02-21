@@ -1,4 +1,5 @@
 import unittest
+
 from conans.model.profile import Profile
 
 
@@ -18,8 +19,8 @@ class ProfileTest(unittest.TestCase):
         profile._settings["compiler.version"] = "12"
         profile._settings["compiler"] = "Visual Studio"
 
-        profile._env["CXX"] = "path/to/my/compiler/g++"
-        profile._env["CC"] = "path/to/my/compiler/gcc"
+        profile.env_values.add("CXX", "path/to/my/compiler/g++")
+        profile.env_values.add("CC", "path/to/my/compiler/gcc")
 
         profile.scopes["p1"]["conaning"] = "1"
         profile.scopes["p2"]["testing"] = "2"
@@ -31,8 +32,7 @@ class ProfileTest(unittest.TestCase):
         self.assertEquals(new_profile._settings["compiler.version"], "12")
         self.assertEquals(new_profile._settings["compiler"], "Visual Studio")
 
-        self.assertEquals(new_profile._env["CXX"], "path/to/my/compiler/g++")
-        self.assertEquals(new_profile._env["CC"], "path/to/my/compiler/gcc")
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX': 'path/to/my/compiler/g++', 'CC': 'path/to/my/compiler/gcc'}, {}))
 
         self.assertEquals(dict(new_profile.scopes)["p1"]["conaning"], '1')
         self.assertEquals(dict(new_profile.scopes)["p2"]["testing"], '2')
@@ -64,49 +64,13 @@ MyPackage:os=Windows
                                                 [("os", "Windows"), ("OTHER", "2"),
                                                  ("compiler", "2"), ("compiler.version", "3")]})
 
-    def profile_env_update_test(self):
-        prof = '''[env]
-CXX_FLAGS="-DAAA=0"
-[settings]
-'''
-        new_profile = Profile.loads(prof)
-
-        new_profile.update_env([("OTHER", "2")])
-        self.assertEquals(new_profile.env, [("OTHER", "2"), ("CXX_FLAGS", "-DAAA=0")])
-
-        new_profile.update_env([("OTHER", "3"), ("NEW", "4")])
-        self.assertEquals(new_profile.env, [("OTHER", "3"), ("NEW", "4"), ("CXX_FLAGS", "-DAAA=0")])
-
-        new_profile.update_env([("NEW", "4"), ("CXX_FLAGS", "A")])
-        self.assertEquals(new_profile.env, [("NEW", "4"), ("CXX_FLAGS", "A"), ("OTHER", "3")])
-
-    def profile_package_env_update_test(self):
-        prof = '''[env]
-MyPackage:VARIABLE=2
-[settings]
-'''
-        new_profile = Profile.loads(prof)
-
-        new_profile.update_packages_env({"MyPackage": [("VARIABLE", "3")]})
-        self.assertEquals(new_profile.package_env["MyPackage"], [("VARIABLE", "3")])
-
-        new_profile.update_packages_env({"MyPackage": [("OTHER", "2")]})
-        self.assertEquals(new_profile.package_env["MyPackage"], [("OTHER", "2"), ("VARIABLE", "3")])
-
-        new_profile.update_packages_env({"MyPackage": [("SOME", "VAR"), ("OTHER", "22")]})
-        self.assertEquals(new_profile.package_env["MyPackage"], [("SOME", "VAR"), ("OTHER", "22"), ("VARIABLE", "3")])
-
-        new_profile.update_packages_env({"OtherPackage": [("ONE", "2")]})
-        self.assertEquals(new_profile.package_env["MyPackage"], [("SOME", "VAR"), ("OTHER", "22"), ("VARIABLE", "3")])
-        self.assertEquals(new_profile.package_env["OtherPackage"], [("ONE", "2")])
-
     def profile_loads_test(self):
         prof = '''[env]
 CXX_FLAGS="-DAAA=0"
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env, [("CXX_FLAGS", "-DAAA=0")])
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
         prof = '''[env]
 CXX_FLAGS="-DAAA=0"
@@ -116,30 +80,34 @@ OtherPackage:ONE=ONE
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env, [("CXX_FLAGS", "-DAAA=0")])
-        self.assertEquals(new_profile.package_env, {"MyPackage": [("VAR", "1"), ("OTHER", "2")],
-                                                    "OtherPackage": [("ONE", "ONE")]})
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+        self.assertEquals(new_profile.env_values.env_dicts("MyPackage"), ({"OTHER": "2",
+                                                                           "VAR": "1",
+                                                                           'CXX_FLAGS': '-DAAA=0'}, {}))
+
+        self.assertEquals(new_profile.env_values.env_dicts("OtherPackage"), ({'CXX_FLAGS': '-DAAA=0',
+                                                                              'ONE': 'ONE'}, {}))
 
         prof = '''[env]
 CXX_FLAGS='-DAAA=0'
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env, [("CXX_FLAGS", "-DAAA=0")])
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
         prof = '''[env]
 CXX_FLAGS=-DAAA=0
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env, [("CXX_FLAGS", "-DAAA=0")])
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
         prof = '''[env]
 CXX_FLAGS="-DAAA=0
 [settings]
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile.env, [("CXX_FLAGS", "\"-DAAA=0")])
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '"-DAAA=0'}, {}))
 
         prof = '''
 [settings]
@@ -158,8 +126,22 @@ compiler=Visual Studio
         profile._settings["arch"] = "x86_64"
         profile._settings["compiler"] = "Visual Studio"
 
-        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=12\nzlib:compiler=gcc\n[scopes]\n[env]',
+        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\n'
+                         'compiler.version=12\nzlib:compiler=gcc\n[scopes]\n[env]\n',
                          profile.dumps())
+
+    def profile_loads_win_test(self):
+        prof = '''[env]
+QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin
+QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
+'''
+        new_profile = Profile.loads(prof)
+        self.assertEqual(new_profile.env_values.data[None]["QTPATH"],
+                         "C:/QtCommercial/5.8/msvc2015_64/bin")
+        self.assertEqual(new_profile.env_values.data[None]["QTPATH2"],
+                         "C:/QtCommercial2/5.8/msvc2015_64/bin")
+        self.assertIn("QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin", new_profile.dumps())
+        self.assertIn("QTPATH2=C:/QtCommercial2/5.8/msvc2015_64/bin", new_profile.dumps())
 
     def apply_test(self):
         # Settings
@@ -168,8 +150,8 @@ compiler=Visual Studio
         profile._settings["arch"] = "x86_64"
         profile._settings["compiler"] = "Visual Studio"
 
-        profile._env["CXX"] = "path/to/my/compiler/g++"
-        profile._env["CC"] = "path/to/my/compiler/gcc"
+        profile.env_values.add("CXX", "path/to/my/compiler/g++")
+        profile.env_values.add("CC", "path/to/my/compiler/gcc")
 
         profile.scopes["p1"]["conaning"] = "True"
         profile.scopes["p2"]["testing"] = "True"

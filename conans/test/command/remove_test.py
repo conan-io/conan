@@ -1,7 +1,7 @@
 import unittest
 from conans.test.tools import TestClient, TestBufferConanOutput, TestServer
 from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE,\
-    CONAN_MANIFEST, CONANINFO
+    CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_DIR
 import os
 from mock import Mock
 from conans.client.userio import UserIO
@@ -45,6 +45,9 @@ class RemoveTest(unittest.TestCase):
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = ""
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
+
+            exports_sources_dir = os.path.join(client.client_cache.export(ref), EXPORT_SOURCES_DIR)
+            os.makedirs(exports_sources_dir)
 
         client.save(files, client.client_cache.store)
 
