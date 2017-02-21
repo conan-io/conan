@@ -17,14 +17,15 @@ class Uploader(object):
 
     def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
         if dedup:
-            headers = headers or {}
-            headers["X-Checksum-Deploy"] = "true"
-            headers["X-Checksum-Sha1"] = sha1sum(abs_path)
-            response = self.requester.put(url, data="", verify=self.verify, headers=headers,
+            dedup_headers = {"X-Checksum-Deploy": "true", "X-Checksum-Sha1": sha1sum(abs_path)}
+            if headers:
+                dedup_headers.update(headers)
+            response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
             if response.status_code != 404:
                 return response
 
+        headers = headers or {}
         self.output.info("")
         # Actual transfer of the real content
         it = load_in_chunks(abs_path, self.chunk_size)

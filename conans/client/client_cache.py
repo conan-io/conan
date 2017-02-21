@@ -45,12 +45,13 @@ class ClientCache(SimplePaths):
         try:
             contents = load(self.put_headers_path)
             for line in contents.splitlines():
-                tmp = line.split("=", 1)
-                if len(tmp) != 2:
-                    raise Exception()
-                name = tmp[0].strip()
-                value = tmp[1].strip()
-                ret[name] = value
+                if line:
+                    tmp = line.split("=", 1)
+                    if len(tmp) != 2:
+                        raise Exception()
+                    name = tmp[0].strip()
+                    value = tmp[1].strip()
+                    ret[name] = value
             return ret
         except Exception:
             raise ConanException("Invalid %s file!" % self.put_headers_path)
