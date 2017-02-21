@@ -134,7 +134,16 @@ def human_size(size_bytes):
     return "%s %s" % (formatted_size, suffix)
 
 
-def unzip(filename, destination="."):
+def unzip(filename, destination=".", keep_permissions=False):
+    """
+    Unzip a zipped file
+    :param filename: Path to the zip file
+    :param destination: Destination folder
+    :param keep_permissions: Keep the zip permissions. WARNING: Can be dangerous if the zip was not created in a NIX
+    system, the bits could produce undefined permission schema. Use only this option if you are sure that the
+    zip was created correctly.
+    :return:
+    """
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
         filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
@@ -171,6 +180,11 @@ def unzip(filename, destination="."):
                 print_progress(extracted_size, uncompress_size)
                 try:
                     z.extract(file_, full_path)
+                    if keep_permissions:
+                        # Could be dangerous if the ZIP has been created in a non nix system
+                        # https://bugs.python.org/issue15795
+                        perm = file_.external_attr >> 16 & 0xFFF
+                        os.chmod(os.path.join(full_path, file_.filename), perm)
                 except Exception as e:
                     print("Error extract %s\n%s" % (file_.filename, str(e)))
 
