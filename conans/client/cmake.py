@@ -1,7 +1,7 @@
 from conans.errors import ConanException
 from conans.model.settings import Settings
 import os
-
+import platform
 
 class CMake(object):
 
@@ -55,24 +55,27 @@ class CMake(object):
                 return base
 
         if operating_system == "Windows":
-            if compiler == "gcc":
-                return "MinGW Makefiles"
-            if compiler in ["clang", "apple-clang"]:
-                return "MinGW Makefiles"
-        if operating_system == "Linux":
-            if compiler in ["gcc", "clang", "apple-clang"]:
-                return "Unix Makefiles"
-        if operating_system == "Macos":
-            if compiler in ["gcc", "clang", "apple-clang"]:
-                return "Unix Makefiles"
-        if operating_system == "FreeBSD":
-            if compiler in ["gcc", "clang", "apple-clang"]:
-                return "Unix Makefiles"
-        if operating_system == "SunOS":
-            if compiler in ["sun-cc", "gcc"]:
-                return "Unix Makefiles"
+            return "MinGW Makefiles" # it is valid only under Windows
+        
+        return "Unix Makefiles"
+        
+    def _cmake_compiler_options(self, os, os_ver, arch):
+        cmake_flags = []
 
-        raise ConanException("Unknown cmake generator for these settings")
+        if str(os).lower() == "macos":
+            if arch == "x86":
+                cmake_flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
+            # CMake defines MacOS as Darwin
+            os = "Darwin"
+        
+        if os:
+            cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % os)
+            if os_ver:
+                cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
+        else:
+            cmake_flags.append("-DCMAKE_SYSTEM_NAME=Generic")
+       
+        return cmake_flags
 
     @property
     def is_multi_configuration(self):
@@ -115,18 +118,24 @@ class CMake(object):
         op_system = str(self._settings.os) if self._settings.os else None
         arch = str(self._settings.arch) if self._settings.arch else None
         comp = str(self._settings.compiler) if self._settings.compiler else None
-        comp_version = self._settings.compiler.version
+        comp_version = self._settings.compiler.version     
 
-        flags = ["-DCONAN_EXPORTED=1"]
-        if op_system == "Windows":
-            if comp == "clang":
-                flags.append("-DCMAKE_C_COMPILER=clang")
-                flags.append("-DCMAKE_CXX_COMPILER=clang++")
+        try:
+            op_system_version = str(self._settings.os.version) if self._settings.os.version else None
+        except:
+            op_system_version = None
+
+        flags = []
+        flags = self._cmake_compiler_options(os=op_system, os_ver=op_system_version, arch=arch)
+
         if comp:
             flags.append('-DCONAN_COMPILER="%s"' % comp)
         if comp_version:
             flags.append('-DCONAN_COMPILER_VERSION="%s"' % comp_version)
 
+        flags.append("-DCONAN_EXPORTED=1")
+
+        # Force compiler flags -- TODO: give as environment/setting parameter?
         if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
             if arch == "x86":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
@@ -136,10 +145,6 @@ class CMake(object):
                 flags.extend(["-DCONAN_CXX_FLAGS=-m64",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m64",
                               "-DCONAN_C_FLAGS=-m64"])
-        elif op_system == "Macos":
-            if arch == "x86":
-                flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
-
         try:
             libcxx = self._settings.compiler.libcxx
             flags.append('-DCONAN_LIBCXX="%s"' % libcxx)
