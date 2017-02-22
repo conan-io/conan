@@ -15,6 +15,11 @@ class VisualStudioBuildEnvironment(object):
     - CL: /I (include paths)
     """
     def __init__(self, conanfile, quote_paths=True):
+        """
+        :param conanfile: ConanFile instance
+        :param quote_paths: The path directories will be quoted. If you are using the vars together with
+                            environment_append keep it to True, for virtualbuildenv quote_paths=False is required.
+        """
         self._deps_cpp_info = conanfile.deps_cpp_info
         self.quote_paths = quote_paths
 
@@ -53,27 +58,27 @@ class AutoToolsBuildEnvironment(object):
 
         self.defines = self._configure_defines()
         # Will go to CFLAGS and CXXFLAGS ["-m64" "-m32", "-g", "-s"]
-        self.compilation_flags = self._configure_compilation_flags()
+        self.flags = self._configure_flags()
         # Only c++ flags [-stdlib, -library], will go to CXXFLAGS
-        self.only_cpp_compilation_flags = self._configure_only_cpp_compilation_flags()
+        self.cxx_flags = self._configure_cxx_flags()
         # Not -L flags, ["-m64" "-m32"]
-        self.linker_flags = self._configure_linker_flags
+        self.link_flags = self._configure_link_flags()  # TEST!
         # Not declared by default
         self.fpic = None
 
-    def _configure_linker_flags(self):
+    def _configure_link_flags(self):
         """Not the -L"""
         return [self._architecture_flag]
 
-    def _configure_compilation_flags(self):
+    def _configure_flags(self):
         ret = [self._architecture_flag]
         if self._build_type == "Debug":
             ret.append("-g")
-        elif self._build_type == "Release" and self._compiler == "gcc":
+        elif self._build_type == "Release" and self._compiler == "gcc":  # TEST!
             ret.append("-s")
         return ret
 
-    def _configure_only_cpp_compilation_flags(self):
+    def _configure_cxx_flags(self):
         ret = []
         if "clang" in str(self._compiler):
             if str(self._libcxx) == "libc++":
@@ -92,7 +97,7 @@ class AutoToolsBuildEnvironment(object):
         ret = copy.copy(self._deps_cpp_info.defines)
 
         # Debug definition for GCC
-        if self._build_type == "Debug" and self._build_type == "gcc":
+        if self._build_type == "Release" and self._build_type == "gcc":
             ret.append("NDEBUG")
 
         # CXX11 ABI
@@ -121,15 +126,15 @@ class AutoToolsBuildEnvironment(object):
         lib_paths = ['-L%s' % x for x in self.library_paths]
         include_paths = ['-I%s' % x for x in self.include_paths]
 
-        ld_flags = append(self._configure_linker_flags(), lib_paths)
+        ld_flags = append(self.link_flags, lib_paths)
         cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])
         libs = ['-l%s' % lib for lib in self.libs]
 
-        tmp_compilation_flags = copy.copy(self.compilation_flags)
+        tmp_compilation_flags = copy.copy(self.flags)
         if self.fpic:
             tmp_compilation_flags.append("-fPIC")
 
-        cxx_flags = append(tmp_compilation_flags, self.only_cpp_compilation_flags)
+        cxx_flags = append(tmp_compilation_flags, self.cxx_flags)
         c_flags = tmp_compilation_flags
 
         ret = {"CPPFLAGS": " ".join(cpp_flags),
