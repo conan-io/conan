@@ -82,7 +82,6 @@ class ConfigureEnvironment(object):
     Replace it with the right one according your needs:
       - AutoToolsBuildEnvironment
       - VisualStudioBuildEnvironment
-      - GccBuildEnvironment
 
     Check docs.conan.io
 

@@ -341,13 +341,13 @@ class CompileHelpersTest(unittest.TestCase):
                                            compiler_name="gcc", libcxx="libstdc++11",
                                            version="6.2")
         gcc = GCC(c11settings_release)
-        self.assertEquals(gcc.command_line, "-s -DNDEBUG -m32 ")
+        self.assertEquals(gcc.command_line, "-s -DNDEBUG -m32")
 
         c11settings_debug = MockSettings("Debug", os="Linux", arch="x86",
                                          compiler_name="gcc", libcxx="libstdc++",
                                          version="6.2")
         gcc = GCC(c11settings_debug)
-        self.assertEquals(gcc.command_line, "-g -m32 ")
+        self.assertEquals(gcc.command_line, "-g -m32")
 
     def append_variables_test(self):
         output = TestBufferConanOutput()
