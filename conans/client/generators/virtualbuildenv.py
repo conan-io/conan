@@ -2,8 +2,7 @@ import platform
 
 from conans.client.generators.virtualenv import VirtualEnvGenerator
 from conans.model.settings import get_setting_str_safe
-from conans.client.configure_build_environment import (AutoToolsBuildEnvironment, GCCBuildEnvironment,
-                                                       VisualStudioBuildEnvironment)
+from conans.client.configure_build_environment import (AutoToolsBuildEnvironment, VisualStudioBuildEnvironment)
 
 
 class VirtualBuildEnvGenerator(VirtualEnvGenerator):
@@ -15,10 +14,7 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
         self.env = {}
         if compiler != "Visual Studio":
             auto_tools_b = AutoToolsBuildEnvironment(conanfile)
-            gcc_b = GCCBuildEnvironment(conanfile)
             tmp = {var: '"%s"' % value for var, value in auto_tools_b.vars.items()}
-            tmp2 = {var: '"%s"' % value for var, value in gcc_b.vars.items()}
-            tmp.update(tmp2)
             self.env = tmp
         else:
             visual_b = VisualStudioBuildEnvironment(conanfile, quote_paths=False)

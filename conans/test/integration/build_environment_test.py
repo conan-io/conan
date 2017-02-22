@@ -66,40 +66,6 @@ class BuildEnvironmenTest(unittest.TestCase):
     def test_autotools_environment(self):
         pass
 
-    def test_gcc_environment_without_gcc_generator(self):
-        """The environment for gcc is very limited, just sets the library and include paths
-        try if it works without the gcc generator"""
-
-        client = TestClient()
-        client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
-        client.run("export lasote/stable")
-        client.run("install Mean/0.1@lasote/stable --build")
-
-        reuse_gcc_conanfile = '''
-import platform
-from conans import ConanFile, GCCBuildEnvironment
-from conans.tools import environment_append
-
-class ConanReuseLib(ConanFile):
-
-    requires = "Mean/0.1@lasote/stable"
-    settings = "os", "compiler", "build_type", "arch"
-
-    def build(self):
-        build_env = GCCBuildEnvironment(self)
-        with environment_append(build_env.vars):
-            self.run("c++ example.c -o mean_exe -lmean ")
-        self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
-        '''
-
-        client.save({CONANFILE: reuse_gcc_conanfile, "example.c": example})
-        client.run("install . --build missing")
-        client.run("build .")
-        self.assertIn("15", client.user_io.out)
-
-        # Definitions are not passed
-        self.assertNotIn("Active var!!!", client.user_io.out)
-
     def test_gcc_and_environment(self):
 
         # CREATE A DUMMY LIBRARY WITH GCC (could be generated with other build system)
@@ -108,11 +74,11 @@ class ConanReuseLib(ConanFile):
         client.run("export lasote/stable")
         client.run("install Mean/0.1@lasote/stable --build")
 
-        # Reuse the mean library using the GCCBuildEnvironment
+        # Reuse the mean library using only the generator
 
         reuse_gcc_conanfile = '''
 import platform
-from conans import ConanFile, GCCBuildEnvironment
+from conans import ConanFile
 from conans.tools import environment_append
 
 class ConanReuseLib(ConanFile):
@@ -122,9 +88,9 @@ class ConanReuseLib(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     def build(self):
-        build_env = GCCBuildEnvironment(self)
-        with environment_append(build_env.vars):
-            self.run("c++ example.cpp @conanbuildinfo.gcc -o mean_exe ")
+
+
+        self.run("c++ example.cpp @conanbuildinfo.gcc -o mean_exe ")
         self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
 '''
 

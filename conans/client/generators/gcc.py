@@ -30,6 +30,16 @@ class GCCGenerator(Generator):
         flags.extend(self._libcxx_flags())
         arch = get_setting_str_safe(self.conanfile.settings, "arch")
         flags.append({"x86_64": "-m64", "x86": "-m32"}.get(arch, ""))
+
+        build_type = get_setting_str_safe(self.conanfile.settings, "build_type")
+        if build_type == "Release":
+            compiler = get_setting_str_safe(self.conanfile.settings, "compiler")
+            if compiler == "gcc":
+                flags.append("-s")
+            flags.append("-DNDEBUG")
+        elif self.build_type == "Debug":
+            flags.append("-g ")
+
         return " ".join(flags)
 
     def _libcxx_flags(self):

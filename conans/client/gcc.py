@@ -17,6 +17,23 @@ class GCC(object):
             command = 'gcc main.c @conanbuildinfo.gcc -o main %s' % gcc.command_line
             self.run(command)
         """
+        print("""
+        ***********************************************************************
+
+            WARNING!!!
+
+            GCC helper class is deprecated and will be removed soon.
+            It's not needed anymore due the improvement of "gcc" generator.
+
+            Use "gcc" generator and invoke the compiler:
+
+                gcc main.c @conanbuildinfo.gcc -o main
+
+            Check docs.conan.io
+
+
+        ***********************************************************************
+                """)
         flags = ""
         if self.build_type:
             flags += self.build_type_flags
@@ -29,7 +46,7 @@ class GCC(object):
         if self.build_type == "Release":
             return "-s -DNDEBUG "
         elif self.build_type == "Debug":
-            return "-g "
+            return "-g"
         return ""
 
     @property

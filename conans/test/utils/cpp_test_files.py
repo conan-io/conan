@@ -16,7 +16,7 @@ conanfile_build_cmake = """    def build(self):
 conanfile_build_new_env = """
     def build(self):
         import os
-        from conans import GCCBuildEnvironment, VisualStudioBuildEnvironment, AutoToolsBuildEnvironment
+        from conans import VisualStudioBuildEnvironment, AutoToolsBuildEnvironment
         from conans.tools import environment_append, vcvars_command, save
 
 
@@ -67,32 +67,28 @@ AC_OUTPUT
                 self.run("make")
 
         elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
-            env_build = GCCBuildEnvironment(self)
-            with environment_append(env_build.vars):
-                lang = '-DCONAN_LANGUAGE=%s' % self.options.language
-                if self.options.static:
-                    self.run("c++ -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
-                    self.run("ar rcs libhello{}.a hello.o".format(self.name))
+            lang = '-DCONAN_LANGUAGE=%s' % self.options.language
+            if self.options.static:
+                self.run("c++ -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
+                self.run("ar rcs libhello{}.a hello.o".format(self.name))
+            else:
+                if self.settings.os == "Windows":
+                    self.run("c++ -o libhello{}.dll -shared -fPIC hello.cpp {} @conanbuildinfo.gcc "
+                             "-Wl,--out-implib,libhello{}.a".
+                             format(self.name, lang, self.name))
                 else:
-                    if self.settings.os == "Windows":
-                        self.run("c++ -o libhello{}.dll -shared -fPIC hello.cpp {} @conanbuildinfo.gcc "
-                                 "-Wl,--out-implib,libhello{}.a".
-                                 format(self.name, lang, self.name))
-                    else:
-                        self.run("c++ -o libhello{}.so -shared -fPIC hello.cpp {} @conanbuildinfo.gcc".
-                        format(self.name, lang))
-                self.run('c++ -o main main.cpp -L. -lhello{} @conanbuildinfo.gcc'.format(self.name))
-        elif self.settings.compiler == "sun-cc":
-            env_build = GCCBuildEnvironment(self)
-            with environment_append(env_build.vars):
-                lang = '-DCONAN_LANGUAGE=%s' % self.options.language
-                if self.options.static:
-                    self.run("CC -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
-                    self.run("ar rcs libhello{}.a hello.o".format(self.name))
-                else:
-                    self.run("CC -o libhello{}.so -G -Kpic hello.cpp {} @conanbuildinfo.gcc".
+                    self.run("c++ -o libhello{}.so -shared -fPIC hello.cpp {} @conanbuildinfo.gcc".
                     format(self.name, lang))
-                self.run('CC -o main main.cpp -L. -lhello{} @conanbuildinfo.gcc'.format(self.name))
+            self.run('c++ -o main main.cpp -L. -lhello{} @conanbuildinfo.gcc'.format(self.name))
+        elif self.settings.compiler == "sun-cc":
+            lang = '-DCONAN_LANGUAGE=%s' % self.options.language
+            if self.options.static:
+                self.run("CC -c hello.cpp {} @conanbuildinfo.gcc".format(lang))
+                self.run("ar rcs libhello{}.a hello.o".format(self.name))
+            else:
+                self.run("CC -o libhello{}.so -G -Kpic hello.cpp {} @conanbuildinfo.gcc".
+                format(self.name, lang))
+            self.run('CC -o main main.cpp -L. -lhello{} @conanbuildinfo.gcc'.format(self.name))
         try:
             os.makedirs("bin")
         except:
