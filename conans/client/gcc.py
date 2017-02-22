@@ -46,13 +46,13 @@ class GCC(object):
         if self.build_type == "Release":
             return "-s -DNDEBUG "
         elif self.build_type == "Debug":
-            return "-g"
+            return "-g "
         return ""
 
     @property
     def arch_flags(self):
         if self.arch == "x86":  # FIXME: If platform is x86_64
-            return "-m32 "
+            return "-m32"
         return ""
 
     def _get_setting_safe(self, name):
