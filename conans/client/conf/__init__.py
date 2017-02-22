@@ -12,7 +12,7 @@ from collections import OrderedDict
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
 default_settings_yml = """os: [Windows, Linux, Macos, Android, iOS, FreeBSD, SunOS]
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8]
+arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9]
 compiler:
     sun-cc:
        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
