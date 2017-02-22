@@ -51,7 +51,7 @@ class ClientCache(SimplePaths):
                         raise Exception()
                     name = tmp[0].strip()
                     value = tmp[1].strip()
-                    ret[name] = value
+                    ret[str(name)] = str(value)
             return ret
         except Exception:
             raise ConanException("Invalid %s file!" % self.put_headers_path)

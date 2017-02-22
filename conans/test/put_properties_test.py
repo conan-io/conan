@@ -14,9 +14,10 @@ class PutPropertiesTest(unittest.TestCase):
     def create_empty_property_file_test(self):
 
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        self.client.save(files)
-        self.client.run("export lasote/stable")
-        props_file = self.client.client_cache.put_headers_path
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client.save(files)
+        client.run("export lasote/stable")
+        props_file = client.client_cache.put_headers_path
         self.assertTrue(os.path.exists(props_file))
 
     def put_properties_test(self):
