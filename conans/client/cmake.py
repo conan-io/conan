@@ -1,14 +1,18 @@
 from conans.errors import ConanException
 from conans.model.settings import Settings
+from conans.util.files import mkdir
 import os
+import subprocess
+import sys
 
 
 class CMake(object):
 
-    def __init__(self, settings):
+    def __init__(self, settings, generator=None):
         assert isinstance(settings, Settings)
         self._settings = settings
-        self.generator = self._generator()
+        self.generator = generator or self._generator()
+        self.build_dir = None
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -85,8 +89,13 @@ class CMake(object):
 
     @property
     def command_line(self):
-        return '-G "%s" %s %s %s -Wno-dev' % (self.generator, self.build_type,
-                                              self.runtime, self.flags)
+        return _join_arguments([
+            '-G "%s"' % self.generator,
+            self.build_type,
+            self.runtime,
+            self.flags,
+            '-Wno-dev'
+        ])
 
     @property
     def build_type(self):
@@ -156,3 +165,48 @@ class CMake(object):
         if runtime:
             return "-DCONAN_LINK_RUNTIME=/%s" % runtime
         return ""
+
+    def configure(self, conan_file, args=None, vars=None, source_dir=None, build_dir=None):
+        args = args or []
+        vars = vars or {}
+        source_dir = source_dir or conan_file.conanfile_directory
+        self.build_dir = build_dir or self.build_dir or conan_file.conanfile_directory
+
+        mkdir(self.build_dir)
+        arg_list = _join_arguments([
+            self.command_line,
+            _args_to_string(args),
+            _vars_to_string(vars),
+            _args_to_string([source_dir])
+        ])
+        command = "cd %s && cmake %s" % (_args_to_string([self.build_dir]), arg_list)
+        conan_file.run(command)
+
+    def build(self, conan_file, args=None, build_dir=None, target=None):
+        args = args or []
+        build_dir = build_dir or self.build_dir or conan_file.conanfile_directory
+        if target is not None:
+            args = ["--target", target] + args
+
+        arg_list = _join_arguments([
+            _args_to_string([build_dir]),
+            self.build_config,
+            _args_to_string(args)
+        ])
+        command = "cmake --build %s" % arg_list
+        conan_file.run(command)
+
+
+def _vars_to_string(vars):
+    return _args_to_string('-D{0}={1}'.format(k, v) for k,v in vars.items())
+
+
+def _args_to_string(args):
+    if sys.platform == 'win32':
+        return subprocess.list2cmdline(args)
+    else:
+        return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
+
+
+def _join_arguments(args):
+    return " ".join(filter(None, args))

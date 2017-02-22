@@ -75,8 +75,8 @@ class CMakeMultiTest(unittest.TestCase):
 
         def prepare_files(files, number):
             # Change language according to build_type, to check
-            orig = "lang = '-DCONAN_LANGUAGE=%s' % self.options.language"
-            replace = "lang = '-DCONAN_LANGUAGE=%s' % (0 if self.settings.build_type=='Debug' else 1)"
+            orig = '"CONAN_LANGUAGE": self.options.language'
+            replace = '"CONAN_LANGUAGE": 0 if self.settings.build_type=="Debug" else 1'
             conanfile = files["conanfile.py"]
             # The test files, surprisingly, dont use build_type
             conanfile = conanfile.replace(orig, replace).replace('"arch"', '"arch", "build_type"')
