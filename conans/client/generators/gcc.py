@@ -37,8 +37,8 @@ class GCCGenerator(Generator):
             if compiler == "gcc":
                 flags.append("-s")
             flags.append("-DNDEBUG")
-        elif self.build_type == "Debug":
-            flags.append("-g ")
+        elif build_type == "Debug":
+            flags.append("-g")
 
         return " ".join(flags)
 

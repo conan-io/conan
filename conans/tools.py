@@ -116,8 +116,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
-        env = ConfigureEnvironment(self)
-        command = "%s && %s" % (env.command_line_env, build_command)
+        command = "%s && %s" % (tools.vcvars_command(self.settings), build_command)
         self.run(command)
     """
     targets = targets or []
