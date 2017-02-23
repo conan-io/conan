@@ -1,6 +1,6 @@
-from conans.client.configure_build_environment import sun_cc_libcxx_flags_dict
+from conans.client.configure_build_environment import sun_cc_libcxx_flags_dict, architecture_dict, stdlib_flags, \
+    stdlib_defines
 from conans.model import Generator
-from conans.model.settings import get_setting_str_safe
 from conans.paths import BUILD_INFO_GCC
 import platform
 
@@ -28,12 +28,12 @@ class GCCGenerator(Generator):
         flags.extend(self._deps_build_info.sharedlinkflags)
         flags.extend(self._deps_build_info.exelinkflags)
         flags.extend(self._libcxx_flags())
-        arch = get_setting_str_safe(self.conanfile.settings, "arch")
-        flags.append({"x86_64": "-m64", "x86": "-m32"}.get(arch, ""))
+        arch = self.conanfile.settings.get_safe("arch")
+        flags.append(architecture_dict.get(arch, ""))
 
-        build_type = get_setting_str_safe(self.conanfile.settings, "build_type")
+        build_type = self.conanfile.settings.get_safe("build_type")
         if build_type == "Release":
-            compiler = get_setting_str_safe(self.conanfile.settings, "compiler")
+            compiler = self.conanfile.settings.get_safe("compiler")
             if compiler == "gcc":
                 flags.append("-s")
             flags.append("-DNDEBUG")
@@ -43,21 +43,13 @@ class GCCGenerator(Generator):
         return " ".join(flags)
 
     def _libcxx_flags(self):
-        libcxx = get_setting_str_safe(self.conanfile.settings, "compiler.libcxx")
-        compiler = get_setting_str_safe(self.conanfile.settings, "compiler")
+        libcxx = self.conanfile.settings.get_safe("compiler.libcxx")
+        compiler = self.conanfile.settings.get_safe("compiler")
 
         lib_flags = []
         if libcxx:
-            if libcxx == "libstdc++":
-                lib_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
-            elif str(libcxx) == "libstdc++11":
-                lib_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
-
-            if "clang" in compiler:
-                lib_flags.append({"libc++": "-stdlib=libc++"}.get(libcxx, "-stdlib=libstdc++"))
-
-            elif compiler == "sun-cc":
-                lib_flags.append(sun_cc_libcxx_flags_dict.get(libcxx, ""))
+            lib_flags.extend(["-D%s" % define for define in stdlib_defines(compiler, libcxx)])
+            lib_flags.extend(stdlib_flags(compiler, libcxx))
 
         return lib_flags
 

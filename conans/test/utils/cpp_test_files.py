@@ -4,14 +4,13 @@ from conans.paths import CONANFILE, BUILD_INFO_CMAKE
 
 
 conanfile_build_cmake = """    def build(self):
-        static_flags = "-DBUILD_SHARED_LIBS=ON" if not self.options.static else ""
-        lang = '-DCONAN_LANGUAGE=%s' % self.options.language
+        vars = {
+            "BUILD_SHARED_LIBS": not self.options.static,
+            "CONAN_LANGUAGE": self.options.language
+        }
         cmake = CMake(self.settings)
-        cmake_flags = cmake.command_line
-        cmd = 'cmake "%s" %s %s %s' % (self.conanfile_directory, cmake_flags, lang, static_flags)
-        # print "Executing command: %s" % cmd
-        self.run(cmd)
-        self.run("cmake --build . %s" % cmake.build_config)"""
+        cmake.configure(self, vars=vars)
+        cmake.build(self)"""
 
 conanfile_build_new_env = """
     def build(self):

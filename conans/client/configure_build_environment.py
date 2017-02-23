@@ -1,12 +1,35 @@
 import copy
-import os
-
-from conans.model.settings import get_setting_str_safe
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
                             "libstdcxx": "-library=stdcxx4",
                             "libstlport": "-library=stlport4",
                             "libstdc++": "-library=stdcpp"}
+
+architecture_dict = {"x86_64": "-m64", "x86": "-m32"}
+
+
+def stdlib_flags(compiler, libcxx):
+    ret = []
+    if compiler and "clang" in compiler:
+        if libcxx == "libc++":
+            ret.append("-stdlib=libc++")
+        else:
+            ret.append("-stdlib=libstdc++")
+    elif compiler == "sun-cc":
+        flag = sun_cc_libcxx_flags_dict.get(libcxx, None)
+        if flag:
+            ret.append(flag)
+    return ret
+
+
+def stdlib_defines(compiler, libcxx):
+    ret = []
+    if compiler == "gcc" or compiler == "clang":  # Maybe clang is using the standard library from g++
+        if libcxx == "libstdc++":
+            ret.append("_GLIBCXX_USE_CXX11_ABI=0")
+        elif str(libcxx) == "libstdc++11":
+            ret.append("_GLIBCXX_USE_CXX11_ABI=1")
+    return ret
 
 
 class VisualStudioBuildEnvironment(object):
@@ -45,10 +68,10 @@ class AutoToolsBuildEnvironment(object):
     def __init__(self, conanfile):
         self._conanfile = conanfile
         self._deps_cpp_info = conanfile.deps_cpp_info
-        self._arch = get_setting_str_safe(conanfile.settings, "arch")
-        self._build_type = get_setting_str_safe(conanfile.settings, "build_type")
-        self._compiler = get_setting_str_safe(conanfile.settings, "compiler")
-        self._libcxx = get_setting_str_safe(conanfile.settings, "compiler.libcxx")
+        self._arch = conanfile.settings.get_safe("arch")
+        self._build_type = conanfile.settings.get_safe("build_type")
+        self._compiler = conanfile.settings.get_safe("compiler")
+        self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
@@ -73,43 +96,29 @@ class AutoToolsBuildEnvironment(object):
     def _configure_flags(self):
         ret = [self._architecture_flag]
         if self._build_type == "Debug":
-            ret.append("-g")
-        elif self._build_type == "Release" and self._compiler == "gcc":  # TEST!
-            ret.append("-s")
+            ret.append("-g")  # default debug information
+        elif self._build_type == "Release" and self._compiler == "gcc":
+            ret.append("-s")  # Remove all symbol table and relocation information from the executable.
         return ret
 
     def _configure_cxx_flags(self):
-        ret = []
-        if "clang" in str(self._compiler):
-            if str(self._libcxx) == "libc++":
-                ret.append("-stdlib=libc++")
-            else:
-                ret.append("-stdlib=libstdc++")
-
-        elif str(self._compiler) == "sun-cc":
-            flag = sun_cc_libcxx_flags_dict.get(self._libcxx, None)
-            if flag:
-                ret.append(flag)
-        return ret
+        return stdlib_flags(self._compiler, self._libcxx)
 
     def _configure_defines(self):
         # requires declared defines
         ret = copy.copy(self._deps_cpp_info.defines)
 
         # Debug definition for GCC
-        if self._build_type == "Release" and self._build_type == "gcc":
+        if self._build_type == "Release" and self._compiler == "gcc":
             ret.append("NDEBUG")
 
         # CXX11 ABI
-        if self._libcxx == "libstdc++":
-            ret.append("_GLIBCXX_USE_CXX11_ABI=0")
-        elif self._libcxx == "libstdc++11":
-            ret.append("_GLIBCXX_USE_CXX11_ABI=1")
+        ret.extend(stdlib_defines(self._compiler, self._libcxx))
         return ret
 
     @property
     def _architecture_flag(self):
-        return {"x86_64": "-m64", "x86": "-m32"}.get(self._arch, "")
+        return architecture_dict.get(self._arch, "")
 
     @property
     def vars(self):

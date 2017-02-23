@@ -63,9 +63,6 @@ int main(){
 
 class BuildEnvironmenTest(unittest.TestCase):
 
-    def test_autotools_environment(self):
-        pass
-
     def test_gcc_and_environment(self):
 
         # CREATE A DUMMY LIBRARY WITH GCC (could be generated with other build system)
