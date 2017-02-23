@@ -92,3 +92,6 @@ cacert.pem
 
 #Pyinstaller generated binaries
 /pyinstaller
+
+#vscode folder
+.vscode

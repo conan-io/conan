@@ -12,8 +12,11 @@ Replace this module with other that keeps the interface or super class.
 
 from abc import ABCMeta, abstractmethod
 from conans.errors import ForbiddenException, InternalErrorException,\
-    AuthenticationException
+    AuthenticationException, ConanException
 from conans.model.ref import ConanFileReference
+from passlib.apache import HtpasswdFile
+from conans.util.log import logger
+import os
 
 #  ############################################
 #  ############ ABSTRACT CLASSES ##############
@@ -81,20 +84,70 @@ class Authenticator(object):
 class BasicAuthenticator(Authenticator):
     """
     Handles the user authentication from a dict of plain users and passwords.
-    users is {username: plain-text-passwd}
+    users is {username: plain-text-passwd} 
     """
 
-    def __init__(self, users):
-        self.users = users
+    def __init__(self, server_config):
+        # server_config: the server config object
+        self.users = dict(server_config.users)
 
     def valid_user(self, username, plain_password):
         """
-        username: User that request to read the conans
-        conan_reference: ConanFileReference
+        username: Username to be authenticated
+        plain_password: The password to authenticate with
         return: True if match False if don't
         """
         return username in self.users and self.users[username] == plain_password
 
+class HTPasswdAuthenticator(Authenticator):
+    """
+    Handles the user authentication for htpasswd files
+    htpasswd is the location of the htpasswd to use
+    """
+    def __init__(self, server_config):
+        # server_config: the server config object
+        htfile = server_config.htpasswd_file
+        if not os.path.isabs(htfile):
+            htfile = os.path.join(server_config.conan_folder, htfile)
+        self.htpasswd = HtpasswdFile(htfile)
+
+    
+    def valid_user(self, username, plain_password):
+        """
+        username: Username to be authenticated
+        plain_password: The password to authenticate with
+        return: True if match False if don't
+        """
+        # Update
+        self.htpasswd.load_if_changed()
+        # Verify
+        return username in self.htpasswd.users() and self.htpasswd.check_password(username, plain_password)
+
+class AuthorizeManager(Authenticator):
+    """
+    Manager for multiple authenticators
+    """
+    known_authenticators = {
+        "basic" : BasicAuthenticator,
+        "htpasswd" : HTPasswdAuthenticator
+    }
+
+    def __init__(self, server_config):
+        # Uses the server config to generate all needed authenticators
+        self.auths = []
+        authentication = server_config.authentication
+        logger.debug("Initialize default authentication: %s" % authentication)
+        for auth in authentication:
+            logger.debug("Creating entry %s" % auth)
+            if auth not in self.known_authenticators:
+                raise ConanException("Unknown authenticator provided: %s" % auth)
+            self.auths.append(self.known_authenticators[auth](server_config))
+    
+    def valid_user(self, username, plain_password):
+        for m in self.auths:
+            if m.valid_user(username, plain_password):
+                return True
+        return False
 
 class BasicAuthorizer(Authorizer):
     """

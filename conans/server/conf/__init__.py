@@ -36,12 +36,13 @@ class ConanServerConfigParser(ConfigParser):
                            "disk_storage_path": get_env("CONAN_STORAGE_PATH", storage_folder, environment),
                            "jwt_secret": get_env("CONAN_JWT_SECRET", None, environment),
                            "jwt_expire_minutes": get_env("CONAN_JWT_EXPIRE_MINUTES", None, environment),
-                           "write_permissions": [],
-                           "read_permissions": [],
                            "ssl_enabled": get_env("CONAN_SSL_ENABLED", None, environment),
                            "port": get_env("CONAN_SERVER_PORT", None, environment),
                            "public_port": get_env("CONAN_SERVER_PUBLIC_PORT", None, environment),
                            "host_name": get_env("CONAN_HOST_NAME", None, environment),
+                           # authentication process
+                           "authentication" : get_env("CONAN_SERVER_AUTHENTICATION", None, environment),
+                           "htpasswd_file" : get_env("CONAN_HTPASSWD_FILE", None, environment),
                            # "user:pass,user2:pass2"
                            "users": get_env("CONAN_SERVER_USERS", None, environment)}
 
@@ -124,17 +125,25 @@ class ConanServerConfigParser(ConfigParser):
 
     @property
     def read_permissions(self):
-        if self.env_config["read_permissions"]:
-            return self.env_config["read_permissions"]
-        else:
-            return self._get_file_conf("read_permissions")
+        return self._get_file_conf("read_permissions")
 
     @property
     def write_permissions(self):
-        if self.env_config["write_permissions"]:
-            return self.env_config["write_permissions"]
+        return self._get_file_conf("write_permissions")
+
+    @property
+    def authentication(self):
+        if self.env_config["authentication"]:
+            return self.env_config["authentication"].split(",")
         else:
-            return self._get_file_conf("write_permissions")
+            return self._get_file_conf("server", "authentication").split(",")
+
+    @property
+    def htpasswd_file(self):
+        if self.env_config["htpasswd_file"]:
+            return self.env_config["htpasswd_file"]
+        else:
+            return self._get_file_conf("server", "htpasswd_file")
 
     @property
     def users(self):

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
+from conans.server.service.authorize import BasicAuthorizer, AuthenticatorManager
 from conans.server.conf import get_file_manager
 from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
@@ -20,8 +20,9 @@ class ServerLauncher(object):
         server_config = migrate_and_get_server_config(user_folder)
 
         authorizer = BasicAuthorizer(server_config.read_permissions,
-                                     server_config.write_permissions)
-        authenticator = BasicAuthenticator(dict(server_config.users))
+                                        server_config.write_permissions)
+        
+        authenticator = AuthorizeManager(server_config)
 
         credentials_manager = JWTCredentialsManager(server_config.jwt_secret,
                                                     server_config.jwt_expire_time)
