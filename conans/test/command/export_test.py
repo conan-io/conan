@@ -54,7 +54,7 @@ class ExportTest(unittest.TestCase):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '2ccf59d0147680e8cf0d393465b2d7a5',
+                         'conanfile.py': '05bd2ffe3ff0c35b3a1deede3264a8b6',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
@@ -139,7 +139,7 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '2ccf59d0147680e8cf0d393465b2d7a5',
+                         'conanfile.py': '05bd2ffe3ff0c35b3a1deede3264a8b6',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest2.file_sums)
@@ -172,7 +172,7 @@ class OpenSSLConan(ConanFile):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': 'f04fc2119c7b42602b7a40789e2460dd',
+                         'conanfile.py': 'd98d9dab2d555bfcea77f091762aeffa',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest3.file_sums)

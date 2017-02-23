@@ -148,7 +148,7 @@ class ConanFileLoader(object):
                             os.path.dirname(conanfile_path), user, channel)
 
             # Assign environment
-            result.env_values.update(self._env_values)
+            result._env_values.update(self._env_values)
 
             if consumer:
                 self._user_options.descope_options(result.name)
@@ -196,7 +196,7 @@ class ConanFileLoader(object):
         conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
                                                                parser.import_parameters)
         conanfile.scope = self._scopes.package_scope()
-        conanfile.env_values.update(self._env_values)
+        conanfile._env_values.update(self._env_values)
         return conanfile
 
     def load_virtual(self, reference, path):

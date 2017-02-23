@@ -34,7 +34,7 @@ install:
   - ./.ci/travis/install.sh
 before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
-  - export CONAN_LOGGING_LEVEL=10
+  - export CONAN_LOGGING_LEVEL=20
 # command to run tests
 script: 
   - ulimit -n 2048 # Error with py3 and OSX, max file descriptors
