@@ -38,7 +38,7 @@ class ClientMigrator(Migrator):
         if old_version is None:
             return
 
-        if old_version < Version("0.16"):
+        if old_version < Version("0.20"):
             old_settings = """
 os: [Windows, Linux, Macos, Android, iOS]
 arch: [x86, x86_64, ppc64le, armv6, armv7, armv7hf, armv8]
