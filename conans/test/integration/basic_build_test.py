@@ -56,7 +56,7 @@ class BasicBuildTest(unittest.TestCase):
     def build_mingw_test(self):
         if platform.system() != "Windows":
             return
-        not_env = os.system("g++ --version > nul")
+        not_env = os.system("c++ --version > nul")
         if not_env != 0:
             logger.error("This platform does not support G++ command")
             return

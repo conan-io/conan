@@ -125,22 +125,10 @@ class ConanFile(object):
         self._channel = channel
 
     @property
-    def env(self):  # Only for retro-compatibility
-        simple_values, list_values = self._env_values.env_dicts(self.name)
-        ret = {}
-        for name, value in list_values.items():  # Iterate to copy the values
-            ret[name] = os.pathsep.join(value)
-        for name, value in simple_values.items():  # Iterate to copy the values
-            ret[name] = value
-        return ret
-
-    @property
-    def env_values(self):
-        return self._env_values
-
-    @property
-    def env_values_dicts(self):
-        return self._env_values.env_dicts(self.name)
+    def env(self):
+        simple, multiple = self._env_values.env_dicts(self.name)
+        simple.update(multiple)
+        return simple
 
     @property
     def channel(self):
