@@ -7,8 +7,11 @@ class ConanGrapher(object):
         self._project_reference = project_reference
 
     def graph(self):
-        output_file = os.path.join(os.getcwd(), "graph.dot")
-        f = open(output_file, 'w')
+        try:
+            output_file = os.path.join(os.getcwd(), "graph.dot")
+            f = open(output_file, 'w')
+        except:
+            raise
 
         f.write('digraph {\n')
 
