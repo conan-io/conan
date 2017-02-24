@@ -23,7 +23,7 @@ class CMakeTest(unittest.TestCase):
         settings.arch = "x86"
 
         def check(text, build_config, generator=None):
-            cross = ("-DCMAKE_SYSTEM_NAME=%s " % {"Macos": "Darwin"}.get(settings.os, settings.os)
+            cross = ("-DCMAKE_SYSTEM_NAME=%s " % {"Macos": "Darwin"}.get(str(settings.os), settings.os)
                      if platform.system() != settings.os else "")
             cmake = CMake(settings, generator=generator)
             text = text.replace("-DCONAN_EXPORTED", "%s-DCONAN_EXPORTED" % cross)
