@@ -1,4 +1,4 @@
-import sys
+import os
 from conans.model.ref import ConanFileReference
 
 class ConanGrapher(object):
@@ -7,6 +7,11 @@ class ConanGrapher(object):
         self._project_reference = project_reference
 
     def graph(self):
+        output_file = os.path.join(os.getcwd(), "graph.dot")
+        f = open(output_file, 'w')
+
+        f.write('digraph {\n')
+
         for node in self._deps_graph.nodes:
             ref = node.conan_ref
 
@@ -16,12 +21,16 @@ class ConanGrapher(object):
             depends = self._deps_graph.neighbors(node)
 
             if depends:
-                sys.stdout.write('"%s" -> {' % str(ref))
+                f.write('    "%s" -> {' % str(ref))
 
                 for i, dep in enumerate(depends):
-                    sys.stdout.write('"%s/%s"' % (dep.conan_ref.name, dep.conan_ref.version))
+                    f.write('"%s"' % str(dep.conan_ref))
 
                     if i == len(depends) - 1:
-                        print '}'
+                        f.write('}\n')
                     else:
-                        sys.stdout.write(' ')
+                        f.write(' ')
+
+        f.write('}\n');
+
+        f.close()
