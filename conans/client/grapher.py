@@ -6,7 +6,7 @@ class ConanGrapher(object):
         self._deps_graph = deps_graph
         self._project_reference = project_reference
 
-    def graph(self, output_dir):
+    def graph(self):
         for node in self._deps_graph.nodes:
             ref = node.conan_ref
 

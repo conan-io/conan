@@ -201,7 +201,7 @@ class ConanManager(object):
     def info(self, reference, current_path, remote=None, options=None, settings=None,
              info=None, filename=None, update=False, check_updates=False, scopes=None,
              build_order=None, build_mode=None, package_settings=None, env_values=None,
-             profile_name=None):
+             profile_name=None, graph=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -249,9 +249,13 @@ class ConanManager(object):
         else:
             graph_updates_info = {}
 
-        Printer(self._user_io.out).print_info(deps_graph, project_reference,
-                                              info, registry, graph_updates_info,
-                                              remote, read_dates(deps_graph))
+        if graph:
+            grapher = ConanGrapher(project_reference, deps_graph)
+            grapher.graph()
+        else:
+            Printer(self._user_io.out).print_info(deps_graph, project_reference,
+                                                  info, registry, graph_updates_info,
+                                                  remote, read_dates(deps_graph))
 
     def read_profile(self, profile_name, cwd):
         if not profile_name:
@@ -586,25 +590,6 @@ If not:
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
         return remote_proxy.authenticate(name, password)
-
-    def graph(self, reference, current_path, remote=None, options=None, settings=None,
-              filename=None, update=False, scopes=None, package_settings=None):
-        """ Output a .dot file from dependency graph.
-        @param reference: ConanFileReference or path to user space conanfile
-        @param current_path: where the output files will be saved
-        @param remote: install only from that remote
-        @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
-        @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
-        @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
-        """
-
-        objects = self._get_graph(reference, current_path, remote, options, settings, filename,
-                                  update, None, None, scopes, package_settings, None, None)
-        (builder, deps_graph, project_reference, registry, _, remote_proxy, _) = objects
-
-        grapher = ConanGrapher(project_reference, deps_graph)
-
-        grapher.graph(None)
 
 
 def _mix_with_profile(profile, settings, package_settings, scopes, env_values):
