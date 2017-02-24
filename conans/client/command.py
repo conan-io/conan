@@ -839,6 +839,46 @@ path to the CMake binary directory, like this:
             p = self._manager.read_profile(args.profile, os.getcwd())
             Printer(self._user_io.out).print_profile(args.profile, p)
 
+    def graph(self, *args):
+        """ Generate a dot file.
+        DOCS
+        """
+        parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan graph")
+        parser.add_argument("reference", nargs='?', default="",
+                            help='reference name or path to conanfile file, '
+                            'e.g., MyPackage/1.2@user/channel or ./my_project/')
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
+        parser.add_argument("-r", "--remote", help='look in the specified remote server')
+        parser.add_argument("--options", "-o",
+                            help='Options to build the package, overwriting the defaults.'
+                                 ' e.g., -o with_qt=true',
+                            nargs=1, action=Extender)
+        parser.add_argument("--settings", "-s",
+                            help='Settings to build the package, overwriting the defaults.'
+                                 ' e.g., -s compiler=gcc',
+                            nargs=1, action=Extender)
+        parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
+                            help='Use the specified scope in the info command')
+        args = parser.parse_args(*args)
+        log_command("graph", vars(args))
+
+        options = self._get_tuples_list_from_extender_arg(args.options)
+        settings, package_settings = self._get_simple_and_package_tuples(args.settings)
+        current_path = os.getcwd()
+        try:
+            reference = ConanFileReference.loads(args.reference)
+        except:
+            reference = os.path.normpath(os.path.join(current_path, args.reference))
+        scopes = Scopes.from_list(args.scope) if args.scope else None
+        self._manager.graph(reference=reference,
+                            current_path=current_path,
+                            remote=args.remote,
+                            options=options,
+                            settings=settings,
+                            package_settings=package_settings,
+                            filename=args.file,
+                            scopes=scopes)
+
     def _show_help(self):
         """ prints a summary of all commands
         """
