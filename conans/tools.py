@@ -22,7 +22,7 @@ from conans.client.runner import ConanRunner
 from conans.errors import ConanException
 from conans.model.version import Version
 # noinspection PyUnresolvedReferences
-from conans.util.files import _generic_algorithm_sum, load, save
+from conans.util.files import _generic_algorithm_sum, load
 from conans.util.log import logger
 
 
@@ -52,7 +52,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None):
         raise ConanException("Command only for Windows operating system")
     # This needs to be set so that msys2 bash profile will set up the environment correctly.
     try:
-        arch = conanfile.settings.arch # Maybe arch doesn't exist
+        arch = conanfile.settings.arch  # Maybe arch doesn't exist
     except:
         arch = None
     env_vars = {"MSYSTEM": "MINGW32" if arch == "x86" else "MINGW64",
@@ -621,4 +621,3 @@ def _run(runner, command):
     print("Running: %s" % command)
     if runner(command, True) != 0:
         raise ConanException("Command '%s' failed" % command)
-
