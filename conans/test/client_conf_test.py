@@ -30,8 +30,7 @@ class ClientConfTest(unittest.TestCase):
 
     def test_quotes(self):
         tmp_dir = temp_folder()
-        client_conf = default_client_conf.replace("asd", "232")
-        save(os.path.join(tmp_dir, CONAN_CONF), client_conf)
+        save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf)
         config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
         self.assertEqual(config.env_vars["CONAN_TRACE_FILE"], "Path/with/quotes")
 
