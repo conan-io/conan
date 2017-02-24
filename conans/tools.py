@@ -22,7 +22,7 @@ from conans.client.runner import ConanRunner
 from conans.errors import ConanException
 from conans.model.version import Version
 # noinspection PyUnresolvedReferences
-from conans.util.files import _generic_algorithm_sum, load
+from conans.util.files import _generic_algorithm_sum, load, save
 from conans.util.log import logger
 
 
