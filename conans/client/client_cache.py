@@ -1,4 +1,6 @@
 import os
+
+from conans.errors import ConanException
 from conans.util.files import save, load, mkdir, normalize
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
@@ -6,7 +8,7 @@ from conans.model.values import Values
 from conans.client.detect import detect_defaults_settings
 from conans.model.ref import ConanFileReference
 from conans.model.manifest import FileTreeManifest
-from conans.paths import SimplePaths, CONANINFO
+from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
 from genericpath import isdir
 from conans.model.info import ConanInfo
 
@@ -30,6 +32,30 @@ class ClientCache(SimplePaths):
         self._output = output
         self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
         super(ClientCache, self).__init__(self._store_folder)
+
+    @property
+    def put_headers_path(self):
+        return os.path.join(self.conan_folder, PUT_HEADERS)
+
+    def read_put_headers(self):
+        ret = {}
+        if not os.path.exists(self.put_headers_path):
+            save(self.put_headers_path, "")
+            return ret
+        try:
+            contents = load(self.put_headers_path)
+            for line in contents.splitlines():
+                if line:
+                    tmp = line.split("=", 1)
+                    if len(tmp) != 2:
+                        raise Exception()
+                    name = tmp[0].strip()
+                    value = tmp[1].strip()
+                    ret[str(name)] = str(value)
+            return ret
+        except Exception:
+            raise ConanException("Invalid %s file!" % self.put_headers_path)
+
 
     @property
     def registry(self):
