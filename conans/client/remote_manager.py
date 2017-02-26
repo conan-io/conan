@@ -26,7 +26,7 @@ class RemoteManager(object):
         self._output = output
         self._remote_client = remote_client
 
-    def upload_conan(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file):
+    def upload_conan(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file, dry_run = None):
         """Will upload the conans to the first remote"""
 
         t1 = time.time()
@@ -35,24 +35,24 @@ class RemoteManager(object):
 
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
-
         the_files = compress_recipe_files(files, export_folder, self._output)
-
-        ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
-                                retry, retry_wait, ignore_deleted_file)
-        duration = time.time() - t1
-        log_recipe_upload(conan_reference, duration, the_files, remote)
-        msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
-        # FIXME: server dependent
-        if remote.url == "https://server.conan.io":
-            msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
+        if not dry_run:
+            ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
+                                    retry, retry_wait, ignore_deleted_file)
+            duration = time.time() - t1
+            log_recipe_upload(conan_reference, duration, the_files, remote)
+            msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
+            # FIXME: server dependent
+            if remote.url == "https://server.conan.io":
+                msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
+            else:
+                msg += ": %s" % remote.url
+            self._output.info(msg)
+            return ret
         else:
-            msg += ": %s" % remote.url
-        self._output.info(msg)
+            return None
 
-        return ret
-
-    def upload_package(self, package_reference, remote, retry, retry_wait):
+    def upload_package(self, package_reference, remote, retry, retry_wait, dry_run = None):
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
@@ -90,15 +90,19 @@ class RemoteManager(object):
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
         logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
-
         the_files = compress_package_files(files, package_folder, self._output)
+        if not dry_run:
 
-        tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
-                                retry, retry_wait)
-        duration = time.time() - t1
-        log_package_upload(package_reference, duration, the_files, remote)
-        logger.debug("====> Time remote_manager upload_package: %f" % duration)
-        return tmp
+            tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
+                                    retry, retry_wait)
+            print(("WHAT2!"))
+            duration = time.time() - t1
+            log_package_upload(package_reference, duration, the_files, remote)
+            logger.debug("====> Time remote_manager upload_package: %f" % duration)
+            return tmp
+        else:
+            return None
+
 
     def get_conan_digest(self, conan_reference, remote):
         """
