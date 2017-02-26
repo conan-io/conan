@@ -188,7 +188,8 @@ class ConanInfo(object):
     @staticmethod
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
-                                     "requires", "full_requires", "scope", "recipe_hash"])
+                                     "requires", "full_requires", "scope", "recipe_hash"],
+                              raise_unexpected_field=False)
 
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
