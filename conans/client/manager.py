@@ -251,6 +251,33 @@ class ConanManager(object):
         Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                               info, registry, graph_updates_info,
                                               remote, read_dates(deps_graph))
+    def path_info(self, user, reference, current_path, options=None, settings=None,
+             package_settings=None, profile_name=None):
+        """ print onformation about pathes that the build of @a reference will use
+        @param reference: ConanFileReference or path to user space conanfile
+        @param current_path: where the output files will be saved
+        @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
+        @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
+        @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
+        """
+        profile = self.read_profile(profile_name, current_path)
+
+        # Mix Settings, Env vars and scopes between profile and command line
+        settings, package_settings, scopes, env_values = _mix_with_profile(profile, settings, package_settings, None, None)
+
+        objects = self._get_graph(reference, current_path, None, options, settings, None,
+                                  None, None, None, scopes, package_settings, env_values)
+
+        (_, _, _, _, conan_file, _, _) = objects
+        package_id = conan_file.info.package_id()
+        user_name, channel = get_user_channel(user)
+        conan_ref = ConanFileReference(conan_file.name, conan_file.version, user_name, channel)
+        package_ref = PackageReference(conan_ref, package_id)
+        self._user_io.out.info("export: %s " % self._client_cache.export(conan_ref))
+        self._user_io.out.info("source: %s " % self._client_cache.source(conan_ref, conan_file.short_paths))
+        self._user_io.out.info("build: %s " % self._client_cache.build(package_ref, conan_file.short_paths))
+        self._user_io.out.info("package: %s " % self._client_cache.package(package_ref, conan_file.short_paths))
+
 
     def read_profile(self, profile_name, cwd):
         if not profile_name:
