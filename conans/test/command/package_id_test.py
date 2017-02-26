@@ -41,24 +41,30 @@ class PackageIdTest(unittest.TestCase):
 
     def test_short_pathes(self):
         if platform.system() == "Windows":
-            folder = temp_folder(False);
-            client = TestClient(base_folder=folder)
-            client.save({CONANFILE: short_path_file})
-            short_folder = os.path.join(folder, ".cn");
-            os.environ["CONAN_USER_HOME_SHORT"] = short_folder
-            for settings in [self.settingsA, self.settingsB]:
-                client.run("path_info myUser %s" % settings)
-                basePath = os.path.join("MyPackage", "0.1.0", "myUser", "testing");
-                output = client.user_io.out;
-                self.assertIn(os.path.join(basePath, "export"), output)
-                self.assertNotIn(os.path.join(basePath, "source"), output)
-                self.assertNotIn(os.path.join(basePath, "build"), output)
-                self.assertNotIn(os.path.join(basePath, "package"), output)
+            currentEnv = os.environ.get("CONAN_USER_HOME_SHORT", None)
+            try:
+                folder = temp_folder(False);
+                client = TestClient(base_folder=folder)
+                client.save({CONANFILE: short_path_file})
+                short_folder = os.path.join(folder, ".cn");
+                os.environ["CONAN_USER_HOME_SHORT"] = short_folder
+                for settings in [self.settingsA, self.settingsB]:
+                    client.run("path_info myUser %s" % settings)
+                    basePath = os.path.join("MyPackage", "0.1.0", "myUser", "testing");
+                    output = client.user_io.out;
+                    self.assertIn(os.path.join(basePath, "export"), output)
+                    self.assertNotIn(os.path.join(basePath, "source"), output)
+                    self.assertNotIn(os.path.join(basePath, "build"), output)
+                    self.assertNotIn(os.path.join(basePath, "package"), output)
 
-                self.assertIn("source: %s" % short_folder, output)
-                self.assertIn("build: %s" % short_folder, output)
-                self.assertIn("package: %s" % short_folder, output)
-
+                    self.assertIn("source: %s" % short_folder, output)
+                    self.assertIn("build: %s" % short_folder, output)
+                    self.assertIn("package: %s" % short_folder, output)
+            finally:
+                if currentEnv is None:
+                    del os.environ["CONAN_USER_HOME_SHORT"]
+                else:
+                    os.environ["CONAN_USER_HOME_SHORT"] = currentEnv
 
 
 
