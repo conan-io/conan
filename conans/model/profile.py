@@ -3,19 +3,7 @@ from conans.util.config_parser import ConfigParser
 from conans.model.scope import Scopes, _root
 from conans.errors import ConanException
 from collections import defaultdict
-from conans.model.env_info import EnvValues
-
-
-def _clean_value(value):
-    '''Strip a value and remove the quotes. EX:
-    key="value " => str('value')
-    '''
-    value = value.strip()
-    if value.startswith('"') and value.endswith('"') and value != '"':
-        value = value[1:-1]
-    if value.startswith("'") and value.endswith("'") and value != "'":
-        value = value[1:-1]
-    return value
+from conans.model.env_info import EnvValues, unquote
 
 
 class Profile(object):
@@ -49,7 +37,7 @@ class Profile(object):
 
             name, value = item.split("=", 1)
             name = name.strip()
-            value = _clean_value(value)
+            value = unquote(value)
             return package_name, name, value
 
         try:
