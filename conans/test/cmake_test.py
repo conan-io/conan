@@ -195,9 +195,16 @@ build_type: [ Release]
         settings.compiler.version = "5.4"
         cmake = CMake(settings)
         cmake.build(conan_file, parallel=True)
-        self.assertEqual('cmake --build %s -- -j%i' % (dot_dir, cpu_count()), conan_file.command)
+        if sys.platform == 'win32':
+            self.assertEqual('cmake --build . -- -j%i' % cpu_count(), conan_file.command)
+        else:
+            self.assertEqual("cmake --build '.' '--' '-j%i'" % cpu_count(), conan_file.command)
+
         cmake.build(conan_file, args=['foo', '--', 'bar'], parallel=True)
-        self.assertEqual('cmake --build %s foo -- bar -j%i' % (dot_dir, cpu_count()), conan_file.command)
+        if sys.platform == 'win32':
+            self.assertEqual('cmake --build . foo -- bar -j%i' % cpu_count(), conan_file.command)
+        else:
+            self.assertEqual("cmake --build '.' 'foo' '--' 'bar' '-j%i'" % cpu_count(), conan_file.command)
 
 
 class ConanFileMock(object):
