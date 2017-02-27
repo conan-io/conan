@@ -22,18 +22,19 @@ class PackageIdTest(unittest.TestCase):
 
         self.settingsB = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=14 "
                           "-s arch=x86 -s compiler.runtime=MDd")
-
+        self.userChannel = "myUser/testing"
+        self.conan_ref = "MyPackage/0.1.0@%s" % self.userChannel
     def test_basic(self):
         client = TestClient()
-        client.run("new MyPackage/0.1.0@myuser/testing")
+        client.run("new %s" % self.conan_ref)
+        client.run("export %s" % self.userChannel)
         for settings in [self.settingsA, self.settingsB]:
-            client.run("path_info myUser %s" % settings)
+            client.run("info %s %s" % (self.conan_ref, settings))
             basePath = os.path.join("MyPackage", "0.1.0", "myUser", "testing");
             output = client.user_io.out;
             self.assertIn(os.path.join(basePath, "export"), output)
             self.assertIn(os.path.join(basePath, "source"), output)
 
-            client.run("info %s" % settings)
             id = re.search('ID:\s*([a-z0-9]*)', str(client.user_io.out)).group(1);
 
             self.assertIn(os.path.join(basePath, "build", id), output)
@@ -48,8 +49,9 @@ class PackageIdTest(unittest.TestCase):
                 client.save({CONANFILE: short_path_file})
                 short_folder = os.path.join(folder, ".cn");
                 os.environ["CONAN_USER_HOME_SHORT"] = short_folder
+                client.run("export %s" % self.userChannel)
                 for settings in [self.settingsA, self.settingsB]:
-                    client.run("path_info myUser %s" % settings)
+                    client.run("info %s %s" % (self.conan_ref, settings))
                     basePath = os.path.join("MyPackage", "0.1.0", "myUser", "testing");
                     output = client.user_io.out;
                     self.assertIn(os.path.join(basePath, "export"), output)
@@ -57,9 +59,9 @@ class PackageIdTest(unittest.TestCase):
                     self.assertNotIn(os.path.join(basePath, "build"), output)
                     self.assertNotIn(os.path.join(basePath, "package"), output)
 
-                    self.assertIn("source: %s" % short_folder, output)
-                    self.assertIn("build: %s" % short_folder, output)
-                    self.assertIn("package: %s" % short_folder, output)
+                    self.assertIn("sourceFolder: %s" % short_folder, output)
+                    self.assertIn("buildFolder: %s" % short_folder, output)
+                    self.assertIn("packageFolder: %s" % short_folder, output)
             finally:
                 if currentEnv is None:
                     del os.environ["CONAN_USER_HOME_SHORT"]

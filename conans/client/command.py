@@ -457,35 +457,6 @@ path to the CMake binary directory, like this:
                            env_values=env_values,
                            profile_name=args.profile)
 
-    def path_info(self, *args):
-        """Command to give information about the pathes conan will use for your build
-        """
-        parser = argparse.ArgumentParser(description=self.path_info.__doc__, prog="conan path_info")
-        parser.add_argument("user", help='user_name[/channel]. By default, channel is '
-                                         '"testing", e.g., phil or phil/stable')
-        parser.add_argument("reference", nargs='?', default=".",
-                            help='package recipe reference'
-                                 ' e.g., MyPackage/1.2@user/channel or ./my_project/')
-        parser.add_argument("--options", "-o",
-                            help='Options to build the package, overwriting the defaults. e.g., -o with_qt=true',
-                            nargs=1, action=Extender)
-        parser.add_argument("--settings", "-s",
-                            help='Settings to build the package, overwriting the defaults. e.g., -s compiler=gcc',
-                            nargs=1, action=Extender)
-        parser.add_argument("--profile", "-pr", default=None, help='Apply a profile')
-
-        args = parser.parse_args(*args)
-        current_path = os.getcwd()
-        try:
-            reference = ConanFileReference.loads(args.reference)
-        except:
-            reference = os.path.normpath(os.path.join(current_path, args.reference))
-        options = _get_tuples_list_from_extender_arg(args.options)
-        settings, package_settings = _get_simple_and_package_tuples(args.settings)
-        self._manager.path_info(args.user, reference, current_path, options, settings,
-                                 package_settings, args.profile)
-
-
     def build(self, *args):
         """ Utility command to run your current project 'conanfile.py' build() method.
         It doesn't work for 'conanfile.txt'. It is convenient for automatic translation
