@@ -751,7 +751,7 @@ path to the CMake binary directory, like this:
         self._manager.upload(args.pattern, args.package,
                              args.remote, all_packages=args.all,
                              force=args.force, confirm=args.confirm, retry=args.retry,
-                             retry_wait=args.retry_wait, dry_run = args.dry_run)
+                             retry_wait=args.retry_wait, dry_run=args.dry_run)
 
     def remote(self, *args):
         """ Handles the remote list and the package recipes associated to a remote.

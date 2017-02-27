@@ -16,7 +16,7 @@ class ConanUploader(object):
         self._loader = loader
 
     def upload_conan(self, pattern, force=False, all_packages=False, confirm=False,
-                     retry=None, retry_wait=None, dry_run = None):
+                     retry=None, retry_wait=None, dry_run=False):
         """Upload all the recipes matching 'pattern'"""
         if is_a_reference(pattern):
             ref = ConanFileReference.loads(pattern)
@@ -67,7 +67,7 @@ class ConanUploader(object):
             raise ConanException("Conanfile has build_policy='always', "
                                  "no packages can be uploaded")
 
-    def upload_package(self, package_ref, index=1, total=1, retry=None, retry_wait=None, dry_run = None):
+    def upload_package(self, package_ref, index=1, total=1, retry=None, retry_wait=None, dry_run=False):
         """Uploads the package identified by package_id"""
         msg = ("Uploading package %d/%d: %s" % (index, total, str(package_ref.package_id)))
         t1 = time.time()

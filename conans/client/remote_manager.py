@@ -26,7 +26,7 @@ class RemoteManager(object):
         self._output = output
         self._remote_client = remote_client
 
-    def upload_conan(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file, dry_run = None):
+    def upload_conan(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file, dry_run=False):
         """Will upload the conans to the first remote"""
 
         t1 = time.time()
@@ -52,7 +52,7 @@ class RemoteManager(object):
         else:
             return None
 
-    def upload_package(self, package_reference, remote, retry, retry_wait, dry_run = None):
+    def upload_package(self, package_reference, remote, retry, retry_wait, dry_run=False):
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
@@ -95,7 +95,7 @@ class RemoteManager(object):
 
             tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
                                     retry, retry_wait)
-            print(("WHAT2!"))
+
             duration = time.time() - t1
             log_package_upload(package_reference, duration, the_files, remote)
             logger.debug("====> Time remote_manager upload_package: %f" % duration)
