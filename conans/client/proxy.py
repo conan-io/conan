@@ -259,7 +259,7 @@ class ConanProxy(object):
                 ignore_deleted_file = EXPORT_SOURCES_TGZ_NAME
         return ignore_deleted_file
 
-    def upload_conan(self, conan_reference, retry, retry_wait):
+    def upload_recipe(self, conan_reference, retry, retry_wait):
         """ upload to defined remote in (-r=remote), to current remote
         or to default remote, in that order.
         If the remote is not set, set it
@@ -268,8 +268,8 @@ class ConanProxy(object):
 
         remote, ref_remote = self._get_remote(conan_reference)
 
-        result = self._remote_manager.upload_conan(conan_reference, remote, retry, retry_wait,
-                                                   ignore_deleted_file=ignore_deleted_file)
+        result = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
+                                                    ignore_deleted_file=ignore_deleted_file)
         if not ref_remote:
             self._registry.set_ref(conan_reference, remote)
         return result

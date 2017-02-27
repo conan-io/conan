@@ -171,7 +171,7 @@ class RestApiClient(object):
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def upload_conan(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
         """
         the_files: dict with relative_path: content
         """

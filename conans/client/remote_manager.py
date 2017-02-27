@@ -26,7 +26,7 @@ class RemoteManager(object):
         self._output = output
         self._remote_client = remote_client
 
-    def upload_conan(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file):
+    def upload_recipe(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file):
         """Will upload the conans to the first remote"""
 
         t1 = time.time()
@@ -38,7 +38,7 @@ class RemoteManager(object):
 
         the_files = compress_recipe_files(files, export_folder, self._output)
 
-        ret = self._call_remote(remote, "upload_conan", conan_reference, the_files,
+        ret = self._call_remote(remote, "upload_recipe", conan_reference, the_files,
                                 retry, retry_wait, ignore_deleted_file)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files, remote)

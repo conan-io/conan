@@ -506,10 +506,10 @@ If not:
             uploader.check_reference(ref)
             uploader.upload_package(PackageReference(ref, package_id), retry=retry,
                                     retry_wait=retry_wait)
-        else:  # Upload conans
-            uploader.upload_conan(conan_reference_or_pattern, all_packages=all_packages,
-                                  force=force, confirm=confirm,
-                                  retry=retry, retry_wait=retry_wait)
+        else:  # Upload more than one package, or the recipe
+            uploader.upload(conan_reference_or_pattern, all_packages=all_packages,
+                            force=force, confirm=confirm,
+                            retry=retry, retry_wait=retry_wait)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 

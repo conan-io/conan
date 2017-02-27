@@ -15,8 +15,8 @@ class ConanUploader(object):
         self._search_manager = search_manager
         self._loader = loader
 
-    def upload_conan(self, pattern, force=False, all_packages=False, confirm=False,
-                     retry=None, retry_wait=None):
+    def upload(self, pattern, force=False, all_packages=False, confirm=False,
+               retry=None, retry_wait=None):
         """Upload all the recipes matching 'pattern'"""
         if is_a_reference(pattern):
             ref = ConanFileReference.loads(pattern)
@@ -38,15 +38,15 @@ class ConanUploader(object):
                 msg = "Are you sure you want to upload '%s'?" % str(conan_ref)
                 upload = self._user_io.request_boolean(msg)
             if upload:
-                self._upload_conan(conan_ref, force, all_packages, retry, retry_wait)
+                self._upload(conan_ref, force, all_packages, retry, retry_wait)
 
-    def _upload_conan(self, conan_ref, force, all_packages, retry, retry_wait):
+    def _upload(self, conan_ref, force, all_packages, retry, retry_wait):
         """Uploads the conans identified by conan_ref"""
         if not force:
             self._check_package_date(conan_ref)
 
         self._user_io.out.info("Uploading %s" % str(conan_ref))
-        self._remote_proxy.upload_conan(conan_ref, retry, retry_wait)
+        self._remote_proxy.upload_recipe(conan_ref, retry, retry_wait)
 
         if all_packages:
             self.check_reference(conan_ref)
