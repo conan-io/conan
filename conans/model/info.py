@@ -210,7 +210,6 @@ class ConanInfo(object):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
                                      "requires", "full_requires", "scope", "recipe_hash",
                                      "env"])
-
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
