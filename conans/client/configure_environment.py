@@ -1,11 +1,56 @@
+import os
+import platform
+
 from conans.model.settings import Settings
 import copy
-from conans.client.generators.virtualenv import get_setenv_variables_commands
 from conans.model.env_info import DepsEnvInfo
 from conans.util.files import save
 from conans import tools
 from conans.client.output import ConanOutput
 import sys
+
+
+# MOVED DEPRECATED FUNCTIONS HERE TO DEPRECATE THE WHOLE MODULE
+
+def get_setenv_variables_commands(deps_env_info, command_set=None):
+    if command_set is None:
+        command_set = "SET" if platform.system() == "Windows" else "export"
+
+    multiple_to_set, simple_to_set = get_dict_values(deps_env_info)
+    ret = []
+    for name, value in multiple_to_set.items():
+        if platform.system() == "Windows":
+            ret.append(command_set + ' "' + name + '=' + value + ';%' + name + '%"')
+        else:
+            # Standard UNIX "sh" does not allow "export VAR=xxx" on one line
+            # So for portability reasons we split into two commands
+            ret.append(name + '=' + value + ':$' + name)
+            ret.append(command_set + ' ' + name)
+    for name, value in simple_to_set.items():
+        if platform.system() == "Windows":
+            ret.append(command_set + ' "' + name + '=' + value + '"')
+        else:
+            ret.append(name + '=' + value)
+            ret.append(command_set + ' ' + name + '=' + value)
+    return ret
+
+
+def get_dict_values(deps_env_info):
+    def adjust_var_name(name):
+        return "PATH" if name.lower() == "path" else name
+    multiple_to_set = {}
+    simple_to_set = {}
+    for name, value in deps_env_info.vars.items():
+        name = adjust_var_name(name)
+        if isinstance(value, list):
+            # Allow path with spaces in non-windows platforms
+            if platform.system() != "Windows" and name in ["PATH", "PYTHONPATH"]:
+                value = ['"%s"' % v for v in value]
+            multiple_to_set[name] = os.pathsep.join(value).replace("\\", "/")
+        else:
+            #  It works in windows too using "/" and allows to use MSYS shell
+            simple_to_set[name] = value.replace("\\", "/")
+    return multiple_to_set, simple_to_set
 
 
 class ConfigureEnvironment(object):
@@ -24,6 +69,25 @@ class ConfigureEnvironment(object):
             settings = self.conanfile.settings
 
         assert isinstance(settings, Settings)
+
+        self.output.warn("""
+***********************************************************************
+
+    WARNING!!!
+
+    ConfigureEnvironment class is deprecated and will be removed soon.
+    With ConfigureEnvironment, env variables from profiles and/or
+    command line are not applied.
+
+    Replace it with the right one according your needs:
+      - AutoToolsBuildEnvironment
+      - VisualStudioBuildEnvironment
+
+    Check docs.conan.io
+
+
+***********************************************************************
+        """)
 
         self._settings = settings
         self._deps_cpp_info = deps_cpp_info

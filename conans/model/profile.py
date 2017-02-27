@@ -1,21 +1,9 @@
-import copy
 from collections import OrderedDict
 from conans.util.config_parser import ConfigParser
 from conans.model.scope import Scopes, _root
 from conans.errors import ConanException
 from collections import defaultdict
-
-
-def _clean_value(value):
-    '''Strip a value and remove the quotes. EX:
-    key="value " => str('value')
-    '''
-    value = value.strip()
-    if value.startswith('"') and value.endswith('"') and value != '"':
-        value = value[1:-1]
-    if value.startswith("'") and value.endswith("'") and value != "'":
-        value = value[1:-1]
-    return value
+from conans.model.env_info import EnvValues, unquote
 
 
 class Profile(object):
@@ -26,8 +14,7 @@ class Profile(object):
         # Sections
         self._settings = OrderedDict()
         self._package_settings = defaultdict(OrderedDict)
-        self._env = OrderedDict()
-        self._package_env = defaultdict(OrderedDict)
+        self.env_values = EnvValues()
         self.scopes = Scopes()
 
     @property
@@ -37,14 +24,6 @@ class Profile(object):
     @property
     def settings(self):
         return list(self._settings.items())
-
-    @property
-    def package_env(self):
-        return {package_name: list(env.items()) for package_name, env in self._package_env.items()}
-
-    @property
-    def env(self):
-        return list(self._env.items())
 
     @staticmethod
     def loads(text):
@@ -58,7 +37,7 @@ class Profile(object):
 
             name, value = item.split("=", 1)
             name = name.strip()
-            value = _clean_value(value)
+            value = unquote(value)
             return package_name, name, value
 
         try:
@@ -79,17 +58,7 @@ class Profile(object):
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())
 
-            for env in doc.env.splitlines():
-                env = env.strip()
-                if env and not env.startswith("#"):
-                    if "=" not in env:
-                        raise ConanException("Invalid env line '%s'" % env)
-                    package_name, name, value = get_package_name_value(env)
-                    if package_name:
-                        obj._package_env[package_name][name] = value
-                    else:
-                        obj._env[name] = value
-
+            obj.env_values = EnvValues.loads(doc.env)
             obj._order()
             return obj
         except ConanException:
@@ -121,8 +90,7 @@ class Profile(object):
         result.append(scopes_txt)
 
         result.append("[env]")
-        dump_simple_items(self._env.items(), result)
-        dump_package_items(self._package_env.items(), result)
+        result.append(self.env_values.dumps())
 
         return "\n".join(result).replace("\n\n", "\n")
 
@@ -160,12 +128,6 @@ class Profile(object):
             res_env[name] = value  # Insert the rest of env vars at the end
 
         return res_env
-
-    def update_env(self, new_env):
-        '''Priorize new_env to override the current envs'''
-        if not new_env:
-            return
-        self._env = self._mix_env_with_new(self._env, new_env)
 
     def update_packages_env(self, new_packages_env):
         '''Priorize new_packages_env to override the current package_env'''
@@ -212,8 +174,3 @@ class Profile(object):
         # Order package settings
         for package_name, settings in self._package_settings.items():
             self._package_settings[package_name] = order_single_settings(settings)
-
-        tmp_env = copy.copy(self._env)
-        self._env = OrderedDict()
-        for ordered_key in sorted(tmp_env):
-            self._env[ordered_key] = tmp_env[ordered_key]

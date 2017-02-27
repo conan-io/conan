@@ -45,8 +45,9 @@ class ConfigParser(object):
             if field:
                 if self._allowed_fields and field not in self._allowed_fields and raise_unexpected_field:
                     raise ConanException("ConfigParser: Unrecognized field '%s'" % field)
-                current_lines = []
-                self._sections[field] = current_lines
+                else:
+                    current_lines = []
+                    self._sections[field] = current_lines
             else:
                 if current_lines is None:
                     raise ConanException("ConfigParser: Unexpected line '%s'" % line)

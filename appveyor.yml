@@ -1,4 +1,6 @@
 build: false
+cache:
+    - C:\mingw64-> appveyor.yml
 
 environment:
   matrix:
@@ -10,7 +12,9 @@ init:
   - "ECHO %PYTHON%"
 
 install:
-  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+  - If Not Exist "C:\mingw64" appveyor DownloadFile "https://s3-eu-west-1.amazonaws.com/downloads.conan.io/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
+  - If Not Exist "C:\mingw64" 7z x x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc:\
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw64\\bin;%PATH%"
   - "set PYTHONPATH=%PYTHONPATH%;%CD%"
   - "set CONAN_LOGGING_LEVEL=10"
   - "set CONAN_COMPILER=Visual Studio"
@@ -18,6 +22,7 @@ install:
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements.txt"
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_dev.txt"
   - "%PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt"
+
 
 test_script:
   - "nosetests --with-coverage conans.test"

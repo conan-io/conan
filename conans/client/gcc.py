@@ -17,6 +17,23 @@ class GCC(object):
             command = 'gcc main.c @conanbuildinfo.gcc -o main %s' % gcc.command_line
             self.run(command)
         """
+        print("""
+        ***********************************************************************
+
+            WARNING!!!
+
+            GCC helper class is deprecated and will be removed soon.
+            It's not needed anymore due the improvement of "gcc" generator.
+
+            Use "gcc" generator and invoke the compiler:
+
+                gcc main.c @conanbuildinfo.gcc -o main
+
+            Check docs.conan.io
+
+
+        ***********************************************************************
+                """)
         flags = ""
         if self.build_type:
             flags += self.build_type_flags
@@ -35,7 +52,7 @@ class GCC(object):
     @property
     def arch_flags(self):
         if self.arch == "x86":  # FIXME: If platform is x86_64
-            return "-m32 "
+            return "-m32"
         return ""
 
     def _get_setting_safe(self, name):

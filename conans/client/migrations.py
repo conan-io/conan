@@ -1,8 +1,10 @@
+from conans.client.client_cache import CONAN_CONF
 from conans.migrations import Migrator
+from conans.tools import replace_in_file
 from conans.util.files import load, save
 from conans.model.version import Version
 import os
-from conans.client.conf import default_settings_yml
+from conans.client.conf import default_settings_yml, new_default_confs_from_env
 
 
 class ClientMigrator(Migrator):
@@ -36,7 +38,7 @@ class ClientMigrator(Migrator):
         if old_version is None:
             return
 
-        if old_version < Version("0.16"):
+        if old_version < Version("0.20"):
             old_settings = """
 os: [Windows, Linux, Macos, Android, iOS]
 arch: [x86, x86_64, ppc64le, armv6, armv7, armv7hf, armv8]
@@ -59,3 +61,22 @@ compiler:
 build_type: [None, Debug, Release]
 """
             self._update_settings_yml(old_settings)
+
+        if old_version < Version("0.20"):
+            self.out.warn("Migration: Updating %s file" % CONAN_CONF)
+            conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
+            old_conf = load(conf_path)
+            if "[log]" not in old_conf:
+                backup_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF + ".backup")
+                save(backup_path, old_conf)
+                new_conf = old_conf.replace("[settings_defaults]",
+                                            "%s\n[settings_defaults]" % new_default_confs_from_env)
+
+                save(conf_path, new_conf)
+                self.out.warn("*" * 40)
+                self.out.warn("A new %s has been defined" % CONAN_CONF)
+                self.out.warn("Your old %s has been backup'd to: %s" % (CONAN_CONF, backup_path))
+                self.out.warn("*" * 40)
+            else:
+                self.out.warn("You are migrating from an older version, but your conan.conf "
+                              "seems to be already migrated")

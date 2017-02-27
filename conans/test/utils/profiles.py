@@ -1,7 +1,8 @@
+import os
+
 from conans.model.profile import Profile
 from conans.model.scope import Scopes
 from conans.util.files import save
-import os
 
 
 def create_profile(folder, name, settings=None, scopes=None, package_settings=None, env=None,
@@ -19,9 +20,9 @@ def create_profile(folder, name, settings=None, scopes=None, package_settings=No
 
     for package_name, envs in package_env.items():
         for var_name, value in envs:
-            profile._package_env[package_name][var_name] = value
+            profile.env_values.add(var_name, value, package_name)
 
     for var_name, value in env or {}:
-        profile._env[var_name] = value
+        profile.env_values.add(var_name, value)
 
     save(os.path.join(folder, name), profile.dumps())

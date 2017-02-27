@@ -1,7 +1,9 @@
-from conans.client.output import Color
-from conans.model.ref import PackageReference
-from conans.model.ref import ConanFileReference
 from collections import OrderedDict
+
+from conans.client.output import Color
+from conans.model.ref import ConanFileReference
+from conans.model.ref import PackageReference
+from conans.client.installer import build_id
 
 
 class Printer(object):
@@ -78,6 +80,13 @@ class Printer(object):
             if reg_remote and not remote:
                 remote_name = reg_remote.name
 
+            if show("id"):
+                id_ = conan.info.package_id()
+                self._out.writeln("    ID: %s" % id_, Color.BRIGHT_GREEN)
+            if show("build_id"):
+                bid = build_id(conan)
+                self._out.writeln("    BuildID: %s" % bid, Color.BRIGHT_GREEN)
+
             if isinstance(ref, ConanFileReference) and show("remote"):
                 if reg_remote:
                     self._out.writeln("    Remote: %s=%s" % (reg_remote.name, reg_remote.url),
@@ -145,7 +154,8 @@ class Printer(object):
     def print_search_packages(self, packages_props, reference, recipe_hash, packages_query):
         if not packages_props:
             if packages_query:
-                warn_msg = "There are no packages for reference '%s' matching the query '%s'" % (str(reference), packages_query)
+                warn_msg = "There are no packages for reference '%s' matching the query '%s'" % (str(reference),
+                                                                                                 packages_query)
             else:
                 warn_msg = "There are no packages for pattern '%s'" % str(reference)
             self._out.info(warn_msg)
@@ -168,7 +178,8 @@ class Printer(object):
                         for key in sorted(attrs):
                             self._print_colored_line(key, indent=3)
             package_recipe_hash = properties.get("recipe_hash", None)
-            # Always compare outdated with local recipe, simplification, if a remote check is needed install recipe first
+            # Always compare outdated with local recipe, simplification,
+            # if a remote check is needed install recipe first
             if recipe_hash:
                 self._print_colored_line("outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
             self._out.writeln("")
@@ -176,18 +187,24 @@ class Printer(object):
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings)
-        self._print_profile_section("env", profile.env)
+
+        envs = []
+        for package, env_vars in profile.env_values.data.items():
+            for name, value in env_vars.items():
+                key = "%s:%s" % (package, name) if package else name
+                envs.append((key, value))
+        self._print_profile_section("env", envs, separator='=')
         scopes = profile.scopes.dumps().splitlines()
         self._print_colored_line("[scopes]")
         for scope in scopes:
             self._print_colored_line(scope, indent=1)
 
-    def _print_profile_section(self, name, items, indent=0):
+    def _print_profile_section(self, name, items, indent=0, separator=": "):
         self._print_colored_line("[%s]" % name, indent=indent)
         for key, value in items:
-            self._print_colored_line(key, value=str(value), indent=indent+1)
+            self._print_colored_line(key, value=str(value), indent=indent+1, separator=separator)
 
-    def _print_colored_line(self, text, value=None, indent=0):
+    def _print_colored_line(self, text, value=None, indent=0, separator=": "):
         """ Print a colored line depending on its indentation level
             Attributes:
                 text: string line
@@ -202,7 +219,7 @@ class Printer(object):
         indent_text = ' ' * Printer.INDENT_SPACES * indent
         if value is not None:
             value_color = Color.BRIGHT_WHITE
-            self._out.write('%s%s: ' % (indent_text, text), text_color)
+            self._out.write('%s%s%s' % (indent_text, text, separator), text_color)
             self._out.writeln(value, value_color)
         else:
             self._out.writeln('%s%s' % (indent_text, text), text_color)

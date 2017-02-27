@@ -1,12 +1,13 @@
 import unittest
+import platform
+import os
+
 from conans.test.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
-import os
 from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
-import platform
 from conans.client.detect import detected_os
 
 
@@ -23,6 +24,22 @@ class InstallTest(unittest.TestCase):
         self.client.save(files, clean_first=True)
         if export:
             self.client.run("export lasote/stable")
+
+    def partials_test(self):
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+
+        self.client.run("install %s --build=missing" % (self.settings))
+
+        error = self.client.run("install %s --build=Bye" % (self.settings), ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("No package matching 'Bye*' pattern", self.client.user_io.out)
+
+        for package in ["Hello0", "Hello1"]:
+            error = self.client.run("install %s --build=%s" % (self.settings, package))
+            self.assertFalse(error)
+            self.assertNotIn("No package matching", self.client.user_io.out)
 
     def reuse_test(self):
         self._create("Hello0", "0.1")

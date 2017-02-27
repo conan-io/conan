@@ -9,7 +9,7 @@ class VisualStudioGenerator(Generator):
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <ExecutablePath>{bin_dirs}$(ExecutablePath)</ExecutablePath>
+    <ExecutablePath>{bin_dirs}%(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
