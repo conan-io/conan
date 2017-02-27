@@ -50,7 +50,7 @@ other=var
 var
 [moon]
 var=walker
-    """
+"""
 
         self.assertRaises(ConanException, ConfigParser, text, ["one", "two", "three"])
         conf = ConfigParser(text, ["one", "two", "three"], raise_unexpected_field=False)

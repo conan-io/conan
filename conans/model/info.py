@@ -209,7 +209,7 @@ class ConanInfo(object):
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
                                      "requires", "full_requires", "scope", "recipe_hash",
-                                     "env"])
+                                     "env"], raise_unexpected_field=False)
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
@@ -218,6 +218,7 @@ class ConanInfo(object):
         result.full_requires = RequirementsList.loads(parser.full_requires)
         result.requires = RequirementsInfo(result.full_requires, None)
         result.recipe_hash = parser.recipe_hash or None
+
         # TODO: Missing handling paring of requires, but not necessary now
         result.scope = Scopes.loads(parser.scope)
         result.env_values = EnvValues.loads(parser.env)

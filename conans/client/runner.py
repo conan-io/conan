@@ -57,7 +57,13 @@ class ConanRunner(object):
                     break
                 decoded_line = decode_text(line)
                 if stream_output and self._log_run_to_output:
-                    stream_output.write(decoded_line)
+                    try:
+                        stream_output.write(decoded_line)
+                    except UnicodeEncodeError:  # be agressive on text encoding
+                        decoded_line = decoded_line.encode("latin-1", "ignore").decode("latin-1",
+                                                                                       "ignore")
+                        stream_output.write(decoded_line)
+
                 if log_handler:
                     # Write decoded in PY2 causes some ASCII encoding problems
                     # tried to open the log_handler binary but same result.
