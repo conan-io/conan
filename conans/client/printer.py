@@ -6,7 +6,7 @@ from conans.client.output import Color
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
 from conans.client.installer import build_id
-
+import fnmatch
 
 class Printer(object):
     """ Print some specific information """
@@ -44,7 +44,7 @@ class Printer(object):
         self._out.writeln("")
 
     def print_info(self, deps_graph, project_reference, _info, registry, graph_updates_info=None,
-                   remote=None, node_times=None, path_resolver = None):
+                   remote=None, node_times=None, path_resolver = None, filter = None):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -75,6 +75,9 @@ class Printer(object):
                     continue
                 else:
                     ref = project_reference
+            if filter is not None:
+                if not fnmatch.fnmatch(str(ref), filter):
+                    continue
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             reg_remote = registry.get_ref(ref)
             # Excludes PROJECT fake reference

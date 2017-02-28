@@ -418,6 +418,9 @@ path to the CMake binary directory, like this:
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--only", "-n", nargs="?", const="None",
                             help='show fields only')
+        parser.add_argument("--package_filter", nargs='?',
+                            help='print information only for packages that match the filter'
+                                 'e.g., MyPackage/1.2@user/channel or MyPackage*')
         parser.add_argument("--build_order", "-bo",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
@@ -449,6 +452,7 @@ path to the CMake binary directory, like this:
                            settings=settings,
                            package_settings=package_settings,
                            info=args.only,
+                           filter=args.package_filter,
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
