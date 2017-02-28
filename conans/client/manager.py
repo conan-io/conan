@@ -62,7 +62,7 @@ class ConanManager(object):
         self._search_manager = search_manager
 
     def _loader(self, current_path=None, user_settings_values=None, package_settings=None,
-                user_options_values=None, scopes=None, env_values=None):
+                user_options_values=None, scopes=None, env_values=None, use_conaninfo=True):
 
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
@@ -74,7 +74,7 @@ class ConanManager(object):
 
         if current_path:
             conan_info_path = os.path.join(current_path, CONANINFO)
-            if os.path.exists(conan_info_path):
+            if use_conaninfo and os.path.exists(conan_info_path):
                 existing_info = ConanInfo.load_file(conan_info_path)
                 settings.values = existing_info.full_settings
                 options = existing_info.full_options  # Take existing options from conaninfo.txt
@@ -153,7 +153,8 @@ class ConanManager(object):
     def _get_graph(self, reference, current_path, remote, options, settings, filename, update,
                    check_updates, manifest_manager, scopes, package_settings, env_values):
 
-        loader = self._loader(current_path, settings, package_settings, options, scopes, env_values)
+        loader = self._loader(current_path, settings, package_settings, options,
+                              scopes, env_values, use_conaninfo=False)
         # Not check for updates for info command, it'll be checked when dep graph is built
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,

@@ -52,16 +52,13 @@ def _get_dependency(file_doc, dep_ref):
     return ret
 
 
-def _build_modules(trace_path):
+def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
     modules = []
-    mods = _extract_uploads_from_conan_trace(trace_path)
-    downloaded_modules = _extract_downloads_from_conan_trace(trace_path)
     deps = defaultdict(set)  # Reference: [Reference, Reference]
-
     # Extract needed information
-    for module_id, mod_doc in mods.items():
+    for module_id, mod_doc in uploaded_files.items():
         module_id = ConanFileReference.loads(module_id) if mod_doc["type"] == "recipe" \
-                                                        else PackageReference.loads(module_id)
+            else PackageReference.loads(module_id)
         # Store recipe and package dependencies
         if mod_doc["type"] == "package":
             conan_infos = [file_doc for file_doc in mod_doc["files"] if file_doc["name"] == "conaninfo.txt"]
@@ -73,7 +70,7 @@ def _build_modules(trace_path):
                     deps[str(module_id)].add(str(package_reference))
 
     # Add the modules
-    for module_id, mod_doc in mods.items():
+    for module_id, mod_doc in uploaded_files.items():
         module = BuildInfoModule()
         module.id = str(module_id)
         # Add artifacts
@@ -83,16 +80,42 @@ def _build_modules(trace_path):
 
         # Add dependencies, for each module dep modules
         for mod_dep_id in deps[module_id]:
-            if mod_dep_id in downloaded_modules:
-                down_module = downloaded_modules[mod_dep_id]
+            if mod_dep_id in downloaded_files:
+                down_module = downloaded_files[mod_dep_id]
                 # Check if the remote from the uploaded package matches the remote from the downloaded dependency
                 if down_module.get("remote", None) == mod_doc["remote"]:
                     for file_doc in down_module["files"]:
                         module.dependencies.append(_get_dependency(file_doc, mod_dep_id))
 
         modules.append(module)
-
     return modules
+
+
+def _get_only_downloads_module(downloaded_files):
+    """
+    Gets a BuildInfoModule for the downloaded_files
+    :param downloaded_files: {conan_ref: {"files": [doc_file, doc_file], "remote": remote }}
+    :return: BuildInfoModule object
+    """
+    ret = BuildInfoModule()
+    ret.id = "DownloadOnly"
+    for ref, file_docs in downloaded_files.items():
+        files = file_docs["files"]
+        for file_doc in files:
+            the_type = _get_type(file_doc["path"])
+            dep = BuildInfoModuleDependency(file_doc["name"], the_type, file_doc["sha1"], file_doc["md5"])
+            ret.dependencies.append(dep)
+    return ret
+
+
+def _build_modules(trace_path):
+
+    uploaded_files = _extract_uploads_from_conan_trace(trace_path)
+    downloaded_files = _extract_downloads_from_conan_trace(trace_path)
+    if uploaded_files:
+        return _get_upload_modules_with_deps(uploaded_files, downloaded_files)
+    else:
+        return [_get_only_downloads_module(downloaded_files)]
 
 
 def get_build_info(trace_path):

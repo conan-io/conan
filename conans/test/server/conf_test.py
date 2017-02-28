@@ -1,3 +1,5 @@
+from conans.errors import ConanException
+from conans.util.config_parser import ConfigParser
 import unittest
 from conans.util.files import save
 import os
@@ -37,6 +39,35 @@ class ServerConfTest(unittest.TestCase):
         self.storage_path = os.path.join(self.file_path, "storage")
         save(server_conf, fileconfig % self.storage_path)
         self.environ = {}
+
+    def test_unexpected_section(self):
+        text = """
+[one]
+text=value
+[two]
+other=var
+[three]
+var
+[moon]
+var=walker
+"""
+
+        self.assertRaises(ConanException, ConfigParser, text, ["one", "two", "three"])
+        conf = ConfigParser(text, ["one", "two", "three"], raise_unexpected_field=False)
+        self.assertEquals(conf.one, "text=value")
+        self.assertEquals(conf.two, "other=var")
+        self.assertEquals(conf.three, "var")
+        self.assertEquals(conf.moon, "var=walker")
+        with self.assertRaisesRegexp(ConanException, "Unrecognized field 'NOEXIST'"):
+            conf.NOEXIST
+
+        # IF an old config file is readed but the section is in the list, just return it empty
+        text = """
+[one]
+text=value
+        """
+        conf = ConfigParser(text, ["one", "two", "three"], raise_unexpected_field=False)
+        self.assertEquals(conf.two, "")
 
     def test_values(self):
         config = ConanServerConfigParser(self.file_path, environment=self.environ)

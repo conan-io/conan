@@ -1041,7 +1041,8 @@ def get_command():
                                                             Version(MIN_SERVER_COMPATIBLE_VERSION),
                                                             out)
         # To handle remote connections
-        rest_api_client = RestApiClient(out, requester=version_checker_requester)
+        put_headers = client_cache.read_put_headers()
+        rest_api_client = RestApiClient(out, requester=version_checker_requester, put_headers=put_headers)
         # To store user and token
         localdb = LocalDB(client_cache.localdb)
         # Wraps RestApiClient to add authentication support (same interface)
