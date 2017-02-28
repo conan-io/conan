@@ -193,7 +193,8 @@ class InstallTest(unittest.TestCase):
         info_path = os.path.join(client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("", conan_info.options.dumps())
-        self.assertIn("Hello0:language=1", conan_info.full_options.dumps())
+        # For conan install options are not cached anymore
+        self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
 
         # it is necessary to clean the cached conaninfo
         client.save(files, clean_first=True)
