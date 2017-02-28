@@ -4,12 +4,12 @@ from conans.paths import CONANFILE, BUILD_INFO_CMAKE
 
 
 conanfile_build_cmake = """    def build(self):
-        vars = {
+        defs = {
             "BUILD_SHARED_LIBS": not self.options.static,
             "CONAN_LANGUAGE": self.options.language
         }
         cmake = CMake(self.settings)
-        cmake.configure(self, vars=vars)
+        cmake.configure(self, defs=defs)
         cmake.build(self)"""
 
 conanfile_build_new_env = """
