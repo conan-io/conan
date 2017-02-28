@@ -67,7 +67,7 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conan_package.tgz", client.user_io.out)
         self.assertIn("Package is up to date", client.user_io.out)
 
-    def dry_run_test(self):
+    def skip_upload_test(self):
         """ Check that the option --dry does not upload anything
         """
         servers = {}
@@ -80,7 +80,7 @@ class UploadTest(unittest.TestCase):
         client.save(files)
         client.run("export frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build=missing")
-        client.run("upload Hello0/1.2.1@frodo/stable -r default --all --dry_run")
+        client.run("upload Hello0/1.2.1@frodo/stable -r default --all --skip_upload")
 
         # dry run should not upload
         self.assertNotIn("Uploading conan_package.tgz", client.user_io.out)

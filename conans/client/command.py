@@ -730,7 +730,7 @@ path to the CMake binary directory, like this:
         parser.add_argument("--remote", "-r", help='upload to this specific remote')
         parser.add_argument("--all", action='store_true',
                             default=False, help='Upload both package recipe and packages')
-        parser.add_argument("--dry_run", action='store_true',
+        parser.add_argument("--skip_upload", action='store_true',
                             default=False, help='Do not upload anything, just run the checks and the compression.')
         parser.add_argument("--force", action='store_true',
                             default=False,
@@ -751,7 +751,7 @@ path to the CMake binary directory, like this:
         self._manager.upload(args.pattern, args.package,
                              args.remote, all_packages=args.all,
                              force=args.force, confirm=args.confirm, retry=args.retry,
-                             retry_wait=args.retry_wait, dry_run=args.dry_run)
+                             retry_wait=args.retry_wait, skip_upload=args.skip_upload)
 
     def remote(self, *args):
         """ Handles the remote list and the package recipes associated to a remote.

@@ -493,7 +493,7 @@ If not:
             raise ConanException("Unable to build it successfully\n%s" % '\n'.join(trace[3:]))
 
     def upload(self, conan_reference_or_pattern, package_id=None, remote=None, all_packages=None,
-               force=False, confirm=False, retry=0, retry_wait=0, dry_run=False):
+               force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
         t1 = time.time()
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
@@ -505,11 +505,11 @@ If not:
             ref = ConanFileReference.loads(conan_reference_or_pattern)
             uploader.check_reference(ref)
             uploader.upload_package(PackageReference(ref, package_id), retry=retry,
-                                    retry_wait=retry_wait, dry_run=dry_run)
+                                    retry_wait=retry_wait, skip_upload=skip_upload)
         else:  # Upload conans
             uploader.upload_conan(conan_reference_or_pattern, all_packages=all_packages,
                                   force=force, confirm=confirm,
-                                  retry=retry, retry_wait=retry_wait, dry_run=dry_run)
+                                  retry=retry, retry_wait=retry_wait, skip_upload=skip_upload)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 
