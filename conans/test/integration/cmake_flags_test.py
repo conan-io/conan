@@ -1,6 +1,7 @@
 import unittest
 from conans.test.tools import TestClient
 from nose.plugins.attrib import attr
+import re
 
 conanfile_py = """
 from conans import ConanFile
@@ -46,6 +47,15 @@ message(STATUS "CHAT_CXX_FLAGS=${CHAT_FLAGS}")
 @attr("slow")
 class CMakeFlagsTest(unittest.TestCase):
 
+    def _get_line(self, text, begin):
+        lines = str(text).splitlines()
+        begin = "-- %s=" % begin
+        line = [l for l in lines if l.startswith(begin)][0]
+        flags = line[len(begin):].strip()
+        self.assertNotIn("'", flags)
+        self.assertNotIn('"', flags)
+        return flags
+
     def flags_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
@@ -55,8 +65,8 @@ class CMakeFlagsTest(unittest.TestCase):
 
         client.run('install -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
-        self.assertIn("CMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /W3 /GR /EHsc MyFlag1 MyFlag2",
-                      client.user_io.out)
+        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.user_io.out)
 
     def transitive_flags_test(self):
@@ -70,9 +80,8 @@ class CMakeFlagsTest(unittest.TestCase):
 
         client.run('install -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
-        self.assertIn("CMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /W3 /GR /EHsc MyFlag1 MyFlag2 "
-                      "MyChatFlag1 MyChatFlag2",
-                      client.user_io.out)
+        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2"))
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
                       client.user_io.out)
 
@@ -90,8 +99,8 @@ class CMakeFlagsTest(unittest.TestCase):
 
         client.run('install -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
-        self.assertIn("CMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /W3 /GR /EHsc",
-                      client.user_io.out)
+        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.user_io.out)
         self.assertIn("HELLO_CXX_FLAGS=MyFlag1 MyFlag2;"
                       "$<$<CONFIG:Release>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
@@ -115,8 +124,8 @@ class CMakeFlagsTest(unittest.TestCase):
         client.run('install -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
 
-        self.assertIn("CMAKE_CXX_FLAGS=/DWIN32 /D_WINDOWS /W3 /GR /EHsc",
-                      client.user_io.out)
+        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
                       client.user_io.out)
         self.assertIn("HELLO_CXX_FLAGS=MyFlag1 MyFlag2;"
