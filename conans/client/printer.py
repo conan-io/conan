@@ -88,24 +88,26 @@ class Printer(object):
             if show("build_id"):
                 bid = build_id(conan)
                 self._out.writeln("    BuildID: %s" % bid, Color.BRIGHT_GREEN)
-            if show("export_folder") and isinstance(path_resolver, SimplePaths):
-                path = path_resolver.export(ref)
-                self._out.writeln("    exportFolder: %s" % path, Color.BRIGHT_GREEN)
-            if show("source_folder") and isinstance(path_resolver, SimplePaths):
-                path = path_resolver.source(ref, conan.short_paths)
-                self._out.writeln("    sourceFolder: %s" % path, Color.BRIGHT_GREEN)
-            if show("build_folder") and isinstance(path_resolver, SimplePaths):
-                # @todo: check if this is correct or if it must always be package_id()
-                bid = build_id(conan)
-                if not bid:
-                    bid = conan.info.package_id();
-                path = path_resolver.build(PackageReference(ref, bid), conan.short_paths)
-                self._out.writeln("    buildFolder: %s" % path, Color.BRIGHT_GREEN)
-            if show("package_folder") and isinstance(path_resolver, SimplePaths):
-                # @todo: check if this is correct or if it must always be package_id()
-                id_ = conan.info.package_id();
-                path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
-                self._out.writeln("    packageFolder: %s" % path, Color.BRIGHT_GREEN)
+
+            if isinstance(ref, ConanFileReference) and isinstance(path_resolver, SimplePaths):
+                if show("export_folder"):
+                    path = path_resolver.export(ref)
+                    self._out.writeln("    exportFolder: %s" % path, Color.BRIGHT_GREEN)
+                if show("source_folder"):
+                    path = path_resolver.source(ref, conan.short_paths)
+                    self._out.writeln("    sourceFolder: %s" % path, Color.BRIGHT_GREEN)
+                if show("build_folder") and isinstance(path_resolver, SimplePaths):
+                    # @todo: check if this is correct or if it must always be package_id()
+                    bid = build_id(conan)
+                    if not bid:
+                        bid = conan.info.package_id();
+                    path = path_resolver.build(PackageReference(ref, bid), conan.short_paths)
+                    self._out.writeln("    buildFolder: %s" % path, Color.BRIGHT_GREEN)
+                if show("package_folder") and isinstance(path_resolver, SimplePaths):
+                    id_ = conan.info.package_id();
+                    path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
+                    self._out.writeln("    packageFolder: %s" % path, Color.BRIGHT_GREEN)
+
             if isinstance(ref, ConanFileReference) and show("remote"):
                 if reg_remote:
                     self._out.writeln("    Remote: %s=%s" % (reg_remote.name, reg_remote.url),
