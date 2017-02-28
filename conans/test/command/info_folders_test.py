@@ -57,7 +57,6 @@ class InfoFoldersTest(unittest.TestCase):
             with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
                 client = TestClient(base_folder=folder)
                 client.save({CONANFILE: short_path_file})
-                os.environ["CONAN_USER_HOME_SHORT"] = short_folder
                 client.run("export %s" % self.userChannel)
                 client.run("info %s %s" % (self.conan_ref, self.settings))
                 basePath = os.path.join("MyPackage", "0.1.0", "myUser", "testing");
