@@ -17,7 +17,7 @@ class AConan(ConanFile):
 """
 
 
-class PackageIdTest(unittest.TestCase):
+class InfoFoldersTest(unittest.TestCase):
     def setUp(self):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
