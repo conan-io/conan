@@ -5,6 +5,7 @@ import unittest
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
 from conans.client.cmake import CMake
+from conans.tools import cpu_count
 
 
 class CMakeTest(unittest.TestCase):
@@ -134,6 +135,7 @@ build_type: [ Release]
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
         settings.arch = "x86"
+        settings.os = "Windows"
 
         if sys.platform == 'win32':
             dot_dir = "."
@@ -176,7 +178,7 @@ build_type: [ Release]
             escaped_args = r"'--target' 'install' '--bar '\''foo'\'''"
         self.assertEqual('cmake --build %s --config Debug %s' % (tempdir, escaped_args),
                          conan_file.command)
-        
+
 
         settings.build_type = "Release"
         cmake = CMake(settings)
@@ -185,6 +187,24 @@ build_type: [ Release]
 
         cmake.build(conan_file, build_dir=self.tempdir)
         self.assertEqual('cmake --build %s --config Release' % tempdir, conan_file.command)
+
+        cmake.build(conan_file, parallel=True)  # Should be set up in cmake.configure() for Visual Studio
+        self.assertEqual('cmake --build %s --config Release' % dot_dir, conan_file.command)
+
+        settings.compiler = "gcc"
+        settings.compiler.version = "5.4"
+        cmake = CMake(settings)
+        cmake.build(conan_file, parallel=True)
+        if sys.platform == 'win32':
+            self.assertEqual('cmake --build . -- -j%i' % cpu_count(), conan_file.command)
+        else:
+            self.assertEqual("cmake --build '.' '--' '-j%i'" % cpu_count(), conan_file.command)
+
+        cmake.build(conan_file, args=['foo', '--', 'bar'], parallel=True)
+        if sys.platform == 'win32':
+            self.assertEqual('cmake --build . foo -- bar -j%i' % cpu_count(), conan_file.command)
+        else:
+            self.assertEqual("cmake --build '.' 'foo' '--' 'bar' '-j%i'" % cpu_count(), conan_file.command)
 
 
 class ConanFileMock(object):
