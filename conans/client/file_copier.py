@@ -40,8 +40,9 @@ class FileCopier(object):
     def report(self, output, warn=False):
         report_copied_files(self._copied, output, warn)
 
-    def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None):
-        """ FileCopier is lazy, it just store requested copies, and execute them later
+    def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
+                 excludes=None):
+        """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
                    the files will be copied. Eg: "bin"
@@ -61,9 +62,19 @@ class FileCopier(object):
             self._base_src = os.path.dirname(reldir)
             pattern = os.path.basename(reldir)
 
-        copied_files = []
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
+        files_to_copy = self._filter_files(src, pattern, excludes)
+        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
+        self._copied.extend(files_to_copy)
+        return copied_files
+
+    @staticmethod
+    def _filter_files(src, pattern, excludes=None):
+        """ return a list of the files matching the patterns
+        The list will be relative path names wrt to the root src folder
+        """
+        filenames = []
         for root, subfolders, files in os.walk(src, followlinks=True):
             basename = os.path.basename(root)
             # Skip git or svn subfolders
@@ -79,23 +90,38 @@ class FileCopier(object):
             relative_path = os.path.relpath(root, src)
             for f in files:
                 relative_name = os.path.normpath(os.path.join(relative_path, f))
-                if fnmatch.fnmatch(relative_name, pattern):
-                    abs_src_name = os.path.join(root, f)
-                    filename = relative_name if keep_path else f
-                    abs_dst_name = os.path.normpath(os.path.join(dst, filename))
-                    try:
-                        os.makedirs(os.path.dirname(abs_dst_name))
-                    except:
-                        pass
-                    if links and os.path.islink(abs_src_name):
-                        linkto = os.readlink(abs_src_name)
-                        try:
-                            os.remove(abs_dst_name)
-                        except OSError:
-                            pass
-                        os.symlink(linkto, abs_dst_name)
-                    else:
-                        shutil.copy2(abs_src_name, abs_dst_name)
-                    copied_files.append(abs_dst_name)
-                    self._copied.append(relative_name)
+                filenames.append(relative_name)
+
+        files_to_copy = fnmatch.filter(filenames, pattern)
+        if excludes:
+            if not isinstance(excludes, tuple):
+                excludes = (excludes, )
+            for exclude in excludes:
+                files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
+        return files_to_copy
+
+    @staticmethod
+    def _copy_files(files, src, dst, keep_path, symlinks):
+        """ executes a multiple file copy from [(src_file, dst_file), (..)]
+        managing symlinks if necessary
+        """
+        copied_files = []
+        for filename in files:
+            abs_src_name = os.path.join(src, filename)
+            filename = filename if keep_path else os.path.basename(filename)
+            abs_dst_name = os.path.normpath(os.path.join(dst, filename))
+            try:
+                os.makedirs(os.path.dirname(abs_dst_name))
+            except:
+                pass
+            if symlinks and os.path.islink(abs_src_name):
+                linkto = os.readlink(abs_src_name)  # @UndefinedVariable
+                try:
+                    os.remove(abs_dst_name)
+                except OSError:
+                    pass
+                os.symlink(linkto, abs_dst_name)  # @UndefinedVariable
+            else:
+                shutil.copy2(abs_src_name, abs_dst_name)
+            copied_files.append(abs_dst_name)
         return copied_files
