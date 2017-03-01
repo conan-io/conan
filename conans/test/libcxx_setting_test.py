@@ -78,7 +78,7 @@ class LibcxxSettingTest(unittest.TestCase):
             self.assertIn("-stdlib=libstdc++", str(client.user_io.out))
             self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=0", str(client.user_io.out))
 
-            client.run('install -s compiler=clang -s compiler.libcxx=libstdc++11', ignore_error=False)
+            client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++11', ignore_error=False)
             client.run('build')
             self.assertIn("-stdlib=libstdc++", str(client.user_io.out))
             self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=1", str(client.user_io.out))

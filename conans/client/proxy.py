@@ -259,18 +259,18 @@ class ConanProxy(object):
                 ignore_deleted_file = EXPORT_SOURCES_TGZ_NAME
         return ignore_deleted_file
 
-    def upload_recipe(self, conan_reference, retry, retry_wait):
+    def upload_recipe(self, conan_reference, retry, retry_wait, skip_upload):
         """ upload to defined remote in (-r=remote), to current remote
         or to default remote, in that order.
         If the remote is not set, set it
         """
         ignore_deleted_file = self.complete_recipe_sources(conan_reference, force_complete=False)
-
         remote, ref_remote = self._get_remote(conan_reference)
 
         result = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
-                                                    ignore_deleted_file=ignore_deleted_file)
-        if not ref_remote:
+                                                    ignore_deleted_file=ignore_deleted_file,
+                                                    skip_upload=skip_upload)
+        if not ref_remote and not skip_upload:
             self._registry.set_ref(conan_reference, remote)
         return result
 
@@ -286,14 +286,13 @@ class ConanProxy(object):
                 remote = self._registry.default_remote
         return remote, ref_remote
 
-    def upload_package(self, package_ref, retry, retry_wait):
+    def upload_package(self, package_ref, retry, retry_wait, skip_upload):
         remote, current_remote = self._get_remote(package_ref.conan)
-
         if not current_remote:
             self._out.warn("Remote for '%s' not defined, uploading to %s"
                            % (str(package_ref.conan), remote.name))
-        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait)
-        if not current_remote:
+        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait, skip_upload)
+        if not current_remote and not skip_upload:
             self._registry.set_ref(package_ref.conan, remote)
         return result
 
