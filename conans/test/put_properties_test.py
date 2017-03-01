@@ -42,7 +42,7 @@ class PutPropertiesTest(unittest.TestCase):
 
 
 def _create_property_files(client, values):
-    lines = []
+    lines = ["#Some comment", " #Some comments"]
     for name, value in values.items():
         lines.append("%s=%s" % (name, value))
     save(client.client_cache.put_headers_path, "\n".join(lines))
