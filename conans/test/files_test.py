@@ -59,3 +59,30 @@ class FileCopierTest(unittest.TestCase):
             self.assertEqual("Hello1", load(os.path.join(folder2, "texts/file1.txt")))
             self.assertEqual("Hello1 sub", load(os.path.join(folder2, "texts/sub1/file1.txt")))
             self.assertNotIn("subdir2", os.listdir(os.path.join(folder2, "texts")))
+
+    def excludes_test(self):
+        folder1 = temp_folder()
+        sub1 = os.path.join(folder1, "subdir1")
+        save(os.path.join(sub1, "file1.txt"), "Hello1")
+        save(os.path.join(sub1, "file2.c"), "Hello2")
+
+        folder2 = temp_folder()
+        copier = FileCopier(folder1, folder2)
+        copier("*.*", "texts", excludes="*.c")
+        self.assertEqual(['file1.txt'], os.listdir(os.path.join(folder2, "texts/subdir1")))
+
+        folder1 = temp_folder()
+        save(os.path.join(folder1, "MyLib.txt"), "")
+        save(os.path.join(folder1, "MyLibImpl.txt"), "")
+        save(os.path.join(folder1, "MyLibTests.txt"), "")
+        folder2 = temp_folder()
+        copier = FileCopier(folder1, folder2)
+        copier("*.txt", excludes="*Test*.txt")
+        self.assertEqual(['MyLib.txt', 'MyLibImpl.txt'], os.listdir(folder2))
+
+        folder2 = temp_folder()
+        copier = FileCopier(folder1, folder2)
+        copier("*.txt", excludes=("*Test*.txt", "*Impl*"))
+        self.assertEqual(['MyLib.txt'], os.listdir(folder2))
+
+
