@@ -45,7 +45,7 @@ class ClientCache(SimplePaths):
         try:
             contents = load(self.put_headers_path)
             for line in contents.splitlines():
-                if line:
+                if line and not line.strip().startswith("#"):
                     tmp = line.split("=", 1)
                     if len(tmp) != 2:
                         raise Exception()

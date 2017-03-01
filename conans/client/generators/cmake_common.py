@@ -8,10 +8,10 @@ set(CONAN_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
 set(CONAN_COMPILE_DEFINITIONS_{dep}{build_type} {deps.compile_definitions})
-set(CONAN_CXX_FLAGS_{dep}{build_type} {deps.cppflags})
-set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type} {deps.sharedlinkflags})
-set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type} {deps.exelinkflags})
-set(CONAN_C_FLAGS_{dep}{build_type} {deps.cflags})
+set(CONAN_CXX_FLAGS_{dep}{build_type} "{deps.cppflags}")
+set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type} "{deps.sharedlinkflags}")
+set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type} "{deps.exelinkflags}")
+set(CONAN_C_FLAGS_{dep}{build_type} "{deps.cflags}")
 """
 
 
@@ -49,10 +49,10 @@ set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
 set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
 set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
-set(CONAN_CXX_FLAGS{build_type} {deps.cppflags} ${{CONAN_CXX_FLAGS{build_type}}})
-set(CONAN_SHARED_LINKER_FLAGS{build_type} {deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS{build_type}}})
-set(CONAN_EXE_LINKER_FLAGS{build_type} {deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS{build_type}}})
-set(CONAN_C_FLAGS{build_type} {deps.cflags} ${{CONAN_C_FLAGS{build_type}}})
+set(CONAN_CXX_FLAGS{build_type} "{deps.cppflags} ${{CONAN_CXX_FLAGS{build_type}}}")
+set(CONAN_SHARED_LINKER_FLAGS{build_type} "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS{build_type}}}")
+set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS{build_type}}}")
+set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
 set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
 """
 
