@@ -27,6 +27,52 @@ class TestConan(ConanFile):
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
 
+    def test_exclude_basic(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "*.txt", "!*file1.txt"
+    exports_sources = "*.cpp", "!*temp.cpp"
+"""
+
+        client.save({CONANFILE: conanfile,
+                     "file.txt": "",
+                     "file1.txt": "",
+                     "file.cpp": "",
+                     "file_temp.cpp": ""})
+        client.run("export lasote/stable")
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export(conan_ref)
+        self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
+        self.assertFalse(os.path.exists(os.path.join(export_path, "file1.txt")))
+        self.assertTrue(os.path.exists(os.path.join(export_path, EXPORT_SOURCES_DIR, "file.cpp")))
+        self.assertFalse(os.path.exists(os.path.join(export_path, EXPORT_SOURCES_DIR,
+                                                     "file_temp.cpp")))
+
+    def test_exclude_folders(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "*.txt", "!*/temp/*"
+"""
+
+        client.save({CONANFILE: conanfile,
+                     "file.txt": "",
+                     "any/temp/file1.txt": "",
+                     "other/sub/file2.txt": ""})
+        client.run("export lasote/stable")
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export(conan_ref)
+        self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
+        self.assertFalse(os.path.exists(os.path.join(export_path, "any/temp/file1.txt")))
+        self.assertTrue(os.path.exists(os.path.join(export_path, "other/sub/file2.txt")))
+
 
 class ExportTest(unittest.TestCase):
 
