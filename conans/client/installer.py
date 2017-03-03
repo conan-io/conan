@@ -247,7 +247,7 @@ class ConanInstaller(object):
         if isinstance(build_mode, list):
             to_build = [n[0] for n in nodes_to_build if n[3]]
             for pattern in build_mode:
-                if pattern == "*":
+                if pattern in ["*", "outdated*"]:
                     continue
                 matched = any([fnmatch.fnmatch(str(ref), pattern) for ref in to_build])
                 if not matched:
