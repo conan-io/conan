@@ -78,8 +78,8 @@ class {package_name}TestConan(ConanFile):
 
     def build(self):
         cmake = CMake(self.settings)
-        self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
-        self.run("cmake --build . %s" % cmake.build_config)
+        cmake.configure(self)
+        cmake.build(self)
 
     def imports(self):
         self.copy("*.dll", "bin", "bin")
