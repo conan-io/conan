@@ -8,6 +8,7 @@ from conans.model.values import Values
 import urllib
 from conans.paths import conan_expand_user
 from collections import OrderedDict
+from conans.model.env_info import unquote
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
@@ -19,7 +20,7 @@ compiler:
        threads: [None, posix]
        libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
-        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3"]
+        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -100,7 +101,7 @@ class ConanClientConfigParser(ConfigParser, object):
         if env is not None:
             return env
         try:
-            return self.get_item(var_name)
+            return unquote(self.get_item(var_name))
         except ConanException:
             return default_value
 

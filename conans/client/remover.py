@@ -47,8 +47,9 @@ class DiskRemover(object):
             self._remove(path, conan_ref, "builds")
         else:
             for id_ in ids:
-                self._remove(self._paths.build(PackageReference(conan_ref, id_)), conan_ref,
-                             "package:%s" % id_)
+                # Removal build IDs should be those of the build_id if present
+                pkg_path = self._paths.build(PackageReference(conan_ref, id_))
+                self._remove(pkg_path, conan_ref, "package:%s" % id_)
 
     def remove_packages(self, conan_ref, ids_filter=None):
         if not ids_filter:  # Remove all

@@ -62,7 +62,7 @@ class ConanManager(object):
         self._search_manager = search_manager
 
     def _loader(self, current_path=None, user_settings_values=None, package_settings=None,
-                user_options_values=None, scopes=None, env_values=None):
+                user_options_values=None, scopes=None, env_values=None, use_conaninfo=True):
 
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
@@ -74,7 +74,7 @@ class ConanManager(object):
 
         if current_path:
             conan_info_path = os.path.join(current_path, CONANINFO)
-            if os.path.exists(conan_info_path):
+            if use_conaninfo and os.path.exists(conan_info_path):
                 existing_info = ConanInfo.load_file(conan_info_path)
                 settings.values = existing_info.full_settings
                 options = existing_info.full_options  # Take existing options from conaninfo.txt
@@ -153,7 +153,8 @@ class ConanManager(object):
     def _get_graph(self, reference, current_path, remote, options, settings, filename, update,
                    check_updates, manifest_manager, scopes, package_settings, env_values):
 
-        loader = self._loader(current_path, settings, package_settings, options, scopes, env_values)
+        loader = self._loader(current_path, settings, package_settings, options,
+                              scopes, env_values, use_conaninfo=False)
         # Not check for updates for info command, it'll be checked when dep graph is built
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
@@ -413,6 +414,12 @@ If not:
         if not os.path.exists(conan_file_path):
             raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
+        loader = self._loader()
+        conanfile = loader.load_conan(conan_file_path, self._user_io.out, reference=reference)
+        if hasattr(conanfile, "build_id"):
+            raise ConanException("package command does not support recipes with 'build_id'\n"
+                                 "To repackage them use 'conan install'")
+
         if not package_id:
             packages = [PackageReference(reference, packid)
                         for packid in self._client_cache.conan_builds(reference)]
@@ -438,12 +445,11 @@ If not:
             output = ScopedOutput(str(reference), self._user_io.out)
             output.info("Re-packaging %s" % package_reference.package_id)
             loader = self._loader(build_folder)
-            conanfile = loader.load_conan(conan_file_path, self._user_io.out,
-                                          reference=package_reference.conan)
+
+            conanfile = loader.load_conan(conan_file_path, self._user_io.out, reference=reference)
             _load_info_file(build_folder, conanfile, output)
             rmdir(package_folder)
-
-            with environment_append(*conanfile.env_values_dicts):
+            with environment_append(conanfile.env):
                 packager.create_package(conanfile, build_folder, package_folder, output)
 
     def build(self, conanfile_path, current_path, test=False, filename=None):
@@ -474,7 +480,7 @@ If not:
             _load_info_file(current_path, conan_file, output)
             os.chdir(current_path)
             conan_file._conanfile_directory = conanfile_path
-            with environment_append(*conan_file.env_values_dicts):
+            with environment_append(conan_file.env):
                 conan_file.build()
 
             if test:
@@ -487,9 +493,8 @@ If not:
             raise ConanException("Unable to build it successfully\n%s" % '\n'.join(trace[3:]))
 
     def upload(self, conan_reference_or_pattern, package_id=None, remote=None, all_packages=None,
-               force=False, confirm=False, retry=0, retry_wait=0):
+               force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
-
         t1 = time.time()
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
                                   remote)
@@ -500,11 +505,11 @@ If not:
             ref = ConanFileReference.loads(conan_reference_or_pattern)
             uploader.check_reference(ref)
             uploader.upload_package(PackageReference(ref, package_id), retry=retry,
-                                    retry_wait=retry_wait)
+                                    retry_wait=retry_wait, skip_upload=skip_upload)
         else:  # Upload conans
             uploader.upload_conan(conan_reference_or_pattern, all_packages=all_packages,
                                   force=force, confirm=confirm,
-                                  retry=retry, retry_wait=retry_wait)
+                                  retry=retry, retry_wait=retry_wait, skip_upload=skip_upload)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 

@@ -99,8 +99,7 @@ class HelloConan(ConanFile):
         self.env_info.var3="Another value"
         self.env_info.path = "/dir"
 '''
-        files = {}
-        files["conanfile.py"] = conanfile
+        files = {"conanfile.py": conanfile}
         client.save(files)
         client.run("export lasote/stable")
         conanfile = '''
@@ -128,9 +127,9 @@ class HelloConan(ConanFile):
         self.assertNotIn("bad value", activate_contents)
         self.assertIn("var1=good value", activate_contents)
         if platform.system() == "Windows":
-            self.assertIn("var2=value3;value2;%var2%", activate_contents)
+            self.assertIn('var2=value3;value2;%var2%', activate_contents)
         else:
-            self.assertIn("var2=value3:value2:$var2", activate_contents)
+            self.assertIn('var2="value3":"value2":$var2', activate_contents)
         self.assertIn("Another value", activate_contents)
         self.assertIn("PATH=/dir", activate_contents)
 

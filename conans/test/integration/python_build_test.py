@@ -218,7 +218,7 @@ class ConanToolPackage(ConanFile):
         self.assertRaises(Exception, client.run, "install conantool/1.0@lasote/stable --build missing")
 
         # But we can inject the PYTHONPATH
-        client.run("install conantool/1.0@lasote/stable -e PYTHONPATH='%s'" % external_dir)
+        client.run("install conantool/1.0@lasote/stable -e PYTHONPATH=['%s']" % external_dir)
 
         # Now we want to reuse the package and access both external stuff and mytest.py stuff
 
@@ -243,3 +243,30 @@ class ToolsTest(ConanFile):
         pythonpath = info.env_values.env_dicts(None)[1]["PYTHONPATH"]
         self.assertEquals(os.path.normpath(pythonpath[0]), os.path.normpath(external_dir))
         self.assertTrue(len(pythonpath), 2)
+
+    def external_python_with_simple_var_test(self):
+        client = TestClient()
+        conanfile_simple = """from conans import ConanFile, tools
+
+class ToolsTest(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def build(self):
+        with tools.pythonpath(self):
+            import external
+            external.external_baz()
+
+    """
+        external_py = '''
+def external_baz():
+    print("External baz")
+
+            '''
+        external_dir = temp_folder()
+        save(os.path.join(external_dir, "external.py"), external_py)
+
+        client.save({CONANFILE: conanfile_simple})
+        client.run("export lasote/stable")
+        # Should work even if PYTHONPATH is not declared as [], only external resource needed
+        client.run('install Hello/0.1@lasote/stable --build missing -e PYTHONPATH="%s"' % external_dir)

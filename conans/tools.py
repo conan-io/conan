@@ -1,46 +1,106 @@
 """ ConanFile user tools, as download, etc
 """
 from __future__ import print_function
-import sys
-import os
 
 import logging
-
-from conans.errors import ConanException
-from conans.util.files import _generic_algorithm_sum, load
-from patch import fromfile, fromstring
-from conans.client.rest.uploader_downloader import Downloader
-import requests
-from conans.client.output import ConanOutput
-import platform
-from conans.model.version import Version
-from conans.util.log import logger
-from conans.client.runner import ConanRunner
-from contextlib import contextmanager
 import multiprocessing
+import os
+import platform
+import re
+import subprocess
+import sys
+
+
+from contextlib import contextmanager
+
+import requests
+from patch import fromfile, fromstring
+
+from conans.client.output import ConanOutput
+from conans.client.rest.uploader_downloader import Downloader
+from conans.client.runner import ConanRunner
+from conans.errors import ConanException
+from conans.model.version import Version
+# noinspection PyUnresolvedReferences
+from conans.util.files import _generic_algorithm_sum, load, save
+from conans.util.log import logger
+
+
+def unix_path(path):
+    """"Used to translate windows paths to MSYS unix paths like
+    c/users/path/to/file"""
+    pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
+    return pattern.sub('/\\1/', path).replace('\\', '/').lower()
+
+
+def escape_windows_cmd(command):
+    """ To use in a regular windows cmd.exe
+        1. Adds escapes so the argument can be unpacked by CommandLineToArgvW()
+        2. Adds escapes for cmd.exe so the argument survives cmd.exe's substitutions.
+
+        Useful to escape commands to be executed in a windows bash (msys2, cygwin etc)
+    """
+    quoted_arg = subprocess.list2cmdline([command])
+    return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
+
+
+def run_in_windows_bash(conanfile, bashcmd, cwd=None):
+    """ Will run a unix command inside the msys2 environment
+        It requires to have MSYS2 in the path and MinGW
+    """
+    if platform.system() != "Windows":
+        raise ConanException("Command only for Windows operating system")
+    # This needs to be set so that msys2 bash profile will set up the environment correctly.
+    try:
+        arch = conanfile.settings.arch  # Maybe arch doesn't exist
+    except:
+        arch = None
+    env_vars = {"MSYSTEM": "MINGW32" if arch == "x86" else "MINGW64",
+                "MSYS2_PATH_TYPE": "inherit"}
+    with environment_append(env_vars):
+        curdir = unix_path(cwd or os.path.abspath(os.path.curdir))
+        # Needed to change to that dir inside the bash shell
+        to_run = 'cd "%s" && %s ' % (curdir, bashcmd)
+        wincmd = 'bash --login -c %s' % escape_windows_cmd(to_run)
+        conanfile.output.info('run_in_windows_bash: %s' % wincmd)
+        conanfile.run(wincmd)
+
+
+@contextmanager
+def chdir(newdir):
+    old_path = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)
 
 
 @contextmanager
 def pythonpath(conanfile):
     old_path = sys.path[:]
-    try:
-        sys.path.extend(conanfile.env["PYTHONPATH"].split(os.pathsep))
-    except KeyError:
-        pass
+    python_path = conanfile.env.get("PYTHONPATH", None)
+    if python_path:
+        if isinstance(python_path, list):
+            sys.path.extend(python_path)
+        else:
+            sys.path.append(python_path)
+
     yield
     sys.path = old_path
 
 
 @contextmanager
-def environment_append(env_vars, list_env_vars=None):
+def environment_append(env_vars):
     """
     :param env_vars: List of simple environment vars. {name: value, name2: value2} => e.j: MYVAR=1
-    :param list_env_vars: List of appendable environment vars. {name: [value, value2]} => e.j. PATH=/path/1:/path/2
+                     The values can also be lists of appendable environment vars. {name: [value, value2]}
+                      => e.j. PATH=/path/1:/path/2
     :return: None
     """
     old_env = dict(os.environ)
-    if list_env_vars:
-        for name, value in list_env_vars.items():
+    for name, value in env_vars.items():
+        if isinstance(value, list):
             env_vars[name] = os.pathsep.join(value)
             if name in old_env:
                 env_vars[name] += os.pathsep + old_env[name]
@@ -56,8 +116,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
-        env = ConfigureEnvironment(self)
-        command = "%s && %s" % (env.command_line_env, build_command)
+        command = "%s && %s" % (tools.vcvars_command(self.settings), build_command)
         self.run(command)
     """
     targets = targets or []
@@ -131,9 +190,18 @@ def human_size(size_bytes):
     return "%s %s" % (formatted_size, suffix)
 
 
-def unzip(filename, destination="."):
+def unzip(filename, destination=".", keep_permissions=False):
+    """
+    Unzip a zipped file
+    :param filename: Path to the zip file
+    :param destination: Destination folder
+    :param keep_permissions: Keep the zip permissions. WARNING: Can be dangerous if the zip was not created in a NIX
+    system, the bits could produce undefined permission schema. Use only this option if you are sure that the
+    zip was created correctly.
+    :return:
+    """
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
-        filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
+            filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
         return untargz(filename, destination)
     import zipfile
@@ -168,6 +236,11 @@ def unzip(filename, destination="."):
                 print_progress(extracted_size, uncompress_size)
                 try:
                     z.extract(file_, full_path)
+                    if keep_permissions:
+                        # Could be dangerous if the ZIP has been created in a non nix system
+                        # https://bugs.python.org/issue15795
+                        perm = file_.external_attr >> 16 & 0xFFF
+                        os.chmod(os.path.join(full_path, file_.filename), perm)
                 except Exception as e:
                     print("Error extract %s\n%s" % (file_.filename, str(e)))
 
@@ -196,6 +269,8 @@ def download(url, filename, verify=True, out=None, retry=2, retry_wait=5):
     downloader = Downloader(requests, out, verify=verify)
     downloader.download(url, filename, retry=retry, retry_wait=retry_wait)
     out.writeln("")
+
+
 #     save(filename, content)
 
 
@@ -208,7 +283,6 @@ def replace_in_file(file_path, search, replace):
 
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
-
     real_signature = _generic_algorithm_sum(file_path, algorithm_name)
     if real_signature != signature:
         raise ConanException("%s signature failed for '%s' file."
@@ -320,13 +394,13 @@ class OSInfo(object):
     @property
     def with_apt(self):
         return self.is_linux and self.linux_distro in \
-            ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian")
+                                 ("debian", "ubuntu", "knoppix", "linuxmint", "raspbian")
 
     @property
     def with_yum(self):
         return self.is_linux and self.linux_distro in \
-            ("centos", "redhat", "fedora", "pidora", "scientific",
-             "xenserver", "amazon", "oracle")
+                                 ("centos", "redhat", "fedora", "pidora", "scientific",
+                                  "xenserver", "amazon", "oracle")
 
     def get_win_os_version(self):
         """
@@ -341,7 +415,7 @@ class OSInfo(object):
                         ('dwMinorVersion', ctypes.c_ulong),
                         ('dwBuildNumber', ctypes.c_ulong),
                         ('dwPlatformId', ctypes.c_ulong),
-                        ('szCSDVersion', ctypes.c_wchar*128),
+                        ('szCSDVersion', ctypes.c_wchar * 128),
                         ('wServicePackMajor', ctypes.c_ushort),
                         ('wServicePackMinor', ctypes.c_ushort),
                         ('wSuiteMask', ctypes.c_ushort),
@@ -430,6 +504,7 @@ class OSInfo(object):
             return "Solaris 10"
         elif version.minor() == "5.11":
             return "Solaris 11"
+
 
 try:
     os_info = OSInfo()
@@ -542,9 +617,7 @@ class BrewTool(object):
         return exit_code == 0
 
 
-
 def _run(runner, command):
     print("Running: %s" % command)
     if runner(command, True) != 0:
         raise ConanException("Command '%s' failed" % command)
-

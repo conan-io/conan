@@ -1,11 +1,13 @@
+import os
+import shutil
+
+import six
+
+from conans import tools
+from conans.errors import ConanException, format_conanfile_exception
 from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME,\
     CONANFILE
-import os
 from conans.util.files import rmdir, save
-import six
-from conans.errors import ConanException, format_conanfile_exception
-import shutil
-from conans import tools
 
 
 def _merge_directories(src, dst):
@@ -71,7 +73,7 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
         save(dirty, "")  # Creation of DIRTY flag
         os.chdir(src_folder)
         try:
-            with tools.environment_append(*conan_file.env_values_dicts):
+            with tools.environment_append(conan_file.env):
                 conan_file.source()
             os.remove(dirty)  # Everything went well, remove DIRTY flag
         except Exception as e:
@@ -100,7 +102,7 @@ def config_source_local(export_folder, current_path, conan_file, output):
 
     save(dirty, "")  # Creation of DIRTY flag
     try:
-        with tools.environment_append(*conan_file.env_values_dicts):
+        with tools.environment_append(conan_file.env):
             conan_file.source()
         os.remove(dirty)  # Everything went well, remove DIRTY flag
     except Exception as e:

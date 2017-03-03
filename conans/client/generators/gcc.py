@@ -1,5 +1,8 @@
+from conans.client.configure_build_environment import sun_cc_libcxx_flags_dict, architecture_dict, stdlib_flags, \
+    stdlib_defines
 from conans.model import Generator
 from conans.paths import BUILD_INFO_GCC
+import platform
 
 
 class GCCGenerator(Generator):
@@ -12,17 +15,41 @@ class GCCGenerator(Generator):
         """With gcc_flags you can invoke gcc like that:
         $ gcc main.c @conanbuildinfo.gcc -o main
         """
-        defines = " ".join("-D%s" % x for x in self._deps_build_info.defines)
-        include_paths = " ".join("-I%s"
-                                 % x.replace("\\", "/") for x in self._deps_build_info.include_paths)
-        rpaths = " ".join("-Wl,-rpath=%s"
-                          % x.replace("\\", "/") for x in self._deps_build_info.lib_paths)
-        lib_paths = " ".join("-L%s" % x.replace("\\", "/") for x in self._deps_build_info.lib_paths)
-        libs = " ".join("-l%s" % x for x in self._deps_build_info.libs)
-        other_flags = " ".join(self._deps_build_info.cppflags +
-                               self._deps_build_info.cflags +
-                               self._deps_build_info.sharedlinkflags +
-                               self._deps_build_info.exelinkflags)
-        flags = ("%s %s %s %s %s %s"
-                 % (defines, include_paths, lib_paths, rpaths, libs, other_flags))
-        return flags
+        flags = []
+        flags.extend(["-D%s" % x for x in self._deps_build_info.defines])
+        flags.extend(['-I"%s"' % x.replace("\\", "/") for x in self._deps_build_info.include_paths])
+        rpath_separator = "," if platform.system() == "Darwin" else "="
+        flags.extend(['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/")) 
+                      for x in self._deps_build_info.lib_paths]) # rpaths
+        flags.extend(['-L"%s"' % x.replace("\\", "/") for x in self._deps_build_info.lib_paths])
+        flags.extend(["-l%s" % x for x in self._deps_build_info.libs])
+        flags.extend(self._deps_build_info.cppflags)
+        flags.extend(self._deps_build_info.cflags)
+        flags.extend(self._deps_build_info.sharedlinkflags)
+        flags.extend(self._deps_build_info.exelinkflags)
+        flags.extend(self._libcxx_flags())
+        arch = self.conanfile.settings.get_safe("arch")
+        flags.append(architecture_dict.get(arch, ""))
+
+        build_type = self.conanfile.settings.get_safe("build_type")
+        if build_type == "Release":
+            compiler = self.conanfile.settings.get_safe("compiler")
+            if compiler == "gcc":
+                flags.append("-s")
+            flags.append("-DNDEBUG")
+        elif build_type == "Debug":
+            flags.append("-g")
+
+        return " ".join(flags)
+
+    def _libcxx_flags(self):
+        libcxx = self.conanfile.settings.get_safe("compiler.libcxx")
+        compiler = self.conanfile.settings.get_safe("compiler")
+
+        lib_flags = []
+        if libcxx:
+            lib_flags.extend(["-D%s" % define for define in stdlib_defines(compiler, libcxx)])
+            lib_flags.extend(stdlib_flags(compiler, libcxx))
+
+        return lib_flags
+

@@ -80,6 +80,10 @@ class RequirementsInfo(object):
         self._non_devs_requirements = non_devs_requirements
         self._data = {r: RequirementInfo(str(r)) for r in requires}
 
+    def copy(self):
+        return RequirementsInfo(self._data.keys(), self._non_devs_requirements.copy()
+                                if self._non_devs_requirements else None)
+
     def clear(self):
         self._data = {}
 
@@ -111,6 +115,10 @@ class RequirementsInfo(object):
         self.requires["Boost"].version = "2.X"
         """
         return self._data[self._get_key(item)]
+
+    @property
+    def pkg_names(self):
+        return [r.conan.name for r in self._data.keys()]
 
     @property
     def sha(self):
@@ -169,6 +177,16 @@ class RequirementsList(list):
 
 class ConanInfo(object):
 
+    def copy(self):
+        """ Useful for build_id implementation
+        """
+        result = ConanInfo()
+        result.settings = self.settings.copy()
+        result.options = self.options.copy()
+        result.requires = self.requires.copy()
+        result._non_devs_requirements = self._non_devs_requirements
+        return result
+
     @staticmethod
     def create(settings, options, requires, indirect_requires, non_devs_requirements):
         result = ConanInfo()
@@ -191,8 +209,7 @@ class ConanInfo(object):
     def loads(text):
         parser = ConfigParser(text, ["settings", "full_settings", "options", "full_options",
                                      "requires", "full_requires", "scope", "recipe_hash",
-                                     "env"])
-
+                                     "env"], raise_unexpected_field=False)
         result = ConanInfo()
         result.settings = Values.loads(parser.settings)
         result.full_settings = Values.loads(parser.full_settings)
@@ -201,6 +218,7 @@ class ConanInfo(object):
         result.full_requires = RequirementsList.loads(parser.full_requires)
         result.requires = RequirementsInfo(result.full_requires, None)
         result.recipe_hash = parser.recipe_hash or None
+
         # TODO: Missing handling paring of requires, but not necessary now
         result.scope = Scopes.loads(parser.scope)
         result.env_values = EnvValues.loads(parser.env)
@@ -262,6 +280,9 @@ class ConanInfo(object):
             return computed_id
         result = []
         result.append(self.settings.sha)
+        # Only are valid requires for OPtions those Non-Dev who are still in requires
+
+        self.options.filter_used(self.requires.pkg_names)
         result.append(self.options.sha(self._non_devs_requirements))
         result.append(self.requires.sha)
         self._package_id = sha1('\n'.join(result).encode())

@@ -3,6 +3,7 @@ from collections import OrderedDict
 from conans.client.output import Color
 from conans.model.ref import ConanFileReference
 from conans.model.ref import PackageReference
+from conans.client.installer import build_id
 
 
 class Printer(object):
@@ -78,6 +79,13 @@ class Printer(object):
             remote_name = remote
             if reg_remote and not remote:
                 remote_name = reg_remote.name
+
+            if show("id"):
+                id_ = conan.info.package_id()
+                self._out.writeln("    ID: %s" % id_, Color.BRIGHT_GREEN)
+            if show("build_id"):
+                bid = build_id(conan)
+                self._out.writeln("    BuildID: %s" % bid, Color.BRIGHT_GREEN)
 
             if isinstance(ref, ConanFileReference) and show("remote"):
                 if reg_remote:

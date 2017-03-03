@@ -2,6 +2,8 @@ _cmake_single_dep_vars = """set(CONAN_{dep}_ROOT{build_type} {deps.rootpath})
 set(CONAN_INCLUDE_DIRS_{dep}{build_type} {deps.include_paths})
 set(CONAN_LIB_DIRS_{dep}{build_type} {deps.lib_paths})
 set(CONAN_BIN_DIRS_{dep}{build_type} {deps.bin_paths})
+set(CONAN_RES_DIRS_{dep}{build_type} {deps.res_paths})
+set(CONAN_BUILD_DIRS_{dep}{build_type} {deps.build_paths})
 set(CONAN_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
@@ -13,32 +15,95 @@ set(CONAN_C_FLAGS_{dep}{build_type} "{deps.cflags}")
 """
 
 
-def cmake_single_dep_vars(name, deps, build_type=""):
+def _build_type_str(build_type):
+    if build_type:
+        return "_" + str(build_type).upper()
+    return ""
+
+
+def cmake_dependency_vars(name, deps, build_type=""):
+    build_type = _build_type_str(build_type)
     return _cmake_single_dep_vars.format(dep=name.upper(), deps=deps, build_type=build_type)
 
 
-_cmake_multi_dep_vars = """set(CONAN_PACKAGE_NAME {name})
+_cmake_package_info = """set(CONAN_PACKAGE_NAME {name})
 set(CONAN_PACKAGE_VERSION {version})
-set(CONAN_DEPENDENCIES{build_type} {dependencies})
+"""
+
+
+def cmake_package_info(name, version):
+    return _cmake_package_info.format(name=name, version=version)
+
+
+def cmake_dependencies(dependencies, build_type=""):
+    build_type = _build_type_str(build_type)
+    dependencies = " ".join(dependencies)
+    return "set(CONAN_DEPENDENCIES{build_type} {dependencies})".format(dependencies=dependencies,
+                                                                       build_type=build_type)
+
+
+_cmake_multi_dep_vars = """
 set(CONAN_INCLUDE_DIRS{build_type} {deps.include_paths} ${{CONAN_INCLUDE_DIRS{build_type}}})
 set(CONAN_LIB_DIRS{build_type} {deps.lib_paths} ${{CONAN_LIB_DIRS{build_type}}})
 set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
+set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
 set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
 set(CONAN_CXX_FLAGS{build_type} "{deps.cppflags} ${{CONAN_CXX_FLAGS{build_type}}}")
 set(CONAN_SHARED_LINKER_FLAGS{build_type} "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS{build_type}}}")
 set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS{build_type}}}")
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
-set(CONAN_CMAKE_MODULE_PATH{build_type} {module_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
+set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
 """
 
 
-def cmake_multi_dep_vars(name, version, deps, dependencies, root_paths, build_type=""):
-    module_paths = " ".join(root_paths)
-    dependencies = " ".join(dependencies)
-    return _cmake_multi_dep_vars.format(deps=deps, module_paths=module_paths,
-                                        dependencies=dependencies, name=name, version=version,
-                                        build_type=build_type)
+def cmake_global_vars(deps, build_type=""):
+    return _cmake_multi_dep_vars.format(deps=deps, build_type=_build_type_str(build_type))
+
+_target_template = """
+    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
+                                  CONAN_FULLPATH_LIBS_{uname})
+    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
+                                  CONAN_FULLPATH_LIBS_{uname}_DEBUG)
+    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
+                                  CONAN_FULLPATH_LIBS_{uname}_RELEASE)
+
+    add_library({name} INTERFACE IMPORTED)
+    # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}}
+                                                                 $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
+                                                                 $<$<CONFIG:Debug>:${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG}}>
+                                                                 {deps})
+    set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
+                                                                      $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
+                                                                      $<$<CONFIG:Debug>:${{CONAN_INCLUDE_DIRS_{uname}_DEBUG}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}}
+                                                                      $<$<CONFIG:Release>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELEASE}}>
+                                                                      $<$<CONFIG:Debug>:${{CONAN_COMPILE_DEFINITIONS_{uname}_DEBUG}}>)
+    set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_CFLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}}
+                                                                  $<$<CONFIG:Release>:${{CONAN_CFLAGS_{uname}_RELEASE}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE}}>
+                                                                  $<$<CONFIG:Debug>:${{CONAN_CFLAGS_{uname}_DEBUG}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG}}>)
+ """
+
+
+def generate_targets_section(dependencies):
+    section = []
+    section.append("\n###  Definition of macros and functions ###\n")
+    section.append('macro(conan_define_targets)\n'
+                   '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
+                   '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
+                   '    endif()  # CMAKE > 3.x\n')
+
+    for dep_name, dep_info in dependencies:
+        use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
+        deps = "" if not use_deps else " ".join(use_deps)
+        section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
+                                               uname=dep_name.upper()))
+
+    all_targets = " ".join(["CONAN_PKG::%s" % name for name, _ in dependencies])
+    section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
+    section.append('endmacro()\n')
+    return section
 
 
 _cmake_common_macros = """
@@ -212,6 +277,59 @@ function(conan_check_compiler)
     endif()
     check_compiler_version()
 endfunction()
+
+
+macro(conan_global_flags)
+    if(CONAN_SYSTEM_INCLUDES)
+        include_directories(SYSTEM ${CONAN_INCLUDE_DIRS}
+                                   "$<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>"
+                                   "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
+    else()
+        include_directories(${CONAN_INCLUDE_DIRS}
+                            "$<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>"
+                            "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
+    endif()
+
+    link_directories(${CONAN_LIB_DIRS})
+
+    conan_find_libraries_abs_path("${CONAN_LIBS_DEBUG}" "${CONAN_LIB_DIRS_DEBUG}"
+                                  CONAN_LIBS_DEBUG)
+    conan_find_libraries_abs_path("${CONAN_LIBS_RELEASE}" "${CONAN_LIB_DIRS_RELEASE}"
+                                  CONAN_LIBS_RELEASE)
+
+    add_compile_options(${CONAN_DEFINES}
+                        "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
+                        "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>")
+
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CXX_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_C_FLAGS}")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_SHARED_LINKER_FLAGS}")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
+
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CONAN_CXX_FLAGS_RELEASE}")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CONAN_C_FLAGS_RELEASE}")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} ${CONAN_SHARED_LINKER_FLAGS_RELEASE}")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${CONAN_EXE_LINKER_FLAGS_RELEASE}")
+
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CONAN_CXX_FLAGS_DEBUG}")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CONAN_C_FLAGS_DEBUG}")
+    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${CONAN_SHARED_LINKER_FLAGS_DEBUG}")
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${CONAN_EXE_LINKER_FLAGS_DEBUG}")
+endmacro()
+
+macro(conan_target_link_libraries target)
+    if(CONAN_TARGETS)
+        target_link_libraries(${target} ${CONAN_TARGETS})
+    else()
+        target_link_libraries(${target} ${CONAN_LIBS})
+        foreach(_LIB ${CONAN_LIBS_RELEASE})
+            target_link_libraries(${target} optimized ${_LIB})
+        endforeach()
+        foreach(_LIB ${CONAN_LIBS_DEBUG})
+            target_link_libraries(${target} debug ${_LIB})
+        endforeach()
+    endif()
+endmacro()
 """
 
 cmake_macros = """
@@ -233,6 +351,8 @@ macro(conan_basic_setup)
 endmacro()
 
 macro(conan_set_find_paths)
+    # CMAKE_MODULE_PATH does not have Debug/Release config, but there are variables
+    # CONAN_CMAKE_MODULE_PATH_DEBUG to be used by the consumer
     # CMake can find findXXX.cmake files in the root of packages
     set(CMAKE_MODULE_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_MODULE_PATH})
 
@@ -241,6 +361,8 @@ macro(conan_set_find_paths)
 endmacro()
 
 macro(conan_set_find_library_paths)
+    # CMAKE_INCLUDE_PATH, CMAKE_LIBRARY_PATH does not have Debug/Release config, but there are variables
+    # CONAN_INCLUDE_DIRS_DEBUG/RELEASE CONAN_LIB_DIRS_DEBUG/RELEASE to be used by the consumer
     # For find_library
     set(CMAKE_INCLUDE_PATH ${CONAN_INCLUDE_DIRS} ${CMAKE_INCLUDE_PATH})
     set(CMAKE_LIBRARY_PATH ${CONAN_LIB_DIRS} ${CMAKE_LIBRARY_PATH})
@@ -272,28 +394,6 @@ macro(conan_flags_setup)
     conan_set_libcxx()
 endmacro()
 
-macro(conan_global_flags)
-    if(CONAN_SYSTEM_INCLUDES)
-        include_directories(SYSTEM ${CONAN_INCLUDE_DIRS})
-    else()
-        include_directories(${CONAN_INCLUDE_DIRS})
-    endif()
-    link_directories(${CONAN_LIB_DIRS})
-    add_definitions(${CONAN_DEFINES})
-
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CXX_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_C_FLAGS}")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_SHARED_LINKER_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
-endmacro()
-
-macro(conan_target_link_libraries target)
-    if(CONAN_TARGETS)
-        target_link_libraries(${target} ${CONAN_TARGETS})
-    else()
-        target_link_libraries(${target} ${CONAN_LIBS})
-    endif()
-endmacro()
 """ + _cmake_common_macros
 
 
@@ -345,68 +445,4 @@ macro(conan_set_vs_runtime)
     endif()
 endmacro()
 
-macro(conan_global_flags)
-    if(CONAN_SYSTEM_INCLUDES)
-        include_directories(SYSTEM "$<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>"
-                                   "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
-    else()
-        include_directories("$<$<CONFIG:Release>:${CONAN_INCLUDE_DIRS_RELEASE}>"
-                            "$<$<CONFIG:Debug>:${CONAN_INCLUDE_DIRS_DEBUG}>")
-    endif()
-
-    # link_directories(${CONAN_LIB_DIRS})
-
-    conan_find_libraries_abs_path("${CONAN_LIBS_DEBUG}" "${CONAN_LIB_DIRS_DEBUG}"
-                                  CONAN_LIBS_DEBUG)
-    conan_find_libraries_abs_path("${CONAN_LIBS_RELEASE}" "${CONAN_LIB_DIRS_RELEASE}"
-                                  CONAN_LIBS_RELEASE)
-
-    add_compile_options(
-        "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
-        "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>"
-    )
-
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CONAN_CXX_FLAGS_RELEASE}")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CONAN_C_FLAGS_RELEASE}")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} ${CONAN_SHARED_LINKER_FLAGS_RELEASE}")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${CONAN_EXE_LINKER_FLAGS_RELEASE}")
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CONAN_CXX_FLAGS_DEBUG}")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CONAN_C_FLAGS_DEBUG}")
-    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${CONAN_SHARED_LINKER_FLAGS_DEBUG}")
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${CONAN_EXE_LINKER_FLAGS_DEBUG}")
-
-endmacro()
-
-macro(conan_target_link_libraries target)
-    if(CONAN_TARGETS)
-        target_link_libraries(${target} ${CONAN_TARGETS})
-    else()
-        foreach(_LIB ${CONAN_LIBS_RELEASE})
-            target_link_libraries(${target} optimized ${_LIB})
-        endforeach()
-        foreach(_LIB ${CONAN_LIBS_DEBUG})
-            target_link_libraries(${target} debug ${_LIB})
-        endforeach()
-    endif()
-endmacro()
 """ + _cmake_common_macros
-
-
-def generate_targets_section(template, dependencies):
-    section = []
-    section.append("\n###  Definition of macros and functions ###\n")
-    section.append('macro(conan_define_targets)\n'
-                   '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
-                   '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
-                   '    endif()  # CMAKE > 3.x\n')
-
-    for dep_name, dep_info in dependencies:
-        use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
-        deps = "" if not use_deps else " ".join(use_deps)
-        section.append(template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
-                                       uname=dep_name.upper()))
-
-    all_targets = " ".join(["CONAN_PKG::%s" % name for name, _ in dependencies])
-    section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
-    section.append('endmacro()\n')
-    return section

@@ -1,9 +1,6 @@
 import json
 import os
 import unittest
-
-import time
-
 import sys
 
 from conans import tools
@@ -22,6 +19,22 @@ class MyBuildInfo(unittest.TestCase):
         self.servers = {"default": test_server, "alternative": test_server2}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "lasote")],
                                                               "alternative": [("lasote", "lasote")]})
+
+    def test_only_download(self):
+        files = cpp_hello_conan_files("Hello", "1.0", build=False)
+        self.client.save(files)
+        self.client.run("export lasote/stable")
+        self.client.run("upload '*' -c --all")
+        trace_file = os.path.join(temp_folder(), "conan_trace.log")
+        self.client.run("remove '*' -f")
+        with tools.environment_append({"CONAN_TRACE_FILE": trace_file}):
+            self.client.run("install Hello/1.0@lasote/stable --build")
+
+        data = get_build_info(trace_file).serialize()
+        self.assertEquals(len(data["modules"]), 1)
+        self.assertEquals(data["modules"][0]["id"], "DownloadOnly")
+        self.assertEquals(len(data["modules"][0]["artifacts"]), 0)
+        self.assertEquals(len(data["modules"][0]["dependencies"]), 3)
 
     def test_json(self):
 
