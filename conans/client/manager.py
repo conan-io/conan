@@ -198,10 +198,10 @@ class ConanManager(object):
         return (builder, deps_graph, project_reference, registry, conanfile,
                 remote_proxy, loader)
 
-    def info(self, reference, current_path, remote=None, options=None, settings=None,
+    def info(self, reference, current_path, graph_filename, remote=None, options=None, settings=None,
              info=None, filename=None, update=False, check_updates=False, scopes=None,
              build_order=None, build_mode=None, package_settings=None, env_values=None,
-             profile_name=None, graph=False):
+             profile_name=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -249,9 +249,9 @@ class ConanManager(object):
         else:
             graph_updates_info = {}
 
-        if graph:
+        if graph_filename:
             grapher = ConanGrapher(project_reference, deps_graph)
-            grapher.graph()
+            grapher.graph(graph_filename)
         else:
             Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                                   info, registry, graph_updates_info,

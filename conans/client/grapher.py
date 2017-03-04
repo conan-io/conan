@@ -6,14 +6,10 @@ class ConanGrapher(object):
         self._deps_graph = deps_graph
         self._project_reference = project_reference
 
-    def graph(self):
-        try:
-            output_file = os.path.join(os.getcwd(), "graph.dot")
-            f = open(output_file, 'w')
-        except:
-            raise
+    def graph(self, output_file):
+        graph_lines = []
 
-        f.write('digraph {\n')
+        graph_lines.append('digraph {\n')
 
         for node in self._deps_graph.nodes:
             ref = node.conan_ref
@@ -24,16 +20,24 @@ class ConanGrapher(object):
             depends = self._deps_graph.neighbors(node)
 
             if depends:
-                f.write('    "%s" -> {' % str(ref))
+                graph_lines.append('    "%s" -> {' % str(ref))
 
                 for i, dep in enumerate(depends):
-                    f.write('"%s"' % str(dep.conan_ref))
+                    graph_lines.append('"%s"' % str(dep.conan_ref))
 
                     if i == len(depends) - 1:
-                        f.write('}\n')
+                        graph_lines.append('}\n')
                     else:
-                        f.write(' ')
+                        graph_lines.append(' ')
 
-        f.write('}\n');
+        graph_lines.append('}\n')
 
-        f.close()
+        graph_lines_string = ''.join(graph_lines)
+
+        self.graph_file(graph_lines_string, output_file)
+
+    def graph_file(self, graph, output_filename):
+        output_file = os.path.join(os.getcwd(), output_filename)
+
+        with open(output_file, 'w') as f:
+            f.write(graph)

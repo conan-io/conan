@@ -73,15 +73,6 @@ class InfoTest(unittest.TestCase):
             export = False if name == "Hello0" else True
             self._create(name, "0.1", expanded_deps, export=export)
 
-        create_export(test_deps, "Hello0")
-
-        self.client.run("info --graph")
-
-        dot_file = os.path.join(self.client.current_folder, "graph.dot")
-
-        node_regex = re.compile(r'"([^"]+)"');
-        dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
-
         def check_conan_ref(ref):
             self.assertEqual(ref.version, "0.1")
             self.assertEqual(ref.user, "lasote")
@@ -103,12 +94,29 @@ class InfoTest(unittest.TestCase):
                 check_conan_ref(dep)
                 self.assertIn(dep.name, test_deps[parent.name])
 
-        with open(dot_file) as dot_file_contents:
-            lines = dot_file_contents.readlines()
-            self.assertEqual(lines[0], "digraph {\n");
-            for line in lines[1:-1]:
-                check_digraph_line(line)
-            self.assertEqual(lines[-1], "}\n");
+        def check_file(dot_file):
+            with open(dot_file) as dot_file_contents:
+                lines = dot_file_contents.readlines()
+                self.assertEqual(lines[0], "digraph {\n");
+                for line in lines[1:-1]:
+                    check_digraph_line(line)
+                self.assertEqual(lines[-1], "}\n");
+
+        create_export(test_deps, "Hello0")
+
+        node_regex = re.compile(r'"([^"]+)"');
+        dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
+
+        # default case - file will be named graph.dot
+        self.client.run("info --graph")
+        dot_file = os.path.join(self.client.current_folder, "graph.dot")
+        check_file(dot_file)
+
+        # arbitrary case - file will be named according to argument
+        arg_filename = "test.dot"
+        self.client.run("info --graph=%s" % arg_filename)
+        dot_file = os.path.join(self.client.current_folder, arg_filename)
+        check_file(dot_file)
 
     def only_names_test(self):
         self.client = TestClient()
