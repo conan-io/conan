@@ -211,19 +211,13 @@ path to the CMake binary directory, like this:
         rmdir(build_folder)
         # shutil.copytree(test_folder, build_folder)
 
-        options = _get_tuples_list_from_extender_arg(args.options)
-        env, package_env = _get_simple_and_package_tuples(args.env)
-        env_values = _get_env_values(env, package_env)
-        settings, package_settings = _get_simple_and_package_tuples(args.settings)
-        scopes = Scopes.from_list(args.scope) if args.scope else None
-
-        manager = self._manager
+        settings, package_settings, options, env_values, scopes = _local_parse(args)
 
         options = OptionsValues(options)
         # Read profile environment and mix with the command line parameters
         if args.profile:
             try:
-                profile = manager.read_profile(args.profile, current_path)
+                profile = self._manager.read_profile(args.profile, current_path)
             except ConanException as exc:
                 raise ConanException("Error reading '%s' profile: %s" % (args.profile, exc))
 
@@ -231,9 +225,9 @@ path to the CMake binary directory, like this:
                                       env_values)
             settings, package_settings, options, scopes, env_values = mixed
 
-        loader = manager._loader(current_path=None, user_settings_values=settings,
-                                 user_options_values=options, scopes=scopes,
-                                 package_settings=package_settings, env_values=env_values)
+        loader = self._manager._loader(current_path=None, user_settings_values=settings,
+                                       user_options_values=options, scopes=scopes,
+                                       package_settings=package_settings, env_values=env_values)
 
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
@@ -341,12 +335,9 @@ path to the CMake binary directory, like this:
         else:  # Classic install, package chosen with settings and options
             # Get False or a list of patterns to check
             args.build = _get_build_sources_parameter(args.build)
-            options = _get_tuples_list_from_extender_arg(args.options)
-            settings, package_settings = _get_simple_and_package_tuples(args.settings)
-            env, package_env = _get_simple_and_package_tuples(args.env)
-            env_values = _get_env_values(env, package_env)
 
-            scopes = Scopes.from_list(args.scope) if args.scope else None
+            settings, package_settings, options, env_values, scopes = _local_parse(args)
+
             if args.manifests and args.manifests_interactive:
                 raise ConanException("Do not specify both manifests and "
                                      "manifests-interactive arguments")
@@ -434,10 +425,8 @@ path to the CMake binary directory, like this:
 
         log_command("info", vars(args))
 
-        options = _get_tuples_list_from_extender_arg(args.options)
-        settings, package_settings =_get_simple_and_package_tuples(args.settings)
-        env, package_env = _get_simple_and_package_tuples(args.env)
-        env_values = _get_env_values(env, package_env)
+        settings, package_settings, options, env_values, scopes = _local_parse(args)
+
         # Get False or a list of patterns to check
         args.build = _get_build_sources_parameter(args.build)
         current_path = os.getcwd()
@@ -445,7 +434,7 @@ path to the CMake binary directory, like this:
             reference = ConanFileReference.loads(args.reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, args.reference))
-        scopes = Scopes.from_list(args.scope) if args.scope else None
+
         self._manager.info(reference=reference,
                            current_path=current_path,
                            remote=args.remote,
@@ -936,35 +925,51 @@ def _add_common_install_arguments(parser, build_help):
     parser.add_argument("--build", "-b", action=Extender, nargs="*", help=build_help)
 
 
-def _get_tuples_list_from_extender_arg(items):
-    if not items:
-        return []
-    # Validate the pairs
-    for item in items:
-        chunks = item.split("=")
-        if len(chunks) != 2:
-            raise ConanException("Invalid input '%s', use 'name=value'" % item)
-    return [(item[0], item[1]) for item in [item.split("=") for item in items]]
+def _local_parse(args):
+    def _get_tuples_list_from_extender_arg(items):
+        if not items:
+            return []
+        # Validate the pairs
+        for item in items:
+            chunks = item.split("=")
+            if len(chunks) != 2:
+                raise ConanException("Invalid input '%s', use 'name=value'" % item)
+        return [(item[0], item[1]) for item in [item.split("=") for item in items]]
 
+    def _get_simple_and_package_tuples(items):
+        """Parse items like "thing:item=value or item2=value2 and returns a tuple list for
+        the simple items (name, value) and a dict for the package items
+        {package: [(item, value)...)], ...}
+        """
 
-def _get_simple_and_package_tuples(items):
-    """Parse items like "thing:item=value or item2=value2 and returns a tuple list for
-    the simple items (name, value) and a dict for the package items
-    {package: [(item, value)...)], ...}
-    """
+        simple_items = []
+        package_items = defaultdict(list)
+        tuples = _get_tuples_list_from_extender_arg(items)
+        for name, value in tuples:
+            if ":" in name:  # Scoped items
+                tmp = name.split(":", 1)
+                ref_name = tmp[0]
+                name = tmp[1]
+                package_items[ref_name].append((name, value))
+            else:
+                simple_items.append((name, value))
+        return simple_items, package_items
 
-    simple_items = []
-    package_items = defaultdict(list)
-    tuples = _get_tuples_list_from_extender_arg(items)
-    for name, value in tuples:
-        if ":" in name:  # Scoped items
-            tmp = name.split(":", 1)
-            ref_name = tmp[0]
-            name = tmp[1]
-            package_items[ref_name].append((name, value))
-        else:
-            simple_items.append((name, value))
-    return simple_items, package_items
+    def _get_env_values(env, package_env):
+        env_values = EnvValues()
+        for name, value in env:
+            env_values.add(name, EnvValues.load_value(value))
+        for package, data in package_env.items():
+            for name, value in data:
+                env_values.add(name, EnvValues.load_value(value), package)
+        return env_values
+
+    options = _get_tuples_list_from_extender_arg(args.options)
+    env, package_env = _get_simple_and_package_tuples(args.env)
+    env_values = _get_env_values(env, package_env)
+    settings, package_settings = _get_simple_and_package_tuples(args.settings)
+    scopes = Scopes.from_list(args.scope) if args.scope else None
+    return settings, package_settings, options, env_values, scopes
 
 
 def _get_build_sources_parameter(build_param):
@@ -1000,17 +1005,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
 '''
 
 
-def _get_env_values(env, package_env):
-    env_values = EnvValues()
-    for name, value in env:
-        env_values.add(name, EnvValues.load_value(value))
-    for package, data in package_env.items():
-        for name, value in data:
-            env_values.add(name, EnvValues.load_value(value), package)
-    return env_values
-
-
-def _get_reference( args):
+def _get_reference(args):
     current_path = os.getcwd()
     try:
         reference = ConanFileReference.loads(args.reference)
