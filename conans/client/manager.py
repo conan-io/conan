@@ -507,9 +507,9 @@ If not:
             uploader.upload_package(PackageReference(ref, package_id), retry=retry,
                                     retry_wait=retry_wait, skip_upload=skip_upload)
         else:  # Upload conans
-            uploader.upload_conan(conan_reference_or_pattern, all_packages=all_packages,
-                                  force=force, confirm=confirm,
-                                  retry=retry, retry_wait=retry_wait, skip_upload=skip_upload)
+            uploader.upload(conan_reference_or_pattern, all_packages=all_packages,
+                            force=force, confirm=confirm,
+                            retry=retry, retry_wait=retry_wait, skip_upload=skip_upload)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 
