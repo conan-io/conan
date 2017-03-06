@@ -24,17 +24,13 @@ from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException
 from conans.model.build_info import DepsCppInfo, CppInfo
-from conans.model.env_info import EnvInfo, EnvValues
-from conans.model.info import ConanInfo
-from conans.model.options import OptionsValues
-from conans.model.profile import Profile
+from conans.model.env_info import EnvInfo
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.model.scope import Scopes
-from conans.model.values import Values
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
 from conans.tools import environment_append
 from conans.util.files import save, load, rmdir, normalize
 from conans.util.log import logger
+from conans.model.profile import initialize_profile
 
 
 def get_user_channel(text):
@@ -61,40 +57,15 @@ class ConanManager(object):
         self._current_scopes = None
         self._search_manager = search_manager
 
-    def _loader(self, current_path=None, user_settings_values=None, package_settings=None,
-                user_options_values=None, scopes=None, env_values=None, use_conaninfo=True):
-
+    def _loader(self, current_path=None, profile=None):
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
-
-        conaninfo_scopes = Scopes()
-        user_options = user_options_values or OptionsValues()
-        mixed_env_values = EnvValues()
-        mixed_env_values.update(env_values)
-
-        if current_path:
-            conan_info_path = os.path.join(current_path, CONANINFO)
-            if use_conaninfo and os.path.exists(conan_info_path):
-                existing_info = ConanInfo.load_file(conan_info_path)
-                settings.values = existing_info.full_settings
-                options = existing_info.full_options  # Take existing options from conaninfo.txt
-                options.update(user_options)
-                user_options = options
-                conaninfo_scopes = existing_info.scope
-                # Update with info (prioritize user input)
-                mixed_env_values.update(existing_info.env_values)
-
-        if user_settings_values:
-            aux_values = Values.from_list(user_settings_values)
-            settings.values = aux_values
-
-        if scopes:
-            conaninfo_scopes.update_scope(scopes)
-
-        self._current_scopes = conaninfo_scopes
-        return ConanFileLoader(self._runner, settings, package_settings=package_settings,
-                               options=user_options, scopes=conaninfo_scopes,
-                               env_values=mixed_env_values)
+        profile = initialize_profile(settings, current_path, profile)
+        self._current_scopes = profile.scopes
+        return ConanFileLoader(self._runner, settings=settings,
+                               package_settings=profile.package_settings,
+                               options=profile.options, scopes=profile.scopes,
+                               env_values=profile.env_values)
 
     def export(self, user, conan_file_path, keep_source=False):
         """ Export the conans
@@ -150,11 +121,10 @@ class ConanManager(object):
             else:
                 remote_proxy.download_packages(reference, list(packages_props.keys()))
 
-    def _get_graph(self, reference, current_path, remote, options, settings, filename, update,
-                   check_updates, manifest_manager, scopes, package_settings, env_values):
+    def _get_graph(self, reference, current_path, profile, remote, filename, update,
+                   check_updates, manifest_manager):
 
-        loader = self._loader(current_path, settings, package_settings, options,
-                              scopes, env_values, use_conaninfo=False)
+        loader = self._loader(current_path, profile, use_conaninfo=False)
         # Not check for updates for info command, it'll be checked when dep graph is built
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
@@ -198,10 +168,9 @@ class ConanManager(object):
         return (builder, deps_graph, project_reference, registry, conanfile,
                 remote_proxy, loader)
 
-    def info(self, reference, current_path, remote=None, options=None, settings=None,
-             info=None, filename=None, update=False, check_updates=False, scopes=None,
-             build_order=None, build_mode=None, package_settings=None, env_values=None,
-             profile_name=None):
+    def info(self, reference, current_path, profile, remote=None,
+             info=None, filename=None, update=False, check_updates=False,
+             build_order=None, build_mode=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -211,22 +180,8 @@ class ConanManager(object):
         @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
         """
 
-        def read_dates(deps_graph):
-            ret = {}
-            for ref, _ in sorted(deps_graph.nodes):
-                if ref:
-                    manifest = self._client_cache.load_manifest(ref)
-                    ret[ref] = manifest.time_str
-            return ret
-
-        profile = self.read_profile(profile_name, current_path)
-
-        # Mix Settings, Env vars and scopes between profile and command line
-        options = OptionsValues(options)
-        mixed = _mix_with_profile(profile, settings, package_settings, options, scopes, env_values)
-        settings, package_settings, options, scopes, env_values = mixed
-        objects = self._get_graph(reference, current_path, remote, options, settings, filename,
-                                  update, check_updates, None, scopes, package_settings, env_values)
+        objects = self._get_graph(reference, current_path, profile, remote, filename,
+                                  update, check_updates, None)
 
         (builder, deps_graph, project_reference, registry, _, remote_proxy, _) = objects
 
@@ -249,45 +204,22 @@ class ConanManager(object):
         else:
             graph_updates_info = {}
 
+        def read_dates(deps_graph):
+            ret = {}
+            for ref, _ in sorted(deps_graph.nodes):
+                if ref:
+                    manifest = self._client_cache.load_manifest(ref)
+                    ret[ref] = manifest.time_str
+            return ret
+
         Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                               info, registry, graph_updates_info,
                                               remote, read_dates(deps_graph))
 
-    def read_profile(self, profile_name, cwd):
-        if not profile_name:
-            return None
-
-        if os.path.isabs(profile_name):
-            profile_path = profile_name
-            folder = os.path.dirname(profile_name)
-        elif profile_name.startswith("."):  # relative path name
-            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-            folder = os.path.dirname(profile_path)
-        else:
-            folder = self._client_cache.profiles_path
-            profile_path = self._client_cache.profile_path(profile_name)
-
-        try:
-            text = load(profile_path)
-        except Exception:
-            if os.path.exists(folder):
-                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-            else:
-                profiles = []
-            current_profiles = ", ".join(profiles) or "[]"
-            raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                                 "%s" % (profile_name, current_profiles))
-
-        try:
-            return Profile.loads(text)
-        except ConanException as exc:
-            raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
-
-    def install(self, reference, current_path, remote=None, options=None, settings=None,
+    def install(self, reference, current_path, profile, remote=None,
                 build_mode=False, filename=None, update=False, check_updates=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                scopes=None, generators=None, profile_name=None, package_settings=None,
-                env_values=None, no_imports=False):
+                generators=None, no_imports=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -309,17 +241,8 @@ class ConanManager(object):
         else:
             manifest_manager = None
 
-        profile = self.read_profile(profile_name, current_path)
-
-        # Mix Settings, Env vars and scopes between profile and command line
-        if not isinstance(options, OptionsValues):
-            options = OptionsValues(options)
-        mixed = _mix_with_profile(profile, settings, package_settings, options, scopes, env_values)
-        settings, package_settings, options, scopes, env_values = mixed
-
-        objects = self._get_graph(reference, current_path, remote, options, settings, filename,
-                                  update, check_updates, manifest_manager, scopes, package_settings,
-                                  env_values)
+        objects = self._get_graph(reference, current_path, profile, remote, filename,
+                                  update, check_updates, manifest_manager)
         (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
 
         Printer(self._user_io.out).print_graph(deps_graph, registry)
@@ -587,20 +510,6 @@ If not:
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
         return remote_proxy.authenticate(name, password)
-
-
-def _mix_with_profile(profile, settings, package_settings, options, scopes, env_values):
-    if profile:
-        # Settings
-        profile.update_settings(settings)
-        profile.update_package_settings(package_settings)
-        # Scopes
-        profile.update_scopes(scopes)
-        env_values.update(profile.env_values)
-        profile.options.update(options)
-        return profile.settings, profile.package_settings, profile.options, profile.scopes, env_values
-
-    return settings, package_settings, options, scopes, env_values
 
 
 def _load_info_file(current_path, conanfile, output, error=False):
