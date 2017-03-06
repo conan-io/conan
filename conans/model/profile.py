@@ -4,6 +4,7 @@ from conans.model.scope import Scopes, _root
 from conans.errors import ConanException
 from collections import defaultdict
 from conans.model.env_info import EnvValues, unquote
+from conans.model.options import OptionsValues
 
 
 class Profile(object):
@@ -16,6 +17,7 @@ class Profile(object):
         self._package_settings = defaultdict(OrderedDict)
         self.env_values = EnvValues()
         self.scopes = Scopes()
+        self.options = OptionsValues()
 
     @property
     def package_settings(self):
@@ -42,7 +44,7 @@ class Profile(object):
 
         try:
             obj = Profile()
-            doc = ConfigParser(text, allowed_fields=["settings", "env", "scopes"])
+            doc = ConfigParser(text, allowed_fields=["settings", "env", "scopes", "options"])
 
             for setting in doc.settings.splitlines():
                 setting = setting.strip()
@@ -57,6 +59,9 @@ class Profile(object):
 
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())
+
+            if doc.options:
+                obj.options = OptionsValues.loads(doc.options)
 
             obj.env_values = EnvValues.loads(doc.env)
             obj._order()
@@ -81,6 +86,9 @@ class Profile(object):
         result = ["[settings]"]
         dump_simple_items(self._settings.items(), result)
         dump_package_items(self._package_settings.items(), result)
+
+        result.append("[options]")
+        result.append(self.options.dumps())
 
         result.append("[scopes]")
         if self.scopes[_root].get("dev", None):

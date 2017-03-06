@@ -10,7 +10,7 @@ from collections import defaultdict
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
-from conans.client.manager import ConanManager
+from conans.client.manager import ConanManager, _mix_with_profile
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, Color
 from conans.client.printer import Printer
@@ -34,6 +34,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files, exception_message_safe
 from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
+from conans.model.options import OptionsValues
 
 
 class Extender(argparse.Action):
@@ -218,14 +219,17 @@ path to the CMake binary directory, like this:
 
         manager = self._manager
 
+        options = OptionsValues(options)
         # Read profile environment and mix with the command line parameters
         if args.profile:
             try:
                 profile = manager.read_profile(args.profile, current_path)
             except ConanException as exc:
                 raise ConanException("Error reading '%s' profile: %s" % (args.profile, exc))
-            else:
-                env_values.update(profile.env_values)
+
+            mixed = _mix_with_profile(profile, settings, package_settings, options, scopes,
+                                      env_values)
+            settings, package_settings, options, scopes, env_values = mixed
 
         loader = manager._loader(current_path=None, user_settings_values=settings,
                                  user_options_values=options, scopes=scopes,

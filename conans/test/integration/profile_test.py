@@ -146,7 +146,6 @@ class ProfileTest(unittest.TestCase):
 
     def install_profile_settings_test(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] = files["conanfile.py"].replace("generators =", "generators = \"txt\",")
 
         # Create a profile and use it
         profile_settings = {"compiler": "Visual Studio",
@@ -211,6 +210,19 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("compiler=gcc", info)
         self.assertNotIn("compiler.libcxx=libstdc++11", info)
         self.assertIn("compiler.libcxx=libstdc++", info)
+
+    def install_profile_options_test(self):
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
+
+        create_profile(self.client.client_cache.profiles_path, "vs_12_86",
+                       options=[("Hello0:language", 1),
+                                ("Hello0:static", False)])
+
+        self.client.save(files)
+        self.client.run("install --build missing -pr vs_12_86")
+        info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
+        self.assertIn("language=1", info)
+        self.assertIn("static=False", info)
 
     def scopes_env_test(self):
         # Create a profile and use it

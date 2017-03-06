@@ -68,7 +68,7 @@ class ConanManager(object):
         settings = self._client_cache.settings
 
         conaninfo_scopes = Scopes()
-        user_options = OptionsValues(user_options_values)
+        user_options = user_options_values or OptionsValues()
         mixed_env_values = EnvValues()
         mixed_env_values.update(env_values)
 
@@ -222,9 +222,9 @@ class ConanManager(object):
         profile = self.read_profile(profile_name, current_path)
 
         # Mix Settings, Env vars and scopes between profile and command line
-        settings, package_settings, scopes, env_values = _mix_with_profile(profile, settings, package_settings,
-                                                                           scopes, env_values)
-
+        options = OptionsValues(options)
+        mixed = _mix_with_profile(profile, settings, package_settings, options, scopes, env_values)
+        settings, package_settings, options, scopes, env_values = mixed
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, None, scopes, package_settings, env_values)
 
@@ -312,8 +312,10 @@ class ConanManager(object):
         profile = self.read_profile(profile_name, current_path)
 
         # Mix Settings, Env vars and scopes between profile and command line
-        settings, package_settings, scopes, env_values = _mix_with_profile(profile, settings, package_settings,
-                                                                           scopes, env_values)
+        if not isinstance(options, OptionsValues):
+            options = OptionsValues(options)
+        mixed = _mix_with_profile(profile, settings, package_settings, options, scopes, env_values)
+        settings, package_settings, options, scopes, env_values = mixed
 
         objects = self._get_graph(reference, current_path, remote, options, settings, filename,
                                   update, check_updates, manifest_manager, scopes, package_settings,
@@ -587,7 +589,7 @@ If not:
         return remote_proxy.authenticate(name, password)
 
 
-def _mix_with_profile(profile, settings, package_settings, scopes, env_values):
+def _mix_with_profile(profile, settings, package_settings, options, scopes, env_values):
     if profile:
         # Settings
         profile.update_settings(settings)
@@ -595,9 +597,10 @@ def _mix_with_profile(profile, settings, package_settings, scopes, env_values):
         # Scopes
         profile.update_scopes(scopes)
         env_values.update(profile.env_values)
-        return profile.settings, profile.package_settings, profile.scopes, env_values
+        profile.options.update(options)
+        return profile.settings, profile.package_settings, profile.options, profile.scopes, env_values
 
-    return settings, package_settings, scopes, env_values
+    return settings, package_settings, options, scopes, env_values
 
 
 def _load_info_file(current_path, conanfile, output, error=False):
