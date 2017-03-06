@@ -1,9 +1,9 @@
 import os
-from conans.errors import ConanException, NotFoundException
-from conans.model.ref import PackageReference, is_a_reference,\
-    ConanFileReference
-from conans.util.log import logger
 import time
+
+from conans.errors import ConanException, NotFoundException
+from conans.model.ref import PackageReference, is_a_reference, ConanFileReference
+from conans.util.log import logger
 
 
 class ConanUploader(object):
@@ -44,7 +44,7 @@ class ConanUploader(object):
 
         """Uploads the conans identified by conan_ref"""
         if not force:
-            self._check_package_date(conan_ref)
+            self._check_recipe_date(conan_ref)
         self._user_io.out.info("Uploading %s" % str(conan_ref))
         self._remote_proxy.upload_recipe(conan_ref, retry, retry_wait, skip_upload)
         if all_packages:
@@ -77,7 +77,7 @@ class ConanUploader(object):
 
         logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
 
-    def _check_package_date(self, conan_ref):
+    def _check_recipe_date(self, conan_ref):
         try:
             remote_conan_digest = self._remote_proxy.get_conan_digest(conan_ref)
         except NotFoundException:
