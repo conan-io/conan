@@ -23,7 +23,7 @@ class MockCompiler(object):
         self.libcxx = libcxx
         self.version = version
 
-    def __repr__(self, *args, **kwargs):
+    def __repr__(self, *args, **kwargs):  # @UnusedVariable
         return self.name
 
 
@@ -237,7 +237,6 @@ class CompileHelpersTest(unittest.TestCase):
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
                                              '-L"path/to/lib2" -llib1 -llib2 cppflag1 -library=Cstd')
 
-
     def configure_environment_test(self):
         win_settings = MockSettings("Release", os="Windows", arch="x86",
                                     compiler_name="Visual Studio", libcxx=None, version="14")
@@ -322,7 +321,7 @@ class CompileHelpersTest(unittest.TestCase):
                                             '"path/to/includes/lib2"')
 
         freebsd_settings = MockSettings("Release", os="FreeBSD", arch="x86",
-                                         compiler_name="clang", libcxx="libc++", version="3.8")
+                                        compiler_name="clang", libcxx="libc++", version="3.8")
         env = ConfigureEnvironment(MockConanfile(freebsd_settings))
         self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
                                             '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
@@ -356,16 +355,15 @@ class CompileHelpersTest(unittest.TestCase):
                                             '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
                                             'CFLAGS="$CFLAGS -m32 cflag1 -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
-                                            'CXXFLAGS="$CXXFLAGS -m32 cppflag1 -library=stlport4 -DNDEBUG '
+                                            'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -library=stlport4 -DNDEBUG '
                                             '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
                                             'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2" '
                                             'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2"')
 
-
         # Not supported yet
-        win_gcc = MockSettings("Release", os="Windows", arch="x86", 
+        win_gcc = MockSettings("Release", os="Windows", arch="x86",
                                compiler_name="gcc", libcxx=None, version="4.9")
         env = ConfigureEnvironment(MockConanfile(win_gcc))
         self.assertEquals(env.command_line_env, 'call _conan_env.bat')
