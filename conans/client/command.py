@@ -88,7 +88,7 @@ class Command(object):
         if not os.path.exists(test_conanfile):
             raise ConanException("Test conanfile.py does not exist")
         test_conanfile_content = load(test_conanfile)
-        if ".conanfile_directory" not in test_conanfile_content:
+        if ".conanfile_directory" not in test_conanfile_content and "cmake.configure(" not in test_conanfile_content:
             self._user_io.out.error("""******* conan test command layout has changed *******
 
 In your "%s" folder 'conanfile.py' you should use the
