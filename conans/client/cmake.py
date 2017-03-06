@@ -9,11 +9,12 @@ import sys
 
 class CMake(object):
 
-    def __init__(self, settings, generator=None):
+    def __init__(self, settings, generator=None, cmake_system_name=True):
         assert isinstance(settings, Settings)
         self._settings = settings
         self.generator = generator or self._generator()
         self.build_dir = None
+        self._cmake_system_name = cmake_system_name
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -73,7 +74,7 @@ class CMake(object):
             # CMake defines MacOS as Darwin
             os = "Darwin"
 
-        if platform.system() != os or os_ver:
+        if self._cmake_system_name and (platform.system() != os or os_ver):
             if os:
                 cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % os)
                 if os_ver:

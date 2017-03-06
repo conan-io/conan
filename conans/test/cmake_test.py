@@ -24,12 +24,13 @@ class CMakeTest(unittest.TestCase):
 
         def check(text, build_config, generator=None):
             os = str(settings.os)
-            cross = ("-DCMAKE_SYSTEM_NAME=%s " % {"Macos": "Darwin"}.get(os, os)
-                     if platform.system() != os else "")
-            cmake = CMake(settings, generator=generator)
-            text = text.replace("-DCONAN_EXPORTED", "%s-DCONAN_EXPORTED" % cross)
-            self.assertEqual(text, cmake.command_line)
-            self.assertEqual(build_config, cmake.build_config)
+            for cmake_system_name in (True, False):
+                cross = ("-DCMAKE_SYSTEM_NAME=%s " % {"Macos": "Darwin"}.get(os, os)
+                         if (platform.system() != os and cmake_system_name) else "")
+                cmake = CMake(settings, generator=generator, cmake_system_name=cmake_system_name)
+                new_text = text.replace("-DCONAN_EXPORTED", "%s-DCONAN_EXPORTED" % cross)
+                self.assertEqual(new_text, cmake.command_line)
+                self.assertEqual(build_config, cmake.build_config)
 
         check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED=1 '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
