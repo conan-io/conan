@@ -1,6 +1,8 @@
 import unittest
 from conans.test.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.model.ref import ConanFileReference
+from conans.util.files import save
 
 
 class UploadTest(unittest.TestCase):
@@ -66,6 +68,38 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploaded conan recipe", client.user_io.out)
         self.assertNotIn("Uploading conan_package.tgz", client.user_io.out)
         self.assertIn("Package is up to date", client.user_io.out)
+
+    def upload_newer_recipe_test(self):
+        servers = {}
+        test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                 users={"lasote": "mypass"})
+        servers["default"] = test_server
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export frodo/stable")
+        client.run("install Hello0/1.2.1@frodo/stable --build=missing")
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+
+        client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        client2.save(files)
+        client2.run("export frodo/stable")
+        ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
+        manifest = client2.client_cache.load_manifest(ref)
+        manifest.time += 10
+        save(client2.client_cache.digestfile_conanfile(ref), str(manifest))
+        client2.run("install Hello0/1.2.1@frodo/stable --build=missing")
+        client2.run("upload Hello0/1.2.1@frodo/stable --all")
+        self.assertNotIn("conanfile", client2.user_io.out)
+        self.assertIn("Package is up to date.", client2.user_io.out)
+        self.assertIn("Uploading conanmanifest.txt", client2.user_io.out)
+
+        # Now try again with the other client, which timestamp is older
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+        self.assertNotIn("conanfile", client2.user_io.out)
+        self.assertIn("Package is up to date.", client2.user_io.out)
+        self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
 
     def skip_upload_test(self):
         """ Check that the option --dry does not upload anything

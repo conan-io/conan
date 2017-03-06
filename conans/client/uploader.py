@@ -41,8 +41,7 @@ class ConanUploader(object):
                 self._upload(conan_ref, force, all_packages, retry, retry_wait, skip_upload)
 
     def _upload(self, conan_ref, force, all_packages, retry, retry_wait, skip_upload):
-
-        """Uploads the conans identified by conan_ref"""
+        """Uploads the recipes and binaries identified by conan_ref"""
         if not force:
             self._check_recipe_date(conan_ref)
         self._user_io.out.info("Uploading %s" % str(conan_ref))
@@ -68,7 +67,8 @@ class ConanUploader(object):
             raise ConanException("Conanfile has build_policy='always', "
                                  "no packages can be uploaded")
 
-    def upload_package(self, package_ref, index=1, total=1, retry=None, retry_wait=None, skip_upload=False):
+    def upload_package(self, package_ref, index=1, total=1, retry=None, retry_wait=None,
+                       skip_upload=False):
         """Uploads the package identified by package_id"""
         msg = ("Uploading package %d/%d: %s" % (index, total, str(package_ref.package_id)))
         t1 = time.time()
@@ -79,13 +79,14 @@ class ConanUploader(object):
 
     def _check_recipe_date(self, conan_ref):
         try:
-            remote_conan_digest = self._remote_proxy.get_conan_digest(conan_ref)
+            remote_recipe_manifest = self._remote_proxy.get_conan_digest(conan_ref)
         except NotFoundException:
             return  # First upload
 
-        local_digest = self._paths.load_manifest(conan_ref)
+        local_manifest = self._paths.load_manifest(conan_ref)
 
-        if remote_conan_digest.time > local_digest.time:
+        if (remote_recipe_manifest.file_sums != local_manifest.file_sums and
+                remote_recipe_manifest.time > local_manifest.time):
             raise ConanException("Remote recipe is newer than local recipe: "
                                  "\n Remote date: %s\n Local date: %s" %
-                                 (remote_conan_digest.time, local_digest.time))
+                                 (remote_recipe_manifest.time, local_manifest.time))

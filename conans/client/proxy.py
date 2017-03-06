@@ -102,11 +102,6 @@ class ConanProxy(object):
         self.handle_package_manifest(package_ref, installed)
         return installed
 
-    def _package_outdated(self, package_ref, package_folder):
-        recipe_hash = self._client_cache.load_manifest(package_ref.conan).summary_hash
-        package_recipe_hash = self._client_cache.read_package_recipe_hash(package_folder)
-        return not recipe_hash == package_recipe_hash
-
     def handle_package_manifest(self, package_ref, installed):
         if installed and self._manifest_manager:
             remote = self._registry.get_ref(package_ref.conan)
