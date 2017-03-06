@@ -2,6 +2,7 @@ from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.util.files import mkdir
 import os
+import platform
 import subprocess
 import sys
 
@@ -59,30 +60,34 @@ class CMake(object):
                 return base
 
         if operating_system == "Windows":
-            if compiler == "gcc":
-                return "MinGW Makefiles"
-            if compiler in ["clang", "apple-clang"]:
-                return "MinGW Makefiles"
-        if operating_system == "Linux":
-            if compiler in ["gcc", "clang", "apple-clang"]:
-                return "Unix Makefiles"
-        if operating_system == "Macos":
-            if compiler in ["gcc", "clang", "apple-clang"]:
-                return "Unix Makefiles"
-        if operating_system == "FreeBSD":
-            if compiler in ["gcc", "clang", "apple-clang"]:
-                return "Unix Makefiles"
-        if operating_system == "SunOS":
-            if compiler in ["sun-cc", "gcc"]:
-                return "Unix Makefiles"
+            return "MinGW Makefiles"  # it is valid only under Windows
 
-        raise ConanException("Unknown cmake generator for these settings")
+        return "Unix Makefiles"
+
+    def _cmake_compiler_options(self, os, os_ver, arch):
+        cmake_flags = []
+
+        if str(os).lower() == "macos":
+            if arch == "x86":
+                cmake_flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
+            # CMake defines MacOS as Darwin
+            os = "Darwin"
+
+        if platform.system() != os or os_ver:
+            if os:
+                cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % os)
+                if os_ver:
+                    cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
+            else:
+                cmake_flags.append("-DCMAKE_SYSTEM_NAME=Generic")
+
+        return cmake_flags
 
     @property
     def is_multi_configuration(self):
         """ some IDEs are multi-configuration, as Visual. Makefiles or Ninja are single-conf
         """
-        if "Visual" in self.generator:
+        if "Visual" in self.generator or "Xcode" in self.generator:
             return True
         # TODO: complete logic
         return False
@@ -125,17 +130,16 @@ class CMake(object):
         arch = str(self._settings.arch) if self._settings.arch else None
         comp = str(self._settings.compiler) if self._settings.compiler else None
         comp_version = self._settings.compiler.version
+        op_system_version = self._settings.get_safe("os.version")
 
-        flags = ["-DCONAN_EXPORTED=1"]
-        if op_system == "Windows":
-            if comp == "clang":
-                flags.append("-DCMAKE_C_COMPILER=clang")
-                flags.append("-DCMAKE_CXX_COMPILER=clang++")
+        flags = self._cmake_compiler_options(os=op_system, os_ver=op_system_version, arch=arch)
+        flags.append("-DCONAN_EXPORTED=1")
         if comp:
             flags.append('-DCONAN_COMPILER="%s"' % comp)
         if comp_version:
             flags.append('-DCONAN_COMPILER_VERSION="%s"' % comp_version)
 
+        # Force compiler flags -- TODO: give as environment/setting parameter?
         if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
             if arch == "x86" or arch == "sparc":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
@@ -145,10 +149,6 @@ class CMake(object):
                 flags.extend(["-DCONAN_CXX_FLAGS=-m64",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m64",
                               "-DCONAN_C_FLAGS=-m64"])
-        elif op_system == "Macos":
-            if arch == "x86":
-                flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
-
         try:
             libcxx = self._settings.compiler.libcxx
             flags.append('-DCONAN_LIBCXX="%s"' % libcxx)
@@ -166,9 +166,9 @@ class CMake(object):
             return "-DCONAN_LINK_RUNTIME=/%s" % runtime
         return ""
 
-    def configure(self, conan_file, args=None, vars=None, source_dir=None, build_dir=None):
+    def configure(self, conan_file, args=None, defs=None, source_dir=None, build_dir=None):
         args = args or []
-        vars = vars or {}
+        defs = defs or {}
         source_dir = source_dir or conan_file.conanfile_directory
         self.build_dir = build_dir or self.build_dir or conan_file.conanfile_directory
 
@@ -176,7 +176,7 @@ class CMake(object):
         arg_list = _join_arguments([
             self.command_line,
             _args_to_string(args),
-            _vars_to_string(vars),
+            _vars_to_string(defs),
             _args_to_string([source_dir])
         ])
         command = "cd %s && cmake %s" % (_args_to_string([self.build_dir]), arg_list)
@@ -197,8 +197,8 @@ class CMake(object):
         conan_file.run(command)
 
 
-def _vars_to_string(vars):
-    return _args_to_string('-D{0}={1}'.format(k, v) for k,v in vars.items())
+def _vars_to_string(defs):
+    return _args_to_string('-D{0}={1}'.format(k, v) for k, v in defs.items())
 
 
 def _args_to_string(args):

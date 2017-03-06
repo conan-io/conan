@@ -31,6 +31,27 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn("set(CONAN_COMPILE_DEFINITIONS_MYPKG MYDEFINE1)", cmake_lines)
         self.assertIn("set(CONAN_COMPILE_DEFINITIONS_MYPKG2 MYDEFINE2)", cmake_lines)
 
+    def multi_flag_test(self):
+        conanfile = ConanFile(None, None, Settings({}), None)
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.includedirs.append("other_include_dir")
+        cpp_info.cppflags = ["-DGTEST_USE_OWN_TR1_TUPLE=1", "-DGTEST_LINKED_AS_SHARED_LIBRARY=1"]
+        conanfile.deps_cpp_info.update(cpp_info, ref)
+        ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info.cflags = ["-DSOMEFLAG=1"]
+        conanfile.deps_cpp_info.update(cpp_info, ref)
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        cmake_lines = content.splitlines()
+        self.assertIn('set(CONAN_C_FLAGS_MYPKG2 "-DSOMEFLAG=1")', cmake_lines)
+        self.assertIn('set(CONAN_CXX_FLAGS_MYPKG "-DGTEST_USE_OWN_TR1_TUPLE=1'
+                      ' -DGTEST_LINKED_AS_SHARED_LIBRARY=1")', cmake_lines)
+        self.assertIn('set(CONAN_C_FLAGS "-DSOMEFLAG=1 ${CONAN_C_FLAGS}")', cmake_lines)
+        self.assertIn('set(CONAN_CXX_FLAGS "-DGTEST_USE_OWN_TR1_TUPLE=1'
+                      ' -DGTEST_LINKED_AS_SHARED_LIBRARY=1 ${CONAN_CXX_FLAGS}")', cmake_lines)
+
     def aux_cmake_test_setup_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
         generator = CMakeGenerator(conanfile)

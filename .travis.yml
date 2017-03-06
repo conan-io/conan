@@ -15,26 +15,26 @@ matrix:
     include:
         - language: generic
           os: osx
-          env: PYVER=py27 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
+          env: PYVER=py27 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0 CONAN_LOGGING_LEVEL=20
         
         - language: generic
           os: osx
-          env: PYVER=py34 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
+          env: PYVER=py34 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0 CONAN_LOGGING_LEVEL=20
           
         - language: generic
           os: osx
-          env: PYVER=py35 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
+          env: PYVER=py35 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0 CONAN_LOGGING_LEVEL=20
           
         - language: generic
           os: osx
-          env: PYVER=py36 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0
+          env: PYVER=py36 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=6.0 CONAN_LOGGING_LEVEL=20
 
 # command to install dependencies
 install:
   - ./.ci/travis/install.sh
 before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
-  - export CONAN_LOGGING_LEVEL=10
+  - export CONAN_LOGGING_LEVEL=20
 # command to run tests
 script: 
   - ulimit -n 2048 # Error with py3 and OSX, max file descriptors

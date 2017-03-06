@@ -90,3 +90,34 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         new_client.run("install Hello1/0.1@lasote/stable --build outdated")
         self.assertIn("Hello0/0.1@lasote/stable: Outdated package!", new_client.user_io.out)
         self.assertIn("Hello0/0.1@lasote/stable: Building your package", new_client.user_io.out)
+
+    def install_outdated_and_dep_test(self):
+        # regression test for https://github.com/conan-io/conan/issues/1053
+        # A new recipe that depends on Hello0/0.1
+        new_client = TestClient(servers=self.servers,
+                                users={"default": [("lasote", "mypass")]})
+        files = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], build=False)
+        new_client.save(files)
+        new_client.run("export lasote/stable")
+        self.assertIn("A new conanfile.py version was exported", new_client.user_io.out)
+        # It will retrieve from the remote Hello0 and build Hello1
+        new_client.run("install Hello1/0.1@lasote/stable --build missing")
+
+        # Then modify REMOTE Hello0 recipe files (WITH THE OTHER CLIENT)
+        files = cpp_hello_conan_files("Hello0", "0.1", build=False)
+        files["conanfile.py"] = files["conanfile.py"] + "\n#MODIFIED RECIPE"
+        self.client.save(files)
+        self.client.run("export lasote/stable")
+        self.assertIn("A new conanfile.py version was exported", self.client.user_io.out)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing")
+        # Upload only the recipe, so the package is outdated in the server
+        self.client.run("upload Hello0/0.1@lasote/stable")
+
+        # Now, with the new_client, remove only the binary package from Hello0
+        rmdir(new_client.paths.packages(self.ref))
+        # And try to install Hello1 again, should not complain because the remote
+        # binary is in the "same version" than local cached Hello0
+        new_client.run("install Hello1/0.1@lasote/stable --build outdated --build Hello1")
+        self.assertIn("Downloading conan_package.tgz", new_client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: WARN: Forced build from source",
+                      new_client.user_io.out)

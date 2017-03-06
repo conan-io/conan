@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME
+from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME, CONANFILE
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -197,12 +197,12 @@ class ConanInstaller(object):
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
 
         # Update the env_values with the inherited from dependencies
-        conan_file.env_values.update(conan_file.deps_env_info)
+        conan_file._env_values.update(conan_file.deps_env_info)
 
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
         subtree_libnames = [ref.name for (ref, _) in node_order]
-        for package_name, env_vars in conan_file.env_values.data.items():
+        for package_name, env_vars in conan_file._env_values.data.items():
             for name, value in env_vars.items():
                 if not package_name or package_name in subtree_libnames or package_name == conan_file.name:
                     conan_file.info.env_values.add(name, value, package_name)
@@ -247,7 +247,7 @@ class ConanInstaller(object):
         if isinstance(build_mode, list):
             to_build = [n[0] for n in nodes_to_build if n[3]]
             for pattern in build_mode:
-                if pattern == "*":
+                if pattern in ["*", "outdated*"]:
                     continue
                 matched = any([fnmatch.fnmatch(str(ref), pattern) for ref in to_build])
                 if not matched:
@@ -290,8 +290,7 @@ class ConanInstaller(object):
         export_folder = self._client_cache.export(conan_ref)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
-        simple_env_vars, multiple_env_vars = conan_file.env_values_dicts
-        with environment_append(simple_env_vars, multiple_env_vars):
+        with environment_append(conan_file.env):
             self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
         return build_folder
 
@@ -312,8 +311,7 @@ class ConanInstaller(object):
 
         os.chdir(build_folder)
 
-        simple_env_vars, multiple_env_vars = conan_file.env_values_dicts
-        with environment_append(simple_env_vars, multiple_env_vars):
+        with environment_append(conan_file.env):
             create_package(conan_file, build_folder, package_folder, output)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
 
@@ -426,6 +424,7 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
             self._out.writeln("")
             output.error("Package '%s' build failed" % conan_file.info.package_id())
             output.warn("Build folder %s" % build_folder)
+            _show_partial_trace(output, CONANFILE)
             raise ConanException("%s: %s" % (conan_file.name, str(e)))
         finally:
             conan_file._conanfile_directory = export_folder
@@ -473,3 +472,18 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
 
     def _check_outdated(self, build_mode):
         return build_mode == "outdated"
+
+
+def _show_partial_trace(output, start_keyword):
+    try:
+        import traceback
+        traces = traceback.format_exc()
+        active = False
+        for trace in traces.splitlines():
+            if start_keyword in trace:
+                active = True
+            if active:
+                output.warn(trace)
+    except:
+        # Any error (encoding or whatever, just ignore it)
+        pass

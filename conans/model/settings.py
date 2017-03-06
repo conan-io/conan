@@ -171,6 +171,17 @@ class Settings(object):
         self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
 
+    def get_safe(self, name):
+        try:
+            tmp = self
+            for prop in name.split("."):
+                tmp = getattr(tmp, prop, None)
+        except ConanException:
+            return None
+        if tmp is not None:
+            return str(tmp)
+        return None
+
     def copy(self):
         """ deepcopy, recursive
         """

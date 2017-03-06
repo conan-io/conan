@@ -81,7 +81,7 @@ class DiamondTest(unittest.TestCase):
                                               "Hello2/0.1@lasote/stable"], use_cmake=use_cmake,
                             cmake_targets=cmake_targets)
 
-        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]}, path_with_spaces=use_cmake)
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"],
                                        use_cmake=use_cmake, cmake_targets=cmake_targets)
 
@@ -136,7 +136,7 @@ class DiamondTest(unittest.TestCase):
         client.run("upload Hello0/0.1@lasote/stable --all")
         self.assertEqual(str(client.user_io.out).count("Uploading package"), 2)
 
-        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]}, path_with_spaces=use_cmake)
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"],
                                        use_cmake=use_cmake, cmake_targets=cmake_targets)
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')

@@ -8,6 +8,7 @@ from conans.model.values import Values
 import urllib
 from conans.paths import conan_expand_user
 from collections import OrderedDict
+from conans.model.env_info import unquote
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
@@ -100,7 +101,7 @@ class ConanClientConfigParser(ConfigParser, object):
         if env is not None:
             return env
         try:
-            return self.get_item(var_name)
+            return unquote(self.get_item(var_name))
         except ConanException:
             return default_value
 
