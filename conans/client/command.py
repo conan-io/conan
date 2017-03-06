@@ -80,38 +80,6 @@ class Command(object):
     def client_cache(self):
         return self._client_cache
 
-    def _test_check(self, test_folder, test_folder_name):
-        """ To ensure that the 0.9 version new layout is detected and users warned
-        """
-        # Check old tests, format
-        test_conanfile = os.path.join(test_folder, "conanfile.py")
-        if not os.path.exists(test_conanfile):
-            raise ConanException("Test conanfile.py does not exist")
-        test_conanfile_content = load(test_conanfile)
-        if ".conanfile_directory" not in test_conanfile_content and "cmake.configure(" not in test_conanfile_content:
-            self._user_io.out.error("""******* conan test command layout has changed *******
-
-In your "%s" folder 'conanfile.py' you should use the
-path to the conanfile_directory, something like:
-
-    self.run('cmake %%s %%s' %% (self.conanfile_directory, cmake.command_line))
-
- """ % test_folder_name)
-
-        # Test the CMakeLists, if existing
-        test_cmake = os.path.join(test_folder, "CMakeLists.txt")
-        if os.path.exists(test_cmake):
-            test_cmake_content = load(test_cmake)
-            if "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake" not in test_cmake_content:
-                self._user_io.out.error("""******* conan test command layout has changed *******
-
-In your "%s" folder 'CMakeLists.txt' you should use the
-path to the CMake binary directory, like this:
-
-   include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-
- """ % test_folder_name)
-
     def new(self, *args):
         """Creates a new package recipe template with a 'conanfile.py'.
         And optionally, 'test_package' package testing files.
@@ -267,7 +235,6 @@ path to the CMake binary directory, like this:
                               profile_name=args.profile,
                               env_values=env_values
                               )
-        self._test_check(test_folder, test_folder_name)
         self._manager.build(test_folder, build_folder, test=True)
 
     # Alias to test

@@ -190,6 +190,10 @@ build_type: [ Release]
         self.assertEqual('cmake --build %s --config Release' % tempdir, conan_file.command)
 
     def test_clean_sh_path(self):
+
+        if platform.system() != "Windows":
+            return
+
         os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + self.tempdir
         save(os.path.join(self.tempdir, "sh.exe"), "Fake sh")
         conanfile = ConanFileMock()
