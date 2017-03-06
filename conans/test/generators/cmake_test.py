@@ -45,12 +45,12 @@ class CMakeGeneratorTest(unittest.TestCase):
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
-        self.assertIn("set(CONAN_C_FLAGS_MYPKG2 -DSOMEFLAG=1)", cmake_lines)
-        self.assertIn("set(CONAN_CXX_FLAGS_MYPKG -DGTEST_USE_OWN_TR1_TUPLE=1"
-                      " -DGTEST_LINKED_AS_SHARED_LIBRARY=1)", cmake_lines)
-        self.assertIn("set(CONAN_C_FLAGS -DSOMEFLAG=1 ${CONAN_C_FLAGS})", cmake_lines)
-        self.assertIn("set(CONAN_CXX_FLAGS -DGTEST_USE_OWN_TR1_TUPLE=1"
-                      " -DGTEST_LINKED_AS_SHARED_LIBRARY=1 ${CONAN_CXX_FLAGS})", cmake_lines)
+        self.assertIn('set(CONAN_C_FLAGS_MYPKG2 "-DSOMEFLAG=1")', cmake_lines)
+        self.assertIn('set(CONAN_CXX_FLAGS_MYPKG "-DGTEST_USE_OWN_TR1_TUPLE=1'
+                      ' -DGTEST_LINKED_AS_SHARED_LIBRARY=1")', cmake_lines)
+        self.assertIn('set(CONAN_C_FLAGS "-DSOMEFLAG=1 ${CONAN_C_FLAGS}")', cmake_lines)
+        self.assertIn('set(CONAN_CXX_FLAGS "-DGTEST_USE_OWN_TR1_TUPLE=1'
+                      ' -DGTEST_LINKED_AS_SHARED_LIBRARY=1 ${CONAN_CXX_FLAGS}")', cmake_lines)
 
     def aux_cmake_test_setup_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)

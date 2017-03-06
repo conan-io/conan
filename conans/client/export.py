@@ -68,22 +68,33 @@ def _init_export_folder(destination_folder):
 
 
 def _export(conanfile, origin_folder, destination_folder, output):
-    exports = conanfile.exports or []
-    exports_sources = conanfile.exports_sources or []
+    def classify(patterns):
+        patterns = patterns or []
+        included, excluded = [], []
+        for p in patterns:
+            if p.startswith("!"):
+                excluded.append(p[1:])
+            else:
+                included.append(p)
+        return included, excluded
+
+    included_exports, excluded_exports = classify(conanfile.exports)
+    included_sources, excluded_sources = classify(conanfile.exports_sources)
+
     try:
         os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
     except:
         pass
 
     copier = FileCopier(origin_folder, destination_folder)
-    for pattern in exports:
-        copier(pattern, links=True)
+    for pattern in included_exports:
+        copier(pattern, links=True, excludes=excluded_exports)
     # create directory for sources, and import them
     export_sources_dir = os.path.join(destination_folder, EXPORT_SOURCES_DIR)
     mkdir(export_sources_dir)
     copier = FileCopier(origin_folder, export_sources_dir)
-    for pattern in exports_sources:
-        copier(pattern, links=True)
+    for pattern in included_sources:
+        copier(pattern, links=True, excludes=excluded_sources)
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)
 
