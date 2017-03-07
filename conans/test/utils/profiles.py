@@ -12,12 +12,12 @@ def create_profile(folder, name, settings=None, scopes=None, package_settings=No
     package_env = package_env or {}
 
     profile = Profile()
-    profile._settings = settings or {}
+    profile.settings = settings or {}
     if scopes:
         profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
 
     if package_settings:
-        profile._package_settings = package_settings
+        profile.package_settings = package_settings
 
     if options:
         profile.options = OptionsValues(options)

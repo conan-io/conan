@@ -1,6 +1,7 @@
 import unittest
 
 from conans.model.profile import Profile
+from conans.model.values import Values
 
 
 class ProfileTest(unittest.TestCase):
@@ -146,9 +147,9 @@ QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
     def apply_test(self):
         # Settings
         profile = Profile()
-        profile._settings["compiler.version"] = "12"
-        profile._settings["arch"] = "x86_64"
-        profile._settings["compiler"] = "Visual Studio"
+        profile.settings.compiler = "Visual Studio"
+        profile.settings.compiler.version = "12"
+        profile.settings.arch = "x86_64"
 
         profile.env_values.add("CXX", "path/to/my/compiler/g++")
         profile.env_values.add("CC", "path/to/my/compiler/gcc")
@@ -156,7 +157,10 @@ QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
         profile.scopes["p1"]["conaning"] = "True"
         profile.scopes["p2"]["testing"] = "True"
 
-        profile.update_settings({"compiler.version": "14"})
+        new_values = Values()
+        new_values = .settings.compiler = "Visual Studio"
+        new_values.compiler.version = "14"
+        profile.update_settings(new_values)
 
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
                          '[options]\n[scopes]\np1:conaning=True\np2:testing=True\n'

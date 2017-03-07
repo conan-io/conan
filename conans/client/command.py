@@ -6,7 +6,6 @@ import re
 import requests
 import sys
 import conans
-from collections import defaultdict
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
@@ -23,9 +22,7 @@ from conans.client.runner import ConanRunner
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import ConanException
-from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference, is_a_reference
-from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
@@ -34,8 +31,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files, exception_message_safe
 from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.model.options import OptionsValues
-from conans.model.profile import read_profile_args
+from conans.model.profile import read_profile_args, read_profile_file
 
 
 class Extender(argparse.Action):
@@ -347,7 +343,6 @@ path to the CMake binary directory, like this:
                                   manifest_verify=manifest_verify,
                                   manifest_interactive=manifest_interactive,
                                   generators=args.generator,
-                                  profile_name=args.profile,
                                   no_imports=args.no_imports)
 
     def config(self, *args):
@@ -419,8 +414,7 @@ path to the CMake binary directory, like this:
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
-                           build_mode=args.build,
-                           profile_name=args.profile)
+                           build_mode=args.build)
 
     def build(self, *args):
         """ Utility command to run your current project 'conanfile.py' build() method.
@@ -803,7 +797,7 @@ path to the CMake binary directory, like this:
             else:
                 self._user_io.out.info("No profiles defined")
         elif args.subcommand == "show":
-            p = self._manager.read_profile(args.profile, os.getcwd())
+            p = read_profile_file(args.profile, os.getcwd(), self._client_cache.profiles_path)
             Printer(self._user_io.out).print_profile(args.profile, p)
 
     def _show_help(self):

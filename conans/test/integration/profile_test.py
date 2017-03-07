@@ -47,7 +47,8 @@ class ProfileTest(unittest.TestCase):
         profile = '''
         [settings
         '''
-        save(self.client.client_cache.profile_path("clang"), profile)
+        clang_profile_path = os.path.join(self.client.client_cache.profiles_path, "clang")
+        save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
         self.assertIn("Error reading 'clang' profile", self.client.user_io.out)
         self.assertIn("Bad syntax", self.client.user_io.out)
@@ -56,7 +57,7 @@ class ProfileTest(unittest.TestCase):
         [settings]
         [invented]
         '''
-        save(self.client.client_cache.profile_path("clang"), profile)
+        save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
         self.assertIn("Unrecognized field 'invented'", self.client.user_io.out)
         self.assertIn("Error reading 'clang' profile", self.client.user_io.out)
@@ -65,7 +66,7 @@ class ProfileTest(unittest.TestCase):
         [settings]
         as
         '''
-        save(self.client.client_cache.profile_path("clang"), profile)
+        save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
         self.assertIn("Error reading 'clang' profile: Invalid setting line 'as'", self.client.user_io.out)
 
@@ -73,7 +74,7 @@ class ProfileTest(unittest.TestCase):
         [env]
         as
         '''
-        save(self.client.client_cache.profile_path("clang"), profile)
+        save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
         self.assertIn("Error reading 'clang' profile: Invalid env line 'as'", self.client.user_io.out)
 
@@ -81,7 +82,7 @@ class ProfileTest(unittest.TestCase):
         [scopes]
         as
         '''
-        save(self.client.client_cache.profile_path("clang"), profile)
+        save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
         self.assertIn("Error reading 'clang' profile: Bad scope as", self.client.user_io.out)
 
@@ -89,7 +90,7 @@ class ProfileTest(unittest.TestCase):
         [settings]
         os =   a value
         '''
-        save(self.client.client_cache.profile_path("clang"), profile)
+        save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
         # stripped "a value"
         self.assertIn("'a value' is not a valid 'settings.os'", self.client.user_io.out)
@@ -98,7 +99,7 @@ class ProfileTest(unittest.TestCase):
         [env]
         ENV_VAR =   a value
         '''
-        save(self.client.client_cache.profile_path("clang"), profile)
+        save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
@@ -108,7 +109,7 @@ class ProfileTest(unittest.TestCase):
         # Not even here
         ENV_VAR =   a value
         '''
-        save(self.client.client_cache.profile_path("clang"), profile)
+        save(clang_profile_path, profile)
         self.client.run("install Hello0/0.1@lasote/stable --build -pr clang", ignore_error=True)
         self._assert_env_variable_printed("ENV_VAR", "a value")
 

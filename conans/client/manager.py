@@ -124,7 +124,7 @@ class ConanManager(object):
     def _get_graph(self, reference, current_path, profile, remote, filename, update,
                    check_updates, manifest_manager):
 
-        loader = self._loader(current_path, profile, use_conaninfo=False)
+        loader = self._loader(current_path, profile)
         # Not check for updates for info command, it'll be checked when dep graph is built
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,

@@ -186,7 +186,7 @@ class Printer(object):
 
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
-        self._print_profile_section("settings", profile.settings)
+        self._print_profile_section("settings", profile.settings.items())
 
         envs = []
         for package, env_vars in profile.env_values.data.items():
@@ -201,7 +201,7 @@ class Printer(object):
 
     def _print_profile_section(self, name, items, indent=0, separator=": "):
         self._print_colored_line("[%s]" % name, indent=indent)
-        for key, value in items:
+        for (key, value) in items:
             self._print_colored_line(key, value=str(value), indent=indent+1, separator=separator)
 
     def _print_colored_line(self, text, value=None, indent=0, separator=": "):

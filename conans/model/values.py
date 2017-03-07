@@ -13,6 +13,10 @@ class Values(object):
             return None
         return self._dict[attr]
 
+    def update(self, other):
+        for key, values in other._dict.items():
+            self._dict.setdefault(key, Values()).update(values)
+
     def clear(self):
         # TODO: Test. DO not delete, might be used by package_id() to clear settings values
         self._dict.clear()
