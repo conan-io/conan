@@ -142,7 +142,6 @@ class ConanLib(ConanFile):
 
         tmp_folder = temp_folder()
         self.client.run('imports -d "%s"' % tmp_folder)
-        print self.client.user_io.out
         files = os.listdir(tmp_folder)
         self.assertIn("file1.txt", files)
         self.assertIn("file2.txt", files)
