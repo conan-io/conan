@@ -94,7 +94,7 @@ class FileCopier(object):
 
         files_to_copy = fnmatch.filter(filenames, pattern)
         if excludes:
-            if not isinstance(excludes, tuple):
+            if not isinstance(excludes, (tuple, list)):
                 excludes = (excludes, )
             for exclude in excludes:
                 files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]

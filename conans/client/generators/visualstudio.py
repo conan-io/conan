@@ -10,7 +10,11 @@ class VisualStudioGenerator(Generator):
   <PropertyGroup Label="UserMacros" />
   {item_properties}
   <PropertyGroup>
-    <ExecutablePath>{bin_dirs}%(ExecutablePath)</ExecutablePath>
+    <ExecutablePath>{bin_dirs}$(ExecutablePath)</ExecutablePath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LocalDebuggerEnvironment>PATH=%PATH%;{bin_dirs}</LocalDebuggerEnvironment>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   {item_properties}
   <ItemDefinitionGroup>
