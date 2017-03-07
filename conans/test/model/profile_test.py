@@ -1,7 +1,7 @@
 import unittest
 
 from conans.model.profile import Profile
-from conans.model.values import Values
+from collections import OrderedDict
 
 
 class ProfileTest(unittest.TestCase):
@@ -16,9 +16,9 @@ class ProfileTest(unittest.TestCase):
 
         # Settings
         profile = Profile()
-        profile._settings["arch"] = "x86_64"
-        profile._settings["compiler.version"] = "12"
-        profile._settings["compiler"] = "Visual Studio"
+        profile.settings["arch"] = "x86_64"
+        profile.settings["compiler"] = "Visual Studio"
+        profile.settings["compiler.version"] = "12"
 
         profile.env_values.add("CXX", "path/to/my/compiler/g++")
         profile.env_values.add("CC", "path/to/my/compiler/gcc")
@@ -29,9 +29,9 @@ class ProfileTest(unittest.TestCase):
         dump = profile.dumps()
         new_profile = Profile.loads(dump)
         self.assertEquals(new_profile.settings, profile.settings)
-        self.assertEquals(new_profile._settings["arch"], "x86_64")
-        self.assertEquals(new_profile._settings["compiler.version"], "12")
-        self.assertEquals(new_profile._settings["compiler"], "Visual Studio")
+        self.assertEquals(new_profile.settings["arch"], "x86_64")
+        self.assertEquals(new_profile.settings["compiler.version"], "12")
+        self.assertEquals(new_profile.settings["compiler"], "Visual Studio")
 
         self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX': 'path/to/my/compiler/g++', 'CC': 'path/to/my/compiler/gcc'}, {}))
 
@@ -45,11 +45,12 @@ os=Windows
         new_profile = Profile.loads(prof)
 
         new_profile.update_settings([("OTHER", "2")])
-        self.assertEquals(new_profile.settings, [("os", "Windows"), ("OTHER", "2")])
+        self.assertEquals(new_profile.settings, OrderedDict([("os", "Windows"), ("OTHER", "2")]))
 
-        new_profile.update_settings([("compiler.version", "3"), ("compiler", "2")])
-        self.assertEquals(new_profile.settings, [("os", "Windows"), ("OTHER", "2"),
-                                                 ("compiler", "2"), ("compiler.version", "3")])
+        new_profile.update_settings([("compiler", "2"), ("compiler.version", "3")])
+        self.assertEquals(new_profile.settings,
+                          OrderedDict([("os", "Windows"), ("OTHER", "2"),
+                                       ("compiler", "2"), ("compiler.version", "3")]))
 
     def package_settings_update_test(self):
         prof = '''[settings]
@@ -58,12 +59,13 @@ MyPackage:os=Windows
         np = Profile.loads(prof)
 
         np.update_package_settings({"MyPackage": [("OTHER", "2")]})
-        self.assertEquals(np.package_settings, {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
+        self.assertEquals(np.package_settings_values,
+                          {"MyPackage": [("os", "Windows"), ("OTHER", "2")]})
 
-        np.update_package_settings({"MyPackage": [("compiler.version", "3"), ("compiler", "2")]})
-        self.assertEquals(np.package_settings, {"MyPackage":
-                                                [("os", "Windows"), ("OTHER", "2"),
-                                                 ("compiler", "2"), ("compiler.version", "3")]})
+        np.update_package_settings({"MyPackage": [("compiler", "2"), ("compiler.version", "3")]})
+        self.assertEquals(np.package_settings_values,
+                          {"MyPackage": [("os", "Windows"), ("OTHER", "2"),
+                                         ("compiler", "2"), ("compiler.version", "3")]})
 
     def profile_loads_test(self):
         prof = '''[env]
@@ -116,16 +118,16 @@ zlib:compiler=gcc
 compiler=Visual Studio
 '''
         new_profile = Profile.loads(prof)
-        self.assertEquals(new_profile._package_settings["zlib"], {"compiler": "gcc"})
-        self.assertEquals(new_profile._settings["compiler"], "Visual Studio")
+        self.assertEquals(new_profile.package_settings["zlib"], {"compiler": "gcc"})
+        self.assertEquals(new_profile.settings["compiler"], "Visual Studio")
 
     def profile_dump_order_test(self):
         # Settings
         profile = Profile()
-        profile._package_settings["zlib"] = {"compiler": "gcc"}
-        profile._settings["compiler.version"] = "12"
-        profile._settings["arch"] = "x86_64"
-        profile._settings["compiler"] = "Visual Studio"
+        profile.package_settings["zlib"] = {"compiler": "gcc"}
+        profile.settings["arch"] = "x86_64"
+        profile.settings["compiler"] = "Visual Studio"
+        profile.settings["compiler.version"] = "12"
 
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\n'
                          'compiler.version=12\nzlib:compiler=gcc\n[options]\n[scopes]\n[env]\n',
@@ -147,9 +149,9 @@ QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
     def apply_test(self):
         # Settings
         profile = Profile()
-        profile.settings.compiler = "Visual Studio"
-        profile.settings.compiler.version = "12"
-        profile.settings.arch = "x86_64"
+        profile.settings["arch"] = "x86_64"
+        profile.settings["compiler"] = "Visual Studio"
+        profile.settings["compiler.version"] = "12"
 
         profile.env_values.add("CXX", "path/to/my/compiler/g++")
         profile.env_values.add("CC", "path/to/my/compiler/gcc")
@@ -157,10 +159,7 @@ QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
         profile.scopes["p1"]["conaning"] = "True"
         profile.scopes["p2"]["testing"] = "True"
 
-        new_values = Values()
-        new_values = .settings.compiler = "Visual Studio"
-        new_values.compiler.version = "14"
-        profile.update_settings(new_values)
+        profile.update_settings({"compiler.version": "14"})
 
         self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
                          '[options]\n[scopes]\np1:conaning=True\np2:testing=True\n'

@@ -201,7 +201,7 @@ class Printer(object):
 
     def _print_profile_section(self, name, items, indent=0, separator=": "):
         self._print_colored_line("[%s]" % name, indent=indent)
-        for (key, value) in items:
+        for key, value in items:
             self._print_colored_line(key, value=str(value), indent=indent+1, separator=separator)
 
     def _print_colored_line(self, text, value=None, indent=0, separator=": "):

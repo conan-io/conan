@@ -30,6 +30,8 @@ def initialize_profile(settings, current_path=None, profile=None):
         if profile.scopes:
             result.scopes.update_scope(profile.scopes)
         result.options.update(profile.options)
+        for pkg, settings in profile.package_settings.items():
+            result.package_settings[pkg].update(settings)
     return result
 
 
@@ -93,6 +95,13 @@ class Profile(object):
     @property
     def settings_values(self):
         return Values.from_list(list(self.settings.items()))
+
+    @property
+    def package_settings_values(self):
+        result = {}
+        for pkg, settings in self.package_settings.items():
+            result[pkg] = list(settings.items())
+        return result
 
     @staticmethod
     def parse(settings, options, envs, scopes):
@@ -164,8 +173,6 @@ class Profile(object):
             obj = Profile()
             doc = ConfigParser(text, allowed_fields=["settings", "env", "scopes", "options"])
 
-            settings = []
-            package_settings = defaultdict(list)
             for setting in doc.settings.splitlines():
                 setting = setting.strip()
                 if setting and not setting.startswith("#"):
@@ -173,12 +180,9 @@ class Profile(object):
                         raise ConanException("Invalid setting line '%s'" % setting)
                     package_name, name, value = get_package_name_value(setting)
                     if package_name:
-                        package_settings[package_name].append((name, value))
+                        obj.package_settings[package_name][name] = value
                     else:
-                        settings.append((name, value))
-            obj.settings = OrderedDict(settings)
-            for pkg, values in package_settings.items():
-                obj.package_settings[pkg] = OrderedDict(values)
+                        obj.settings[name] = value
 
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())
@@ -199,7 +203,7 @@ class Profile(object):
         for name, value in self.settings.items():
             result.append("%s=%s" % (name, value))
         for package, values in self.package_settings.items():
-            for name, value in values.as_list():
+            for name, value in values.items():
                 result.append("%s:%s=%s" % (package, name, value))
 
         result.append("[options]")

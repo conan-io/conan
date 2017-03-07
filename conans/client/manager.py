@@ -63,7 +63,7 @@ class ConanManager(object):
         profile = initialize_profile(settings, current_path, profile)
         self._current_scopes = profile.scopes
         return ConanFileLoader(self._runner, settings=settings,
-                               package_settings=profile.package_settings,
+                               package_settings=profile.package_settings_values,
                                options=profile.options, scopes=profile.scopes,
                                env_values=profile.env_values)
 

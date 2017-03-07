@@ -149,10 +149,10 @@ class ProfileTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
         # Create a profile and use it
-        profile_settings = {"compiler": "Visual Studio",
-                            "compiler.version": "12",
-                            "compiler.runtime": "MD",
-                            "arch": "x86"}
+        profile_settings = OrderedDict([("compiler", "Visual Studio"),
+                                        ("compiler.version", "12"),
+                                        ("compiler.runtime", "MD"),
+                                        ("arch", "x86")])
 
         create_profile(self.client.client_cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
