@@ -33,7 +33,7 @@ from conans.model.scope import Scopes
 from conans.model.values import Values
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
 from conans.tools import environment_append
-from conans.util.files import save, load, rmdir, normalize
+from conans.util.files import save, load, rmdir, normalize, mkdir
 from conans.util.log import logger
 
 
@@ -396,7 +396,13 @@ If not:
             conanfile = self._loader().load_conan(conan_file_path, output, reference=reference)
 
         _load_info_file(current_path, conanfile, output, error=True)
-        run_imports(conanfile, dest_folder or current_path, output)
+        if dest_folder:
+            if not os.path.isabs(dest_folder):
+                dest_folder = os.path.normpath(os.path.join(current_path, dest_folder))
+            mkdir(dest_folder)
+        else:
+            dest_folder = current_path
+        run_imports(conanfile, dest_folder, output)
 
     def local_package(self, current_path, build_folder):
         if current_path == build_folder:
