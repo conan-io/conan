@@ -51,6 +51,59 @@ def build_id(conanfile):
     return None
 
 
+class BuildMode(object):
+    def __init__(self, params, output):
+        self._out = output
+        self.outdated = False
+        self.missing = False
+        self.patterns = []
+        self.all = False
+        if params is None:
+            return
+
+        assert isinstance(params, list)
+        if len(params) == 0:
+            self.all = True
+        else:
+            never = False
+            for param in params:
+                if param == "outdated":
+                    self.outdated = True
+                elif param == "missing":
+                    self.missing = True
+                elif param == "never":
+                    never = True
+                else:
+                    self.patterns.append("%s*" % param)
+
+            if never and (self.outdated or self.missing or self.patterns):
+                raise ConanException("--build=never not compatible with other options")
+
+    def forced(self, reference, conanfile):
+        if self.all:
+            return True
+
+        ref = str(reference)
+        if conanfile.build_policy_always:
+            out = ScopedOutput(ref, self._out)
+            out.info("Building package from source as defined by build_policy='always'")
+            return True
+
+        # Patterns to match, if package matches pattern, build is forced
+        force_build = any([fnmatch.fnmatch(ref, pattern) for pattern in self.patterns])
+        return force_build
+
+    def allowed(self, reference, conanfile):
+        return (self.missing or self.outdated or self.forced(reference, conanfile) or
+                conanfile.build_policy_missing)
+
+    def check_matches(self, references):
+        for pattern in self.patterns:
+            matched = any(fnmatch.fnmatch(ref, pattern) for ref in references)
+            if not matched:
+                raise ConanException("No package matching '%s' pattern" % pattern)
+
+
 class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
@@ -60,7 +113,7 @@ class ConanInstaller(object):
         self._out = user_io.out
         self._remote_proxy = remote_proxy
 
-    def install(self, deps_graph, build_mode=False):
+    def install(self, deps_graph, build_mode):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
@@ -70,6 +123,7 @@ class ConanInstaller(object):
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
         t1 = time.time()
+        build_mode = BuildMode(build_mode, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         logger.debug("Install-Process private %s" % (time.time() - t1))
         t1 = time.time()
@@ -90,13 +144,13 @@ class ConanInstaller(object):
                 continue
 
             if conan_ref:
-                build_forced = self._build_forced(conan_ref, build_mode, conanfile)
+                build_forced = build_mode.forced(conan_ref, conanfile)
                 if build_forced:
                     continue
 
                 package_id = conanfile.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
-                check_outdated = self._check_outdated(build_mode)
+                check_outdated = build_mode.outdated
 
                 if self._remote_proxy.package_available(package_reference,
                                                         conanfile.short_paths,
@@ -111,6 +165,7 @@ class ConanInstaller(object):
         """Called from info command when a build policy is used in build_order parameter"""
         # Get the nodes in order and if we have to build them
         nodes_by_level = deps_graph.by_levels()
+        build_mode = BuildMode(build_mode, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         nodes = self._get_nodes(nodes_by_level, skip_private_nodes, build_mode)
         return [(PackageReference(conan_ref, package_id), conan_file)
@@ -143,7 +198,7 @@ class ConanInstaller(object):
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
 
             if build_needed:
-                build_allowed = self._build_allowed(conan_ref, build_mode, conan_file)
+                build_allowed = build_mode.allowed(conan_ref, conan_file)
                 if not build_allowed:
                     self._raise_package_not_found_error(conan_ref, conan_file)
 
@@ -152,7 +207,7 @@ class ConanInstaller(object):
                 package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
                 if build_mode is True:
                     output.info("Building package from source as defined by build_policy='missing'")
-                elif self._build_forced(conan_ref, build_mode, conan_file):
+                elif build_mode.forced(conan_ref, conan_file):
                     output.warn('Forced build from source')
 
                 t1 = time.time()
@@ -233,8 +288,8 @@ class ConanInstaller(object):
                     # Avoid processing twice the same package reference
                     if package_reference not in package_references:
                         package_references.add(package_reference)
-                        check_outdated = self._check_outdated(build_mode)
-                        if self._build_forced(conan_ref, build_mode, conan_file):
+                        check_outdated = build_mode.outdated
+                        if build_mode.forced(conan_ref, conan_file):
                             build_node = True
                         else:
                             build_node = not self._remote_proxy.package_available(package_reference,
@@ -244,14 +299,10 @@ class ConanInstaller(object):
                 nodes_to_build.append((conan_ref, package_id, conan_file, build_node))
 
         # A check to be sure that if introduced a pattern, something is going to be built
-        if isinstance(build_mode, list):
-            to_build = [n[0] for n in nodes_to_build if n[3]]
-            for pattern in build_mode:
-                if pattern in ["*", "outdated*"]:
-                    continue
-                matched = any([fnmatch.fnmatch(str(ref), pattern) for ref in to_build])
-                if not matched:
-                    raise ConanException("No package matching '%s' pattern" % pattern)
+
+        if build_mode.patterns:
+            to_build = [str(n[0]) for n in nodes_to_build if n[3]]
+            build_mode.check_matches(to_build)
 
         return nodes_to_build
 
@@ -444,34 +495,6 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
         except Exception as e:
             msg = format_conanfile_exception(str(conan_ref), "package_info", e)
             raise ConanException(msg)
-
-    def _build_forced(self, conan_ref, build_mode, conan_file):
-        if build_mode == "outdated":
-            return False
-
-        if conan_file.build_policy_always:
-            out = ScopedOutput(str(conan_ref), self._out)
-            out.info("Building package from source as defined by build_policy='always'")
-            return True
-
-        if build_mode is False:  # "never" option, default
-            return False
-
-        if build_mode is True:  # Build missing (just if needed), not force
-            return False
-
-        # Patterns to match, if package matches pattern, build is forced
-        force_build = any([fnmatch.fnmatch(str(conan_ref), pattern)
-                           for pattern in build_mode])
-        return force_build
-
-    def _build_allowed(self, conan_ref, build_mode, conan_file):
-        forced = self._build_forced(conan_ref, build_mode, conan_file)
-        # Option "--build outdated" means: missing or outdated, so don't care if it's really outdated
-        return forced or build_mode in (True, "outdated") or conan_file.build_policy_missing
-
-    def _check_outdated(self, build_mode):
-        return build_mode == "outdated"
 
 
 def _show_partial_trace(output, start_keyword):
