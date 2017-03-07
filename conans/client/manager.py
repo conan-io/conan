@@ -30,7 +30,8 @@ from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
 from conans.tools import environment_append
 from conans.util.files import save, load, rmdir, normalize
 from conans.util.log import logger
-from conans.model.profile import initialize_profile
+from conans.model.profile import Profile
+from conans.model.info import ConanInfo
 
 
 def get_user_channel(text):
@@ -60,12 +61,30 @@ class ConanManager(object):
     def _loader(self, current_path=None, profile=None):
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
-        profile = initialize_profile(settings, current_path, profile)
-        self._current_scopes = profile.scopes
+        mixed_profile = Profile()
+        if profile is None:
+            if current_path:
+                conan_info_path = os.path.join(current_path, CONANINFO)
+                if os.path.exists(conan_info_path):
+                    existing_info = ConanInfo.load_file(conan_info_path)
+                    settings.values = existing_info.full_settings
+                    mixed_profile.options = existing_info.full_options
+                    mixed_profile.scopes = existing_info.scope
+                    mixed_profile.env_values = existing_info.env_values
+        else:
+            mixed_profile.env_values.update(profile.env_values)
+            settings.values = profile.settings_values
+            if profile.scopes:
+                mixed_profile.scopes.update_scope(profile.scopes)
+            mixed_profile.options.update(profile.options)
+            for pkg, pkg_settings in profile.package_settings.items():
+                mixed_profile.package_settings[pkg].update(pkg_settings)
+
+        self._current_scopes = mixed_profile.scopes
         return ConanFileLoader(self._runner, settings=settings,
-                               package_settings=profile.package_settings_values,
-                               options=profile.options, scopes=profile.scopes,
-                               env_values=profile.env_values)
+                               package_settings=mixed_profile.package_settings_values,
+                               options=mixed_profile.options, scopes=mixed_profile.scopes,
+                               env_values=mixed_profile.env_values)
 
     def export(self, user, conan_file_path, keep_source=False):
         """ Export the conans

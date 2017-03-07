@@ -31,7 +31,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files, exception_message_safe
 from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
-from conans.model.profile import read_profile_args, read_profile_file
+from conans.model.profile import Profile
 
 
 class Extender(argparse.Action):
@@ -208,7 +208,7 @@ path to the CMake binary directory, like this:
         rmdir(build_folder)
         # shutil.copytree(test_folder, build_folder)
 
-        profile = read_profile_args(args, current_path, self._client_cache.profiles_path)
+        profile = Profile.from_args(args, current_path, self._client_cache.profiles_path)
         loader = self._manager._loader(current_path=None, profile=profile)
 
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
@@ -331,7 +331,7 @@ path to the CMake binary directory, like this:
             else:
                 manifest_verify = manifest_interactive = False
 
-            profile = read_profile_args(args, current_path, self._client_cache.profiles_path)
+            profile = Profile.from_args(args, current_path, self._client_cache.profiles_path)
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,
@@ -405,7 +405,7 @@ path to the CMake binary directory, like this:
         except:
             reference = os.path.normpath(os.path.join(current_path, args.reference))
 
-        profile = read_profile_args(args, current_path, self._client_cache.profiles_path)
+        profile = Profile.from_args(args, current_path, self._client_cache.profiles_path)
         self._manager.info(reference=reference,
                            current_path=current_path,
                            remote=args.remote,
@@ -797,7 +797,7 @@ path to the CMake binary directory, like this:
             else:
                 self._user_io.out.info("No profiles defined")
         elif args.subcommand == "show":
-            p = read_profile_file(args.profile, os.getcwd(), self._client_cache.profiles_path)
+            p = Profile.read_file(args.profile, os.getcwd(), self._client_cache.profiles_path)
             Printer(self._user_io.out).print_profile(args.profile, p)
 
     def _show_help(self):

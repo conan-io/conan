@@ -7,77 +7,7 @@ from conans.model.env_info import EnvValues, unquote
 from conans.model.options import OptionsValues
 import os
 from conans.util.files import load, mkdir
-from conans.paths import CONANINFO
-from conans.model.info import ConanInfo
 from conans.model.values import Values
-
-
-def initialize_profile(settings, current_path=None, profile=None):
-    result = Profile()
-
-    if profile is None:
-        if current_path:
-            conan_info_path = os.path.join(current_path, CONANINFO)
-            if os.path.exists(conan_info_path):
-                existing_info = ConanInfo.load_file(conan_info_path)
-                settings.values = existing_info.full_settings
-                result.options = existing_info.full_options
-                result.scopes = existing_info.scope
-                result.env_values = existing_info.env_values
-    else:
-        result.env_values.update(profile.env_values)
-        settings.values = profile.settings_values
-        if profile.scopes:
-            result.scopes.update_scope(profile.scopes)
-        result.options.update(profile.options)
-        for pkg, settings in profile.package_settings.items():
-            result.package_settings[pkg].update(settings)
-    return result
-
-
-def read_profile_args(args, cwd, default_folder):
-    file_profile = read_profile_file(args.profile, cwd, default_folder)
-    args_profile = Profile.parse(args.settings, args.options, args.env, args.scope)
-
-    if file_profile:
-        # Settings
-        file_profile.update(args_profile)
-        return file_profile
-    else:
-        return args_profile
-
-
-def read_profile_file(profile_name, cwd, default_folder):
-    if not profile_name:
-        return None
-
-    if os.path.isabs(profile_name):
-        profile_path = profile_name
-        folder = os.path.dirname(profile_name)
-    elif profile_name.startswith("."):  # relative path name
-        profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-        folder = os.path.dirname(profile_path)
-    else:
-        folder = default_folder
-        if not os.path.exists(folder):
-            mkdir(folder)
-        profile_path = os.path.join(folder, profile_name)
-
-    try:
-        text = load(profile_path)
-    except Exception:
-        if os.path.exists(folder):
-            profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-        else:
-            profiles = []
-        current_profiles = ", ".join(profiles) or "[]"
-        raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                             "%s" % (profile_name, current_profiles))
-
-    try:
-        return Profile.loads(text)
-    except ConanException as exc:
-        raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
 
 class Profile(object):
@@ -104,7 +34,23 @@ class Profile(object):
         return result
 
     @staticmethod
+    def from_args(args, cwd, default_folder):
+        """ Return a Profile object, as the result of merging a potentially existing Profile
+        file and the args command-line arguments
+        """
+        file_profile = Profile.read_file(args.profile, cwd, default_folder)
+        args_profile = Profile.parse(args.settings, args.options, args.env, args.scope)
+
+        if file_profile:
+            file_profile.update(args_profile)
+            return file_profile
+        else:
+            return args_profile
+
+    @staticmethod
     def parse(settings, options, envs, scopes):
+        """ return a Profile object result of parsing raw data
+        """
         def _get_tuples_list_from_extender_arg(items):
             if not items:
                 return []
@@ -156,7 +102,46 @@ class Profile(object):
         return result
 
     @staticmethod
+    def read_file(profile_name, cwd, default_folder):
+        """ Will look for "profile_name" in disk if profile_name is absolute path,
+        in current folder if path is relative or in the default folder otherwise.
+        return: a Profile object
+        """
+        if not profile_name:
+            return None
+
+        if os.path.isabs(profile_name):
+            profile_path = profile_name
+            folder = os.path.dirname(profile_name)
+        elif profile_name.startswith("."):  # relative path name
+            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+            folder = os.path.dirname(profile_path)
+        else:
+            folder = default_folder
+            if not os.path.exists(folder):
+                mkdir(folder)
+            profile_path = os.path.join(folder, profile_name)
+
+        try:
+            text = load(profile_path)
+        except Exception:
+            if os.path.exists(folder):
+                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
+            else:
+                profiles = []
+            current_profiles = ", ".join(profiles) or "[]"
+            raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
+                                 "%s" % (profile_name, current_profiles))
+
+        try:
+            return Profile.loads(text)
+        except ConanException as exc:
+            raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
+
+    @staticmethod
     def loads(text):
+        """ Parse and return a Profile object from a text config like representation
+        """
         def get_package_name_value(item):
             '''Parse items like package:name=value or name=value'''
             package_name = None
@@ -242,18 +227,6 @@ class Profile(object):
         Specified package settings are prioritized to profile'''
         for package_name, settings in package_settings.items():
             self.package_settings[package_name].update(settings)
-
-    def _mix_env_with_new(self, env_dict, new_env):
-        res_env = OrderedDict()
-        for name, value in new_env:
-            if name in env_dict:
-                del env_dict[name]
-            res_env[name] = value  # Insert first in the result
-
-        for name, value in env_dict.items():
-            res_env[name] = value  # Insert the rest of env vars at the end
-
-        return res_env
 
     def update_scopes(self, new_scopes):
         '''Mix the specified settings with the current profile.
