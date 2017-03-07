@@ -30,20 +30,6 @@ class VisualStudioGenerator(Generator):
   <ItemGroup />
 </Project>'''
 
-  #   item_template = '''  <PropertyGroup Label="{name}">
-  #   <Conan.{name}.root>{root_dir}</Conan.{name}.root>
-  #   <Conan.IncludeDirs.{name}>{include_dirs}</Conan.IncludeDirs.{name}>
-  #   <Conan.LibDirs.{name}>{lib_dirs}</Conan.LibDirs.{name}>
-  #   <Conan.BinDirs.{name}>{bin_dirs}</Conan.BinDirs.{name}>
-  #   <Conan.Libs.{name}>{libs}</Conan.Libs.{name}>
-  #   <Conan.Defines.{name}>{defines}</Conan.Defines.{name}>
-  #   <Conan.CompileDefinitions.{name}>{definitions}</Conan.CompileDefinitions.{name}>
-  #   <Conan.CxxFlags.{name}>{cxx_flags}</Conan.CxxFlags.{name}>
-  #   <Conan.SharedLinkerFlags.{name}>{include_dirs}</Conan.SharedLinkerFlags.{name}>
-  #   <Conan.ExeLinkerFlags.{name}>{shared_exe_flags}</Conan.ExeLinkerFlags.{name}>
-  #   <Conan.CFlags.{name}>{c_flags}</Conan.CFlags.{name}>
-  # </PropertyGroup>'''
-
     item_template = '''
   <PropertyGroup Label="Conan.{name}">
     <Conan.{name}.Root>{root_dir}</Conan.{name}.Root>
