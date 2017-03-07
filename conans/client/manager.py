@@ -235,7 +235,7 @@ class ConanManager(object):
             self._user_io.out.info(", ".join(str(s) for s in result))
             return
 
-        if build_mode is not False:  # sim_install is a policy or list of names (same as install build param)
+        if build_mode is not None:  # sim_install is a policy or list of names (same as install build param)
             installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
             nodes = installer.nodes_to_build(deps_graph, build_mode)
             counter = Counter(ref.conan.name for ref, _ in nodes)
@@ -284,7 +284,7 @@ class ConanManager(object):
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
-                build_mode=False, filename=None, update=False, check_updates=False,
+                build_mode=None, filename=None, update=False, check_updates=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
                 scopes=None, generators=None, profile_name=None, package_settings=None,
                 env_values=None, no_imports=False):
