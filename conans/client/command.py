@@ -251,8 +251,6 @@ path to the CMake binary directory, like this:
         # Get False or a list of patterns to check
         if args.build is None and lib_to_test:  # Not specified, force build the tested library
             args.build = [lib_to_test]
-        else:
-            args.build = _get_build_sources_parameter(args.build)
 
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
@@ -335,8 +333,6 @@ path to the CMake binary directory, like this:
                                      "e.g., MyPackage/1.2@user/channel")
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
-            # Get False or a list of patterns to check
-            args.build = _get_build_sources_parameter(args.build)
             options = _get_tuples_list_from_extender_arg(args.options)
             settings, package_settings = _get_simple_and_package_tuples(args.settings)
             env, package_env = _get_simple_and_package_tuples(args.env)
@@ -424,6 +420,8 @@ path to the CMake binary directory, like this:
         parser.add_argument("--build_order", "-bo",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
+        parser.add_argument("--graph", "-g", nargs="?", const="graph.dot",
+                            help='Output project dependencies in DOT format for visual graphing')
         build_help = 'given a build policy (same install command "build" parameter), return an ordered list of  ' \
                      'packages that would be built from sources in install command (simulation)'
 
@@ -434,11 +432,10 @@ path to the CMake binary directory, like this:
         log_command("info", vars(args))
 
         options = _get_tuples_list_from_extender_arg(args.options)
-        settings, package_settings =_get_simple_and_package_tuples(args.settings)
+        settings, package_settings = _get_simple_and_package_tuples(args.settings)
         env, package_env = _get_simple_and_package_tuples(args.env)
         env_values = _get_env_values(env, package_env)
-        # Get False or a list of patterns to check
-        args.build = _get_build_sources_parameter(args.build)
+
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
@@ -459,7 +456,8 @@ path to the CMake binary directory, like this:
                            build_mode=args.build,
                            scopes=scopes,
                            env_values=env_values,
-                           profile_name=args.profile)
+                           profile_name=args.profile,
+                           graph_filename=args.graph)
 
     def build(self, *args):
         """ Utility command to run your current project 'conanfile.py' build() method.
@@ -734,6 +732,8 @@ path to the CMake binary directory, like this:
         parser.add_argument("--remote", "-r", help='upload to this specific remote')
         parser.add_argument("--all", action='store_true',
                             default=False, help='Upload both package recipe and packages')
+        parser.add_argument("--skip_upload", action='store_true',
+                            default=False, help='Do not upload anything, just run the checks and the compression.')
         parser.add_argument("--force", action='store_true',
                             default=False,
                             help='Do not check conan recipe date, override remote with local')
@@ -753,7 +753,7 @@ path to the CMake binary directory, like this:
         self._manager.upload(args.pattern, args.package,
                              args.remote, all_packages=args.all,
                              force=args.force, confirm=args.confirm, retry=args.retry,
-                             retry_wait=args.retry_wait)
+                             retry_wait=args.retry_wait, skip_upload=args.skip_upload)
 
     def remote(self, *args):
         """ Handles the remote list and the package recipes associated to a remote.
@@ -965,29 +965,6 @@ def _get_simple_and_package_tuples(items):
     return simple_items, package_items
 
 
-def _get_build_sources_parameter(build_param):
-    """returns True if we want to build the missing libraries
-             False if building is forbidden
-             A list with patterns: Will force build matching libraries,
-                                   will look for the package for the rest
-             "outdated" if will build when the package is not generated with
-                        the current exported recipe
-    """
-    if isinstance(build_param, list):
-        if len(build_param) == 0:  # All packages from source
-            return ["*"]
-        elif len(build_param) == 1 and build_param[0] == "never":
-            return False  # Default
-        elif len(build_param) == 1 and build_param[0] == "missing":
-            return True
-        elif len(build_param) == 1 and build_param[0] == "outdated":
-            return "outdated"
-        else:  # A list of expressions to match (if matches, will build from source)
-            return ["%s*" % ref_expr for ref_expr in build_param]
-    else:
-        return False  # Nothing is built
-
-
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
 
         --build            Build all from sources, do not use binary packages.
@@ -1008,7 +985,7 @@ def _get_env_values(env, package_env):
     return env_values
 
 
-def _get_reference( args):
+def _get_reference(args):
     current_path = os.getcwd()
     try:
         reference = ConanFileReference.loads(args.reference)

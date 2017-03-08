@@ -8,6 +8,7 @@ from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.detect import detected_os
 from conans.client.export import export_conanfile
 from conans.client.generators import write_generators
+from conans.client.grapher import ConanGrapher
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import ConanInstaller
 from conans.client.loader import ConanFileLoader
@@ -33,7 +34,7 @@ from conans.model.scope import Scopes
 from conans.model.values import Values
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
 from conans.tools import environment_append
-from conans.util.files import save, load, rmdir, normalize
+from conans.util.files import save, load, rmdir, normalize, mkdir
 from conans.util.log import logger
 
 
@@ -198,8 +199,8 @@ class ConanManager(object):
         return (builder, deps_graph, project_reference, registry, conanfile,
                 remote_proxy, loader)
 
-    def info(self, reference, current_path, remote=None, options=None, settings=None,
-             info=None, filter=None, filename=None, update=False, check_updates=False, scopes=None,
+    def info(self, reference, current_path, graph_filename, remote=None, options=None, settings=None,
+             info=None, filter = None, filename=None, update=False, check_updates=False, scopes=None,
              build_order=None, build_mode=None, package_settings=None, env_values=None,
              profile_name=None):
         """ Fetch and build all dependencies for the given reference
@@ -235,7 +236,7 @@ class ConanManager(object):
             self._user_io.out.info(", ".join(str(s) for s in result))
             return
 
-        if build_mode is not False:  # sim_install is a policy or list of names (same as install build param)
+        if build_mode is not None:  # sim_install is a policy or list of names (same as install build param)
             installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
             nodes = installer.nodes_to_build(deps_graph, build_mode)
             counter = Counter(ref.conan.name for ref, _ in nodes)
@@ -249,9 +250,13 @@ class ConanManager(object):
         else:
             graph_updates_info = {}
 
-        Printer(self._user_io.out).print_info(deps_graph, project_reference,
-                                              info, registry, graph_updates_info,
-                                              remote, read_dates(deps_graph), self._client_cache, filter)
+        if graph_filename:
+            grapher = ConanGrapher(project_reference, deps_graph)
+            grapher.graph(graph_filename)
+        else:
+            Printer(self._user_io.out).print_info(deps_graph, project_reference,
+                                                  info, registry, graph_updates_info,
+                                                  remote, read_dates(deps_graph), self._client_cache, filter)
 
     def read_profile(self, profile_name, cwd):
         if not profile_name:
@@ -284,7 +289,7 @@ class ConanManager(object):
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
     def install(self, reference, current_path, remote=None, options=None, settings=None,
-                build_mode=False, filename=None, update=False, check_updates=False,
+                build_mode=None, filename=None, update=False, check_updates=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
                 scopes=None, generators=None, profile_name=None, package_settings=None,
                 env_values=None, no_imports=False):
@@ -396,7 +401,13 @@ If not:
             conanfile = self._loader().load_conan(conan_file_path, output, reference=reference)
 
         _load_info_file(current_path, conanfile, output, error=True)
-        run_imports(conanfile, dest_folder or current_path, output)
+        if dest_folder:
+            if not os.path.isabs(dest_folder):
+                dest_folder = os.path.normpath(os.path.join(current_path, dest_folder))
+            mkdir(dest_folder)
+        else:
+            dest_folder = current_path
+        run_imports(conanfile, dest_folder, output)
 
     def local_package(self, current_path, build_folder):
         if current_path == build_folder:
@@ -493,9 +504,8 @@ If not:
             raise ConanException("Unable to build it successfully\n%s" % '\n'.join(trace[3:]))
 
     def upload(self, conan_reference_or_pattern, package_id=None, remote=None, all_packages=None,
-               force=False, confirm=False, retry=0, retry_wait=0):
+               force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False):
         """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
-
         t1 = time.time()
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
                                   remote)
@@ -506,11 +516,11 @@ If not:
             ref = ConanFileReference.loads(conan_reference_or_pattern)
             uploader.check_reference(ref)
             uploader.upload_package(PackageReference(ref, package_id), retry=retry,
-                                    retry_wait=retry_wait)
+                                    retry_wait=retry_wait, skip_upload=skip_upload)
         else:  # Upload conans
-            uploader.upload_conan(conan_reference_or_pattern, all_packages=all_packages,
-                                  force=force, confirm=confirm,
-                                  retry=retry, retry_wait=retry_wait)
+            uploader.upload(conan_reference_or_pattern, all_packages=all_packages,
+                            force=force, confirm=confirm,
+                            retry=retry, retry_wait=retry_wait, skip_upload=skip_upload)
 
         logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 
