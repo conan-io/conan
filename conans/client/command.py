@@ -5,6 +5,7 @@ import os
 import re
 import requests
 import sys
+
 import conans
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
@@ -32,6 +33,7 @@ from conans.util.files import rmdir, load, save_files, exception_message_safe
 from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.model.profile import Profile
+from conans.client.command_profile_args import profile_from_args
 
 
 class Extender(argparse.Action):
@@ -208,8 +210,8 @@ path to the CMake binary directory, like this:
         rmdir(build_folder)
         # shutil.copytree(test_folder, build_folder)
 
-        profile = Profile.from_args(args, current_path, self._client_cache.profiles_path)
-        loader = self._manager._loader(current_path=None, profile=profile)
+        profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
+        loader = self._manager._loader(conan_info_path=None, profile=profile)
 
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
@@ -231,8 +233,6 @@ path to the CMake binary directory, like this:
         # Get False or a list of patterns to check
         if args.build is None and lib_to_test:  # Not specified, force build the tested library
             args.build = [lib_to_test]
-        else:
-            args.build = _get_build_sources_parameter(args.build)
 
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
@@ -310,9 +310,6 @@ path to the CMake binary directory, like this:
                                      "e.g., MyPackage/1.2@user/channel")
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
-            # Get False or a list of patterns to check
-            args.build = _get_build_sources_parameter(args.build)
-
             if args.manifests and args.manifests_interactive:
                 raise ConanException("Do not specify both manifests and "
                                      "manifests-interactive arguments")
@@ -331,7 +328,7 @@ path to the CMake binary directory, like this:
             else:
                 manifest_verify = manifest_interactive = False
 
-            profile = Profile.from_args(args, current_path, self._client_cache.profiles_path)
+            profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,
@@ -388,24 +385,22 @@ path to the CMake binary directory, like this:
         parser.add_argument("--build_order", "-bo",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
+        parser.add_argument("--graph", "-g", nargs="?", const="graph.dot",
+                            help='Output project dependencies in DOT format for visual graphing')
         build_help = 'given a build policy (same install command "build" parameter), return an ordered list of  ' \
                      'packages that would be built from sources in install command (simulation)'
 
         _add_common_install_arguments(parser, build_help=build_help)
-
         args = parser.parse_args(*args)
-
         log_command("info", vars(args))
 
-        # Get False or a list of patterns to check
-        args.build = _get_build_sources_parameter(args.build)
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, args.reference))
 
-        profile = Profile.from_args(args, current_path, self._client_cache.profiles_path)
+        profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
         self._manager.info(reference=reference,
                            current_path=current_path,
                            remote=args.remote,
@@ -414,7 +409,8 @@ path to the CMake binary directory, like this:
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
-                           build_mode=args.build)
+                           build_mode=args.build,
+                           graph_filename=args.graph)
 
     def build(self, *args):
         """ Utility command to run your current project 'conanfile.py' build() method.
@@ -889,29 +885,6 @@ def _add_common_install_arguments(parser, build_help):
                         nargs=1, action=Extender)
 
     parser.add_argument("--build", "-b", action=Extender, nargs="*", help=build_help)
-
-
-def _get_build_sources_parameter(build_param):
-    """returns True if we want to build the missing libraries
-             False if building is forbidden
-             A list with patterns: Will force build matching libraries,
-                                   will look for the package for the rest
-             "outdated" if will build when the package is not generated with
-                        the current exported recipe
-    """
-    if isinstance(build_param, list):
-        if len(build_param) == 0:  # All packages from source
-            return ["*"]
-        elif len(build_param) == 1 and build_param[0] == "never":
-            return False  # Default
-        elif len(build_param) == 1 and build_param[0] == "missing":
-            return True
-        elif len(build_param) == 1 and build_param[0] == "outdated":
-            return "outdated"
-        else:  # A list of expressions to match (if matches, will build from source)
-            return ["%s*" % ref_expr for ref_expr in build_param]
-    else:
-        return False  # Nothing is built
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
