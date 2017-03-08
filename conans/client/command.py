@@ -602,27 +602,37 @@ path to the CMake binary directory, like this:
         """
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
         parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
-        parser.add_argument('-p', '--packages', const=[], nargs='?',
-                            help='By default, remove all the packages or select one, '
-                                 'specifying the SHA key')
-        parser.add_argument('-b', '--builds', const=[], nargs='?',
-                            help='By default, remove all the build folders or select one, '
-                                 'specifying the SHA key')
+        parser.add_argument('-p', '--packages',
+                            help='By default, remove all the packages or select one, specifying the package ID',
+                            nargs="*", action=Extender)
+        parser.add_argument('-b', '--builds',
+                            help='By default, remove all the build folders or select one, specifying the package ID',
+                            nargs="*", action=Extender)
+
         parser.add_argument('-s', '--src', default=False, action="store_true",
                             help='Remove source folders')
         parser.add_argument('-f', '--force', default=False,
                             action='store_true', help='Remove without requesting a confirmation')
         parser.add_argument('-r', '--remote', help='Will remove from the specified remote')
+        parser.add_argument('-q', '--query', default=None, help='Packages query: "os=Windows AND '
+                                                                '(arch=x86 OR compiler=gcc)".'
+                                                                ' The "pattern" parameter '
+                                                                'has to be a package recipe '
+                                                                'reference: MyPackage/1.2'
+                                                                '@user/channel')
         args = parser.parse_args(*args)
         log_command("remove", vars(args))
 
-        if args.packages:
-            args.packages = args.packages.split(",")
-        if args.builds:
-            args.builds = args.builds.split(",")
-        self._manager.remove(args.pattern, package_ids_filter=args.packages,
-                             build_ids=args.builds,
-                             src=args.src, force=args.force, remote=args.remote)
+        reference = _check_query_parameter_and_get_reference(args)
+
+        if args.packages is not None and args.query:
+            raise ConanException("'-q' and '-p' parameters can't be used at the same time")
+
+        if args.builds is not None and args.query:
+            raise ConanException("'-q' and '-b' parameters can't be used at the same time")
+
+        self._manager.remove(reference or args.pattern, package_ids_filter=args.packages, build_ids=args.builds,
+                             src=args.src, force=args.force, remote=args.remote, packages_query=args.query)
 
     def copy(self, *args):
         """ Copy conan recipes and packages to another user/channel.
@@ -702,15 +712,7 @@ path to the CMake binary directory, like this:
         args = parser.parse_args(*args)
         log_command("search", vars(args))
 
-        reference = None
-        if args.pattern:
-            try:
-                reference = ConanFileReference.loads(args.pattern)
-            except ConanException:
-                if args.query is not None:
-                    raise ConanException("-q parameter only allowed with a valid recipe "
-                                         "reference as search pattern. e.j conan search "
-                                         "MyPackage/1.2@user/channel -q \"os=Windows\"")
+        reference = _check_query_parameter_and_get_reference(args)
 
         self._manager.search(reference or args.pattern,
                              args.remote,
@@ -898,7 +900,7 @@ path to the CMake binary directory, like this:
                 pass
         except Exception as exc:
             # import traceback
-            # logger.debug(traceback.format_exc())
+            # print(traceback.format_exc())
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
@@ -907,6 +909,19 @@ path to the CMake binary directory, like this:
             raise exc
 
         return errors
+
+
+def _check_query_parameter_and_get_reference(args):
+    reference = None
+    if args.pattern:
+        try:
+            reference = ConanFileReference.loads(args.pattern)
+        except ConanException:
+            if args.query is not None:
+                raise ConanException("-q parameter only allowed with a valid recipe "
+                                     "reference as search pattern. e.j conan search "
+                                     "MyPackage/1.2@user/channel -q \"os=Windows\"")
+    return reference
 
 
 def _add_common_install_arguments(parser, build_help):

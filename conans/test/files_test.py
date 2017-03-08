@@ -78,7 +78,7 @@ class FileCopierTest(unittest.TestCase):
         folder2 = temp_folder()
         copier = FileCopier(folder1, folder2)
         copier("*.txt", excludes="*Test*.txt")
-        self.assertEqual(['MyLib.txt', 'MyLibImpl.txt'], os.listdir(folder2))
+        self.assertEqual(set(['MyLib.txt', 'MyLibImpl.txt']), set(os.listdir(folder2)))
 
         folder2 = temp_folder()
         copier = FileCopier(folder1, folder2)

@@ -581,17 +581,20 @@ If not:
         copier.copy(reference, package_ids, username, channel, force)
 
     def remove(self, pattern, src=False, build_ids=None, package_ids_filter=None, force=False,
-               remote=None):
+               remote=None, packages_query=None):
         """ Remove conans and/or packages
         @param pattern: string to match packages
-        @param package_ids: list of ids or [] for all list
+        @param src: Remove src folder
+        @param package_ids_filter: list of ids or [] for all list
+        @param build_ids: list of ids or [] for all list
         @param remote: search on another origin to get packages info
         @param force: if True, it will be deleted without requesting anything
+        @param packages_query: Only if src is a reference. Query settings and options
         """
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
         remover = ConanRemover(self._client_cache, self._search_manager, self._user_io,
                                remote_proxy)
-        remover.remove(pattern, src, build_ids, package_ids_filter, force=force)
+        remover.remove(pattern, src, build_ids, package_ids_filter, force=force, packages_query=packages_query)
 
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
