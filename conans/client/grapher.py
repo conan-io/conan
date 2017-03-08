@@ -1,4 +1,5 @@
 from conans.util.files import save
+from conans.client.installer import build_id
 
 
 class ConanGrapher(object):
@@ -40,8 +41,15 @@ class ConanHTMLGrapher(object):
             if ref:
                 label = "%s/%s" % (ref.name, ref.version)
                 fulllabel = [str(ref)]
-                fulllabel.append("license: %s" % conanfile.license)
-                fulllabel.append("author: %s" % conanfile.author)
+                fulllabel.append("")
+                fulllabel.append("id: %s" % conanfile.info.package_id())
+                fulllabel.append("build_id: %s" % build_id(conanfile))
+                if conanfile.url:
+                    fulllabel.append("url: %s" % conanfile.url)
+                if conanfile.license:
+                    fulllabel.append("license: %s" % conanfile.license)
+                if conanfile.author:
+                    fulllabel.append("author: %s" % conanfile.author)
                 fulllabel = r"\n".join(fulllabel)
             else:
                 fulllabel = label = self._project_reference
@@ -54,7 +62,7 @@ class ConanHTMLGrapher(object):
             for node_to in self._deps_graph.neighbors(node):
                 src = nodes_map[node]
                 dst = nodes_map[node_to]
-                edges.append("{ from: %d, to: %d, arrows: 'to' }" % (src, dst))
+                edges.append("{ from: %d, to: %d }" % (src, dst))
         edges = ",\n".join(edges)
 
         return self._template.replace("%NODES%", nodes).replace("%EDGES%", edges)
@@ -82,11 +90,12 @@ class ConanHTMLGrapher(object):
       }
     }
   </style>
-  <div id="mynetwork"></div>
   <div align="right">
     <a href="javascript:showhideclass('controls')" class="noPrint">Show/hide controls.</a>
   </div>
-  <div id="controls" class="controls"></div>
+  <div id="controls" class="controls"  style="display:none"></div>
+  <div id="mynetwork"></div>
+
 
   <script type="text/javascript">
     function showhideclass(id) {
@@ -110,15 +119,22 @@ class ConanHTMLGrapher(object):
     var options = {
       autoResize: true,
       locale: 'en',
-      physics: {
-        enabled: false,
-
+      edges: {
+        arrows: { to: {enabled: true}},
+        smooth: { enabled: false}
+      },
+      nodes: {
+          font: {'face': 'monospace', 'align': 'left'}
       },
       layout: {
         "hierarchical": {
           "enabled": true,
-          "sortMethod": "directed"
+          "sortMethod": "directed",
+          "direction": "UD"
         }
+      },
+      physics: {
+          enabled: false,
       },
       configure: {
         enabled: true,
