@@ -448,4 +448,4 @@ class ProfilesEnvironmentTest(unittest.TestCase):
             profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
         for varname, value in env.items():
             profile.env_values.add(varname, value)
-        save(self.client.client_cache.profile_path(name), profile.dumps())
+        save(os.path.join(self.client.client_cache.profiles_path, name), profile.dumps())

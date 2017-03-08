@@ -1,7 +1,7 @@
 import os
 
 from conans.errors import ConanException
-from conans.util.files import save, load, mkdir, normalize
+from conans.util.files import save, load, normalize
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
@@ -55,7 +55,6 @@ class ClientCache(SimplePaths):
             return ret
         except Exception:
             raise ConanException("Invalid %s file!" % self.put_headers_path)
-
 
     @property
     def registry(self):
@@ -173,8 +172,3 @@ class ClientCache(SimplePaths):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
-
-    def profile_path(self, name):
-        if not os.path.exists(self.profiles_path):
-            mkdir(self.profiles_path)
-        return os.path.join(self.profiles_path, name)

@@ -5,8 +5,8 @@ import os
 import re
 import requests
 import sys
+
 import conans
-from collections import defaultdict
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
@@ -23,9 +23,7 @@ from conans.client.runner import ConanRunner
 from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.errors import ConanException
-from conans.model.env_info import EnvValues
 from conans.model.ref import ConanFileReference, is_a_reference
-from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
@@ -34,6 +32,8 @@ from conans.util.env_reader import get_env
 from conans.util.files import rmdir, load, save_files, exception_message_safe
 from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
+from conans.model.profile import Profile
+from conans.client.command_profile_args import profile_from_args
 
 
 class Extender(argparse.Action):
@@ -178,26 +178,8 @@ class Command(object):
         rmdir(build_folder)
         # shutil.copytree(test_folder, build_folder)
 
-        options = _get_tuples_list_from_extender_arg(args.options)
-        env, package_env = _get_simple_and_package_tuples(args.env)
-        env_values = _get_env_values(env, package_env)
-        settings, package_settings = _get_simple_and_package_tuples(args.settings)
-        scopes = Scopes.from_list(args.scope) if args.scope else None
-
-        manager = self._manager
-
-        # Read profile environment and mix with the command line parameters
-        if args.profile:
-            try:
-                profile = manager.read_profile(args.profile, current_path)
-            except ConanException as exc:
-                raise ConanException("Error reading '%s' profile: %s" % (args.profile, exc))
-            else:
-                env_values.update(profile.env_values)
-
-        loader = manager._loader(current_path=None, user_settings_values=settings,
-                                 user_options_values=options, scopes=scopes,
-                                 package_settings=package_settings, env_values=env_values)
+        profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
+        loader = self._manager._loader(conan_info_path=None, profile=profile)
 
         conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
         try:
@@ -223,15 +205,10 @@ class Command(object):
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
                               remote=args.remote,
-                              options=options,
-                              settings=settings,
-                              package_settings=package_settings,
+                              profile=profile,
                               build_mode=args.build,
-                              scopes=scopes,
                               update=args.update,
-                              generators=["env", "txt"],
-                              profile_name=args.profile,
-                              env_values=env_values
+                              generators=["env", "txt"]
                               )
         self._manager.build(test_folder, build_folder, test=True)
 
@@ -300,12 +277,6 @@ class Command(object):
                                      "e.g., MyPackage/1.2@user/channel")
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
-            options = _get_tuples_list_from_extender_arg(args.options)
-            settings, package_settings = _get_simple_and_package_tuples(args.settings)
-            env, package_env = _get_simple_and_package_tuples(args.env)
-            env_values = _get_env_values(env, package_env)
-
-            scopes = Scopes.from_list(args.scope) if args.scope else None
             if args.manifests and args.manifests_interactive:
                 raise ConanException("Do not specify both manifests and "
                                      "manifests-interactive arguments")
@@ -323,22 +294,19 @@ class Command(object):
                 manifest_interactive = args.manifests_interactive is not None
             else:
                 manifest_verify = manifest_interactive = False
+
+            profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
             self._manager.install(reference=reference,
                                   current_path=current_path,
                                   remote=args.remote,
-                                  options=options,
-                                  settings=settings,
+                                  profile=profile,
                                   build_mode=args.build,
                                   filename=args.file,
                                   update=args.update,
                                   manifest_folder=manifest_folder,
                                   manifest_verify=manifest_verify,
                                   manifest_interactive=manifest_interactive,
-                                  scopes=scopes,
                                   generators=args.generator,
-                                  profile_name=args.profile,
-                                  package_settings=package_settings,
-                                  env_values=env_values,
                                   no_imports=args.no_imports)
 
     def config(self, *args):
@@ -390,36 +358,25 @@ class Command(object):
                      'packages that would be built from sources in install command (simulation)'
 
         _add_common_install_arguments(parser, build_help=build_help)
-
         args = parser.parse_args(*args)
-
         log_command("info", vars(args))
-
-        options = _get_tuples_list_from_extender_arg(args.options)
-        settings, package_settings = _get_simple_and_package_tuples(args.settings)
-        env, package_env = _get_simple_and_package_tuples(args.env)
-        env_values = _get_env_values(env, package_env)
 
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(args.reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, args.reference))
-        scopes = Scopes.from_list(args.scope) if args.scope else None
+
+        profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
         self._manager.info(reference=reference,
                            current_path=current_path,
                            remote=args.remote,
-                           options=options,
-                           settings=settings,
-                           package_settings=package_settings,
+                           profile=profile,
                            info=args.only,
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
                            build_mode=args.build,
-                           scopes=scopes,
-                           env_values=env_values,
-                           profile_name=args.profile,
                            graph_filename=args.graph)
 
     def build(self, *args):
@@ -803,7 +760,7 @@ class Command(object):
             else:
                 self._user_io.out.info("No profiles defined")
         elif args.subcommand == "show":
-            p = self._manager.read_profile(args.profile, os.getcwd())
+            p = Profile.read_file(args.profile, os.getcwd(), self._client_cache.profiles_path)
             Printer(self._user_io.out).print_profile(args.profile, p)
 
     def _show_help(self):
@@ -897,37 +854,6 @@ def _add_common_install_arguments(parser, build_help):
     parser.add_argument("--build", "-b", action=Extender, nargs="*", help=build_help)
 
 
-def _get_tuples_list_from_extender_arg(items):
-    if not items:
-        return []
-    # Validate the pairs
-    for item in items:
-        chunks = item.split("=")
-        if len(chunks) != 2:
-            raise ConanException("Invalid input '%s', use 'name=value'" % item)
-    return [(item[0], item[1]) for item in [item.split("=") for item in items]]
-
-
-def _get_simple_and_package_tuples(items):
-    """Parse items like "thing:item=value or item2=value2 and returns a tuple list for
-    the simple items (name, value) and a dict for the package items
-    {package: [(item, value)...)], ...}
-    """
-
-    simple_items = []
-    package_items = defaultdict(list)
-    tuples = _get_tuples_list_from_extender_arg(items)
-    for name, value in tuples:
-        if ":" in name:  # Scoped items
-            tmp = name.split(":", 1)
-            ref_name = tmp[0]
-            name = tmp[1]
-            package_items[ref_name].append((name, value))
-        else:
-            simple_items.append((name, value))
-    return simple_items, package_items
-
-
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
 
         --build            Build all from sources, do not use binary packages.
@@ -936,16 +862,6 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
         --build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
         --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 '''
-
-
-def _get_env_values(env, package_env):
-    env_values = EnvValues()
-    for name, value in env:
-        env_values.add(name, EnvValues.load_value(value))
-    for package, data in package_env.items():
-        for name, value in data:
-            env_values.add(name, EnvValues.load_value(value), package)
-    return env_values
 
 
 def _get_reference(args):
