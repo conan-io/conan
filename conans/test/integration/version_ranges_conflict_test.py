@@ -55,8 +55,6 @@ class MyConanC(ConanFile):
         client = self._prepareClient()
         client.run("install --build --werror", ignore_error=True)
 
-        print(client.user_io.out)
-
         self.assertNotIn("WARN: Version range '~0.1' required by 'MyPkg2/0.1@user/testing' "
                       "not valid for downstream requirement 'MyPkg1/0.2.0@user/testing'", client.user_io.out)
 
