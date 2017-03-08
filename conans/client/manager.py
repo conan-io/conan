@@ -8,6 +8,7 @@ from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.detect import detected_os
 from conans.client.export import export_conanfile
 from conans.client.generators import write_generators
+from conans.client.grapher import ConanGrapher
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import ConanInstaller
 from conans.client.loader import ConanFileLoader
@@ -198,7 +199,7 @@ class ConanManager(object):
         return (builder, deps_graph, project_reference, registry, conanfile,
                 remote_proxy, loader)
 
-    def info(self, reference, current_path, remote=None, options=None, settings=None,
+    def info(self, reference, current_path, graph_filename, remote=None, options=None, settings=None,
              info=None, filename=None, update=False, check_updates=False, scopes=None,
              build_order=None, build_mode=None, package_settings=None, env_values=None,
              profile_name=None):
@@ -249,9 +250,13 @@ class ConanManager(object):
         else:
             graph_updates_info = {}
 
-        Printer(self._user_io.out).print_info(deps_graph, project_reference,
-                                              info, registry, graph_updates_info,
-                                              remote, read_dates(deps_graph))
+        if graph_filename:
+            grapher = ConanGrapher(project_reference, deps_graph)
+            grapher.graph(graph_filename)
+        else:
+            Printer(self._user_io.out).print_info(deps_graph, project_reference,
+                                                  info, registry, graph_updates_info,
+                                                  remote, read_dates(deps_graph))
 
     def read_profile(self, profile_name, cwd):
         if not profile_name:
