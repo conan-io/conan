@@ -55,7 +55,6 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         conanfile.deps_cpp_info.update(cpp_info, ref)
         generator = VisualStudioGenerator(conanfile)
         content = generator.content
-        print(content)
         self.assertIn("<Conan.CompilerFlags.MyPkg>-DGTEST_USE_OWN_TR1_TUPLE=1 -DGTEST_LINKED_AS_SHARED_LIBRARY=1",
                       content)
         self.assertIn("<AdditionalOptions>-DGTEST_USE_OWN_TR1_TUPLE=1 -DGTEST_LINKED_AS_SHARED_LIBRARY=1"

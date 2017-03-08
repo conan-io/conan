@@ -44,9 +44,9 @@ class VisualStudioGenerator(Generator):
   </PropertyGroup>'''
 
     def _add_common_fields(self, fields, dep_cpp_info):
-        fields['bin_dirs'] = "".join( "%s;" % p for p in dep_cpp_info.bin_paths)
-        fields['include_dirs'] = "".join( "%s;" % p for p in dep_cpp_info.include_paths)
-        fields['lib_dirs'] = "".join( "%s;" % p for p in dep_cpp_info.lib_paths)
+        fields['bin_dirs'] = "".join( "%s;" % p for p in dep_cpp_info.bin_paths).replace("\\", "/")
+        fields['include_dirs'] = "".join( "%s;" % p for p in dep_cpp_info.include_paths).replace("\\", "/")
+        fields['lib_dirs'] = "".join( "%s;" % p for p in dep_cpp_info.lib_paths).replace("\\", "/")
         fields['libs'] = "".join(['%s.lib;' % lib if not lib.endswith(".lib")
                              else '%s;' % lib for lib in dep_cpp_info.libs])
         fields['definitions'] = "".join("%s;" % d for d in dep_cpp_info.defines)
