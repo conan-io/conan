@@ -40,7 +40,7 @@ class RequireResolver(object):
             ref = require.conan_reference
             resolved = self._resolve_version(version_range, [ref])
             if not resolved:
-                self._output.warn("Version range '%s' required by '%s' not valid for "
+                self._output.werror("Version range '%s' required by '%s' not valid for "
                                   "downstream requirement '%s'"
                                   % (version_range, base_conanref, str(ref)))
             else:
