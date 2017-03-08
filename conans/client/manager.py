@@ -253,12 +253,9 @@ class ConanManager(object):
         if graph_filename:
             if graph_filename.endswith(".html"):
                 grapher = ConanHTMLGrapher(project_reference, deps_graph)
-                grapher.graph_file(graph_filename)
-                import webbrowser
-                webbrowser.open('file://' + os.path.realpath(graph_filename))
             else:
                 grapher = ConanGrapher(project_reference, deps_graph)
-                grapher.graph_file(graph_filename)
+            grapher.graph_file(graph_filename)
         else:
             Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                                   info, registry, graph_updates_info,

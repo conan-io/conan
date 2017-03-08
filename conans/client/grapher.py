@@ -35,7 +35,9 @@ class ConanHTMLGrapher(object):
     def graph(self):
         nodes = []
         nodes_map = {}
-        for i, node in enumerate(self._deps_graph.nodes):
+        graph_nodes = self._deps_graph.by_levels()
+        graph_nodes = reversed([n for level in graph_nodes for n in level])
+        for i, node in enumerate(graph_nodes):
             ref, conanfile = node
             nodes_map[node] = i
             if ref:
@@ -130,7 +132,8 @@ class ConanHTMLGrapher(object):
         "hierarchical": {
           "enabled": true,
           "sortMethod": "directed",
-          "direction": "UD"
+          "direction": "UD",
+          nodeSpacing: 200
         }
       },
       physics: {

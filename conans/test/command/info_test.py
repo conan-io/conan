@@ -6,6 +6,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference
 import textwrap
+from conans.util.files import load
 
 
 class InfoTest(unittest.TestCase):
@@ -117,6 +118,34 @@ class InfoTest(unittest.TestCase):
         self.client.run("info --graph=%s" % arg_filename)
         dot_file = os.path.join(self.client.current_folder, arg_filename)
         check_file(dot_file)
+
+    def graph_html_test(self):
+        self.client = TestClient()
+
+        test_deps = {
+            "Hello0": ["Hello1"],
+            "Hello1": [],
+        }
+
+        def create_export(test_deps, name):
+            deps = test_deps[name]
+            for dep in deps:
+                create_export(test_deps, dep)
+
+            expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
+            export = False if name == "Hello0" else True
+            self._create(name, "0.1", expanded_deps, export=export)
+
+        create_export(test_deps, "Hello0")
+
+        # arbitrary case - file will be named according to argument
+        arg_filename = "test.html"
+        self.client.run("info --graph=%s" % arg_filename)
+        arg_filename = os.path.join(self.client.current_folder, arg_filename)
+        html = load(arg_filename)
+        self.assertIn("<body>", html)
+        self.assertIn("{ from: 1, to: 0 }", html)
+        self.assertIn("id: 0, label: 'Hello1/0.1'", html)
 
     def only_names_test(self):
         self.client = TestClient()
