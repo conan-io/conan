@@ -97,14 +97,14 @@ class InfoTest(unittest.TestCase):
         def check_file(dot_file):
             with open(dot_file) as dot_file_contents:
                 lines = dot_file_contents.readlines()
-                self.assertEqual(lines[0], "digraph {\n");
+                self.assertEqual(lines[0], "digraph {\n")
                 for line in lines[1:-1]:
                     check_digraph_line(line)
-                self.assertEqual(lines[-1], "}\n");
+                self.assertEqual(lines[-1], "}\n")
 
         create_export(test_deps, "Hello0")
 
-        node_regex = re.compile(r'"([^"]+)"');
+        node_regex = re.compile(r'"([^"]+)"')
         dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
 
         # default case - file will be named graph.dot
