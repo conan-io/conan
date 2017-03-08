@@ -11,8 +11,8 @@ class InstallUpdateTest(unittest.TestCase):
 
     def setUp(self):
         test_server = TestServer()
-        self.servers = {"default": test_server}
-        self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        self.servers = {"myremote": test_server}
+        self.client = TestClient(servers=self.servers, users={"myremote": [("lasote", "mypass")]})
 
     def update_not_date_test(self):
         # Regression for https://github.com/conan-io/conan/issues/949
@@ -30,8 +30,13 @@ class InstallUpdateTest(unittest.TestCase):
         package_ref = PackageReference(ref, "55a3af76272ead64e6f543c12ecece30f94d3eda")
         recipe_manifest = self.client.client_cache.digestfile_conanfile(ref)
         package_manifest = self.client.client_cache.digestfile_package(package_ref)
-        recipe_timestamp = load(recipe_manifest).splitlines()[0]
-        package_timestamp = load(package_manifest).splitlines()[0]
+
+        def timestamps():
+            recipe_timestamp = load(recipe_manifest).splitlines()[0]
+            package_timestamp = load(package_manifest).splitlines()[0]
+            return recipe_timestamp, package_timestamp
+
+        initial_timestamps = timestamps()
 
         import time
         time.sleep(1)
@@ -41,20 +46,16 @@ class InstallUpdateTest(unittest.TestCase):
         self.client.save(files0, clean_first=True)
         self.client.run("export lasote/stable")
         self.client.run("install Hello0/1.0@lasote/stable --build")
-        new_recipe_timestamp = load(recipe_manifest).splitlines()[0]
-        new_package_timestamp = load(package_manifest).splitlines()[0]
-        self.assertNotEqual(new_recipe_timestamp, recipe_timestamp)
-        self.assertNotEqual(new_package_timestamp, package_timestamp)
+        rebuild_timestamps = timestamps()
+        self.assertNotEqual(rebuild_timestamps, initial_timestamps)
 
         # back to the consumer, try to update
         self.client.save(files1, clean_first=True)
         self.client.run("install --update")
-        self.assertIn("ERROR: Current conanfile is newer than default's one",
+        self.assertIn("ERROR: Current conanfile is newer than myremote's one",
                       self.client.user_io.out)
-        new_recipe_timestamp2 = load(recipe_manifest).splitlines()[0]
-        new_package_timestamp2 = load(package_manifest).splitlines()[0]
-        self.assertEqual(new_recipe_timestamp, new_recipe_timestamp2)
-        self.assertEqual(new_package_timestamp, new_package_timestamp2)
+        failed_update_timestamps = timestamps()
+        self.assertEqual(rebuild_timestamps, failed_update_timestamps)
 
         # hack manifests, put old time
         for manifest_file in (recipe_manifest, package_manifest):
@@ -64,10 +65,8 @@ class InstallUpdateTest(unittest.TestCase):
             save(manifest_file, "\n".join(lines))
 
         self.client.run("install --update")
-        new_recipe_timestamp = load(recipe_manifest).splitlines()[0]
-        new_package_timestamp = load(package_manifest).splitlines()[0]
-        self.assertEqual(new_recipe_timestamp, recipe_timestamp)
-        self.assertEqual(new_package_timestamp, package_timestamp)
+        update_timestamps = timestamps()
+        self.assertEqual(update_timestamps, initial_timestamps)
 
     def reuse_test(self):
         files = cpp_hello_conan_files("Hello0", "1.0", build=False)
