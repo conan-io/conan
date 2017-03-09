@@ -109,9 +109,8 @@ class InfoTest(unittest.TestCase):
         dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
 
         # default case - file will be named graph.dot
-        self.client.run("info --graph")
-        dot_file = os.path.join(self.client.current_folder, "graph.dot")
-        check_file(dot_file)
+        error = self.client.run("info --graph", ignore_error=True)
+        self.assertTrue(error)
 
         # arbitrary case - file will be named according to argument
         arg_filename = "test.dot"
