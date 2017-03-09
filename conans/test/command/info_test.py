@@ -144,8 +144,8 @@ class InfoTest(unittest.TestCase):
         arg_filename = os.path.join(self.client.current_folder, arg_filename)
         html = load(arg_filename)
         self.assertIn("<body>", html)
-        self.assertIn("{ from: 1, to: 0 }", html)
-        self.assertIn("id: 0, label: 'Hello1/0.1'", html)
+        self.assertIn("{ from: 0, to: 1 }", html)
+        self.assertIn("id: 0, label: 'Hello0/0.1@PROJECT'", html)
 
     def only_names_test(self):
         self.client = TestClient()
