@@ -309,7 +309,7 @@ class RestApiClient(object):
     def remove_packages(self, conan_reference, package_ids=None):
         """ Remove any packages specified by package_ids"""
         self.check_credentials()
-        payload = {"package_ids": package_ids}
+        payload = {"package_ids": list(package_ids)}
         url = "%s/conans/%s/packages/delete" % (self._remote_api_url, '/'.join(conan_reference))
         return self._post_json(url, payload)
 
