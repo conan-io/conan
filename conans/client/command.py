@@ -29,7 +29,7 @@ from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.config_parser import get_bool_from_text
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, load, save_files, exception_message_safe
+from conans.util.files import rmdir, save_files, exception_message_safe
 from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.model.profile import Profile
@@ -145,6 +145,7 @@ class Command(object):
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
 
+        _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
@@ -202,8 +203,13 @@ class Command(object):
         if args.build is None and lib_to_test:  # Not specified, force build the tested library
             args.build = [lib_to_test]
 
+        manifests = _parse_manifests_arguments(args, root_folder, current_path)
+        manifest_folder, manifest_interactive, manifest_verify = manifests
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
+                              manifest_folder=manifest_folder,
+                              manifest_verify=manifest_verify,
+                              manifest_interactive=manifest_interactive,
                               remote=args.remote,
                               profile=profile,
                               build_mode=args.build,
@@ -241,18 +247,7 @@ class Command(object):
         parser.add_argument("--werror", action='store_true', default=False,
                             help='Error instead of warnings for graph inconsistencies')
 
-        # Manifests arguments
-        default_manifest_folder = '.conan_manifests'
-        parser.add_argument("--manifests", "-m", const=default_manifest_folder, nargs="?",
-                            help='Install dependencies manifests in folder for later verify.'
-                            ' Default folder is .conan_manifests, but can be changed')
-        parser.add_argument("--manifests-interactive", "-mi", const=default_manifest_folder,
-                            nargs="?",
-                            help='Install dependencies manifests in folder for later verify, '
-                            'asking user for confirmation. '
-                            'Default folder is .conan_manifests, but can be changed')
-        parser.add_argument("--verify", "-v", const=default_manifest_folder, nargs="?",
-                            help='Verify dependencies manifests against stored ones')
+        _add_manifests_arguments(parser)
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
@@ -277,24 +272,8 @@ class Command(object):
                                      "e.g., MyPackage/1.2@user/channel")
             self._manager.download(reference, args.package, remote=args.remote)
         else:  # Classic install, package chosen with settings and options
-            if args.manifests and args.manifests_interactive:
-                raise ConanException("Do not specify both manifests and "
-                                     "manifests-interactive arguments")
-            if args.verify and (args.manifests or args.manifests_interactive):
-                raise ConanException("Do not specify both 'verify' and "
-                                     "'manifests' or 'manifests-interactive' arguments")
-            manifest_folder = args.verify or args.manifests or args.manifests_interactive
-            if manifest_folder:
-                if not os.path.isabs(manifest_folder):
-                    if isinstance(reference, ConanFileReference):
-                        manifest_folder = os.path.join(current_path, manifest_folder)
-                    else:
-                        manifest_folder = os.path.join(reference, manifest_folder)
-                manifest_verify = args.verify is not None
-                manifest_interactive = args.manifests_interactive is not None
-            else:
-                manifest_verify = manifest_interactive = False
-
+            manifests = _parse_manifests_arguments(args, reference, current_path)
+            manifest_folder, manifest_interactive, manifest_verify = manifests
             profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
             self._manager.install(reference=reference,
                                   current_path=current_path,
@@ -831,6 +810,42 @@ class Command(object):
             raise exc
 
         return errors
+
+
+def _parse_manifests_arguments(args, reference, current_path):
+    if args.manifests and args.manifests_interactive:
+        raise ConanException("Do not specify both manifests and "
+                             "manifests-interactive arguments")
+    if args.verify and (args.manifests or args.manifests_interactive):
+        raise ConanException("Do not specify both 'verify' and "
+                             "'manifests' or 'manifests-interactive' arguments")
+    manifest_folder = args.verify or args.manifests or args.manifests_interactive
+    if manifest_folder:
+        if not os.path.isabs(manifest_folder):
+            if isinstance(reference, ConanFileReference):
+                manifest_folder = os.path.join(current_path, manifest_folder)
+            else:
+                manifest_folder = os.path.join(reference, manifest_folder)
+        manifest_verify = args.verify is not None
+        manifest_interactive = args.manifests_interactive is not None
+    else:
+        manifest_verify = manifest_interactive = False
+
+    return manifest_folder, manifest_interactive, manifest_verify
+
+
+def _add_manifests_arguments(parser):
+    default_manifest_folder = '.conan_manifests'
+    parser.add_argument("--manifests", "-m", const=default_manifest_folder, nargs="?",
+                        help='Install dependencies manifests in folder for later verify.'
+                        ' Default folder is .conan_manifests, but can be changed')
+    parser.add_argument("--manifests-interactive", "-mi", const=default_manifest_folder,
+                        nargs="?",
+                        help='Install dependencies manifests in folder for later verify, '
+                        'asking user for confirmation. '
+                        'Default folder is .conan_manifests, but can be changed')
+    parser.add_argument("--verify", "-v", const=default_manifest_folder, nargs="?",
+                        help='Verify dependencies manifests against stored ones')
 
 
 def _add_common_install_arguments(parser, build_help):
