@@ -1,3 +1,5 @@
+import copy
+import os
 import shutil
 import sys
 import tempfile
@@ -6,6 +8,8 @@ from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
 from conans.client.cmake import CMake
 import platform
+
+from conans.util.files import save
 
 
 class CMakeTest(unittest.TestCase):
@@ -186,11 +190,46 @@ build_type: [ Release]
         cmake.build(conan_file, build_dir=self.tempdir)
         self.assertEqual('cmake --build %s --config Release' % tempdir, conan_file.command)
 
+    def test_clean_sh_path(self):
+
+        if platform.system() != "Windows":
+            return
+
+        os.environ["PATH"] = os.environ.get("PATH", "") + os.pathsep + self.tempdir
+        save(os.path.join(self.tempdir, "sh.exe"), "Fake sh")
+        conanfile = ConanFileMock()
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.arch = "x86"
+
+        cmake = CMake(settings)
+        cmake.configure(conanfile)
+        self.assertIn(self.tempdir, conanfile.path)
+
+        cmake.generator = "MinGW Makefiles"
+        cmake.configure(conanfile)
+        self.assertNotIn(self.tempdir, conanfile.path)
+
+        # Automatic gcc
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "gcc"
+        settings.compiler.version = "5.4"
+        settings.arch = "x86"
+
+        cmake = CMake(settings)
+        cmake.configure(conanfile)
+        self.assertNotIn(self.tempdir, conanfile.path)
+
 
 class ConanFileMock(object):
     def __init__(self):
         self.command = None
         self.conanfile_directory = "."
+        self.path = None
 
     def run(self, command):
         self.command = command
+        self.path = os.environ["PATH"]
