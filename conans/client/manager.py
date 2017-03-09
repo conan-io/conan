@@ -8,6 +8,7 @@ from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.detect import detected_os
 from conans.client.export import export_conanfile
 from conans.client.generators import write_generators
+from conans.client.grapher import ConanGrapher
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import ConanInstaller
 from conans.client.loader import ConanFileLoader
@@ -33,7 +34,7 @@ from conans.model.scope import Scopes
 from conans.model.values import Values
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
 from conans.tools import environment_append
-from conans.util.files import save, load, rmdir, normalize
+from conans.util.files import save, load, rmdir, normalize, mkdir
 from conans.util.log import logger
 
 
@@ -198,7 +199,7 @@ class ConanManager(object):
         return (builder, deps_graph, project_reference, registry, conanfile,
                 remote_proxy, loader)
 
-    def info(self, reference, current_path, remote=None, options=None, settings=None,
+    def info(self, reference, current_path, graph_filename, remote=None, options=None, settings=None,
              info=None, filename=None, update=False, check_updates=False, scopes=None,
              build_order=None, build_mode=None, package_settings=None, env_values=None,
              profile_name=None):
@@ -249,9 +250,13 @@ class ConanManager(object):
         else:
             graph_updates_info = {}
 
-        Printer(self._user_io.out).print_info(deps_graph, project_reference,
-                                              info, registry, graph_updates_info,
-                                              remote, read_dates(deps_graph))
+        if graph_filename:
+            grapher = ConanGrapher(project_reference, deps_graph)
+            grapher.graph(graph_filename)
+        else:
+            Printer(self._user_io.out).print_info(deps_graph, project_reference,
+                                                  info, registry, graph_updates_info,
+                                                  remote, read_dates(deps_graph))
 
     def read_profile(self, profile_name, cwd):
         if not profile_name:
@@ -396,7 +401,13 @@ If not:
             conanfile = self._loader().load_conan(conan_file_path, output, reference=reference)
 
         _load_info_file(current_path, conanfile, output, error=True)
-        run_imports(conanfile, dest_folder or current_path, output)
+        if dest_folder:
+            if not os.path.isabs(dest_folder):
+                dest_folder = os.path.normpath(os.path.join(current_path, dest_folder))
+            mkdir(dest_folder)
+        else:
+            dest_folder = current_path
+        run_imports(conanfile, dest_folder, output)
 
     def local_package(self, current_path, build_folder):
         if current_path == build_folder:

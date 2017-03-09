@@ -417,6 +417,8 @@ path to the CMake binary directory, like this:
         parser.add_argument("--build_order", "-bo",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
+        parser.add_argument("--graph", "-g", nargs="?", const="graph.dot",
+                            help='Output project dependencies in DOT format for visual graphing')
         build_help = 'given a build policy (same install command "build" parameter), return an ordered list of  ' \
                      'packages that would be built from sources in install command (simulation)'
 
@@ -450,7 +452,8 @@ path to the CMake binary directory, like this:
                            build_mode=args.build,
                            scopes=scopes,
                            env_values=env_values,
-                           profile_name=args.profile)
+                           profile_name=args.profile,
+                           graph_filename=args.graph)
 
     def build(self, *args):
         """ Utility command to run your current project 'conanfile.py' build() method.
