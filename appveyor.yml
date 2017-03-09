@@ -2,11 +2,22 @@ build: false
 cache:
     - C:\mingw64-> appveyor.yml
 
-environment:
-  matrix:
-    - PYTHON: "C:\\Python27"
-    - PYTHON: "C:\\Python34"
-    - PYTHON: "C:\\Python35"
+-
+    branches:
+        only:
+          - /release.*/
+          - /master/
+
+    environment:
+      matrix:
+        - PYTHON: "C:\\Python27"
+        - PYTHON: "C:\\Python34"
+        - PYTHON: "C:\\Python35"
+
+-
+    environment:
+      matrix:
+        - PYTHON: "C:\\Python35"
 
 init:
   - "ECHO %PYTHON%"
