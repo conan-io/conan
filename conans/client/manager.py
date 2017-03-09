@@ -13,7 +13,7 @@ from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import ConanInstaller
 from conans.client.loader import ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
-from conans.client.output import ScopedOutput
+from conans.client.output import ScopedOutput, Color
 from conans.client.package_copier import PackageCopier
 from conans.client.printer import Printer
 from conans.client.proxy import ConanProxy
@@ -238,36 +238,6 @@ class ConanManager(object):
                                                   info, registry, graph_updates_info,
                                                   remote, read_dates(deps_graph))
 
-    def read_profile(self, profile_name, cwd):
-        if not profile_name:
-            return None
-
-        if os.path.isabs(profile_name):
-            profile_path = profile_name
-            folder = os.path.dirname(profile_name)
-        elif profile_name.startswith("."):  # relative path name
-            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-            folder = os.path.dirname(profile_path)
-        else:
-            folder = self._client_cache.profiles_path
-            profile_path = self._client_cache.profile_path(profile_name)
-
-        try:
-            text = load(profile_path)
-        except Exception:
-            if os.path.exists(folder):
-                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-            else:
-                profiles = []
-            current_profiles = ", ".join(profiles) or "[]"
-            raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                                 "%s" % (profile_name, current_profiles))
-
-        try:
-            return Profile.loads(text)
-        except ConanException as exc:
-            raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
-
     def install(self, reference, current_path, profile, remote=None,
                 build_mode=None, filename=None, update=False, check_updates=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
@@ -298,17 +268,11 @@ class ConanManager(object):
         (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
 
         Printer(self._user_io.out).print_graph(deps_graph, registry)
-        # Warn if os doesn't match
+
         try:
             if detected_os() != loader._settings.os:
-                message = '''You are building this package with settings.os='%s' on a '%s' system.
-If this is your intention, you can ignore this message.
-If not:
-     - Check the passed settings (-s)
-     - Check your global settings in ~/.conan/conan.conf
-     - Remove conaninfo.txt to avoid bad cached settings
-''' % (loader._settings.os, detected_os())
-                self._user_io.out.warn(message)
+                message = "Cross-platform from '%s' to '%s'" % (detected_os(), loader._settings.os)
+                self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
             pass
 

@@ -232,13 +232,9 @@ class InstallTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable:2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
                       conan_info.full_requires.dumps())
 
-    def warn_bad_os_test(self):
+    def cross_platform_msg_test(self):
         bad_os = "Linux" if platform.system() != "Linux" else "Macos"
-        message = "You are building this package with settings.os='%s" % bad_os
+        message = "Cross-platform from '%s' to '%s'" % (detected_os(), bad_os)
         self._create("Hello0", "0.1")
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, ignore_error=True)
         self.assertIn(message, self.client.user_io.out)
-
-        self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % detected_os(),
-                        ignore_error=True)
-        self.assertNotIn("You are building this package with settings.os", self.client.user_io.out)
