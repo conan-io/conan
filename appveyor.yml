@@ -4,45 +4,29 @@
         - /release.*/
         - /master/
 
-    build: false
-    cache:
-        - C:\mingw64-> appveyor.yml
-
     environment:
       matrix:
         - PYTHON: "C:\\Python27"
         - PYTHON: "C:\\Python34"
         - PYTHON: "C:\\Python35"
 
-    install:
-      - If Not Exist "C:\mingw64" appveyor DownloadFile "https://s3-eu-west-1.amazonaws.com/downloads.conan.io/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
-      - If Not Exist "C:\mingw64" 7z x x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc:\
-      - .ci/appveyor/install.bat
-
-
-    test_script:
-      - "nosetests --with-coverage conans.test"
-
-    after_test:
-      - "codecov"
-
 -
-    build: false
-    cache:
-        - C:\mingw64-> appveyor.yml
-
     environment:
       matrix:
-        - PYTHON: "C:\\Python27"
         - PYTHON: "C:\\Python35"
 
-    install:
-      - If Not Exist "C:\mingw64" appveyor DownloadFile "https://s3-eu-west-1.amazonaws.com/downloads.conan.io/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
-      - If Not Exist "C:\mingw64" 7z x x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc:\
-      - .ci/appveyor/install.bat
 
-    test_script:
-      - "nosetests --with-coverage conans.test"
+build: false
+cache:
+    - C:\mingw64-> appveyor.yml
 
-    after_test:
-      - "codecov"
+install:
+  - If Not Exist "C:\mingw64" appveyor DownloadFile "https://s3-eu-west-1.amazonaws.com/downloads.conan.io/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
+  - If Not Exist "C:\mingw64" 7z x x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc:\
+  - .ci/appveyor/install.bat
+
+test_script:
+  - "nosetests --with-coverage conans.test"
+
+after_test:
+  - "codecov"
