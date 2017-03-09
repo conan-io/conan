@@ -78,7 +78,7 @@ class ConanRemover(object):
     def remove(self, pattern, src=None, build_ids=None, package_ids_filter=None, force=False, packages_query=None):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
-        @param pattern: it could be OpenCV* or OpenCV
+        @param pattern: it could be OpenCV* or OpenCV or a ConanFileReference
         @param build_ids: Lists with ids or empty for all. (Its a filter)
         @param package_ids_filter: Lists with ids or empty for all. (Its a filter)
         @param force: if True, it will be deleted without requesting anything
@@ -130,13 +130,13 @@ class ConanRemover(object):
             if not packages_query:
                 conan_refs = self._remote_proxy.search(pattern)
             else:
-                package_ids = self._remote_proxy.search_packages(pattern, packages_query).keys()
+                package_ids = list(self._remote_proxy.search_packages(pattern, packages_query).keys())
                 conan_refs = [pattern] if package_ids else None
         else:
             if not packages_query:
-                conan_refs = self._search_manager.search(str(pattern))
+                conan_refs = self._search_manager.search(pattern)
             else:
-                package_ids = self._search_manager.search_packages(pattern, packages_query).keys()
+                package_ids = list(self._search_manager.search_packages(pattern, packages_query).keys())
                 conan_refs = [pattern] if package_ids else None
 
         return conan_refs, package_ids
