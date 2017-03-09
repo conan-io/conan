@@ -186,7 +186,7 @@ class Printer(object):
 
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
-        self._print_profile_section("settings", profile.settings)
+        self._print_profile_section("settings", profile.settings.items())
 
         envs = []
         for package, env_vars in profile.env_values.data.items():
