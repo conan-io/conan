@@ -22,21 +22,10 @@ disk_storage_path: ~/.conan_server/data
 disk_authorize_timeout: 1800
 updown_secret: {updown_secret}
 
-# If you want to use a different authenticator that the default based in the [users] list
-# create a python module in '~/.conan_server/plugins/authenticator/my_authenticator.py'
-# Example:
+# Check docs.conan.io to implement a different authenticator plugin for conan_server
+# if custom_authenticator is not specified, [users] section will be used to authenticate
+# the users.
 #
-# def get_class():
-#     return MyAuthenticator()
-#
-#
-# class MyAuthenticator(object):
-#     def valid_user(self, username, plain_password):
-#         return username == "foo" and plain_password == "bar"
-#
-# 'valid_user' has to return True or False if the user and password are valid
-# In the following "custom_authenticator" variable set the name of the authenticator module:
-
 # custom_authenticator: my_authenticator
 
 [write_permissions]
