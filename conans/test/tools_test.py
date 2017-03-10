@@ -274,8 +274,8 @@ class HelloConan(ConanFile):
                            retry=3, retry_wait=0)
 
         # And OK
-        dest = os.path.join(temp_folder(), "README.txt")
-        tools.download("https://raw.githubusercontent.com/conan-io/conan/develop/README.rst",
+        dest = os.path.join(temp_folder(), "manual.html")
+        tools.download("http://www.zlib.net/manual.html",
                        dest, out=out,
                        retry=3, retry_wait=0)
 
