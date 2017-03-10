@@ -78,7 +78,7 @@ class ToolsTest(unittest.TestCase):
     def system_package_tool_fail_when_not_0_returned_test(self):
         runner = RunnerMock(return_ok=False)
         spt = SystemPackageTool(runner=runner)
-        if platform.system() != "Windows":
+        if platform.system() == "Linux" or platform.system() == "Macos":
             msg = "Command 'sudo apt-get update' failed" if platform.system() == "Linux" \
                                                          else "Command 'brew update' failed"
             with self.assertRaisesRegexp(ConanException, msg):
@@ -199,7 +199,7 @@ class ToolsTest(unittest.TestCase):
         self.assertEquals(7, runner.calls)
 
     def system_package_tool_installed_test(self):
-        if platform.system() == "Windows":
+        if platform.system() != "Linux" and platform.system() != "Macos":
             return
         spt = SystemPackageTool()
         # Git should be installed on development/testing machines

@@ -109,6 +109,23 @@ class CMakeTest(unittest.TestCase):
               '-DCONAN_SHARED_LINKER_FLAGS=-m64 -DCONAN_C_FLAGS=-m64 -Wno-dev',
               "")
 
+        settings.arch = "sparc"
+        cmake = CMake(settings)
+        self.assertEqual('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCONAN_EXPORTED=1 '
+                         '-DCONAN_COMPILER="sun-cc" '
+                         '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS=-m32 '
+                         '-DCONAN_SHARED_LINKER_FLAGS=-m32 -DCONAN_C_FLAGS=-m32 -Wno-dev',
+                         cmake.command_line)
+
+        settings.arch = "sparcv9"
+        cmake = CMake(settings)
+        self.assertEqual('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCONAN_EXPORTED=1 '
+                         '-DCONAN_COMPILER="sun-cc" '
+                         '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS=-m64 '
+                         '-DCONAN_SHARED_LINKER_FLAGS=-m64 -DCONAN_C_FLAGS=-m64 -Wno-dev',
+                         cmake.command_line)
+
+
     def deleted_os_test(self):
         partial_settings = """
 os: [Linux]
