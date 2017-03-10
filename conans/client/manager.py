@@ -8,7 +8,7 @@ from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.detect import detected_os
 from conans.client.export import export_conanfile
 from conans.client.generators import write_generators
-from conans.client.grapher import ConanGrapher
+from conans.client.grapher import ConanGrapher, ConanHTMLGrapher
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import ConanInstaller
 from conans.client.loader import ConanFileLoader
@@ -231,8 +231,11 @@ class ConanManager(object):
             return ret
 
         if graph_filename:
-            grapher = ConanGrapher(project_reference, deps_graph)
-            grapher.graph(graph_filename)
+            if graph_filename.endswith(".html"):
+                grapher = ConanHTMLGrapher(project_reference, deps_graph)
+            else:
+                grapher = ConanGrapher(project_reference, deps_graph)
+            grapher.graph_file(graph_filename)
         else:
             Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                                   info, registry, graph_updates_info,

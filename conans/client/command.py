@@ -331,8 +331,9 @@ class Command(object):
         parser.add_argument("--build_order", "-bo",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
-        parser.add_argument("--graph", "-g", nargs="?", const="graph.dot",
-                            help='Output project dependencies in DOT format for visual graphing')
+        parser.add_argument("--graph", "-g",
+                            help='Creates file with project dependencies graph. It will generate '
+                            'a DOT or HTML file depending on the filename extension')
         build_help = 'given a build policy (same install command "build" parameter), return an ordered list of  ' \
                      'packages that would be built from sources in install command (simulation)'
 
