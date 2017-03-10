@@ -65,7 +65,8 @@ class Printer(object):
                 self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
 
     def print_info(self, deps_graph, project_reference, _info, registry, graph_updates_info=None,
-                   remote=None, node_times=None, path_resolver=None, package_filter=None):
+                   remote=None, node_times=None, path_resolver=None, package_filter=None,
+                   show_paths=False):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -112,7 +113,8 @@ class Printer(object):
                 bid = build_id(conan)
                 self._out.writeln("    BuildID: %s" % bid, Color.BRIGHT_GREEN)
 
-            self._print_paths(ref, conan, path_resolver, show)
+            if show_paths:
+                self._print_paths(ref, conan, path_resolver, show)
 
             if isinstance(ref, ConanFileReference) and show("remote"):
                 if reg_remote:
