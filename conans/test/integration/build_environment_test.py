@@ -64,6 +64,8 @@ int main(){
 class BuildEnvironmenTest(unittest.TestCase):
 
     def test_gcc_and_environment(self):
+        if platform.system() == "SunOS":
+            return  # If is using sun-cc the gcc generator doesn't work
 
         # CREATE A DUMMY LIBRARY WITH GCC (could be generated with other build system)
         client = TestClient()

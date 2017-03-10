@@ -35,6 +35,7 @@ class ConanFileLoader(object):
         self._settings = settings
         self._user_options = options
         self._scopes = scopes
+
         self._package_settings = package_settings
         self._env_values = env_values
 

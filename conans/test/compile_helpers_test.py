@@ -23,7 +23,7 @@ class MockCompiler(object):
         self.libcxx = libcxx
         self.version = version
 
-    def __repr__(self, *args, **kwargs):
+    def __repr__(self, *args, **kwargs):  # @UnusedVariable
         return self.name
 
 
@@ -137,86 +137,105 @@ class CompileHelpersTest(unittest.TestCase):
         linux_s = MockSettings("Release", os="Linux", arch="x86",
                                compiler_name="gcc", libcxx="libstdc++", version="4.9")
         env = ConfigureEnvironment(MockConanfile(linux_s))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m32 -framework thing -framework '
+        self.assertEquals(env.compile_flags, '-m32 -framework thing -framework '
                                              'thing2 -s -DNDEBUG -DMYDEF1 -DMYDEF2 '
                                              '-I"path/to/includes/lib1" -I"path/to/includes/lib2" '
-                                             '-L"path/to/lib1" -L"path/to/lib2" cppflag1 '
+                                             '-L"path/to/lib1" -L"path/to/lib2" -llib1 -llib2 cppflag1 '
                                              '-D_GLIBCXX_USE_CXX11_ABI=0')
 
         linux_s_11 = MockSettings("Debug", os="Linux", arch="x86_64",
                                   compiler_name="gcc", libcxx="libstdc++11", version="4.9")
         env = ConfigureEnvironment(MockConanfile(linux_s_11))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m64 -framework thing -framework thing2'
+        self.assertEquals(env.compile_flags, '-m64 -framework thing -framework thing2'
                                              ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
-                                             '-L"path/to/lib2" cppflag1 '
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 '
                                              '-D_GLIBCXX_USE_CXX11_ABI=1')
 
         linux_s_clang_std = MockSettings("Debug", os="Linux", arch="x86_64",
                                          compiler_name="clang", libcxx="libstdc", version="4.9")
         env = ConfigureEnvironment(MockConanfile(linux_s_clang_std))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m64 -framework thing -framework thing2'
+        self.assertEquals(env.compile_flags, '-m64 -framework thing -framework thing2'
                                              ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
-                                             '-L"path/to/lib2" cppflag1 -stdlib=libstdc++')
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 '
+                                             '-stdlib=libstdc++')
 
         linux_s_clang = MockSettings("Debug", os="Linux", arch="x86_64",
                                      compiler_name="clang", libcxx="libc++", version="4.9")
         env = ConfigureEnvironment(MockConanfile(linux_s_clang))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m64 -framework thing -framework thing2'
+        self.assertEquals(env.compile_flags, '-m64 -framework thing -framework thing2'
                                              ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
-                                             '-L"path/to/lib2" cppflag1 -stdlib=libc++')
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 '
+                                             '-stdlib=libc++')
 
         freebsd_s_clang_32 = MockSettings("Debug", os="FreeBSD", arch="x86",
                                           compiler_name="clang", libcxx="libc++", version="3.8")
         env = ConfigureEnvironment(MockConanfile(freebsd_s_clang_32))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m32 -framework thing -framework thing2'
+        self.assertEquals(env.compile_flags, '-m32 -framework thing -framework thing2'
                                              ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
-                                             '-L"path/to/lib2" cppflag1 -stdlib=libc++')
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 '
+                                             '-stdlib=libc++')
 
         freebsd_s_clang_64 = MockSettings("Debug", os="FreeBSD", arch="x86_64",
                                           compiler_name="clang", libcxx="libc++", version="3.8")
         env = ConfigureEnvironment(MockConanfile(freebsd_s_clang_64))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m64 -framework thing -framework thing2'
+        self.assertEquals(env.compile_flags, '-m64 -framework thing -framework thing2'
                                              ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
-                                             '-L"path/to/lib2" cppflag1 -stdlib=libc++')
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 -stdlib=libc++')
 
         solaris_s_sun_cc_32 = MockSettings("Debug", os="SunOS", arch="x86",
                                            compiler_name="sun-cc", libcxx="libCstd", version="5.10")
         env = ConfigureEnvironment(MockConanfile(solaris_s_sun_cc_32))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m32 -framework thing -framework thing2'
+        self.assertEquals(env.compile_flags, '-m32 -framework thing -framework thing2'
                                              ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
-                                             '-L"path/to/lib2" cppflag1 -library=Cstd')
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 -library=Cstd')
 
         solaris_s_sun_cc_64 = MockSettings("Debug", os="SunOS", arch="x86_64",
                                            compiler_name="sun-cc", libcxx="libCstd", version="5.10")
         env = ConfigureEnvironment(MockConanfile(solaris_s_sun_cc_64))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m64 -framework thing -framework thing2'
+        self.assertEquals(env.compile_flags, '-m64 -framework thing -framework thing2'
                                              ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
-                                             '-L"path/to/lib2" cppflag1 -library=Cstd')
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 -library=Cstd')
 
         solaris_s_sun_cc_stlport = MockSettings("Debug", os="SunOS", arch="x86_64",
                                                 compiler_name="sun-cc", libcxx="libstlport",
                                                 version="5.10")
         env = ConfigureEnvironment(MockConanfile(solaris_s_sun_cc_stlport))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m64 -framework thing -framework thing2'
+        self.assertEquals(env.compile_flags, '-m64 -framework thing -framework thing2'
                                              ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
-                                             '-L"path/to/lib2" cppflag1 -library=stlport4')
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 -library=stlport4')
 
         solaris_s_sun_cc_stdcxx = MockSettings("Debug", os="SunOS", arch="x86_64",
                                                compiler_name="sun-cc", libcxx="libstdcxx",
                                                version="5.10")
         env = ConfigureEnvironment(MockConanfile(solaris_s_sun_cc_stdcxx))
-        self.assertEquals(env.compile_flags, '-llib1 -llib2 -m64 -framework thing -framework thing2'
+        self.assertEquals(env.compile_flags, '-m64 -framework thing -framework thing2'
                                              ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
                                              '-I"path/to/includes/lib2" -L"path/to/lib1" '
-                                             '-L"path/to/lib2" cppflag1 -library=stdcxx4')
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 -library=stdcxx4')
+
+        solaris_s_sun_cc_sparc = MockSettings("Debug", os="SunOS", arch="sparc",
+                                              compiler_name="sun-cc", libcxx="libCstd", version="5.10")
+        env = ConfigureEnvironment(MockConanfile(solaris_s_sun_cc_sparc))
+        self.assertEquals(env.compile_flags, '-m32 -framework thing -framework thing2'
+                                             ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
+                                             '-I"path/to/includes/lib2" -L"path/to/lib1" '
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 -library=Cstd')
+
+        solaris_s_sun_cc_sparcv9 = MockSettings("Debug", os="SunOS", arch="sparcv9",
+                                                compiler_name="sun-cc", libcxx="libCstd", version="5.10")
+        env = ConfigureEnvironment(MockConanfile(solaris_s_sun_cc_sparcv9))
+        self.assertEquals(env.compile_flags, '-m64 -framework thing -framework thing2'
+                                             ' -g -DMYDEF1 -DMYDEF2 -I"path/to/includes/lib1" '
+                                             '-I"path/to/includes/lib2" -L"path/to/lib1" '
+                                             '-L"path/to/lib2" -llib1 -llib2 cppflag1 -library=Cstd')
 
     def configure_environment_test(self):
         win_settings = MockSettings("Release", os="Windows", arch="x86",
@@ -302,7 +321,7 @@ class CompileHelpersTest(unittest.TestCase):
                                             '"path/to/includes/lib2"')
 
         freebsd_settings = MockSettings("Release", os="FreeBSD", arch="x86",
-                                         compiler_name="clang", libcxx="libc++", version="3.8")
+                                        compiler_name="clang", libcxx="libc++", version="3.8")
         env = ConfigureEnvironment(MockConanfile(freebsd_settings))
         self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
                                             '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
@@ -329,9 +348,22 @@ class CompileHelpersTest(unittest.TestCase):
                                             'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:"path/to/includes/lib1":'
                                             '"path/to/includes/lib2"')
 
+        solaris_sparc_settings = MockSettings("Release", os="SunOS", arch="sparc",
+                                              compiler_name="sun-cc", libcxx="libstlport", version="5.10")
+        env = ConfigureEnvironment(MockConanfile(solaris_sparc_settings))
+        self.assertEquals(env.command_line, 'env LIBS="-llib1 -llib2" LDFLAGS="-Lpath/to/lib1 '
+                                            '-Lpath/to/lib2 -m32 -framework thing -framework thing2 $LDFLAGS" '
+                                            'CFLAGS="$CFLAGS -m32 cflag1 -DNDEBUG '
+                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
+                                            'CPPFLAGS="$CPPFLAGS -m32 cppflag1 -library=stlport4 -DNDEBUG '
+                                            '-Ipath/to/includes/lib1 -Ipath/to/includes/lib2 -DMYDEF1 -DMYDEF2" '
+                                            'C_INCLUDE_PATH=$C_INCLUDE_PATH:"path/to/includes/lib1":'
+                                            '"path/to/includes/lib2" '
+                                            'CPLUS_INCLUDE_PATH=$CPLUS_INCLUDE_PATH:"path/to/includes/lib1":'
+                                            '"path/to/includes/lib2"')
 
         # Not supported yet
-        win_gcc = MockSettings("Release", os="Windows", arch="x86", 
+        win_gcc = MockSettings("Release", os="Windows", arch="x86",
                                compiler_name="gcc", libcxx=None, version="4.9")
         env = ConfigureEnvironment(MockConanfile(win_gcc))
         self.assertEquals(env.command_line_env, 'call _conan_env.bat')
@@ -448,4 +480,4 @@ class ProfilesEnvironmentTest(unittest.TestCase):
             profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
         for varname, value in env.items():
             profile.env_values.add(varname, value)
-        save(self.client.client_cache.profile_path(name), profile.dumps())
+        save(os.path.join(self.client.client_cache.profiles_path, name), profile.dumps())
