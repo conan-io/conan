@@ -182,16 +182,19 @@ QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
 [env]
 PYTHONPATH=$PROFILE_DIR/my_python_tools
 '''
+
+        def assert_path(profile):
+            pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
+            self.assertEquals(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
+
         abs_profile_path = os.path.join(tmp, "Myprofile.txt")
         save(abs_profile_path, txt)
         profile = Profile.read_file(abs_profile_path, None, None)
-        pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
-        self.assertEquals(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
+        assert_path(profile)
 
         profile = Profile.read_file("./Myprofile.txt", tmp, None)
-        pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
-        self.assertEquals(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
+        assert_path(profile)
 
         profile = Profile.read_file("Myprofile.txt", None, tmp)
-        pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
-        self.assertEquals(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
+        assert_path(profile)
+
