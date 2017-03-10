@@ -185,10 +185,12 @@ PYTHONPATH=$PROFILE_DIR/my_python_tools
         abs_profile_path = os.path.join(tmp, "Myprofile.txt")
         save(abs_profile_path, txt)
         profile = Profile.read_file(abs_profile_path, None, None)
-        self.assertEquals(profile.env_values.env_dicts("")[0], {"PYTHONPATH": os.path.join(tmp, "my_python_tools")})
+        pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
+        self.assertEquals(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
 
         profile = Profile.read_file("./Myprofile.txt", tmp, None)
-        self.assertEquals(profile.env_values.env_dicts("")[0], {"PYTHONPATH": os.path.join(tmp, "my_python_tools")})
+        pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
+        self.assertEquals(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
 
         profile = Profile.read_file("Myprofile.txt", None, tmp)
         pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
