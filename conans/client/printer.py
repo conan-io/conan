@@ -8,6 +8,7 @@ from conans.model.ref import PackageReference
 from conans.client.installer import build_id
 import fnmatch
 
+
 class Printer(object):
     """ Print some specific information """
 
@@ -43,8 +44,28 @@ class Printer(object):
             self._out.writeln("    %s" % repr(ref), Color.BRIGHT_CYAN)
         self._out.writeln("")
 
+    def _print_paths(self, ref, conan, path_resolver, show):
+        if isinstance(ref, ConanFileReference):
+            if show("export_folder"):
+                path = path_resolver.export(ref)
+                self._out.writeln("    export_folder: %s" % path, Color.BRIGHT_GREEN)
+            if show("source_folder"):
+                path = path_resolver.source(ref, conan.short_paths)
+                self._out.writeln("    source_folder: %s" % path, Color.BRIGHT_GREEN)
+            if show("build_folder") and isinstance(path_resolver, SimplePaths):
+                # @todo: check if this is correct or if it must always be package_id()
+                bid = build_id(conan)
+                if not bid:
+                    bid = conan.info.package_id()
+                path = path_resolver.build(PackageReference(ref, bid), conan.short_paths)
+                self._out.writeln("    build_folder: %s" % path, Color.BRIGHT_GREEN)
+            if show("package_folder") and isinstance(path_resolver, SimplePaths):
+                id_ = conan.info.package_id()
+                path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
+                self._out.writeln("    package_folder: %s" % path, Color.BRIGHT_GREEN)
+
     def print_info(self, deps_graph, project_reference, _info, registry, graph_updates_info=None,
-                   remote=None, node_times=None, path_resolver = None, filter = None):
+                   remote=None, node_times=None, path_resolver=None, package_filter=None):
         """ Print the dependency information for a conan file
 
             Attributes:
@@ -75,9 +96,8 @@ class Printer(object):
                     continue
                 else:
                     ref = project_reference
-            if filter is not None:
-                if not fnmatch.fnmatch(str(ref), filter):
-                    continue
+            if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
+                continue
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             reg_remote = registry.get_ref(ref)
             # Excludes PROJECT fake reference
@@ -92,24 +112,7 @@ class Printer(object):
                 bid = build_id(conan)
                 self._out.writeln("    BuildID: %s" % bid, Color.BRIGHT_GREEN)
 
-            if isinstance(ref, ConanFileReference) and isinstance(path_resolver, SimplePaths):
-                if show("export_folder"):
-                    path = path_resolver.export(ref)
-                    self._out.writeln("    exportFolder: %s" % path, Color.BRIGHT_GREEN)
-                if show("source_folder"):
-                    path = path_resolver.source(ref, conan.short_paths)
-                    self._out.writeln("    sourceFolder: %s" % path, Color.BRIGHT_GREEN)
-                if show("build_folder") and isinstance(path_resolver, SimplePaths):
-                    # @todo: check if this is correct or if it must always be package_id()
-                    bid = build_id(conan)
-                    if not bid:
-                        bid = conan.info.package_id();
-                    path = path_resolver.build(PackageReference(ref, bid), conan.short_paths)
-                    self._out.writeln("    buildFolder: %s" % path, Color.BRIGHT_GREEN)
-                if show("package_folder") and isinstance(path_resolver, SimplePaths):
-                    id_ = conan.info.package_id();
-                    path = path_resolver.package(PackageReference(ref, id_), conan.short_paths)
-                    self._out.writeln("    packageFolder: %s" % path, Color.BRIGHT_GREEN)
+            self._print_paths(ref, conan, path_resolver, show)
 
             if isinstance(ref, ConanFileReference) and show("remote"):
                 if reg_remote:
@@ -210,7 +213,7 @@ class Printer(object):
 
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
-        self._print_profile_section("settings", profile.settings)
+        self._print_profile_section("settings", profile.settings.items())
 
         envs = []
         for package, env_vars in profile.env_values.data.items():

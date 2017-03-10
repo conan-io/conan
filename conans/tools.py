@@ -65,7 +65,6 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None):
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         conanfile.run(wincmd)
 
-
 @contextmanager
 def chdir(newdir):
     old_path = os.getcwd()

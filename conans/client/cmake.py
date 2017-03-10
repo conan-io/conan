@@ -1,6 +1,9 @@
+from contextlib import contextmanager
+
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.util.files import mkdir
+from conans import tools
 import os
 import platform
 import subprocess
@@ -142,11 +145,11 @@ class CMake(object):
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
         if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
-            if arch == "x86":
+            if arch == "x86" or arch == "sparc":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m32",
                               "-DCONAN_C_FLAGS=-m32"])
-            if arch == "x86_64":
+            if arch == "x86_64" or arch == "sparcv9":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m64",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m64",
                               "-DCONAN_C_FLAGS=-m64"])
@@ -181,7 +184,11 @@ class CMake(object):
             _args_to_string([source_dir])
         ])
         command = "cd %s && cmake %s" % (_args_to_string([self.build_dir]), arg_list)
-        conan_file.run(command)
+        if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
+            with clean_sh_from_path():
+                conan_file.run(command)
+        else:
+            conan_file.run(command)
 
     def build(self, conan_file, args=None, build_dir=None, target=None):
         args = args or []
@@ -211,3 +218,13 @@ def _args_to_string(args):
 
 def _join_arguments(args):
     return " ".join(filter(None, args))
+
+
+@contextmanager
+def clean_sh_from_path():
+    new_path = []
+    for path_entry in os.environ.get("PATH", "").split(os.pathsep):
+        if not os.path.exists(os.path.join(path_entry, "sh.exe")):
+            new_path.append(path_entry)
+    with tools.environment_append({"PATH": os.pathsep.join(new_path)}):
+        yield
