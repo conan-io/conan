@@ -188,7 +188,8 @@ class ConanManager(object):
 
     def info(self, reference, current_path, profile, remote=None,
              info=None, filename=None, update=False, check_updates=False,
-             build_order=None, build_mode=None, graph_filename=None):
+             build_order=None, build_mode=None, graph_filename=None, package_filter=None,
+             show_paths=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -239,7 +240,8 @@ class ConanManager(object):
         else:
             Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                                   info, registry, graph_updates_info,
-                                                  remote, read_dates(deps_graph))
+                                                  remote, read_dates(deps_graph),
+                                                  self._client_cache, package_filter, show_paths)
 
     def install(self, reference, current_path, profile, remote=None,
                 build_mode=None, filename=None, update=False, check_updates=False,

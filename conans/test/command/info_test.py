@@ -201,7 +201,11 @@ class InfoTest(unittest.TestCase):
             return "\n".join([line for line in str(output).splitlines()
                               if not line.strip().startswith("Creation date") and
                               not line.strip().startswith("ID") and
-                              not line.strip().startswith("BuildID")])
+                              not line.strip().startswith("BuildID") and
+                              not line.strip().startswith("export_folder") and
+                              not line.strip().startswith("build_folder") and
+                              not line.strip().startswith("source_folder") and
+                              not line.strip().startswith("package_folder")])
 
         # The timestamp is variable so we can't check the equality
         self.assertIn(expected_output, clean_output(self.client.user_io.out))

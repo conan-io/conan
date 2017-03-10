@@ -328,6 +328,11 @@ class Command(object):
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--only", "-n", nargs="?", const="None",
                             help='show fields only')
+        parser.add_argument("--paths", action='store_true', default=False,
+                            help='Show package paths in local cache')
+        parser.add_argument("--package_filter", nargs='?',
+                            help='print information only for packages that match the filter'
+                                 'e.g., MyPackage/1.2@user/channel or MyPackage*')
         parser.add_argument("--build_order", "-bo",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
@@ -353,11 +358,13 @@ class Command(object):
                            remote=args.remote,
                            profile=profile,
                            info=args.only,
+                           package_filter=args.package_filter,
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
                            build_mode=args.build,
-                           graph_filename=args.graph)
+                           graph_filename=args.graph,
+                           show_paths=args.paths)
 
     def build(self, *args):
         """ Utility command to run your current project 'conanfile.py' build() method.
@@ -815,7 +822,6 @@ class Command(object):
         return errors
 
 
-
 def _check_query_parameter_and_get_reference(args):
     reference = None
     if args.pattern:
@@ -827,6 +833,7 @@ def _check_query_parameter_and_get_reference(args):
                                      "reference as search pattern. e.j conan search "
                                      "MyPackage/1.2@user/channel -q \"os=Windows\"")
     return reference
+
 
 def _parse_manifests_arguments(args, reference, current_path):
     if args.manifests and args.manifests_interactive:
