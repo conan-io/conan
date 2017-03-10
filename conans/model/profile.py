@@ -56,7 +56,6 @@ class Profile(object):
 
         try:
             text = load(profile_path)
-            text = text.replace("$PROFILE_DIR", os.path.abspath(folder))  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
         except IOError:
             if os.path.exists(folder):
                 profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
@@ -67,6 +66,7 @@ class Profile(object):
                                  "%s" % (profile_name, current_profiles))
 
         try:
+            text = text.replace("$PROFILE_DIR", os.path.abspath(folder))  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
             return Profile.loads(text)
         except ConanException as exc:
             raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
