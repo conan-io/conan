@@ -191,4 +191,5 @@ PYTHONPATH=$PROFILE_DIR/my_python_tools
         self.assertEquals(profile.env_values.env_dicts("")[0], {"PYTHONPATH": os.path.join(tmp, "my_python_tools")})
 
         profile = Profile.read_file("Myprofile.txt", None, tmp)
-        self.assertEquals(profile.env_values.env_dicts("")[0], {"PYTHONPATH": os.path.join(tmp, "my_python_tools")})
+        pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
+        self.assertEquals(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
