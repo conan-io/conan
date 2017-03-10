@@ -145,11 +145,11 @@ class CMake(object):
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
         if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
-            if arch == "x86":
+            if arch == "x86" or arch == "sparc":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m32",
                               "-DCONAN_C_FLAGS=-m32"])
-            if arch == "x86_64":
+            if arch == "x86_64" or arch == "sparcv9":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m64",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m64",
                               "-DCONAN_C_FLAGS=-m64"])
