@@ -11,8 +11,8 @@ from conans.model.values import Values
 
 
 class Profile(object):
-    '''A profile contains a set of setting (with values), environment variables
-    and scopes'''
+    """A profile contains a set of setting (with values), environment variables
+    and scopes"""
 
     def __init__(self):
         # Sections
@@ -56,7 +56,8 @@ class Profile(object):
 
         try:
             text = load(profile_path)
-        except Exception:
+            text = text.replace("$PROFILE_DIR", os.path.abspath(folder))  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
+        except IOError:
             if os.path.exists(folder):
                 profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
             else:

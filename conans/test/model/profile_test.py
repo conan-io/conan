@@ -1,7 +1,11 @@
+import os
 import unittest
 
 from conans.model.profile import Profile
 from collections import OrderedDict
+
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
 
 
 class ProfileTest(unittest.TestCase):
@@ -171,3 +175,20 @@ QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
                          '[options]\n[scopes]\np1:new_one=2\np2:testing=True\n'
                          '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())
+
+    def profile_dir_test(self):
+        tmp = temp_folder()
+        txt = '''
+[env]
+PYTHONPATH=$PROFILE_DIR/my_python_tools
+'''
+        abs_profile_path = os.path.join(tmp, "Myprofile.txt")
+        save(abs_profile_path, txt)
+        profile = Profile.read_file(abs_profile_path, None, None)
+        self.assertEquals(profile.env_values.env_dicts("")[0], {"PYTHONPATH": os.path.join(tmp, "my_python_tools")})
+
+        profile = Profile.read_file("./Myprofile.txt", tmp, None)
+        self.assertEquals(profile.env_values.env_dicts("")[0], {"PYTHONPATH": os.path.join(tmp, "my_python_tools")})
+
+        profile = Profile.read_file("Myprofile.txt", None, tmp)
+        self.assertEquals(profile.env_values.env_dicts("")[0], {"PYTHONPATH": os.path.join(tmp, "my_python_tools")})
