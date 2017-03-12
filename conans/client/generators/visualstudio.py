@@ -7,7 +7,9 @@ class VisualStudioGenerator(Generator):
     template = '''<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
-  <PropertyGroup Label="UserMacros" />{item_properties}
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Label="Conan.RootDirs">{item_properties}
+  </PropertyGroup>
   <PropertyGroup>
     <ExecutablePath>{bin_dirs}$(ExecutablePath)</ExecutablePath>
   </PropertyGroup>
@@ -31,28 +33,8 @@ class VisualStudioGenerator(Generator):
 </Project>'''
 
     item_template = '''
-  <PropertyGroup Label="Conan.{name}">
-    <Conan.{name}.Root>{root_dir}</Conan.{name}.Root>
-    <Conan.IncludeDirs.{name}>{include_dirs}</Conan.IncludeDirs.{name}>
-    <Conan.LibDirs.{name}>{lib_dirs}</Conan.LibDirs.{name}>
-    <Conan.BinDirs.{name}>{bin_dirs}</Conan.BinDirs.{name}>
-    <Conan.Libs.{name}>{libs}</Conan.Libs.{name}>
-    <Conan.Defines.{name}>{definitions}</Conan.Defines.{name}>
-    <Conan.CompilerFlags.{name}>{compiler_flags}</Conan.CompilerFlags.{name}>
-    <Conan.SharedLinkerFlags.{name}>{linker_flags}</Conan.SharedLinkerFlags.{name}>
-    <Conan.ExeLinkerFlags.{name}>{exe_flags}</Conan.ExeLinkerFlags.{name}>
-  </PropertyGroup>'''
+    <Conan.{name}.Root>{root_dir}</Conan.{name}.Root>'''
 
-    def _add_common_fields(self, fields, dep_cpp_info):
-        fields['bin_dirs'] = "".join( "%s;" % p for p in dep_cpp_info.bin_paths).replace("\\", "/")
-        fields['include_dirs'] = "".join( "%s;" % p for p in dep_cpp_info.include_paths).replace("\\", "/")
-        fields['lib_dirs'] = "".join( "%s;" % p for p in dep_cpp_info.lib_paths).replace("\\", "/")
-        fields['libs'] = "".join(['%s.lib;' % lib if not lib.endswith(".lib")
-                             else '%s;' % lib for lib in dep_cpp_info.libs])
-        fields['definitions'] = "".join("%s;" % d for d in dep_cpp_info.defines)
-        fields['compiler_flags'] = " ".join(dep_cpp_info.cppflags + dep_cpp_info.cflags)
-        fields['linker_flags'] = " ".join(dep_cpp_info.sharedlinkflags)
-        fields['exe_flags'] = " ".join(dep_cpp_info.exelinkflags)
 
     def _format_items(self, deps_cpp_info):
         sections = []
@@ -61,8 +43,6 @@ class VisualStudioGenerator(Generator):
                 'root_dir': dep_cpp_info.rootpath,
                 'name': dep_name
             }
-            self._add_common_fields(fields, dep_cpp_info)
-            fields = {k: v.strip(";") for k, v in fields.items()}
             section = self.item_template.format(**fields)
             sections.append(section)
         return "".join(sections)
@@ -75,8 +55,16 @@ class VisualStudioGenerator(Generator):
     def content(self):
         per_item_props = self._format_items(self._deps_build_info)
         fields = {
-            'item_properties': per_item_props
+            'item_properties': per_item_props,
+            'bin_dirs': "".join("%s;" % p for p in self._deps_build_info.bin_paths).replace("\\", "/"),
+            'include_dirs': "".join("%s;" % p for p in self._deps_build_info.include_paths).replace("\\", "/"),
+            'lib_dirs': "".join("%s;" % p for p in self._deps_build_info.lib_paths).replace("\\", "/"),
+            'libs': "".join(['%s.lib;' % lib if not lib.endswith(".lib")
+                                  else '%s;' % lib for lib in self._deps_build_info.libs]),
+            'definitions': "".join("%s;" % d for d in self._deps_build_info.defines),
+            'compiler_flags': " ".join(self._deps_build_info.cppflags + self._deps_build_info.cflags),
+            'linker_flags': " ".join(self._deps_build_info.sharedlinkflags),
+            'exe_flags': " ".join(self._deps_build_info.exelinkflags)
         }
-        self._add_common_fields(fields, self._deps_build_info)
         return self.template.format(**fields)
 
