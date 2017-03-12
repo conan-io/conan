@@ -46,6 +46,8 @@ class BasicBuildTest(unittest.TestCase):
 
     def build_default_test(self):
         "build default (gcc in nix, VS in win)"
+        if platform.system() == "SunOS":
+            return  # If is using sun-cc the gcc generator doesn't work
         for pure_c in (False, True):
             for cmd, lang, static in [("install", 0, True),
                                       ("install -o language=1", 1, True),

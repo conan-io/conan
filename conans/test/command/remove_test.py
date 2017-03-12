@@ -1,16 +1,33 @@
+import os
 import unittest
-from conans.test.tools import TestClient, TestBufferConanOutput, TestServer
+
+import six
+from mock import Mock
+
+from conans.client.userio import UserIO
+from conans.model.manifest import FileTreeManifest
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE,\
     CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_DIR
-import os
-from mock import Mock
-from conans.client.userio import UserIO
-from conans.test.utils.test_files import temp_folder
-import six
+from conans.test.tools import TestClient, TestBufferConanOutput, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.model.ref import PackageReference, ConanFileReference
-from conans.model.manifest import FileTreeManifest
+from conans.test.utils.test_files import temp_folder
 
+
+
+conaninfo ='''
+[settings]
+    arch=x64
+    os=Windows
+    compiler=Visual Studio
+    compiler.version=8.%s
+[options]
+    use_Qt=True
+[full_requires]
+  Hello2/0.1@lasote/stable:11111
+  OpenSSL/2.10@lasote/testing:2222
+  HelloInfo1/0.45@fenix/testing:33333
+'''
 
 class RemoveTest(unittest.TestCase):
 
@@ -39,11 +56,12 @@ class RemoveTest(unittest.TestCase):
             files["%s/%s/conanmanifest.txt" % (folder, EXPORT_FOLDER)] = ""
             files["%s/%s/conans.txt" % (folder, SRC_FOLDER)] = ""
             for pack_id in (1, 2):
+                i = pack_id
                 pack_id = "%s_%s" % (pack_id, key)
                 pack_refs.append(PackageReference(ref, str(pack_id)))
                 files["%s/%s/%s/conans.txt" % (folder, BUILD_FOLDER, pack_id)] = ""
                 files["%s/%s/%s/conans.txt" % (folder, PACKAGES_FOLDER, pack_id)] = ""
-                files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = ""
+                files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i)
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
 
             exports_sources_dir = os.path.join(client.client_cache.export(ref), EXPORT_SOURCES_DIR)
@@ -111,10 +129,10 @@ class RemoveTest(unittest.TestCase):
 
     def basic_test(self):
         self.client.run("remove hello/* -f")
-        self.assert_folders({"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
-                            {"H1": False, "H2": False, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Other", "Bye"], folders)
 
@@ -122,36 +140,36 @@ class RemoveTest(unittest.TestCase):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
         mocked_user_io.request_boolean = Mock(return_value=True)
         self.client.run("remove hello/*", user_io=mocked_user_io)
-        self.assert_folders({"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
-                            {"H1": False, "H2": False, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Other", "Bye"], folders)
 
     def basic_packages_test(self):
         self.client.run("remove hello/* -p -f")
-        self.assert_folders({"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
         six.assertCountEqual(self, ["build", "source", "export"],
-                              os.listdir(os.path.join(self.client.storage_folder,
-                                                      "Hello/1.4.10/fenix/testing")))
+                             os.listdir(os.path.join(self.client.storage_folder,
+                                                     "Hello/1.4.10/fenix/testing")))
         six.assertCountEqual(self, ["build", "source", "export"],
-                              os.listdir(os.path.join(self.client.storage_folder,
-                                                      "Hello/2.4.11/fenix/testing")))
+                             os.listdir(os.path.join(self.client.storage_folder,
+                                                     "Hello/2.4.11/fenix/testing")))
 
     def builds_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
         mocked_user_io.request_boolean = Mock(return_value=True)
         self.client.run("remove hello/* -b", user_io=mocked_user_io)
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
         six.assertCountEqual(self, ["package", "source", "export"],
@@ -165,10 +183,10 @@ class RemoveTest(unittest.TestCase):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
         mocked_user_io.request_boolean = Mock(return_value=True)
         self.client.run("remove hello/* -s", user_io=mocked_user_io)
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": False, "H2": False, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
         six.assertCountEqual(self, ["package", "build", "export"],
@@ -182,74 +200,108 @@ class RemoveTest(unittest.TestCase):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
         mocked_user_io.request_boolean = Mock(return_value=False)
         self.client.run("remove hello/* -s -b -p", user_io=mocked_user_io)
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def remote_build_error_test(self):
         self.client.run("remove hello/* -b -r=default", ignore_error=True)
         self.assertIn("Remotes don't have 'build' or 'src' folder", self.client.user_io.out)
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def remote_packages_test(self):
         self.client.run("remove hello/* -p -r=default -f")
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [], "H2": [], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def remote_conans_test(self):
         self.client.run("remove hello/* -r=default -f")
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": None, "H2": None, "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
         remote_folder = os.path.join(self.server_folder, ".conan_server/data") 
         folders = os.listdir(remote_folder)
         six.assertCountEqual(self, ["Other", "Bye"], folders)
 
     def remove_specific_package_test(self):
         self.client.run("remove hello/1.4.10* -p=1_H1 -f")
-        self.assert_folders({"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def remove_specific_packages_test(self):
-        self.client.run("remove hello/1.4.10* -p=1_H1,2_H1 -f")
-        self.assert_folders({"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.client.run("remove hello/1.4.10* -p=1_H1 -p 2_H1 -f")
+        self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def remove_specific_build_test(self):
         self.client.run("remove hello/1.4.10* -b=1_H1 -f")
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def remove_specific_builds_test(self):
-        self.client.run("remove hello/1.4.10* -b=1_H1,2_H1 -f")
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.client.run("remove hello/1.4.10* -b=1_H1 -b=2_H1 -f")
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def remove_remote_specific_package_test(self):
         self.client.run("remove hello/1.4.10* -p=1_H1 -f -r=default")
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
 
     def remove_remote_specific_packages_test(self):
-        self.client.run("remove hello/1.4.10* -p=1_H1,2_H1 -f -r=default")
-        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
-                            {"H1": True, "H2": True, "B": True, "O": True})
+        self.client.run("remove hello/1.4.10* -p=1_H1 -p2_H1 -f -r=default")
+        self.assert_folders(local_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
+
+    def try_remove_using_query_and_packages_or_builds_test(self):
+        with self.assertRaisesRegexp(Exception, "Command failed"):
+            self.client.run("remove hello/1.4.10@lasote/stable -p=1_H1 -q 'compiler.version=4.8' ")
+            self.assertIn("'-q' and '-p' parameters can't be used at the same time", self.client.user_io.out)
+
+        with self.assertRaisesRegexp(Exception, "Command failed"):
+            self.client.run("remove hello/1.4.10@lasote/stable -b=1_H1 -q 'compiler.version=4.8' ")
+            self.assertIn("'-q' and '-b' parameters can't be used at the same time", self.client.user_io.out)
+
+    def query_remove_locally_test(self):
+        self.client.run("remove hello/1.4.10@fenix/testing -q='compiler.version=4.4' -f")
+        self.assertIn("No packages matching the query", self.client.user_io.out)
+
+        self.client.run('remove Hello/1.4.10@fenix/testing -q="compiler.version=8.1" -f')
+        self.assertNotIn("No packages matching the query", self.client.user_io.out)
+        self.assert_folders(local_folders={"H1": [2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
+
+        self.client.run('remove Hello/1.4.10@fenix/testing -q="compiler.version=8.2" -f')
+        self.assertNotIn("No packages matching the query", self.client.user_io.out)
+        self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
+
+        self.client.run('remove Hello/1.4.10@fenix/testing -q="compiler.version=8.2" -f -r default')
+        self.assertNotIn("No packages matching the query", self.client.user_io.out)
+        self.assert_folders(local_folders={"H1": [], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            remote_folders={"H1": [1], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            build_folders={"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            src_folders={"H1": True, "H2": True, "B": True, "O": True})
