@@ -16,7 +16,7 @@ def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, short_p
                      keep_source):
     destination_folder = paths.export(conan_ref)
     previous_digest = _init_export_folder(destination_folder)
-    _export(conanfile, origin_folder, destination_folder, output)
+    execute_export(conanfile, origin_folder, destination_folder, output)
 
     digest = FileTreeManifest.create(destination_folder)
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
@@ -67,7 +67,7 @@ def _init_export_folder(destination_folder):
     return previous_digest
 
 
-def _export(conanfile, origin_folder, destination_folder, output):
+def execute_export(conanfile, origin_folder, destination_folder, output):
     def classify(patterns):
         patterns = patterns or []
         included, excluded = [], []
