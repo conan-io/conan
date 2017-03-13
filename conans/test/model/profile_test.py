@@ -197,4 +197,3 @@ PYTHONPATH=$PROFILE_DIR/my_python_tools
 
         profile = Profile.read_file("Myprofile.txt", None, tmp)
         assert_path(profile)
-
