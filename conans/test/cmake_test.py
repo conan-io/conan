@@ -209,23 +209,27 @@ build_type: [ Release]
         cmake.build(conan_file, build_dir=self.tempdir)
         self.assertEqual('cmake --build %s --config Release' % tempdir, conan_file.command)
 
-        cmake.build(conan_file, parallel=True)  # Should be set up in cmake.configure() for Visual Studio
-        self.assertEqual('cmake --build %s --config Release' % dot_dir, conan_file.command)
-
         settings.compiler = "gcc"
         settings.compiler.version = "5.4"
         cmake = CMake(settings)
-        cmake.build(conan_file, parallel=True)
+        cmake.build(conan_file)
         if sys.platform == 'win32':
             self.assertEqual('cmake --build . -- -j%i' % cpu_count(), conan_file.command)
         else:
             self.assertEqual("cmake --build '.' '--' '-j%i'" % cpu_count(), conan_file.command)
 
-        cmake.build(conan_file, args=['foo', '--', 'bar'], parallel=True)
+        cmake.build(conan_file, args=['foo', '--', 'bar'])
         if sys.platform == 'win32':
             self.assertEqual('cmake --build . foo -- bar -j%i' % cpu_count(), conan_file.command)
         else:
             self.assertEqual("cmake --build '.' 'foo' '--' 'bar' '-j%i'" % cpu_count(), conan_file.command)
+
+        cmake = CMake(settings, parallel=False)
+        cmake.build(conan_file)
+        if sys.platform == 'win32':
+            self.assertEqual('cmake --build .', conan_file.command)
+        else:
+            self.assertEqual("cmake --build '.'", conan_file.command)
 
     def test_clean_sh_path(self):
 
