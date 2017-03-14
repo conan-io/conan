@@ -13,12 +13,13 @@ import sys
 
 class CMake(object):
 
-    def __init__(self, settings, generator=None, cmake_system_name=True):
+    def __init__(self, settings, generator=None, cmake_system_name=True, parallel=True):
         assert isinstance(settings, Settings)
         self._settings = settings
         self.generator = generator or self._generator()
         self.build_dir = None
         self._cmake_system_name = cmake_system_name
+        self.parallel = parallel
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -191,13 +192,13 @@ class CMake(object):
         else:
             conan_file.run(command)
 
-    def build(self, conan_file, args=None, build_dir=None, target=None, parallel=False):
+    def build(self, conan_file, args=None, build_dir=None, target=None):
         args = args or []
         build_dir = build_dir or self.build_dir or conan_file.conanfile_directory
         if target is not None:
             args = ["--target", target] + args
 
-        if parallel:
+        if self.parallel:
             if "Makefiles" in self.generator:
                 if not "--" in args:
                     args.append("--")
