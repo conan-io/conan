@@ -8,6 +8,7 @@ from conans.errors import ConanException, format_conanfile_exception
 from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME,\
     CONANFILE
 from conans.util.files import rmdir, save
+from conans.client.export import execute_export
 
 
 def _merge_directories(src, dst):
@@ -93,12 +94,7 @@ def config_source_local(export_folder, current_path, conan_file, output):
         output.warn("Your previous source command failed")
 
     if current_path != export_folder:
-        for item in os.listdir(export_folder):
-            origin = os.path.join(export_folder, item)
-            if os.path.isdir(origin):
-                shutil.copytree(origin, os.path.join(current_path, item))
-            else:
-                shutil.copy2(origin, os.path.join(current_path, item))
+        execute_export(conan_file, export_folder, current_path, output)
 
     save(dirty, "")  # Creation of DIRTY flag
     try:

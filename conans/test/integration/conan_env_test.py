@@ -33,6 +33,53 @@ class MyTest(ConanFile):
         client.run("test_package -e MYVAR=MYVALUE", ignore_error=True)
         self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
 
+    def test_run_env(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    build_policy = "missing"
+
+    def package_info(self):
+        self.cpp_info.bindirs.append("bin2")
+        self.cpp_info.libdirs.append("lib2")
+
+'''
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/stable")
+
+        reuse = '''[requires]
+Hello/0.1@lasote/stable
+[generators]
+virtualrunenv
+'''
+
+        client.save({"conanfile.txt": reuse}, clean_first=True)
+        client.run("install")
+
+        ext = "bat" if platform.system() == "Windows" else "sh"
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate_run.%s" % ext)))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate_run.%s" % ext)))
+        activate_contents = load(os.path.join(client.current_folder, "activate_run.%s" % ext))
+
+        self.assertIn("PATH", activate_contents)
+        self.assertIn("LD_LIBRARY_PATH", activate_contents)
+        self.assertIn("DYLIB_LIBRARY_PATH", activate_contents)
+
+        for line in activate_contents.splitlines():
+            if " PATH=" in line:
+                self.assertIn("bin2", line)
+                self.assertNotIn("lib2", line)
+            if " DYLIB_LIBRARY_PATH=" in line:
+                self.assertNotIn("bin2", line)
+                self.assertIn("lib2", line)
+            if " LD_LIBRARY_PATH=" in line:
+                self.assertNotIn("bin2", line)
+                self.assertIn("lib2", line)
+
     def dual_compiler_settings_and_env_test(self):
 
         def patch_conanfile(conanfile):

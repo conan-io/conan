@@ -1,10 +1,13 @@
+import os
 import unittest
+from nose_parameterized.parameterized import parameterized
+
 from conans.test.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
-import os
 from conans.util.files import save, load, md5
 from conans.model.ref import PackageReference
 from conans.paths import CONANFILE, SimplePaths
+from conans.test.utils.test_files import temp_folder
 
 
 class ManifestValidationTest(unittest.TestCase):
@@ -26,6 +29,49 @@ class ConanFileTest(ConanFile):
         self.reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.client.save(self.files)
         self.client.run("export lasote/stable")
+
+    @parameterized.expand([(True, ), (False, )])
+    def test_package_test(self, use_abs_folder):
+        self.client.run("install Hello/0.1@lasote/stable --build missing")
+        conanfile = """from conans import ConanFile
+
+class ConsumerFileTest(ConanFile):
+    name = "Chat"
+    version = "0.1"
+    requires = "Hello/0.1@lasote/stable"
+"""
+        test_conanfile = """from conans import ConanFile
+
+class ConsumerFileTest(ConanFile):
+    requires = "Chat/0.1@lasote/stable"
+    def test(self):
+        self.output.info("TEST OK")
+"""
+        if use_abs_folder:
+            output_folder = temp_folder()
+            dest = '="%s"' % output_folder
+        else:
+            dest = ""
+            output_folder = os.path.join(self.client.current_folder, ".conan_manifests")
+
+        self.client.save({"conanfile.py": conanfile,
+                          "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        self.client.run("test_package --manifests%s" % dest)
+        self.assertIn("Project: TEST OK", self.client.user_io.out)
+        self.assertIn("Installed manifest for 'Chat/0.1@lasote/stable' from local cache",
+                      self.client.user_io.out)
+        self.assertIn("Installed manifest for 'Hello/0.1@lasote/stable' from local cache",
+                      self.client.user_io.out)
+
+        paths = SimplePaths(output_folder)
+        self.assertTrue(os.path.exists(paths.digestfile_conanfile(self.reference)))
+        package_reference = PackageReference.loads("Hello/0.1@lasote/stable:"
+                                                   "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        self.assertTrue(os.path.exists(paths.digestfile_package(package_reference)))
+        # now verify
+        self.client.run("test_package --verify%s" % dest)
+        self.assertIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
+        self.assertIn("Manifest for '%s': OK" % str(package_reference), self.client.user_io.out)
 
     def _capture_verify_manifest(self, reference, remote="local cache", folder=""):
         self.client.run("install %s --build missing --manifests %s" % (str(reference), folder))

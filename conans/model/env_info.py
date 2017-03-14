@@ -7,6 +7,13 @@ from conans.errors import ConanException
 from conans.util.log import logger
 
 
+def unquote(text):
+    text = text.strip()
+    if len(text) > 1 and (text[0] == text[-1]) and text[0] in "'\"":
+        return text[1:-1]
+    return text
+
+
 class EnvValues(object):
     """ Object to represent the introduced env values entered by the user
     with the -e or profiles etc.
@@ -37,10 +44,7 @@ class EnvValues(object):
                         raise ConanException("Invalid env line '%s'" % env_def)
                     tmp = env_def.split("=", 1)
                     name = tmp[0]
-                    value = tmp[1].strip()
-                    for quote in ['"', "'"]:  # Peel the quotes from text
-                        if value.startswith(quote) and value.endswith(quote) and len(value) > 1:
-                            value = value[1:-1]
+                    value = unquote(tmp[1])
                     package = None
                     if ":" in name:
                         tmp = name.split(":", 1)

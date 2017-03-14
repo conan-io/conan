@@ -8,11 +8,12 @@ from conans.model.values import Values
 import urllib
 from conans.paths import conan_expand_user
 from collections import OrderedDict
+from conans.model.env_info import unquote
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
 default_settings_yml = """os: [Windows, Linux, Macos, Android, iOS, FreeBSD, SunOS]
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8]
+arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9]
 compiler:
     sun-cc:
        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -100,7 +101,7 @@ class ConanClientConfigParser(ConfigParser, object):
         if env is not None:
             return env
         try:
-            return self.get_item(var_name)
+            return unquote(self.get_item(var_name))
         except ConanException:
             return default_value
 

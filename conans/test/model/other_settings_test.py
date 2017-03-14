@@ -52,14 +52,14 @@ class SayConan(ConanFile):
     def settings_as_a_dict_conanfile_test(self):
         """Declare settings as a dict"""
         # Now with conanfile as a dict
-        # XXX: this test only works on machines that default arch to "x86" or "x86_64"
+        # XXX: this test only works on machines that default arch to "x86" or "x86_64" or "sparc" or "sparcv9"
         content = """
 from conans import ConanFile
 
 class SayConan(ConanFile):
     name = "Say"
     version = "0.1"
-    settings = {"os": ["Windows"], "arch": ["x86", "x86_64"]}
+    settings = {"os": ["Windows"], "arch": ["x86", "x86_64", "sparc", "sparcv9"]}
 """
         self.client.save({CONANFILE: content})
         self.client.run("install -s os=Windows --build missing")

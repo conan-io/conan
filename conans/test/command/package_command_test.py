@@ -70,10 +70,12 @@ class MyConan(ConanFile):
 from conans import ConanFile
 
 class MyConan(ConanFile):
+    exports = "*file.h"
     def package(self):
         self.copy(pattern="*.h", dst="include", src="include")
 """
         files = {"include/file.h": "foo",
+                 "include/file2.h": "bar",
                  CONANFILE: conanfile_template}
 
         client.save(files)
@@ -83,6 +85,7 @@ class MyConan(ConanFile):
         client.current_folder = build_folder
         client.run("install .. -g env -g txt")
         client.run("source ..")
+        self.assertEqual(os.listdir(os.path.join(client.current_folder, "include")), ["file.h"])
         client.run("build ..")
         client.current_folder = temp_folder()
         client.run('package "%s/build"' % origin_folder)

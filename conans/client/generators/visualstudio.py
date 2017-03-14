@@ -8,8 +8,14 @@ class VisualStudioGenerator(Generator):
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Label="Conan.RootDirs">{item_properties}
+  </PropertyGroup>
   <PropertyGroup>
-    <ExecutablePath>{bin_dirs}%(ExecutablePath)</ExecutablePath>
+    <ExecutablePath>{bin_dirs}$(ExecutablePath)</ExecutablePath>
+  </PropertyGroup>
+  <PropertyGroup>
+    <LocalDebuggerEnvironment>PATH=%PATH%;{bin_dirs}</LocalDebuggerEnvironment>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -26,20 +32,20 @@ class VisualStudioGenerator(Generator):
   <ItemGroup />
 </Project>'''
 
-    def __init__(self, conanfile):
-        super(VisualStudioGenerator, self).__init__(conanfile)
-        deps_cpp_info = conanfile.deps_cpp_info
-        self.bin_dirs = "".join('%s;' % p.replace("\\", "/")
-                                for p in deps_cpp_info.bin_paths)
-        self.include_dirs = "".join('%s;' % p.replace("\\", "/")
-                                    for p in deps_cpp_info.include_paths)
-        self.lib_dirs = "".join('%s;' % p.replace("\\", "/")
-                                for p in deps_cpp_info.lib_paths)
-        self.libs = "".join(['%s.lib;' % lib if not lib.endswith(".lib")
-                             else '%s;' % lib for lib in deps_cpp_info.libs])
-        self.definitions = "".join("%s;" % d for d in deps_cpp_info.defines)
-        self.compiler_flags = " ".join(deps_cpp_info.cppflags + deps_cpp_info.cflags)
-        self.linker_flags = " ".join(deps_cpp_info.sharedlinkflags)
+    item_template = '''
+    <Conan.{name}.Root>{root_dir}</Conan.{name}.Root>'''
+
+
+    def _format_items(self, deps_cpp_info):
+        sections = []
+        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+            fields = {
+                'root_dir': dep_cpp_info.rootpath,
+                'name': dep_name
+            }
+            section = self.item_template.format(**fields)
+            sections.append(section)
+        return "".join(sections)
 
     @property
     def filename(self):
@@ -47,4 +53,18 @@ class VisualStudioGenerator(Generator):
 
     @property
     def content(self):
-        return self.template.format(**self.__dict__)
+        per_item_props = self._format_items(self._deps_build_info)
+        fields = {
+            'item_properties': per_item_props,
+            'bin_dirs': "".join("%s;" % p for p in self._deps_build_info.bin_paths).replace("\\", "/"),
+            'include_dirs': "".join("%s;" % p for p in self._deps_build_info.include_paths).replace("\\", "/"),
+            'lib_dirs': "".join("%s;" % p for p in self._deps_build_info.lib_paths).replace("\\", "/"),
+            'libs': "".join(['%s.lib;' % lib if not lib.endswith(".lib")
+                                  else '%s;' % lib for lib in self._deps_build_info.libs]),
+            'definitions': "".join("%s;" % d for d in self._deps_build_info.defines),
+            'compiler_flags': " ".join(self._deps_build_info.cppflags + self._deps_build_info.cflags),
+            'linker_flags': " ".join(self._deps_build_info.sharedlinkflags),
+            'exe_flags': " ".join(self._deps_build_info.exelinkflags)
+        }
+        return self.template.format(**fields)
+
