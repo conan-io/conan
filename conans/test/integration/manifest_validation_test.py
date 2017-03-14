@@ -2,7 +2,7 @@ import os
 import unittest
 from nose_parameterized.parameterized import parameterized
 
-from conans.test.tools import TestServer, TestClient
+from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
 from conans.util.files import save, load, md5
 from conans.model.ref import PackageReference

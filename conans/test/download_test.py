@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.test_files import hello_source_files
 from conans.client.manager import CONANFILE
 import os

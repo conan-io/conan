@@ -2,7 +2,7 @@ import unittest
 import platform
 import os
 
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.model.info import ConanInfo
