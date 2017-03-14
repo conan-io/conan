@@ -1,4 +1,4 @@
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 import unittest
 from conans.util.files import save, load
 from conans.client.conf import default_client_conf

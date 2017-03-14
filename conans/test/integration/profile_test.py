@@ -2,7 +2,7 @@ import unittest
 
 from conans.model.env_info import EnvValues
 from conans.model.profile import Profile
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import save, load
 import os

@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 
 
 class LoopDectectionTest(unittest.TestCase):

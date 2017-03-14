@@ -5,7 +5,7 @@ from conans.util.files import save, load
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 
 
 class ExportSettingsTest(unittest.TestCase):

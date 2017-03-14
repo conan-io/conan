@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE, CONANINFO, BUILD_INFO_CMAKE
 import os
 from conans.model.info import ConanInfo
