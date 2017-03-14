@@ -47,8 +47,8 @@ def undo_imports(current_path, output):
         raise ConanException("Cannot remove manifest file (open or busy): %s" % manifest_path)
 
 
-def run_imports(conanfile, current_path, output):
-    file_importer = FileImporter(conanfile, current_path)
+def run_imports(conanfile, dest_folder, output):
+    file_importer = FileImporter(conanfile, dest_folder)
     conanfile.copy = file_importer
     with environment_append(conanfile.env):
         conanfile.imports()
@@ -59,10 +59,10 @@ def run_imports(conanfile, current_path, output):
         date = calendar.timegm(time.gmtime())
         file_dict = {}
         for f in copied_files:
-            abs_path = os.path.join(current_path, f)
+            abs_path = os.path.join(dest_folder, f)
             file_dict[f] = md5sum(abs_path)
         manifest = FileTreeManifest(date, file_dict)
-        save(os.path.join(current_path, IMPORTS_MANIFESTS), str(manifest))
+        save(os.path.join(dest_folder, IMPORTS_MANIFESTS), str(manifest))
     return copied_files
 
 

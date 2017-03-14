@@ -1,8 +1,12 @@
 import unittest
+import os
+import re
 from conans.test.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE
+from conans.model.ref import ConanFileReference
 import textwrap
+from conans.util.files import load
 
 
 class InfoTest(unittest.TestCase):
@@ -43,6 +47,104 @@ class InfoTest(unittest.TestCase):
         if export:
             self.client.run("export lasote/stable")
             self.assertNotIn("WARN: Conanfile doesn't have 'url'", self.client.user_io.out)
+
+    def graph_test(self):
+        self.client = TestClient()
+
+        test_deps = {
+            "Hello0": ["Hello1", "Hello2", "Hello3"],
+            "Hello1": ["Hello4"],
+            "Hello2": [],
+            "Hello3": ["Hello7"],
+            "Hello4": ["Hello5", "Hello6"],
+            "Hello5": [],
+            "Hello6": [],
+            "Hello7": ["Hello8"],
+            "Hello8": ["Hello9", "Hello10"],
+            "Hello9": [],
+            "Hello10": [],
+        }
+
+        def create_export(test_deps, name):
+            deps = test_deps[name]
+            for dep in deps:
+                create_export(test_deps, dep)
+
+            expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
+            export = False if name == "Hello0" else True
+            self._create(name, "0.1", expanded_deps, export=export)
+
+        def check_conan_ref(ref):
+            self.assertEqual(ref.version, "0.1")
+            self.assertEqual(ref.user, "lasote")
+            self.assertEqual(ref.channel, "stable")
+
+        def check_digraph_line(line):
+            self.assertTrue(dot_regex.match(line))
+
+            # root node (current project) is special case
+            line = line.replace("@PROJECT", "@lasote/stable")
+
+            node_matches = node_regex.findall(line)
+
+            parent = ConanFileReference.loads(node_matches[0])
+            deps = [ConanFileReference.loads(ref) for ref in node_matches[1:]]
+
+            check_conan_ref(parent)
+            for dep in deps:
+                check_conan_ref(dep)
+                self.assertIn(dep.name, test_deps[parent.name])
+
+        def check_file(dot_file):
+            with open(dot_file) as dot_file_contents:
+                lines = dot_file_contents.readlines()
+                self.assertEqual(lines[0], "digraph {\n")
+                for line in lines[1:-1]:
+                    check_digraph_line(line)
+                self.assertEqual(lines[-1], "}\n")
+
+        create_export(test_deps, "Hello0")
+
+        node_regex = re.compile(r'"([^"]+)"')
+        dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
+
+        # default case - file will be named graph.dot
+        error = self.client.run("info --graph", ignore_error=True)
+        self.assertTrue(error)
+
+        # arbitrary case - file will be named according to argument
+        arg_filename = "test.dot"
+        self.client.run("info --graph=%s" % arg_filename)
+        dot_file = os.path.join(self.client.current_folder, arg_filename)
+        check_file(dot_file)
+
+    def graph_html_test(self):
+        self.client = TestClient()
+
+        test_deps = {
+            "Hello0": ["Hello1"],
+            "Hello1": [],
+        }
+
+        def create_export(test_deps, name):
+            deps = test_deps[name]
+            for dep in deps:
+                create_export(test_deps, dep)
+
+            expanded_deps = ["%s/0.1@lasote/stable" % dep for dep in deps]
+            export = False if name == "Hello0" else True
+            self._create(name, "0.1", expanded_deps, export=export)
+
+        create_export(test_deps, "Hello0")
+
+        # arbitrary case - file will be named according to argument
+        arg_filename = "test.html"
+        self.client.run("info --graph=%s" % arg_filename)
+        arg_filename = os.path.join(self.client.current_folder, arg_filename)
+        html = load(arg_filename)
+        self.assertIn("<body>", html)
+        self.assertIn("{ from: 0, to: 1 }", html)
+        self.assertIn("id: 0, label: 'Hello0/0.1@PROJECT'", html)
 
     def only_names_test(self):
         self.client = TestClient()
@@ -99,7 +201,11 @@ class InfoTest(unittest.TestCase):
             return "\n".join([line for line in str(output).splitlines()
                               if not line.strip().startswith("Creation date") and
                               not line.strip().startswith("ID") and
-                              not line.strip().startswith("BuildID")])
+                              not line.strip().startswith("BuildID") and
+                              not line.strip().startswith("export_folder") and
+                              not line.strip().startswith("build_folder") and
+                              not line.strip().startswith("source_folder") and
+                              not line.strip().startswith("package_folder")])
 
         # The timestamp is variable so we can't check the equality
         self.assertIn(expected_output, clean_output(self.client.user_io.out))

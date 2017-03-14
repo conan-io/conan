@@ -25,6 +25,33 @@ class InstallTest(unittest.TestCase):
         if export:
             self.client.run("export lasote/stable")
 
+    def install_error_never_test(self):
+        self._create("Hello0", "0.1", export=False)
+        error = self.client.run("install --build never --build missing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --build=never not compatible with other options",
+                      self.client.user_io.out)
+        error = self.client.run("install --build never --build Hello", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --build=never not compatible with other options",
+                      self.client.user_io.out)
+        error = self.client.run("install --build never --build outdated", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --build=never not compatible with other options",
+                      self.client.user_io.out)
+
+    def install_combined_test(self):
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+        self.client.run("install %s --build=missing" % (self.settings))
+
+        self.client.run("install %s --build=missing --build Hello1" % (self.settings))
+        self.assertIn("Hello0/0.1@lasote/stable: Already installed!",
+                      self.client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: WARN: Forced build from source",
+                      self.client.user_io.out)
+
     def partials_test(self):
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
@@ -193,7 +220,8 @@ class InstallTest(unittest.TestCase):
         info_path = os.path.join(client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("", conan_info.options.dumps())
-        self.assertIn("Hello0:language=1", conan_info.full_options.dumps())
+        # For conan install options are not cached anymore
+        self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
 
         # it is necessary to clean the cached conaninfo
         client.save(files, clean_first=True)
@@ -204,13 +232,9 @@ class InstallTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable:2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
                       conan_info.full_requires.dumps())
 
-    def warn_bad_os_test(self):
+    def cross_platform_msg_test(self):
         bad_os = "Linux" if platform.system() != "Linux" else "Macos"
-        message = "You are building this package with settings.os='%s" % bad_os
+        message = "Cross-platform from '%s' to '%s'" % (detected_os(), bad_os)
         self._create("Hello0", "0.1")
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, ignore_error=True)
         self.assertIn(message, self.client.user_io.out)
-
-        self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % detected_os(),
-                        ignore_error=True)
-        self.assertNotIn("You are building this package with settings.os", self.client.user_io.out)

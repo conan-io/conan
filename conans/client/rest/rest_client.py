@@ -67,7 +67,7 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester):
+    def __init__(self, output, requester, put_headers=None):
 
         # Set to instance
         self.token = None
@@ -76,6 +76,7 @@ class RestApiClient(object):
         self._output = output
         self.requester = requester
         self._verify_ssl = True
+        self._put_headers = put_headers
 
     @property
     def verify_ssl(self):
@@ -171,7 +172,7 @@ class RestApiClient(object):
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def upload_conan(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
         """
         the_files: dict with relative_path: content
         """
@@ -469,7 +470,7 @@ class RestApiClient(object):
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
                 response = uploader.upload(resource_url, files[filename], auth=auth, dedup=dedup,
-                                           retry=retry, retry_wait=retry_wait)
+                                           retry=retry, retry_wait=retry_wait, headers=self._put_headers)
                 output.writeln("")
                 if not response.ok:
                     output.error("\nError uploading file: %s, '%s'" % (filename, response.content))

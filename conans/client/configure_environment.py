@@ -118,9 +118,9 @@ class ConfigureEnvironment(object):
             self.libcxx = None
 
     def _gcc_arch_flags(self):
-        if self.arch == "x86_64":
+        if self.arch == "x86_64" or self.arch == "sparcv9":
             return "-m64"
-        elif self.arch == "x86":
+        elif self.arch == "x86" or self.arch == "sparc":
             return "-m32"
         else:
             return "";
@@ -230,7 +230,6 @@ class ConfigureEnvironment(object):
     def compile_flags(self):
         if self.compiler == "gcc" or "clang" in str(self.compiler) or self.compiler == "sun-cc":
             flags = []
-            flags.extend("-l%s" % lib for lib in self._deps_cpp_info.libs)
             flags.append(self._gcc_arch_flags())
             flags.extend(self._deps_cpp_info.exelinkflags)
             flags.extend(self._deps_cpp_info.sharedlinkflags)
@@ -241,6 +240,7 @@ class ConfigureEnvironment(object):
             flags.extend('-D%s' % i for i in self._deps_cpp_info.defines)
             flags.extend('-I"%s"' % i for i in self._deps_cpp_info.include_paths)
             flags.extend('-L"%s"' % i for i in self._deps_cpp_info.lib_paths)
+            flags.extend("-l%s" % lib for lib in self._deps_cpp_info.libs)
             flags.extend(self._deps_cpp_info.cppflags)
             flags.extend(self._gcc_lib_flags())
 

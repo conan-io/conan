@@ -24,6 +24,27 @@ class SettingsTest(unittest.TestCase):
         sut.target = "native"
         self.assertTrue(sut.target == "native")
 
+    def multi_os_test(self):
+        settings = Settings.loads("""os:
+            Windows:
+            Linux:
+                distro: [RH6, RH7]
+            Macos:
+                codename: [Mavericks, Yosemite]
+        """)
+        settings.os = "Windows"
+        self.assertEqual(settings.os, "Windows")
+        settings.os = "Linux"
+        settings.os.distro = "RH6"
+        self.assertTrue(settings.os.distro == "RH6")
+        with self.assertRaises(ConanException):
+            settings.os.distro = "Other"
+        with self.assertRaises(ConanException):
+            settings.os.codename = "Yosemite"
+        settings.os = "Macos"
+        settings.os.codename = "Yosemite"
+        self.assertTrue(settings.os.codename == "Yosemite")
+
     def remove_test(self):
         self.sut.remove("compiler")
         self.sut.os = "Windows"

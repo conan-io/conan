@@ -16,7 +16,7 @@ from conans.server.store.file_manager import FileManager
 from conans.util.log import logger
 from conans.server.conf.default_server_conf import default_server_conf
 
-MIN_CLIENT_COMPATIBLE_VERSION = '0.12.0'
+MIN_CLIENT_COMPATIBLE_VERSION = '0.19.3'
 
 
 class ConanServerConfigParser(ConfigParser):
@@ -42,6 +42,7 @@ class ConanServerConfigParser(ConfigParser):
                            "port": get_env("CONAN_SERVER_PORT", None, environment),
                            "public_port": get_env("CONAN_SERVER_PUBLIC_PORT", None, environment),
                            "host_name": get_env("CONAN_HOST_NAME", None, environment),
+                           "custom_authenticator": get_env("CONAN_CUSTOM_AUTHENTICATOR", None, environment),
                            # "user:pass,user2:pass2"
                            "users": get_env("CONAN_SERVER_USERS", None, environment)}
 
@@ -135,6 +136,13 @@ class ConanServerConfigParser(ConfigParser):
             return self.env_config["write_permissions"]
         else:
             return self._get_file_conf("write_permissions")
+
+    @property
+    def custom_authenticator(self):
+        try:
+            return self._get_conf_server_string("custom_authenticator")
+        except ConanException:
+            return None
 
     @property
     def users(self):
