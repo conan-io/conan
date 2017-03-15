@@ -34,6 +34,7 @@ from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.model.profile import Profile
 from conans.client.command_profile_args import profile_from_args
+from conans.client.new import get_files
 
 
 class Extender(argparse.Action):
@@ -94,35 +95,18 @@ class Command(object):
                             help='Create a C language package only package, '
                                  'deleting "self.settings.compiler.libcxx" setting '
                                  'in the configure method')
+        parser.add_argument("-s", "--sources", action='store_true', default=False,
+                            help='Create a package with embedded sources in "hello" folder, '
+                                 'using "exports_sources" instead of retrieving external code with '
+                                 'the "source()" method')
 
         args = parser.parse_args(*args)
         log_command("new", vars(args))
 
         root_folder = os.getcwd()
-        try:
-            name, version, user, channel = ConanFileReference.loads(args.name)
-            pattern = re.compile('[\W_]+')
-            package_name = pattern.sub('', name).capitalize()
-        except:
-            raise ConanException("Bad parameter, please use full package name,"
-                                 "e.g: MyLib/1.2.3@user/testing")
-        from conans.client.new import (conanfile, conanfile_header, test_conanfile, test_cmake,
-                                       test_main)
-        if args.header:
-            files = {"conanfile.py": conanfile_header.format(name=name, version=version,
-                                                             package_name=package_name)}
-        else:
-            files = {"conanfile.py": conanfile.format(name=name, version=version,
-                                                      package_name=package_name)}
-            if args.pure_c:
-                config = "\n    def configure(self):\n        del self.settings.compiler.libcxx"
-                files["conanfile.py"] = files["conanfile.py"] + config
-        if args.test:
-            files["test_package/conanfile.py"] = test_conanfile.format(name=name, version=version,
-                                                                       user=user, channel=channel,
-                                                                       package_name=package_name)
-            files["test_package/CMakeLists.txt"] = test_cmake
-            files["test_package/example.cpp"] = test_main
+        files = get_files(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
+                          exports_sources=args.sources)
+
         save_files(root_folder, files)
         for f in sorted(files):
             self._user_io.out.success("File saved: %s" % f)

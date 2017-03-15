@@ -7,9 +7,6 @@ from conans.util.files import load
 class NewTest(unittest.TestCase):
 
     def new_test(self):
-        """ Test that the user can be shown and changed, and it is reflected in the
-        user cache localdb
-        """
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -t')
         root = client.current_folder
@@ -44,9 +41,6 @@ class NewTest(unittest.TestCase):
         self.assertIn("My-Package/1.3@myuser/testing", client.user_io.out)
 
     def new_header_test(self):
-        """ Test that the user can be shown and changed, and it is reflected in the
-        user cache localdb
-        """
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing -t -i')
         root = client.current_folder
@@ -62,10 +56,36 @@ class NewTest(unittest.TestCase):
         client.run("info test_package")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 
+    def new_sources_test(self):
+        client = TestClient()
+        client.run('new MyPackage/1.3@myuser/testing -t -s')
+        root = client.current_folder
+        self.assertTrue(os.path.exists(os.path.join(root, "conanfile.py")))
+        content = load(os.path.join(root, "conanfile.py"))
+        self.assertIn('name = "MyPackage"', content)
+        self.assertIn('version = "1.3"', content)
+        self.assertIn('exports_sources', content)
+        self.assertNotIn('source()', content)
+        # assert they are correct at least
+        client.run("export myuser/testing")
+        client.run("info test_package")
+        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+
+    def new_purec_test(self):
+        client = TestClient()
+        client.run('new MyPackage/1.3@myuser/testing -c -t')
+        root = client.current_folder
+        self.assertTrue(os.path.exists(os.path.join(root, "conanfile.py")))
+        content = load(os.path.join(root, "conanfile.py"))
+        self.assertIn('name = "MyPackage"', content)
+        self.assertIn('version = "1.3"', content)
+        self.assertIn('del self.settings.compiler.libcxx', content)
+        # assert they are correct at least
+        client.run("export myuser/testing")
+        client.run("info test_package")
+        self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
+
     def new_without_test(self):
-        """ Test that the user can be shown and changed, and it is reflected in the
-        user cache localdb
-        """
         client = TestClient()
         client.run('new MyPackage/1.3@myuser/testing')
         root = client.current_folder
