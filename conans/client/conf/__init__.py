@@ -50,7 +50,7 @@ print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 compression_level = 9       # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True     # environment CONAN_SYSREQUIRES_SUDO
 # cmake_generator           # environment CONAN_CMAKE_GENERATOR
-
+# cpu_count = 1             # environment CONAN_CPU_COUNT
 '''
 
 default_client_conf = '''[storage]
@@ -92,6 +92,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
+               "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
                }
         # Filter None values
         return {name: value for name, value in ret.items() if value is not None}

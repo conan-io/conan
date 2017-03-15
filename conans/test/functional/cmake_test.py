@@ -13,7 +13,6 @@ import platform
 from conans.util.files import save
 
 
-
 class CMakeTest(unittest.TestCase):
     def setUp(self):
         self.tempdir = tempfile.mkdtemp()

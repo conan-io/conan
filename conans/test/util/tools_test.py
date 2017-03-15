@@ -58,6 +58,8 @@ class ToolsTest(unittest.TestCase):
         cpus = tools.cpu_count()
         self.assertIsInstance(cpus, int)
         self.assertGreaterEqual(cpus, 1)
+        with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
+            self.assertEquals(tools.cpu_count(), 34)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):

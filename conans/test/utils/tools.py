@@ -12,7 +12,7 @@ from mock import Mock
 from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import __version__ as CLIENT_VERSION
+from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command, migrate_and_get_client_cache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION

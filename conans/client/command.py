@@ -795,7 +795,8 @@ class Command(object):
             except IndexError as exc:  # No parameters
                 self._show_help()
                 return False
-            method(args[0][1:])
+            with tools.environment_append(self.client_cache.conan_config.env_vars):
+                method(args[0][1:])
         except (KeyboardInterrupt, SystemExit) as exc:
             logger.error(exc)
             errors = True
@@ -1002,8 +1003,7 @@ def main(args):
             sys.exit(0)
 
         signal.signal(signal.SIGINT, sigint_handler)
-        with tools.environment_append(command.client_cache.conan_config.env_vars):
-            error = command.run(args)
+        error = command.run(args)
     finally:
         os.chdir(current_dir)
     sys.exit(error)

@@ -158,7 +158,8 @@ def vcvars_command(settings):
 
 def cpu_count():
     try:
-        return multiprocessing.cpu_count()
+        env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
+        return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
     except NotImplementedError:
         print("WARN: multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
