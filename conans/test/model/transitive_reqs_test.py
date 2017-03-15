@@ -411,7 +411,7 @@ class ChatConan(ConanFile):
         self.assertEqual(conaninfo.options.dumps(), "")
         self.assertEqual(conaninfo.full_options.dumps(), "")
         self.assertEqual(conaninfo.requires.dumps(),
-                         "Hello/1.2/user/testing/0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
+                         "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
                          "Say/0.1")
         self.assertEqual(conaninfo.full_requires.dumps(),
                          "Hello/1.2@user/testing:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
