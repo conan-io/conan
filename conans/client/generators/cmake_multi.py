@@ -10,8 +10,7 @@ def extend(cpp_info, config):
     """
     config_info = cpp_info.configs.get(config)
     if config_info:
-        result = CppInfo()
-        result.rootpath = config_info.rootpath
+        result = CppInfo(config_info.rootpath)
         result.includedirs = cpp_info.includedirs + config_info.includedirs
         result.libdirs = cpp_info.libdirs + config_info.libdirs
         result.bindirs = cpp_info.bindirs + config_info.bindirs
