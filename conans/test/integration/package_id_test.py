@@ -3,6 +3,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import load
 from conans.paths import CONANINFO
 import os
+from conans.test.utils.conanfile import TestConanFile
 
 
 class PackageIDTest(unittest.TestCase):
@@ -12,23 +13,12 @@ class PackageIDTest(unittest.TestCase):
 
     def _export(self, name, version, package_id_text=None, requires=None,
                 channel=None, default_option_value="off"):
-        hello_file = """
-from conans import ConanFile
+        conanfile = TestConanFile(name, version, requires=requires,
+                                  options={"an_option": ["on", "off"]},
+                                  default_options=[("an_option", "%s" % default_option_value)],
+                                  package_id=package_id_text)
 
-class HelloConan(ConanFile):
-    name = "%s"
-    version = "%s"
-    options = {"an_option": ["on", "off"]}
-    default_options = [("an_option", "%s")]
-""" % (name, version, default_option_value)
-        if requires:
-            hello_file += "\n    requires="
-            for require in requires:
-                hello_file += '"%s"' % require
-        if package_id_text:
-            hello_file += "\n    def package_id(self):\n        %s" % package_id_text
-
-        self.client.save({"conanfile.py": hello_file}, clean_first=True)
+        self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         self.client.run("export %s" % (channel or "lasote/stable"))
 
     @property
@@ -36,7 +26,7 @@ class HelloConan(ConanFile):
         return load(os.path.join(self.client.current_folder, CONANINFO))
 
     def test_version_semver_schema(self):
-        self._export("Hello", "1.2.0", package_id_text=None, requires=None)
+        self._export("Hello", "1.2.0")
         self._export("Hello2", "2.3.8",
                      package_id_text='self.info.requires["Hello"].semver()',
                      requires=["Hello/1.2.0@lasote/stable"])

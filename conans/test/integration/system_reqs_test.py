@@ -3,7 +3,7 @@ from conans.test.utils.tools import TestClient
 import os
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.files import load
-from conans.errors import ConanException
+
 
 base_conanfile = '''
 from conans import ConanFile

@@ -1,23 +1,17 @@
 import unittest
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
+from conans.test.utils.conanfile import TestConanFile
 
 
 class VersionRangesConflictTest(unittest.TestCase):
 
     def setUp(self):
-        conanfile = """
-from conans import ConanFile
-class MyConanA(ConanFile):
-    name = "%s"
-    version = "%s"
-    %s
-    """
         self.client = TestClient()
 
         def add(name, version, requires=None):
-            requires = "requires=%s" % ",".join('"%s"' % r for r in requires) if requires else ""
-            self.client.save({CONANFILE: conanfile % (name, version, requires)})
+            conanfile = TestConanFile(name, version, requires=requires)
+            self.client.save({CONANFILE: str(conanfile)})
             self.client.run("export user/testing")
         add("MyPkg1", "0.1.0")
         add("MyPkg1", "0.2.0")
