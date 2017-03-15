@@ -6,6 +6,8 @@ import unittest
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
 from conans.client.cmake import CMake
+from conans.tools import cpu_count
+
 import platform
 
 from conans.util.files import save
@@ -151,6 +153,7 @@ build_type: [ Release]
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
         settings.arch = "x86"
+        settings.os = "Windows"
 
         if sys.platform == 'win32':
             dot_dir = "."
@@ -203,6 +206,28 @@ build_type: [ Release]
 
         cmake.build(conan_file, build_dir=self.tempdir)
         self.assertEqual('cmake --build %s --config Release' % tempdir, conan_file.command)
+
+        settings.compiler = "gcc"
+        settings.compiler.version = "5.4"
+        cmake = CMake(settings)
+        cmake.build(conan_file)
+        if sys.platform == 'win32':
+            self.assertEqual('cmake --build . -- -j%i' % cpu_count(), conan_file.command)
+        else:
+            self.assertEqual("cmake --build '.' '--' '-j%i'" % cpu_count(), conan_file.command)
+
+        cmake.build(conan_file, args=['foo', '--', 'bar'])
+        if sys.platform == 'win32':
+            self.assertEqual('cmake --build . foo -- bar -j%i' % cpu_count(), conan_file.command)
+        else:
+            self.assertEqual("cmake --build '.' 'foo' '--' 'bar' '-j%i'" % cpu_count(), conan_file.command)
+
+        cmake = CMake(settings, parallel=False)
+        cmake.build(conan_file)
+        if sys.platform == 'win32':
+            self.assertEqual('cmake --build .', conan_file.command)
+        else:
+            self.assertEqual("cmake --build '.'", conan_file.command)
 
     def test_clean_sh_path(self):
 

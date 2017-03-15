@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.util.files import mkdir
+from conans.tools import cpu_count
 from conans import tools
 import os
 import platform
@@ -12,12 +13,13 @@ import sys
 
 class CMake(object):
 
-    def __init__(self, settings, generator=None, cmake_system_name=True):
+    def __init__(self, settings, generator=None, cmake_system_name=True, parallel=True):
         assert isinstance(settings, Settings)
         self._settings = settings
         self.generator = generator or self._generator()
         self.build_dir = None
         self._cmake_system_name = cmake_system_name
+        self.parallel = parallel
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -195,6 +197,12 @@ class CMake(object):
         build_dir = build_dir or self.build_dir or conan_file.conanfile_directory
         if target is not None:
             args = ["--target", target] + args
+
+        if self.parallel:
+            if "Makefiles" in self.generator:
+                if not "--" in args:
+                    args.append("--")
+                args.append("-j%i" % cpu_count())
 
         arg_list = _join_arguments([
             _args_to_string([build_dir]),
