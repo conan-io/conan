@@ -744,7 +744,7 @@ class Command(object):
             folder = self._client_cache.profiles_path
             if os.path.exists(folder):
                 profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-                for p in profiles:
+                for p in sorted(profiles):
                     self._user_io.out.info(p)
             else:
                 self._user_io.out.info("No profiles defined")

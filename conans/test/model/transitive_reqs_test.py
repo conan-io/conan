@@ -3,7 +3,7 @@ import os
 
 from collections import namedtuple
 
-from conans.test.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 from conans.client.deps_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference

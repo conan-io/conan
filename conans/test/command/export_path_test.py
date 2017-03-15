@@ -4,7 +4,7 @@ from conans.util.files import load
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
 
 

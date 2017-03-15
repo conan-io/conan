@@ -1,6 +1,6 @@
 import unittest
 
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.test.utils.profiles import create_profile
 
 
@@ -13,12 +13,12 @@ class ProfileTest(unittest.TestCase):
 
     def list_test(self):
         client = TestClient()
+        create_profile(client.client_cache.profiles_path, "profile3")
         create_profile(client.client_cache.profiles_path, "profile1")
         create_profile(client.client_cache.profiles_path, "profile2")
-        create_profile(client.client_cache.profiles_path, "profile3")
         client.run("profile list")
-        self.assertEqual(set(["profile1", "profile2", "profile3"]),
-                         set(str(client.user_io.out).splitlines()))
+        self.assertEqual(list(["profile1", "profile2", "profile3"]),
+                         list(str(client.user_io.out).splitlines()))
 
     def show_test(self):
         client = TestClient()

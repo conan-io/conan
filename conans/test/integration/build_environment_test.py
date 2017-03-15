@@ -4,7 +4,7 @@ import unittest
 
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.tools import unix_path
 from conans.util.files import md5sum
 

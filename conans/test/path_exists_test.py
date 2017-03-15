@@ -1,7 +1,7 @@
 import unittest
 from conans.util.files import mkdir, path_exists
 import os
-from conans.test.tools import TestServer, TestClient
+from conans.test.utils.tools import TestServer, TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
 from conans.test.utils.test_files import temp_folder
@@ -19,8 +19,6 @@ class PathExistsTest(unittest.TestCase):
         self.assertFalse(path_exists(os.path.join(tmp_dir, "capsdir"), tmp_dir))
 
     def test_conanfile_not_found(self):
-        """If package is OpenSSL is not openssl"""
-
         test_server = TestServer()
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
