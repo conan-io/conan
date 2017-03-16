@@ -37,7 +37,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     """
     max_chars = 40
     min_chars = 2
-    base_er = "[a-zA-Z0-9_]+[a-zA-Z0-9_\.-]{%s,%s}" % (min_chars - 1, max_chars)
+    base_er = "[a-zA-Z0-9_]+[a-zA-Z0-9_\+\.-]{%s,%s}" % (min_chars - 1, max_chars)
     regular_expression = "^%s$" % base_er
     validation_pattern = re.compile(regular_expression)
     whitespace_pattern = re.compile(r"\s+")

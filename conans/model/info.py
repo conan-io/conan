@@ -28,8 +28,14 @@ class RequirementInfo(object):
             self.semver()
 
     def dumps(self):
-        return "/".join([n for n in [self.name, self.version, self.user, self.channel,
-                                     self.package_id] if n])
+        if not self.name:
+            return ""
+        result = ["%s/%s" % (self.name, self.version)]
+        if self.user or self.channel:
+            result.append("@%s/%s" % (self.user, self.channel))
+        if self.package_id:
+            result.append(":%s" % self.package_id)
+        return "".join(result)
 
     @property
     def sha(self):
@@ -57,6 +63,26 @@ class RequirementInfo(object):
     def full_version_mode(self):
         self.name = self.full_name
         self.version = self.full_version
+        self.user = self.channel = self.package_id = None
+
+    def patch_mode(self):
+        self.name = self.full_name
+        self.version = self.full_version.patch()
+        self.user = self.channel = self.package_id = None
+
+    def base_mode(self):
+        self.name = self.full_name
+        self.version = self.full_version.base
+        self.user = self.channel = self.package_id = None
+
+    def minor_mode(self):
+        self.name = self.full_name
+        self.version = self.full_version.minor()
+        self.user = self.channel = self.package_id = None
+
+    def major_mode(self):
+        self.name = self.full_name
+        self.version = self.full_version.major()
         self.user = self.channel = self.package_id = None
 
     def full_recipe_mode(self):
@@ -157,6 +183,41 @@ class RequirementsInfo(object):
             ref = PackageReference.loads(ref)
             ret._data[ref] = RequirementInfo.deserialize(requinfo)
         return ret
+
+    def unrelated_mode(self):
+        self.clear()
+
+    def semver_mode(self):
+        for r in self._data.values():
+            r.semver_mode()
+
+    def patch_mode(self):
+        for r in self._data.values():
+            r.patch_mode()
+
+    def minor_mode(self):
+        for r in self._data.values():
+            r.minor_mode()
+
+    def major_mode(self):
+        for r in self._data.values():
+            r.major_mode()
+
+    def base_mode(self):
+        for r in self._data.values():
+            r.base_mode()
+
+    def full_version_mode(self):
+        for r in self._data.values():
+            r.full_version_mode()
+
+    def full_recipe_mode(self):
+        for r in self._data.values():
+            r.full_recipe_mode()
+
+    def full_package_mode(self):
+        for r in self._data.values():
+            r.full_package_mode()
 
 
 class RequirementsList(list):
@@ -307,3 +368,8 @@ class ConanInfo(object):
                            "full_requires": self.full_requires.serialize(),
                            "recipe_hash": self.recipe_hash}
         return conan_info_json
+
+    def header_only(self):
+        self.settings.clear()
+        self.options.clear()
+        self.requires.unrelated_mode()
