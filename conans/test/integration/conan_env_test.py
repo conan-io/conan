@@ -164,7 +164,7 @@ CXXFLAGS=-fPIC -DPIC
         if platform.system() != "Windows":
             ret = os.system("cd '%s' && chmod +x %s && ./%s" % (client.current_folder, "activate.sh", "activate.sh"))
         else:
-            ret = os.system("cd '%s' && %s" % (client.current_folder, "activate.bat"))
+            ret = os.system('cd "%s" && %s' % (client.current_folder, "activate.bat"))
         self.assertEquals(ret, 0)
 
     def conan_env_deps_test(self):
