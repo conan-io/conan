@@ -56,7 +56,7 @@ void hello{name}(){{
 """
 
 cmake_pkg = """
-project(MyHello)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
@@ -84,7 +84,7 @@ cmake_multi
 """
 
 cmake = """
-project(MyHello)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
 # Some cross-building toolchains will define this

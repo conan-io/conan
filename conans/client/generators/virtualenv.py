@@ -24,7 +24,7 @@ class VirtualEnvGenerator(Generator):
                     value = os.pathsep.join(value)
                     ret.append(command_set + ' ' + name + '=' + value + ';%' + name + '%')
                 else:
-                    ret.append(command_set + ' ' + name + '=' + value)
+                    ret.append(command_set + ' ' + name + '="' + value + '"')
             else:
                 if isinstance(value, list):
                     value = os.pathsep.join(['"%s"' % val for val in value])
@@ -33,7 +33,7 @@ class VirtualEnvGenerator(Generator):
                     ret.append(name + '=' + value + ':$' + name)
                     ret.append(command_set + ' ' + name)
                 else:
-                    ret.append(name + '=' + value)
+                    ret.append(name + '="' + value + '"')
                     ret.append(command_set + ' ' + name)
 
         return ret
