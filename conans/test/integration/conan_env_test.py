@@ -132,6 +132,41 @@ virtualrunenv
         self.assertIn("CXX: Hello1=>/mycompilercxx", client.user_io.out)
         self.assertIn("CC: Hello1=>/mycompilercc", client.user_io.out)
 
+    def conan_profile_unscaped_env_var_test(self):
+
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+'''
+        files = {"conanfile.py": conanfile}
+        client.save(files)
+        client.run("export lasote/stable")
+        reuse = '''
+[requires]
+Hello/0.1@lasote/stable
+
+[generators]
+virtualenv
+'''
+        profile = '''
+[env]
+CXXFLAGS=-fPIC -DPIC
+
+'''
+        files = {"conanfile.txt": reuse, "myprofile": profile}
+        client.save(files, clean_first=True)
+        client.run("install --profile ./myprofile --build missing")
+
+        if platform.system() != "Windows":
+            ret = os.system("cd '%s' && chmod +x %s && ./%s" % (client.current_folder, "activate.sh", "activate.sh"))
+        else:
+            ret = os.system('cd "%s" && %s' % (client.current_folder, "activate.bat"))
+        self.assertEquals(ret, 0)
+
     def conan_env_deps_test(self):
         client = TestClient()
         conanfile = '''
@@ -172,13 +207,13 @@ class HelloConan(ConanFile):
         activate_contents = load(os.path.join(client.current_folder, "activate.%s" % ext))
         deactivate_contents = load(os.path.join(client.current_folder, "deactivate.%s" % ext))
         self.assertNotIn("bad value", activate_contents)
-        self.assertIn("var1=good value", activate_contents)
+        self.assertIn("var1=\"good value\"", activate_contents)
         if platform.system() == "Windows":
             self.assertIn('var2=value3;value2;%var2%', activate_contents)
         else:
             self.assertIn('var2="value3":"value2":$var2', activate_contents)
         self.assertIn("Another value", activate_contents)
-        self.assertIn("PATH=/dir", activate_contents)
+        self.assertIn("PATH=\"/dir\"", activate_contents)
 
         self.assertIn('var1=', deactivate_contents)
         self.assertIn('var2=', deactivate_contents)
