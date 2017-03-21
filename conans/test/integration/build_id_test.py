@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 import os
 from conans.util.files import load
 from conans.model.ref import PackageReference, ConanFileReference

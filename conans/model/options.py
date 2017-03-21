@@ -264,6 +264,10 @@ class OptionsValues(object):
             ret["req_options"][name] = values.serialize()
         return ret
 
+    def clear(self):
+        self._package_values.clear()
+        self._reqs_options.clear()
+
 
 class PackageOption(object):
     def __init__(self, possible_values, name):

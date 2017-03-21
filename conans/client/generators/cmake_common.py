@@ -42,7 +42,7 @@ def cmake_dependencies(dependencies, build_type=""):
                                                                        build_type=build_type)
 
 
-_cmake_multi_dep_vars = """
+_cmake_multi_dep_vars = """{cmd_line_args}
 set(CONAN_INCLUDE_DIRS{build_type} {deps.include_paths} ${{CONAN_INCLUDE_DIRS{build_type}}})
 set(CONAN_LIB_DIRS{build_type} {deps.lib_paths} ${{CONAN_LIB_DIRS{build_type}}})
 set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
@@ -58,7 +58,17 @@ set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE
 
 
 def cmake_global_vars(deps, build_type=""):
-    return _cmake_multi_dep_vars.format(deps=deps, build_type=_build_type_str(build_type))
+    if not build_type:
+        cmd_line_args = """# Storing original command line args (CMake helper) flags
+set(CONAN_CMD_CXX_FLAGS ${CONAN_CXX_FLAGS})
+set(CONAN_CMD_SHARED_LINKER_FLAGS ${CONAN_SHARED_LINKER_FLAGS})
+set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
+# Defining accumulated conan variables for all deps
+"""
+    else:
+        cmd_line_args = ""
+    return _cmake_multi_dep_vars.format(cmd_line_args=cmd_line_args,
+                                        deps=deps, build_type=_build_type_str(build_type))
 
 _target_template = """
     conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
@@ -69,6 +79,12 @@ _target_template = """
                                   CONAN_FULLPATH_LIBS_{uname}_RELEASE)
 
     add_library({name} INTERFACE IMPORTED)
+    foreach(build_type "" "_DEBUG" "_RELEASE")
+        string(REPLACE " " ";" "CONAN_C_FLAGS_{uname}${{build_type}}"     "${{CONAN_C_FLAGS_{uname}${{build_type}}}}")
+        string(REPLACE " " ";" "CONAN_CXX_FLAGS_{uname}${{build_type}}"   "${{CONAN_CXX_FLAGS_{uname}${{build_type}}}}")
+        string(REPLACE " " ";" "CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}" "${{CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}}}")
+        string(REPLACE " " ";" "CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}"    "${{CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}}}")
+    endforeach()
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}}
                                                                  $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
@@ -80,6 +96,7 @@ _target_template = """
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:Debug>:${{CONAN_COMPILE_DEFINITIONS_{uname}_DEBUG}}>)
+
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_C_FLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}}
                                                                   $<$<CONFIG:Release>:${{CONAN_C_FLAGS_{uname}_RELEASE}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE}}>
                                                                   $<$<CONFIG:Debug>:${{CONAN_C_FLAGS_{uname}_DEBUG}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG}}>)
@@ -92,7 +109,10 @@ def generate_targets_section(dependencies):
     section.append('macro(conan_define_targets)\n'
                    '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
                    '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
-                   '    endif()  # CMAKE > 3.x\n')
+                   '    endif()  # CMAKE > 3.x\n'
+                   '    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CMD_CXX_FLAGS}")\n'
+                   '    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_CMD_C_FLAGS}")\n'
+                   '    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_CMD_SHARED_LINKER_FLAGS}")\n')
 
     for dep_name, dep_info in dependencies:
         use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]

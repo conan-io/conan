@@ -39,6 +39,15 @@ class VersionTest(unittest.TestCase):
         self.assertTrue(Version("1.2.1-dev") > Version("1.2.alpha"))
         self.assertTrue(Version("1.2.1-dev") > Version("1.2-alpha"))
 
+    def text_test(self):
+        v1 = Version("master+build2")
+        self.assertEqual(v1.major(), "master")
+        self.assertEqual(v1.minor(), "master")
+        self.assertEqual(v1.patch(), "master")
+        self.assertEqual(v1.pre(), "master")
+        self.assertEqual(v1.build, "build2")
+        self.assertEqual(v1.stable(), "master")
+
     def patch_test(self):
         v1 = Version("1.2.3-alpha1+build2")
         self.assertEqual(v1.major(), "1.Y.Z")

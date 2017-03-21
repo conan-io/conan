@@ -157,7 +157,7 @@ class {name}Conan(ConanFile):
 """
 
 cmake_file = """
-project(MyHello)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
 include(${{CMAKE_BINARY_DIR}}/%s)
@@ -176,7 +176,7 @@ target_link_libraries(say_hello hello{name})
 """ % BUILD_INFO_CMAKE
 
 cmake_targets_file = """
-project(MyHello)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
 include(${{CMAKE_BINARY_DIR}}/%s)
@@ -295,7 +295,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
     else:
         ret["CMakeLists.txt"] = cmake_file.format(name=name, ext=ext)
     if pure_c:
-        ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project(MyHello)",
+        ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project(MyHello CXX)",
                                                               "project(MyHello C)")
     if need_patch:
         ret["CMakeLists.txt"] = ret["CMakeLists.txt"].replace("project", "projct")

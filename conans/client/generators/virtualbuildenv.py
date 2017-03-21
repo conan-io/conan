@@ -13,7 +13,7 @@ class VirtualBuildEnvGenerator(VirtualEnvGenerator):
         self.env = {}
         if compiler != "Visual Studio":
             auto_tools_b = AutoToolsBuildEnvironment(conanfile)
-            tmp = {var: '"%s"' % value for var, value in auto_tools_b.vars.items()}
+            tmp = {var: '%s' % value for var, value in auto_tools_b.vars.items()}
             self.env = tmp
         else:
             visual_b = VisualStudioBuildEnvironment(conanfile, quote_paths=False)

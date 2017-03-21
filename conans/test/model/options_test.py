@@ -2,7 +2,7 @@ import unittest
 from conans.model.options import OptionsValues, PackageOptions, Options, PackageOptionValues,\
     option_undefined_msg
 from conans.model.ref import ConanFileReference
-from conans.test.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.errors import ConanException
 
 

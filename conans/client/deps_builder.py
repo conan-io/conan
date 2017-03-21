@@ -10,7 +10,6 @@ from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
 from collections import defaultdict
-from conans.model.env_info import EnvValues
 
 
 class Node(namedtuple("Node", "conan_ref conanfile")):

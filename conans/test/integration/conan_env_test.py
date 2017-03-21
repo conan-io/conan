@@ -5,7 +5,7 @@ import unittest
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE, CONANINFO
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
 
@@ -32,6 +32,53 @@ class MyTest(ConanFile):
                      "test_package/conanfile.py": test_conanfile})
         client.run("test_package -e MYVAR=MYVALUE", ignore_error=True)
         self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
+
+    def test_run_env(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    build_policy = "missing"
+
+    def package_info(self):
+        self.cpp_info.bindirs.append("bin2")
+        self.cpp_info.libdirs.append("lib2")
+
+'''
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/stable")
+
+        reuse = '''[requires]
+Hello/0.1@lasote/stable
+[generators]
+virtualrunenv
+'''
+
+        client.save({"conanfile.txt": reuse}, clean_first=True)
+        client.run("install")
+
+        ext = "bat" if platform.system() == "Windows" else "sh"
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate_run.%s" % ext)))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate_run.%s" % ext)))
+        activate_contents = load(os.path.join(client.current_folder, "activate_run.%s" % ext))
+
+        self.assertIn("PATH", activate_contents)
+        self.assertIn("LD_LIBRARY_PATH", activate_contents)
+        self.assertIn("DYLIB_LIBRARY_PATH", activate_contents)
+
+        for line in activate_contents.splitlines():
+            if " PATH=" in line:
+                self.assertIn("bin2", line)
+                self.assertNotIn("lib2", line)
+            if " DYLIB_LIBRARY_PATH=" in line:
+                self.assertNotIn("bin2", line)
+                self.assertIn("lib2", line)
+            if " LD_LIBRARY_PATH=" in line:
+                self.assertNotIn("bin2", line)
+                self.assertIn("lib2", line)
 
     def dual_compiler_settings_and_env_test(self):
 
@@ -85,6 +132,41 @@ class MyTest(ConanFile):
         self.assertIn("CXX: Hello1=>/mycompilercxx", client.user_io.out)
         self.assertIn("CC: Hello1=>/mycompilercc", client.user_io.out)
 
+    def conan_profile_unscaped_env_var_test(self):
+
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+'''
+        files = {"conanfile.py": conanfile}
+        client.save(files)
+        client.run("export lasote/stable")
+        reuse = '''
+[requires]
+Hello/0.1@lasote/stable
+
+[generators]
+virtualenv
+'''
+        profile = '''
+[env]
+CXXFLAGS=-fPIC -DPIC
+
+'''
+        files = {"conanfile.txt": reuse, "myprofile": profile}
+        client.save(files, clean_first=True)
+        client.run("install --profile ./myprofile --build missing")
+
+        if platform.system() != "Windows":
+            ret = os.system("cd '%s' && chmod +x %s && ./%s" % (client.current_folder, "activate.sh", "activate.sh"))
+        else:
+            ret = os.system('cd "%s" && %s' % (client.current_folder, "activate.bat"))
+        self.assertEquals(ret, 0)
+
     def conan_env_deps_test(self):
         client = TestClient()
         conanfile = '''
@@ -125,13 +207,13 @@ class HelloConan(ConanFile):
         activate_contents = load(os.path.join(client.current_folder, "activate.%s" % ext))
         deactivate_contents = load(os.path.join(client.current_folder, "deactivate.%s" % ext))
         self.assertNotIn("bad value", activate_contents)
-        self.assertIn("var1=good value", activate_contents)
+        self.assertIn("var1=\"good value\"", activate_contents)
         if platform.system() == "Windows":
             self.assertIn('var2=value3;value2;%var2%', activate_contents)
         else:
             self.assertIn('var2="value3":"value2":$var2', activate_contents)
         self.assertIn("Another value", activate_contents)
-        self.assertIn("PATH=/dir", activate_contents)
+        self.assertIn("PATH=\"/dir\"", activate_contents)
 
         self.assertIn('var1=', deactivate_contents)
         self.assertIn('var2=', deactivate_contents)

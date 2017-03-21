@@ -1,6 +1,10 @@
+from contextlib import contextmanager
+
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.util.files import mkdir
+from conans.tools import cpu_count
+from conans import tools
 import os
 import platform
 import subprocess
@@ -9,12 +13,13 @@ import sys
 
 class CMake(object):
 
-    def __init__(self, settings, generator=None, cmake_system_name=True):
+    def __init__(self, settings, generator=None, cmake_system_name=True, parallel=True):
         assert isinstance(settings, Settings)
         self._settings = settings
         self.generator = generator or self._generator()
         self.build_dir = None
         self._cmake_system_name = cmake_system_name
+        self.parallel = parallel
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -142,11 +147,11 @@ class CMake(object):
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
         if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
-            if arch == "x86":
+            if arch == "x86" or arch == "sparc":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m32",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m32",
                               "-DCONAN_C_FLAGS=-m32"])
-            if arch == "x86_64":
+            if arch == "x86_64" or arch == "sparcv9":
                 flags.extend(["-DCONAN_CXX_FLAGS=-m64",
                               "-DCONAN_SHARED_LINKER_FLAGS=-m64",
                               "-DCONAN_C_FLAGS=-m64"])
@@ -181,13 +186,23 @@ class CMake(object):
             _args_to_string([source_dir])
         ])
         command = "cd %s && cmake %s" % (_args_to_string([self.build_dir]), arg_list)
-        conan_file.run(command)
+        if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
+            with clean_sh_from_path():
+                conan_file.run(command)
+        else:
+            conan_file.run(command)
 
     def build(self, conan_file, args=None, build_dir=None, target=None):
         args = args or []
         build_dir = build_dir or self.build_dir or conan_file.conanfile_directory
         if target is not None:
             args = ["--target", target] + args
+
+        if self.parallel:
+            if "Makefiles" in self.generator:
+                if "--" not in args:
+                    args.append("--")
+                args.append("-j%i" % cpu_count())
 
         arg_list = _join_arguments([
             _args_to_string([build_dir]),
@@ -211,3 +226,13 @@ def _args_to_string(args):
 
 def _join_arguments(args):
     return " ".join(filter(None, args))
+
+
+@contextmanager
+def clean_sh_from_path():
+    new_path = []
+    for path_entry in os.environ.get("PATH", "").split(os.pathsep):
+        if not os.path.exists(os.path.join(path_entry, "sh.exe")):
+            new_path.append(path_entry)
+    with tools.environment_append({"PATH": os.pathsep.join(new_path)}):
+        yield

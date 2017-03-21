@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestServer, TestClient
+from conans.test.utils.tools import TestServer, TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
 from nose.plugins.attrib import attr
@@ -72,6 +72,10 @@ class DiamondTest(unittest.TestCase):
         self._diamond_test(install=install, use_cmake=False)
 
     def _diamond_test(self, install="install", use_cmake=True, cmake_targets=False):
+
+        if not use_cmake and platform.system() == "SunOS":
+            return  # If is using sun-cc the gcc generator doesn't work
+
         self._export_upload("Hello0", "0.1", use_cmake=use_cmake, cmake_targets=cmake_targets)
         self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake,
                             cmake_targets=cmake_targets)

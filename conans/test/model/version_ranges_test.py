@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os
 from conans.client.deps_builder import DepsGraphBuilder
