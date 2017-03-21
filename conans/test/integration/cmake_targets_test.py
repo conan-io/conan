@@ -25,7 +25,7 @@ Hello/0.1@lasote/testing
 """
 
 cmake = """
-project(MyHello)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)

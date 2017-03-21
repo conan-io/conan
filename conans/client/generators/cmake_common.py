@@ -42,7 +42,7 @@ def cmake_dependencies(dependencies, build_type=""):
                                                                        build_type=build_type)
 
 
-_cmake_multi_dep_vars = """
+_cmake_multi_dep_vars = """{cmd_line_args}
 set(CONAN_INCLUDE_DIRS{build_type} {deps.include_paths} ${{CONAN_INCLUDE_DIRS{build_type}}})
 set(CONAN_LIB_DIRS{build_type} {deps.lib_paths} ${{CONAN_LIB_DIRS{build_type}}})
 set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
@@ -58,7 +58,17 @@ set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE
 
 
 def cmake_global_vars(deps, build_type=""):
-    return _cmake_multi_dep_vars.format(deps=deps, build_type=_build_type_str(build_type))
+    if not build_type:
+        cmd_line_args = """# Storing original command line args (CMake helper) flags
+set(CONAN_CMD_CXX_FLAGS ${CONAN_CXX_FLAGS})
+set(CONAN_CMD_SHARED_LINKER_FLAGS ${CONAN_SHARED_LINKER_FLAGS})
+set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
+# Defining accumulated conan variables for all deps
+"""
+    else:
+        cmd_line_args = ""
+    return _cmake_multi_dep_vars.format(cmd_line_args=cmd_line_args,
+                                        deps=deps, build_type=_build_type_str(build_type))
 
 _target_template = """
     conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
@@ -99,7 +109,10 @@ def generate_targets_section(dependencies):
     section.append('macro(conan_define_targets)\n'
                    '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
                    '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
-                   '    endif()  # CMAKE > 3.x\n')
+                   '    endif()  # CMAKE > 3.x\n'
+                   '    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CMD_CXX_FLAGS}")\n'
+                   '    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_CMD_C_FLAGS}")\n'
+                   '    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_CMD_SHARED_LINKER_FLAGS}")\n')
 
     for dep_name, dep_info in dependencies:
         use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]

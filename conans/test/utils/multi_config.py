@@ -102,7 +102,7 @@ int main(){{
 }}
 """
 cmake = """
-project(MyHello)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
@@ -117,7 +117,7 @@ target_link_libraries(say_hello hello{name})
 
 """
 testcmake = """
-project(MyHello)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
