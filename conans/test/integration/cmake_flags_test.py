@@ -1,7 +1,7 @@
 import unittest
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
-import re
+
 
 conanfile_py = """
 from conans import ConanFile
@@ -31,7 +31,7 @@ Hello/0.1@lasote/testing
 """
 
 cmake = """
-project(MyHello)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -102,6 +102,29 @@ class CMakeFlagsTest(unittest.TestCase):
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.user_io.out)
+        self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+
+    def targets_own_flags_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": conanfile_py.replace('version = "0.1"',
+                                                          'version = "0.1"\n'
+                                                          '    settings = "compiler"')})
+        client.run("export lasote/testing")
+        cmake_targets = cmake.replace("conan_basic_setup()",
+                                      "conan_basic_setup(TARGETS)\n"
+                                      "get_target_property(HELLO_FLAGS CONAN_PKG::Hello"
+                                      " INTERFACE_COMPILE_OPTIONS)")
+        client.save({"conanfile.txt": conanfile,
+                     "CMakeLists.txt": cmake_targets},
+                    clean_first=True)
+
+        client.run('install -g cmake')
+        client.runner("cmake . -DCONAN_CXX_FLAGS=CmdCXXFlag", cwd=client.current_folder)
+        cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
+        self.assertNotIn("My", cmake_cxx_flags)
+        self.assertIn("CmdCXXFlag", cmake_cxx_flags)
+        self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 CmdCXXFlag", client.user_io.out)
         self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
                       "$<$<CONFIG:Release>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
 
