@@ -8,7 +8,7 @@ class VisualStudioGenerator(Generator):
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Label="Conan.RootDirs">{item_properties}
+  <PropertyGroup Label="Conan-RootDirs">{item_properties}
   </PropertyGroup>
   <PropertyGroup>
     <ExecutablePath>{bin_dirs}$(ExecutablePath)</ExecutablePath>
@@ -33,15 +33,14 @@ class VisualStudioGenerator(Generator):
 </Project>'''
 
     item_template = '''
-    <Conan.{name}.Root>{root_dir}</Conan.{name}.Root>'''
-
+    <Conan-{name}-Root>{root_dir}</Conan-{name}-Root>'''
 
     def _format_items(self, deps_cpp_info):
         sections = []
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             fields = {
                 'root_dir': dep_cpp_info.rootpath,
-                'name': dep_name
+                'name': dep_name.replace(".", "-")
             }
             section = self.item_template.format(**fields)
             sections.append(section)
