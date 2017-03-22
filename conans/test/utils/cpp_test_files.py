@@ -156,7 +156,8 @@ class {name}Conan(ConanFile):
         self.copy(pattern="*", dst="bin", src="bin")
 """
 
-cmake_file = """
+cmake_file = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
@@ -175,7 +176,8 @@ target_link_libraries(say_hello hello{name})
 
 """ % BUILD_INFO_CMAKE
 
-cmake_targets_file = """
+cmake_targets_file = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
