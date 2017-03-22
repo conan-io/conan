@@ -21,7 +21,11 @@ def load_authentication_plugin(server_folder, plugin_name):
         plugins_dir = os.path.join(server_folder, "plugins", "authenticator")
         plugin_source = plugin_base.make_plugin_source(
                         searchpath=[plugins_dir])
-        return plugin_source, plugin_source.load_plugin(plugin_name).get_class()
+        auth = plugin_source.load_plugin(plugin_name).get_class()
+        # it is necessary to keep a reference to the plugin, otherwise it is removed
+        # and some imports fail
+        auth.plugin_source = plugin_source
+        return auth
     except:
         print("Error loading authenticator plugin '%s'" % plugin_name)
         raise
@@ -35,7 +39,7 @@ class ServerLauncher(object):
         server_config = migrate_and_get_server_config(user_folder)
         custom_auth = server_config.custom_authenticator
         if custom_auth:
-            self.auth_plugin_source, authenticator = load_authentication_plugin(server_folder, custom_auth)
+            authenticator = load_authentication_plugin(server_folder, custom_auth)
         else:
             authenticator = BasicAuthenticator(dict(server_config.users))
 
