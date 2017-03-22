@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestServer, TestClient
+from conans.test.utils.tools import TestServer, TestClient
 from conans.model.version import Version
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from collections import OrderedDict

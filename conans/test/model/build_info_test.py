@@ -10,11 +10,6 @@ import platform
 
 class BuildInfoTest(unittest.TestCase):
 
-    def _equal(self, item1, item2):
-        for field in item1.fields:
-            self.assertEqual(getattr(item1, field),
-                             getattr(item2, field))
-
     def help_test(self):
         deps_env_info = DepsEnvInfo()
         deps_cpp_info = DepsCppInfo()
@@ -29,7 +24,62 @@ class BuildInfoTest(unittest.TestCase):
         fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info")
         output = TXTGenerator(fakeconan(deps_cpp_info, None, deps_env_info, None)).content
         deps_cpp_info2 = DepsCppInfo.loads(output)
-        self._equal(deps_cpp_info, deps_cpp_info2)
+        self.assertEqual(deps_cpp_info.configs, deps_cpp_info2.configs)
+        self.assertEqual(deps_cpp_info.includedirs, deps_cpp_info2.includedirs)
+        self.assertEqual(deps_cpp_info.libdirs, deps_cpp_info2.libdirs)
+        self.assertEqual(deps_cpp_info.bindirs, deps_cpp_info2.bindirs)
+        self.assertEqual(deps_cpp_info.libs, deps_cpp_info2.libs)
+        self.assertEqual(len(deps_cpp_info._dependencies),
+                         len(deps_cpp_info2._dependencies))
+        self.assertEqual(deps_cpp_info["Boost"].includedirs,
+                         deps_cpp_info2["Boost"].includedirs)
+        self.assertEqual(deps_cpp_info["Boost"].cppflags,
+                         deps_cpp_info2["Boost"].cppflags)
+        self.assertEqual(deps_cpp_info["Boost"].cppflags, ["cxxmyflag"])
+
+    def configs_test(self):
+        deps_cpp_info = DepsCppInfo()
+        deps_cpp_info.includedirs.append("C:/whatever")
+        deps_cpp_info.debug.includedirs.append("C:/whenever")
+        deps_cpp_info.libs.extend(["math"])
+        deps_cpp_info.debug.libs.extend(["debug_Lib"])
+
+        child = DepsCppInfo()
+        child.includedirs.append("F:/ChildrenPath")
+        child.debug.includedirs.append("F:/ChildrenDebugPath")
+        child.cppflags.append("cxxmyflag")
+        child.debug.cppflags.append("cxxmydebugflag")
+        deps_cpp_info._dependencies["Boost"] = child
+
+        fakeconan = namedtuple("Conanfile", "deps_cpp_info cpp_info deps_env_info env_info")
+        output = TXTGenerator(fakeconan(deps_cpp_info, None, None, None)).content
+
+        deps_cpp_info2 = DepsCppInfo.loads(output)
+        self.assertEqual(deps_cpp_info.includedirs, deps_cpp_info2.includedirs)
+        self.assertEqual(deps_cpp_info.libdirs, deps_cpp_info2.libdirs)
+        self.assertEqual(deps_cpp_info.bindirs, deps_cpp_info2.bindirs)
+        self.assertEqual(deps_cpp_info.libs, deps_cpp_info2.libs)
+        self.assertEqual(len(deps_cpp_info._dependencies),
+                         len(deps_cpp_info2._dependencies))
+        self.assertEqual(deps_cpp_info["Boost"].includedirs,
+                         deps_cpp_info2["Boost"].includedirs)
+        self.assertEqual(deps_cpp_info["Boost"].cppflags,
+                         deps_cpp_info2["Boost"].cppflags)
+        self.assertEqual(deps_cpp_info["Boost"].cppflags, ["cxxmyflag"])
+
+        self.assertEqual(deps_cpp_info.debug.includedirs, deps_cpp_info2.debug.includedirs)
+        self.assertEqual(deps_cpp_info.debug.includedirs, ["C:/whenever"])
+
+        self.assertEqual(deps_cpp_info.debug.libs, deps_cpp_info2.debug.libs)
+        self.assertEqual(deps_cpp_info.debug.libs, ["debug_Lib"])
+
+        self.assertEqual(deps_cpp_info["Boost"].debug.includedirs,
+                         deps_cpp_info2["Boost"].debug.includedirs)
+        self.assertEqual(deps_cpp_info["Boost"].debug.includedirs,
+                         ["F:/ChildrenDebugPath"])
+        self.assertEqual(deps_cpp_info["Boost"].debug.cppflags,
+                         deps_cpp_info2["Boost"].debug.cppflags)
+        self.assertEqual(deps_cpp_info["Boost"].debug.cppflags, ["cxxmydebugflag"])
 
     def cpp_info_test(self):
         folder = temp_folder()

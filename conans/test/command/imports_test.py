@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 import os
 from conans.client.importer import IMPORTS_MANIFESTS
 from conans.util.files import load
@@ -122,6 +122,29 @@ class ConanLib(ConanFile):
         self.assertIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertIn("file2.txt", os.listdir(self.client.current_folder))
         self._check_manifest()
+
+    def install_dest_test(self):
+        self.client.save({"conanfile.txt": test1}, clean_first=True)
+        self.client.run("install --no-imports -g txt")
+        self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
+        self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
+
+        self.client.run("imports -d myfolder")
+        files = os.listdir(os.path.join(self.client.current_folder, "myfolder"))
+        self.assertIn("file1.txt", files)
+        self.assertIn("file2.txt", files)
+
+    def install_abs_dest_test(self):
+        self.client.save({"conanfile.txt": test1}, clean_first=True)
+        self.client.run("install --no-imports -g txt")
+        self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
+        self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
+
+        tmp_folder = temp_folder()
+        self.client.run('imports -d "%s"' % tmp_folder)
+        files = os.listdir(tmp_folder)
+        self.assertIn("file1.txt", files)
+        self.assertIn("file2.txt", files)
 
     def undo_install_manifest_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)

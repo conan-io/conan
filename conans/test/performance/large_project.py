@@ -1,7 +1,7 @@
 import unittest
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 import time
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 
 
 class PerformanceTest(unittest.TestCase):

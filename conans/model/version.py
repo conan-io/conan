@@ -13,22 +13,20 @@ class Version(str):
     @property
     def as_list(self):
         if not hasattr(self, "_cached_list"):
+            tokens = self.rsplit('+', 1)
+            self._base = tokens[0]
+            if len(tokens) == 2:
+                self._build = tokens[1]
             self._cached_list = []
-            tokens = Version.version_pattern.split(self)
+            tokens = Version.version_pattern.split(tokens[0])
             for item in tokens:
                 self._cached_list.append(int(item) if item.isdigit() else item)
-            try:
-                tokens = self._cached_list[-1].split('+')
-            except AttributeError:
-                pass
-            else:
-                if len(tokens) == 2:
-                    self._cached_list[-1] = tokens[0]
-                    self._build = tokens[1]
         return self._cached_list
 
     def major(self, fill=True):
         self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
         v = str(self_list[0]) if self_list else "0"
         if fill:
             return Version(".".join([v, 'Y', 'Z']))
@@ -44,6 +42,8 @@ class Version(str):
 
     def minor(self, fill=True):
         self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
         v0 = str(self_list[0]) if len(self_list) > 0 else "0"
         v1 = str(self_list[1]) if len(self_list) > 1 else "0"
         if fill:
@@ -52,6 +52,8 @@ class Version(str):
 
     def patch(self):
         self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
         v0 = str(self_list[0]) if len(self_list) > 0 else "0"
         v1 = str(self_list[1]) if len(self_list) > 1 else "0"
         v2 = str(self_list[2]) if len(self_list) > 2 else "0"
@@ -59,6 +61,8 @@ class Version(str):
 
     def pre(self):
         self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
         v0 = str(self_list[0]) if len(self_list) > 0 else "0"
         v1 = str(self_list[1]) if len(self_list) > 1 else "0"
         v2 = str(self_list[2]) if len(self_list) > 2 else "0"
@@ -72,6 +76,11 @@ class Version(str):
         if hasattr(self, "_build"):
             return self._build
         return ""
+
+    @property
+    def base(self):
+        self.as_list
+        return Version(self._base)
 
     def compatible(self, other):
         if not isinstance(other, Version):

@@ -6,9 +6,9 @@ from conans.model.values import Values
 def bad_value_msg(name, value, value_range):
     tip = ""
     if "settings" in name:
-        tip = "\nCheck your settings ~/.conan/settings.yml or read the docs FAQ"
+        tip = '\nRead "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-invalid-setting"'
 
-    return ("'%s' is not a valid '%s' value.\nPossible values are %s%s"
+    return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s%s"
             % (value, name, value_range, tip))
 
 
@@ -170,6 +170,17 @@ class Settings(object):
         self._parent_value = parent_value  # gcc, x86
         self._data = {str(k): SettingsItem(v, "%s.%s" % (name, k))
                       for k, v in definition.items()}
+
+    def get_safe(self, name):
+        try:
+            tmp = self
+            for prop in name.split("."):
+                tmp = getattr(tmp, prop, None)
+        except ConanException:
+            return None
+        if tmp is not None:
+            return str(tmp)
+        return None
 
     def copy(self):
         """ deepcopy, recursive

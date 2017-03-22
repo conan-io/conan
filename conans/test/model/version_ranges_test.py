@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os
 from conans.client.deps_builder import DepsGraphBuilder
@@ -153,7 +153,7 @@ class VersionRangesTest(unittest.TestCase):
     def setUp(self):
         self.output = TestBufferConanOutput()
         self.loader = ConanFileLoader(None, Settings.loads(""), None,
-                                      OptionsValues.loads(""), Scopes(), None, None)
+                                      OptionsValues.loads(""), Scopes(), None)
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)

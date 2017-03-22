@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME
+from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME, CONANFILE
 from conans.util.files import save, rmdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -36,6 +36,74 @@ def init_package_info(deps_graph, paths):
             conan_file.env_info = EnvInfo(package_folder)
 
 
+def build_id(conanfile):
+    if hasattr(conanfile, "build_id"):
+        # construct new ConanInfo
+        build_id_info = conanfile.info.copy()
+        conanfile.info_build = build_id_info
+        # effectively call the user function to change the package values
+        try:
+            conanfile.build_id()
+        except Exception as e:
+            raise ConanException("Error in 'build_id()': %s" % str(e))
+        # compute modified ID
+        return build_id_info.package_id()
+    return None
+
+
+class BuildMode(object):
+    def __init__(self, params, output):
+        self._out = output
+        self.outdated = False
+        self.missing = False
+        self.patterns = []
+        self.all = False
+        if params is None:
+            return
+
+        assert isinstance(params, list)
+        if len(params) == 0:
+            self.all = True
+        else:
+            never = False
+            for param in params:
+                if param == "outdated":
+                    self.outdated = True
+                elif param == "missing":
+                    self.missing = True
+                elif param == "never":
+                    never = True
+                else:
+                    self.patterns.append("%s*" % param)
+
+            if never and (self.outdated or self.missing or self.patterns):
+                raise ConanException("--build=never not compatible with other options")
+
+    def forced(self, reference, conanfile):
+        if self.all:
+            return True
+
+        ref = str(reference)
+        if conanfile.build_policy_always:
+            out = ScopedOutput(ref, self._out)
+            out.info("Building package from source as defined by build_policy='always'")
+            return True
+
+        # Patterns to match, if package matches pattern, build is forced
+        force_build = any([fnmatch.fnmatch(ref, pattern) for pattern in self.patterns])
+        return force_build
+
+    def allowed(self, reference, conanfile):
+        return (self.missing or self.outdated or self.forced(reference, conanfile) or
+                conanfile.build_policy_missing)
+
+    def check_matches(self, references):
+        for pattern in self.patterns:
+            matched = any(fnmatch.fnmatch(ref, pattern) for ref in references)
+            if not matched:
+                raise ConanException("No package matching '%s' pattern" % pattern)
+
+
 class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
@@ -45,7 +113,7 @@ class ConanInstaller(object):
         self._out = user_io.out
         self._remote_proxy = remote_proxy
 
-    def install(self, deps_graph, build_mode=False):
+    def install(self, deps_graph, build_mode):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
@@ -55,6 +123,7 @@ class ConanInstaller(object):
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
         t1 = time.time()
+        build_mode = BuildMode(build_mode, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         logger.debug("Install-Process private %s" % (time.time() - t1))
         t1 = time.time()
@@ -75,13 +144,13 @@ class ConanInstaller(object):
                 continue
 
             if conan_ref:
-                build_forced = self._build_forced(conan_ref, build_mode, conanfile)
+                build_forced = build_mode.forced(conan_ref, conanfile)
                 if build_forced:
                     continue
 
                 package_id = conanfile.info.package_id()
                 package_reference = PackageReference(conan_ref, package_id)
-                check_outdated = self._check_outdated(build_mode)
+                check_outdated = build_mode.outdated
 
                 if self._remote_proxy.package_available(package_reference,
                                                         conanfile.short_paths,
@@ -96,6 +165,7 @@ class ConanInstaller(object):
         """Called from info command when a build policy is used in build_order parameter"""
         # Get the nodes in order and if we have to build them
         nodes_by_level = deps_graph.by_levels()
+        build_mode = BuildMode(build_mode, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         nodes = self._get_nodes(nodes_by_level, skip_private_nodes, build_mode)
         return [(PackageReference(conan_ref, package_id), conan_file)
@@ -128,7 +198,7 @@ class ConanInstaller(object):
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
 
             if build_needed:
-                build_allowed = self._build_allowed(conan_ref, build_mode, conan_file)
+                build_allowed = build_mode.allowed(conan_ref, conan_file)
                 if not build_allowed:
                     self._raise_package_not_found_error(conan_ref, conan_file)
 
@@ -137,7 +207,7 @@ class ConanInstaller(object):
                 package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
                 if build_mode is True:
                     output.info("Building package from source as defined by build_policy='missing'")
-                elif self._build_forced(conan_ref, build_mode, conan_file):
+                elif build_mode.forced(conan_ref, conan_file):
                     output.warn('Forced build from source')
 
                 t1 = time.time()
@@ -146,17 +216,18 @@ class ConanInstaller(object):
 
                 self._remote_proxy.get_recipe_sources(conan_ref)
                 # Call the conanfile's build method
-                self._build_conanfile(conan_ref, conan_file, package_ref, package_folder, output)
+                build_folder = self._build_conanfile(conan_ref, conan_file, package_ref,
+                                                     package_folder, output)
 
                 # Call the conanfile's package method
-                self._package_conanfile(conan_ref, conan_file, package_ref, package_folder, output)
+                self._package_conanfile(conan_ref, conan_file, package_ref, build_folder,
+                                        package_folder, output)
 
                 # Call the info method
                 self._package_info_conanfile(conan_ref, conan_file)
 
                 duration = time.time() - t1
-                log_file = os.path.join(self._client_cache.build(package_ref, conan_file.short_paths),
-                                        RUN_LOG_NAME)
+                log_file = os.path.join(build_folder, RUN_LOG_NAME)
                 log_file = log_file if os.path.exists(log_file) else None
                 log_package_built(package_ref, duration, log_file)
             else:
@@ -179,6 +250,17 @@ class ConanInstaller(object):
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
+
+        # Update the env_values with the inherited from dependencies
+        conan_file._env_values.update(conan_file.deps_env_info)
+
+        # Update the info but filtering the package values that not apply to the subtree
+        # of this current node and its dependencies.
+        subtree_libnames = [ref.name for (ref, _) in node_order]
+        for package_name, env_vars in conan_file._env_values.data.items():
+            for name, value in env_vars.items():
+                if not package_name or package_name in subtree_libnames or package_name == conan_file.name:
+                    conan_file.info.env_values.add(name, value, package_name)
 
     def _get_nodes(self, nodes_by_level, skip_nodes, build_mode):
         """Install the available packages if needed/allowed and return a list
@@ -206,8 +288,8 @@ class ConanInstaller(object):
                     # Avoid processing twice the same package reference
                     if package_reference not in package_references:
                         package_references.add(package_reference)
-                        check_outdated = self._check_outdated(build_mode)
-                        if self._build_forced(conan_ref, build_mode, conan_file):
+                        check_outdated = build_mode.outdated
+                        if build_mode.forced(conan_ref, conan_file):
                             build_node = True
                         else:
                             build_node = not self._remote_proxy.package_available(package_reference,
@@ -215,6 +297,12 @@ class ConanInstaller(object):
                                                                                   check_outdated)
 
                 nodes_to_build.append((conan_ref, package_id, conan_file, build_node))
+
+        # A check to be sure that if introduced a pattern, something is going to be built
+
+        if build_mode.patterns:
+            to_build = [str(n[0]) for n in nodes_to_build if n[3]]
+            build_mode.check_matches(to_build)
 
         return nodes_to_build
 
@@ -242,22 +330,27 @@ class ConanInstaller(object):
 
     def _build_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
         """Calls the conanfile's build method"""
-
+        new_id = build_id(conan_file)
+        if new_id:
+            package_reference = PackageReference(package_reference.conan, new_id)
         build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
+        if os.path.exists(build_folder) and hasattr(conan_file, "build_id"):
+            return build_folder
+        # build_id is not caching the build folder, so actually rebuild the package
         src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
         export_folder = self._client_cache.export(conan_ref)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
-
         with environment_append(conan_file.env):
             self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
+        return build_folder
 
-    def _package_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
+    def _package_conanfile(self, conan_ref, conan_file, package_reference, build_folder,
+                           package_folder, output):
         """Generate the info txt files and calls the conanfile package method"""
 
         # FIXME: Is weak to assign here the recipe_hash
         conan_file.info.recipe_hash = self._client_cache.load_manifest(conan_ref).summary_hash
-        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
 
         # Creating ***info.txt files
         save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
@@ -268,6 +361,7 @@ class ConanInstaller(object):
         output.info("Generated %s" % CONANENV)
 
         os.chdir(build_folder)
+
         with environment_append(conan_file.env):
             create_package(conan_file, build_folder, package_folder, output)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
@@ -275,16 +369,16 @@ class ConanInstaller(object):
     def _raise_package_not_found_error(self, conan_ref, conan_file):
         settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
         options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
-        author_contact = " at '%s'" % conan_file.url if conan_file.url else ""
 
-        raise ConanException('''Can't find a '%s' package for the specified options and settings
-
-- Try to build from sources with "--build %s" parameter
-- If it fails, you could try to contact the package author %s, report your configuration and try to collaborate to support it.
-
-Package configuration:
+        self._out.warn('''Can't find a '%s' package for the specified options and settings:
 - Settings: %s
-- Options: %s''' % (conan_ref, conan_ref.name, author_contact, settings_text, options_text))
+- Options: %s
+''' % (conan_ref, settings_text, options_text))
+
+        raise ConanException('''Missing prebuilt package for '%s'
+Try to build it from sources with "--build %s"
+Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
+''' % (conan_ref, conan_ref.name))
 
     def _handle_system_requirements(self, conan_ref, package_reference, conan_file, coutput):
         """ check first the system_reqs/system_requirements.txt existence, if not existing
@@ -381,6 +475,7 @@ Package configuration:
             self._out.writeln("")
             output.error("Package '%s' build failed" % conan_file.info.package_id())
             output.warn("Build folder %s" % build_folder)
+            _show_partial_trace(output, CONANFILE)
             raise ConanException("%s: %s" % (conan_file.name, str(e)))
         finally:
             conan_file._conanfile_directory = export_folder
@@ -401,30 +496,17 @@ Package configuration:
             msg = format_conanfile_exception(str(conan_ref), "package_info", e)
             raise ConanException(msg)
 
-    def _build_forced(self, conan_ref, build_mode, conan_file):
-        if build_mode == "outdated":
-            return False
 
-        if conan_file.build_policy_always:
-            out = ScopedOutput(str(conan_ref), self._out)
-            out.info("Building package from source as defined by build_policy='always'")
-            return True
-
-        if build_mode is False:  # "never" option, default
-            return False
-
-        if build_mode is True:  # Build missing (just if needed), not force
-            return False
-
-        # Patterns to match, if package matches pattern, build is forced
-        force_build = any([fnmatch.fnmatch(str(conan_ref), pattern)
-                           for pattern in build_mode])
-        return force_build
-
-    def _build_allowed(self, conan_ref, build_mode, conan_file):
-        forced = self._build_forced(conan_ref, build_mode, conan_file)
-        # Option "--build outdated" means: missing or outdated, so don't care if it's really outdated
-        return forced or build_mode in (True, "outdated") or conan_file.build_policy_missing
-
-    def _check_outdated(self, build_mode):
-        return build_mode == "outdated"
+def _show_partial_trace(output, start_keyword):
+    try:
+        import traceback
+        traces = traceback.format_exc()
+        active = False
+        for trace in traces.splitlines():
+            if start_keyword in trace:
+                active = True
+            if active:
+                output.warn(trace)
+    except:
+        # Any error (encoding or whatever, just ignore it)
+        pass

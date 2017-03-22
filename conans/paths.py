@@ -29,6 +29,7 @@ CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
 DIRTY_FILE = ".conan_dirty"
+PUT_HEADERS = "artifacts.properties"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"

@@ -1,3 +1,4 @@
+from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
 from conans.model import registered_generators
 from conans.util.files import save, normalize
 from os.path import join
@@ -13,6 +14,7 @@ from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
 from .env import ConanEnvGenerator
 from .cmake_multi import CMakeMultiGenerator
+from .virtualbuildenv import VirtualBuildEnvGenerator
 
 
 def _save_generator(name, klass):
@@ -31,6 +33,8 @@ _save_generator("xcode", XCodeGenerator)
 _save_generator("ycm", YouCompleteMeGenerator)
 _save_generator("virtualenv", VirtualEnvGenerator)
 _save_generator("env", ConanEnvGenerator)
+_save_generator("virtualbuildenv", VirtualBuildEnvGenerator)
+_save_generator("virtualrunenv", VirtualRunEnvGenerator)
 
 
 def write_generators(conanfile, path, output):

@@ -1,15 +1,14 @@
-import os
+import calendar
 import fnmatch
+import os
+import time
 
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
-from conans.model.manifest import FileTreeManifest
-from conans.util.files import save, md5sum, load
-import calendar
-import time
 from conans.errors import ConanException
+from conans.model.manifest import FileTreeManifest
 from conans.tools import environment_append
-
+from conans.util.files import save, md5sum, load
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
@@ -48,11 +47,10 @@ def undo_imports(current_path, output):
         raise ConanException("Cannot remove manifest file (open or busy): %s" % manifest_path)
 
 
-def run_imports(conanfile, current_path, output):
-    file_importer = FileImporter(conanfile, current_path)
+def run_imports(conanfile, dest_folder, output):
+    file_importer = FileImporter(conanfile, dest_folder)
     conanfile.copy = file_importer
-    # FIXME: The environment has to be properly defined even for "conan imports"
-    with environment_append(conanfile.env or []):
+    with environment_append(conanfile.env):
         conanfile.imports()
     copied_files = file_importer.execute()
     import_output = ScopedOutput("%s imports()" % output.scope, output)
@@ -61,10 +59,10 @@ def run_imports(conanfile, current_path, output):
         date = calendar.timegm(time.gmtime())
         file_dict = {}
         for f in copied_files:
-            abs_path = os.path.join(current_path, f)
+            abs_path = os.path.join(dest_folder, f)
             file_dict[f] = md5sum(abs_path)
         manifest = FileTreeManifest(date, file_dict)
-        save(os.path.join(current_path, IMPORTS_MANIFESTS), str(manifest))
+        save(os.path.join(dest_folder, IMPORTS_MANIFESTS), str(manifest))
     return copied_files
 
 

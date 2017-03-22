@@ -208,6 +208,9 @@ class OptionsValues(object):
         for v in self._reqs_options.values():
             v.clear()
 
+    def filter_used(self, used_pkg_names):
+        self._reqs_options = {k: v for k, v in self._reqs_options.items() if k in used_pkg_names}
+
     def as_list(self):
         result = []
         options_list = self._package_values.items()
@@ -260,6 +263,10 @@ class OptionsValues(object):
         for name, values in self._reqs_options.items():
             ret["req_options"][name] = values.serialize()
         return ret
+
+    def clear(self):
+        self._package_values.clear()
+        self._reqs_options.clear()
 
 
 class PackageOption(object):
