@@ -204,7 +204,7 @@ class ConanInfo(object):
 
     def dumps(self):
         def indent(text):
-            return '\n'.join("    " + line for line in text.splitlines())
+            return '\n'.join("" + line for line in text.splitlines())
         result = []
 
         result.append("[settings]")
