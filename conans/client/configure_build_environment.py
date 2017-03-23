@@ -91,10 +91,14 @@ class AutoToolsBuildEnvironment(object):
 
     def _configure_link_flags(self):
         """Not the -L"""
-        return [self._architecture_flag]
+        ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
+        ret.extend(self._deps_cpp_info.exelinkflags)
+        ret.append(self._architecture_flag)
+        return ret
 
     def _configure_flags(self):
-        ret = [self._architecture_flag]
+        ret = copy.copy(self._deps_cpp_info.cflags)
+        ret.append(self._architecture_flag)
         if self._build_type == "Debug":
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
@@ -102,7 +106,9 @@ class AutoToolsBuildEnvironment(object):
         return ret
 
     def _configure_cxx_flags(self):
-        return stdlib_flags(self._compiler, self._libcxx)
+        ret = copy.copy(self._deps_cpp_info.cppflags)
+        ret.extend(stdlib_flags(self._compiler, self._libcxx))
+        return ret
 
     def _configure_defines(self):
         # requires declared defines
