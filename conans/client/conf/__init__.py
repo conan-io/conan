@@ -47,9 +47,18 @@ level = 50                  # environment CONAN_LOGGING_LEVEL
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
 [general]
-compression_level = 9       # environment CONAN_COMPRESSION_LEVEL
-sysrequires_sudo = True     # environment CONAN_SYSREQUIRES_SUDO
-# cmake_generator           # environment CONAN_CMAKE_GENERATOR
+compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
+sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
+
+# cmake_generator                     # environment CONAN_CMAKE_GENERATOR
+# http://www.vtk.org/Wiki/CMake_Cross_Compiling
+# cmake_system_name                   # environment CONAN_CMAKE_SYSTEM_NAME
+# cmake_system_processor              # environment CONAN_CMAKE_SYSTEM_PROCESSOR
+# cmake_find_root_path                # environment CONAN_CMAKE_FIND_ROOT_PATH
+# cmake_find_root_path_mode_program   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM
+# cmake_find_root_path_mode_library   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY
+# cmake_find_root_path_mode_include   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
+
 # cpu_count = 1             # environment CONAN_CPU_COUNT
 '''
 
@@ -91,8 +100,26 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_PRINT_RUN_COMMANDS": self._env_c("log.print_run_commands", "CONAN_PRINT_RUN_COMMANDS", "False"),
                "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
-               "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
+               # http://www.vtk.org/Wiki/CMake_Cross_Compiling
+               "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
+               "CONAN_CMAKE_SYSTEM_NAME": self._env_c("general.cmake_system_name", "CONAN_CMAKE_SYSTEM_NAME", None),
+               "CONAN_CMAKE_SYSTEM_PROCESSOR": self._env_c("general.cmake_system_processor",
+                                                           "CONAN_CMAKE_SYSTEM_PROCESSOR",
+                                                           None),
+               "CONAN_CMAKE_FIND_ROOT_PATH": self._env_c("general.cmake_find_root_path",
+                                                         "CONAN_CMAKE_FIND_ROOT_PATH",
+                                                         None),
+               "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM": self._env_c("general.cmake_find_root_path_mode_program",
+                                                                      "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
+                                                                      None),
+               "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY": self._env_c("general.cmake_find_root_path_mode_library",
+                                                                      "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
+                                                                      None),
+               "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE": self._env_c("general.cmake_find_root_path_mode_include",
+                                                                      "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE",
+                                                                      None),
+
                }
         # Filter None values
         return {name: value for name, value in ret.items() if value is not None}

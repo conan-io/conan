@@ -283,7 +283,6 @@ class ConanManager(object):
 
         installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
         installer.install(deps_graph, build_mode)
-
         prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
         output = ScopedOutput(prefix, self._user_io.out)
 
