@@ -17,7 +17,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         cpp_info = CppInfo("dummy_root_folder1")
         conanfile.deps_cpp_info.update(cpp_info, ref)
-        ref = ConanFileReference.loads("MyPkg2/0.1@user/testing")
+        ref = ConanFileReference.loads("My.Fancy-Pkg_2/0.1@user/testing")
         cpp_info = CppInfo("dummy_root_folder2")
         conanfile.deps_cpp_info.update(cpp_info, ref)
         generator = VisualStudioGenerator(conanfile)
@@ -33,7 +33,7 @@ class VisualStudioGeneratorTest(unittest.TestCase):
 
     def variables_setup_test(self):
         content = self._createInfo()
-        self.assertIn('<PropertyGroup Label="Conan.RootDirs">', content)
-        self.assertIn("<Conan.MyPkg.Root>dummy_root_folder1</Conan.MyPkg.Root>", content)
-        self.assertIn("<Conan.MyPkg2.Root>dummy_root_folder2</Conan.MyPkg2.Root>", content)
+        self.assertIn('<PropertyGroup Label="Conan-RootDirs">', content)
+        self.assertIn("<Conan-MyPkg-Root>dummy_root_folder1</Conan-MyPkg-Root>", content)
+        self.assertIn("<Conan-My-Fancy-Pkg_2-Root>dummy_root_folder2</Conan-My-Fancy-Pkg_2-Root>", content)
 

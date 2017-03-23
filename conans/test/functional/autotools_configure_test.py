@@ -10,6 +10,10 @@ class MockDepsCppInfo(object):
         self.lib_paths = []
         self.libs = []
         self.defines = []
+        self.cflags = []
+        self.cppflags = []
+        self.sharedlinkflags = []
+        self.exelinkflags = []
 
 
 class MockConanfile(object):
@@ -38,6 +42,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.libs.append("twolib")
         conanfile.deps_cpp_info.defines.append("onedefinition")
         conanfile.deps_cpp_info.defines.append("twodefinition")
+        conanfile.deps_cpp_info.cflags.append("a_c_flag")
+        conanfile.deps_cpp_info.cppflags.append("a_cpp_flag")
+        conanfile.deps_cpp_info.sharedlinkflags.append("shared_link_flag")
+        conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
 
     def test_variables(self):
         # GCC 32
@@ -49,11 +57,11 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
 
         be = AutoToolsBuildEnvironment(conanfile)
-        expected = {'CFLAGS': '-m32 -s',
+        expected = {'CFLAGS': 'a_c_flag -m32 -s',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG '
                                 '-D_GLIBCXX_USE_CXX11_ABI=0',
-                    'CXXFLAGS': '-m32 -s',
-                    'LDFLAGS': '-m32 -Lone/lib/path',
+                    'CXXFLAGS': 'a_c_flag -m32 -s a_cpp_flag',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m32 -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
 
         self.assertEquals(be.vars, expected)
@@ -66,11 +74,11 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': '-m64 -g',
+        expected = {'CFLAGS': 'a_c_flag -m64 -g',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition'
                                 ' -D_GLIBCXX_USE_CXX11_ABI=0',
-                    'CXXFLAGS': '-m64 -g',
-                    'LDFLAGS': '-m64 -Lone/lib/path',
+                    'CXXFLAGS': 'a_c_flag -m64 -g a_cpp_flag',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m64 -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEquals(be.vars, expected)
@@ -83,11 +91,11 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': '-m64',
+        expected = {'CFLAGS': 'a_c_flag -m64',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition'
                                 ' -D_GLIBCXX_USE_CXX11_ABI=0',
-                    'CXXFLAGS': '-m64 -stdlib=libstdc++',
-                    'LDFLAGS': '-m64 -Lone/lib/path',
+                    'CXXFLAGS': 'a_c_flag -m64 a_cpp_flag -stdlib=libstdc++',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m64 -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEquals(be.vars, expected)
@@ -100,10 +108,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': '-m64',
+        expected = {'CFLAGS': 'a_c_flag -m64',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
-                    'CXXFLAGS': '-m64 -stdlib=libc++',
-                    'LDFLAGS': '-m64 -Lone/lib/path',
+                    'CXXFLAGS': 'a_c_flag -m64 a_cpp_flag -stdlib=libc++',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m64 -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEquals(be.vars, expected)
@@ -116,11 +124,11 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': '-m64 -s',
+        expected = {'CFLAGS': 'a_c_flag -m64 -s',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG '
                                 '-D_GLIBCXX_USE_CXX11_ABI=1',
-                    'CXXFLAGS': '-m64 -s',
-                    'LDFLAGS': '-m64 -Lone/lib/path',
+                    'CXXFLAGS': 'a_c_flag -m64 -s a_cpp_flag',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m64 -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEquals(be.vars, expected)
@@ -133,10 +141,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': '-m64',
+        expected = {'CFLAGS': 'a_c_flag -m64',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
-                    'CXXFLAGS': '-m64 -library=Cstd',
-                    'LDFLAGS': '-m64 -Lone/lib/path',
+                    'CXXFLAGS': 'a_c_flag -m64 a_cpp_flag -library=Cstd',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m64 -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEquals(be.vars, expected)
@@ -148,10 +156,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': '-m64',
+        expected = {'CFLAGS': 'a_c_flag -m64',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
-                    'CXXFLAGS': '-m64 -library=stdcxx4',
-                    'LDFLAGS': '-m64 -Lone/lib/path',
+                    'CXXFLAGS': 'a_c_flag -m64 a_cpp_flag -library=stdcxx4',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m64 -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEquals(be.vars, expected)
@@ -163,10 +171,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': '-m64',
+        expected = {'CFLAGS': 'a_c_flag -m64',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
-                    'CXXFLAGS': '-m64 -library=stlport4',
-                    'LDFLAGS': '-m64 -Lone/lib/path',
+                    'CXXFLAGS': 'a_c_flag -m64 a_cpp_flag -library=stlport4',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m64 -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEquals(be.vars, expected)
@@ -178,10 +186,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
-        expected = {'CFLAGS': '-m64',
+        expected = {'CFLAGS': 'a_c_flag -m64',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
-                    'CXXFLAGS': '-m64 -library=stdcpp',
-                    'LDFLAGS': '-m64 -Lone/lib/path',
+                    'CXXFLAGS': 'a_c_flag -m64 a_cpp_flag -library=stdcpp',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m64 -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEquals(be.vars, expected)
@@ -203,10 +211,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         be.fpic = True
         be.flags.append("cucucu")
 
-        expected = {'CFLAGS': '-m64 -g cucucu -fPIC',
+        expected = {'CFLAGS': 'a_c_flag -m64 -g cucucu -fPIC',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition'
                                 ' -D_GLIBCXX_USE_CXX11_ABI=0 -DOtherDefinition=23',
-                    'CXXFLAGS': '-m64 -g cucucu -fPIC -onlycxx',
+                    'CXXFLAGS': 'a_c_flag -m64 -g cucucu -fPIC a_cpp_flag -onlycxx',
                     'LDFLAGS': '-inventedflag -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         self.assertEquals(be.vars, expected)
