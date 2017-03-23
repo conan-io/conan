@@ -52,7 +52,7 @@ class ConanHTMLGrapher(object):
                     fulllabel.append("license: %s" % conanfile.license)
                 if conanfile.author:
                     fulllabel.append("author: %s" % conanfile.author)
-                fulllabel = r"\n".join(fulllabel)
+                fulllabel = r"\n".join(fulllabel).replace("'", '"')
             else:
                 fulllabel = label = self._project_reference
             nodes.append("{id: %d, label: '%s', shape: 'box', fulllabel: '%s'}"
