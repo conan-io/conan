@@ -22,6 +22,9 @@ def load_authentication_plugin(server_folder, plugin_name):
         plugin_source = plugin_base.make_plugin_source(
                         searchpath=[plugins_dir])
         auth = plugin_source.load_plugin(plugin_name).get_class()
+        # it is necessary to keep a reference to the plugin, otherwise it is removed
+        # and some imports fail
+        auth.plugin_source = plugin_source
         return auth
     except:
         print("Error loading authenticator plugin '%s'" % plugin_name)
