@@ -63,7 +63,7 @@ class ConanManager(object):
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
         mixed_profile = Profile()
-        if profile is None:
+        if profile is None:  # From install and info profile always exist, so never enter here
             if conan_info_path and os.path.exists(conan_info_path):
                 existing_info = ConanInfo.load_file(conan_info_path)
                 settings.values = existing_info.full_settings
@@ -268,6 +268,7 @@ class ConanManager(object):
         else:
             manifest_manager = None
 
+        # METODO DEVUELVE DEMASIADAS COSAS
         objects = self._get_graph(reference, current_path, profile, remote, filename,
                                   update, check_updates, manifest_manager)
         (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
