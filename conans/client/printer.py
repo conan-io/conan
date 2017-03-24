@@ -82,7 +82,7 @@ class Printer(object):
             def show(_):
                 return True
         else:
-            _info_lower = [s.lower() for s in _info.split(",")]
+            _info_lower = [s.lower() for s in _info]
 
             def show(field):
                 return field in _info_lower
@@ -99,6 +99,7 @@ class Printer(object):
                     ref = project_reference
             if package_filter and not fnmatch.fnmatch(str(ref), package_filter):
                 continue
+
             self._out.writeln("%s" % str(ref), Color.BRIGHT_CYAN)
             reg_remote = registry.get_ref(ref)
             # Excludes PROJECT fake reference

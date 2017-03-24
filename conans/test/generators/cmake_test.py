@@ -60,6 +60,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         # extract the conan_basic_setup macro
         macro = self._extract_macro("conan_basic_setup", aux_cmake_test_setup)
         self.assertEqual("""macro(conan_basic_setup)
+    if(CONAN_EXPORTED)
+        message(STATUS "Conan: called by CMake conan helper")
+    endif()
     conan_check_compiler()
     conan_output_dirs_setup()
     conan_set_find_library_paths()
