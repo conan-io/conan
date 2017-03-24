@@ -269,20 +269,18 @@ class DepsGraphBuilder(object):
         return {conan_reference: self._retriever.update_available(conan_reference)
                 for conan_reference, _ in deps_graph.nodes}
 
-    def load(self, conan_ref, conanfile):
-        """ compute the dependencies graph for:
-        param conan_ref: ConanFileReference for installed conanfile or path to user one
-                         might be None for user conanfile.py or .txt
+    def load(self, conanfile):
+        """ compute the dependencies graph for the conanfile
         """
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        root_node = Node(conan_ref, conanfile)
+        root_node = Node(None, conanfile)
         dep_graph.add_node(root_node)
         public_deps = {}  # {name: Node} dict with public nodes, so they are not added again
         # enter recursive computation
         t1 = time.time()
         loop_ancestors = []
-        self._load_deps(root_node, Requirements(), dep_graph, public_deps, conan_ref, None,
+        self._load_deps(root_node, Requirements(), dep_graph, public_deps, None, None,
                         loop_ancestors)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()

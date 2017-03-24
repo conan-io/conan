@@ -136,7 +136,7 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load(None, root_conan)
+        deps_graph = self.builder.load(root_conan)
         return deps_graph
 
     def test_basic(self):
@@ -1503,7 +1503,7 @@ class CoreSettingsTest(unittest.TestCase):
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
-        deps_graph = builder.load(None, root_conan)
+        deps_graph = builder.load(root_conan)
         return deps_graph
 
     def test_basic(self):
@@ -1789,7 +1789,7 @@ class ChatConan(ConanFile):
         retriever.conan(hello_ref, hello_content)
 
         root_conan = retriever.root(chat_content)
-        deps_graph = builder.load(None, root_conan)
+        deps_graph = builder.load(root_conan)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]

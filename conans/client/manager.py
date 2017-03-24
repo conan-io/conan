@@ -80,7 +80,9 @@ class ConanManager(object):
                 mixed_profile.package_settings[pkg].update(pkg_settings)
 
         self._current_scopes = mixed_profile.scopes
-        return ConanFileLoader(self._runner, settings=settings,
+        self._input_settings = settings.values
+        return ConanFileLoader(self._runner,
+                               settings=settings,
                                package_settings=mixed_profile.package_settings_values,
                                options=mixed_profile.options, scopes=mixed_profile.scopes,
                                env_values=mixed_profile.env_values)
@@ -139,52 +141,42 @@ class ConanManager(object):
             else:
                 remote_proxy.download_packages(reference, list(packages_props.keys()))
 
-    def _get_graph(self, reference, current_path, profile, remote, filename, update,
-                   check_updates, manifest_manager):
-        conan_info_path = os.path.join(current_path, CONANINFO)
-        loader = self._loader(conan_info_path, profile)
-        # Not check for updates for info command, it'll be checked when dep graph is built
-
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
-                                  update=update, check_updates=check_updates,
-                                  manifest_manager=manifest_manager)
-
-        if isinstance(reference, ConanFileReference):
-            project_reference = None
-            conanfile = loader.load_virtual(reference, current_path)
+    def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename, current_path):
+        if isinstance(reference_or_path, ConanFileReference):
+            conanfile = loader.load_virtual(reference_or_path, current_path)
             is_txt = True
         else:
-            conanfile_path = reference
-            project_reference = "PROJECT"
-            output = ScopedOutput(project_reference, self._user_io.out)
+            output = ScopedOutput("PROJECT", self._user_io.out)
             try:
-                if filename and filename.endswith(".txt"):
+                if conanfile_filename and conanfile_filename.endswith(".txt"):
                     raise NotFoundException("")
-                conan_file_path = os.path.join(conanfile_path, filename or CONANFILE)
+                conan_file_path = os.path.join(reference_or_path, conanfile_filename or CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
                 is_txt = False
-                if conanfile.name is not None and conanfile.version is not None:
-                    project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
-                    project_reference += "PROJECT"
             except NotFoundException:  # Load conanfile.txt
-                conan_path = os.path.join(conanfile_path, filename or CONANFILE_TXT)
+                conan_path = os.path.join(reference_or_path, conanfile_filename or CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
                 is_txt = True
-        # build deps graph and install it
-        local_search = None if update else self._search_manager
-        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
-        builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
-        deps_graph = builder.load(None, conanfile)
-        # These lines are so the conaninfo stores the correct complete info
-        if is_txt:
-            conanfile.info.settings = loader._settings.values
-        conanfile.info.full_settings = loader._settings.values
-        conanfile.info.scope = self._current_scopes
         conanfile.cpp_info = CppInfo(current_path)
         conanfile.env_info = EnvInfo(current_path)
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return (builder, deps_graph, project_reference, registry, conanfile,
-                remote_proxy, loader)
+
+        return conanfile, is_txt
+
+    def _get_graph_builder(self, loader, update, remote_proxy):
+        local_search = None if update else self._search_manager
+        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
+        graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
+        return graph_builder
+
+    def _fill_info(self, conanfile, is_txt):
+        # These lines are so the conaninfo stores the correct complete info
+        # FIXME: package_settings are not cached in conaninfo, analyze if it breaks artifactory
+        # FIXME: These lines assigning things to conanfile are ugly here.
+
+        if is_txt:
+            conanfile.info.settings = self._input_settings
+        conanfile.info.full_settings = self._input_settings
+        conanfile.info.scope = self._current_scopes
 
     def info(self, reference, current_path, profile, remote=None,
              info=None, filename=None, update=False, check_updates=False,
@@ -194,15 +186,17 @@ class ConanManager(object):
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
-        @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
-        @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
-        @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
         """
 
-        objects = self._get_graph(reference, current_path, profile, remote, filename,
-                                  update, check_updates, None)
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
+                                  update=update, check_updates=check_updates)
 
-        (builder, deps_graph, project_reference, registry, _, remote_proxy, _) = objects
+        loader = self._loader(profile=profile)
+        conanfile, is_txt = self._get_conanfile_object(loader, reference, filename, current_path)
+        graph_builder = self._get_graph_builder(loader, update, remote_proxy)
+        deps_graph = graph_builder.load(conanfile)
+
+        self._fill_info(conanfile, is_txt)
 
         if build_order:
             result = deps_graph.build_order(build_order)
@@ -219,7 +213,7 @@ class ConanManager(object):
             return
 
         if check_updates:
-            graph_updates_info = builder.get_graph_updates_info(deps_graph)
+            graph_updates_info = graph_builder.get_graph_updates_info(deps_graph)
         else:
             graph_updates_info = {}
 
@@ -231,6 +225,16 @@ class ConanManager(object):
                     ret[ref] = manifest.time_str
             return ret
 
+        # Get project reference
+        if isinstance(reference, ConanFileReference):
+            project_reference = None
+        if conanfile.name is not None and conanfile.version is not None:
+            project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
+            project_reference += "PROJECT"
+        else:
+            project_reference = "PROJECT"
+
+        # Print results
         if graph_filename:
             if graph_filename.endswith(".html"):
                 grapher = ConanHTMLGrapher(project_reference, deps_graph)
@@ -238,6 +242,7 @@ class ConanManager(object):
                 grapher = ConanGrapher(project_reference, deps_graph)
             grapher.graph_file(graph_filename)
         else:
+            registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
             Printer(self._user_io.out).print_info(deps_graph, project_reference,
                                                   info, registry, graph_updates_info,
                                                   remote, read_dates(deps_graph),
@@ -251,32 +256,29 @@ class ConanManager(object):
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
-        @param options: list of tuples: [(optionname, optionvalue), (optionname, optionvalue)...]
-        @param settings: list of tuples: [(settingname, settingvalue), (settingname, value)...]
-        @param package_settings: dict name=> settings: {"zlib": [(settingname, settingvalue), ...]}
         @param profile: name of the profile to use
-        @param env: list of tuples for environment vars: [(var, value), (var2, value2)...]
-        @param package_env: package dict of list of tuples: {"package_name": [(var, value), (var2, value2)...]}
         """
         generators = generators or []
+        manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
+                                           client_cache=self._client_cache,
+                                           verify=manifest_verify,
+                                           interactive=manifest_interactive) if manifest_folder else None
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
+                                  update=update, check_updates=check_updates, manifest_manager=manifest_manager)
+        loader = self._loader(profile=profile)
+        conanfile, is_txt = self._get_conanfile_object(loader, reference, filename, current_path)
+        graph_builder = self._get_graph_builder(loader, update, remote_proxy)
+        deps_graph = graph_builder.load(conanfile)
 
-        if manifest_folder:
-            manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
-                                               client_cache=self._client_cache,
-                                               verify=manifest_verify,
-                                               interactive=manifest_interactive)
-        else:
-            manifest_manager = None
+        # This line is so the conaninfo stores the correct complete info
+        self._fill_info(conanfile, is_txt)
 
-        objects = self._get_graph(reference, current_path, profile, remote, filename,
-                                  update, check_updates, manifest_manager)
-        (_, deps_graph, _, registry, conanfile, remote_proxy, loader) = objects
-
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         try:
-            if detected_os() != loader._settings.os:
-                message = "Cross-platform from '%s' to '%s'" % (detected_os(), loader._settings.os)
+            if detected_os() != self._input_settings.os:
+                message = "Cross-platform from '%s' to '%s'" % (detected_os(), self._input_settings.os)
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
             pass

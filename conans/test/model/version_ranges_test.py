@@ -172,7 +172,7 @@ class SayConan(ConanFile):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load(None, root_conan)
+        deps_graph = self.builder.load(root_conan)
         return deps_graph
 
     def test_local_basic(self):
