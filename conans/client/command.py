@@ -349,7 +349,7 @@ class Command(object):
             args.only = []
 
         if args.only and args.paths and (set(args.only) - set(path_only_options)):
-            raise ConanException("Invalid --only value '%s' with --path specfied, allowed values: [%s]."
+            raise ConanException("Invalid --only value '%s' with --path specified, allowed values: [%s]."
                                  "" % (args.only, str_path_only_options))
         elif args.only and not args.paths and (set(args.only) - set(info_only_options)):
             raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"

@@ -163,11 +163,11 @@ class InfoTest(unittest.TestCase):
 
         self.client.run("info --only=invalid", ignore_error=True)
         self.assertIn("Invalid --only value", self.client.user_io.out)
-        self.assertNotIn("with --path specfied, allowed values:", self.client.user_io.out)
+        self.assertNotIn("with --path specified, allowed values:", self.client.user_io.out)
 
         self.client.run("info --paths --only=bad", ignore_error=True)
         self.assertIn("Invalid --only value", self.client.user_io.out)
-        self.assertIn("with --path specfied, allowed values:", self.client.user_io.out)
+        self.assertIn("with --path specified, allowed values:", self.client.user_io.out)
 
     def reuse_test(self):
         self.client = TestClient()
