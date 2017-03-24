@@ -311,7 +311,8 @@ class Command(object):
                             'e.g., MyPackage/1.2@user/channel or ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--only", "-n", nargs="?", const="None",
-                            help='show fields only')
+                            help='show the specified fields only from: '
+                                 '"id", "build_id", "remote", "url", "license", "requires"')
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
         parser.add_argument("--package_filter", nargs='?',
