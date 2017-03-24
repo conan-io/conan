@@ -212,6 +212,11 @@ class CMake(object):
         command = "cmake --build %s" % arg_list
         conan_file.run(command)
 
+    def test(self, conan_file, args=None, build_dir=None, target=None):
+        if not target:
+            target = "RUN_TESTS" if self._settings.compiler == "Visual Studio" else "test"
+        self.build(conan_file=conan_file, args=args, build_dir=build_dir, target=target)
+
 
 def _vars_to_string(defs):
     return _args_to_string('-D{0}={1}'.format(k, v) for k, v in defs.items())
