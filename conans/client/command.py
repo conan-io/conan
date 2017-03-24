@@ -305,13 +305,22 @@ class Command(object):
         You can use it for your current project (just point to the path of your conanfile
         if you want), or for any existing package in your local cache.
         """
+
+        info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update", "required",
+                             "date", "author", "None"]
+        path_only_options = ["export_folder", "build_folder", "package_folder", "source_folder"]
+        str_path_only_options = ", ".join(['"%s"' % field for field in path_only_options])
+        str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
+
         parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info")
         parser.add_argument("reference", nargs='?', default="",
                             help='reference name or path to conanfile file, '
                             'e.g., MyPackage/1.2@user/channel or ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("--only", "-n", nargs="?", const="None",
-                            help='show fields only')
+        parser.add_argument("--only", "-n", nargs=1, action=Extender,
+                            help='show the specified fields only from: '
+                                 '%s or use --paths with options %s. Use --only None to show only references.'
+                                 % (str_only_options, str_path_only_options))
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
         parser.add_argument("--package_filter", nargs='?',
@@ -335,6 +344,16 @@ class Command(object):
             reference = ConanFileReference.loads(args.reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, args.reference))
+
+        if args.only == ["None"]:
+            args.only = []
+
+        if args.only and args.paths and (set(args.only) - set(path_only_options)):
+            raise ConanException("Invalid --only value '%s' with --path specified, allowed values: [%s]."
+                                 "" % (args.only, str_path_only_options))
+        elif args.only and not args.paths and (set(args.only) - set(info_only_options)):
+            raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
+                                 "Use --only=None to show only the references." % (args.only, str_only_options))
 
         profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
         self._manager.info(reference=reference,

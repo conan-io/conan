@@ -152,7 +152,7 @@ class InfoTest(unittest.TestCase):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("info --only")
+        self.client.run("info --only None")
         self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable",
                           "Hello1/0.1@lasote/stable"], str(self.client.user_io.out).splitlines())
         self.client.run("info --only=date")
@@ -160,6 +160,14 @@ class InfoTest(unittest.TestCase):
                  for line in str(self.client.user_io.out).splitlines()]
         self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable", "Date",
                           "Hello1/0.1@lasote/stable", "Date"], lines)
+
+        self.client.run("info --only=invalid", ignore_error=True)
+        self.assertIn("Invalid --only value", self.client.user_io.out)
+        self.assertNotIn("with --path specified, allowed values:", self.client.user_io.out)
+
+        self.client.run("info --paths --only=bad", ignore_error=True)
+        self.assertIn("Invalid --only value", self.client.user_io.out)
+        self.assertIn("with --path specified, allowed values:", self.client.user_io.out)
 
     def reuse_test(self):
         self.client = TestClient()
@@ -220,7 +228,7 @@ class InfoTest(unittest.TestCase):
             Hello1/0.1@lasote/stable
                 URL: myurl""")
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
-        self.client.run("info -u --only=url,license")
+        self.client.run("info -u --only=url --only=license")
         expected_output = textwrap.dedent(
             """\
             Hello2/0.1@PROJECT
