@@ -30,6 +30,10 @@ class ProfileTest(unittest.TestCase):
         profile.scopes["p1"]["conaning"] = "1"
         profile.scopes["p2"]["testing"] = "2"
 
+        profile.requires.append("zlib/1.2.8@lasote/testing")
+        profile.package_requires["zlib"].append("OpenSSL/1.0.2@lasote/stable")
+        profile.package_requires["zlib"].append("OpenSSL/1.0.3@lasote/stable")
+
         dump = profile.dumps()
         new_profile = Profile.loads(dump)
         self.assertEquals(new_profile.settings, profile.settings)
@@ -37,10 +41,14 @@ class ProfileTest(unittest.TestCase):
         self.assertEquals(new_profile.settings["compiler.version"], "12")
         self.assertEquals(new_profile.settings["compiler"], "Visual Studio")
 
-        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX': 'path/to/my/compiler/g++', 'CC': 'path/to/my/compiler/gcc'}, {}))
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX': 'path/to/my/compiler/g++',
+                                                                  'CC': 'path/to/my/compiler/gcc'}, {}))
 
         self.assertEquals(dict(new_profile.scopes)["p1"]["conaning"], '1')
         self.assertEquals(dict(new_profile.scopes)["p2"]["testing"], '2')
+
+        self.assertEquals(new_profile.package_requires, {"zlib": ["OpenSSL/1.0.2@lasote/stable",
+                                                                  "OpenSSL/1.0.3@lasote/stable"]})
 
     def profile_settings_update_test(self):
         prof = '''[settings]
@@ -132,8 +140,14 @@ compiler=Visual Studio
         profile.settings["arch"] = "x86_64"
         profile.settings["compiler"] = "Visual Studio"
         profile.settings["compiler.version"] = "12"
+        profile.requires.append("zlib/1.2.8@lasote/testing")
+        profile.requires.append("aaaa/1.2.3@lasote/testing")
+        profile.package_requires["zlib"].append("zlib/1.2.11@lasote/testing")
+        profile.package_requires["zlib"].append("aaa/1.2.11@lasote/testing")
 
-        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\n'
+        self.assertEqual('[build_requires]\naaaa/1.2.3@lasote/testing\nzlib/1.2.8@lasote/testing\nzlib:'
+                         'aaa/1.2.11@lasote/testing\nzlib:zlib/1.2.11@lasote/testing'
+                         '\n[settings]\narch=x86_64\ncompiler=Visual Studio\n'
                          'compiler.version=12\nzlib:compiler=gcc\n[options]\n[scopes]\n[env]\n',
                          profile.dumps())
 
@@ -165,13 +179,13 @@ QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
 
         profile.update_settings({"compiler.version": "14"})
 
-        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
+        self.assertEqual('[build_requires]\n[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
                          '[options]\n[scopes]\np1:conaning=True\np2:testing=True\n'
                          '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())
 
         profile.update_scopes({"p1": {"new_one": 2}})
-        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
+        self.assertEqual('[build_requires]\n[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
                          '[options]\n[scopes]\np1:new_one=2\np2:testing=True\n'
                          '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())

@@ -1,4 +1,6 @@
 from collections import OrderedDict
+
+from conans.model.ref import ConanFileReference
 from conans.util.config_parser import ConfigParser
 from conans.model.scope import Scopes, _root
 from conans.errors import ConanException
@@ -21,6 +23,8 @@ class Profile(object):
         self.env_values = EnvValues()
         self.scopes = Scopes()
         self.options = OptionsValues()
+        self.requires = []
+        self.package_requires = defaultdict(list)
 
     @property
     def settings_values(self):
@@ -76,7 +80,7 @@ class Profile(object):
         """ Parse and return a Profile object from a text config like representation
         """
         def get_package_name_value(item):
-            '''Parse items like package:name=value or name=value'''
+            """Parse items like package:name=value or name=value"""
             package_name = None
             if ":" in item:
                 tmp = item.split(":", 1)
@@ -89,7 +93,7 @@ class Profile(object):
 
         try:
             obj = Profile()
-            doc = ConfigParser(text, allowed_fields=["settings", "env", "scopes", "options"])
+            doc = ConfigParser(text, allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
 
             for setting in doc.settings.splitlines():
                 setting = setting.strip()
@@ -101,6 +105,18 @@ class Profile(object):
                         obj.package_settings[package_name][name] = value
                     else:
                         obj.settings[name] = value
+
+            if doc.build_requires:
+                for req in doc.build_requires.splitlines():
+                    if ":" in req:
+                        package_name, req = req.split(":", 1)
+                        try:
+                            ConanFileReference.loads(req)
+                        except:
+                            raise ConanException("Invalid requirement reference '%s' specified in profile" % req)
+                        obj.package_requires[package_name].append(req)
+                    else:
+                        obj.requires.append(req)
 
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())
@@ -117,7 +133,14 @@ class Profile(object):
             raise ConanException("Error parsing the profile text file: %s" % str(exc))
 
     def dumps(self):
-        result = ["[settings]"]
+        result = ["[build_requires]"]
+        for ref in sorted(self.requires):
+            result.append(ref)
+        for package in sorted(self.package_requires.keys()):
+            refs = sorted(self.package_requires[package])
+            for ref in refs:
+                result.append("%s:%s" % (package, ref))
+        result.append("[settings]")
         for name, value in self.settings.items():
             result.append("%s=%s" % (name, value))
         for package, values in self.package_settings.items():
