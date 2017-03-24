@@ -27,6 +27,14 @@ class Profile(object):
         self.package_requires = defaultdict(list)
 
     @property
+    def all_requires(self):
+        ret = []
+        for references in self.package_requires.values():
+            ret.extend(references)
+        ret.extend(self.requires)
+        return set(ret)
+
+    @property
     def settings_values(self):
         return Values.from_list(list(self.settings.items()))
 
@@ -107,16 +115,19 @@ class Profile(object):
                         obj.settings[name] = value
 
             if doc.build_requires:
+                # FIXME CHECKS OF DUPLICATED?
                 for req in doc.build_requires.splitlines():
                     if ":" in req:
                         package_name, req = req.split(":", 1)
                         try:
-                            ConanFileReference.loads(req)
+                            ref = ConanFileReference.loads(req.strip())
+                            obj.package_requires[package_name.strip()].append(ref)
                         except:
                             raise ConanException("Invalid requirement reference '%s' specified in profile" % req)
-                        obj.package_requires[package_name].append(req)
+
                     else:
-                        obj.requires.append(req)
+                        ref = ConanFileReference.loads(req.strip())
+                        obj.requires.append(ref)
 
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())

@@ -1,6 +1,6 @@
 import os
 import time
-from collections import OrderedDict, Counter
+from collections import OrderedDict, Counter, defaultdict
 
 from conans.client import packager
 from conans.client.client_cache import ClientCache
@@ -143,7 +143,7 @@ class ConanManager(object):
 
     def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename, current_path):
         if isinstance(reference_or_path, ConanFileReference):
-            conanfile = loader.load_virtual(reference_or_path, current_path)
+            conanfile = loader.load_virtual([reference_or_path], current_path)
             is_txt = True
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
@@ -162,10 +162,10 @@ class ConanManager(object):
 
         return conanfile, is_txt
 
-    def _get_graph_builder(self, loader, update, remote_proxy):
+    def _get_graph_builder(self, loader, update, remote_proxy, build_dep_infos=None):
         local_search = None if update else self._search_manager
         resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
-        graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
+        graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver, build_dep_infos)
         return graph_builder
 
     def _fill_info(self, conanfile, is_txt):
@@ -186,6 +186,10 @@ class ConanManager(object):
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
+        @param profile: Profile object with both the -s introduced options and profile readed values
+        @param build_modes: List of build_modes specified
+        @param filename: Optional filename of the conanfile
+
         """
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
@@ -250,6 +254,27 @@ class ConanManager(object):
                                                   remote, read_dates(deps_graph),
                                                   self._client_cache, package_filter, show_paths)
 
+    def _install_build_requires(self, loader, remote_proxy, requires, current_path):
+        self._user_io.out.info("---------- Installing build_requires -------------")
+        conanfile = loader.load_virtual(requires, current_path)
+        conanfile.cpp_info = CppInfo(current_path)
+        conanfile.env_info = EnvInfo(current_path)
+
+        # FIXME: Forced update=True, build_mode, Where to define it?
+        update = True
+        build_modes = ["missing"]
+
+        graph_builder = self._get_graph_builder(loader, update, remote_proxy)
+        deps_graph = graph_builder.load(conanfile)
+
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        Printer(self._user_io.out).print_graph(deps_graph, registry)
+
+        installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
+        installer.install(deps_graph, build_modes)
+        self._user_io.out.info("-------------------------------------------------\n")
+        return conanfile.deps_cpp_info, conanfile.deps_env_info
+
     def install(self, reference, current_path, profile, remote=None,
                 build_modes=None, filename=None, update=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
@@ -258,7 +283,7 @@ class ConanManager(object):
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
-        @param profile: Profile object to use
+        @param profile: Profile object with both the -s introduced options and profile readed values
         @param build_modes: List of build_modes specified
         @param filename: Optional filename of the conanfile
         @param update: Check for updated in the upstream remotes (and update)
@@ -276,8 +301,29 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=update, check_updates=False, manifest_manager=manifest_manager)
         loader = self._loader(profile=profile)
+
+        # Install the build_requires and get the info objets
+        build_dep_infos = None
+        if profile.all_requires:
+            # Build the graph and install the build_require dependency tree
+            deps_cpp_info, deps_env_info = self._install_build_requires(loader, remote_proxy,
+                                                                        profile.all_requires, current_path)
+            # Build a dict with {"dest_package": {"tool_reference": (deps_cpp_info, deps_env_info)} taking into
+            # account the package level requires
+            build_dep_infos = defaultdict(dict)
+            for dest_package, references in profile.package_requires.items():  # Package level ones
+                for ref in references:
+                    build_dep_infos[dest_package][ref] = (deps_cpp_info[ref.name],
+                                                          deps_env_info[ref.name])
+
+            # Also apply the global build_requires
+            for global_reference in profile.requires:
+                build_dep_infos[None][global_reference] = (deps_cpp_info[global_reference.name],
+                                                           deps_env_info[global_reference.name])
+
+        # Build the graph for the real dependency tree
         conanfile, is_txt = self._get_conanfile_object(loader, reference, filename, current_path)
-        graph_builder = self._get_graph_builder(loader, update, remote_proxy)
+        graph_builder = self._get_graph_builder(loader, update, remote_proxy, build_dep_infos)
         deps_graph = graph_builder.load(conanfile)
 
         # This line is so the conaninfo stores the correct complete info

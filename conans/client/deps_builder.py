@@ -252,14 +252,18 @@ class DepsGraph(object):
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, retriever, output, loader, resolver):
+    def __init__(self, retriever, output, loader, resolver, build_dep_infos):
         """ param retriever: something that implements retrieve_conanfile for installed conans
-        param loader: helper ConanLoader to be able to load user space conanfile
+        :param loader: helper ConanLoader to be able to load user space conanfile
+        :param build_dep_infos: cpp_infos and env_infos from build_requires.
+                               {dest_package_name: {build_dep_reference: (cpp_info, env_info)},
+                                None: {build_dep_reference: (cpp_info, env_info)}}
         """
         self._retriever = retriever
         self._output = output
         self._loader = loader
         self._resolver = resolver
+        self._build_dep_infos = build_dep_infos
 
     def get_graph_updates_info(self, deps_graph):
         """
@@ -270,8 +274,7 @@ class DepsGraphBuilder(object):
                 for conan_reference, _ in deps_graph.nodes}
 
     def load(self, conanfile):
-        """ compute the dependencies graph for the conanfile
-        """
+
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
         root_node = Node(None, conanfile)
@@ -304,6 +307,22 @@ class DepsGraphBuilder(object):
                                  "    New requirements: %s"
                                  % (conanref, list(conanfile.requires.values()),
                                     list(conanfile._evaluated_requires.values())))
+
+    def _apply_build_deps_infos_to_conanfile(self, conanfile):
+        if not self._build_dep_infos:
+            return
+
+        # Apply the global build_deps infos
+        def apply_infos(infos):
+            for build_dep_reference, info in infos.items():  # List of tuples (cpp_info, env_info)
+                cpp_info, env_info = info
+                conanfile.deps_cpp_info.update(cpp_info, build_dep_reference)
+                conanfile.deps_env_info.update(env_info, build_dep_reference)
+
+        if conanfile.name and conanfile.name in self._build_dep_infos.keys():
+            apply_infos(self._build_dep_infos[conanfile.name])
+
+        apply_infos(self._build_dep_infos[None])
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
                    loop_ancestors):
@@ -394,6 +413,9 @@ class DepsGraphBuilder(object):
 
             new_options = conanfile.options.deps_package_values
             new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
+
+            # Set the env_info and cpp_info from build_requires
+            self._apply_build_deps_infos_to_conanfile(conanfile)
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
         except Exception as e:
