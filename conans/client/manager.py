@@ -226,13 +226,15 @@ class ConanManager(object):
             return ret
 
         # Get project reference
+        project_reference = None
         if isinstance(reference, ConanFileReference):
             project_reference = None
-        if conanfile.name is not None and conanfile.version is not None:
-            project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
-            project_reference += "PROJECT"
         else:
-            project_reference = "PROJECT"
+            if conanfile.name is not None and conanfile.version is not None:
+                project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
+                project_reference += "PROJECT"
+            else:
+                project_reference = "PROJECT"
 
         # Print results
         if graph_filename:
