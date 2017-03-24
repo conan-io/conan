@@ -26,7 +26,7 @@ class ConanProxy(object):
         self._registry = RemoteRegistry(self._client_cache.registry, self._out)
         self._remote_name = remote_name
         self._update = update
-        self._check_updates = check_updates or update  # Update forces check
+        self._check_updates = check_updates or update  # Update forces check (and of course the update)
         self._manifest_manager = manifest_manager
 
     @property

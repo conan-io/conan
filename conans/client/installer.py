@@ -113,7 +113,7 @@ class ConanInstaller(object):
         self._out = user_io.out
         self._remote_proxy = remote_proxy
 
-    def install(self, deps_graph, build_mode):
+    def install(self, deps_graph, build_modes):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
@@ -123,7 +123,7 @@ class ConanInstaller(object):
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
         t1 = time.time()
-        build_mode = BuildMode(build_mode, self._out)
+        build_mode = BuildMode(build_modes, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         logger.debug("Install-Process private %s" % (time.time() - t1))
         t1 = time.time()
@@ -161,11 +161,11 @@ class ConanInstaller(object):
         skippable_private_nodes = deps_graph.private_nodes(skip_nodes)
         return skippable_private_nodes
 
-    def nodes_to_build(self, deps_graph, build_mode):
+    def nodes_to_build(self, deps_graph, build_modes):
         """Called from info command when a build policy is used in build_order parameter"""
         # Get the nodes in order and if we have to build them
         nodes_by_level = deps_graph.by_levels()
-        build_mode = BuildMode(build_mode, self._out)
+        build_mode = BuildMode(build_modes, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         nodes = self._get_nodes(nodes_by_level, skip_private_nodes, build_mode)
         return [(PackageReference(conan_ref, package_id), conan_file)

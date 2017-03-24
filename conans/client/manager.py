@@ -179,8 +179,8 @@ class ConanManager(object):
         conanfile.info.scope = self._current_scopes
 
     def info(self, reference, current_path, profile, remote=None,
-             info=None, filename=None, update=False, check_updates=False,
-             build_order=None, build_mode=None, graph_filename=None, package_filter=None,
+             info=None, filename=None, check_updates=False,
+             build_order=None, build_modes=None, graph_filename=None, package_filter=None,
              show_paths=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
@@ -189,11 +189,11 @@ class ConanManager(object):
         """
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
-                                  update=update, check_updates=check_updates)
+                                  update=False, check_updates=check_updates)
 
         loader = self._loader(profile=profile)
         conanfile, is_txt = self._get_conanfile_object(loader, reference, filename, current_path)
-        graph_builder = self._get_graph_builder(loader, update, remote_proxy)
+        graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 
         self._fill_info(conanfile, is_txt)
@@ -203,9 +203,9 @@ class ConanManager(object):
             self._user_io.out.info(", ".join(str(s) for s in result))
             return
 
-        if build_mode is not None:
+        if build_modes is not None:
             installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
-            nodes = installer.nodes_to_build(deps_graph, build_mode)
+            nodes = installer.nodes_to_build(deps_graph, build_modes)
             counter = Counter(ref.conan.name for ref, _ in nodes)
             self._user_io.out.info(", ".join((str(ref)
                                               if counter[ref.conan.name] > 1 else str(ref.conan))
@@ -251,14 +251,22 @@ class ConanManager(object):
                                                   self._client_cache, package_filter, show_paths)
 
     def install(self, reference, current_path, profile, remote=None,
-                build_mode=None, filename=None, update=False, check_updates=False,
+                build_modes=None, filename=None, update=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
                 generators=None, no_imports=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
         @param remote: install only from that remote
-        @param profile: name of the profile to use
+        @param profile: Profile object to use
+        @param build_modes: List of build_modes specified
+        @param filename: Optional filename of the conanfile
+        @param update: Check for updated in the upstream remotes (and update)
+        @param manifest_folder: Folder to install the manifests
+        @param manifest_verify: Verify dependencies manifests against stored ones
+        @param manifest_interactive: Install deps manifests in folder for later verify, asking user for confirmation
+        @param generators: List of generators from command line
+        @param no_imports: Install specified packages but avoid running imports
         """
         generators = generators or []
         manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
@@ -266,7 +274,7 @@ class ConanManager(object):
                                            verify=manifest_verify,
                                            interactive=manifest_interactive) if manifest_folder else None
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
-                                  update=update, check_updates=check_updates, manifest_manager=manifest_manager)
+                                  update=update, check_updates=False, manifest_manager=manifest_manager)
         loader = self._loader(profile=profile)
         conanfile, is_txt = self._get_conanfile_object(loader, reference, filename, current_path)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
@@ -286,7 +294,7 @@ class ConanManager(object):
             pass
 
         installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
-        installer.install(deps_graph, build_mode)
+        installer.install(deps_graph, build_modes)
 
         prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
         output = ScopedOutput(prefix, self._user_io.out)

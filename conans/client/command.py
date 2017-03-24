@@ -196,7 +196,7 @@ class Command(object):
                               manifest_interactive=manifest_interactive,
                               remote=args.remote,
                               profile=profile,
-                              build_mode=args.build,
+                              build_modes=args.build,
                               update=args.update,
                               generators=["env", "txt"]
                               )
@@ -263,7 +263,7 @@ class Command(object):
                                   current_path=current_path,
                                   remote=args.remote,
                                   profile=profile,
-                                  build_mode=args.build,
+                                  build_modes=args.build,
                                   filename=args.file,
                                   update=args.update,
                                   manifest_folder=manifest_folder,
@@ -346,7 +346,7 @@ class Command(object):
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
-                           build_mode=args.build,
+                           build_modes=args.build,
                            graph_filename=args.graph,
                            show_paths=args.paths)
 
@@ -785,8 +785,8 @@ class Command(object):
             logger.error(exc)
             errors = True
         except ConanException as exc:
-            import traceback
-            logger.debug(traceback.format_exc())
+            # import traceback
+            # logger.debug(traceback.format_exc())
             errors = True
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
@@ -795,8 +795,8 @@ class Command(object):
             except:
                 pass
         except Exception as exc:
-            import traceback
-            print(traceback.format_exc())
+            # import traceback
+            # print(traceback.format_exc())
             msg = exception_message_safe(exc)
             try:
                 log_exception(exc, msg)
