@@ -132,11 +132,9 @@ class DepsGraph(object):
         return ordered
 
     def direct_requires(self):
-        closure = set()
         nodes_by_level = self.inverse_levels()
         open_nodes = nodes_by_level[1]
-        closure.update(open_nodes)
-        return closure
+        return open_nodes
 
     def ordered_closure(self, node, flat):
         closure = set()
