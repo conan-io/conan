@@ -205,6 +205,9 @@ class ConanFileLoader(object):
         # for the reference (keep compatibility)
         conanfile = ConanFile(None, self._runner, self._settings.copy(), path)
 
+        # Assign environment
+        conanfile._env_values.update(self._env_values)
+
         for ref in references:
             conanfile.requires.add(str(ref))  # Convert to string necessary
             # conanfile.options.values = options

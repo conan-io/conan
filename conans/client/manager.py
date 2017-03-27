@@ -25,7 +25,7 @@ from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException
 from conans.model.build_info import DepsCppInfo, CppInfo
-from conans.model.env_info import EnvInfo
+from conans.model.env_info import EnvInfo, DepsEnvInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import (CONANFILE, CONANINFO, CONANFILE_TXT, BUILD_INFO)
 from conans.tools import environment_append
@@ -273,7 +273,39 @@ class ConanManager(object):
         installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
         installer.install(deps_graph, build_modes)
         self._user_io.out.info("-------------------------------------------------\n")
-        return conanfile.deps_cpp_info, conanfile.deps_env_info
+        return deps_graph
+
+    def _install_build_requires_and_get_infos(self, profile, loader, remote_proxy, current_path):
+        # Build the graph and install the build_require dependency tree
+        deps_graph = self._install_build_requires(loader, remote_proxy, profile.all_requires, current_path)
+        # Build a dict with
+        # {"zlib": {"cmake/2.8@lasote/stable": (deps_cpp_info, deps_env_info),
+        #           "other_tool/3.2@lasote/stable": (deps_cpp_info, deps_env_info)}
+        #  "None": {"cmake/3.1@lasote/stable": (deps_cpp_info, deps_env_info)}
+        # taking into account the package level requires
+        refs_objects = {}
+        requires_nodes = deps_graph.direct_requires()
+        # We have all the cpp_info and env_info in the virtual conanfile, but we need those info objects at
+        # requires level to filter later (profiles allow to filter targeting a library in the real deps tree)
+        for node in requires_nodes:
+            deps_cpp_info = DepsCppInfo()
+            deps_cpp_info.update(node.conanfile.cpp_info, node.conan_ref)
+            deps_cpp_info.update(node.conanfile.deps_cpp_info, node.conan_ref)
+
+            deps_env_info = DepsEnvInfo()
+            deps_env_info.update(node.conanfile.env_info, node.conan_ref)
+            deps_env_info.update(node.conanfile.deps_env_info, node.conan_ref)
+
+            refs_objects[node.conan_ref] = (deps_cpp_info, deps_env_info)
+
+        build_dep_infos = defaultdict(dict)
+        for dest_package, references in profile.package_requires.items():  # Package level ones
+            for ref in references:
+                build_dep_infos[dest_package][ref] = refs_objects[ref]
+        for global_reference in profile.requires:
+            build_dep_infos[None][global_reference] = refs_objects[global_reference]
+
+        return build_dep_infos
 
     def install(self, reference, current_path, profile, remote=None,
                 build_modes=None, filename=None, update=False,
@@ -305,21 +337,10 @@ class ConanManager(object):
         # Install the build_requires and get the info objets
         build_dep_infos = None
         if profile.all_requires:
-            # Build the graph and install the build_require dependency tree
-            deps_cpp_info, deps_env_info = self._install_build_requires(loader, remote_proxy,
-                                                                        profile.all_requires, current_path)
-            # Build a dict with {"dest_package": {"tool_reference": (deps_cpp_info, deps_env_info)} taking into
-            # account the package level requires
-            build_dep_infos = defaultdict(dict)
-            for dest_package, references in profile.package_requires.items():  # Package level ones
-                for ref in references:
-                    build_dep_infos[dest_package][ref] = (deps_cpp_info[ref.name],
-                                                          deps_env_info[ref.name])
-
-            # Also apply the global build_requires
-            for global_reference in profile.requires:
-                build_dep_infos[None][global_reference] = (deps_cpp_info[global_reference.name],
-                                                           deps_env_info[global_reference.name])
+            # {"zlib": {"cmake/2.8@lasote/stable": (deps_cpp_info, deps_env_info),
+            #           "other_tool/3.2@lasote/stable": (deps_cpp_info, deps_env_info)}
+            #  "None": {"cmake/3.1@lasote/stable": (deps_cpp_info, deps_env_info)}
+            build_dep_infos = self._install_build_requires_and_get_infos(profile, loader, remote_proxy, current_path)
 
         # Build the graph for the real dependency tree
         conanfile, is_txt = self._get_conanfile_object(loader, reference, filename, current_path)
