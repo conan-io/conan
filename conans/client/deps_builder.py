@@ -315,7 +315,7 @@ class DepsGraphBuilder(object):
                                  % (conanref, list(conanfile.requires.values()),
                                     list(conanfile._evaluated_requires.values())))
 
-    def _apply_build_deps_infos_to_conanfile(self, conanfile):
+    def _apply_initial_deps_infos_to_conanfile(self, conanfile):
         if not self._initial_deps_infos:
             return
 
@@ -423,7 +423,7 @@ class DepsGraphBuilder(object):
             new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
 
             # Set the env_info and cpp_info from build_requires
-            self._apply_build_deps_infos_to_conanfile(conanfile)
+            self._apply_initial_deps_infos_to_conanfile(conanfile)
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
         except Exception as e:

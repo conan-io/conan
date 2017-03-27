@@ -89,7 +89,7 @@ class CMake(object):
         # SYSTEM NAME
         env_system_name = os.environ.get("CONAN_CMAKE_SYSTEM_NAME", None)
         if env_system_name is not None:
-            if env_system_name is False:  # False means not auto-set
+            if env_system_name is not False:  # False means not auto-set
                 cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % env_system_name)
         else:
             if self._cmake_system_name and (platform.system() != the_os or os_ver):
