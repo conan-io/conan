@@ -4,6 +4,7 @@ import unittest
 from conans.model.profile import Profile
 from collections import OrderedDict
 
+from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
@@ -47,8 +48,8 @@ class ProfileTest(unittest.TestCase):
         self.assertEquals(dict(new_profile.scopes)["p1"]["conaning"], '1')
         self.assertEquals(dict(new_profile.scopes)["p2"]["testing"], '2')
 
-        self.assertEquals(new_profile.package_requires, {"zlib": ["OpenSSL/1.0.2@lasote/stable",
-                                                                  "OpenSSL/1.0.3@lasote/stable"]})
+        self.assertEquals(new_profile.package_requires, {"zlib": [ConanFileReference.loads("OpenSSL/1.0.2@lasote/stable"),
+                                                                  ConanFileReference.loads("OpenSSL/1.0.3@lasote/stable")]})
 
     def profile_settings_update_test(self):
         prof = '''[settings]

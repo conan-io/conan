@@ -63,7 +63,7 @@ class ConanManager(object):
         # The disk settings definition, already including the default disk values
         settings = self._client_cache.settings
         mixed_profile = Profile()
-        if profile is None:
+        if profile is None:  # From install and info profile always exist, so never enter here
             if conan_info_path and os.path.exists(conan_info_path):
                 existing_info = ConanInfo.load_file(conan_info_path)
                 settings.values = existing_info.full_settings
@@ -330,6 +330,7 @@ class ConanManager(object):
         self._fill_info(conanfile, is_txt)
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+
         Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         try:
@@ -340,6 +341,7 @@ class ConanManager(object):
             pass
 
         installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
+
         installer.install(deps_graph, build_modes)
 
         prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)

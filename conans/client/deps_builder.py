@@ -252,10 +252,10 @@ class DepsGraph(object):
 class DepsGraphBuilder(object):
     """ Responsible for computing the dependencies graph DepsGraph
     """
-    def __init__(self, retriever, output, loader, resolver, build_dep_infos):
+    def __init__(self, retriever, output, loader, resolver, initial_dep_infos):
         """ param retriever: something that implements retrieve_conanfile for installed conans
         :param loader: helper ConanLoader to be able to load user space conanfile
-        :param build_dep_infos: cpp_infos and env_infos from build_requires.
+        :param initial_dep_infos: Initial cpp_infos and env_infos (from build_requires).
                                {dest_package_name: {build_dep_reference: (cpp_info, env_info)},
                                 None: {build_dep_reference: (cpp_info, env_info)}}
         """
@@ -263,7 +263,7 @@ class DepsGraphBuilder(object):
         self._output = output
         self._loader = loader
         self._resolver = resolver
-        self._build_dep_infos = build_dep_infos
+        self._initial_dep_infos = initial_dep_infos
 
     def get_graph_updates_info(self, deps_graph):
         """
@@ -309,7 +309,7 @@ class DepsGraphBuilder(object):
                                     list(conanfile._evaluated_requires.values())))
 
     def _apply_build_deps_infos_to_conanfile(self, conanfile):
-        if not self._build_dep_infos:
+        if not self._initial_dep_infos:
             return
 
         # Apply the global build_deps infos
@@ -319,10 +319,10 @@ class DepsGraphBuilder(object):
                 conanfile.deps_cpp_info.update(cpp_info, build_dep_reference)
                 conanfile.deps_env_info.update(env_info, build_dep_reference)
 
-        if conanfile.name and conanfile.name in self._build_dep_infos.keys():
-            apply_infos(self._build_dep_infos[conanfile.name])
+        if conanfile.name and conanfile.name in self._initial_dep_infos.keys():
+            apply_infos(self._initial_dep_infos[conanfile.name])
 
-        apply_infos(self._build_dep_infos[None])
+        apply_infos(self._initial_dep_infos[None])
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
                    loop_ancestors):
