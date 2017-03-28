@@ -200,14 +200,19 @@ class ConanFileLoader(object):
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, reference, path):
+    def load_virtual(self, references, path):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(None, self._runner, self._settings.copy(), path)
 
-        conanfile.requires.add(str(reference))  # Convert to string necessary
-        # conanfile.options.values = options
-        self._user_options.scope_options(reference.name)
+        # Assign environment
+        conanfile._env_values.update(self._env_values)
+
+        for ref in references:
+            conanfile.requires.add(str(ref))  # Convert to string necessary
+            # Allows options without package namespace in conan install commands:
+            #   conan install zlib/1.2.8@lasote/stable -o shared=True
+            self._user_options.scope_options(ref.name)
         conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []

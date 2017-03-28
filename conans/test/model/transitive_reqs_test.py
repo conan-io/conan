@@ -132,11 +132,11 @@ class ConanRequirementsTest(unittest.TestCase):
                                       None)
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
-                                        MockRequireResolver())
+                                        MockRequireResolver(), {})
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load(None, root_conan)
+        deps_graph = self.builder.load(root_conan)
         return deps_graph
 
     def test_basic(self):
@@ -1501,9 +1501,9 @@ class CoreSettingsTest(unittest.TestCase):
         options = OptionsValues.loads(options)
         loader = ConanFileLoader(None, full_settings, None, options, Scopes(), None)
         retriever = Retriever(loader, self.output)
-        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
+        builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver(), {})
         root_conan = retriever.root(content)
-        deps_graph = builder.load(None, root_conan)
+        deps_graph = builder.load(root_conan)
         return deps_graph
 
     def test_basic(self):
@@ -1784,12 +1784,12 @@ class ChatConan(ConanFile):
                                                      "myoption_chat=on"),
                                  Scopes(), env_values=None)
         retriever = Retriever(loader, output)
-        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver())
+        builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver(), {})
         retriever.conan(say_ref, say_content)
         retriever.conan(hello_ref, hello_content)
 
         root_conan = retriever.root(chat_content)
-        deps_graph = builder.load(None, root_conan)
+        deps_graph = builder.load(root_conan)
 
         self.assertEqual(3, len(deps_graph.nodes))
         hello = _get_nodes(deps_graph, "Hello")[0]

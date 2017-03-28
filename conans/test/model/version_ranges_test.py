@@ -157,7 +157,7 @@ class VersionRangesTest(unittest.TestCase):
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)
-        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver, {})
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:
             say_content = """
@@ -172,7 +172,7 @@ class SayConan(ConanFile):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load(None, root_conan)
+        deps_graph = self.builder.load(root_conan)
         return deps_graph
 
     def test_local_basic(self):

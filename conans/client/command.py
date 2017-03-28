@@ -196,7 +196,7 @@ class Command(object):
                               manifest_interactive=manifest_interactive,
                               remote=args.remote,
                               profile=profile,
-                              build_mode=args.build,
+                              build_modes=args.build,
                               update=args.update,
                               generators=["env", "txt"]
                               )
@@ -263,7 +263,7 @@ class Command(object):
                                   current_path=current_path,
                                   remote=args.remote,
                                   profile=profile,
-                                  build_mode=args.build,
+                                  build_modes=args.build,
                                   filename=args.file,
                                   update=args.update,
                                   manifest_folder=manifest_folder,
@@ -365,7 +365,7 @@ class Command(object):
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
-                           build_mode=args.build,
+                           build_modes=args.build,
                            graph_filename=args.graph,
                            show_paths=args.paths)
 
