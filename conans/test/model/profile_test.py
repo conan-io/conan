@@ -31,9 +31,9 @@ class ProfileTest(unittest.TestCase):
         profile.scopes["p1"]["conaning"] = "1"
         profile.scopes["p2"]["testing"] = "2"
 
-        profile.requires.append("zlib/1.2.8@lasote/testing")
-        profile.package_requires["zlib"].append("OpenSSL/1.0.2@lasote/stable")
-        profile.package_requires["zlib"].append("OpenSSL/1.0.3@lasote/stable")
+        profile.requires.append("android_toolchain/1.2.8@lasote/testing")
+        profile.package_requires["zlib"].append("cmake/1.0.2@lasote/stable")
+        profile.package_requires["zlib"].append("autotools/1.0.3@lasote/stable")
 
         dump = profile.dumps()
         new_profile = Profile.loads(dump)
@@ -48,8 +48,14 @@ class ProfileTest(unittest.TestCase):
         self.assertEquals(dict(new_profile.scopes)["p1"]["conaning"], '1')
         self.assertEquals(dict(new_profile.scopes)["p2"]["testing"], '2')
 
-        self.assertEquals(new_profile.package_requires, {"zlib": [ConanFileReference.loads("OpenSSL/1.0.2@lasote/stable"),
-                                                                  ConanFileReference.loads("OpenSSL/1.0.3@lasote/stable")]})
+        self.assertEquals(new_profile.package_requires, {"zlib": [
+                                                              ConanFileReference.loads("autotools/1.0.3@lasote/stable"),
+                                                              ConanFileReference.loads("cmake/1.0.2@lasote/stable")]})
+
+        self.assertEquals(new_profile.all_requires,
+                          set([ConanFileReference.loads("cmake/1.0.2@lasote/stable"),
+                               ConanFileReference.loads("android_toolchain/1.2.8@lasote/testing"),
+                               ConanFileReference.loads("autotools/1.0.3@lasote/stable")]))
 
     def profile_settings_update_test(self):
         prof = '''[settings]
