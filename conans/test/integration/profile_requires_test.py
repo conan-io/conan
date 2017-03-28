@@ -50,6 +50,8 @@ class BuildRequire(ConanFile):
     version = "0.1"
     settings = "os", "compiler", "arch"
     requires = "BuildRequireParent/0.1@lasote/stable"
+    options = {"activate_foo": [True, False]}
+    default_options = "activate_foo=False"
 
     def build(self):
         assert(self.settings.os == "Windows")
@@ -63,6 +65,10 @@ class BuildRequire(ConanFile):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_BUILD_REQUIRE")
         self.env_info.ENV_VAR = "ENV_VALUE_FROM_BUILD_REQUIRE"
         self.env_info.ENV_VAR_MULTI.append("ENV_VALUE_MULTI_FROM_BUILD_REQUIRE")
+        if self.options.activate_foo:
+            self.env_info.FOO_VAR = "1"
+        else:
+            self.env_info.FOO_VAR = "0"
 
 """
 
@@ -129,6 +135,8 @@ class MyLib(ConanFile):
         assert(os.environ["ENV_VAR_MULTI"] == tmp)
         assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_MYLIB_PARENT", "A_C_FLAG_FROM_BUILD_REQUIRE_PARENT", "A_C_FLAG_FROM_BUILD_REQUIRE"])
 
+        assert(os.environ["FOO_VAR"] == "1")
+
 """
 
 
@@ -152,6 +160,8 @@ class MyLib2(ConanFile):
         assert(os.environ.get("ENV_VAR_MULTI", None) == tmp)
         assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE_PARENT", "A_C_FLAG_FROM_BUILD_REQUIRE", "A_C_FLAG_FROM_BUILD_REQUIRE2"])
 
+        assert(os.environ["FOO_VAR"] == "1")
+
 """
 
 
@@ -171,6 +181,9 @@ arch=x86
 PROFILE_VAR_ENV=PROFILE_VAR_VALUE
 BuildRequireParent:ENV_VAR_ONLY_PARENT=1
 ENV_VAR_ONLY_PARENT=0
+
+[options]
+BuildRequire:activate_foo=True
 
 
 """

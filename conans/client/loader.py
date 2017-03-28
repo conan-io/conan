@@ -210,7 +210,8 @@ class ConanFileLoader(object):
 
         for ref in references:
             conanfile.requires.add(str(ref))  # Convert to string necessary
-            # conanfile.options.values = options
+            # Allows options without package namespace in conan install commands:
+            #   conan install zlib/1.2.8@lasote/stable -o shared=True
             self._user_options.scope_options(ref.name)
         conanfile.options.initialize_upstream(self._user_options)
 
