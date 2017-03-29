@@ -82,6 +82,8 @@ class BuildIdTest(unittest.TestCase):
         else:
             client.save({"conanfile.txt": consumer}, clean_first=True)
         client.run('install -s build_type=Debug')
+        self.assertIn("Building package from source as defined by build_policy='missing'",
+                      client.user_io.out)
         self.assertIn("Building my code!", client.user_io.out)
         self.assertIn("Packaging Debug!", client.user_io.out)
         content = load(os.path.join(client.current_folder, "file1.txt"))
