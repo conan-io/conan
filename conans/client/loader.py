@@ -150,22 +150,30 @@ def load_conanfile_class(conanfile_path, check_name_version=False):
     return result
 
 
+def _loader(runner, settings, profile):
+    return ConanFileLoader(runner,
+                           settings=settings,
+                           package_settings=profile.package_settings_values,
+                           options=profile.options, scopes=profile.scopes,
+                           env_values=profile.env_values)
+
+
 def _get_single_loader(current_path, settings, runner):
-    mixed_profile = Profile()
+    profile = Profile()
     conan_info_path = os.path.join(current_path, CONANINFO)
     if conan_info_path and os.path.exists(conan_info_path):
         existing_info = ConanInfo.load_file(conan_info_path)
         settings.values = existing_info.full_settings
-        mixed_profile.options = existing_info.full_options
-        mixed_profile.scopes = existing_info.scope
-        mixed_profile.env_values = existing_info.env_values
+        profile.options = existing_info.full_options
+        profile.scopes = existing_info.scope
+        profile.env_values = existing_info.env_values
 
-    loader = ConanFileLoader(runner,
-                             settings=settings,
-                             package_settings=mixed_profile.package_settings_values,
-                             options=mixed_profile.options, scopes=mixed_profile.scopes,
-                             env_values=mixed_profile.env_values)
-    return loader
+    return _loader(runner, settings, profile)
+
+
+def install_loader(settings, profile, runner):
+    settings.values = profile.settings_values
+    return _loader(runner, settings, profile)
 
 
 def load_conanfile_single(conanfile_path, current_path, settings, runner, output, reference=None,
@@ -182,16 +190,6 @@ def load_conanfile_txt_single(conanfile_path, current_path, settings, runner, ou
     conanfile = loader.load_conan_txt(conanfile_path, output)
     _load_info_file(current_path, conanfile, output, error)
     return conanfile
-
-
-def install_loader(settings, profile, runner):
-    settings.values = profile.settings_values
-
-    return ConanFileLoader(runner,
-                           settings=settings,
-                           package_settings=profile.package_settings_values,
-                           options=profile.options, scopes=profile.scopes,
-                           env_values=profile.env_values)
 
 
 class ConanFileLoader(object):
@@ -302,10 +300,10 @@ class ConanFileLoader(object):
             conanfile.requires.add(str(ref))  # Convert to string necessary
             # Allows options without package namespace in conan install commands:
             #   conan install zlib/1.2.8@lasote/stable -o shared=True
-            self._user_options.scope_options(ref.name)
+            self._user_options.scope_options(ref.name)  # FIXME: This only scope the 1st require
         conanfile.options.initialize_upstream(self._user_options)
 
-        conanfile.generators = []
+        conanfile.generators = []  # remove the default txt generator
         conanfile.scope = self._scopes.package_scope()
 
         return conanfile
