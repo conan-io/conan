@@ -11,8 +11,8 @@ from conans.client.generators import write_generators
 from conans.client.grapher import ConanGrapher, ConanHTMLGrapher
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import ConanInstaller
-from conans.client.loader import ConanFileLoader, load_conanfile_class, load_conanfile_single,\
-    load_conanfile_txt_single
+from conans.client.loader import load_conanfile_class, load_conanfile_single,\
+    load_conanfile_txt_single, install_loader
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import ScopedOutput, Color
 from conans.client.package_copier import PackageCopier
@@ -32,7 +32,6 @@ from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT
 from conans.tools import environment_append
 from conans.util.files import save,  rmdir, normalize, mkdir
 from conans.util.log import logger
-from conans.model.profile import Profile
 
 
 class ConanManager(object):
@@ -48,25 +47,6 @@ class ConanManager(object):
         self._remote_manager = remote_manager
         self._current_scopes = None
         self._search_manager = search_manager
-
-    def _install_loader(self, profile):
-        settings = self._client_cache.settings
-        mixed_profile = Profile()
-        mixed_profile.env_values.update(profile.env_values)
-        settings.values = profile.settings_values
-        if profile.scopes:
-            mixed_profile.scopes.update_scope(profile.scopes)
-        mixed_profile.options.update(profile.options)
-        for pkg, pkg_settings in profile.package_settings.items():
-            mixed_profile.package_settings[pkg].update(pkg_settings)
-
-        self._current_scopes = mixed_profile.scopes
-        self._input_settings = settings.values
-        return ConanFileLoader(self._runner,
-                               settings=settings,
-                               package_settings=mixed_profile.package_settings_values,
-                               options=mixed_profile.options, scopes=mixed_profile.scopes,
-                               env_values=mixed_profile.env_values)
 
     def export(self, user, conan_file_path, keep_source=False):
         """ Export the conans
@@ -129,7 +109,6 @@ class ConanManager(object):
     def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename, current_path):
         if isinstance(reference_or_path, ConanFileReference):
             conanfile = loader.load_virtual([reference_or_path], current_path)
-            is_txt = True
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
             try:
@@ -137,31 +116,19 @@ class ConanManager(object):
                     raise NotFoundException("")
                 conan_file_path = os.path.join(reference_or_path, conanfile_filename or CONANFILE)
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
-                is_txt = False
             except NotFoundException:  # Load conanfile.txt
                 conan_path = os.path.join(reference_or_path, conanfile_filename or CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
-                is_txt = True
         conanfile.cpp_info = CppInfo(current_path)
         conanfile.env_info = EnvInfo(current_path)
 
-        return conanfile, is_txt
+        return conanfile
 
     def _get_graph_builder(self, loader, update, remote_proxy):
         local_search = None if update else self._search_manager
         resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
         graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         return graph_builder
-
-    def _fill_info(self, conanfile, is_txt):
-        # These lines are so the conaninfo stores the correct complete info
-        # FIXME: package_settings are not cached in conaninfo, analyze if it breaks artifactory
-        # FIXME: These lines assigning things to conanfile are ugly here.
-
-        if is_txt:
-            conanfile.info.settings = self._input_settings
-        conanfile.info.full_settings = self._input_settings
-        conanfile.info.scope = self._current_scopes
 
     def info(self, reference, current_path, profile, remote=None,
              info=None, filename=None, check_updates=False,
@@ -180,12 +147,10 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=False, check_updates=check_updates)
 
-        loader = self._install_loader(profile=profile)
-        conanfile, is_txt = self._get_conanfile_object(loader, reference, filename, current_path)
+        loader = install_loader(self._client_cache.settings, profile, self._runner)
+        conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
-
-        self._fill_info(conanfile, is_txt)
 
         if build_order:
             result = deps_graph.build_order(build_order)
@@ -317,7 +282,7 @@ class ConanManager(object):
                                            interactive=manifest_interactive) if manifest_folder else None
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=update, check_updates=False, manifest_manager=manifest_manager)
-        loader = self._install_loader(profile=profile)
+        loader = install_loader(self._client_cache.settings, profile, self._runner)
 
         # Install the build_requires and get the info objets
         build_dep_infos = None
@@ -329,20 +294,20 @@ class ConanManager(object):
             loader.initial_deps_infos = build_dep_infos
 
         # Build the graph for the real dependency tree
-        conanfile, is_txt = self._get_conanfile_object(loader, reference, filename, current_path)
+        conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 
         # This line is so the conaninfo stores the correct complete info
-        self._fill_info(conanfile, is_txt)
+        conanfile.info.scope = profile.scopes
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
         Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         try:
-            if detected_os() != self._input_settings.os:
-                message = "Cross-platform from '%s' to '%s'" % (detected_os(), self._input_settings.os)
+            if detected_os() != loader._settings.os:
+                message = "Cross-platform from '%s' to '%s'" % (detected_os(), loader._settings.os)
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
             pass
@@ -404,7 +369,7 @@ class ConanManager(object):
             if conan_file_path.endswith(".txt"):
                 conanfile = load_conanfile_txt_single(conan_file_path, current_path,
                                                       self._client_cache.settings,
-                                                      self._runner, output)
+                                                      self._runner, output, error=True)
             else:
                 conanfile = load_conanfile_single(conan_file_path, current_path,
                                                   self._client_cache.settings,
@@ -613,6 +578,3 @@ class ConanManager(object):
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
         return remote_proxy.authenticate(name, password)
-
-
-

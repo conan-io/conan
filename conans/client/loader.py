@@ -150,8 +150,7 @@ def load_conanfile_class(conanfile_path, check_name_version=False):
     return result
 
 
-def load_conanfile_single(conanfile_path, current_path, settings, runner, output, reference=None,
-                          error=False):
+def _get_single_loader(current_path, settings, runner):
     mixed_profile = Profile()
     conan_info_path = os.path.join(current_path, CONANINFO)
     if conan_info_path and os.path.exists(conan_info_path):
@@ -166,32 +165,33 @@ def load_conanfile_single(conanfile_path, current_path, settings, runner, output
                              package_settings=mixed_profile.package_settings_values,
                              options=mixed_profile.options, scopes=mixed_profile.scopes,
                              env_values=mixed_profile.env_values)
+    return loader
 
+
+def load_conanfile_single(conanfile_path, current_path, settings, runner, output, reference=None,
+                          error=False):
+    loader = _get_single_loader(current_path, settings, runner)
     consumer = not reference
     conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
     _load_info_file(current_path, conanfile, output, error)
     return conanfile
 
 
-def load_conanfile_txt_single(conanfile_path, current_path, settings, runner, output):
-    mixed_profile = Profile()
-    conan_info_path = os.path.join(current_path, CONANINFO)
-    if conan_info_path and os.path.exists(conan_info_path):
-        existing_info = ConanInfo.load_file(conan_info_path)
-        settings.values = existing_info.full_settings
-        mixed_profile.options = existing_info.full_options
-        mixed_profile.scopes = existing_info.scope
-        mixed_profile.env_values = existing_info.env_values
-
-    loader = ConanFileLoader(runner,
-                             settings=settings,
-                             package_settings=mixed_profile.package_settings_values,
-                             options=mixed_profile.options, scopes=mixed_profile.scopes,
-                             env_values=mixed_profile.env_values)
-
+def load_conanfile_txt_single(conanfile_path, current_path, settings, runner, output, error=False):
+    loader = _get_single_loader(current_path, settings, runner)
     conanfile = loader.load_conan_txt(conanfile_path, output)
-    _load_info_file(current_path, conanfile, output)
+    _load_info_file(current_path, conanfile, output, error)
     return conanfile
+
+
+def install_loader(settings, profile, runner):
+    settings.values = profile.settings_values
+
+    return ConanFileLoader(runner,
+                           settings=settings,
+                           package_settings=profile.package_settings_values,
+                           options=profile.options, scopes=profile.scopes,
+                           env_values=profile.env_values)
 
 
 class ConanFileLoader(object):
