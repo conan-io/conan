@@ -10,6 +10,8 @@ from conans.model.options import OptionsValues
 import os
 from conans.util.files import load, mkdir
 from conans.model.values import Values
+from conans.paths import CONANINFO
+from conans.model.info import ConanInfo
 
 
 class Profile(object):
@@ -44,6 +46,18 @@ class Profile(object):
         for pkg, settings in self.package_settings.items():
             result[pkg] = list(settings.items())
         return result
+
+    @staticmethod
+    def read_conaninfo(current_path):
+        profile = Profile()
+        conan_info_path = os.path.join(current_path, CONANINFO)
+        if os.path.exists(conan_info_path):
+            existing_info = ConanInfo.load_file(conan_info_path)
+            profile.settings = OrderedDict(existing_info.full_settings.as_list())
+            profile.options = existing_info.full_options
+            profile.scopes = existing_info.scope
+            profile.env_values = existing_info.env_values
+        return profile
 
     @staticmethod
     def read_file(profile_name, cwd, default_folder):

@@ -17,6 +17,7 @@ from conans.client.conf import default_settings_yml
 from conans.model.values import Values
 from conans.test.utils.test_files import temp_folder
 from conans.model.scope import Scopes
+from conans.model.profile import Profile
 
 
 class Retriever(object):
@@ -127,9 +128,7 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), None,
-                                      OptionsValues.loads(""), Scopes(),
-                                      None)
+        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         MockRequireResolver())
@@ -1498,8 +1497,9 @@ class CoreSettingsTest(unittest.TestCase):
     def root(self, content, options="", settings=""):
         full_settings = Settings.loads(default_settings_yml)
         full_settings.values = Values.loads(settings)
-        options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, full_settings, None, options, Scopes(), None)
+        profile = Profile()
+        profile.options = OptionsValues.loads(options)
+        loader = ConanFileLoader(None, full_settings, profile)
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
@@ -1778,11 +1778,11 @@ class ChatConan(ConanFile):
     options = {"myoption_chat": ["on", "off"]}
 """
         output = TestBufferConanOutput()
-        loader = ConanFileLoader(None, Settings.loads(""), None,
-                                 OptionsValues.loads("Say:myoption_say=123\n"
-                                                     "Hello:myoption_hello=True\n"
-                                                     "myoption_chat=on"),
-                                 Scopes(), env_values=None)
+        profile = Profile()
+        profile.options = OptionsValues.loads("Say:myoption_say=123\n"
+                                              "Hello:myoption_hello=True\n"
+                                              "myoption_chat=on")
+        loader = ConanFileLoader(None, Settings.loads(""), profile)
         retriever = Retriever(loader, output)
         builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver())
         retriever.conan(say_ref, say_content)

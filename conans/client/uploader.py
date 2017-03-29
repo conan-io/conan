@@ -4,7 +4,7 @@ import time
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, is_a_reference, ConanFileReference
 from conans.util.log import logger
-from conans.client.loader import load_conanfile_class
+from conans.client.loader_parse import load_conanfile_class
 
 
 class ConanUploader(object):

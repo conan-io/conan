@@ -5,12 +5,12 @@ from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedCl
                            NotFoundException)
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
-from conans.client.loader import load_conanfile_class
 import os
 from conans.paths import rm_conandir, EXPORT_SOURCES_DIR, EXPORT_SOURCES_TGZ_NAME
 from conans.client.remover import DiskRemover
 from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
+from conans.client.loader_parse import load_conanfile_class
 
 
 class ConanProxy(object):

@@ -15,6 +15,7 @@ from conans.model.scope import Scopes
 from conans.client.require_resolver import RequireResolver, satisfying
 import re
 from nose_parameterized import parameterized
+from conans.model.profile import Profile
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -152,8 +153,7 @@ class VersionRangesTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), None,
-                                      OptionsValues.loads(""), Scopes(), None)
+        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)
