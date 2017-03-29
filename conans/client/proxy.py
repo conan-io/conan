@@ -5,7 +5,7 @@ from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedCl
                            NotFoundException)
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
-from conans.client.loader import ConanFileLoader
+from conans.client.loader import load_conanfile_class
 import os
 from conans.paths import rm_conandir, EXPORT_SOURCES_DIR, EXPORT_SOURCES_TGZ_NAME
 from conans.client.remover import DiskRemover
@@ -359,8 +359,7 @@ class ConanProxy(object):
         export_path = self._client_cache.export(reference)
         self._remote_manager.get_recipe(reference, export_path, remote)
         conanfile_path = self._client_cache.conanfile(reference)
-        loader = ConanFileLoader(None, None, None, None, None, None)
-        conanfile = loader.load_class(conanfile_path)
+        conanfile = load_conanfile_class(conanfile_path)
         short_paths = conanfile.short_paths
         self._registry.set_ref(reference, remote)
         output = ScopedOutput(str(reference), self._out)
