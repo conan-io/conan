@@ -210,6 +210,9 @@ class ProfileRequiresTest(unittest.TestCase):
 [requires]
 MyLib/0.1@lasote/stable
 MyLib2/0.1@lasote/stable
+[generators]
+cmake
+gcc
 """
         self.client.save({"profile.txt": profile, "conanfile.txt": reuse}, clean_first=True)
         self.client.run("install --profile ./profile.txt --build missing")

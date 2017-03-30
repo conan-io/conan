@@ -1,4 +1,7 @@
 import copy
+import platform
+
+from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
                             "libstdcxx": "-library=stdcxx4",
@@ -88,6 +91,85 @@ class AutoToolsBuildEnvironment(object):
         self.link_flags = self._configure_link_flags()  # TEST!
         # Not declared by default
         self.fpic = None
+
+    def _get_host_build_target_flags(self, arch_detected, os_detected):
+        """Based on google search for build/host triplets, it could need a lot and complex verification"""
+        if not cross_building(self._conanfile.settings, os_detected, arch_detected):
+            return None, None, None
+
+        arch_setting = self._conanfile.settings.get_safe("arch")
+        os_setting = self._conanfile.settings.get_safe("os")
+        os_detected = os_detected
+
+        if os_detected == "Windows" and os_setting != "Windows":
+            return None, None, None    # Don't know what to do with these, even exists? its only for configure
+
+        # Building FOR windows
+        if os_setting == "Windows":
+            build = "i686-w64-mingw32" if arch_detected == "x86" else "x86_64-w64-mingw32"
+            target = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
+        else:  # Building for Linux or Android
+            build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu", "Darwin": "apple-macos"}.get(os_detected,
+                                                                                                  os_detected.lower()))
+            if arch_setting == "armv8":
+                host_arch = "aarch64"
+            else:
+                host_arch = "arm" if "arm" in arch_setting else arch_setting
+            target = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
+                                           "Android": "-linux-android"}.get(os_setting, ""))
+            if arch_setting == "armv7hf" and os_setting == "Linux":
+                target += "hf"
+            elif "arm" in arch_setting and arch_setting != "armv8" and os_setting == "Android":
+                target += "eabi"
+
+        host = build
+        return build, host, target
+
+    def configure(self, configure_dir=None, args=None, build=None, host=None, target=None):
+        """
+        :param args: Optional arguments to pass to configure.
+        :param build: In which system the program will be built. "False" skips the --build flag
+        :param host: In which system the generated program will run.  "False" skips the --host flag
+        :param target: This option is only used to build a cross-compiling toolchain.  "False" skips the --target flag
+                       When the tool chain generates executable program, in which target system the program will run.
+        :return: None
+
+        http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
+        https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
+
+        """
+        configure_dir = configure_dir or "./"
+        auto_build, auto_host, auto_target = None, None, None
+        if build is None or host is None or target is None:
+            auto_build, auto_host, auto_target = self._get_host_build_target_flags(detected_architecture(), platform.system())
+
+        if build is None:
+            build = auto_build
+        if build:
+            build = "--build %s" % build
+        else:
+            build = ""
+
+        if host is None:
+            host = auto_host
+        if host:
+            host = "--host %s" % host
+        else:
+            host = ""
+
+        if target is None:
+            target = auto_target
+        if target:
+            target = "--target %s" % target
+        else:
+            target = ""
+
+        with environment_append(self.vars):
+            self._conanfile.run("%sconfigure %s %s %s %s" % (configure_dir, args_to_string(args), build, host, target))
+
+    def make(self, args=""):
+        with environment_append(self.vars):
+            self._conanfile.run("make %s -j%s" % (args_to_string(args), cpu_count()))
 
     def _configure_link_flags(self):
         """Not the -L"""

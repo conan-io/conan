@@ -289,6 +289,7 @@ class ConanManager(object):
         # requires level to filter later (profiles allow to filter targeting a library in the real deps tree)
         for node in requires_nodes:
             deps_cpp_info = DepsCppInfo()
+            deps_cpp_info.public_deps = []
             deps_cpp_info.update(node.conanfile.cpp_info, node.conan_ref)
             deps_cpp_info.update(node.conanfile.deps_cpp_info, node.conan_ref)
 

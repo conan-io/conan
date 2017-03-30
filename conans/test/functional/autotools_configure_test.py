@@ -218,3 +218,121 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LDFLAGS': '-inventedflag -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         self.assertEquals(be.vars, expected)
+
+    def cross_build_flags_test(self):
+        def get_values(this_os, this_arch, setting_os, setting_arch):
+            settings = MockSettings({"arch": setting_arch,
+                                     "os": setting_os})
+            conanfile = MockConanfile(settings)
+            conanfile.settings = settings
+            be = AutoToolsBuildEnvironment(conanfile)
+            return be._get_host_build_target_flags(this_arch, this_os)
+
+        build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "arm-linux-gnueabihf")
+
+        build, host, target = get_values("Linux", "x86", "Linux", "armv7hf")
+        self.assertEquals(build, "x86-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "arm-linux-gnueabihf")
+
+        build, host, target = get_values("Linux", "x86", "Linux", "x86")
+        self.assertIsNone(build)
+        self.assertIsNone(host)
+        self.assertIsNone(target)
+
+        build, host, target = get_values("Linux", "x86_64", "Linux", "x86_64")
+        self.assertIsNone(build)
+        self.assertIsNone(host)
+        self.assertIsNone(target)
+
+        build, host, target = get_values("Linux", "x86_64", "Linux", "x86")
+        self.assertIsNone(build)
+        self.assertIsNone(host)
+        self.assertIsNone(target)
+
+        build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "arm-linux-gnueabihf")
+
+        build, host, target = get_values("Linux", "x86_64", "Linux", "armv7")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "arm-linux-gnueabi")
+
+        build, host, target = get_values("Linux", "x86_64", "Linux", "armv6")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "arm-linux-gnueabi")
+
+        build, host, target = get_values("Linux", "x86_64", "Android", "x86")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "x86-linux-android")
+
+        build, host, target = get_values("Linux", "x86_64", "Android", "x86_64")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "x86_64-linux-android")
+
+        build, host, target = get_values("Linux", "x86_64", "Android", "armv7")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "arm-linux-androideabi")
+
+        build, host, target = get_values("Linux", "x86_64", "Android", "armv7hf")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "arm-linux-androideabi")
+
+        build, host, target = get_values("Linux", "x86_64", "Android", "armv8")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "aarch64-linux-android")
+
+        build, host, target = get_values("Linux", "x86_64", "Android", "armv6")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "arm-linux-androideabi")
+
+        build, host, target = get_values("Linux", "x86_64", "Windows", "x86")
+        self.assertEquals(build, "x86_64-w64-mingw32")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "i686-w64-mingw32")
+
+        build, host, target = get_values("Linux", "x86_64", "Windows", "x86_64")
+        self.assertEquals(build, "x86_64-w64-mingw32")
+        self.assertEquals(build, host)
+        self.assertEquals(target, "x86_64-w64-mingw32")
+
+        build, host, target = get_values("Windows", "x86_64", "Windows", "x86_64")
+        self.assertIsNone(build)
+        self.assertIsNone(host)
+        self.assertIsNone(target)
+
+        build, host, target = get_values("Windows", "x86", "Windows", "x86")
+        self.assertIsNone(build)
+        self.assertIsNone(host)
+        self.assertIsNone(target)
+
+        build, host, target = get_values("Windows", "x86_64", "Windows", "x86")
+        self.assertIsNone(build)
+        self.assertIsNone(host)
+        self.assertIsNone(target)
+
+        build, host, target = get_values("Windows", "x86_64", "Linux", "armv7hf")
+        self.assertIsNone(build)
+        self.assertIsNone(host)
+        self.assertIsNone(target)
+
+        build, host, target = get_values("Windows", "x86_64", "Linux", "x86_64")
+        self.assertIsNone(build)
+        self.assertIsNone(host)
+        self.assertIsNone(target)
+
+        build, host, target = get_values("Darwin", "x86_64", "Android", "armv7hf")
+        self.assertEquals(build, "x86_64-apple-macos")
+        self.assertEquals(target, "arm-linux-androideabi")

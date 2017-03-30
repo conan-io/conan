@@ -152,8 +152,8 @@ class SayConan(ConanFile):
 
         # Now add new settings to config and try again
         config = load(self.client.paths.settings_path)
-        config = config.replace("Windows,",
-                                "Windows, ChromeOS,")
+        config = config.replace("Windows:\n",
+                                "Windows:\n    ChromeOS:\n")
 
         save(self.client.paths.settings_path, config)
         self.client.run("install -s os=ChromeOS --build missing")

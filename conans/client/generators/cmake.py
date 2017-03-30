@@ -7,6 +7,8 @@ from conans.client.generators.cmake_common import cmake_dependency_vars,\
 
 class DepsCppCmake(object):
     def __init__(self, deps_cpp_info):
+        self.deps_cpp_info = deps_cpp_info
+
         def multiline(field):
             return "\n\t\t\t".join('"%s"' % p.replace("\\", "/") for p in field)
 
@@ -24,6 +26,15 @@ class DepsCppCmake(object):
         self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
         self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
         self.rootpath = '"%s"' % deps_cpp_info.rootpath.replace("\\", "/")
+
+        # Vars excluding sysroot
+        def _remove_sysroot(var_list):
+            return [flag for flag in var_list if "--sysroot" not in flag]
+
+        self.cppflags_nosysroot = " ".join(_remove_sysroot(self.deps_cpp_info.cppflags))
+        self.cflags_nosysroot = " ".join(_remove_sysroot(self.deps_cpp_info.cflags))
+        self.sharedlinkflags_nosysroot = " ".join(_remove_sysroot(self.deps_cpp_info.sharedlinkflags))
+        self.exelinkflags_nosysroot = " ".join(_remove_sysroot(self.deps_cpp_info.rootpath))
 
 
 class CMakeGenerator(Generator):
