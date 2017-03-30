@@ -1,64 +1,23 @@
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.printer import Printer
 from conans.client.installer import ConanInstaller
-from conans.model.build_info import DepsCppInfo
-from conans.model.env_info import DepsEnvInfo
-from collections import defaultdict
 from conans.client.require_resolver import RequireResolver
 from conans.client.deps_builder import DepsGraphBuilder
 import fnmatch
 import copy
 
 
-def _apply_initial_deps_infos_to_conanfile(conanfile, initial_deps_infos):
-    if not initial_deps_infos:
-        return
-
-    def apply_infos(infos):
-        for build_dep_reference, info in infos.items():  # List of tuples (cpp_info, env_info)
-            cpp_info, env_info = info
-            conanfile.deps_cpp_info.update(cpp_info, build_dep_reference)
-            conanfile.deps_env_info.update(env_info, build_dep_reference)
-
-    # If there are some specific package-level deps infos apply them
-    if conanfile.name and conanfile.name in initial_deps_infos.keys():
-        apply_infos(initial_deps_infos[conanfile.name])
-
-    # And also apply the global ones
-    apply_infos(initial_deps_infos[None])
-
-
-def _install_build_requires_and_get_infos(deps_graph, profile):
-    # Build the graph and install the build_require dependency tree
-    # Build a dict with
-    # {"zlib": {"cmake/2.8@lasote/stable": (deps_cpp_info, deps_env_info),
-    #           "other_tool/3.2@lasote/stable": (deps_cpp_info, deps_env_info)}
-    #  "None": {"cmake/3.1@lasote/stable": (deps_cpp_info, deps_env_info)}
-    # taking into account the package level requires
-    refs_objects = {}
+def _apply_build_requires(deps_graph, conanfile):
     requires_nodes = deps_graph.direct_requires()
-    # We have all the cpp_info and env_info in the virtual conanfile, but we need those info objects at
-    # requires level to filter later (profiles allow to filter targeting a library in the real deps tree)
-    for node in requires_nodes:
-        deps_cpp_info = DepsCppInfo()
-        deps_cpp_info.public_deps = []  # FIXME: spaguetti
-        deps_cpp_info.update(node.conanfile.cpp_info, node.conan_ref)
-        deps_cpp_info.update(node.conanfile.deps_cpp_info, node.conan_ref)
+    assert len(requires_nodes) == 1
+    node = requires_nodes[0]
+    conan_ref, build_require_conanfile = node
 
-        deps_env_info = DepsEnvInfo()
-        deps_env_info.update(node.conanfile.env_info, node.conan_ref)
-        deps_env_info.update(node.conanfile.deps_env_info, node.conan_ref)
+    conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, conan_ref)
+    conanfile.deps_cpp_info.update(build_require_conanfile.deps_cpp_info, conan_ref)
 
-        refs_objects[node.conan_ref] = (deps_cpp_info, deps_env_info)
-
-    build_dep_infos = defaultdict(dict)
-    for dest_package, references in profile.package_requires.items():  # Package level ones
-        for ref in references:
-            build_dep_infos[dest_package][ref] = refs_objects[ref]
-    for global_reference in profile.requires:
-        build_dep_infos[None][global_reference] = refs_objects[global_reference]
-
-    return build_dep_infos
+    conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref)
+    conanfile.deps_env_info.update(build_require_conanfile.deps_env_info, conan_ref)
 
 
 class BuildRequires(object):
@@ -73,7 +32,7 @@ class BuildRequires(object):
         self._search_manager = search_manager
         self._build_requires = build_requires
 
-    def install(self, reference):
+    def install(self, reference, conanfile):
         build_requires = []
         str_ref = str(reference)
         for pattern, req_list in self._build_requires.items():
@@ -89,6 +48,8 @@ class BuildRequires(object):
             if not cached_graph:
                 cached_graph = self._install(build_require)
                 self._cached_graphs[reference] = cached_graph
+
+            _apply_build_requires(cached_graph, conanfile)
 
     def _install(self, build_require):
         self._output.info("Installing build_require: %s" % str(build_require))
@@ -108,6 +69,7 @@ class BuildRequires(object):
 
         # Make sure we recursively do not propagate the "*" pattern
         build_requires = copy.copy(self)
+        build_requires._build_requires = self._build_requires.copy()
         build_requires._build_requires.pop("*", None)
 
         installer = ConanInstaller(self._client_cache, self._output, self._remote_proxy,

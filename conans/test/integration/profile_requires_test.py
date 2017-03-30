@@ -156,9 +156,10 @@ class MyLib2(ConanFile):
         assert(os.environ["ENV_VAR"] == "ENV_VALUE_FROM_BUILD_REQUIRE")
         assert(os.environ["ENV_VAR_REQ2"] == "ENV_VALUE_FROM_BUILD_REQUIRE2")
 
-        tmp = "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE2" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT"
+        tmp = "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE2"
+
         assert(os.environ.get("ENV_VAR_MULTI", None) == tmp)
-        assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE_PARENT", "A_C_FLAG_FROM_BUILD_REQUIRE", "A_C_FLAG_FROM_BUILD_REQUIRE2"])
+        assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE2", "A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",  "A_C_FLAG_FROM_BUILD_REQUIRE"])
 
         assert(os.environ["FOO_VAR"] == "1")
 

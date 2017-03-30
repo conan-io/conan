@@ -211,7 +211,7 @@ class ConanInstaller(object):
                 elif build_mode.forced(conan_ref, conan_file):
                     output.warn('Forced build from source')
 
-                self._build_requires.install(conan_ref)
+                self._build_requires.install(conan_ref, conan_file)
 
                 t1 = time.time()
                 # Assign to node the propagated info
