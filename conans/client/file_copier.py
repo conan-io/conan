@@ -127,7 +127,7 @@ class FileCopier(object):
             elif os.path.isdir(abs_src_name):
                 try:
                     os.makedirs(abs_dst_name)
-                except FileExistsError:
+                except OSError:
                     pass
             else:
                 shutil.copy2(abs_src_name, abs_dst_name)
