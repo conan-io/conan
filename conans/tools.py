@@ -439,7 +439,7 @@ class OSInfo(object):
                                   "xenserver", "amazon", "oracle")
 
     @staticmethod
-    def get_win_os_version(self):
+    def get_win_os_version():
         """
         Get's the OS major and minor versions.  Returns a tuple of
         (OS_MAJOR, OS_MINOR).
