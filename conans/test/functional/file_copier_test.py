@@ -1,7 +1,5 @@
 import unittest
 import os
-from turtledemo.chaos import f
-
 from conans.util.files import save, load
 from conans.test.utils.test_files import temp_folder
 import platform
