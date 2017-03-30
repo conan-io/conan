@@ -167,8 +167,8 @@ class MyLib2(ConanFile):
 
 profile = """
 [build_requires]
-BuildRequire/0.1@lasote/stable
-MyLib2:BuildRequire2/0.1@lasote/stable
+*: BuildRequire/0.1@lasote/stable
+MyLib2/*: BuildRequire2/0.1@lasote/stable
 
 [settings]
 os=Windows

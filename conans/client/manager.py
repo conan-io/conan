@@ -1,6 +1,6 @@
 import os
 import time
-from collections import OrderedDict, Counter, defaultdict
+from collections import OrderedDict, Counter
 
 from conans.client import packager
 from conans.client.client_cache import ClientCache
@@ -24,14 +24,13 @@ from conans.client.source import config_source, config_source_local
 from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException
-from conans.model.build_info import DepsCppInfo, CppInfo
-from conans.model.env_info import EnvInfo, DepsEnvInfo
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT
 from conans.tools import environment_append
 from conans.util.files import save,  rmdir, normalize, mkdir
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
+from conans.client.build_requires import BuildRequires
 
 
 class ConanManager(object):
@@ -101,7 +100,7 @@ class ConanManager(object):
 
     def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename, current_path):
         if isinstance(reference_or_path, ConanFileReference):
-            conanfile = loader.load_virtual([reference_or_path], current_path)
+            conanfile = loader.load_virtual(reference_or_path, current_path)
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
             try:
@@ -112,8 +111,6 @@ class ConanManager(object):
             except NotFoundException:  # Load conanfile.txt
                 conan_path = os.path.join(reference_or_path, conanfile_filename or CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
-        conanfile.cpp_info = CppInfo(current_path)
-        conanfile.env_info = EnvInfo(current_path)
 
         return conanfile
 
@@ -151,7 +148,7 @@ class ConanManager(object):
             return
 
         if build_modes is not None:
-            installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
+            installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, None)
             nodes = installer.nodes_to_build(deps_graph, build_modes)
             counter = Counter(ref.conan.name for ref, _ in nodes)
             self._user_io.out.info(", ".join((str(ref)
@@ -197,60 +194,6 @@ class ConanManager(object):
                                                   remote, read_dates(deps_graph),
                                                   self._client_cache, package_filter, show_paths)
 
-    def _install_build_requires(self, loader, remote_proxy, requires, current_path):
-        self._user_io.out.info("---------- Installing build_requires -------------")
-        conanfile = loader.load_virtual(requires, current_path)
-        conanfile.cpp_info = CppInfo(current_path)
-        conanfile.env_info = EnvInfo(current_path)
-
-        # FIXME: Forced update=True, build_mode, Where to define it?
-        update = True
-        build_modes = ["missing"]
-
-        graph_builder = self._get_graph_builder(loader, update, remote_proxy)
-        deps_graph = graph_builder.load(conanfile)
-
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        Printer(self._user_io.out).print_graph(deps_graph, registry)
-
-        installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
-        installer.install(deps_graph, build_modes)
-        self._user_io.out.info("-------------------------------------------------\n")
-        return deps_graph
-
-    def _install_build_requires_and_get_infos(self, profile, loader, remote_proxy, current_path):
-        # Build the graph and install the build_require dependency tree
-        deps_graph = self._install_build_requires(loader, remote_proxy, profile.all_requires, current_path)
-        # Build a dict with
-        # {"zlib": {"cmake/2.8@lasote/stable": (deps_cpp_info, deps_env_info),
-        #           "other_tool/3.2@lasote/stable": (deps_cpp_info, deps_env_info)}
-        #  "None": {"cmake/3.1@lasote/stable": (deps_cpp_info, deps_env_info)}
-        # taking into account the package level requires
-        refs_objects = {}
-        requires_nodes = deps_graph.direct_requires()
-        # We have all the cpp_info and env_info in the virtual conanfile, but we need those info objects at
-        # requires level to filter later (profiles allow to filter targeting a library in the real deps tree)
-        for node in requires_nodes:
-            deps_cpp_info = DepsCppInfo()
-            deps_cpp_info.public_deps = []  # FIXME: spaguetti
-            deps_cpp_info.update(node.conanfile.cpp_info, node.conan_ref)
-            deps_cpp_info.update(node.conanfile.deps_cpp_info, node.conan_ref)
-
-            deps_env_info = DepsEnvInfo()
-            deps_env_info.update(node.conanfile.env_info, node.conan_ref)
-            deps_env_info.update(node.conanfile.deps_env_info, node.conan_ref)
-
-            refs_objects[node.conan_ref] = (deps_cpp_info, deps_env_info)
-
-        build_dep_infos = defaultdict(dict)
-        for dest_package, references in profile.package_requires.items():  # Package level ones
-            for ref in references:
-                build_dep_infos[dest_package][ref] = refs_objects[ref]
-        for global_reference in profile.requires:
-            build_dep_infos[None][global_reference] = refs_objects[global_reference]
-
-        return build_dep_infos
-
     def install(self, reference, current_path, profile, remote=None,
                 build_modes=None, filename=None, update=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
@@ -277,17 +220,6 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=update, check_updates=False, manifest_manager=manifest_manager)
         loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
-
-        # Install the build_requires and get the info objets
-        build_dep_infos = None
-        if profile.all_requires:
-            # {"zlib": {"cmake/2.8@lasote/stable": (deps_cpp_info, deps_env_info),
-            #           "other_tool/3.2@lasote/stable": (deps_cpp_info, deps_env_info)}
-            #  "None": {"cmake/3.1@lasote/stable": (deps_cpp_info, deps_env_info)}
-            build_dep_infos = self._install_build_requires_and_get_infos(profile, loader, remote_proxy, current_path)
-            loader.initial_deps_infos = build_dep_infos
-
-        # Build the graph for the real dependency tree
         conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
@@ -306,9 +238,12 @@ class ConanManager(object):
         except ConanException:  # Setting os doesn't exist
             pass
 
-        installer = ConanInstaller(self._client_cache, self._user_io, remote_proxy)
+        build_requires = BuildRequires(loader, remote_proxy, self._user_io.out, self._client_cache,
+                                       self._search_manager, profile.build_requires, current_path)
+        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy,
+                                   build_requires)
 
-        installer.install(deps_graph, build_modes)
+        installer.install(deps_graph, build_modes, current_path)
 
         prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
         output = ScopedOutput(prefix, self._user_io.out)

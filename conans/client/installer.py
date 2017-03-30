@@ -20,11 +20,7 @@ from conans.tools import environment_append
 from conans.util.tracer import log_package_built
 
 
-def _init_package_info(deps_graph, paths):
-    """ Made external so it is independent of installer and can called
-    in testing too
-    """
-    # Assign export root folders
+def _init_package_info(deps_graph, paths, current_path):
     for node in deps_graph.nodes:
         conan_ref, conan_file = node
         if conan_ref:
@@ -34,6 +30,9 @@ def _init_package_info(deps_graph, paths):
             conan_file.package_folder = package_folder
             conan_file.cpp_info = CppInfo(package_folder)
             conan_file.env_info = EnvInfo(package_folder)
+        else:
+            conan_file.cpp_info = CppInfo(current_path)
+            conan_file.env_info = EnvInfo(current_path)
 
 
 def build_id(conanfile):
@@ -108,18 +107,19 @@ class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, client_cache, user_io, remote_proxy):
+    def __init__(self, client_cache, output, remote_proxy, build_requires):
 
         self._client_cache = client_cache
-        self._out = user_io.out
+        self._out = output
         self._remote_proxy = remote_proxy
+        self._build_requires = build_requires
 
-    def install(self, deps_graph, build_modes):
+    def install(self, deps_graph, build_modes, current_path):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
         t1 = time.time()
-        _init_package_info(deps_graph, self._client_cache)
+        _init_package_info(deps_graph, self._client_cache, current_path)
         # order by levels and propagate exports as download imports
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
@@ -210,6 +210,8 @@ class ConanInstaller(object):
                     output.info("Building package from source as defined by build_policy='missing'")
                 elif build_mode.forced(conan_ref, conan_file):
                     output.warn('Forced build from source')
+
+                self._build_requires.install(conan_ref)
 
                 t1 = time.time()
                 # Assign to node the propagated info

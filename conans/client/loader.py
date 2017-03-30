@@ -13,24 +13,6 @@ from conans.model.profile import Profile
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
 
 
-def _apply_initial_deps_infos_to_conanfile(conanfile, initial_deps_infos):
-    if not initial_deps_infos:
-        return
-
-    def apply_infos(infos):
-        for build_dep_reference, info in infos.items():  # List of tuples (cpp_info, env_info)
-            cpp_info, env_info = info
-            conanfile.deps_cpp_info.update(cpp_info, build_dep_reference)
-            conanfile.deps_env_info.update(env_info, build_dep_reference)
-
-    # If there are some specific package-level deps infos apply them
-    if conanfile.name and conanfile.name in initial_deps_infos.keys():
-        apply_infos(initial_deps_infos[conanfile.name])
-
-    # And also apply the global ones
-    apply_infos(initial_deps_infos[None])
-
-
 def _load_info_file(current_path, conanfile, output, error=False):
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
@@ -80,7 +62,6 @@ class ConanFileLoader(object):
 
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
-        self.initial_deps_infos = None
 
     def load_conan(self, conanfile_path, output, consumer=False, reference=None):
         """ loads a ConanFile object from the given file
@@ -112,7 +93,6 @@ class ConanFileLoader(object):
             else:
                 result.scope = self._scopes.package_scope(result.name)
 
-            _apply_initial_deps_infos_to_conanfile(result, self.initial_deps_infos)
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
@@ -155,19 +135,18 @@ class ConanFileLoader(object):
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, references, path):
+    def load_virtual(self, reference, current_path):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(None, self._runner, self._settings.copy(), path)
+        conanfile = ConanFile(None, self._runner, self._settings.copy(), current_path)
 
         # Assign environment
         conanfile._env_values.update(self._env_values)
 
-        for ref in references:
-            conanfile.requires.add(str(ref))  # Convert to string necessary
-            # Allows options without package namespace in conan install commands:
-            #   conan install zlib/1.2.8@lasote/stable -o shared=True
-            self._user_options.scope_options(ref.name)  # FIXME: This only scope the 1st require
+        conanfile.requires.add(str(reference))  # Convert to string necessary
+        # Allows options without package namespace in conan install commands:
+        #   conan install zlib/1.2.8@lasote/stable -o shared=True
+        self._user_options.scope_options(reference.name)
         conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []  # remove the default txt generator

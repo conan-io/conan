@@ -25,16 +25,7 @@ class Profile(object):
         self.env_values = EnvValues()
         self.scopes = Scopes()
         self.options = OptionsValues()
-        self.requires = []
-        self.package_requires = defaultdict(list)
-
-    @property
-    def all_requires(self):
-        ret = []
-        for references in self.package_requires.values():
-            ret.extend(references)
-        ret.extend(self.requires)
-        return set(ret)
+        self.build_requires = OrderedDict()  # conan_ref Pattern: list of conan_ref
 
     @property
     def settings_values(self):
@@ -131,17 +122,9 @@ class Profile(object):
             if doc.build_requires:
                 # FIXME CHECKS OF DUPLICATED?
                 for req in doc.build_requires.splitlines():
-                    if ":" in req:
-                        package_name, req = req.split(":", 1)
-                        try:
-                            ref = ConanFileReference.loads(req.strip())
-                            obj.package_requires[package_name.strip()].append(ref)
-                        except:
-                            raise ConanException("Invalid requirement reference '%s' specified in profile" % req)
-
-                    else:
-                        ref = ConanFileReference.loads(req.strip())
-                        obj.requires.append(ref)
+                    pattern, req_list = req.split(":", 1)
+                    req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
+                    obj.build_requires[pattern] = req_list
 
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())
@@ -159,12 +142,8 @@ class Profile(object):
 
     def dumps(self):
         result = ["[build_requires]"]
-        for ref in sorted(self.requires):
-            result.append(ref)
-        for package in sorted(self.package_requires.keys()):
-            refs = sorted(self.package_requires[package])
-            for ref in refs:
-                result.append("%s:%s" % (package, ref))
+        for pattern, req_list in self.build_requires.items():
+            result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
         result.append("[settings]")
         for name, value in self.settings.items():
             result.append("%s=%s" % (name, value))
