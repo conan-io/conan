@@ -155,7 +155,6 @@ class AutoToolsBuildEnvironment(object):
         if target is not False:
             triplet_args.append("--target %s" % (target or auto_target) if (target or auto_target) else "")
 
-        print(triplet_args)
         with environment_append(self.vars):
             self._conanfile.run("%sconfigure %s %s" % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
