@@ -27,15 +27,6 @@ class DepsCppCmake(object):
         self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
         self.rootpath = '"%s"' % deps_cpp_info.rootpath.replace("\\", "/")
 
-        # Vars excluding sysroot
-        def _remove_sysroot(var_list):
-            return [flag for flag in var_list if "--sysroot" not in flag]
-
-        self.cppflags_nosysroot = " ".join(_remove_sysroot(self.deps_cpp_info.cppflags))
-        self.cflags_nosysroot = " ".join(_remove_sysroot(self.deps_cpp_info.cflags))
-        self.sharedlinkflags_nosysroot = " ".join(_remove_sysroot(self.deps_cpp_info.sharedlinkflags))
-        self.exelinkflags_nosysroot = " ".join(_remove_sysroot(self.deps_cpp_info.rootpath))
-
 
 class CMakeGenerator(Generator):
     @property
