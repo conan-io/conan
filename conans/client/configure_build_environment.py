@@ -107,7 +107,7 @@ class AutoToolsBuildEnvironment(object):
         # Building FOR windows
         if os_setting == "Windows":
             build = "i686-w64-mingw32" if arch_detected == "x86" else "x86_64-w64-mingw32"
-            target = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
+            host = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
         else:  # Building for Linux or Android
             build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu", "Darwin": "apple-macos"}.get(os_detected,
                                                                                                   os_detected.lower()))
@@ -115,18 +115,19 @@ class AutoToolsBuildEnvironment(object):
                 host_arch = "aarch64"
             else:
                 host_arch = "arm" if "arm" in arch_setting else arch_setting
-            target = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
-                                           "Android": "-linux-android"}.get(os_setting, ""))
-            if arch_setting == "armv7hf" and os_setting == "Linux":
-                target += "hf"
-            elif "arm" in arch_setting and arch_setting != "armv8" and os_setting == "Android":
-                target += "eabi"
 
-        host = build
-        return build, host, target
+            host = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
+                                         "Android": "-linux-android"}.get(os_setting, ""))
+            if arch_setting == "armv7hf" and os_setting == "Linux":
+                host += "hf"
+            elif "arm" in arch_setting and arch_setting != "armv8" and os_setting == "Android":
+                host += "eabi"
+
+        return build, host, None
 
     def configure(self, configure_dir=None, args=None, build=None, host=None, target=None):
         """
+        :param configure_dir: Absolute or relative path to the configure script
         :param args: Optional arguments to pass to configure.
         :param build: In which system the program will be built. "False" skips the --build flag
         :param host: In which system the generated program will run.  "False" skips the --host flag
@@ -143,33 +144,26 @@ class AutoToolsBuildEnvironment(object):
         if build is None or host is None or target is None:
             auto_build, auto_host, auto_target = self._get_host_build_target_flags(detected_architecture(), platform.system())
 
-        if build is None:
-            build = auto_build
-        if build:
-            build = "--build %s" % build
-        else:
-            build = ""
+        triplet_args = []
 
-        if host is None:
-            host = auto_host
-        if host:
-            host = "--host %s" % host
-        else:
-            host = ""
+        if build is not False:
+            triplet_args.append("--build %s" % (build or auto_build) if (build or auto_build) else "")
 
-        if target is None:
-            target = auto_target
-        if target:
-            target = "--target %s" % target
-        else:
-            target = ""
+        if host is not False:
+            triplet_args.append("--host %s" % (host or auto_host) if (host or auto_host) else "")
 
+        if target is not False:
+            triplet_args.append("--target %s" % (target or auto_target) if (target or auto_target) else "")
+
+        print(triplet_args)
         with environment_append(self.vars):
-            self._conanfile.run("%sconfigure %s %s %s %s" % (configure_dir, args_to_string(args), build, host, target))
+            self._conanfile.run("%sconfigure %s %s" % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
     def make(self, args=""):
         with environment_append(self.vars):
-            self._conanfile.run("make %s -j%s" % (args_to_string(args), cpu_count()))
+            str_args = args_to_string(args)
+            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else ""
+            self._conanfile.run("make %s %s" % (str_args, cpu_count_option))
 
     def _configure_link_flags(self):
         """Not the -L"""

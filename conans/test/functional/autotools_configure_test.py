@@ -230,13 +230,11 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "arm-linux-gnueabihf")
+        self.assertEquals(host, "arm-linux-gnueabihf")
 
         build, host, target = get_values("Linux", "x86", "Linux", "armv7hf")
         self.assertEquals(build, "x86-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "arm-linux-gnueabihf")
+        self.assertEquals(host, "arm-linux-gnueabihf")
 
         build, host, target = get_values("Linux", "x86", "Linux", "x86")
         self.assertIsNone(build)
@@ -255,58 +253,47 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "arm-linux-gnueabihf")
+        self.assertEquals(host, "arm-linux-gnueabihf")
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "armv7")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "armv6")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "arm-linux-gnueabi")
+        self.assertEquals(host, "arm-linux-gnueabi")
 
         build, host, target = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "x86-linux-android")
+        self.assertEquals(host, "x86-linux-android")
 
         build, host, target = get_values("Linux", "x86_64", "Android", "x86_64")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "x86_64-linux-android")
+        self.assertEquals(host, "x86_64-linux-android")
 
         build, host, target = get_values("Linux", "x86_64", "Android", "armv7")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "arm-linux-androideabi")
+        self.assertEquals(host, "arm-linux-androideabi")
 
         build, host, target = get_values("Linux", "x86_64", "Android", "armv7hf")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "arm-linux-androideabi")
+        self.assertEquals(host, "arm-linux-androideabi")
 
         build, host, target = get_values("Linux", "x86_64", "Android", "armv8")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "aarch64-linux-android")
+        self.assertEquals(host, "aarch64-linux-android")
 
         build, host, target = get_values("Linux", "x86_64", "Android", "armv6")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "arm-linux-androideabi")
+        self.assertEquals(host, "arm-linux-androideabi")
 
         build, host, target = get_values("Linux", "x86_64", "Windows", "x86")
         self.assertEquals(build, "x86_64-w64-mingw32")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "i686-w64-mingw32")
+        self.assertEquals(host, "i686-w64-mingw32")
 
         build, host, target = get_values("Linux", "x86_64", "Windows", "x86_64")
         self.assertEquals(build, "x86_64-w64-mingw32")
-        self.assertEquals(build, host)
-        self.assertEquals(target, "x86_64-w64-mingw32")
+        self.assertEquals(host, "x86_64-w64-mingw32")
 
         build, host, target = get_values("Windows", "x86_64", "Windows", "x86_64")
         self.assertIsNone(build)
@@ -335,4 +322,4 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         build, host, target = get_values("Darwin", "x86_64", "Android", "armv7hf")
         self.assertEquals(build, "x86_64-apple-macos")
-        self.assertEquals(target, "arm-linux-androideabi")
+        self.assertEquals(host, "arm-linux-androideabi")
