@@ -164,11 +164,17 @@ class AutoToolsBuildEnvironment(object):
             cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else ""
             self._conanfile.run("make %s %s" % (str_args, cpu_count_option))
 
+    @property
+    def _sysroot_flag(self):
+        return "--sysroot=%s" % self._deps_cpp_info.sysroot if self._deps_cpp_info.sysroot else None
+
     def _configure_link_flags(self):
         """Not the -L"""
         ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
         ret.extend(self._deps_cpp_info.exelinkflags)
         ret.append(self._architecture_flag)
+        if self._sysroot_flag:
+            ret.append(self._sysroot_flag)
         return ret
 
     def _configure_flags(self):
@@ -178,6 +184,8 @@ class AutoToolsBuildEnvironment(object):
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
             ret.append("-s")  # Remove all symbol table and relocation information from the executable.
+        if self._sysroot_flag:
+            ret.append(self._sysroot_flag)
         return ret
 
     def _configure_cxx_flags(self):

@@ -14,11 +14,6 @@ set(CONAN_CXX_FLAGS_{dep}{build_type} "{deps.cppflags}")
 set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type} "{deps.sharedlinkflags}")
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type} "{deps.exelinkflags}")
 
-set(CONAN_C_FLAGS_NOSYSROOT{dep}{build_type} "{deps.cflags_nosysroot}")
-set(CONAN_CXX_FLAGS_NOSYSROOT_{dep}{build_type} "{deps.cppflags_nosysroot}")
-set(CONAN_SHARED_LINKER_FLAGS_NOSYSROOT_{dep}{build_type} "{deps.sharedlinkflags_nosysroot}")
-set(CONAN_EXE_LINKER_FLAGS_NOSYSROOT_{dep}{build_type} "{deps.exelinkflags_nosysroot}")
-
 """
 
 
@@ -63,11 +58,6 @@ set(CONAN_SHARED_LINKER_FLAGS{build_type} "{deps.sharedlinkflags} ${{CONAN_SHARE
 set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS{build_type}}}")
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
 
-set(CONAN_CXX_FLAGS_NOSYSROOT{build_type} "{deps.cppflags_nosysroot} ${{CONAN_CXX_FLAGS_NOSYSROOT{build_type}}}")
-set(CONAN_SHARED_LINKER_FLAGS_NOSYSROOT{build_type} "{deps.sharedlinkflags_nosysroot} ${{CONAN_SHARED_LINKER_FLAGS_NOSYSROOT{build_type}}}")
-set(CONAN_EXE_LINKER_FLAGS_NOSYSROOT{build_type} "{deps.exelinkflags_nosysroot} ${{CONAN_EXE_LINKER_FLAGS_NOSYSROOT{build_type}}}")
-set(CONAN_C_FLAGS_NOSYSROOT{build_type} "{deps.cflags_nosysroot} ${{CONAN_C_FLAGS_NOSYSROOT{build_type}}}")
-
 """
 
 
@@ -94,17 +84,12 @@ _target_template = """
 
     add_library({name} INTERFACE IMPORTED)
     foreach(build_type "" "_DEBUG" "_RELEASE")
-        set(suffix "")
-        # Remove sysroot from flags, it will break the build when CMAKE is taking care of that
-        if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL ${{CMAKE_SYSTEM_NAME}})
-            set(suffix "_NOSYSROOT")
-        endif()
-        string(REPLACE " " ";" "CONAN_C_FLAGS_{uname}${{build_type}}"     "${{CONAN_C_FLAGS${{suffix}}_{uname}${{build_type}}}}")
-        string(REPLACE " " ";" "CONAN_CXX_FLAGS_{uname}${{build_type}}"   "${{CONAN_CXX_FLAGS${{suffix}}_{uname}${{build_type}}}}")
-        string(REPLACE " " ";" "CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}" "${{CONAN_SHARED_LINKER_FLAGS${{suffix}}_{uname}${{build_type}}}}")
-        string(REPLACE " " ";" "CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}"    "${{CONAN_EXE_LINKER_FLAGS${{suffix}}_{uname}${{build_type}}}}")
-
+        string(REPLACE " " ";" "CONAN_C_FLAGS_{uname}${{build_type}}"     "${{CONAN_C_FLAGS_{uname}${{build_type}}}}")
+        string(REPLACE " " ";" "CONAN_CXX_FLAGS_{uname}${{build_type}}"   "${{CONAN_CXX_FLAGS_{uname}${{build_type}}}}")
+        string(REPLACE " " ";" "CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}" "${{CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}}}")
+        string(REPLACE " " ";" "CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}"    "${{CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}}}")
     endforeach()
+
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}}
                                                                  $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
@@ -300,6 +285,7 @@ function(conan_check_compiler)
         endif()
     endif()
 
+
     if( (CONAN_COMPILER STREQUAL "Visual Studio" AND NOT CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR
         (CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
         (CONAN_COMPILER STREQUAL "apple-clang" AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
@@ -318,16 +304,10 @@ function(conan_check_compiler)
 endfunction()
 
 macro(conan_set_flags build_type)
-    set(suffix "")
-    # Remove sysroot from flags, it will break the build when CMAKE is taking care of that
-    if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL ${CMAKE_SYSTEM_NAME})
-        set(suffix "_NOSYSROOT")
-    endif()
-
-    set(CMAKE_CXX_FLAGS${build_type} "${CMAKE_CXX_FLAGS${build_type}} ${CONAN_CXX_FLAGS${build_type}${suffix}}")
-    set(CMAKE_C_FLAGS${build_type} "${CMAKE_C_FLAGS${build_type}} ${CONAN_C_FLAGS${build_type}_NOSYSROOT}")
-    set(CMAKE_SHARED_LINKER_FLAGS${build_type} "${CMAKE_SHARED_LINKER_FLAGS${build_type}} ${CONAN_SHARED_LINKER_FLAGS${build_type}${suffix}}")
-    set(CMAKE_EXE_LINKER_FLAGS${build_type} "${CMAKE_EXE_LINKER_FLAGS${build_type}} ${CONAN_EXE_LINKER_FLAGS${build_type}${suffix}}")
+    set(CMAKE_CXX_FLAGS${build_type} "${CMAKE_CXX_FLAGS${build_type}} ${CONAN_CXX_FLAGS${build_type}}")
+    set(CMAKE_C_FLAGS${build_type} "${CMAKE_C_FLAGS${build_type}} ${CONAN_C_FLAGS${build_type}}")
+    set(CMAKE_SHARED_LINKER_FLAGS${build_type} "${CMAKE_SHARED_LINKER_FLAGS${build_type}} ${CONAN_SHARED_LINKER_FLAGS${build_type}}")
+    set(CMAKE_EXE_LINKER_FLAGS${build_type} "${CMAKE_EXE_LINKER_FLAGS${build_type}} ${CONAN_EXE_LINKER_FLAGS${build_type}}")
 endmacro()
 
 macro(conan_global_flags)
