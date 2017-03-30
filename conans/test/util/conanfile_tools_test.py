@@ -9,6 +9,7 @@ from conans.model.scope import Scopes
 from conans import tools
 from nose_parameterized.parameterized import parameterized
 from conans.test.utils.tools import TestClient
+from conans.model.profile import Profile
 
 
 base_conanfile = '''
@@ -116,8 +117,7 @@ class ConanfileToolsTest(unittest.TestCase):
         return tmp_dir, file_path, text_file
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
-        loader = ConanFileLoader(None, Settings(), None, OptionsValues.loads(""), Scopes(),
-                                 None)
+        loader = ConanFileLoader(None, Settings(), Profile())
         ret = loader.load_conan(file_path, None)
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)

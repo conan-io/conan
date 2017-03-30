@@ -20,7 +20,7 @@ from conans.tools import environment_append
 from conans.util.tracer import log_package_built
 
 
-def init_package_info(deps_graph, paths):
+def _init_package_info(deps_graph, paths):
     """ Made external so it is independent of installer and can called
     in testing too
     """
@@ -119,7 +119,7 @@ class ConanInstaller(object):
         """
         self._deps_graph = deps_graph  # necessary for _build_package
         t1 = time.time()
-        init_package_info(deps_graph, self._client_cache)
+        _init_package_info(deps_graph, self._client_cache)
         # order by levels and propagate exports as download imports
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
@@ -206,7 +206,7 @@ class ConanInstaller(object):
                 output = ScopedOutput(str(conan_ref), self._out)
                 package_ref = PackageReference(conan_ref, package_id)
                 package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
-                if build_mode is True:
+                if conan_file.build_policy_missing:
                     output.info("Building package from source as defined by build_policy='missing'")
                 elif build_mode.forced(conan_ref, conan_file):
                     output.warn('Forced build from source')

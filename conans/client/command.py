@@ -2,7 +2,6 @@ import argparse
 import hashlib
 import inspect
 import os
-import re
 import requests
 import sys
 
@@ -35,6 +34,7 @@ from conans.util.tracer import log_command, log_exception
 from conans.model.profile import Profile
 from conans.client.command_profile_args import profile_from_args
 from conans.client.new import get_files
+from conans.client.loader import load_consumer_conanfile
 
 
 class Extender(argparse.Action):
@@ -164,9 +164,9 @@ class Command(object):
         # shutil.copytree(test_folder, build_folder)
 
         profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
-        loader = self._manager._loader(conan_info_path=None, profile=profile)
-
-        conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
+        conanfile = load_consumer_conanfile(test_conanfile, "",
+                                            self._client_cache.settings, self._runner,
+                                            self._user_io.out)
         try:
             # convert to list from ItemViews required for python3
             if hasattr(conanfile, "requirements"):
@@ -198,7 +198,7 @@ class Command(object):
                               profile=profile,
                               build_modes=args.build,
                               update=args.update,
-                              generators=["env", "txt"]
+                              generators=["txt"]
                               )
         self._manager.build(test_folder, build_folder, test=True)
 
