@@ -260,9 +260,6 @@ class DepsGraphBuilder(object):
     def __init__(self, retriever, output, loader, resolver):
         """ param retriever: something that implements retrieve_conanfile for installed conans
         :param loader: helper ConanLoader to be able to load user space conanfile
-        :param initial_deps_infos: Initial cpp_infos and env_infos (usually from build_requires.
-                               {dest_package_name: {build_dep_reference: (cpp_info, env_info)},
-                                None: {build_dep_reference: (cpp_info, env_info)}}
         """
         self._retriever = retriever
         self._output = output

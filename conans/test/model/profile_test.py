@@ -31,9 +31,9 @@ class ProfileTest(unittest.TestCase):
         profile.scopes["p1"]["conaning"] = "1"
         profile.scopes["p2"]["testing"] = "2"
 
-        profile.requires.append("android_toolchain/1.2.8@lasote/testing")
-        profile.package_requires["zlib"].append("cmake/1.0.2@lasote/stable")
-        profile.package_requires["zlib"].append("autotools/1.0.3@lasote/stable")
+        profile.build_requires["*"] = ["android_toolchain/1.2.8@lasote/testing"]
+        profile.build_requires["zlib/*"] = ["cmake/1.0.2@lasote/stable",
+                                            "autotools/1.0.3@lasote/stable"]
 
         dump = profile.dumps()
         new_profile = Profile.loads(dump)
@@ -48,14 +48,11 @@ class ProfileTest(unittest.TestCase):
         self.assertEquals(dict(new_profile.scopes)["p1"]["conaning"], '1')
         self.assertEquals(dict(new_profile.scopes)["p2"]["testing"], '2')
 
-        self.assertEquals(new_profile.package_requires, {"zlib": [
-                                                              ConanFileReference.loads("autotools/1.0.3@lasote/stable"),
-                                                              ConanFileReference.loads("cmake/1.0.2@lasote/stable")]})
-
-        self.assertEquals(new_profile.all_requires,
-                          set([ConanFileReference.loads("cmake/1.0.2@lasote/stable"),
-                               ConanFileReference.loads("android_toolchain/1.2.8@lasote/testing"),
-                               ConanFileReference.loads("autotools/1.0.3@lasote/stable")]))
+        self.assertEquals(new_profile.build_requires["zlib/*"],
+                          [ConanFileReference.loads("cmake/1.0.2@lasote/stable"),
+                           ConanFileReference.loads("autotools/1.0.3@lasote/stable")])
+        self.assertEquals(new_profile.build_requires["*"],
+                          [ConanFileReference.loads("android_toolchain/1.2.8@lasote/testing")])
 
     def profile_settings_update_test(self):
         prof = '''[settings]
@@ -147,16 +144,19 @@ compiler=Visual Studio
         profile.settings["arch"] = "x86_64"
         profile.settings["compiler"] = "Visual Studio"
         profile.settings["compiler.version"] = "12"
-        profile.requires.append("zlib/1.2.8@lasote/testing")
-        profile.requires.append("aaaa/1.2.3@lasote/testing")
-        profile.package_requires["zlib"].append("zlib/1.2.11@lasote/testing")
-        profile.package_requires["zlib"].append("aaa/1.2.11@lasote/testing")
-
-        self.assertEqual('[build_requires]\naaaa/1.2.3@lasote/testing\nzlib/1.2.8@lasote/testing\nzlib:'
-                         'aaa/1.2.11@lasote/testing\nzlib:zlib/1.2.11@lasote/testing'
-                         '\n[settings]\narch=x86_64\ncompiler=Visual Studio\n'
-                         'compiler.version=12\nzlib:compiler=gcc\n[options]\n[scopes]\n[env]\n',
-                         profile.dumps())
+        profile.build_requires["*"] = ["zlib/1.2.8@lasote/testing"]
+        profile.build_requires["zlib/*"] = ["aaaa/1.2.3@lasote/testing", "bb/1.2@lasote/testing"]
+        self.assertEqual("""[build_requires]
+*: zlib/1.2.8@lasote/testing
+zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
+[settings]
+arch=x86_64
+compiler=Visual Studio
+compiler.version=12
+zlib:compiler=gcc
+[options]
+[scopes]
+[env]""".splitlines(), profile.dumps().splitlines())
 
     def profile_loads_win_test(self):
         prof = '''[env]
