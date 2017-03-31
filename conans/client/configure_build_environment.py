@@ -95,11 +95,10 @@ class AutoToolsBuildEnvironment(object):
     def _get_host_build_target_flags(self, arch_detected, os_detected):
         """Based on google search for build/host triplets, it could need a lot and complex verification"""
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
-            return None, None, None
+            return False, False, False
 
         arch_setting = self._conanfile.settings.get_safe("arch")
         os_setting = self._conanfile.settings.get_safe("os")
-        os_detected = os_detected
 
         if os_detected == "Windows" and os_setting != "Windows":
             return None, None, None    # Don't know what to do with these, even exists? its only for configure
@@ -142,7 +141,8 @@ class AutoToolsBuildEnvironment(object):
         configure_dir = configure_dir or "./"
         auto_build, auto_host, auto_target = None, None, None
         if build is None or host is None or target is None:
-            auto_build, auto_host, auto_target = self._get_host_build_target_flags(detected_architecture(), platform.system())
+            auto_build, auto_host, auto_target = self._get_host_build_target_flags(detected_architecture(),
+                                                                                   platform.system())
 
         triplet_args = []
 
