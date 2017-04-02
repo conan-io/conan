@@ -70,22 +70,46 @@ class CMake(object):
 
         return "Unix Makefiles"
 
-    def _cmake_compiler_options(self, os, os_ver, arch):
+    def _cmake_compiler_options(self, the_os, os_ver, arch):
         cmake_flags = []
 
-        if str(os).lower() == "macos":
+        if str(the_os).lower() == "macos":
             if arch == "x86":
                 cmake_flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
             # CMake defines MacOS as Darwin
-            os = "Darwin"
+            the_os = "Darwin"
 
-        if self._cmake_system_name and (platform.system() != os or os_ver):
-            if os:
-                cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % os)
-                if os_ver:
-                    cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
-            else:
-                cmake_flags.append("-DCMAKE_SYSTEM_NAME=Generic")
+        cmake_flags.extend(self._cmake_cross_build_defines(the_os, os_ver))
+
+        return cmake_flags
+
+    def _cmake_cross_build_defines(self, the_os, os_ver):
+        cmake_flags = []
+
+        # SYSTEM NAME
+        env_system_name = os.environ.get("CONAN_CMAKE_SYSTEM_NAME", None)
+        if env_system_name is not None:
+            if env_system_name is not False:  # False means not auto-set
+                cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % env_system_name)
+        else:
+            if self._cmake_system_name and (platform.system() != the_os or os_ver):
+                if the_os:
+                    cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % the_os)
+                    if os_ver:
+                        cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
+                else:
+                    cmake_flags.append("-DCMAKE_SYSTEM_NAME=Generic")
+
+        if cmake_flags:  # If enabled cross compile
+            for env_var in ["CONAN_CMAKE_SYSTEM_PROCESSOR",
+                            "CONAN_CMAKE_FIND_ROOT_PATH",
+                            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
+                            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
+                            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE"]:
+
+                value = os.getenv(env_var, None)
+                if value:
+                    cmake_flags.append("-D%s=%s" % (env_var, value))
 
         return cmake_flags
 
@@ -138,7 +162,7 @@ class CMake(object):
         comp_version = self._settings.compiler.version
         op_system_version = self._settings.get_safe("os.version")
 
-        flags = self._cmake_compiler_options(os=op_system, os_ver=op_system_version, arch=arch)
+        flags = self._cmake_compiler_options(the_os=op_system, os_ver=op_system_version, arch=arch)
         flags.append("-DCONAN_EXPORTED=1")
         if comp:
             flags.append('-DCONAN_COMPILER="%s"' % comp)
@@ -211,6 +235,11 @@ class CMake(object):
         ])
         command = "cmake --build %s" % arg_list
         conan_file.run(command)
+
+    def test(self, conan_file, args=None, build_dir=None, target=None):
+        if not target:
+            target = "RUN_TESTS" if self._settings.compiler == "Visual Studio" else "test"
+        self.build(conan_file=conan_file, args=args, build_dir=build_dir, target=target)
 
 
 def _vars_to_string(defs):

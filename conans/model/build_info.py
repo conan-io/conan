@@ -202,10 +202,8 @@ class DepsCppInfo(_BaseDepsCppInfo):
         return result
 
     def update(self, dep_cpp_info, conan_ref):
-        assert isinstance(dep_cpp_info, CppInfo)
+        assert isinstance(dep_cpp_info, (CppInfo, DepsCppInfo))
         self._dependencies[conan_ref.name] = dep_cpp_info
-
         super(DepsCppInfo, self).update(dep_cpp_info)
-
         for config, cpp_info in dep_cpp_info.configs.items():
             self.configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
