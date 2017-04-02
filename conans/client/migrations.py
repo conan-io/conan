@@ -50,7 +50,7 @@ compiler:
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
-        version: ["8", "9", "10", "11", "12", "14"]
+        version: ["8", "9", "10", "11", "12", "14", "15"]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9"]
         libcxx: [libstdc++, libstdc++11, libc++]
