@@ -60,6 +60,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         # extract the conan_basic_setup macro
         macro = self._extract_macro("conan_basic_setup", aux_cmake_test_setup)
         self.assertEqual("""macro(conan_basic_setup)
+    if(CONAN_EXPORTED)
+        message(STATUS "Conan: called by CMake conan helper")
+    endif()
     conan_check_compiler()
     conan_output_dirs_setup()
     conan_set_find_library_paths()
@@ -86,4 +89,16 @@ endmacro()""", macro)
 
     # Make find_package() to work
     set(CMAKE_PREFIX_PATH ${CONAN_CMAKE_MODULE_PATH} ${CMAKE_PREFIX_PATH})
+
+    # Set the find root path (cross build)
+    set(CMAKE_FIND_ROOT_PATH ${CONAN_CMAKE_FIND_ROOT_PATH} ${CMAKE_FIND_ROOT_PATH})
+    if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM)
+        set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM})
+    endif()
+    if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY)
+        set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY})
+    endif()
+    if(CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE)
+        set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE})
+    endif()
 endmacro()""", macro)

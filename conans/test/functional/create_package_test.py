@@ -12,6 +12,7 @@ from conans.model.options import OptionsValues
 from conans.model.settings import Settings
 from conans.client.output import ScopedOutput
 from conans.model.scope import Scopes
+from conans.model.profile import Profile
 
 
 myconan1 = """
@@ -80,7 +81,7 @@ class ExporterTest(unittest.TestCase):
 
         shutil.copytree(reg_folder, build_folder)
 
-        loader = ConanFileLoader(None, Settings(), None, OptionsValues.loads(""), Scopes(), None)
+        loader = ConanFileLoader(None, Settings(), Profile())
         conanfile = loader.load_conan(conanfile_path, None)
         output = ScopedOutput("", TestBufferConanOutput())
         create_package(conanfile, build_folder, package_folder, output)

@@ -55,7 +55,8 @@ void hello{name}(){{
 }}
 """
 
-cmake_pkg = """
+cmake_pkg = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
@@ -83,7 +84,8 @@ Hello1/0.1@lasote/testing
 cmake_multi
 """
 
-cmake = """
+cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 

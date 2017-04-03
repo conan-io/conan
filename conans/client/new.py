@@ -1,4 +1,3 @@
-from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
 import re
 
@@ -41,6 +40,20 @@ conan_basic_setup()''')
 
     def package_info(self):
         self.cpp_info.libs = ["hello"]
+"""
+
+conanfile_bare = """from conans import ConanFile
+
+class {package_name}Conan(ConanFile):
+    name = "{name}"
+    version = "{version}"
+    settings = "os", "compiler", "build_type", "arch"
+    description = "Package for {package_name}"
+    url = "None"
+    license = "None"
+
+    def package_info(self):
+        self.cpp_info.libs = self.collect_libs()
 """
 
 conanfile_sources = """from conans import ConanFile, CMake, tools
@@ -135,6 +148,12 @@ conan_basic_setup()
 
 add_executable(example example.cpp)
 target_link_libraries(example ${CONAN_LIBS})
+
+# CTest is a testing tool that can be used to test your project.
+# enable_testing()
+# add_test(NAME example
+#          WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
+#          COMMAND example)
 """
 
 test_main = """#include <iostream>
@@ -182,9 +201,15 @@ add_library(hello hello.cpp)
 """
 
 
-def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False):
+def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False):
     try:
-        name, version, user, channel = ConanFileReference.loads(ref)
+        tokens = ref.split("@")
+        name, version = tokens[0].split("/")
+        if len(tokens) == 2:
+            user, channel = tokens[1].split("/")
+        else:
+            user, channel = "user", "channel"
+
         pattern = re.compile('[\W_]+')
         package_name = pattern.sub('', name).capitalize()
     except:
@@ -195,6 +220,8 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
         raise ConanException("--header and --sources are incompatible options")
     if pure_c and (header or exports_sources):
         raise ConanException("--pure_c is incompatible with --header and --sources")
+    if bare and (header or exports_sources):
+        raise ConanException("--bare is incompatible with --header and --sources")
 
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,
@@ -205,6 +232,9 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
                  "hello/hello.cpp": hello_cpp,
                  "hello/hello.h": hello_h,
                  "hello/CMakeLists.txt": cmake}
+    elif bare:
+        files = {"conanfile.py": conanfile_bare.format(name=name, version=version,
+                                                       package_name=package_name)}
     else:
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}

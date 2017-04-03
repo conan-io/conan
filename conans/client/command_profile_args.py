@@ -70,5 +70,5 @@ def _profile_parse_args(settings, options, envs, scopes):
     result.settings = OrderedDict(settings)
     for pkg, values in package_settings.items():
         result.package_settings[pkg] = OrderedDict(values)
-    result.scopes = Scopes.from_list(scopes) if scopes else None
+    result.scopes = Scopes.from_list(scopes) if scopes else Scopes()
     return result

@@ -65,6 +65,16 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None):
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         conanfile.run(wincmd)
 
+
+def args_to_string(args):
+    if not args:
+        return ""
+    if sys.platform == 'win32':
+        return subprocess.list2cmdline(args)
+    else:
+        return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
+
+
 @contextmanager
 def chdir(newdir):
     old_path = os.getcwd()
@@ -339,10 +349,36 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
+def cross_building(settings, self_os=None, self_arch=None):
+    self_os = self_os or platform.system()
+    self_arch = self_arch or detected_architecture()
+    os_setting = settings.get_safe("os")
+    arch_setting = settings.get_safe("arch")
+    platform_os = {"Darwin": "Macos"}.get(self_os, self_os)
+    if self_os == os_setting and self_arch == "x86_64" and arch_setting == "x86":
+        return False  # not really considered cross
+
+    if os_setting and platform_os != os_setting:
+        return True
+    if arch_setting and self_arch != arch_setting:
+        return True
+
+    return False
+
+
+def detected_architecture():
+    # FIXME: Very weak check but not very common to run conan in other architectures
+    if "64" in platform.machine():
+        return "x86_64"
+    elif "86" in platform.machine():
+        return "x86"
+    return None
+
+
 # DETECT OS, VERSION AND DISTRIBUTIONS
 
 class OSInfo(object):
-    ''' Usage:
+    """ Usage:
         print(os_info.is_linux) # True/False
         print(os_info.is_windows) # True/False
         print(os_info.is_macos) # True/False
@@ -358,7 +394,7 @@ class OSInfo(object):
             pass
         if os_info.os_version == "10.1.0":
             pass
-    '''
+    """
 
     def __init__(self):
         self.os_version = None
@@ -402,7 +438,8 @@ class OSInfo(object):
                                  ("centos", "redhat", "fedora", "pidora", "scientific",
                                   "xenserver", "amazon", "oracle")
 
-    def get_win_os_version(self):
+    @staticmethod
+    def get_win_os_version():
         """
         Get's the OS major and minor versions.  Returns a tuple of
         (OS_MAJOR, OS_MINOR).
@@ -430,7 +467,8 @@ class OSInfo(object):
 
         return Version("%d.%d" % (os_version.dwMajorVersion, os_version.dwMinorVersion))
 
-    def get_debian_version_name(self, version):
+    @staticmethod
+    def get_debian_version_name(version):
         if not version:
             return None
         elif version.major() == "8.Y.Z":
@@ -448,7 +486,8 @@ class OSInfo(object):
         elif version.minor() == "3.0.Z":
             return "woody"
 
-    def get_win_version_name(self, version):
+    @staticmethod
+    def get_win_version_name(version):
         if not version:
             return None
         elif version.major() == "5.Y.Z":
@@ -464,7 +503,8 @@ class OSInfo(object):
         elif version.minor() == "10.0.Z":
             return "Windows 10"
 
-    def get_osx_version_name(self, version):
+    @staticmethod
+    def get_osx_version_name(version):
         if not version:
             return None
         elif version.minor() == "10.12.Z":
@@ -494,10 +534,12 @@ class OSInfo(object):
         elif version.minor() == "10.0.Z":
             return "Cheetha"
 
-    def get_freebsd_version(self):
+    @staticmethod
+    def get_freebsd_version():
         return platform.release().split("-")[0]
 
-    def get_solaris_version_name(self, version):
+    @staticmethod
+    def get_solaris_version_name(version):
         if not version:
             return None
         elif version.minor() == "5.10":

@@ -1,4 +1,4 @@
-from conans.client.configure_build_environment import sun_cc_libcxx_flags_dict, architecture_dict, stdlib_flags, \
+from conans.client.configure_build_environment import architecture_dict, stdlib_flags, \
     stdlib_defines
 from conans.model import Generator
 from conans.paths import BUILD_INFO_GCC
@@ -28,6 +28,8 @@ class GCCGenerator(Generator):
         flags.extend(self._deps_build_info.sharedlinkflags)
         flags.extend(self._deps_build_info.exelinkflags)
         flags.extend(self._libcxx_flags())
+        if self._deps_build_info.sysroot:
+            flags.append("--sysroot=%s" % self._deps_build_info.sysroot)
         arch = self.conanfile.settings.get_safe("arch")
         flags.append(architecture_dict.get(arch, ""))
 

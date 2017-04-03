@@ -2,13 +2,12 @@ from contextlib import contextmanager
 
 from conans.errors import ConanException
 from conans.model.settings import Settings
+from conans.util.env_reader import get_env
 from conans.util.files import mkdir
-from conans.tools import cpu_count
+from conans.tools import cpu_count, args_to_string
 from conans import tools
 import os
 import platform
-import subprocess
-import sys
 
 
 class CMake(object):
@@ -70,23 +69,46 @@ class CMake(object):
 
         return "Unix Makefiles"
 
-    def _cmake_compiler_options(self, os, os_ver, arch):
+    def _cmake_compiler_options(self, the_os, os_ver, arch):
         cmake_flags = []
 
-        if str(os).lower() == "macos":
+        if str(the_os).lower() == "macos":
             if arch == "x86":
                 cmake_flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
             # CMake defines MacOS as Darwin
-            os = "Darwin"
+            the_os = "Darwin"
 
-        if self._cmake_system_name and (platform.system() != os or os_ver):
-            if os:
-                cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % os)
-                if os_ver:
-                    cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
-            else:
-                cmake_flags.append("-DCMAKE_SYSTEM_NAME=Generic")
+        cmake_flags.extend(self._cmake_cross_build_defines(the_os, os_ver))
 
+        return cmake_flags
+
+    def _cmake_cross_build_defines(self, the_os, os_ver):
+        cmake_flags = []
+
+        # SYSTEM NAME
+        env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
+        os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", os_ver)
+        if env_system_name and env_system_name != "False":  # False means not auto-set
+            cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % env_system_name)
+            cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
+        else:
+            if self._cmake_system_name and (platform.system() != the_os or os_ver):
+                if the_os:
+                    cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % the_os)
+                    if os_ver:
+                        cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
+                else:
+                    cmake_flags.append("-DCMAKE_SYSTEM_NAME=Generic")
+        if cmake_flags:  # If enabled cross compile
+            for env_var in ["CONAN_CMAKE_SYSTEM_PROCESSOR",
+                            "CONAN_CMAKE_FIND_ROOT_PATH",
+                            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
+                            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
+                            "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE"]:
+
+                value = os.getenv(env_var, None)
+                if value:
+                    cmake_flags.append("-D%s=%s" % (env_var, value))
         return cmake_flags
 
     @property
@@ -138,7 +160,7 @@ class CMake(object):
         comp_version = self._settings.compiler.version
         op_system_version = self._settings.get_safe("os.version")
 
-        flags = self._cmake_compiler_options(os=op_system, os_ver=op_system_version, arch=arch)
+        flags = self._cmake_compiler_options(the_os=op_system, os_ver=op_system_version, arch=arch)
         flags.append("-DCONAN_EXPORTED=1")
         if comp:
             flags.append('-DCONAN_COMPILER="%s"' % comp)
@@ -181,11 +203,11 @@ class CMake(object):
         mkdir(self.build_dir)
         arg_list = _join_arguments([
             self.command_line,
-            _args_to_string(args),
+            args_to_string(args),
             _vars_to_string(defs),
-            _args_to_string([source_dir])
+            args_to_string([source_dir])
         ])
-        command = "cd %s && cmake %s" % (_args_to_string([self.build_dir]), arg_list)
+        command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
         if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
             with clean_sh_from_path():
                 conan_file.run(command)
@@ -205,23 +227,21 @@ class CMake(object):
                 args.append("-j%i" % cpu_count())
 
         arg_list = _join_arguments([
-            _args_to_string([build_dir]),
+            args_to_string([build_dir]),
             self.build_config,
-            _args_to_string(args)
+            args_to_string(args)
         ])
         command = "cmake --build %s" % arg_list
         conan_file.run(command)
 
+    def test(self, conan_file, args=None, build_dir=None, target=None):
+        if not target:
+            target = "RUN_TESTS" if self._settings.compiler == "Visual Studio" else "test"
+        self.build(conan_file=conan_file, args=args, build_dir=build_dir, target=target)
+
 
 def _vars_to_string(defs):
-    return _args_to_string('-D{0}={1}'.format(k, v) for k, v in defs.items())
-
-
-def _args_to_string(args):
-    if sys.platform == 'win32':
-        return subprocess.list2cmdline(args)
-    else:
-        return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
+    return args_to_string('-D{0}={1}'.format(k, v) for k, v in defs.items())
 
 
 def _join_arguments(args):

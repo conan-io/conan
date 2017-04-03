@@ -2,7 +2,6 @@ import argparse
 import hashlib
 import inspect
 import os
-import re
 import requests
 import sys
 
@@ -35,6 +34,7 @@ from conans.util.tracer import log_command, log_exception
 from conans.model.profile import Profile
 from conans.client.command_profile_args import profile_from_args
 from conans.client.new import get_files
+from conans.client.loader import load_consumer_conanfile
 
 
 class Extender(argparse.Action):
@@ -99,13 +99,16 @@ class Command(object):
                             help='Create a package with embedded sources in "hello" folder, '
                                  'using "exports_sources" instead of retrieving external code with '
                                  'the "source()" method')
+        parser.add_argument("-b", "--bare", action='store_true', default=False,
+                            help='Create the minimum package recipe, without build() or package()'
+                            'methods. Useful in combination with "package_files" command')
 
         args = parser.parse_args(*args)
         log_command("new", vars(args))
 
         root_folder = os.getcwd()
         files = get_files(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
-                          exports_sources=args.sources)
+                          exports_sources=args.sources, bare=args.bare)
 
         save_files(root_folder, files)
         for f in sorted(files):
@@ -164,9 +167,9 @@ class Command(object):
         # shutil.copytree(test_folder, build_folder)
 
         profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
-        loader = self._manager._loader(conan_info_path=None, profile=profile)
-
-        conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
+        conanfile = load_consumer_conanfile(test_conanfile, "",
+                                            self._client_cache.settings, self._runner,
+                                            self._user_io.out)
         try:
             # convert to list from ItemViews required for python3
             if hasattr(conanfile, "requirements"):
@@ -196,9 +199,9 @@ class Command(object):
                               manifest_interactive=manifest_interactive,
                               remote=args.remote,
                               profile=profile,
-                              build_mode=args.build,
+                              build_modes=args.build,
                               update=args.update,
-                              generators=["env", "txt"]
+                              generators=["txt"]
                               )
         self._manager.build(test_folder, build_folder, test=True)
 
@@ -207,6 +210,40 @@ class Command(object):
         """ (deprecated). Alias to test_package, use it instead
         """
         self.test_package(*args)
+
+    def package_files(self, *args):
+        """Creates a package binary from given precompiled artifacts in user folder, skipping
+        the package recipe build() and package() methods
+        """
+        parser = argparse.ArgumentParser(description=self.package_files.__doc__, prog="conan package_files")
+        parser.add_argument("reference",
+                            help='package recipe reference e.g., MyPackage/1.2@user/channel')
+        parser.add_argument("--path", "-p",
+                            help='Get binaries from this path, relative to current or absolute')
+        parser.add_argument("--profile", "-pr",
+                            help='Profile for this package')
+        parser.add_argument("--options", "-o",
+                            help='Options for this package. e.g., -o with_qt=true',
+                            nargs=1, action=Extender)
+        parser.add_argument("--settings", "-s",
+                            help='Settings for this package e.g., -s compiler=gcc',
+                            nargs=1, action=Extender)
+
+        args = parser.parse_args(*args)
+        args.env = None
+        args.scope = None
+        log_command("package_files", vars(args))
+        reference = ConanFileReference.loads(args.reference)
+        current_path = os.getcwd()
+        if args.path:
+            if os.path.isabs(args.path):
+                path = args.path
+            else:
+                path = os.path.join(current_path, args.path)
+        else:
+            path = current_path
+        profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
+        self._manager.package_files(reference=reference, path=path, profile=profile)
 
     def install(self, *args):
         """Installs the requirements specified in a 'conanfile.py' or 'conanfile.txt'.
@@ -263,7 +300,7 @@ class Command(object):
                                   current_path=current_path,
                                   remote=args.remote,
                                   profile=profile,
-                                  build_mode=args.build,
+                                  build_modes=args.build,
                                   filename=args.file,
                                   update=args.update,
                                   manifest_folder=manifest_folder,
@@ -305,13 +342,22 @@ class Command(object):
         You can use it for your current project (just point to the path of your conanfile
         if you want), or for any existing package in your local cache.
         """
+
+        info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update", "required",
+                             "date", "author", "None"]
+        path_only_options = ["export_folder", "build_folder", "package_folder", "source_folder"]
+        str_path_only_options = ", ".join(['"%s"' % field for field in path_only_options])
+        str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
+
         parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info")
         parser.add_argument("reference", nargs='?', default="",
                             help='reference name or path to conanfile file, '
                             'e.g., MyPackage/1.2@user/channel or ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("--only", "-n", nargs="?", const="None",
-                            help='show fields only')
+        parser.add_argument("--only", "-n", nargs=1, action=Extender,
+                            help='show the specified fields only from: '
+                                 '%s or use --paths with options %s. Use --only None to show only references.'
+                                 % (str_only_options, str_path_only_options))
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
         parser.add_argument("--package_filter", nargs='?',
@@ -336,6 +382,16 @@ class Command(object):
         except:
             reference = os.path.normpath(os.path.join(current_path, args.reference))
 
+        if args.only == ["None"]:
+            args.only = []
+
+        if args.only and args.paths and (set(args.only) - set(path_only_options)):
+            raise ConanException("Invalid --only value '%s' with --path specified, allowed values: [%s]."
+                                 "" % (args.only, str_path_only_options))
+        elif args.only and not args.paths and (set(args.only) - set(info_only_options)):
+            raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
+                                 "Use --only=None to show only the references." % (args.only, str_only_options))
+
         profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
         self._manager.info(reference=reference,
                            current_path=current_path,
@@ -346,7 +402,7 @@ class Command(object):
                            check_updates=args.update,
                            filename=args.file,
                            build_order=args.build_order,
-                           build_mode=args.build,
+                           build_modes=args.build,
                            graph_filename=args.graph,
                            show_paths=args.paths)
 
