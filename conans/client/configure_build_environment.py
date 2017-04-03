@@ -146,14 +146,17 @@ class AutoToolsBuildEnvironment(object):
 
         triplet_args = []
 
-        if build is not False:
-            triplet_args.append("--build %s" % (build or auto_build) if (build or auto_build) else "")
+        if build is not False:  # Skipped by user
+            if build or auto_build:  # User specified value or automatic
+                triplet_args.append("--build %s" % (build or auto_build))
 
-        if host is not False:
-            triplet_args.append("--host %s" % (host or auto_host) if (host or auto_host) else "")
+        if host is not False:   # Skipped by user
+            if host or auto_host:  # User specified value or automatic
+                triplet_args.append("--host %s" % (host or auto_host))
 
-        if target is not False:
-            triplet_args.append("--target %s" % (target or auto_target) if (target or auto_target) else "")
+        if target is not False:  # Skipped by user
+            if target or auto_target:  # User specified value or automatic
+                triplet_args.append("--target %s" % (target or auto_target))
 
         with environment_append(self.vars):
             self._conanfile.run("%sconfigure %s %s" % (configure_dir, args_to_string(args), " ".join(triplet_args)))
