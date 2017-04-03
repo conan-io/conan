@@ -1,5 +1,6 @@
 import os
 import time
+import shutil
 from collections import OrderedDict, Counter
 
 from conans.client import packager
@@ -25,10 +26,11 @@ from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT
+from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST
 from conans.tools import environment_append
 from conans.util.files import save,  rmdir, normalize, mkdir
 from conans.util.log import logger
+from conans.model.manifest import FileTreeManifest
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.build_requires import BuildRequires
 
@@ -74,6 +76,35 @@ class ConanManager(object):
                                  % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
         export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source)
+
+    def package_files(self, reference, path, profile):
+        """ Bundle pre-existing binaries
+        @param reference: ConanFileReference
+        """
+        conan_file_path = self._client_cache.conanfile(reference)
+        if not os.path.exists(conan_file_path):
+            raise ConanException("Package recipe '%s' does not exist" % str(reference))
+
+        current_path = path
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
+                                  remote_name=None, update=False, check_updates=False,
+                                  manifest_manager=None)
+        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        conanfile = loader.load_virtual(reference, current_path)
+        graph_builder = self._get_graph_builder(loader, False, remote_proxy)
+        deps_graph = graph_builder.load(conanfile)
+
+        # this is a bit tricky, but works. The loading of a cache package makes the referenced
+        # one, the first of the first level, always existing
+        nodes = deps_graph.direct_requires()
+        _, conanfile = nodes[0]
+        packages_folder = self._client_cache.packages(reference)
+        package_folder = os.path.join(packages_folder, conanfile.info.package_id())
+        shutil.copytree(path, package_folder)
+        save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
+        # Create the digest for the package
+        digest = FileTreeManifest.create(package_folder)
+        save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
 
     def download(self, reference, package_ids, remote=None):
         """ Download conanfile and specified packages to local repository

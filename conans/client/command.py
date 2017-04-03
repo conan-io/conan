@@ -99,13 +99,16 @@ class Command(object):
                             help='Create a package with embedded sources in "hello" folder, '
                                  'using "exports_sources" instead of retrieving external code with '
                                  'the "source()" method')
+        parser.add_argument("-b", "--bare", action='store_true', default=False,
+                            help='Create the minimum package recipe, without build() or package()'
+                            'methods. Useful in combination with "package_files" command')
 
         args = parser.parse_args(*args)
         log_command("new", vars(args))
 
         root_folder = os.getcwd()
         files = get_files(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
-                          exports_sources=args.sources)
+                          exports_sources=args.sources, bare=args.bare)
 
         save_files(root_folder, files)
         for f in sorted(files):
@@ -207,6 +210,40 @@ class Command(object):
         """ (deprecated). Alias to test_package, use it instead
         """
         self.test_package(*args)
+
+    def package_files(self, *args):
+        """Creates a package binary from given precompiled artifacts in user folder, skipping
+        the package recipe build() and package() methods
+        """
+        parser = argparse.ArgumentParser(description=self.package_files.__doc__, prog="conan package_files")
+        parser.add_argument("reference",
+                            help='package recipe reference e.g., MyPackage/1.2@user/channel')
+        parser.add_argument("--path", "-p",
+                            help='Get binaries from this path, relative to current or absolute')
+        parser.add_argument("--profile", "-pr",
+                            help='Profile for this package')
+        parser.add_argument("--options", "-o",
+                            help='Options for this package. e.g., -o with_qt=true',
+                            nargs=1, action=Extender)
+        parser.add_argument("--settings", "-s",
+                            help='Settings for this package e.g., -s compiler=gcc',
+                            nargs=1, action=Extender)
+
+        args = parser.parse_args(*args)
+        args.env = None
+        args.scope = None
+        log_command("package_files", vars(args))
+        reference = ConanFileReference.loads(args.reference)
+        current_path = os.getcwd()
+        if args.path:
+            if os.path.isabs(args.path):
+                path = args.path
+            else:
+                path = os.path.join(current_path, args.path)
+        else:
+            path = current_path
+        profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
+        self._manager.package_files(reference=reference, path=path, profile=profile)
 
     def install(self, *args):
         """Installs the requirements specified in a 'conanfile.py' or 'conanfile.txt'.
