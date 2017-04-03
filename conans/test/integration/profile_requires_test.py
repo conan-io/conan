@@ -165,7 +165,7 @@ class MyLib2(ConanFile):
         assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE2", "A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",  "A_C_FLAG_FROM_BUILD_REQUIRE"])
 
         assert(os.environ["FOO_VAR"] == "1")
-        assert(self.deps_cpp_info.sysroot == "path/to/other_folder")
+        assert(self.deps_cpp_info.sysroot == "path/to/folder") # Applied in order, so it takes the first value from BuildRequire
 
 """
 
