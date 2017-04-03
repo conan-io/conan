@@ -166,6 +166,7 @@ build_type: [ Release]
         conan_file = ConanFileMock()
 
         cross = "-DCMAKE_SYSTEM_NAME=Windows " if platform.system() != "Windows" else ""
+        target_test = CMakeTest.scape('--target RUN_TESTS')
 
         cmake.configure(conan_file)
         self.assertEqual('cd {0} && cmake -G "Visual Studio 12 2013" {1}-DCONAN_EXPORTED=1 '
@@ -176,9 +177,15 @@ build_type: [ Release]
         cmake.build(conan_file)
         self.assertEqual('cmake --build %s' % dot_dir, conan_file.command)
 
+        cmake.test(conan_file)
+        self.assertEqual('cmake --build %s %s' % (dot_dir, target_test), conan_file.command)
+
         settings.build_type = "Debug"
         cmake.build(conan_file)
         self.assertEqual('cmake --build %s --config Debug' % dot_dir, conan_file.command)
+
+        cmake.test(conan_file)
+        self.assertEqual('cmake --build %s --config Debug %s' % (dot_dir, target_test), conan_file.command)
 
         cmake.configure(conan_file, source_dir="/source", build_dir=self.tempdir,
                         args=['--foo "bar"'], defs={"SHARED": True})
@@ -199,35 +206,49 @@ build_type: [ Release]
         self.assertEqual('cmake --build %s --config Debug %s' % (tempdir, escaped_args),
                          conan_file.command)
 
+        cmake.test(conan_file, args=["--bar 'foo'"])
+        if sys.platform == 'win32':
+            escaped_args = '%s "--bar \'foo\'"' % target_test
+        else:
+            escaped_args = r"%s '--bar '\''foo'\'''" % target_test
+        self.assertEqual('cmake --build %s --config Debug %s' % (tempdir, escaped_args),
+                         conan_file.command)
+
         settings.build_type = "Release"
         cmake = CMake(settings)
         cmake.build(conan_file)
         self.assertEqual('cmake --build %s --config Release' % dot_dir, conan_file.command)
 
+        cmake.test(conan_file)
+        self.assertEqual('cmake --build %s --config Release %s' % (dot_dir, target_test), conan_file.command)
+
         cmake.build(conan_file, build_dir=self.tempdir)
         self.assertEqual('cmake --build %s --config Release' % tempdir, conan_file.command)
+
+        cmake.test(conan_file, build_dir=self.tempdir)
+        self.assertEqual('cmake --build %s --config Release %s' % (tempdir, target_test), conan_file.command)
 
         settings.compiler = "gcc"
         settings.compiler.version = "5.4"
         cmake = CMake(settings)
         cmake.build(conan_file)
-        if sys.platform == 'win32':
-            self.assertEqual('cmake --build . -- -j%i' % cpu_count(), conan_file.command)
-        else:
-            self.assertEqual("cmake --build '.' '--' '-j%i'" % cpu_count(), conan_file.command)
+        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. -- -j%i' % cpu_count())), conan_file.command)
+
+        cmake.test(conan_file)
+        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. --target test -- -j%i' % cpu_count())), conan_file.command)
 
         cmake.build(conan_file, args=['foo', '--', 'bar'])
-        if sys.platform == 'win32':
-            self.assertEqual('cmake --build . foo -- bar -j%i' % cpu_count(), conan_file.command)
-        else:
-            self.assertEqual("cmake --build '.' 'foo' '--' 'bar' '-j%i'" % cpu_count(), conan_file.command)
+        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. foo -- bar -j%i' % cpu_count())), conan_file.command)
+
+        cmake.test(conan_file, args=['foo', '--', 'bar'])
+        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. --target test foo -- bar -j%i' % cpu_count())), conan_file.command)
 
         cmake = CMake(settings, parallel=False)
         cmake.build(conan_file)
-        if sys.platform == 'win32':
-            self.assertEqual('cmake --build .', conan_file.command)
-        else:
-            self.assertEqual("cmake --build '.'", conan_file.command)
+        self.assertEqual('cmake --build %s' % CMakeTest.scape('.'), conan_file.command)
+
+        cmake.test(conan_file)
+        self.assertEqual('cmake --build %s' % CMakeTest.scape('. --target test'), conan_file.command)
 
     def test_clean_sh_path(self):
 
@@ -261,6 +282,11 @@ build_type: [ Release]
         cmake = CMake(settings)
         cmake.configure(conanfile)
         self.assertNotIn(self.tempdir, conanfile.path)
+
+    @staticmethod
+    def scape(args):
+        pattern = "%s" if sys.platform == "win32" else r"'%s'"
+        return ' '.join(pattern % i for i in args.split())
 
 
 class ConanFileMock(object):
