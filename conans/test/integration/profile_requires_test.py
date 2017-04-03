@@ -124,6 +124,7 @@ class MyLib(ConanFile):
     version = "0.1"
     settings = "os", "compiler", "arch"
     requires = "MyLibParent/0.1@lasote/stable"
+    generators = "cmake"
 
     def build(self):
         # only from BuildRequire

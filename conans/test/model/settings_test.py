@@ -18,6 +18,19 @@ class SettingsTest(unittest.TestCase):
                 "os": ["Windows", "Linux"]}
         self.sut = Settings(data)
 
+    def test_os_split(self):
+        settings = Settings.loads("""os:
+    Windows:
+    Linux:
+    Macos:
+        version: [1, 2]
+    Android:
+""")
+        other_settings = Settings.loads("os: [Windows, Linux]")
+        settings.os = "Windows"
+        other_settings.os = "Windows"
+        self.assertEqual(settings.values.sha, other_settings.values.sha)
+
     def any_test(self):
         data = {"target": "ANY"}
         sut = Settings(data)
