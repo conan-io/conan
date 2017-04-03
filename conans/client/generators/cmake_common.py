@@ -8,10 +8,12 @@ set(CONAN_LIBS_{dep}{build_type} {deps.libs})
 set(CONAN_DEFINES_{dep}{build_type} {deps.defines})
 # COMPILE_DEFINITIONS are equal to CONAN_DEFINES without -D, for targets
 set(CONAN_COMPILE_DEFINITIONS_{dep}{build_type} {deps.compile_definitions})
+
+set(CONAN_C_FLAGS_{dep}{build_type} "{deps.cflags}")
 set(CONAN_CXX_FLAGS_{dep}{build_type} "{deps.cppflags}")
 set(CONAN_SHARED_LINKER_FLAGS_{dep}{build_type} "{deps.sharedlinkflags}")
 set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type} "{deps.exelinkflags}")
-set(CONAN_C_FLAGS_{dep}{build_type} "{deps.cflags}")
+
 """
 
 
@@ -49,11 +51,13 @@ set(CONAN_BIN_DIRS{build_type} {deps.bin_paths} ${{CONAN_BIN_DIRS{build_type}}})
 set(CONAN_RES_DIRS{build_type} {deps.res_paths} ${{CONAN_RES_DIRS{build_type}}})
 set(CONAN_LIBS{build_type} {deps.libs} ${{CONAN_LIBS{build_type}}})
 set(CONAN_DEFINES{build_type} {deps.defines} ${{CONAN_DEFINES{build_type}}})
+set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
+
 set(CONAN_CXX_FLAGS{build_type} "{deps.cppflags} ${{CONAN_CXX_FLAGS{build_type}}}")
 set(CONAN_SHARED_LINKER_FLAGS{build_type} "{deps.sharedlinkflags} ${{CONAN_SHARED_LINKER_FLAGS{build_type}}}")
 set(CONAN_EXE_LINKER_FLAGS{build_type} "{deps.exelinkflags} ${{CONAN_EXE_LINKER_FLAGS{build_type}}}")
 set(CONAN_C_FLAGS{build_type} "{deps.cflags} ${{CONAN_C_FLAGS{build_type}}}")
-set(CONAN_CMAKE_MODULE_PATH{build_type} {deps.build_paths} ${{CONAN_CMAKE_MODULE_PATH{build_type}}})
+
 """
 
 
@@ -85,6 +89,7 @@ _target_template = """
         string(REPLACE " " ";" "CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}" "${{CONAN_SHARED_LINKER_FLAGS_{uname}${{build_type}}}}")
         string(REPLACE " " ";" "CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}"    "${{CONAN_EXE_LINKER_FLAGS_{uname}${{build_type}}}}")
     endforeach()
+
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
     set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}}} ${{CONAN_EXE_LINKER_FLAGS_{uname}}}
                                                                  $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE}}>
@@ -96,7 +101,6 @@ _target_template = """
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_DEFINITIONS ${{CONAN_COMPILE_DEFINITIONS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_COMPILE_DEFINITIONS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:Debug>:${{CONAN_COMPILE_DEFINITIONS_{uname}_DEBUG}}>)
-
     set_property(TARGET {name} PROPERTY INTERFACE_COMPILE_OPTIONS ${{CONAN_C_FLAGS_{uname}}} ${{CONAN_CXX_FLAGS_{uname}}}
                                                                   $<$<CONFIG:Release>:${{CONAN_C_FLAGS_{uname}_RELEASE}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE}}>
                                                                   $<$<CONFIG:Debug>:${{CONAN_C_FLAGS_{uname}_DEBUG}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG}}>)
@@ -281,14 +285,19 @@ function(conan_check_compiler)
         endif()
     endif()
 
+    if(NOT CMAKE_HOST_SYSTEM_NAME STREQUAL ${CMAKE_SYSTEM_NAME})
+        set(CROSS_BUILDING 1)
+    endif()
+
+    # Avoid checks when cross compiling, apple-clang crashes because its APPLE but not apple-clang
     if( (CONAN_COMPILER STREQUAL "Visual Studio" AND NOT CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR
         (CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
-        (CONAN_COMPILER STREQUAL "apple-clang" AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
+        (CONAN_COMPILER STREQUAL "apple-clang" AND NOT CROSS_BUILDING AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
         (CONAN_COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR
         (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
-
         message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}', is not the one detected by CMake: '${CMAKE_CXX_COMPILER_ID}'")
     endif()
+
 
     if(NOT DEFINED CONAN_COMPILER_VERSION)
         message(STATUS "WARN: CONAN_COMPILER_VERSION variable not set, please make sure yourself "
@@ -298,6 +307,12 @@ function(conan_check_compiler)
     check_compiler_version()
 endfunction()
 
+macro(conan_set_flags build_type)
+    set(CMAKE_CXX_FLAGS${build_type} "${CMAKE_CXX_FLAGS${build_type}} ${CONAN_CXX_FLAGS${build_type}}")
+    set(CMAKE_C_FLAGS${build_type} "${CMAKE_C_FLAGS${build_type}} ${CONAN_C_FLAGS${build_type}}")
+    set(CMAKE_SHARED_LINKER_FLAGS${build_type} "${CMAKE_SHARED_LINKER_FLAGS${build_type}} ${CONAN_SHARED_LINKER_FLAGS${build_type}}")
+    set(CMAKE_EXE_LINKER_FLAGS${build_type} "${CMAKE_EXE_LINKER_FLAGS${build_type}} ${CONAN_EXE_LINKER_FLAGS${build_type}}")
+endmacro()
 
 macro(conan_global_flags)
     if(CONAN_SYSTEM_INCLUDES)
@@ -321,20 +336,10 @@ macro(conan_global_flags)
                         "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
                         "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>")
 
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CXX_FLAGS}")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_C_FLAGS}")
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_SHARED_LINKER_FLAGS}")
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${CONAN_EXE_LINKER_FLAGS}")
+    conan_set_flags("")
+    conan_set_flags("_RELEASE")
+    conan_set_flags("_DEBUG")
 
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CONAN_CXX_FLAGS_RELEASE}")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CONAN_C_FLAGS_RELEASE}")
-    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} ${CONAN_SHARED_LINKER_FLAGS_RELEASE}")
-    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${CONAN_EXE_LINKER_FLAGS_RELEASE}")
-
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CONAN_CXX_FLAGS_DEBUG}")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CONAN_C_FLAGS_DEBUG}")
-    set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} ${CONAN_SHARED_LINKER_FLAGS_DEBUG}")
-    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} ${CONAN_EXE_LINKER_FLAGS_DEBUG}")
 endmacro()
 
 macro(conan_target_link_libraries target)

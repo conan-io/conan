@@ -39,6 +39,7 @@ class BuildRequireParent(ConanFile):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_BUILD_REQUIRE_PARENT")
         self.env_info.ENV_VAR = "ENV_VALUE_FROM_BUILD_REQUIRE_PARENT"
         self.env_info.ENV_VAR_MULTI.append("ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT")
+        self.cpp_info.sysroot = "path/to/folder"
 """
 
 build_require = """
@@ -90,6 +91,7 @@ class BuildRequire2(ConanFile):
         self.cpp_info.cflags.append("A_C_FLAG_FROM_BUILD_REQUIRE2")
         self.env_info.ENV_VAR_REQ2 = "ENV_VALUE_FROM_BUILD_REQUIRE2"
         self.env_info.ENV_VAR_MULTI.append("ENV_VALUE_MULTI_FROM_BUILD_REQUIRE2")
+        self.cpp_info.sysroot = "path/to/other_folder"
 
 """
 
@@ -135,6 +137,7 @@ class MyLib(ConanFile):
         tmp = "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE" + os.pathsep + "ENV_VALUE_MULTI_FROM_BUILD_REQUIRE_PARENT" + os.pathsep + "ENV_VALUE_MULTI_FROM_MYLIB_PARENT"
         assert(os.environ["ENV_VAR_MULTI"] == tmp)
         assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_MYLIB_PARENT", "A_C_FLAG_FROM_BUILD_REQUIRE_PARENT", "A_C_FLAG_FROM_BUILD_REQUIRE"])
+        assert(self.deps_cpp_info.sysroot == "path/to/folder")
 
         assert(os.environ["FOO_VAR"] == "1")
 
@@ -163,6 +166,7 @@ class MyLib2(ConanFile):
         assert(self.deps_cpp_info.cflags == ["A_C_FLAG_FROM_BUILD_REQUIRE2", "A_C_FLAG_FROM_BUILD_REQUIRE_PARENT",  "A_C_FLAG_FROM_BUILD_REQUIRE"])
 
         assert(os.environ["FOO_VAR"] == "1")
+        assert(self.deps_cpp_info.sysroot == "path/to/folder") # Applied in order, so it takes the first value from BuildRequire
 
 """
 
@@ -212,6 +216,9 @@ class ProfileRequiresTest(unittest.TestCase):
 [requires]
 MyLib/0.1@lasote/stable
 MyLib2/0.1@lasote/stable
+[generators]
+cmake
+gcc
 """
         self.client.save({"profile.txt": profile, "conanfile.txt": reuse}, clean_first=True)
         self.client.run("install --profile ./profile.txt --build missing")
