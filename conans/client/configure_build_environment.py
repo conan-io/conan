@@ -1,4 +1,7 @@
 import copy
+import platform
+
+from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
                             "libstdcxx": "-library=stdcxx4",
@@ -89,11 +92,92 @@ class AutoToolsBuildEnvironment(object):
         # Not declared by default
         self.fpic = None
 
+    def _get_host_build_target_flags(self, arch_detected, os_detected):
+        """Based on google search for build/host triplets, it could need a lot and complex verification"""
+        if not cross_building(self._conanfile.settings, os_detected, arch_detected):
+            return False, False, False
+
+        arch_setting = self._conanfile.settings.get_safe("arch")
+        os_setting = self._conanfile.settings.get_safe("os")
+
+        if os_detected == "Windows" and os_setting != "Windows":
+            return None, None, None    # Don't know what to do with these, even exists? its only for configure
+
+        # Building FOR windows
+        if os_setting == "Windows":
+            build = "i686-w64-mingw32" if arch_detected == "x86" else "x86_64-w64-mingw32"
+            host = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
+        else:  # Building for Linux or Android
+            build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu", "Darwin": "apple-macos"}.get(os_detected,
+                                                                                                  os_detected.lower()))
+            if arch_setting == "armv8":
+                host_arch = "aarch64"
+            else:
+                host_arch = "arm" if "arm" in arch_setting else arch_setting
+
+            host = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
+                                         "Android": "-linux-android"}.get(os_setting, ""))
+            if arch_setting == "armv7hf" and os_setting == "Linux":
+                host += "hf"
+            elif "arm" in arch_setting and arch_setting != "armv8" and os_setting == "Android":
+                host += "eabi"
+
+        return build, host, None
+
+    def configure(self, configure_dir=None, args=None, build=None, host=None, target=None):
+        """
+        :param configure_dir: Absolute or relative path to the configure script
+        :param args: Optional arguments to pass to configure.
+        :param build: In which system the program will be built. "False" skips the --build flag
+        :param host: In which system the generated program will run.  "False" skips the --host flag
+        :param target: This option is only used to build a cross-compiling toolchain.  "False" skips the --target flag
+                       When the tool chain generates executable program, in which target system the program will run.
+        :return: None
+
+        http://jingfenghanmax.blogspot.com.es/2010/09/configure-with-host-target-and-build.html
+        https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
+
+        """
+        configure_dir = configure_dir or "./"
+        auto_build, auto_host, auto_target = None, None, None
+        if build is None or host is None or target is None:
+            auto_build, auto_host, auto_target = self._get_host_build_target_flags(detected_architecture(),
+                                                                                   platform.system())
+
+        triplet_args = []
+
+        if build is not False:  # Skipped by user
+            if build or auto_build:  # User specified value or automatic
+                triplet_args.append("--build %s" % (build or auto_build))
+
+        if host is not False:   # Skipped by user
+            if host or auto_host:  # User specified value or automatic
+                triplet_args.append("--host %s" % (host or auto_host))
+
+        if target is not False:  # Skipped by user
+            if target or auto_target:  # User specified value or automatic
+                triplet_args.append("--target %s" % (target or auto_target))
+
+        with environment_append(self.vars):
+            self._conanfile.run("%sconfigure %s %s" % (configure_dir, args_to_string(args), " ".join(triplet_args)))
+
+    def make(self, args=""):
+        with environment_append(self.vars):
+            str_args = args_to_string(args)
+            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else ""
+            self._conanfile.run("make %s %s" % (str_args, cpu_count_option))
+
+    @property
+    def _sysroot_flag(self):
+        return "--sysroot=%s" % self._deps_cpp_info.sysroot if self._deps_cpp_info.sysroot else None
+
     def _configure_link_flags(self):
         """Not the -L"""
         ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
         ret.extend(self._deps_cpp_info.exelinkflags)
         ret.append(self._architecture_flag)
+        if self._sysroot_flag:
+            ret.append(self._sysroot_flag)
         return ret
 
     def _configure_flags(self):
@@ -103,6 +187,8 @@ class AutoToolsBuildEnvironment(object):
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
             ret.append("-s")  # Remove all symbol table and relocation information from the executable.
+        if self._sysroot_flag:
+            ret.append(self._sysroot_flag)
         return ret
 
     def _configure_cxx_flags(self):

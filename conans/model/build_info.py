@@ -30,6 +30,7 @@ class _CppInfo(object):
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
         self.rootpath = ""
+        self.sysroot = None
 
     @property
     def include_paths(self):
@@ -79,6 +80,7 @@ class CppInfo(_CppInfo):
         def _get_cpp_info():
             result = _CppInfo()
             result.rootpath = self.rootpath
+            result.sysroot = self.sysroot
             result.includedirs.append(DEFAULT_INCLUDE)
             result.libdirs.append(DEFAULT_LIB)
             result.bindirs.append(DEFAULT_BIN)
@@ -111,6 +113,9 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
+
+        if not self.sysroot:
+            self.sysroot = dep_cpp_info.sysroot
 
     @property
     def include_paths(self):
