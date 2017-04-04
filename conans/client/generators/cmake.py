@@ -7,6 +7,7 @@ from conans.client.generators.cmake_common import cmake_dependency_vars,\
 
 class DepsCppCmake(object):
     def __init__(self, deps_cpp_info):
+
         def multiline(field):
             return "\n\t\t\t".join('"%s"' % p.replace("\\", "/") for p in field)
 
