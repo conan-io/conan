@@ -207,7 +207,11 @@ class HelloConan(ConanFile):
         activate_contents = load(os.path.join(client.current_folder, "activate.%s" % ext))
         deactivate_contents = load(os.path.join(client.current_folder, "deactivate.%s" % ext))
         self.assertNotIn("bad value", activate_contents)
-        self.assertIn("var1=\"good value\"", activate_contents)
+        if platform.system() == "Windows":
+            self.assertIn("var1=\"good value\"", activate_contents)
+        else:
+            self.assertIn('var1="good value"', activate_contents)
+
         if platform.system() == "Windows":
             self.assertIn('var2=value3;value2;%var2%', activate_contents)
         else:
