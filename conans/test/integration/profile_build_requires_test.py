@@ -1,4 +1,6 @@
 import unittest
+import platform
+import os
 
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
@@ -71,8 +73,10 @@ class BuildRequiresTest(unittest.TestCase):
 
     def test_profile_requires(self):
         client = TestClient()
+        name = "mytool.bat" if platform.system() == "Windows" else "mytool"
         client.save({CONANFILE: tool_conanfile,
-                     "mytool.bat": "echo Hello World!"}, clean_first=True)
+                     name: "echo Hello World!"}, clean_first=True)
+        os.chmod(os.path.join(client.current_folder, name), 0777)
         client.run("export lasote/stable")
         client.save({CONANFILE: python_conanfile,
                      "mypythontool.py": """def tool_hello_world():

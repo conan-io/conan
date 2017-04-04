@@ -31,15 +31,14 @@ cmake_minimum_required(VERSION 2.8.12)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
-
 if(ENABLE_TESTING)
-    add_executable(test test.cpp)
-    target_link_libraries(test ${CONAN_LIBS})
+    add_executable(example test.cpp)
+    target_link_libraries(example ${CONAN_LIBS})
 
     enable_testing()
-    add_test(NAME test
+    add_test(NAME example
               WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/bin
-              COMMAND test)
+              COMMAND example)
 endif()
 """
 
