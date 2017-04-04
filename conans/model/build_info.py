@@ -72,6 +72,7 @@ class CppInfo(_CppInfo):
         self.bindirs.append(DEFAULT_BIN)
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append("")
+        # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
 
@@ -207,8 +208,14 @@ class DepsCppInfo(_BaseDepsCppInfo):
         return result
 
     def update(self, dep_cpp_info, conan_ref):
-        assert isinstance(dep_cpp_info, (CppInfo, DepsCppInfo))
         self._dependencies[conan_ref.name] = dep_cpp_info
         super(DepsCppInfo, self).update(dep_cpp_info)
         for config, cpp_info in dep_cpp_info.configs.items():
             self.configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
+
+    def update_deps_cpp_info(self, dep_cpp_info):
+        assert isinstance(dep_cpp_info, DepsCppInfo)
+        for pkg, cpp_info in dep_cpp_info.dependencies:
+            from collections import namedtuple
+            ref = namedtuple('ref', "name")(pkg)
+            self.update(cpp_info, ref)

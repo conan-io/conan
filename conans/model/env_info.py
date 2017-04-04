@@ -267,3 +267,10 @@ class DepsEnvInfo(EnvInfo):
                     self.vars[varname] = merge_lists(self.vars[varname], [value])
             else:
                 logger.warn("DISCARDED variable %s=%s from %s" % (varname, value, str(conan_ref)))
+
+    def update_deps_env_info(self, dep_env_info):
+        assert isinstance(dep_env_info, DepsEnvInfo)
+        for pkg, env_info in dep_env_info.dependencies:
+            from collections import namedtuple
+            ref = namedtuple('ref', "name")(pkg)
+            self.update(env_info, ref)

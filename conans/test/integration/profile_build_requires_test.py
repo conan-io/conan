@@ -3,6 +3,7 @@ import unittest
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 
+
 tool_conanfile = """
 import os
 from conans import ConanFile
@@ -59,6 +60,12 @@ profile = """
 Tool/0.1@lasote/stable, PythonTool/0.1@lasote/stable
 """
 
+profile2 = """
+[build_requires]
+Tool/0.1@lasote/stable
+PythonTool/0.1@lasote/stable
+"""
+
 
 class BuildRequiresTest(unittest.TestCase):
 
@@ -73,9 +80,14 @@ class BuildRequiresTest(unittest.TestCase):
         client.run("export lasote/stable")
 
         client.save({CONANFILE: lib_conanfile,
-                     "profile.txt": profile}, clean_first=True)
+                     "profile.txt": profile,
+                     "profile2.txt": profile2}, clean_first=True)
         client.run("export lasote/stable")
 
         client.run("install MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
-        print "\nOUTPUT"
-        print client.user_io.out
+        self.assertIn("Hello World!", client.user_io.out)
+        self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.user_io.out)
+
+        client.run("install MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
+        self.assertIn("Hello World!", client.user_io.out)
+        self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.user_io.out)

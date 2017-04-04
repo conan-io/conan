@@ -9,15 +9,14 @@ import copy
 
 def _apply_build_requires(deps_graph, conanfile):
     requires_nodes = deps_graph.direct_requires()
-    assert len(requires_nodes) == 1
-    node = requires_nodes[0]
-    conan_ref, build_require_conanfile = node
+    for node in requires_nodes:
+        conan_ref, build_require_conanfile = node
 
-    conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, conan_ref)
-    conanfile.deps_cpp_info.update(build_require_conanfile.deps_cpp_info, conan_ref)
+        conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, conan_ref)
+        conanfile.deps_cpp_info.update_deps_cpp_info(build_require_conanfile.deps_cpp_info)
 
-    conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref)
-    conanfile.deps_env_info.update(build_require_conanfile.deps_env_info, conan_ref)
+        conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref)
+        conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
 
 
 class BuildRequires(object):
@@ -33,27 +32,23 @@ class BuildRequires(object):
         self._build_requires = build_requires
 
     def install(self, reference, conanfile):
-        build_requires = []
         str_ref = str(reference)
-        for pattern, req_list in self._build_requires.items():
+        for pattern, build_requires in self._build_requires.items():
             if fnmatch.fnmatch(str_ref, pattern):
-                build_requires.extend(req_list)
-        if not build_requires:
-            return
-        self._output.info("%s: Build requires are: [%s]"
-                          % (str(reference), ", ".join(str(r) for r in build_requires)))
+                self._output.info("%s: Build requires: [%s]"
+                                  % (str(reference), ", ".join(str(r) for r in build_requires)))
 
-        for build_require in build_requires:
-            cached_graph = self._cached_graphs.get(build_require)
-            if not cached_graph:
-                cached_graph = self._install(build_require)
-                self._cached_graphs[reference] = cached_graph
+                cached_graph = self._cached_graphs.get(pattern)
+                if not cached_graph:
+                    cached_graph = self._install(build_requires)
+                    self._cached_graphs[pattern] = cached_graph
 
-            _apply_build_requires(cached_graph, conanfile)
+                _apply_build_requires(cached_graph, conanfile)
 
-    def _install(self, build_require):
-        self._output.info("Installing build_require: %s" % str(build_require))
-        conanfile = self._loader.load_virtual(build_require, None)  # No need current path
+    def _install(self, references):
+        self._output.info("Installing build requires: [%s]"
+                          % ", ".join(str(r) for r in references))
+        conanfile = self._loader.load_virtual(references, None, scope_options=False)  # No need current path
 
         # FIXME: Forced update=True, build_mode, Where to define it?
         update = False
@@ -75,5 +70,6 @@ class BuildRequires(object):
         installer = ConanInstaller(self._client_cache, self._output, self._remote_proxy,
                                    build_requires)
         installer.install(deps_graph, build_modes, self._current_path)
-        self._output.info("Installed build_require: %s" % str(build_require))
+        self._output.info("Installed build requires: [%s]"
+                          % ", ".join(str(r) for r in references))
         return deps_graph
