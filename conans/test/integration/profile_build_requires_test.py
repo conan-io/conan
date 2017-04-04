@@ -76,7 +76,7 @@ class BuildRequiresTest(unittest.TestCase):
         name = "mytool.bat" if platform.system() == "Windows" else "mytool"
         client.save({CONANFILE: tool_conanfile,
                      name: "echo Hello World!"}, clean_first=True)
-        os.chmod(os.path.join(client.current_folder, name), 0777)
+        os.chmod(os.path.join(client.current_folder, name), 0o777)
         client.run("export lasote/stable")
         client.save({CONANFILE: python_conanfile,
                      "mypythontool.py": """def tool_hello_world():
