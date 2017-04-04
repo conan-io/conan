@@ -24,7 +24,10 @@ class VirtualEnvGenerator(Generator):
                     value = os.pathsep.join(value)
                     ret.append(command_set + ' ' + name + '=' + value + ';%' + name + '%')
                 else:
-                    ret.append(command_set + ' ' + name + '="' + value + '"')
+                    # CMake crashes with quotes in CXX and CC, it seems
+                    # that windows doesn't need the quotes, it handles right
+                    # the spaces: #1169
+                    ret.append(command_set + ' ' + name + '=' + value)
             else:
                 if isinstance(value, list):
                     value = os.pathsep.join(['"%s"' % val for val in value])
