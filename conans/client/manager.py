@@ -271,6 +271,9 @@ class ConanManager(object):
 
         build_requires = BuildRequires(loader, remote_proxy, self._user_io.out, self._client_cache,
                                        self._search_manager, profile.build_requires, current_path)
+
+        # Apply build_requires to consumer conanfile
+        build_requires.install("", conanfile)
         installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy,
                                    build_requires)
 

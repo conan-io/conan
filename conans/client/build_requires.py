@@ -34,7 +34,9 @@ class BuildRequires(object):
     def install(self, reference, conanfile):
         str_ref = str(reference)
         for pattern, build_requires in self._build_requires.items():
-            if fnmatch.fnmatch(str_ref, pattern):
+            if ((not str_ref and pattern == "&") or
+                    (str_ref and pattern == "&!") or
+                    fnmatch.fnmatch(str_ref, pattern)):
                 self._output.info("%s: Build requires: [%s]"
                                   % (str(reference), ", ".join(str(r) for r in build_requires)))
 
@@ -66,6 +68,7 @@ class BuildRequires(object):
         build_requires = copy.copy(self)
         build_requires._build_requires = self._build_requires.copy()
         build_requires._build_requires.pop("*", None)
+        build_requires._build_requires.pop("&!", None)
 
         installer = ConanInstaller(self._client_cache, self._output, self._remote_proxy,
                                    build_requires)
