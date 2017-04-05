@@ -166,7 +166,7 @@ build_type: [ Release]
         settings.arch = "x86"
         settings.os = "Windows"
         cmake = CMake(conan_file)
-        self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
+        self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags) if platform.system() == "Windows" else ""
 
         # Now activate cross build and check sysroot
         with(tools.environment_append({"CONAN_CMAKE_SYSTEM_NAME": "Android"})):
@@ -184,7 +184,7 @@ build_type: [ Release]
 
         dot_dir = "." if sys.platform == 'win32' else "'.'"
 
-        cross = "-DCMAKE_SYSTEM_NAME=Windows " if platform.system() != "Windows" else ""
+        cross = "-DCMAKE_SYSTEM_NAME=\"Windows\" " if platform.system() != "Windows" else ""
 
         conan_file = ConanFileMock()
         conan_file.settings = settings
@@ -220,7 +220,7 @@ build_type: [ Release]
         conan_file.settings = settings
         cmake = CMake(conan_file)
 
-        cross = "-DCMAKE_SYSTEM_NAME=Windows " if platform.system() != "Windows" else ""
+        cross = "-DCMAKE_SYSTEM_NAME=\"Windows\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" " if platform.system() != "Windows" else ""
         target_test = CMakeTest.scape('--target RUN_TESTS')
 
         cmake.configure()
@@ -247,7 +247,7 @@ build_type: [ Release]
         if sys.platform == 'win32':
             escaped_args = r'"--foo \"bar\"" -DSHARED="True" /source'
         else:
-            escaped_args = "'--foo \"bar\"' '-DSHARED=\"True\"' '/source'"
+            escaped_args = "'--foo \"bar\"' -DSHARED=\"True\" '/source'"
         self.assertEqual('cd %s && cmake -G "Visual Studio 12 2013" %s-DCONAN_EXPORTED="1" '
                          '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
                          '-Wno-dev %s' % (tempdir, cross, escaped_args),
