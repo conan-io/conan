@@ -9,6 +9,8 @@ from conans.paths import CONANFILE
 import platform
 from conans.errors import ConanException
 from nose.plugins.attrib import attr
+from conans.model.settings import Settings
+from conans.client.conf import default_settings_yml
 
 
 class RunnerMock(object):
@@ -17,7 +19,7 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output):
+    def __call__(self, command, output):  # @UnusedVariable
         self.command_called = command
         return 0 if self.return_ok else 1
 
@@ -178,7 +180,7 @@ class ToolsTest(unittest.TestCase):
                 self.calls = 0
                 self.expected = expected
 
-            def __call__(self, command, output):
+            def __call__(self, command, output):  # @UnusedVariable
                 self.calls += 1
                 return 0 if command in self.expected else 1
 
@@ -208,6 +210,29 @@ class ToolsTest(unittest.TestCase):
         self.assertTrue(spt._tool.installed("git"))
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
+
+    def msvc_command_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        # test build_type and arch override, for multi-config packages
+        cmd = tools.msvc_command(settings, "project.sln", build_type="Debug", arch="x86")
+        self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
+        self.assertIn('vcvarsall.bat', cmd)
+
+        # tests errors if args not defined
+        with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
+            tools.msvc_command(settings, "project.sln")
+        settings.arch = "x86"
+        with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
+            tools.msvc_command(settings, "project.sln")
+
+        # succesful definition via settings
+        settings.build_type = "Debug"
+        cmd = tools.msvc_command(settings, "project.sln")
+        self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
+        self.assertIn('vcvarsall.bat', cmd)
 
     @attr('slow')
     def build_vs_project_test(self):
