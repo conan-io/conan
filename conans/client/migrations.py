@@ -38,19 +38,22 @@ class ClientMigrator(Migrator):
         if old_version is None:
             return
 
-        if old_version < Version("0.20"):
-            old_settings = """
-os: [Windows, Linux, Macos, Android, iOS]
-arch: [x86, x86_64, ppc64le, armv6, armv7, armv7hf, armv8]
+        if old_version < Version("0.22"):
+            old_settings = """os: [Windows, Linux, Macos, Android, iOS, FreeBSD, SunOS]
+arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8]
 compiler:
+    sun-cc:
+       version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
+       threads: [None, posix]
+       libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
-        version: ["4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2"]
+        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
-        version: ["8", "9", "10", "11", "12", "14"]
+        version: ["8", "9", "10", "11", "12", "14", "15"]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9"]
         libcxx: [libstdc++, libstdc++11, libc++]
