@@ -73,8 +73,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 class BuildRequiresTest(unittest.TestCase):
 
-    def test_profile_requires(self):
-        client = TestClient()
+    def _create(self, client):
         name = "mytool.bat" if platform.system() == "Windows" else "mytool"
         client.save({CONANFILE: tool_conanfile,
                      name: "echo Hello World!"}, clean_first=True)
@@ -84,6 +83,10 @@ class BuildRequiresTest(unittest.TestCase):
                      "mypythontool.py": """def tool_hello_world():
     return 'Hello world from python tool!'"""}, clean_first=True)
         client.run("export lasote/stable")
+
+    def test_profile_requires(self):
+        client = TestClient()
+        self._create(client)
 
         client.save({CONANFILE: lib_conanfile,
                      "profile.txt": profile,
@@ -100,13 +103,7 @@ class BuildRequiresTest(unittest.TestCase):
 
     def test_profile_open_requires(self):
         client = TestClient()
-        client.save({CONANFILE: tool_conanfile,
-                     "mytool.bat": "echo Hello World!"}, clean_first=True)
-        client.run("export lasote/stable")
-        client.save({CONANFILE: python_conanfile,
-                     "mypythontool.py": """def tool_hello_world():
-    return 'Hello world from python tool!'"""}, clean_first=True)
-        client.run("export lasote/stable")
+        self._create(client)
 
         client.save({CONANFILE: lib_conanfile,
                      "profile.txt": profile}, clean_first=True)
@@ -119,13 +116,7 @@ class BuildRequiresTest(unittest.TestCase):
 
     def test_profile_test_requires(self):
         client = TestClient()
-        client.save({CONANFILE: tool_conanfile,
-                     "mytool.bat": "echo Hello World!"}, clean_first=True)
-        client.run("export lasote/stable")
-        client.save({CONANFILE: python_conanfile,
-                     "mypythontool.py": """def tool_hello_world():
-    return 'Hello world from python tool!'"""}, clean_first=True)
-        client.run("export lasote/stable")
+        self._create(client)
 
         test_conanfile = """
 import os
@@ -154,13 +145,7 @@ class TestMyLib(ConanFile):
 
     def test_consumer_patterns(self):
         client = TestClient()
-        client.save({CONANFILE: tool_conanfile,
-                     "mytool.bat": "echo Hello World!"}, clean_first=True)
-        client.run("export lasote/stable")
-        client.save({CONANFILE: python_conanfile,
-                     "mypythontool.py": """def tool_hello_world():
-    return 'Hello world from python tool!'"""}, clean_first=True)
-        client.run("export lasote/stable")
+        self._create(client)
 
         test_conanfile = """
 import os
