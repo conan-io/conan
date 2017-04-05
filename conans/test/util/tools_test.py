@@ -212,6 +212,8 @@ class ToolsTest(unittest.TestCase):
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
     def msvc_command_test(self):
+        if platform.system() != "Windows":
+            return
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
