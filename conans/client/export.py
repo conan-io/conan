@@ -50,7 +50,7 @@ def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_so
     digest = FileTreeManifest.create(destination_folder)
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
-    if previous_digest and previous_digest.file_sums == digest.file_sums:
+    if previous_digest and previous_digest == digest:
         digest = previous_digest
         output.info("The stored package has not changed")
         modified_recipe = False
