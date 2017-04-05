@@ -2,6 +2,7 @@ from collections import namedtuple
 import re
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
+from conans.model.username import Username
 
 
 def validate_conan_name(name, version=False):
@@ -51,7 +52,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         if validate:
             name = validate_conan_name(name)
             version = validate_conan_name(version, True)
-            user = validate_conan_name(user)
+            user = Username(user)
             channel = validate_conan_name(channel)
         version = Version(version)
         return super(cls, ConanFileReference).__new__(cls, name, version, user, channel)

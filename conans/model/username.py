@@ -4,7 +4,7 @@ import re
 
 class Username(str):
 
-    base_er = "[a-zA-Z][a-zA-Z0-9_]{1,49}"
+    base_er = "[a-zA-Z][a-zA-Z0-9_]{1,40}"
     pattern = re.compile("^%s$" % base_er)
 
     def __new__(cls, name, validate=True):
