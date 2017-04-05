@@ -94,6 +94,7 @@ class CppInfo(_CppInfo):
 class _BaseDepsCppInfo(_CppInfo):
     def __init__(self):
         super(_BaseDepsCppInfo, self).__init__()
+        self.public_deps = []
 
     def update(self, dep_cpp_info):
 

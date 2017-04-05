@@ -11,7 +11,7 @@ class {name}Conan(ConanFile):
     exports = '*'
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         if cmake.is_multi_configuration:
             cmd = 'cmake "%s" %s' % (self.conanfile_directory, cmake.command_line)
             self.run(cmd)
@@ -51,7 +51,7 @@ class TestConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         if cmake.is_multi_configuration:
             cmd = 'cmake "%s" %s' % (self.conanfile_directory, cmake.command_line)
             self.run(cmd)
