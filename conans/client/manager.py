@@ -90,7 +90,7 @@ class ConanManager(object):
                                   remote_name=None, update=False, check_updates=False,
                                   manifest_manager=None)
         loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
-        conanfile = loader.load_virtual(reference, current_path)
+        conanfile = loader.load_virtual([reference], current_path)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 
@@ -131,7 +131,7 @@ class ConanManager(object):
 
     def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename, current_path):
         if isinstance(reference_or_path, ConanFileReference):
-            conanfile = loader.load_virtual(reference_or_path, current_path)
+            conanfile = loader.load_virtual([reference_or_path], current_path)
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
             try:
@@ -271,6 +271,9 @@ class ConanManager(object):
 
         build_requires = BuildRequires(loader, remote_proxy, self._user_io.out, self._client_cache,
                                        self._search_manager, profile.build_requires, current_path)
+
+        # Apply build_requires to consumer conanfile
+        build_requires.install("", conanfile)
         installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy,
                                    build_requires)
 

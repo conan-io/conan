@@ -18,11 +18,11 @@ class CMakeGeneratorTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder1")
         cpp_info.defines = ["MYDEFINE1"]
-        conanfile.deps_cpp_info.update(cpp_info, ref)
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.defines = ["MYDEFINE2"]
-        conanfile.deps_cpp_info.update(cpp_info, ref)
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
@@ -37,11 +37,11 @@ class CMakeGeneratorTest(unittest.TestCase):
         cpp_info = CppInfo("dummy_root_folder1")
         cpp_info.includedirs.append("other_include_dir")
         cpp_info.cppflags = ["-DGTEST_USE_OWN_TR1_TUPLE=1", "-DGTEST_LINKED_AS_SHARED_LIBRARY=1"]
-        conanfile.deps_cpp_info.update(cpp_info, ref)
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.cflags = ["-DSOMEFLAG=1"]
-        conanfile.deps_cpp_info.update(cpp_info, ref)
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()

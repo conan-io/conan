@@ -16,10 +16,10 @@ class VisualStudioGeneratorTest(unittest.TestCase):
         conanfile = ConanFile(None, None, Settings({}), None)
         ref = ConanFileReference.loads("MyPkg/0.1@user/testing")
         cpp_info = CppInfo("dummy_root_folder1")
-        conanfile.deps_cpp_info.update(cpp_info, ref)
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("My.Fancy-Pkg_2/0.1@user/testing")
         cpp_info = CppInfo("dummy_root_folder2")
-        conanfile.deps_cpp_info.update(cpp_info, ref)
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = VisualStudioGenerator(conanfile)
         return generator.content
 

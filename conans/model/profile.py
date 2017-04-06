@@ -122,9 +122,13 @@ class Profile(object):
             if doc.build_requires:
                 # FIXME CHECKS OF DUPLICATED?
                 for req in doc.build_requires.splitlines():
-                    pattern, req_list = req.split(":", 1)
+                    tokens = req.split(":", 1)
+                    if len(tokens) == 1:
+                        pattern, req_list = "*", req
+                    else:
+                        pattern, req_list = tokens
                     req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
-                    obj.build_requires[pattern] = req_list
+                    obj.build_requires.setdefault(pattern, []).extend(req_list)
 
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())
