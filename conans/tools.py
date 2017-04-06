@@ -121,8 +121,8 @@ def environment_append(env_vars):
         os.environ.update(old_env)
 
 
-def msvc_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                 arch=None):
+def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
+                       arch=None):
     """ Do both: set the environment variables and call the .sln build
     """
     vcvars = vcvars_command(settings)

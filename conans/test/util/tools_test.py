@@ -11,6 +11,7 @@ from conans.errors import ConanException
 from nose.plugins.attrib import attr
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
+from conans.test.utils.runner import TestRunner
 
 
 class RunnerMock(object):
@@ -211,7 +212,7 @@ class ToolsTest(unittest.TestCase):
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
-    def msvc_command_test(self):
+    def msvc_build_command_test(self):
         if platform.system() != "Windows":
             return
         settings = Settings.loads(default_settings_yml)
@@ -219,22 +220,44 @@ class ToolsTest(unittest.TestCase):
         settings.compiler = "Visual Studio"
         settings.compiler.version = "14"
         # test build_type and arch override, for multi-config packages
-        cmd = tools.msvc_command(settings, "project.sln", build_type="Debug", arch="x86")
+        cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
         self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
 
         # tests errors if args not defined
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            tools.msvc_command(settings, "project.sln")
+            tools.msvc_build_command(settings, "project.sln")
         settings.arch = "x86"
         with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
-            tools.msvc_command(settings, "project.sln")
+            tools.msvc_build_command(settings, "project.sln")
 
         # succesful definition via settings
         settings.build_type = "Debug"
-        cmd = tools.msvc_command(settings, "project.sln")
+        cmd = tools.msvc_build_command(settings, "project.sln")
         self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
         self.assertIn('vcvarsall.bat', cmd)
+
+    def vcvars_echo_test(self):
+        if platform.system() != "Windows":
+            return
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        cmd = tools.vcvars_command(settings)
+        output = TestBufferConanOutput()
+        runner = TestRunner(output)
+        runner(cmd + " && set vs140comntools")
+        self.assertIn("vcvarsall.bat", str(output))
+        self.assertIn("VS140COMNTOOLS=", str(output))
+        with tools.environment_append({"VisualStudioVersion": "14"}):
+            output = TestBufferConanOutput()
+            runner = TestRunner(output)
+            cmd = tools.vcvars_command(settings)
+            runner(cmd + " && set vs140comntools")
+            self.assertNotIn("vcvarsall.bat", str(output))
+            self.assertIn("Conan:vcvars already set", str(output))
+            self.assertIn("VS140COMNTOOLS=", str(output))
 
     @attr('slow')
     def build_vs_project_test(self):
