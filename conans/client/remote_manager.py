@@ -71,12 +71,12 @@ class RemoteManager(object):
         # If package has been modified remove tgz to regenerate it
         read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
 
-        if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
+        if read_manifest != expected_manifest:
             self._output.writeln("")
-            for fname in read_manifest.file_sums.keys():
-                if read_manifest.file_sums[fname] != expected_manifest.file_sums[fname]:
-                    self._output.warn("Mismatched checksum for file %s (checksum: %s, expected: %s)" %
-                                      (fname, read_manifest.file_sums[fname], expected_manifest.file_sums[fname]))
+            diff = read_manifest.difference(expected_manifest)
+            for fname, (h1, h2) in diff.items():
+                self._output.warn("Mismatched checksum '%s' (manifest: %s, file: %s)"
+                                  % (fname, h1, h2))
 
             if PACKAGE_TGZ_NAME in files:
                 try:
@@ -84,8 +84,9 @@ class RemoteManager(object):
                     os.unlink(tgz_path)
                 except Exception:
                     pass
-            logger.error("Manifests doesn't match!: %s != %s" % (str(read_manifest.file_sums),
-                                                                 str(expected_manifest.file_sums)))
+            error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
+                                        % (fname, h1, h2) for fname, (h1, h2) in diff.items())
+            logger.error("Manifests doesn't match!\n%s" % error_msg)
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
         else:
             self._output.rewrite_line("Package integrity OK!")
@@ -103,7 +104,6 @@ class RemoteManager(object):
             return tmp
         else:
             return None
-
 
     def get_conan_digest(self, conan_reference, remote):
         """

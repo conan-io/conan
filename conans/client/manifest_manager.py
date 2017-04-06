@@ -40,7 +40,7 @@ class ManifestManager(object):
     def _check(self, reference, manifest, remote, path):
         if os.path.exists(path):
             existing_manifest = FileTreeManifest.loads(load(path))
-            if existing_manifest.file_sums == manifest.file_sums:
+            if existing_manifest == manifest:
                 self._log.append("Manifest for '%s': OK" % str(reference))
                 return
 
@@ -52,7 +52,7 @@ class ManifestManager(object):
         self._handle_add(reference, remote, manifest, path)
 
     def _match_manifests(self, read_manifest, expected_manifest, reference):
-        if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
+        if read_manifest is None or read_manifest != expected_manifest:
             raise ConanException("%s local cache package is corrupted: "
                                  "some file hash doesn't match manifest"
                                  % (str(reference)))
