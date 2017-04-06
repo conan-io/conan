@@ -111,8 +111,6 @@ class CMake(object):
         if str(the_os).lower() == "macos":
             if arch == "x86":
                 cmake_definitions["CMAKE_OSX_ARCHITECTURES"] = "i386"
-            # CMake defines MacOS as Darwin
-            the_os = "Darwin"
         return cmake_definitions
 
     def _cmake_cross_build_defines(self, the_os, os_ver):
@@ -125,7 +123,8 @@ class CMake(object):
             ret["CMAKE_SYSTEM_NAME"] = env_system_name
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
         else:
-            if self._cmake_system_name and (platform.system() != the_os or os_ver):
+            platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
+            if self._cmake_system_name and (platform_os != the_os or os_ver):
                 if the_os:
                     ret["CMAKE_SYSTEM_NAME"] = the_os
                     if os_ver:
