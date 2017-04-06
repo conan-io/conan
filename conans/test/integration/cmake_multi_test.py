@@ -20,7 +20,7 @@ class {name}Conan(ConanFile):
     def build(self):
         with open("hello{name}.h", "a") as f:
             f.write('#define HELLO{name}BUILD "%s"' % self.settings.build_type)
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         self.run('cmake %s' % (cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
