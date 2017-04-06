@@ -81,6 +81,7 @@ class {package_name}Conan(ConanFile):
         self.copy("*.h", dst="include", src="hello")
         self.copy("*hello.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
+        self.copy("*.dylib*", dst="lib", keep_path=False)
         self.copy("*.so", dst="lib", keep_path=False)
         self.copy("*.a", dst="lib", keep_path=False)
 
@@ -132,8 +133,8 @@ class {package_name}TestConan(ConanFile):
         cmake.build()
 
     def imports(self):
-        self.copy("*.dll", "bin", "bin")
-        self.copy("*.dylib", "bin", "bin")
+        self.copy("*.dll", dst="bin", src="bin")
+        self.copy("*.dylib*", dst="bin", src="lib")
 
     def test(self):
         os.chdir("bin")
