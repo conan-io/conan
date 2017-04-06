@@ -50,11 +50,11 @@ class CMake(object):
         self.build_dir = None
         self._cmake_system_name = cmake_system_name
         self.parallel = parallel
-        self.auto_defs = self._get_cmake_definitions()
+        self.definitions = self._get_cmake_definitions()
 
     @property
     def flags(self):
-        return _defs_to_string(self.auto_defs)
+        return _defs_to_string(self.definitions)
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -180,7 +180,7 @@ class CMake(object):
             '-G "%s"' % self.generator,
             self.build_type,
             self.runtime,
-            _defs_to_string(self.auto_defs),
+            self.flags,
             '-Wno-dev'
         ])
 
