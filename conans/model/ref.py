@@ -2,33 +2,30 @@ from collections import namedtuple
 import re
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
+from conans.model.username import Username
 
 
-def validate_conan_name(name, version=False):
+def _validate_conan_name(name, version=False):
     """Check for name compliance with pattern rules"""
-    try:
-        if name == '*':
-            return name
-        if ConanFileReference.validation_pattern.match(name) is None:
-            if version and name.startswith("[") and name.endswith("]"):
-                return name
-            if len(name) > ConanFileReference.max_chars:
-                message = "'%s' is too long. Valid names must " \
-                          "contain at most %s characters." % (name,
-                                                              ConanFileReference.max_chars)
-            elif len(name) < ConanFileReference.min_chars:
-                message = "'%s' is too short. Valid names must contain"\
-                          " at least %s characters." % (name, ConanFileReference.min_chars)
-            else:
-                message = "'%s' is an invalid name. Valid names MUST begin with a "\
-                          "letter or number, have between %s-%s chars, including "\
-                          "letters, numbers, underscore,"\
-                          " dot and dash" % (name, ConanFileReference.min_chars,
-                                             ConanFileReference.max_chars)
-            raise InvalidNameException(message)
-        return name
-    except AttributeError:
-        raise InvalidNameException('Empty name provided', None)
+    if name == "*":
+        return
+    if ConanFileReference.validation_pattern.match(name) is None:
+        if version and name.startswith("[") and name.endswith("]"):
+            return
+        if len(name) > ConanFileReference.max_chars:
+            message = "'%s' is too long. Valid names must " \
+                      "contain at most %s characters." % (name,
+                                                          ConanFileReference.max_chars)
+        elif len(name) < ConanFileReference.min_chars:
+            message = "'%s' is too short. Valid names must contain"\
+                      " at least %s characters." % (name, ConanFileReference.min_chars)
+        else:
+            message = "'%s' is an invalid name. Valid names MUST begin with a "\
+                      "letter or number, have between %s-%s chars, including "\
+                      "letters, numbers, underscore,"\
+                      " dot and dash" % (name, ConanFileReference.min_chars,
+                                         ConanFileReference.max_chars)
+        raise InvalidNameException(message)
 
 
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
@@ -43,41 +40,33 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
     whitespace_pattern = re.compile(r"\s+")
     sep_pattern = re.compile("@|/")
 
-    def __new__(cls, name, version, user, channel, validate=True):
+    def __new__(cls, name, version, user, channel):
         """Simple name creation.
         @param name:        string containing the desired name
         @param validate:    checks for valid complex name. default True
         """
-        if validate:
-            name = validate_conan_name(name)
-            version = validate_conan_name(version, True)
-            user = validate_conan_name(user)
-            channel = validate_conan_name(channel)
+        _validate_conan_name(name)
+        _validate_conan_name(version, True)
+        Username.validate(user, pattern=True)
+        _validate_conan_name(channel)
         version = Version(version)
         return super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
 
     @staticmethod
-    def loads(text, validate=True):
+    def loads(text):
         """ Parses a text string to generate a ConanFileReference object
         """
         text = ConanFileReference.whitespace_pattern.sub("", text)
         tokens = ConanFileReference.sep_pattern.split(text)
         try:
-            name = tokens[0]
-            version = tokens[1]
-            user = tokens[2]
-            channel = tokens[3]
-        except IndexError:
+            name, version, user, channel = tokens
+        except ValueError:
             raise ConanException("Wrong package recipe reference %s\nWrite something like "
-                                 "OpenCV/1.0.6@phil/stable" % text)
-        return ConanFileReference(name, version, user, channel, validate)
+                                 "OpenCV/1.0.6@user/stable" % text)
+        return ConanFileReference(name, version, user, channel)
 
     def __repr__(self):
         return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
-
-    def package_ref(self, conan_info):
-        package_id = conan_info.package_id(self)
-        return PackageReference(self, package_id)
 
 
 class PackageReference(namedtuple("PackageReference", "conan package_id")):
