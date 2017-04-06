@@ -250,8 +250,8 @@ class DepsEnvInfo(EnvInfo):
     def __getitem__(self, item):
         return self._dependencies_[item]
 
-    def update(self, dep_env_info, conan_ref):
-        self._dependencies_[conan_ref.name] = dep_env_info
+    def update(self, dep_env_info, pkg_name):
+        self._dependencies_[pkg_name] = dep_env_info
 
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
@@ -266,11 +266,9 @@ class DepsEnvInfo(EnvInfo):
                 else:
                     self.vars[varname] = merge_lists(self.vars[varname], [value])
             else:
-                logger.warn("DISCARDED variable %s=%s from %s" % (varname, value, str(conan_ref)))
+                logger.warn("DISCARDED variable %s=%s from %s" % (varname, value, pkg_name))
 
     def update_deps_env_info(self, dep_env_info):
         assert isinstance(dep_env_info, DepsEnvInfo)
-        for pkg, env_info in dep_env_info.dependencies:
-            from collections import namedtuple
-            ref = namedtuple('ref', "name")(pkg)
-            self.update(env_info, ref)
+        for pkg_name, env_info in dep_env_info.dependencies:
+            self.update(env_info, pkg_name)

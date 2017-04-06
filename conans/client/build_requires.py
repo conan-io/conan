@@ -12,10 +12,10 @@ def _apply_build_requires(deps_graph, conanfile):
     for node in requires_nodes:
         conan_ref, build_require_conanfile = node
 
-        conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, conan_ref)
+        conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, conan_ref.name)
         conanfile.deps_cpp_info.update_deps_cpp_info(build_require_conanfile.deps_cpp_info)
 
-        conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref)
+        conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref.name)
         conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
 
 

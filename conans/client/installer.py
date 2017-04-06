@@ -251,8 +251,8 @@ class ConanInstaller(object):
         public_deps = [name for name, req in conan_file.requires.items() if not req.private]
         conan_file.cpp_info.public_deps = public_deps
         for n in node_order:
-            conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
-            conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
+            conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
+            conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
 
         # Update the env_values with the inherited from dependencies
         conan_file._env_values.update(conan_file.deps_env_info)

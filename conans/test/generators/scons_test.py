@@ -12,11 +12,11 @@ class SConsGeneratorTest(unittest.TestCase):
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
         cpp_info = CppInfo("")
         cpp_info.defines = ["MYDEFINE1"]
-        conanfile.deps_cpp_info.update(cpp_info, ref)
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
         cpp_info = CppInfo("")
         cpp_info.defines = ["MYDEFINE2"]
-        conanfile.deps_cpp_info.update(cpp_info, ref)
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
         generator = SConsGenerator(conanfile)
         content = generator.content
         scons_lines = content.splitlines()
