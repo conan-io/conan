@@ -171,7 +171,7 @@ build_type: [ Release]
         # Now activate cross build and check sysroot
         with(tools.environment_append({"CONAN_CMAKE_SYSTEM_NAME": "Android"})):
             cmake = CMake(conan_file)
-            self.assertEquals(cmake.auto_defs["CMAKE_SYSROOT"], "/path/to/sysroot")
+            self.assertEquals(cmake.definitions["CMAKE_SYSROOT"], "/path/to/sysroot")
 
     def test_deprecated_behaviour(self):
         """"Remove when deprecate the old settings parameter to CMake and conanfile to configure/build/test"""
