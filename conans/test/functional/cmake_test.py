@@ -40,6 +40,10 @@ class CMakeTest(unittest.TestCase):
                          if (platform.system() != os and cmake_system_name) else "")
                 cmake = CMake(conan_file, generator=generator, cmake_system_name=cmake_system_name)
                 new_text = text.replace("-DCONAN_EXPORTED", "%s-DCONAN_EXPORTED" % cross)
+                if "Visual Studio" in text:
+                    cores = ('-DCONAN_CXX_FLAGS="/MP{0}" '
+                             '-DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count()))
+                    new_text = new_text.replace("-Wno-dev", "%s-Wno-dev" % cores)
                 self.assertEqual(new_text, cmake.command_line)
                 self.assertEqual(build_config, cmake.build_config)
 
@@ -190,9 +194,10 @@ build_type: [ Release]
         conan_file.settings = settings
         cmake = CMake(settings)
         cmake.configure(conan_file)
+        cores = '-DCONAN_CXX_FLAGS="/MP{0}" -DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count())
         self.assertEqual('cd {0} && cmake -G "Visual Studio 12 2013" {1}-DCONAN_EXPORTED="1" '
-                         '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-                         '-Wno-dev {0}'.format(dot_dir, cross),
+                         '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" {2}'
+                         '-Wno-dev {0}'.format(dot_dir, cross, cores),
                          conan_file.command)
 
         cmake.build(conan_file)
@@ -224,9 +229,10 @@ build_type: [ Release]
         target_test = CMakeTest.scape('--target RUN_TESTS')
 
         cmake.configure()
+        cores = '-DCONAN_CXX_FLAGS="/MP{0}" -DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count())
         self.assertEqual('cd {0} && cmake -G "Visual Studio 12 2013" {1}-DCONAN_EXPORTED="1" '
-                         '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-                         '-Wno-dev {0}'.format(dot_dir, cross),
+                         '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" {2}'
+                         '-Wno-dev {0}'.format(dot_dir, cross, cores),
                          conan_file.command)
 
         cmake.build()
@@ -249,8 +255,8 @@ build_type: [ Release]
         else:
             escaped_args = "'--foo \"bar\"' -DSHARED=\"True\" '/source'"
         self.assertEqual('cd %s && cmake -G "Visual Studio 12 2013" %s-DCONAN_EXPORTED="1" '
-                         '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
-                         '-Wno-dev %s' % (tempdir, cross, escaped_args),
+                         '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" %s'
+                         '-Wno-dev %s' % (tempdir, cross, cores, escaped_args),
                          conan_file.command)
 
         cmake.build(args=["--bar 'foo'"], target="install")

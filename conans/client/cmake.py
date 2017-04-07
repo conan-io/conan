@@ -105,7 +105,7 @@ class CMake(object):
 
         return "Unix Makefiles"
 
-    def _cmake_compiler_options(self, the_os, os_ver, arch):
+    def _cmake_compiler_options(self, the_os, arch):
         cmake_definitions = OrderedDict()
 
         if str(the_os).lower() == "macos":
@@ -213,7 +213,7 @@ class CMake(object):
         comp_version = self._settings.compiler.version
         op_system_version = self._settings.get_safe("os.version")
 
-        ret = self._cmake_compiler_options(the_os=op_system, os_ver=op_system_version, arch=arch)
+        ret = self._cmake_compiler_options(the_os=op_system, arch=arch)
         ret.update(self._cmake_cross_build_defines(the_os=op_system, os_ver=op_system_version))
         ret["CONAN_EXPORTED"] = "1"
         if comp:
@@ -237,6 +237,11 @@ class CMake(object):
         except:
             pass
 
+        if op_system == "Windows" and comp == "Visual Studio":
+            if self.parallel:
+                cpus = tools.cpu_count()
+                ret["CONAN_CXX_FLAGS"] = "/MP%s" % cpus
+                ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
         return ret
 
     @property
