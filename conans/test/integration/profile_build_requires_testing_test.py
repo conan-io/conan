@@ -1,7 +1,6 @@
 import unittest
 
 from conans.test.utils.tools import TestClient
-from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
 
@@ -17,12 +16,12 @@ class MyLib(ConanFile):
     settings = "os", "compiler", "arch", "build_type"
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         enable_testing = "Test1" in self.deps_cpp_info.deps
-        cmake.configure(self, defs={"ENABLE_TESTING": enable_testing})
-        cmake.build(self)
+        cmake.configure(defs={"ENABLE_TESTING": enable_testing})
+        cmake.build()
         if enable_testing:
-            cmake.test(self)
+            cmake.test()
 
 """
 cmake = """
