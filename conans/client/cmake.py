@@ -28,6 +28,22 @@ Instance CMake with the conanfile instance instead:
 **********************************************************************************
 '''
 
+# Deprecated in 0.22
+deprecated_conanfile_param_message = '''
+*******************************   WARNING!!! ************************************
+
+Do not pass 'self' to configure() nor build() methods, it is deprecated and will be removed.
+
+Instance CMake with the conanfile instance instead:
+
+    cmake = CMake(self)
+    cmake.configure() # Optional args, defs, source_dir and build_dir parameters
+    cmake.build() # Optional args, build_dir and target
+
+
+**********************************************************************************
+'''
+
 
 class CMake(object):
 

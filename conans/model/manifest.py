@@ -44,6 +44,9 @@ class FileTreeManifest(object):
             ret += "%s: %s\n" % (filepath, file_md5)
         return ret
 
+    def files(self):
+        return self.file_sums.keys()
+
     @property
     def summary_hash(self):
         ret = ""  # Do not include the timestamp in the summary hash
@@ -88,7 +91,21 @@ class FileTreeManifest(object):
         return cls(date, file_dict)
 
     def __eq__(self, other):
-        return self.time == other.time and self.file_sums == other.file_sums
+        """ Two manifests are equal if file_sums
+        """
+        return self.file_sums == other.file_sums
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def difference(self, other):
+        result = {}
+        for f, h in self.file_sums.items():
+            h2 = other.file_sums.get(f)
+            if h != h2:
+                result[f] = h, h2
+        for f, h in other.file_sums.items():
+            h2 = self.file_sums.get(f)
+            if h != h2:
+                result[f] = h2, h
+        return result

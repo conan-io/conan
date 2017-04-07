@@ -79,7 +79,7 @@ class ConanProxy(object):
                 read_manifest = self._client_cache.load_package_manifest(package_ref)
                 try:  # get_conan_digest can fail, not in server
                     upstream_manifest = self.get_package_digest(package_ref)
-                    if upstream_manifest.file_sums != read_manifest.file_sums:
+                    if upstream_manifest != read_manifest:
                         if upstream_manifest.time > read_manifest.time:
                             output.warn("Current package is older than remote upstream one")
                             if self._update:
@@ -190,7 +190,7 @@ class ConanProxy(object):
         if read_manifest:
             try:  # get_conan_digest can fail, not in server
                 upstream_manifest = self.get_conan_digest(conan_reference)
-                if upstream_manifest.file_sums != read_manifest.file_sums:
+                if upstream_manifest != read_manifest:
                     return 1 if upstream_manifest.time > read_manifest.time else -1
             except ConanException:
                 pass
