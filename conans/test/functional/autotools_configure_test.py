@@ -1,6 +1,7 @@
 import unittest
 
 from conans.client.configure_build_environment import AutoToolsBuildEnvironment
+from conans import tools
 
 
 class MockDepsCppInfo(object):
@@ -195,6 +196,31 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
         self.assertEquals(be.vars, expected)
+
+    def environment_append_test(self):
+        settings = MockSettings({"build_type": "Debug",
+                                 "arch": "x86_64",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++"})
+        conanfile = MockConanfile(settings)
+        conanfile.settings = settings
+        self._set_deps_info(conanfile)
+        env_vars = {"CFLAGS": "-additionalcflag",
+                    "CXXFLAGS": "-additionalcxxflag",
+                    "LDFLAGS": "-additionalldflag",
+                    "LIBS": "-additionallibs",
+                    "CPPFLAGS": "-additionalcppflag"}
+
+        with(tools.environment_append(env_vars)):
+            be = AutoToolsBuildEnvironment(conanfile)
+            expected = {'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -'
+                                    'Dtwodefinition -D_GLIBCXX_USE_CXX11_ABI=0 -additionalcppflag', 
+                        'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder a_cpp_flag -additionalcxxflag', 
+                        'LIBS': '-lonelib -ltwolib -additionallibs', 
+                        'LDFLAGS': 'shared_link_flag exe_link_flag -m64 '
+                                   '--sysroot=/path/to/folder -Lone/lib/path -additionalldflag', 
+                        'CFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder -additionalcflag'}
+            self.assertEquals(be.vars, expected)
 
     def modify_values_test(self):
         settings = MockSettings({"build_type": "Debug",

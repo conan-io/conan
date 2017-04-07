@@ -10,6 +10,7 @@ from conans.tools import cpu_count, args_to_string
 from conans import tools
 import os
 import platform
+from conans.util.log import logger
 
 # Deprecated in 0.22
 deprecated_conanfile_param_message = '''
@@ -36,19 +37,23 @@ class CMake(object):
             self._conanfile = None
             self.configure = self._configure_old
             self.build = self._build_old
-            self.test = self._test_old
         elif isinstance(settings_or_conanfile, ConanFile):
             self._settings = settings_or_conanfile.settings
             self._conanfile = settings_or_conanfile
             self.configure = self._configure_new
             self.build = self._build_new
-            self.test = self._test_new
         else:
             raise ConanException("First parameter of CMake() has to be a ConanFile instance.")
 
         self.generator = generator or self._generator()
         self.build_dir = None
         self._cmake_system_name = cmake_system_name
+        # Override by environment
+        if get_env("CONAN_CMAKE_SYSTEM_NAME", "") == "False":
+            self._cmake_system_name = False
+        elif get_env("CONAN_CMAKE_SYSTEM_NAME", ""):
+            self._cmake_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME")
+
         self.parallel = parallel
         self.definitions = self._get_cmake_definitions()
 
@@ -117,14 +122,16 @@ class CMake(object):
         ret = OrderedDict()
 
         # SYSTEM NAME
-        env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", os_ver)
-        if env_system_name and env_system_name != "False":  # False means not auto-set
-            ret["CMAKE_SYSTEM_NAME"] = env_system_name
+        # String not empty
+        if not isinstance(self._cmake_system_name, bool) and self._cmake_system_name != "":
+            ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
+        elif self._cmake_system_name is False:
+            return ret
         else:
             platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-            if self._cmake_system_name and (platform_os != the_os or os_ver):
+            if platform_os != the_os or os_ver:
                 if the_os:
                     ret["CMAKE_SYSTEM_NAME"] = the_os
                     if os_ver:
@@ -163,6 +170,8 @@ class CMake(object):
                                            self._settings.get_safe("arch"))
                 if arch_abi_settings:
                     ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
+
+        logger.info("Setting Cross build flags: %s" % " ,".join(["%s=%s" for k,v in ret.items()]))
         return ret
 
     @property
@@ -309,15 +318,7 @@ class CMake(object):
         command = "cmake --build %s" % arg_list
         self._conanfile.run(command)
 
-    def _test_old(self, conan_file, args=None, build_dir=None, target=None):
-        """Deprecated in 0.22"""
-        if not isinstance(conan_file, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
-        self._conanfile = conan_file
-        self._conanfile.output.warn(deprecated_conanfile_param_message)
-        return self._test_new(args=args, build_dir=build_dir, target=target)
-
-    def _test_new(self, args=None, build_dir=None, target=None):
+    def test(self, args=None, build_dir=None, target=None):
         if isinstance(args, ConanFile):
             raise ConanException(deprecated_conanfile_param_message)
         if not target:
