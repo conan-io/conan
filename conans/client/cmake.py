@@ -45,9 +45,22 @@ Instance CMake with the conanfile instance instead:
 '''
 
 
+def _get_env_cmake_system_name():
+    env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
+    return {"False": False, "True": True, "": None}.get(env_system_name, env_system_name)
+
+
 class CMake(object):
 
     def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True, parallel=True):
+        """
+
+        :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
+        :param generator: Generator name to use or none to autodetect
+        :param cmake_system_name: False to not use CMAKE_SYSTEM_NAME variable, True for auto-detect or directly a string
+               with the system name
+        :param parallel: Try to build with multiple cores if available
+        """
         if isinstance(settings_or_conanfile, Settings):
             self._settings = settings_or_conanfile
             self._conanfile = None
@@ -63,15 +76,12 @@ class CMake(object):
 
         self.generator = generator or self._generator()
         self.build_dir = None
-        self._cmake_system_name = cmake_system_name
-        # Override by environment
-        if get_env("CONAN_CMAKE_SYSTEM_NAME", "") == "False":
-            self._cmake_system_name = False
-        elif get_env("CONAN_CMAKE_SYSTEM_NAME", ""):
-            self._cmake_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME")
-
+        self._cmake_system_name = _get_env_cmake_system_name()
+        if self._cmake_system_name is None:  # Not overwritten using environment
+            self._cmake_system_name = cmake_system_name
         self.parallel = parallel
         self.definitions = self._get_cmake_definitions()
+
 
     @property
     def flags(self):
@@ -136,24 +146,24 @@ class CMake(object):
 
     def _cmake_cross_build_defines(self, the_os, os_ver):
         ret = OrderedDict()
-
-        # SYSTEM NAME
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", os_ver)
-        # String not empty
-        if not isinstance(self._cmake_system_name, bool) and self._cmake_system_name != "":
+
+        if self._cmake_system_name is False:
+            return ret
+
+        if self._cmake_system_name is not True:  # String not empty
             ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
-        elif self._cmake_system_name is False:
-            return ret
-        else:
+        else:  # self._cmake_system_name is True, so detect if we are cross building and the system name and version
             platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-            if platform_os != the_os or os_ver:
+            if (platform_os != the_os) or os_ver:  # We are cross building
                 if the_os:
                     ret["CMAKE_SYSTEM_NAME"] = the_os
                     if os_ver:
                         ret["CMAKE_SYSTEM_VERSION"] = os_ver
                 else:
                     ret["CMAKE_SYSTEM_NAME"] = "Generic"
+
         if ret:  # If enabled cross compile
             for env_var in ["CONAN_CMAKE_SYSTEM_PROCESSOR",
                             "CONAN_CMAKE_FIND_ROOT_PATH",
