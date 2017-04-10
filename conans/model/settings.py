@@ -178,7 +178,7 @@ class Settings(object):
                 tmp = getattr(tmp, prop, None)
         except ConanException:
             return None
-        if tmp is not None:
+        if tmp is not None and tmp.value and tmp.value != "None":  # In case of subsettings is None
             return str(tmp)
         return None
 

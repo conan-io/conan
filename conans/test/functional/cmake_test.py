@@ -206,7 +206,7 @@ build_type: [ Release]
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
         settings.arch = "x86"
-        settings.os = "Windows"
+        settings.build_type = None
 
         if sys.platform == 'win32':
             dot_dir = "."
@@ -235,6 +235,7 @@ build_type: [ Release]
         self.assertEqual('cmake --build %s %s' % (dot_dir, target_test), conan_file.command)
 
         settings.build_type = "Debug"
+        cmake = CMake(conan_file)
         cmake.build()
         self.assertEqual('cmake --build %s --config Debug' % dot_dir, conan_file.command)
 
@@ -304,6 +305,7 @@ build_type: [ Release]
         cmake.test()
         self.assertEqual('cmake --build %s' % CMakeTest.scape('. --target test'), conan_file.command)
 
+
     def test_clean_sh_path(self):
 
         if platform.system() != "Windows":
@@ -339,6 +341,32 @@ build_type: [ Release]
         cmake.configure()
         self.assertNotIn(self.tempdir, conanfile.path)
 
+    def test_shared(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.arch = "x86"
+        settings.os = "Windows"
+
+        conan_file = ConanFileMock(shared=True)
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        self.assertEquals(cmake.definitions["BUILD_SHARED_LIBS"], "ON")
+
+        conan_file = ConanFileMock(shared=False)
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        self.assertEquals(cmake.definitions["BUILD_SHARED_LIBS"], "OFF")
+
+        conan_file = ConanFileMock(shared=None)
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        self.assertNotIn("BUILD_SHARED_LIBS", cmake.definitions)
+
     @staticmethod
     def scape(args):
         pattern = "%s" if sys.platform == "win32" else r"'%s'"
@@ -346,13 +374,15 @@ build_type: [ Release]
 
 
 class ConanFileMock(ConanFile):
-    def __init__(self):
+    def __init__(self, shared=None):
         self.command = None
         self.path = None
         self._conanfile_directory = "."
         self.settings = None
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = namedtuple("output", "warn")(lambda x: x)
+        if shared is not None:
+            self.options = namedtuple("options", "shared")(shared)
 
     def run(self, command):
         self.command = command
