@@ -277,15 +277,12 @@ class ToolsTest(unittest.TestCase):
 
         conanfile = MockConanfile()
         tools.run_in_windows_bash(conanfile, "a_command.bat")
-        expected = 'bash --login -c ^"cd \\^"/home/laso/workspace/conan/conans/test/util\\^" ^&^& a_command.bat ^"'
-        self.assertEquals(conanfile.command, expected)
+        self.assertIn("bash --login -c", conanfile.output)
+        self.assertIn("^&^& a_command.bat ^", conanfile.output)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path/to"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat")
-            expected = 'path/to/bash --login -c ^"cd \\^"/home/laso/workspace/conan/' \
-                       'conans/test/util\\^" ^&^& a_command.bat ^"'
-            self.assertEquals(conanfile.command, expected)
-
+            self.assertIn("path/to/bash --login -c", conanfile.output)
 
     @attr('slow')
     def build_vs_project_test(self):
