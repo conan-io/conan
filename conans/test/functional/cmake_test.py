@@ -205,6 +205,7 @@ build_type: [ Release]
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
+        settings.compiler.runtime = "MDd"
         settings.arch = "x86"
         settings.build_type = None
 
@@ -223,7 +224,7 @@ build_type: [ Release]
         target_test = CMakeTest.scape('--target RUN_TESTS')
 
         cmake.configure()
-        self.assertEqual('cd {0} && cmake -G "Visual Studio 12 2013" {1}-DCONAN_EXPORTED="1" '
+        self.assertEqual('cd {0} && cmake -G "Visual Studio 12 2013" -DCONAN_LINK_RUNTIME=/MDd {1}-DCONAN_EXPORTED="1" '
                          '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
                          '-Wno-dev {0}'.format(dot_dir, cross),
                          conan_file.command)
@@ -248,7 +249,7 @@ build_type: [ Release]
             escaped_args = r'"--foo \"bar\"" -DSHARED="True" /source'
         else:
             escaped_args = "'--foo \"bar\"' -DSHARED=\"True\" '/source'"
-        self.assertEqual('cd %s && cmake -G "Visual Studio 12 2013" %s-DCONAN_EXPORTED="1" '
+        self.assertEqual('cd %s && cmake -G "Visual Studio 12 2013" -DCONAN_LINK_RUNTIME=/MDd %s-DCONAN_EXPORTED="1" '
                          '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" '
                          '-Wno-dev %s' % (tempdir, cross, escaped_args),
                          conan_file.command)

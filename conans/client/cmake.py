@@ -28,6 +28,7 @@ Instance CMake with the conanfile instance instead:
 **********************************************************************************
 '''
 
+
 def _get_env_cmake_system_name():
     env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
     return {"False": False, "True": True, "": None}.get(env_system_name, env_system_name)
@@ -69,7 +70,7 @@ class CMake(object):
         self._build_type = self._settings.get_safe("build_type")
         self._op_system_version = self._settings.get_safe("os.version")
         self._libcxx = self._settings.get_safe("compiler.libcxx")
-        self._runtime = self._settings.get_safe("runtime")
+        self._runtime = self._settings.get_safe("compiler.runtime")
 
         self.generator = generator or self._generator()
         self.build_dir = None
