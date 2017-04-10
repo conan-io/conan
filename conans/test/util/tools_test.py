@@ -280,9 +280,9 @@ class ToolsTest(unittest.TestCase):
         self.assertIn("bash --login -c", conanfile.command)
         self.assertIn("^&^& a_command.bat ^", conanfile.command)
 
-        with tools.environment_append({"CONAN_BASH_PATH": "path/to"}):
+        with tools.environment_append({"CONAN_BASH_PATH": "path\\to"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat")
-            self.assertIn("path/to/bash --login -c", conanfile.command)
+            self.assertIn("path\\to\\bash --login -c", conanfile.command)
 
     @attr('slow')
     def build_vs_project_test(self):
