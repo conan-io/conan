@@ -28,21 +28,9 @@ Instance CMake with the conanfile instance instead:
 **********************************************************************************
 '''
 
-# Deprecated in 0.22
-deprecated_conanfile_param_message = '''
-*******************************   WARNING!!! ************************************
-
-Do not pass 'self' to configure() nor build() methods, it is deprecated and will be removed.
-
-Instance CMake with the conanfile instance instead:
-
-    cmake = CMake(self)
-    cmake.configure() # Optional args, defs, source_dir and build_dir parameters
-    cmake.build() # Optional args, build_dir and target
-
-
-**********************************************************************************
-'''
+def _get_env_cmake_system_name():
+    env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
+    return {"False": False, "True": True, "": None}.get(env_system_name, env_system_name)
 
 
 def _get_env_cmake_system_name():
@@ -90,7 +78,6 @@ class CMake(object):
             self._cmake_system_name = cmake_system_name
         self.parallel = parallel
         self.definitions = self._get_cmake_definitions()
-
 
 
     @property
