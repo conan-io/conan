@@ -5,6 +5,7 @@ from pylint.lint import Run
 import json
 import sys
 from six import StringIO
+from conans.client.output import Color
 
 
 class WritableObject(object):
@@ -15,13 +16,15 @@ class WritableObject(object):
         self.content.append(st)
 
 
-def conan_py23_linter(conanfile_path, out):
+def conan_linter(conanfile_path, out):
     py3_msgs = lint_py3(conanfile_path)
     if py3_msgs:
-        out.error("Python 3 incompatibilities\n\t%s" % "\n\t".join(py3_msgs))
-    msgs = lint(conanfile_path)
+        out.writeln("Python 3 incompatibilities\n    ERROR: %s" % "\n    ERROR: ".join(py3_msgs),
+                    front=Color.BRIGHT_MAGENTA)
+    msgs = normal_linter(conanfile_path)
     if msgs:
-        out.warn("Linter warnings\n\t%s" % "\n\t".join(msgs))
+        out.writeln("Linter warnings\n    WARN: %s" % "\n    WARN:".join(msgs),
+                    front=Color.MAGENTA)
 
 
 def _runner(args):
@@ -54,7 +57,7 @@ def lint_py3(conanfile_path):
     return result
 
 
-def lint(conanfile_path):
+def normal_linter(conanfile_path):
     args = ["--reports=no", "--disable=no-absolute-import", "--persistent=no", conanfile_path]
     output_json = _runner(args)
 
