@@ -121,7 +121,18 @@ def environment_append(env_vars):
         os.environ.update(old_env)
 
 
-def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
+def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
+                       arch=None):
+    """ Do both: set the environment variables and call the .sln build
+    """
+    vcvars = vcvars_command(settings)
+    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch)
+    command = "%s && %s" % (vcvars, build)
+    return command
+
+
+def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
+                      arch=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -130,11 +141,18 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
     """
     targets = targets or []
     command = "devenv %s /upgrade && " % sln_path if upgrade_project else ""
-    command += "msbuild %s /p:Configuration=%s" % (sln_path, settings.build_type)
-    if str(settings.arch) in ["x86_64", "x86"]:
+    build_type = build_type or settings.build_type
+    arch = arch or settings.arch
+    if not build_type:
+        raise ConanException("Cannot build_sln_command, build_type not defined")
+    if not arch:
+        raise ConanException("Cannot build_sln_command, arch not defined")
+    command += "msbuild %s /p:Configuration=%s" % (sln_path, build_type)
+    arch = str(arch)
+    if arch in ["x86_64", "x86"]:
         command += ' /p:Platform='
-        command += '"x64"' if settings.arch == "x86_64" else '"x86"'
-    elif "ARM" in str(settings.arch).upper():
+        command += '"x64"' if arch == "x86_64" else '"x86"'
+    elif "ARM" in arch.upper():
         command += ' /p:Platform="ARM"'
 
     if targets:
@@ -146,7 +164,7 @@ def vcvars_command(settings):
     param = "x86" if settings.arch == "x86" else "amd64"
     existing_version = os.environ.get("VisualStudioVersion")
     if existing_version:
-        command = ""
+        command = "echo Conan:vcvars already set"
         existing_version = existing_version.split(".")[0]
         if existing_version != settings.compiler.version:
             raise ConanException("Error, Visual environment already set to %s\n"
