@@ -25,7 +25,8 @@ class TestConan(ConanFile):
                           client.user_io.out)
             self.assertIn("ERROR: Py3 incompatibility. Line 8: Calling a dict.iter*() method",
                           client.user_io.out)
+
         self.assertIn("WARN: Linter. Line 8: Unused variable 'k'",
                       client.user_io.out)
-        self.assertIn("WARN:Linter. Line 8: Unused variable 'v'",
+        self.assertIn("WARN: Linter. Line 8: Unused variable 'v'",
                       client.user_io.out)

@@ -6,6 +6,7 @@ import json
 import sys
 from six import StringIO
 from conans.client.output import Color
+import os
 
 
 class WritableObject(object):
@@ -17,14 +18,19 @@ class WritableObject(object):
 
 
 def conan_linter(conanfile_path, out):
-    py3_msgs = lint_py3(conanfile_path)
-    if py3_msgs:
-        out.writeln("Python 3 incompatibilities\n    ERROR: %s" % "\n    ERROR: ".join(py3_msgs),
-                    front=Color.BRIGHT_MAGENTA)
-    msgs = normal_linter(conanfile_path)
-    if msgs:
-        out.writeln("Linter warnings\n    WARN: %s" % "\n    WARN:".join(msgs),
-                    front=Color.MAGENTA)
+    try:
+        dirname = os.path.dirname(conanfile_path)
+        sys.path.append(dirname)
+        py3_msgs = lint_py3(conanfile_path)
+        if py3_msgs:
+            out.writeln("Python 3 incompatibilities\n    ERROR: %s" % "\n    ERROR: ".join(py3_msgs),
+                        front=Color.BRIGHT_MAGENTA)
+        msgs = normal_linter(conanfile_path)
+        if msgs:
+            out.writeln("Linter warnings\n    WARN: %s" % "\n    WARN: ".join(msgs),
+                        front=Color.MAGENTA)
+    finally:
+        sys.path.pop()
 
 
 def _runner(args):
