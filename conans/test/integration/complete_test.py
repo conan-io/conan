@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestServer, TestClient
+from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
 import time
@@ -33,7 +33,7 @@ class CompleteFlowTest(unittest.TestCase):
 
         # Upload conans
         self.client.run("upload %s" % str(conan_reference))
-        self.assertIn("Compressing exported", str(self.client.user_io.out))
+        self.assertIn("Compressing recipe", str(self.client.user_io.out))
 
         # Not needed to tgz again
         self.client.run("upload %s" % str(conan_reference))

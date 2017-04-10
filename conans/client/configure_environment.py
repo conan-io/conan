@@ -1,11 +1,56 @@
+import os
+import platform
+
 from conans.model.settings import Settings
 import copy
-from conans.client.generators.virtualenv import get_setenv_variables_commands
 from conans.model.env_info import DepsEnvInfo
 from conans.util.files import save
 from conans import tools
 from conans.client.output import ConanOutput
 import sys
+
+
+# MOVED DEPRECATED FUNCTIONS HERE TO DEPRECATE THE WHOLE MODULE
+
+def get_setenv_variables_commands(deps_env_info, command_set=None):
+    if command_set is None:
+        command_set = "SET" if platform.system() == "Windows" else "export"
+
+    multiple_to_set, simple_to_set = get_dict_values(deps_env_info)
+    ret = []
+    for name, value in multiple_to_set.items():
+        if platform.system() == "Windows":
+            ret.append(command_set + ' "' + name + '=' + value + ';%' + name + '%"')
+        else:
+            # Standard UNIX "sh" does not allow "export VAR=xxx" on one line
+            # So for portability reasons we split into two commands
+            ret.append(name + '=' + value + ':$' + name)
+            ret.append(command_set + ' ' + name)
+    for name, value in simple_to_set.items():
+        if platform.system() == "Windows":
+            ret.append(command_set + ' "' + name + '=' + value + '"')
+        else:
+            ret.append(name + '=' + value)
+            ret.append(command_set + ' ' + name + '=' + value)
+    return ret
+
+
+def get_dict_values(deps_env_info):
+    def adjust_var_name(name):
+        return "PATH" if name.lower() == "path" else name
+    multiple_to_set = {}
+    simple_to_set = {}
+    for name, value in deps_env_info.vars.items():
+        name = adjust_var_name(name)
+        if isinstance(value, list):
+            # Allow path with spaces in non-windows platforms
+            if platform.system() != "Windows" and name in ["PATH", "PYTHONPATH"]:
+                value = ['"%s"' % v for v in value]
+            multiple_to_set[name] = os.pathsep.join(value).replace("\\", "/")
+        else:
+            #  It works in windows too using "/" and allows to use MSYS shell
+            simple_to_set[name] = value.replace("\\", "/")
+    return multiple_to_set, simple_to_set
 
 
 class ConfigureEnvironment(object):
@@ -24,6 +69,25 @@ class ConfigureEnvironment(object):
             settings = self.conanfile.settings
 
         assert isinstance(settings, Settings)
+
+        self.output.warn("""
+***********************************************************************
+
+    WARNING!!!
+
+    ConfigureEnvironment class is deprecated and will be removed soon.
+    With ConfigureEnvironment, env variables from profiles and/or
+    command line are not applied.
+
+    Replace it with the right one according your needs:
+      - AutoToolsBuildEnvironment
+      - VisualStudioBuildEnvironment
+
+    Check docs.conan.io
+
+
+***********************************************************************
+        """)
 
         self._settings = settings
         self._deps_cpp_info = deps_cpp_info
@@ -53,10 +117,44 @@ class ConfigureEnvironment(object):
         except:
             self.libcxx = None
 
+    def _gcc_arch_flags(self):
+        if self.arch == "x86_64" or self.arch == "sparcv9":
+            return "-m64"
+        elif self.arch == "x86" or self.arch == "sparc":
+            return "-m32"
+        else:
+            return "";
+
+    def _gcc_lib_flags(self):
+        lib_flags = []
+        if self.libcxx:
+            if str(self.libcxx) == "libstdc++":
+                lib_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
+            elif str(self.libcxx) == "libstdc++11":
+                lib_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
+
+            if "clang" in str(self.compiler):
+                if str(self.libcxx) == "libc++":
+                    lib_flags.append("-stdlib=libc++")
+                else:
+                    lib_flags.append("-stdlib=libstdc++")
+
+            elif str(self.compiler) == "sun-cc":
+                if str(self.libcxx) == "libCstd":
+                    lib_flags.append("-library=Cstd")
+                elif str(self.libcxx) == "libstdcxx":
+                    lib_flags.append("-library=stdcxx4")
+                elif str(self.libcxx) == "libstlport":
+                    lib_flags.append("-library=stlport4")
+                elif str(self.libcxx) == "libstdc++":
+                    lib_flags.append("-library=stdcpp")
+
+        return lib_flags
+
     def _gcc_env(self):
         libflags = " ".join(["-l%s" % lib for lib in self._deps_cpp_info.libs])
         libs = 'LIBS="%s"' % libflags
-        archflag = "-m32" if self.arch == "x86" else ""
+        archflag = self._gcc_arch_flags()
         exe_linker_flags = " ".join(self._deps_cpp_info.exelinkflags)
         shared_linker_flags = " ".join(self._deps_cpp_info.sharedlinkflags)
         lib_paths = " ".join(["-L%s" % lib for lib in self._deps_cpp_info.lib_paths])
@@ -74,17 +172,7 @@ class ConfigureEnvironment(object):
 
         # Append the definition for libcxx
         all_cpp_flags = copy.copy(self._deps_cpp_info.cppflags)
-        if self.libcxx:
-            if str(self.libcxx) == "libstdc++":
-                all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
-            elif str(self.libcxx) == "libstdc++11":
-                all_cpp_flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
-
-            if "clang" in str(self.compiler):
-                if str(self.libcxx) == "libc++":
-                    all_cpp_flags.append("-stdlib=libc++")
-                else:
-                    all_cpp_flags.append("-stdlib=libstdc++")
+        all_cpp_flags.extend(self._gcc_lib_flags())
 
         cpp_flags = 'CPPFLAGS="$CPPFLAGS %s %s %s %s %s"' % (archflag, " ".join(all_cpp_flags),
                                                              debug, include_flags, defines)
@@ -98,8 +186,8 @@ class ConfigureEnvironment(object):
 
     @property
     def command_line_env(self):
-        if self.os == "Linux" or self.os == "Macos" or self.os == "FreeBSD":
-            if self.compiler == "gcc" or "clang" in str(self.compiler):
+        if self.os == "Linux" or self.os == "Macos" or self.os == "FreeBSD" or self.os == "SunOS":
+            if self.compiler == "gcc" or "clang" in str(self.compiler) or "sun-cc" in str(self.compiler):
                 return self._gcc_env()
         elif self.os == "Windows":
             commands = []
@@ -140,11 +228,9 @@ class ConfigureEnvironment(object):
 
     @property
     def compile_flags(self):
-        if self.compiler == "gcc" or "clang" in str(self.compiler):
+        if self.compiler == "gcc" or "clang" in str(self.compiler) or self.compiler == "sun-cc":
             flags = []
-            flags.extend("-l%s" % lib for lib in self._deps_cpp_info.libs)
-            if self.arch == "x86":
-                flags.append("-m32")
+            flags.append(self._gcc_arch_flags())
             flags.extend(self._deps_cpp_info.exelinkflags)
             flags.extend(self._deps_cpp_info.sharedlinkflags)
             if self.build_type == "Debug":
@@ -154,18 +240,9 @@ class ConfigureEnvironment(object):
             flags.extend('-D%s' % i for i in self._deps_cpp_info.defines)
             flags.extend('-I"%s"' % i for i in self._deps_cpp_info.include_paths)
             flags.extend('-L"%s"' % i for i in self._deps_cpp_info.lib_paths)
+            flags.extend("-l%s" % lib for lib in self._deps_cpp_info.libs)
             flags.extend(self._deps_cpp_info.cppflags)
-            if self.libcxx:
-                if str(self.libcxx) == "libstdc++":
-                    flags.append("-D_GLIBCXX_USE_CXX11_ABI=0")
-                elif str(self.libcxx) == "libstdc++11":
-                    flags.append("-D_GLIBCXX_USE_CXX11_ABI=1")
-
-                if "clang" in str(self.compiler):
-                    if str(self.libcxx) == "libc++":
-                        flags.append("-stdlib=libc++")
-                    else:
-                        flags.append("-stdlib=libstdc++")
+            flags.extend(self._gcc_lib_flags())
 
             return " ".join(flags)
         if self.compiler == "Visual Studio":

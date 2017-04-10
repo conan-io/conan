@@ -1,6 +1,7 @@
 import unittest
-from conans.test.tools import TestClient, TestServer
+from conans.test.utils.tools import TestClient, TestServer
 from collections import OrderedDict
+from conans.util.files import load
 
 
 class RemoteTest(unittest.TestCase):
@@ -39,12 +40,53 @@ class RemoteTest(unittest.TestCase):
         output = str(self.client.user_io.out)
         self.assertIn("remote1: http://", output.splitlines()[0])
 
+    def verify_ssl_test(self):
+        client = TestClient()
+        client.run("remote add my-remote http://someurl TRUE")
+        client.run("remote add my-remote2 http://someurl2 yes")
+        client.run("remote add my-remote3 http://someurl3 FALse")
+        client.run("remote add my-remote4 http://someurl4 No")
+        registry = load(client.client_cache.registry)
+        self.assertIn("my-remote http://someurl True", registry)
+        self.assertIn("my-remote2 http://someurl2 True", registry)
+        self.assertIn("my-remote3 http://someurl3 False", registry)
+        self.assertIn("my-remote4 http://someurl4 False", registry)
+
+    def verify_ssl_error_test(self):
+        client = TestClient()
+        error = client.run("remote add my-remote http://someurl some_invalid_option=foo",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Unrecognized boolean value 'some_invalid_option=foo'",
+                      client.user_io.out)
+        self.assertEqual("", load(client.client_cache.registry))
+
     def errors_test(self):
         self.client.run("remote update origin url", ignore_error=True)
-        self.assertIn("ERROR: origin not found in remotes", self.client.user_io.out)
+        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
 
         self.client.run("remote remove origin", ignore_error=True)
-        self.assertIn("ERROR: origin not found in remotes", self.client.user_io.out)
+        self.assertIn("ERROR: Remote 'origin' not found in remotes", self.client.user_io.out)
+
+    def duplicated_error_tests(self):
+        """ check remote name and URL are not duplicated
+        """
+        error = self.client.run("remote add remote1 http://otherurl", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Remote 'remote1' already exists in remotes (use update to modify)",
+                      self.client.user_io.out)
+
+        self.client.run("remote list")
+        url = str(self.client.user_io.out).split()[1]
+        error = self.client.run("remote add newname %s" % url, ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Remote 'remote0' already exists with same URL",
+                      self.client.user_io.out)
+
+        error = self.client.run("remote update remote1 %s" % url, ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Remote 'remote0' already exists with same URL",
+                      self.client.user_io.out)
 
     def basic_refs_test(self):
         self.client.run("remote add_ref Hello/0.1@user/testing remote0")

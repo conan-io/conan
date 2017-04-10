@@ -116,15 +116,25 @@ class DepsGraph(object):
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
                 non_devs = self.non_dev_nodes(node)
+
                 conanfile.info = ConanInfo.create(conanfile.settings.values,
                                                   conanfile.options.values,
                                                   direct_reqs,
                                                   indirect_reqs,
                                                   non_devs)
 
-                # Once we are done, call conan_info() to narrow and change possible values
-                conanfile.conan_info()
+                # Once we are done, call package_id() to narrow and change possible values
+                if hasattr(conanfile, "conan_info"):
+                    # Deprecated in 0.19
+                    conanfile.conan_info()
+                else:
+                    conanfile.package_id()
         return ordered
+
+    def direct_requires(self):
+        nodes_by_level = self.inverse_levels()
+        open_nodes = nodes_by_level[1]
+        return open_nodes
 
     def ordered_closure(self, node, flat):
         closure = set()
@@ -249,7 +259,7 @@ class DepsGraphBuilder(object):
     """
     def __init__(self, retriever, output, loader, resolver):
         """ param retriever: something that implements retrieve_conanfile for installed conans
-        param loader: helper ConanLoader to be able to load user space conanfile
+        :param loader: helper ConanLoader to be able to load user space conanfile
         """
         self._retriever = retriever
         self._output = output
@@ -264,26 +274,40 @@ class DepsGraphBuilder(object):
         return {conan_reference: self._retriever.update_available(conan_reference)
                 for conan_reference, _ in deps_graph.nodes}
 
-    def load(self, conan_ref, conanfile):
-        """ compute the dependencies graph for:
-        param conan_ref: ConanFileReference for installed conanfile or path to user one
-                         might be None for user conanfile.py or .txt
-        """
+    def load(self, conanfile):
+
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
-        root_node = Node(conan_ref, conanfile)
+        root_node = Node(None, conanfile)
         dep_graph.add_node(root_node)
         public_deps = {}  # {name: Node} dict with public nodes, so they are not added again
         # enter recursive computation
         t1 = time.time()
         loop_ancestors = []
-        self._load_deps(root_node, Requirements(), dep_graph, public_deps, conan_ref, None,
+        self._load_deps(root_node, Requirements(), dep_graph, public_deps, None, None,
                         loop_ancestors)
         logger.debug("Deps-builder: Time to load deps %s" % (time.time() - t1))
         t1 = time.time()
         dep_graph.propagate_info()
         logger.debug("Deps-builder: Propagate info %s" % (time.time() - t1))
         return dep_graph
+
+    def _resolve_deps(self, conanref, conanfile):
+        # Resolve possible version ranges of the current node requirements
+        # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
+        # RequireResolver are also done in new_reqs, and then propagated!
+        for _, require in conanfile.requires.items():
+            self._resolver.resolve(require, conanref)
+
+        if not hasattr(conanfile, "_evaluated_requires"):
+            conanfile._evaluated_requires = conanfile.requires.copy()
+        elif conanfile.requires != conanfile._evaluated_requires:
+            raise ConanException("%s: Incompatible requirements obtained in different "
+                                 "evaluations of 'requirements'\n"
+                                 "    Previous requirements: %s\n"
+                                 "    New requirements: %s"
+                                 % (conanref, list(conanfile.requires.values()),
+                                    list(conanfile._evaluated_requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
                    loop_ancestors):
@@ -301,11 +325,7 @@ class DepsGraphBuilder(object):
         new_reqs, new_options = self._config_node(conanfile, conanref, down_reqs, down_ref,
                                                   down_options)
 
-        # Resolve possible version ranges of the current node requirements
-        # new_reqs is a shallow copy of what is propagated upstream, so changes done by the
-        # RequireResolver are also done in new_reqs, and then propagated!
-        for name, require in conanfile.requires.items():
-            self._resolver.resolve(require, conanref)
+        self._resolve_deps(conanref, conanfile)
 
         # Expand each one of the current requirements
         for name, require in conanfile.requires.items():
@@ -325,7 +345,7 @@ class DepsGraphBuilder(object):
                 new_node = self._create_new_node(node, dep_graph, require, public_deps, name)
                 # RECURSION!
                 self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
-                                new_options.copy(), new_loop_ancestors)
+                                new_options, new_loop_ancestors)
             else:  # a public node already exist with this name
                 if previous_node.conan_ref != require.conan_reference:
                     self._output.werror("Conflict in %s\n"
@@ -337,7 +357,7 @@ class DepsGraphBuilder(object):
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 self._load_deps(previous_node, new_reqs, dep_graph, public_deps, conanref,
-                                new_options.copy(), new_loop_ancestors)
+                                new_options, new_loop_ancestors)
 
     def _config_node(self, conanfile, conanref, down_reqs, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual
@@ -373,9 +393,10 @@ class DepsGraphBuilder(object):
                     conanfile._original_requires = conanfile.requires.copy()
                 else:
                     conanfile.requires = conanfile._original_requires.copy()
+
                 conanfile.requirements()
 
-            new_options = conanfile.options.values
+            new_options = conanfile.options.deps_package_values
             new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))

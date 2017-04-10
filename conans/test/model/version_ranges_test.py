@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestBufferConanOutput
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.paths import CONANFILE
 import os
 from conans.client.deps_builder import DepsGraphBuilder
@@ -15,6 +15,7 @@ from conans.model.scope import Scopes
 from conans.client.require_resolver import RequireResolver, satisfying
 import re
 from nose_parameterized import parameterized
+from conans.model.profile import Profile
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -152,8 +153,7 @@ class VersionRangesTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), None,
-                                      OptionsValues.loads(""), Scopes(), None, None)
+        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)
@@ -172,7 +172,7 @@ class SayConan(ConanFile):
 
     def root(self, content):
         root_conan = self.retriever.root(content)
-        deps_graph = self.builder.load(None, root_conan)
+        deps_graph = self.builder.load(root_conan)
         return deps_graph
 
     def test_local_basic(self):

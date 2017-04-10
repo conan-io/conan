@@ -1,8 +1,9 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 from conans.util.files import load
 import os
+from conans.test.utils.conanfile import TestConanFile
 
 
 class HalfDiamondTest(unittest.TestCase):
@@ -11,23 +12,15 @@ class HalfDiamondTest(unittest.TestCase):
         self.client = TestClient()
 
     def _export(self, name, deps=None, export=True):
-        deps = ", ".join(['"%s"' % d for d in deps or []]) or '""'
-        conanfile = """
-from conans import ConanFile, CMake
-import os
 
-class HelloReuseConan(ConanFile):
-    name = "%s"
-    version = "0.1"
-    requires = %s
-    options = {"potato": [True, False]}
-    default_options = "potato=True"
-
+        conanfile = TestConanFile(name, "0.1", requires=deps,
+                                  options={"potato": [True, False]},
+                                  default_options="potato=True")
+        conanfile = str(conanfile) + """
     def config_options(self):
         del self.options.potato
-""" % (name, deps)
-        files = {CONANFILE: conanfile}
-        self.client.save(files, clean_first=True)
+"""
+        self.client.save({CONANFILE: conanfile}, clean_first=True)
         if export:
             self.client.run("export lasote/stable")
 

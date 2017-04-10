@@ -3,8 +3,9 @@ from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.errors import ConanException
-from conans.model.env_info import DepsEnvInfo
+from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
+from conans.paths import RUN_LOG_NAME
 
 
 def create_options(conanfile):
@@ -14,10 +15,8 @@ def create_options(conanfile):
 
         default_options = getattr(conanfile, "default_options", None)
         if default_options:
-            if isinstance(default_options, tuple):
-                default_values = OptionsValues.loads("\n".join(default_options))
-            elif isinstance(default_options, list):
-                default_values = OptionsValues.from_list(default_options)
+            if isinstance(default_options, (list, tuple)):
+                default_values = OptionsValues(default_options)
             elif isinstance(default_options, str):
                 default_values = OptionsValues.loads(default_options)
             else:
@@ -66,8 +65,17 @@ def create_exports(conanfile):
         return conanfile.exports
 
 
+def create_exports_sources(conanfile):
+    if not hasattr(conanfile, "exports_sources"):
+        return None
+    else:
+        if isinstance(conanfile.exports_sources, str):
+            return (conanfile.exports_sources, )
+        return conanfile.exports_sources
+
+
 class ConanFile(object):
-    """ The base class for all conans
+    """ The base class for all package recipes
     """
 
     name = None
@@ -81,10 +89,6 @@ class ConanFile(object):
     short_paths = False
 
     def __init__(self, output, runner, settings, conanfile_directory, user=None, channel=None):
-        '''
-        param settings: Settings
-        '''
-
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
         if isinstance(self.generators, str):
@@ -95,7 +99,7 @@ class ConanFile(object):
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
         self.exports = create_exports(self)
-
+        self.exports_sources = create_exports_sources(self)
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
@@ -116,9 +120,15 @@ class ConanFile(object):
         self._scope = None
 
         # user specified env variables
-        self.env = None  # Assigned at runtime
+        self._env_values = EnvValues()  # Updated at runtime, user specified -e
         self._user = user
         self._channel = channel
+
+    @property
+    def env(self):
+        simple, multiple = self._env_values.env_dicts(self.name)
+        simple.update(multiple)
+        return simple
 
     @property
     def channel(self):
@@ -228,11 +238,11 @@ class ConanFile(object):
         """ runs such a command in the folder the Conan
         is defined
         """
-        retcode = self._runner(command, output, cwd)
+        retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME),  cwd)
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
-    def conan_info(self):
+    def package_id(self):
         """ modify the conans info, typically to narrow values
         eg.: conaninfo.package_references = []
         """

@@ -1,11 +1,81 @@
 import unittest
-from conans.test.tools import TestClient
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
-from six import StringIO
-from conans.test.utils.runner import TestRunner
 import platform
 import os
+from conans.test.utils.multi_config import multi_config_files
+
+conanfile_py = """
+from conans import ConanFile, CMake
+import platform, os, shutil
+
+class {name}Conan(ConanFile):
+    name = "{name}"
+    version = "0.1"
+    requires = {requires}
+    settings = "os", "compiler", "arch", "build_type"
+    generators = "cmake"
+    exports = '*'
+
+    def build(self):
+        with open("hello{name}.h", "a") as f:
+            f.write('#define HELLO{name}BUILD "%s"' % self.settings.build_type)
+        cmake = CMake(self)
+        self.run('cmake %s' % (cmake.command_line))
+        self.run("cmake --build . %s" % cmake.build_config)
+
+    def package(self):
+        self.copy(pattern="*.h", dst="include", keep_path=False)
+        self.copy(pattern="*.lib", dst="lib", keep_path=False)
+        self.copy(pattern="*lib*.a", dst="lib", keep_path=False)
+
+    def package_info(self):
+        self.cpp_info.libs = ["hello{name}"]
+        self.cpp_info.defines = ['HELLO{name}DEFINE="%s"' % self.settings.build_type]
+"""
+
+
+hello_h = """
+#pragma once
+{includes}
+void hello{name}();
+"""
+hello_cpp = r"""#include "hello{name}.h"
+
+#include <iostream>
+using namespace std;
+
+void hello{name}(){{
+#if  NDEBUG
+    cout<<"Hello Release {name}\n";
+#else
+    cout<<"Hello Debug {name}\n";
+#endif
+    {other_calls}
+}}
+"""
+
+cmake_pkg = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+
+include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
+conan_basic_setup()
+
+add_library(hello{name} hello.cpp)
+conan_target_link_libraries(hello{name})
+"""
+
+
+def package_files(name, deps=None):
+    requires = ', '.join('"%s/0.1@lasote/testing"' % r for r in deps or []) or '""'
+    includes = "\n".join(['#include "hello%s.h"' % d for d in deps or []])
+    other_calls = "\n".join(["hello%s();" % d for d in deps or []])
+    return {"conanfile.py": conanfile_py.format(name=name, requires=requires),
+            "hello%s.h" % name: hello_h.format(name=name, includes=includes),
+            "hello.cpp": hello_cpp.format(name=name, other_calls=other_calls),
+            "CMakeLists.txt": cmake_pkg.format(name=name)}
 
 
 conanfile = """[requires]
@@ -14,40 +84,42 @@ Hello1/0.1@lasote/testing
 cmake_multi
 """
 
-cmake = """
-project(MyHello)
+cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
+# Some cross-building toolchains will define this
+set(CMAKE_FIND_ROOT_PATH "/some/path")
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
 conan_basic_setup()
 
 add_executable(say_hello main.cpp)
-foreach(_LIB ${CONAN_LIBS_RELEASE})
-    target_link_libraries(say_hello optimized ${_LIB})
-endforeach()
-foreach(_LIB ${CONAN_LIBS_DEBUG})
-    target_link_libraries(say_hello debug ${_LIB})
-endforeach()
+conan_target_link_libraries(say_hello)
 """
 
-cmake_targets = """
-project(MyHello)
-cmake_minimum_required(VERSION 2.8.12)
-
-include(${CMAKE_BINARY_DIR}/conanbuildinfo_multi.cmake)
-conan_basic_setup(TARGETS)
-
-add_executable(say_hello main.cpp)
-target_link_libraries(say_hello CONAN_PKG::Hello1)
-"""
+cmake_targets = cmake.replace("conan_basic_setup()", "conan_basic_setup(TARGETS)")
 
 main = """
 #include "helloHello1.h"
 #include <iostream>
 
 int main(){{
-    std::cout<<"Hello0:"<<HELLO0BUILD<<" Hello1:"<<HELLO1BUILD<<std::endl;
-    std::cout<<"Hello0Def:"<<HELLO0DEFINE<<" Hello1Def:"<<HELLO1DEFINE<<std::endl;
+    std::cout<<"Hello0:"<<HELLOHello0BUILD<<" Hello1:"<<HELLOHello1BUILD<<std::endl;
+    std::cout<<"Hello0Def:"<<HELLOHello0DEFINE<<" Hello1Def:"<<HELLOHello1DEFINE<<std::endl;
+    helloHello1();
+    return 0;
+}}
+"""
+
+main2 = """
+#include "helloHello1.h"
+#include <iostream>
+
+int main(){{
+    std::cout<<" Hello1:"<<HELLOHello1BUILD<<std::endl;
+    std::cout<<" Hello1Def:"<<HELLOHello1DEFINE<<std::endl;
     helloHello1();
     return 0;
 }}
@@ -58,6 +130,16 @@ int main(){{
 class CMakeMultiTest(unittest.TestCase):
 
     def cmake_multi_test(self):
+        if platform.system() not in ["Windows", "Darwin"]:
+            return
+        client = TestClient()
+
+        client.save(multi_config_files("Hello0", test=False), clean_first=True)
+        client.run("export lasote/testing")
+        client.run("install Hello0/0.1@lasote/testing --build=missing")
+        client.save(package_files("Hello1", ["Hello0"]), clean_first=True)
+        client.run("export lasote/testing")
+
         if platform.system() == "Windows":
             generator = "Visual Studio 14 Win64"
             debug_install = '-s compiler="Visual Studio" -s compiler.version=14 -s compiler.runtime=MDd'
@@ -66,34 +148,6 @@ class CMakeMultiTest(unittest.TestCase):
             generator = "Xcode"
             debug_install = ''
             release_install = ''
-        else:
-            return
-        client = TestClient()
-
-        def prepare_files(files, number):
-            # Change language according to build_type, to check
-            orig = "lang = '-DCONAN_LANGUAGE=%s' % self.options.language"
-            replace = "lang = '-DCONAN_LANGUAGE=%s' % (0 if self.settings.build_type=='Debug' else 1)"
-            conanfile = files["conanfile.py"]
-            # The test files, surprisingly, dont use build_type
-            conanfile = conanfile.replace(orig, replace).replace('"arch"', '"arch", "build_type"')
-            # Header of the package will contain a different DEFINE, to make sure that it includes
-            # the correct one
-            conanfile = conanfile.replace("def build(self):\n", """def build(self):
-        with open("helloHello{0}.h", "a") as f:
-            f.write('#define HELLO{0}BUILD "%s"' % self.settings.build_type)
-""".format(number))
-            conanfile = conanfile.replace("def package_info(self):\n", """def package_info(self):
-        self.cpp_info.defines = ['HELLO{}DEFINE="%s"' % self.settings.build_type]
-""".format(number))
-            files["conanfile.py"] = conanfile
-            client.save(files, clean_first=True)
-            client.run("export lasote/testing")
-
-        files = cpp_hello_conan_files("Hello0", "0.1")
-        prepare_files(files, 0)
-        files = cpp_hello_conan_files("Hello1", "0.1", deps=["Hello0/0.1@lasote/testing"])
-        prepare_files(files, 1)
 
         # better in one test instead of two, because install time is amortized
         for cmake_file in (cmake, cmake_targets, ):
@@ -102,23 +156,27 @@ class CMakeMultiTest(unittest.TestCase):
                          "main.cpp": main}, clean_first=True)
             client.run('install -s build_type=Debug %s --build=missing' % debug_install)
             client.run('install -s build_type=Release %s --build=missing' % release_install)
-            output = StringIO()
-            runner = TestRunner(output)
-            runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
-            runner('cmake --build . --config Debug', cwd=client.current_folder)
-            hello_comand = os.sep.join([".", "bin", "say_hello"])
-            runner(hello_comand, cwd=client.current_folder)
-            outstr = output.getvalue()
-            self.assertIn("Hello0:Debug Hello1:Debug", outstr)
-            self.assertIn("Hello Hello1", outstr)
-            self.assertIn("Hello Hello0", outstr)
-            runner('cmake --build . --config Release', cwd=client.current_folder)
-            runner(hello_comand, cwd=client.current_folder)
-            outstr = output.getvalue()
-            self.assertIn("Hello0:Release Hello1:Release", outstr)
-            self.assertIn("Hola Hello1", outstr)
-            self.assertIn("Hola Hello0", outstr)
+
+            client.runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
+            self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
+            self.assertNotIn("', skipping the version check...", client.user_io.out)
+            client.runner('cmake --build . --config Debug', cwd=client.current_folder)
+            hello_comand = os.sep.join([".", "Debug", "say_hello"])
+            client.runner(hello_comand, cwd=client.current_folder)
+
+            self.assertIn("Hello0:Debug Hello1:Debug", client.user_io.out)
+            self.assertIn("Hello0Def:Debug Hello1Def:Debug", client.user_io.out)
+            self.assertIn("Hello Debug Hello1", client.user_io.out)
+            self.assertIn("Hello Debug Hello0", client.user_io.out)
+            client.runner('cmake --build . --config Release', cwd=client.current_folder)
+            hello_comand = os.sep.join([".", "Release", "say_hello"])
+            client.runner(hello_comand, cwd=client.current_folder)
+
+            self.assertIn("Hello0:Release Hello1:Release", client.user_io.out)
+            self.assertIn("Hello0Def:Release Hello1Def:Release", client.user_io.out)
+            self.assertIn("Hello Release Hello1", client.user_io.out)
+            self.assertIn("Hello Release Hello0", client.user_io.out)
             if cmake_file == cmake_targets:
-                self.assertIn("Conan: Using cmake targets configuration", outstr)
+                self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
             else:
-                self.assertIn("Conan: Using cmake global configuration", outstr)
+                self.assertIn("Conan: Using cmake global configuration", client.user_io.out)

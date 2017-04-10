@@ -29,10 +29,15 @@ CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
 DIRTY_FILE = ".conan_dirty"
+PUT_HEADERS = "artifacts.properties"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
+EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
+EXPORT_SOURCES_DIR = ".c_src"
 CONAN_LINK = ".conan_link"
+
+RUN_LOG_NAME = "conan_run.log"
 
 
 def conan_expand_user(path):
@@ -77,7 +82,7 @@ else:
 
 def is_case_insensitive_os():
     system = platform.system()
-    return system != "Linux" and system != "FreeBSD"
+    return system != "Linux" and system != "FreeBSD" and system != "SunOS"
 
 
 if is_case_insensitive_os():

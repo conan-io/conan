@@ -1,15 +1,14 @@
 import unittest
-from conans.test.tools import TestClient
+import platform
+import os
+
+from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
-import os
 from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
-import platform
 from conans.client.detect import detected_os
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import load
 
 
 class InstallTest(unittest.TestCase):
@@ -26,43 +25,60 @@ class InstallTest(unittest.TestCase):
         if export:
             self.client.run("export lasote/stable")
 
-    def imports_test(self):
-        """ Ensure that when importing files in a global path, outside the package build,
-        they are not deleted
-        """
-        dst_global_folder = temp_folder().replace("\\", "/")
-        conanfile = '''
-from conans import ConanFile
+    def install_error_never_test(self):
+        self._create("Hello0", "0.1", export=False)
+        error = self.client.run("install --build never --build missing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --build=never not compatible with other options",
+                      self.client.user_io.out)
+        error = self.client.run("install --build never --build Hello", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --build=never not compatible with other options",
+                      self.client.user_io.out)
+        error = self.client.run("install --build never --build outdated", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --build=never not compatible with other options",
+                      self.client.user_io.out)
 
-class ConanLib(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    exports = "*"
+    def install_combined_test(self):
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
+        self.client.run("install %s --build=missing" % (self.settings))
 
-    def package(self):
-        self.copy("*", dst="files")
-'''
-        conanfile2 = '''
-from conans import ConanFile
+        self.client.run("install %s --build=missing --build Hello1" % (self.settings))
+        self.assertIn("Hello0/0.1@lasote/stable: Already installed!",
+                      self.client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: WARN: Forced build from source",
+                      self.client.user_io.out)
 
-class ConanLib(ConanFile):
-    name = "Say"
-    version = "0.1"
-    requires = "Hello/0.1@lasote/stable"
+    def install_transitive_cache_test(self):
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"])
+        self.client.run("install Hello2/0.1@lasote/stable %s --build=missing" % (self.settings))
+        self.assertIn("Hello0/0.1@lasote/stable: Generating the package",
+                      self.client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Generating the package",
+                      self.client.user_io.out)
+        self.assertIn("Hello2/0.1@lasote/stable: Generating the package",
+                      self.client.user_io.out)
 
-    def imports(self):
-        self.copy("*file.txt", dst="%s", src="files")
-''' % dst_global_folder
+    def partials_test(self):
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.save({CONANFILE: conanfile, "other/folder/file.txt": "My file content"})
-        self.client.run("export lasote/stable")
-        self.client.save({CONANFILE: conanfile2}, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("install %s --build=missing" % (self.settings))
 
-        self.client.current_folder = temp_folder()
-        self.client.run("install Say/0.1@lasote/stable --build=missing")
-        content = load(os.path.join(dst_global_folder, "other/folder/file.txt"))
-        self.assertTrue(content, "My file content")
+        error = self.client.run("install %s --build=Bye" % (self.settings), ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("No package matching 'Bye*' pattern", self.client.user_io.out)
+
+        for package in ["Hello0", "Hello1"]:
+            error = self.client.run("install %s --build=%s" % (self.settings, package))
+            self.assertFalse(error)
+            self.assertNotIn("No package matching", self.client.user_io.out)
 
     def reuse_test(self):
         self._create("Hello0", "0.1")
@@ -216,17 +232,21 @@ class ConanLib(ConanFile):
         info_path = os.path.join(client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("", conan_info.options.dumps())
+        # For conan install options are not cached anymore
+        self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
+
+        # it is necessary to clean the cached conaninfo
+        client.save(files, clean_first=True)
+        client.run("install %s --build missing" % self.settings)
+        conan_info = ConanInfo.load_file(info_path)
+        self.assertEqual("", conan_info.options.dumps())
         self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
         self.assertIn("Hello0/0.1@lasote/stable:2e38bbc2c3ef1425197c8e2ffa8532894c347d26",
                       conan_info.full_requires.dumps())
 
-    def warn_bad_os_test(self):
+    def cross_platform_msg_test(self):
         bad_os = "Linux" if platform.system() != "Linux" else "Macos"
-        message = "You are building this package with settings.os='%s" % bad_os
+        message = "Cross-platform from '%s' to '%s'" % (detected_os(), bad_os)
         self._create("Hello0", "0.1")
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, ignore_error=True)
         self.assertIn(message, self.client.user_io.out)
-
-        self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % detected_os(),
-                        ignore_error=True)
-        self.assertNotIn("You are building this package with settings.os", self.client.user_io.out)

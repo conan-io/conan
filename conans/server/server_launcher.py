@@ -1,4 +1,5 @@
 #!/usr/bin/python
+import os
 from conans.server.service.authorize import BasicAuthorizer, BasicAuthenticator
 from conans.server.conf import get_file_manager
 from conans.server.rest.server import ConanServer
@@ -13,16 +14,37 @@ from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans import SERVER_CAPABILITIES
 
 
+def load_authentication_plugin(server_folder, plugin_name):
+    try:
+        from pluginbase import PluginBase
+        plugin_base = PluginBase(package="plugins/authenticator")
+        plugins_dir = os.path.join(server_folder, "plugins", "authenticator")
+        plugin_source = plugin_base.make_plugin_source(
+                        searchpath=[plugins_dir])
+        auth = plugin_source.load_plugin(plugin_name).get_class()
+        # it is necessary to keep a reference to the plugin, otherwise it is removed
+        # and some imports fail
+        auth.plugin_source = plugin_source
+        return auth
+    except:
+        print("Error loading authenticator plugin '%s'" % plugin_name)
+        raise
+
+
 class ServerLauncher(object):
     def __init__(self):
         user_folder = conan_expand_user("~")
+        server_folder = os.path.join(user_folder, '.conan_server')
 
         server_config = migrate_and_get_server_config(user_folder)
+        custom_auth = server_config.custom_authenticator
+        if custom_auth:
+            authenticator = load_authentication_plugin(server_folder, custom_auth)
+        else:
+            authenticator = BasicAuthenticator(dict(server_config.users))
 
         authorizer = BasicAuthorizer(server_config.read_permissions,
                                      server_config.write_permissions)
-        authenticator = BasicAuthenticator(dict(server_config.users))
-
         credentials_manager = JWTCredentialsManager(server_config.jwt_secret,
                                                     server_config.jwt_expire_time)
 

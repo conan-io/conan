@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE, CONANINFO
 from conans.model.ref import ConanFileReference

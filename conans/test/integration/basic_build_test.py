@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 import os
 from conans.paths import CONANINFO
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -22,7 +22,7 @@ class BasicBuildTest(unittest.TestCase):
         client.save(files)
         client.run(cmd)
         client.run('build')
-        ld_path = ("LD_LIBRARY_PATH=$(pwd)"
+        ld_path = ("LD_LIBRARY_PATH=`pwd`"
                    if not static and not platform.system() == "Windows" else "")
         command = os.sep.join([".", "bin", "say_hello"])
         client.runner("%s %s" % (ld_path, command), cwd=client.current_folder)
@@ -46,6 +46,8 @@ class BasicBuildTest(unittest.TestCase):
 
     def build_default_test(self):
         "build default (gcc in nix, VS in win)"
+        if platform.system() == "SunOS":
+            return  # If is using sun-cc the gcc generator doesn't work
         for pure_c in (False, True):
             for cmd, lang, static in [("install", 0, True),
                                       ("install -o language=1", 1, True),
@@ -56,7 +58,7 @@ class BasicBuildTest(unittest.TestCase):
     def build_mingw_test(self):
         if platform.system() != "Windows":
             return
-        not_env = os.system("g++ --version > nul")
+        not_env = os.system("c++ --version > nul")
         if not_env != 0:
             logger.error("This platform does not support G++ command")
             return

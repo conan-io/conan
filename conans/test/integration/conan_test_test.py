@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
 from conans.util.files import load
@@ -93,7 +93,7 @@ class HelloReuseConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
@@ -116,7 +116,7 @@ class HelloReuseConan(ConanFile):
         self.requires("Hello0/0.1@ lasote/stable")
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
@@ -137,7 +137,9 @@ class HelloReuseConan(ConanFile):
         files[CONANFILE] = files[CONANFILE].replace(', "arch"',
                                                     ', "arch", "build_type"')
 
-        cmakelist = """PROJECT(MyHello)
+        cmakelist = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)

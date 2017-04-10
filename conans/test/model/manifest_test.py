@@ -24,7 +24,8 @@ class ManifestTest(unittest.TestCase):
 
         readed_manifest = FileTreeManifest.loads(load(os.path.join(tmp_dir, "THEMANIFEST.txt")))
 
-        self.assertEquals(readed_manifest, manifest)
+        self.assertEqual(readed_manifest.time, manifest.time)
+        self.assertEqual(readed_manifest, manifest)
         # Not included the pycs or pyo
         self.assertEquals(set(manifest.file_sums.keys()),
                           set(["one.ext", "path/to/two.txt", "two.txt"]))

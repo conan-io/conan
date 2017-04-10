@@ -4,6 +4,7 @@ import traceback
 from conans.util.files import save, sha1sum, exception_message_safe
 import os
 import time
+from conans.util.tracer import log_download
 
 
 class Uploader(object):
@@ -14,15 +15,17 @@ class Uploader(object):
         self.requester = requester
         self.verify = verify
 
-    def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0):
+    def upload(self, url, abs_path, auth=None, dedup=False, retry=1, retry_wait=0, headers=None):
         if dedup:
-            headers = {"X-Checksum-Deploy": "true",
-                       "X-Checksum-Sha1": sha1sum(abs_path)}
-            response = self.requester.put(url, data="", verify=self.verify, headers=headers,
+            dedup_headers = {"X-Checksum-Deploy": "true", "X-Checksum-Sha1": sha1sum(abs_path)}
+            if headers:
+                dedup_headers.update(headers)
+            response = self.requester.put(url, data="", verify=self.verify, headers=dedup_headers,
                                           auth=auth)
             if response.status_code != 404:
                 return response
 
+        headers = headers or {}
         self.output.info("")
         # Actual transfer of the real content
         it = load_in_chunks(abs_path, self.chunk_size)
@@ -33,7 +36,7 @@ class Uploader(object):
         iterable_to_file = IterableToFileAdapter(it, file_size)
         # Now it is prepared to work with request
         ret = call_with_retry(self.output, retry, retry_wait, self._upload_file, url,
-                              data=iterable_to_file, headers=None, auth=auth)
+                              data=iterable_to_file, headers=headers, auth=auth)
 
         return ret
 
@@ -112,6 +115,7 @@ class Downloader(object):
             # Should not happen, better to raise, probably we had to remove the dest folder before
             raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
+        t1 = time.time()
         ret = bytearray()
         response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth)
         if not response.ok:  # Do not retry if not found or whatever controlled error
@@ -142,6 +146,10 @@ class Downloader(object):
                         if self.output:
                             print_progress(self.output, units)
                         last_progress = units
+
+            duration = time.time() - t1
+            log_download(url, duration)
+
             if not file_path:
                 return bytes(ret)
             else:

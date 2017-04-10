@@ -5,20 +5,28 @@ class Version(str):
     """ This is NOT an implementation of semver, as users may use any pattern in their versions.
     It is just a helper to parse .-, and compare taking into account integers when possible
     """
+    version_pattern = re.compile('[.-]')
 
     def __new__(cls, content):
         return str.__new__(cls, content.strip())
 
     @property
     def as_list(self):
-        result = []
-        tokens = re.split('[.-]', self)
-        for item in tokens:
-            result.append(int(item) if item.isdigit() else item)
-        return result
+        if not hasattr(self, "_cached_list"):
+            tokens = self.rsplit('+', 1)
+            self._base = tokens[0]
+            if len(tokens) == 2:
+                self._build = tokens[1]
+            self._cached_list = []
+            tokens = Version.version_pattern.split(tokens[0])
+            for item in tokens:
+                self._cached_list.append(int(item) if item.isdigit() else item)
+        return self._cached_list
 
     def major(self, fill=True):
         self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
         v = str(self_list[0]) if self_list else "0"
         if fill:
             return Version(".".join([v, 'Y', 'Z']))
@@ -34,11 +42,45 @@ class Version(str):
 
     def minor(self, fill=True):
         self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
         v0 = str(self_list[0]) if len(self_list) > 0 else "0"
         v1 = str(self_list[1]) if len(self_list) > 1 else "0"
         if fill:
             return Version(".".join([v0, v1, 'Z']))
         return Version(".".join([v0, v1]))
+
+    def patch(self):
+        self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
+        v0 = str(self_list[0]) if len(self_list) > 0 else "0"
+        v1 = str(self_list[1]) if len(self_list) > 1 else "0"
+        v2 = str(self_list[2]) if len(self_list) > 2 else "0"
+        return Version(".".join([v0, v1, v2]))
+
+    def pre(self):
+        self_list = self.as_list
+        if not isinstance(self_list[0], int):
+            return self._base
+        v0 = str(self_list[0]) if len(self_list) > 0 else "0"
+        v1 = str(self_list[1]) if len(self_list) > 1 else "0"
+        v2 = str(self_list[2]) if len(self_list) > 2 else "0"
+        v = ".".join([v0, v1, v2])
+        if len(self_list) > 3:
+            v += "-%s" % self_list[3]
+        return Version(v)
+
+    @property
+    def build(self):
+        if hasattr(self, "_build"):
+            return self._build
+        return ""
+
+    @property
+    def base(self):
+        self.as_list
+        return Version(self._base)
 
     def compatible(self, other):
         if not isinstance(other, Version):
