@@ -1,17 +1,20 @@
-import unittest
-from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool
 import os
-from conans.test.utils.test_files import temp_folder
-from conans import tools
-from conans.test.utils.visual_project_files import get_vs_project_files
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
-from conans.paths import CONANFILE
 import platform
-from conans.errors import ConanException
+import unittest
+
+from collections import namedtuple
 from nose.plugins.attrib import attr
-from conans.model.settings import Settings
+
+from conans import tools
 from conans.client.conf import default_settings_yml
+from conans.errors import ConanException
+from conans.model.settings import Settings
+from conans.paths import CONANFILE
 from conans.test.utils.runner import TestRunner
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.visual_project_files import get_vs_project_files
+from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool
 
 
 class RunnerMock(object):
@@ -258,6 +261,28 @@ class ToolsTest(unittest.TestCase):
             self.assertNotIn("vcvarsall.bat", str(output))
             self.assertIn("Conan:vcvars already set", str(output))
             self.assertIn("VS140COMNTOOLS=", str(output))
+
+    def run_in_bash_test(self):
+        if platform.system() != "Windows":
+            return
+
+        class MockConanfile(object):
+
+            def __init__(self):
+                self.command = ""
+                self.output = namedtuple("output", "info")(lambda x: None)
+
+            def run(self, command):
+                self.command = command
+
+        conanfile = MockConanfile()
+        tools.run_in_windows_bash(conanfile, "a_command.bat")
+        self.assertIn("bash --login -c", conanfile.command)
+        self.assertIn("^&^& a_command.bat ^", conanfile.command)
+
+        with tools.environment_append({"CONAN_BASH_PATH": "path\\to"}):
+            tools.run_in_windows_bash(conanfile, "a_command.bat")
+            self.assertIn("path\\to\\bash --login -c", conanfile.command)
 
     @attr('slow')
     def build_vs_project_test(self):

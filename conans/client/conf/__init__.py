@@ -59,6 +59,7 @@ print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 [general]
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
+# bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
@@ -131,6 +132,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE": self._env_c("general.cmake_find_root_path_mode_include",
                                                                       "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE",
                                                                       None),
+
+               "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
 
                }
         # Filter None values
