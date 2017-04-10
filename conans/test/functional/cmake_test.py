@@ -197,8 +197,7 @@ build_type: [ Release]
 
         cmake.build(conan_file)
         self.assertEqual('cmake --build %s' % dot_dir, conan_file.command)
-
-        cmake.test(conan_file)
+        cmake.test()
         self.assertEqual('cmake --build %s %s' % (dot_dir, CMakeTest.scape('--target RUN_TESTS')), conan_file.command)
 
     def convenient_functions_test(self):
