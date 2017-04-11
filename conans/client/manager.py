@@ -50,7 +50,7 @@ class ConanManager(object):
         self._current_scopes = None
         self._search_manager = search_manager
 
-    def export(self, user, conan_file_path, keep_source=False):
+    def export(self, user, conan_file_path, keep_source=False, filename=None):
         """ Export the conans
         param conanfile_path: the original source directory of the user containing a
                            conanfile.py
@@ -65,7 +65,7 @@ class ConanManager(object):
             user_name, channel = user, "testing"
 
         src_folder = conan_file_path
-        conan_file_path = os.path.join(conan_file_path, CONANFILE)
+        conan_file_path = os.path.join(conan_file_path, filename or CONANFILE)
         conan_linter(conan_file_path, self._user_io.out)
         conanfile = load_export_conanfile(conan_file_path, self._user_io.out)
         conan_ref = ConanFileReference(conanfile.name, conanfile.version, user_name, channel)
@@ -77,7 +77,8 @@ class ConanManager(object):
                                  "You exported '%s' but already existing '%s'"
                                  % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
-        export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source)
+        export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
+                         filename)
 
     def package_files(self, reference, path, profile):
         """ Bundle pre-existing binaries

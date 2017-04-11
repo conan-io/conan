@@ -539,12 +539,13 @@ class Command(object):
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in the local cache. '
                                  'Use for testing purposes only')
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
         args = parser.parse_args(*args)
         log_command("export", vars(args))
 
         current_path = os.path.abspath(args.path or os.getcwd())
         keep_source = args.keep_source
-        self._manager.export(args.user, current_path, keep_source)
+        self._manager.export(args.user, current_path, keep_source, args.file)
 
     def remove(self, *args):
         """Remove any package recipe or binary matching a pattern.

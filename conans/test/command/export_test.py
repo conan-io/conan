@@ -27,6 +27,26 @@ class TestConan(ConanFile):
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
 
+    def test_filename(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+"""
+        client.save({"myconanfile.py": conanfile,
+                     "conanfile.py": ""})
+        client.run("export lasote/stable --file=myconanfile.py")
+        self.assertIn("Hello/1.2@lasote/stable: A new conanfile.py version was exported",
+                      client.user_io.out)
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export(conan_ref)
+        conanfile = load(os.path.join(export_path, "conanfile.py"))
+        self.assertIn('name = "Hello"', conanfile)
+        manifest = load(os.path.join(export_path, "conanmanifest.txt"))
+        self.assertIn('conanfile.py: cac514c81a0af0d87fa379b0bf16fbaa', manifest)
+
     def test_exclude_basic(self):
         client = TestClient()
         conanfile = """
