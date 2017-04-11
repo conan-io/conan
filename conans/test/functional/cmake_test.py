@@ -210,8 +210,9 @@ build_type: [ Release]
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
+        settings.compiler.runtime = "MDd"
         settings.arch = "x86"
-        settings.os = "Windows"
+        settings.build_type = None
 
         if sys.platform == 'win32':
             dot_dir = "."
@@ -228,8 +229,9 @@ build_type: [ Release]
         target_test = CMakeTest.scape('--target RUN_TESTS')
 
         cmake.configure()
+
         cores = '-DCONAN_CXX_FLAGS="/MP{0}" -DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count())
-        self.assertEqual('cd {0} && cmake -G "Visual Studio 12 2013" {1}-DCONAN_EXPORTED="1" '
+        self.assertEqual('cd {0} && cmake -G "Visual Studio 12 2013" -DCONAN_LINK_RUNTIME=/MDd {1}-DCONAN_EXPORTED="1" '
                          '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" {2}'
                          '-Wno-dev {0}'.format(dot_dir, cross, cores),
                          conan_file.command)
@@ -241,6 +243,7 @@ build_type: [ Release]
         self.assertEqual('cmake --build %s %s' % (dot_dir, target_test), conan_file.command)
 
         settings.build_type = "Debug"
+        cmake = CMake(conan_file)
         cmake.build()
         self.assertEqual('cmake --build %s --config Debug' % dot_dir, conan_file.command)
 
@@ -253,7 +256,8 @@ build_type: [ Release]
             escaped_args = r'"--foo \"bar\"" -DSHARED="True" /source'
         else:
             escaped_args = "'--foo \"bar\"' -DSHARED=\"True\" '/source'"
-        self.assertEqual('cd %s && cmake -G "Visual Studio 12 2013" %s-DCONAN_EXPORTED="1" '
+
+        self.assertEqual('cd %s && cmake -G "Visual Studio 12 2013" -DCONAN_LINK_RUNTIME=/MDd %s-DCONAN_EXPORTED="1" '
                          '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" %s'
                          '-Wno-dev %s' % (tempdir, cross, cores, escaped_args),
                          conan_file.command)
@@ -310,6 +314,7 @@ build_type: [ Release]
         cmake.test()
         self.assertEqual('cmake --build %s' % CMakeTest.scape('. --target test'), conan_file.command)
 
+
     def test_clean_sh_path(self):
 
         if platform.system() != "Windows":
@@ -345,6 +350,32 @@ build_type: [ Release]
         cmake.configure()
         self.assertNotIn(self.tempdir, conanfile.path)
 
+    def test_shared(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.arch = "x86"
+        settings.os = "Windows"
+
+        conan_file = ConanFileMock(shared=True)
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        self.assertEquals(cmake.definitions["BUILD_SHARED_LIBS"], "ON")
+
+        conan_file = ConanFileMock(shared=False)
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        self.assertEquals(cmake.definitions["BUILD_SHARED_LIBS"], "OFF")
+
+        conan_file = ConanFileMock(shared=None)
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        self.assertNotIn("BUILD_SHARED_LIBS", cmake.definitions)
+
     @staticmethod
     def scape(args):
         pattern = "%s" if sys.platform == "win32" else r"'%s'"
@@ -352,13 +383,15 @@ build_type: [ Release]
 
 
 class ConanFileMock(ConanFile):
-    def __init__(self):
+    def __init__(self, shared=None):
         self.command = None
         self.path = None
         self._conanfile_directory = "."
         self.settings = None
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = namedtuple("output", "warn")(lambda x: x)
+        if shared is not None:
+            self.options = namedtuple("options", "shared")(shared)
 
     def run(self, command):
         self.command = command
