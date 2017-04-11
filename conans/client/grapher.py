@@ -42,17 +42,19 @@ class ConanHTMLGrapher(object):
             nodes_map[node] = i
             if ref:
                 label = "%s/%s" % (ref.name, ref.version)
-                fulllabel = [str(ref)]
-                fulllabel.append("")
-                fulllabel.append("id: %s" % conanfile.info.package_id())
-                fulllabel.append("build_id: %s" % build_id(conanfile))
-                if conanfile.url:
-                    fulllabel.append("url: %s" % conanfile.url)
-                if conanfile.license:
-                    fulllabel.append("license: %s" % conanfile.license)
-                if conanfile.author:
-                    fulllabel.append("author: %s" % conanfile.author)
-                fulllabel = r"\n".join(fulllabel).replace("'", '"')
+                fulllabel = ["<h3>%s</h3>" % str(ref)]
+                fulllabel.append("<ul>")
+                for name, data in [("id", conanfile.info.package_id()),
+                                   ("build_id", build_id(conanfile)),
+                                   ("url", '<a href="{url}">{url}</a>'.format(url=conanfile.url)),
+                                   ("license", conanfile.license),
+                                   ("author", conanfile.author)]:
+                    if data:
+                        data = data.replace("'", '"')
+                        fulllabel.append("<li><b>%s</b>: %s</li>" % (name, data))
+
+                fulllabel.append("<ul>")
+                fulllabel = "".join(fulllabel)
             else:
                 fulllabel = label = self._project_reference
             nodes.append("{id: %d, label: '%s', shape: 'box', fulllabel: '%s'}"
@@ -91,21 +93,30 @@ class ConanHTMLGrapher(object):
         display: none;
       }
     }
+    .button {
+      background-color: #5555cc;
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 18px;
+    }
   </style>
-  <div align="right">
-    <a href="javascript:showhideclass('controls')" class="noPrint">Show/hide controls.</a>
+  <div style="width: 100%;">
+    <div id="mynetwork" style="float:left; width: 75%;"></div>
+    <div style="float:right;width:25%;">
+      <div id="details"  style="padding:10;" class="noPrint">Package info: no package selected</div>
+      <button onclick="javascript:showhideclass('controls')" class="button noPrint">Show / hide graph controls.</button>
+      <div id="controls" class="controls" style="padding:5; display:none"></div>
+    </div>
   </div>
-  <div id="controls" class="controls"  style="display:none"></div>
-  <div id="mynetwork"></div>
+  <div style="clear:both"></div>
+
 
 
   <script type="text/javascript">
-    function showhideclass(id) {
-      var elements = document.getElementsByClassName(id)
-      for (var i = 0; i < elements.length; i++) {
-        elements[i].style.display = (elements[i].style.display != 'none') ? 'none' : 'block';
-      }
-    }
     var nodes = new vis.DataSet([
       %NODES%
     ]);
@@ -141,22 +152,21 @@ class ConanHTMLGrapher(object):
       },
       configure: {
         enabled: true,
-        filter: 'layout',
+        filter: 'layout physics',
         showButton: false,
         container: controls
       }
     };
     var network = new vis.Network(container, data, options);
-    network.on( 'click', function(properties) {
-        var ids = properties.nodes;
-        var clickedNodes = nodes.get(ids);
-       for (var i = 0; i < clickedNodes.length; i++) {
-          var temp = clickedNodes[i].fulllabel;
-          clickedNodes[i].fulllabel =  clickedNodes[i].label;
-          clickedNodes[i].label = temp;
-          nodes.update(clickedNodes[i]);
-        }
-    });
+    network.on('click', function (properties) {
+                           var ids = properties.nodes;
+                           var clickedNodes = nodes.get(ids);
+                           var control = document.getElementById("details");
+                           if(clickedNodes[0])
+                              control.innerHTML = clickedNodes[0].fulllabel;
+                           else
+                              control.innerHTML = "<b>Package info</b>: No package selected";
+                         });
   </script>
 </body>
 </html>
