@@ -21,7 +21,7 @@ def _apply_build_requires(deps_graph, conanfile):
 
 class BuildRequires(object):
     def __init__(self, loader, remote_proxy, output, client_cache, search_manager, build_requires,
-                 current_path):
+                 current_path, build_modes):
         self._remote_proxy = remote_proxy
         self._client_cache = client_cache
         self._output = output
@@ -30,6 +30,7 @@ class BuildRequires(object):
         self._cached_graphs = {}
         self._search_manager = search_manager
         self._build_requires = build_requires
+        self._build_modes = build_modes
 
     def install(self, reference, conanfile):
         str_ref = str(reference)
@@ -54,7 +55,6 @@ class BuildRequires(object):
 
         # FIXME: Forced update=True, build_mode, Where to define it?
         update = False
-        build_modes = ["missing"]
 
         local_search = None if update else self._search_manager
         resolver = RequireResolver(self._output, local_search, self._remote_proxy)
@@ -72,7 +72,9 @@ class BuildRequires(object):
 
         installer = ConanInstaller(self._client_cache, self._output, self._remote_proxy,
                                    build_requires)
-        installer.install(deps_graph, build_modes, self._current_path)
+        self._build_modes.install_build_requires = True
+        installer.install(deps_graph, self._build_modes, self._current_path)
+        self._build_modes.install_build_requires = False
         self._output.info("Installed build requires: [%s]"
                           % ", ".join(str(r) for r in references))
         return deps_graph
