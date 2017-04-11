@@ -14,6 +14,8 @@ from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
 
 
 def _load_info_file(current_path, conanfile, output, error=False):
+    if not current_path:
+        return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
         deps_info = DepsCppInfo.loads(load(info_file_path))
