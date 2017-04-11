@@ -4,11 +4,7 @@ from conans.test.utils.tools import TestClient
 import six
 
 
-class ExportLinterTest(unittest.TestCase):
-
-    def test_basic(self):
-        client = TestClient()
-        conanfile = """
+conanfile = """
 from conans import ConanFile
 class TestConan(ConanFile):
     name = "Hello"
@@ -18,6 +14,12 @@ class TestConan(ConanFile):
         for k, v in {}.iteritems():
             pass
 """
+
+
+class ExportLinterTest(unittest.TestCase):
+
+    def test_basic(self):
+        client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export lasote/stable")
         if six.PY2:
@@ -30,3 +32,11 @@ class TestConan(ConanFile):
                       client.user_io.out)
         self.assertIn("WARN: Linter. Line 8: Unused variable 'v'",
                       client.user_io.out)
+
+    def test_disable_linter(self):
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("config set general.recipe_linter=False")
+        client.run("export lasote/stable")
+        self.assertNotIn("ERROR: Py3 incompatibility", client.user_io.out)
+        self.assertNotIn("WARN: Linter", client.user_io.out)
