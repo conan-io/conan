@@ -178,7 +178,7 @@ def vcvars_command(settings):
         except KeyError:
             raise ConanException("VS '%s' variable not defined. Please install VS or define "
                                  "the variable (VS2017)" % env_var)
-        if settings.compiler.version != "15":
+        if env_var != "vs150comntools":
             command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
         else:
             command = ('call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
