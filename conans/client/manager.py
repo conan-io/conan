@@ -33,6 +33,7 @@ from conans.util.log import logger
 from conans.model.manifest import FileTreeManifest
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.build_requires import BuildRequires
+from conans.client.linter import conan_linter
 
 
 class ConanManager(object):
@@ -65,6 +66,7 @@ class ConanManager(object):
 
         src_folder = conan_file_path
         conan_file_path = os.path.join(conan_file_path, CONANFILE)
+        conan_linter(conan_file_path, self._user_io.out)
         conanfile = load_export_conanfile(conan_file_path, self._user_io.out)
         conan_ref = ConanFileReference(conanfile.name, conanfile.version, user_name, channel)
         conan_ref_str = str(conan_ref)
