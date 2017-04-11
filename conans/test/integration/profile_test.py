@@ -145,6 +145,12 @@ class ProfileTest(unittest.TestCase):
         self._assert_env_variable_printed("A_VAR", "OTHER_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "3")
 
+        # Pass a variable with "=" symbol
+        self.client.run("install Hello0/0.1@lasote/stable --build -pr envs "
+                        "-e Hello0:A_VAR=Valuewith=equal -e Hello0:OTHER_VAR=3")
+        self._assert_env_variable_printed("A_VAR", "Valuewith=equal")
+        self._assert_env_variable_printed("OTHER_VAR", "3")
+
     def install_profile_settings_test(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
