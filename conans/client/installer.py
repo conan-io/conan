@@ -105,9 +105,8 @@ class BuildMode(object):
                 self._unused_patterns.remove(pattern)
 
     def report_matches(self):
-        if self._unused_patterns:
-            raise ConanException("No package matching '%s' patterns"
-                                 % ", ".join(self._unused_patterns))
+        for pattern in self._unused_patterns:
+            self._out.error("No package matching '%s' pattern" % pattern)
 
 
 class ConanInstaller(object):
