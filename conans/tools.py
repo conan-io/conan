@@ -61,7 +61,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None):
         curdir = unix_path(cwd or os.path.abspath(os.path.curdir))
         # Needed to change to that dir inside the bash shell
         to_run = 'cd "%s" && %s ' % (curdir, bashcmd)
-        custom_bash_path = os.getenv("CONAN_BASH_PATH", "")
+        custom_bash_path = os.getenv("CONAN_BASH_PATH", "bash")
         wincmd = '%s --login -c %s' % (custom_bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         conanfile.run(wincmd)
