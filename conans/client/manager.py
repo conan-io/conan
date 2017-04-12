@@ -283,6 +283,7 @@ class ConanManager(object):
                                    build_requires)
 
         installer.install(deps_graph, build_mode, current_path)
+        build_mode.report_matches()
 
         prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
         output = ScopedOutput(prefix, self._user_io.out)

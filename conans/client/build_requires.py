@@ -72,9 +72,7 @@ class BuildRequires(object):
 
         installer = ConanInstaller(self._client_cache, self._output, self._remote_proxy,
                                    build_requires)
-        self._build_modes.install_build_requires = True
         installer.install(deps_graph, self._build_modes, self._current_path)
-        self._build_modes.install_build_requires = False
         self._output.info("Installed build requires: [%s]"
                           % ", ".join(str(r) for r in references))
         return deps_graph

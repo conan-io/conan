@@ -56,8 +56,8 @@ class BuildMode(object):
         self.outdated = False
         self.missing = False
         self.patterns = []
+        self._unused_patterns = []
         self.all = False
-        self.install_build_requires = False
         if params is None:
             return
 
@@ -78,7 +78,7 @@ class BuildMode(object):
 
             if never and (self.outdated or self.missing or self.patterns):
                 raise ConanException("--build=never not compatible with other options")
-        self.unused_patterns = list(self.patterns)
+        self._unused_patterns = list(self.patterns)
 
     def forced(self, reference, conanfile):
         if self.all:
@@ -99,13 +99,15 @@ class BuildMode(object):
                 conanfile.build_policy_missing)
 
     def check_matches(self, references):
-        for pattern in list(self.unused_patterns):
+        for pattern in list(self._unused_patterns):
             matched = any(fnmatch.fnmatch(ref, pattern) for ref in references)
-            if self.install_build_requires:
-                if matched:
-                    self.unused_patterns.remove(pattern)
-            elif not matched:
-                raise ConanException("No package matching '%s' pattern" % pattern)
+            if matched:
+                self._unused_patterns.remove(pattern)
+
+    def report_matches(self):
+        if self._unused_patterns:
+            raise ConanException("No package matching '%s' patterns"
+                                 % ", ".join(self._unused_patterns))
 
 
 class ConanInstaller(object):
