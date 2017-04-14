@@ -42,15 +42,15 @@ def load_export_conanfile(conanfile_path, output):
     return conanfile
 
 
-def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source):
+def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source, filename):
     destination_folder = paths.export(conan_ref)
     previous_digest = _init_export_folder(destination_folder)
-    execute_export(conanfile, origin_folder, destination_folder, output)
+    execute_export(conanfile, origin_folder, destination_folder, output, filename)
 
     digest = FileTreeManifest.create(destination_folder)
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
-    if previous_digest and previous_digest.file_sums == digest.file_sums:
+    if previous_digest and previous_digest == digest:
         digest = previous_digest
         output.info("The stored package has not changed")
         modified_recipe = False
@@ -96,7 +96,7 @@ def _init_export_folder(destination_folder):
     return previous_digest
 
 
-def execute_export(conanfile, origin_folder, destination_folder, output):
+def execute_export(conanfile, origin_folder, destination_folder, output, filename=None):
     def classify(patterns):
         patterns = patterns or []
         included, excluded = [], []
@@ -127,4 +127,5 @@ def execute_export(conanfile, origin_folder, destination_folder, output):
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)
 
-    shutil.copy2(os.path.join(origin_folder, CONANFILE), destination_folder)
+    shutil.copy2(os.path.join(origin_folder, filename or CONANFILE),
+                 os.path.join(destination_folder, CONANFILE))

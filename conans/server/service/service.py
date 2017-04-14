@@ -90,7 +90,6 @@ class SearchService(object):
         return filtered
 
 
-
 class ConanService(object):
     """Handles authorization and expose methods for REST API"""
 

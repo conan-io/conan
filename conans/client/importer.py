@@ -26,7 +26,8 @@ def undo_imports(current_path, output):
         raise ConanException("Wrong manifest file format %s" % manifest_path)
 
     not_removed = 0
-    for filepath, _ in manifest.file_sums.items():
+    files = manifest.files()
+    for filepath in files:
         if not os.path.exists(filepath):
             output.warn("File doesn't exist: %s" % filepath)
             continue
@@ -39,7 +40,7 @@ def undo_imports(current_path, output):
     if not_removed:
         raise ConanException("Cannot remove %s or more imported files" % not_removed)
 
-    output.success("Removed %s imported files" % (len(manifest.file_sums)))
+    output.success("Removed %s imported files" % (len(files)))
     try:
         os.remove(manifest_path)
         output.success("Removed imports manifest file: %s" % manifest_path)

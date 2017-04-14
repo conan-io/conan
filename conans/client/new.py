@@ -26,7 +26,7 @@ include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
 conan_basic_setup()''')
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         shared = "-DBUILD_SHARED_LIBS=ON" if self.options.shared else ""
         self.run('cmake hello %s %s' % (cmake.command_line, shared))
         self.run("cmake --build . %s" % cmake.build_config)
@@ -72,7 +72,7 @@ class {package_name}Conan(ConanFile):
     exports_sources = "hello/*"
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         shared = "-DBUILD_SHARED_LIBS=ON" if self.options.shared else ""
         self.run('cmake hello %s %s' % (cmake.command_line, shared))
         self.run("cmake --build . %s" % cmake.build_config)
@@ -81,6 +81,7 @@ class {package_name}Conan(ConanFile):
         self.copy("*.h", dst="include", src="hello")
         self.copy("*hello.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
+        self.copy("*.dylib*", dst="lib", keep_path=False)
         self.copy("*.so", dst="lib", keep_path=False)
         self.copy("*.a", dst="lib", keep_path=False)
 
@@ -126,14 +127,14 @@ class {package_name}TestConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         # Current dir is "test_package/build/<build_id>" and CMakeLists.txt is in "test_package"
-        cmake.configure(self, source_dir=self.conanfile_directory, build_dir="./")
-        cmake.build(self)
+        cmake.configure(source_dir=self.conanfile_directory, build_dir="./")
+        cmake.build()
 
     def imports(self):
-        self.copy("*.dll", "bin", "bin")
-        self.copy("*.dylib", "bin", "bin")
+        self.copy("*.dll", dst="bin", src="bin")
+        self.copy("*.dylib*", dst="bin", src="lib")
 
     def test(self):
         os.chdir("bin")

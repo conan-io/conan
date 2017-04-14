@@ -14,6 +14,8 @@ from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
 
 
 def _load_info_file(current_path, conanfile, output, error=False):
+    if not current_path:
+        return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
         deps_info = DepsCppInfo.loads(load(info_file_path))
@@ -135,7 +137,7 @@ class ConanFileLoader(object):
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, reference, current_path):
+    def load_virtual(self, references, current_path, scope_options=True):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(None, self._runner, self._settings.copy(), current_path)
@@ -143,10 +145,13 @@ class ConanFileLoader(object):
         # Assign environment
         conanfile._env_values.update(self._env_values)
 
-        conanfile.requires.add(str(reference))  # Convert to string necessary
+        for reference in references:
+            conanfile.requires.add(str(reference))  # Convert to string necessary
         # Allows options without package namespace in conan install commands:
         #   conan install zlib/1.2.8@lasote/stable -o shared=True
-        self._user_options.scope_options(reference.name)
+        if scope_options:
+            assert len(references) == 1
+            self._user_options.scope_options(references[0].name)
         conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []  # remove the default txt generator

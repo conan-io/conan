@@ -1,14 +1,20 @@
-import unittest
-from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool
 import os
-from conans.test.utils.test_files import temp_folder
-from conans import tools
-from conans.test.utils.visual_project_files import get_vs_project_files
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
-from conans.paths import CONANFILE
 import platform
-from conans.errors import ConanException
+import unittest
+
+from collections import namedtuple
 from nose.plugins.attrib import attr
+
+from conans import tools
+from conans.client.conf import default_settings_yml
+from conans.errors import ConanException
+from conans.model.settings import Settings
+from conans.paths import CONANFILE
+from conans.test.utils.runner import TestRunner
+from conans.test.utils.test_files import temp_folder
+from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.visual_project_files import get_vs_project_files
+from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool
 
 
 class RunnerMock(object):
@@ -17,7 +23,7 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output):
+    def __call__(self, command, output):  # @UnusedVariable
         self.command_called = command
         return 0 if self.return_ok else 1
 
@@ -178,7 +184,7 @@ class ToolsTest(unittest.TestCase):
                 self.calls = 0
                 self.expected = expected
 
-            def __call__(self, command, output):
+            def __call__(self, command, output):  # @UnusedVariable
                 self.calls += 1
                 return 0 if command in self.expected else 1
 
@@ -208,6 +214,75 @@ class ToolsTest(unittest.TestCase):
         self.assertTrue(spt._tool.installed("git"))
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
+
+    def msvc_build_command_test(self):
+        if platform.system() != "Windows":
+            return
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        # test build_type and arch override, for multi-config packages
+        cmd = tools.msvc_build_command(settings, "project.sln", build_type="Debug", arch="x86")
+        self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
+        self.assertIn('vcvarsall.bat', cmd)
+
+        # tests errors if args not defined
+        with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
+            tools.msvc_build_command(settings, "project.sln")
+        settings.arch = "x86"
+        with self.assertRaisesRegexp(ConanException, "Cannot build_sln_command"):
+            tools.msvc_build_command(settings, "project.sln")
+
+        # succesful definition via settings
+        settings.build_type = "Debug"
+        cmd = tools.msvc_build_command(settings, "project.sln")
+        self.assertIn('msbuild project.sln /p:Configuration=Debug /p:Platform="x86"', cmd)
+        self.assertIn('vcvarsall.bat', cmd)
+
+    def vcvars_echo_test(self):
+        if platform.system() != "Windows":
+            return
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "14"
+        cmd = tools.vcvars_command(settings)
+        output = TestBufferConanOutput()
+        runner = TestRunner(output)
+        runner(cmd + " && set vs140comntools")
+        self.assertIn("vcvarsall.bat", str(output))
+        self.assertIn("VS140COMNTOOLS=", str(output))
+        with tools.environment_append({"VisualStudioVersion": "14"}):
+            output = TestBufferConanOutput()
+            runner = TestRunner(output)
+            cmd = tools.vcvars_command(settings)
+            runner(cmd + " && set vs140comntools")
+            self.assertNotIn("vcvarsall.bat", str(output))
+            self.assertIn("Conan:vcvars already set", str(output))
+            self.assertIn("VS140COMNTOOLS=", str(output))
+
+    def run_in_bash_test(self):
+        if platform.system() != "Windows":
+            return
+
+        class MockConanfile(object):
+
+            def __init__(self):
+                self.command = ""
+                self.output = namedtuple("output", "info")(lambda x: None)
+
+            def run(self, command):
+                self.command = command
+
+        conanfile = MockConanfile()
+        tools.run_in_windows_bash(conanfile, "a_command.bat")
+        self.assertIn("bash --login -c", conanfile.command)
+        self.assertIn("^&^& a_command.bat ^", conanfile.command)
+
+        with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
+            tools.run_in_windows_bash(conanfile, "a_command.bat")
+            self.assertIn("path\\to\\mybash.exe --login -c", conanfile.command)
 
     @attr('slow')
     def build_vs_project_test(self):

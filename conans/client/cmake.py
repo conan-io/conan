@@ -1,6 +1,8 @@
+from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.errors import ConanException
+from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir
@@ -8,17 +10,80 @@ from conans.tools import cpu_count, args_to_string
 from conans import tools
 import os
 import platform
+from conans.util.log import logger
+
+# Deprecated in 0.22
+deprecated_conanfile_param_message = '''
+*******************************   WARNING!!! ************************************
+
+Do not pass 'self' to configure() nor build() methods, it is deprecated and will be removed.
+
+Instance CMake with the conanfile instance instead:
+
+    cmake = CMake(self)
+    cmake.configure() # Optional args, defs, source_dir and build_dir parameters
+    cmake.build() # Optional args, build_dir and target
+
+
+**********************************************************************************
+'''
+
+
+def _get_env_cmake_system_name():
+    env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
+    return {"False": False, "True": True, "": None}.get(env_system_name, env_system_name)
+
+
+def _get_env_cmake_system_name():
+    env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
+    return {"False": False, "True": True, "": None}.get(env_system_name, env_system_name)
 
 
 class CMake(object):
 
-    def __init__(self, settings, generator=None, cmake_system_name=True, parallel=True):
-        assert isinstance(settings, Settings)
-        self._settings = settings
+    def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True, parallel=True):
+        """
+
+        :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
+        :param generator: Generator name to use or none to autodetect
+        :param cmake_system_name: False to not use CMAKE_SYSTEM_NAME variable, True for auto-detect or directly a string
+               with the system name
+        :param parallel: Try to build with multiple cores if available
+        """
+        if isinstance(settings_or_conanfile, Settings):
+            self._settings = settings_or_conanfile
+            self._conanfile = None
+            self.configure = self._configure_old
+            self.build = self._build_old
+        elif isinstance(settings_or_conanfile, ConanFile):
+            self._settings = settings_or_conanfile.settings
+            self._conanfile = settings_or_conanfile
+            self.configure = self._configure_new
+            self.build = self._build_new
+        else:
+            raise ConanException("First parameter of CMake() has to be a ConanFile instance.")
+
+        self._os = self._settings.get_safe("os")
+        self._compiler = self._settings.get_safe("compiler")
+        self._compiler_version = self._settings.get_safe("compiler.version")
+        self._arch = self._settings.get_safe("arch")
+        self._build_type = self._settings.get_safe("build_type")
+        self._op_system_version = self._settings.get_safe("os.version")
+        self._libcxx = self._settings.get_safe("compiler.libcxx")
+        self._runtime = self._settings.get_safe("compiler.runtime")
+
         self.generator = generator or self._generator()
         self.build_dir = None
-        self._cmake_system_name = cmake_system_name
+        self._cmake_system_name = _get_env_cmake_system_name()
+        if self._cmake_system_name is None:  # Not overwritten using environment
+            self._cmake_system_name = cmake_system_name
         self.parallel = parallel
+        self.definitions = self._get_cmake_definitions()
+
+
+    @property
+    def flags(self):
+        return _defs_to_string(self.definitions)
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -34,20 +99,15 @@ class CMake(object):
         return ' '.join(result)
 
     def _generator(self):
-        if (not self._settings.compiler or
-                not self._settings.compiler.version or
-                not self._settings.arch):
+
+        if not self._compiler or not self._compiler_version or not self._arch:
             raise ConanException("You must specify compiler, compiler.version and arch in "
                                  "your settings to use a CMake generator")
-
-        operating_system = str(self._settings.os) if self._settings.os else None
-        compiler = str(self._settings.compiler) if self._settings.compiler else None
-        arch = str(self._settings.arch) if self._settings.arch else None
 
         if "CONAN_CMAKE_GENERATOR" in os.environ:
             return os.environ["CONAN_CMAKE_GENERATOR"]
 
-        if compiler == "Visual Studio":
+        if self._compiler == "Visual Studio":
             _visuals = {'8': '8 2005',
                         '9': '9 2008',
                         '10': '10 2010',
@@ -55,51 +115,48 @@ class CMake(object):
                         '12': '12 2013',
                         '14': '14 2015',
                         '15': '15 2017'}
-            str_ver = str(self._settings.compiler.version)
-            base = "Visual Studio %s" % _visuals.get(str_ver, "UnknownVersion %s" % str_ver)
-            if arch == "x86_64":
+            base = "Visual Studio %s" % _visuals.get(self._compiler_version, "UnknownVersion %s" % self._compiler_version)
+            if self._arch == "x86_64":
                 return base + " Win64"
-            elif "arm" in str(arch):
+            elif "arm" in self._arch:
                 return base + " ARM"
             else:
                 return base
 
-        if operating_system == "Windows":
+        if self._os == "Windows":
             return "MinGW Makefiles"  # it is valid only under Windows
 
         return "Unix Makefiles"
 
-    def _cmake_compiler_options(self, the_os, os_ver, arch):
-        cmake_flags = []
+    def _cmake_compiler_options(self, the_os, arch):
+        cmake_definitions = OrderedDict()
 
         if str(the_os).lower() == "macos":
             if arch == "x86":
-                cmake_flags.append("-DCMAKE_OSX_ARCHITECTURES=i386")
-            # CMake defines MacOS as Darwin
-            the_os = "Darwin"
-
-        cmake_flags.extend(self._cmake_cross_build_defines(the_os, os_ver))
-
-        return cmake_flags
+                cmake_definitions["CMAKE_OSX_ARCHITECTURES"] = "i386"
+        return cmake_definitions
 
     def _cmake_cross_build_defines(self, the_os, os_ver):
-        cmake_flags = []
-
-        # SYSTEM NAME
-        env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
+        ret = OrderedDict()
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", os_ver)
-        if env_system_name and env_system_name != "False":  # False means not auto-set
-            cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % env_system_name)
-            cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
-        else:
-            if self._cmake_system_name and (platform.system() != the_os or os_ver):
+
+        if self._cmake_system_name is False:
+            return ret
+
+        if self._cmake_system_name is not True:  # String not empty
+            ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
+            ret["CMAKE_SYSTEM_VERSION"] = os_ver
+        else:  # self._cmake_system_name is True, so detect if we are cross building and the system name and version
+            platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
+            if (platform_os != the_os) or os_ver:  # We are cross building
                 if the_os:
-                    cmake_flags.append("-DCMAKE_SYSTEM_NAME=%s" % the_os)
+                    ret["CMAKE_SYSTEM_NAME"] = the_os
                     if os_ver:
-                        cmake_flags.append("-DCMAKE_SYSTEM_VERSION=%s" % os_ver)
+                        ret["CMAKE_SYSTEM_VERSION"] = os_ver
                 else:
-                    cmake_flags.append("-DCMAKE_SYSTEM_NAME=Generic")
-        if cmake_flags:  # If enabled cross compile
+                    ret["CMAKE_SYSTEM_NAME"] = "Generic"
+
+        if ret:  # If enabled cross compile
             for env_var in ["CONAN_CMAKE_SYSTEM_PROCESSOR",
                             "CONAN_CMAKE_FIND_ROOT_PATH",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
@@ -108,8 +165,32 @@ class CMake(object):
 
                 value = os.getenv(env_var, None)
                 if value:
-                    cmake_flags.append("-D%s=%s" % (env_var, value))
-        return cmake_flags
+                    ret[env_var] = value
+
+            if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
+                sysroot_path = self._conanfile.deps_cpp_info.sysroot
+            else:
+                sysroot_path = os.getenv("CONAN_CMAKE_FIND_ROOT_PATH", None)
+
+            if sysroot_path:
+                # Needs to be set here, can't be managed in the cmake generator, CMake needs to know about
+                # the sysroot before any other thing
+                ret["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
+
+            # Adjust Android stuff
+            if self._os == "Android":
+                arch_abi_settings = {"armv8": "arm64-v8a",
+                                     "armv7": "armeabi-v7a",
+                                     "armv7hf": "armeabi-v7a",
+                                     "armv6": "armeabi-v6",
+                                     "armv5": "armeabi"
+                                     }.get(self._arch,
+                                           self._arch)
+                if arch_abi_settings:
+                    ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
+
+        logger.info("Setting Cross build flags: %s" % " ,".join(["%s=%s" for k,v in ret.items()]))
+        return ret
 
     @property
     def is_multi_configuration(self):
@@ -132,91 +213,106 @@ class CMake(object):
 
     @property
     def build_type(self):
-        try:
-            build_type = self._settings.build_type
-        except ConanException:
-            return ""
-        if build_type and not self.is_multi_configuration:
-            return "-DCMAKE_BUILD_TYPE=%s" % build_type
+        if self._build_type and not self.is_multi_configuration:
+            return '-DCMAKE_BUILD_TYPE="%s"' % self._build_type
         return ""
 
     @property
     def build_config(self):
         """ cmake --build tool have a --config option for Multi-configuration IDEs
         """
-        try:
-            build_type = self._settings.build_type
-        except ConanException:
-            return ""
-        if build_type and self.is_multi_configuration:
-            return "--config %s" % build_type
+        if self._build_type and self.is_multi_configuration:
+            return "--config %s" % self._build_type
         return ""
 
-    @property
-    def flags(self):
-        op_system = str(self._settings.os) if self._settings.os else None
-        arch = str(self._settings.arch) if self._settings.arch else None
-        comp = str(self._settings.compiler) if self._settings.compiler else None
-        comp_version = self._settings.compiler.version
-        op_system_version = self._settings.get_safe("os.version")
+    def _get_cmake_definitions(self):
 
-        flags = self._cmake_compiler_options(the_os=op_system, os_ver=op_system_version, arch=arch)
-        flags.append("-DCONAN_EXPORTED=1")
-        if comp:
-            flags.append('-DCONAN_COMPILER="%s"' % comp)
-        if comp_version:
-            flags.append('-DCONAN_COMPILER_VERSION="%s"' % comp_version)
+        ret = self._cmake_compiler_options(the_os=self._os,  arch=self._arch)
+        ret.update(self._cmake_cross_build_defines(the_os=self._os, os_ver=self._op_system_version))
+
+        ret["CONAN_EXPORTED"] = "1"
+        if self._compiler:
+            ret["CONAN_COMPILER"] = self._compiler
+        if self._compiler_version:
+            ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
-        if op_system == "Linux" or op_system == "FreeBSD" or op_system == "SunOS":
-            if arch == "x86" or arch == "sparc":
-                flags.extend(["-DCONAN_CXX_FLAGS=-m32",
-                              "-DCONAN_SHARED_LINKER_FLAGS=-m32",
-                              "-DCONAN_C_FLAGS=-m32"])
-            if arch == "x86_64" or arch == "sparcv9":
-                flags.extend(["-DCONAN_CXX_FLAGS=-m64",
-                              "-DCONAN_SHARED_LINKER_FLAGS=-m64",
-                              "-DCONAN_C_FLAGS=-m64"])
+        if self._os in ("Linux", "FreeBSD", "SunOS"):
+            if self._arch == "x86" or self._arch == "sparc":
+                ret["CONAN_CXX_FLAGS"] = "-m32"
+                ret["CONAN_SHARED_LINKER_FLAGS"] = "-m32"
+                ret["CONAN_C_FLAGS"] = "-m32"
+
+            if self._arch == "x86_64" or self._arch == "sparcv9":
+                ret["CONAN_CXX_FLAGS"] = "-m64"
+                ret["CONAN_SHARED_LINKER_FLAGS"] = "-m64"
+                ret["CONAN_C_FLAGS"] = "-m64"
+
+        if self._libcxx:
+            ret["CONAN_LIBCXX"] = self._libcxx
+
+        # Shared library
         try:
-            libcxx = self._settings.compiler.libcxx
-            flags.append('-DCONAN_LIBCXX="%s"' % libcxx)
+            ret["BUILD_SHARED_LIBS"] = "ON" if self._conanfile.options.shared else "OFF"
         except:
             pass
-        return " ".join(flags)
+
+        if self._os == "Windows" and self._compiler == "Visual Studio":
+            if self.parallel:
+                cpus = tools.cpu_count()
+                ret["CONAN_CXX_FLAGS"] = "/MP%s" % cpus
+                ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
+        return ret
 
     @property
     def runtime(self):
-        try:
-            runtime = self._settings.compiler.runtime
-        except ConanException:
-            return ""
-        if runtime:
-            return "-DCONAN_LINK_RUNTIME=/%s" % runtime
+        if self._runtime:
+            return "-DCONAN_LINK_RUNTIME=/%s" % self._runtime
         return ""
 
-    def configure(self, conan_file, args=None, defs=None, source_dir=None, build_dir=None):
+    def _configure_old(self, conanfile, args=None, defs=None, source_dir=None, build_dir=None):
+        """Deprecated in 0.22"""
+        if not isinstance(conanfile, ConanFile):
+            raise ConanException(deprecated_conanfile_param_message)
+        self._conanfile = conanfile
+        self._conanfile.output.warn(deprecated_conanfile_param_message)
+        return self._configure_new(args=args, defs=defs, source_dir=source_dir, build_dir=build_dir)
+
+    def _configure_new(self, args=None, defs=None, source_dir=None, build_dir=None):
+        if isinstance(args, ConanFile):
+            raise ConanException(deprecated_conanfile_param_message)
         args = args or []
         defs = defs or {}
-        source_dir = source_dir or conan_file.conanfile_directory
-        self.build_dir = build_dir or self.build_dir or conan_file.conanfile_directory
+        source_dir = source_dir or self._conanfile.conanfile_directory
+        self.build_dir = build_dir or self.build_dir or self._conanfile.conanfile_directory
 
         mkdir(self.build_dir)
         arg_list = _join_arguments([
             self.command_line,
             args_to_string(args),
-            _vars_to_string(defs),
+            _defs_to_string(defs),
             args_to_string([source_dir])
         ])
         command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
         if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
             with clean_sh_from_path():
-                conan_file.run(command)
+                self._conanfile.run(command)
         else:
-            conan_file.run(command)
+            self._conanfile.run(command)
 
-    def build(self, conan_file, args=None, build_dir=None, target=None):
+    def _build_old(self, conanfile, args=None, build_dir=None, target=None):
+        """Deprecated in 0.22"""
+        if not isinstance(conanfile, ConanFile):
+            raise ConanException(deprecated_conanfile_param_message)
+        self._conanfile = conanfile
+        self._conanfile.output.warn(deprecated_conanfile_param_message)
+        return self._build_new(args=args, build_dir=build_dir, target=target)
+
+    def _build_new(self, args=None, build_dir=None, target=None):
+        if isinstance(args, ConanFile):
+            raise ConanException(deprecated_conanfile_param_message)
         args = args or []
-        build_dir = build_dir or self.build_dir or conan_file.conanfile_directory
+        build_dir = build_dir or self.build_dir or self._conanfile.conanfile_directory
         if target is not None:
             args = ["--target", target] + args
 
@@ -232,16 +328,18 @@ class CMake(object):
             args_to_string(args)
         ])
         command = "cmake --build %s" % arg_list
-        conan_file.run(command)
+        self._conanfile.run(command)
 
-    def test(self, conan_file, args=None, build_dir=None, target=None):
+    def test(self, args=None, build_dir=None, target=None):
+        if isinstance(args, ConanFile):
+            raise ConanException(deprecated_conanfile_param_message)
         if not target:
-            target = "RUN_TESTS" if self._settings.compiler == "Visual Studio" else "test"
-        self.build(conan_file=conan_file, args=args, build_dir=build_dir, target=target)
+            target = "RUN_TESTS" if self._compiler == "Visual Studio" else "test"
+        self._build_new(args=args, build_dir=build_dir, target=target)
 
 
-def _vars_to_string(defs):
-    return args_to_string('-D{0}={1}'.format(k, v) for k, v in defs.items())
+def _defs_to_string(defs):
+    return " ".join(['-D{0}="{1}"'.format(k, v) for k, v in defs.items()])
 
 
 def _join_arguments(args):

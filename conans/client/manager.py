@@ -33,6 +33,7 @@ from conans.util.log import logger
 from conans.model.manifest import FileTreeManifest
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.build_requires import BuildRequires
+from conans.client.linter import conan_linter
 
 
 class ConanManager(object):
@@ -49,7 +50,7 @@ class ConanManager(object):
         self._current_scopes = None
         self._search_manager = search_manager
 
-    def export(self, user, conan_file_path, keep_source=False):
+    def export(self, user, conan_file_path, keep_source=False, filename=None):
         """ Export the conans
         param conanfile_path: the original source directory of the user containing a
                            conanfile.py
@@ -64,7 +65,8 @@ class ConanManager(object):
             user_name, channel = user, "testing"
 
         src_folder = conan_file_path
-        conan_file_path = os.path.join(conan_file_path, CONANFILE)
+        conan_file_path = os.path.join(conan_file_path, filename or CONANFILE)
+        conan_linter(conan_file_path, self._user_io.out)
         conanfile = load_export_conanfile(conan_file_path, self._user_io.out)
         conan_ref = ConanFileReference(conanfile.name, conanfile.version, user_name, channel)
         conan_ref_str = str(conan_ref)
@@ -75,7 +77,8 @@ class ConanManager(object):
                                  "You exported '%s' but already existing '%s'"
                                  % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
-        export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source)
+        export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
+                         filename)
 
     def package_files(self, reference, path, profile):
         """ Bundle pre-existing binaries
@@ -90,7 +93,7 @@ class ConanManager(object):
                                   remote_name=None, update=False, check_updates=False,
                                   manifest_manager=None)
         loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
-        conanfile = loader.load_virtual(reference, current_path)
+        conanfile = loader.load_virtual([reference], current_path)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 
@@ -131,7 +134,7 @@ class ConanManager(object):
 
     def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename, current_path):
         if isinstance(reference_or_path, ConanFileReference):
-            conanfile = loader.load_virtual(reference_or_path, current_path)
+            conanfile = loader.load_virtual([reference_or_path], current_path)
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
             try:
@@ -271,6 +274,9 @@ class ConanManager(object):
 
         build_requires = BuildRequires(loader, remote_proxy, self._user_io.out, self._client_cache,
                                        self._search_manager, profile.build_requires, current_path)
+
+        # Apply build_requires to consumer conanfile
+        build_requires.install("", conanfile)
         installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy,
                                    build_requires)
 

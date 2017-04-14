@@ -4,6 +4,7 @@ from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import load
 import os
+from conans.test.utils.conanfile import TestConanFile
 
 
 class PackageFilesTest(unittest.TestCase):
@@ -68,4 +69,37 @@ class TestConan(ConanFile):
 
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_HELLO mycoollib)", cmakeinfo)
+        self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
+
+    def test_with_deps(self):
+        client = TestClient()
+        conanfile = TestConanFile()
+        client.save({"conanfile.py": str(conanfile)})
+        client.run("export lasote/stable")
+        client.run("install Hello/0.1@lasote/stable --build")
+        conanfile = TestConanFile(name="Hello1", requires=["Hello/0.1@lasote/stable"])
+        conanfile = str(conanfile) + """    def package_info(self):
+        self.cpp_info.libs = self.collect_libs()
+        """
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("export lasote/stable")
+        client.save({"Release_x86/lib/libmycoollib.a": ""}, clean_first=True)
+        settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
+                    '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
+        client.run("package_files Hello1/0.1@lasote/stable %s --path=Release_x86" % settings)
+
+        # consumer
+        consumer = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    requires = "Hello1/0.1@lasote/stable"
+    settings = "os"
+"""
+        client.save({CONANFILE: consumer}, clean_first=True)
+        client.run("install -g cmake")
+        self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.user_io.out)
+
+        cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        self.assertIn("set(CONAN_LIBS_HELLO1 mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)

@@ -1,5 +1,6 @@
 import copy
 import platform
+import os
 
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
 
@@ -238,11 +239,23 @@ class AutoToolsBuildEnvironment(object):
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags)
         c_flags = tmp_compilation_flags
 
-        ret = {"CPPFLAGS": " ".join(cpp_flags),
-               "CXXFLAGS": " ".join(cxx_flags),
-               "CFLAGS": " ".join(c_flags),
-               "LDFLAGS": " ".join(ld_flags),
-               "LIBS": " ".join(libs)
+        def environ_values(var_name):
+            if os.environ.get(var_name, ""):
+                return " %s" % os.environ.get(var_name, "")
+            else:
+                return ""
+
+        cpp_flags = " ".join(cpp_flags) + environ_values("CPPFLAGS")
+        cxx_flags = " ".join(cxx_flags) + environ_values("CXXFLAGS")
+        cflags = " ".join(c_flags) + environ_values("CFLAGS")
+        ldflags = " ".join(ld_flags) + environ_values("LDFLAGS")
+        libs = " ".join(libs) + environ_values("LIBS")
+
+        ret = {"CPPFLAGS": cpp_flags,
+               "CXXFLAGS": cxx_flags,
+               "CFLAGS": cflags,
+               "LDFLAGS": ldflags,
+               "LIBS": libs,
                }
 
         return ret

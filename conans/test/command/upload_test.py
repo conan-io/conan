@@ -1,8 +1,9 @@
 import unittest
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import save
+import os
 
 
 class UploadTest(unittest.TestCase):
@@ -68,6 +69,29 @@ class UploadTest(unittest.TestCase):
         self.assertIn("Uploaded conan recipe", client.user_io.out)
         self.assertNotIn("Uploading conan_package.tgz", client.user_io.out)
         self.assertIn("Package is up to date", client.user_io.out)
+
+    def corrupt_upload_test(self):
+        servers = {}
+        test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                                 users={"lasote": "mypass"})
+        servers["default"] = test_server
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client.save(files)
+        client.run("export frodo/stable")
+        client.run("install Hello0/1.2.1@frodo/stable --build=missing")
+        ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
+        packages_folder = client.client_cache.packages(ref)
+        pkg_id = os.listdir(packages_folder)[0]
+        package_folder = os.path.join(packages_folder, pkg_id)
+        save(os.path.join(package_folder, "added.txt"), "")
+        os.remove(os.path.join(package_folder, "include/helloHello0.h"))
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("WARN: Mismatched checksum 'added.txt'", client.user_io.out)
+        self.assertIn("WARN: Mismatched checksum 'include/helloHello0.h'", client.user_io.out)
+        self.assertIn("ERROR: Cannot upload corrupted package", client.user_io.out)
 
     def upload_newer_recipe_test(self):
         servers = {}
