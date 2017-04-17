@@ -71,8 +71,7 @@ class InstallTest(unittest.TestCase):
 
         self.client.run("install %s --build=missing" % (self.settings))
 
-        error = self.client.run("install %s --build=Bye" % (self.settings), ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install %s --build=Bye" % (self.settings))
         self.assertIn("No package matching 'Bye*' pattern", self.client.user_io.out)
 
         for package in ["Hello0", "Hello1"]:
