@@ -20,11 +20,7 @@ from conans.tools import environment_append
 from conans.util.tracer import log_package_built
 
 
-def init_package_info(deps_graph, paths):
-    """ Made external so it is independent of installer and can called
-    in testing too
-    """
-    # Assign export root folders
+def _init_package_info(deps_graph, paths, current_path):
     for node in deps_graph.nodes:
         conan_ref, conan_file = node
         if conan_ref:
@@ -34,6 +30,9 @@ def init_package_info(deps_graph, paths):
             conan_file.package_folder = package_folder
             conan_file.cpp_info = CppInfo(package_folder)
             conan_file.env_info = EnvInfo(package_folder)
+        else:
+            conan_file.cpp_info = CppInfo(current_path)
+            conan_file.env_info = EnvInfo(current_path)
 
 
 def build_id(conanfile):
@@ -57,6 +56,7 @@ class BuildMode(object):
         self.outdated = False
         self.missing = False
         self.patterns = []
+        self._unused_patterns = []
         self.all = False
         if params is None:
             return
@@ -78,6 +78,7 @@ class BuildMode(object):
 
             if never and (self.outdated or self.missing or self.patterns):
                 raise ConanException("--build=never not compatible with other options")
+        self._unused_patterns = list(self.patterns)
 
     def forced(self, reference, conanfile):
         if self.all:
@@ -98,32 +99,37 @@ class BuildMode(object):
                 conanfile.build_policy_missing)
 
     def check_matches(self, references):
-        for pattern in self.patterns:
+        for pattern in list(self._unused_patterns):
             matched = any(fnmatch.fnmatch(ref, pattern) for ref in references)
-            if not matched:
-                raise ConanException("No package matching '%s' pattern" % pattern)
+            if matched:
+                self._unused_patterns.remove(pattern)
+
+    def report_matches(self):
+        for pattern in self._unused_patterns:
+            self._out.error("No package matching '%s' pattern" % pattern)
 
 
 class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
     """
-    def __init__(self, client_cache, user_io, remote_proxy):
-        self._client_cache = client_cache
-        self._out = user_io.out
-        self._remote_proxy = remote_proxy
+    def __init__(self, client_cache, output, remote_proxy, build_requires):
 
-    def install(self, deps_graph, build_mode):
+        self._client_cache = client_cache
+        self._out = output
+        self._remote_proxy = remote_proxy
+        self._build_requires = build_requires
+
+    def install(self, deps_graph, build_mode, current_path):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
         t1 = time.time()
-        init_package_info(deps_graph, self._client_cache)
+        _init_package_info(deps_graph, self._client_cache, current_path)
         # order by levels and propagate exports as download imports
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
         t1 = time.time()
-        build_mode = BuildMode(build_mode, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         logger.debug("Install-Process private %s" % (time.time() - t1))
         t1 = time.time()
@@ -165,7 +171,6 @@ class ConanInstaller(object):
         """Called from info command when a build policy is used in build_order parameter"""
         # Get the nodes in order and if we have to build them
         nodes_by_level = deps_graph.by_levels()
-        build_mode = BuildMode(build_mode, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         nodes = self._get_nodes(nodes_by_level, skip_private_nodes, build_mode)
         return [(PackageReference(conan_ref, package_id), conan_file)
@@ -205,10 +210,12 @@ class ConanInstaller(object):
                 output = ScopedOutput(str(conan_ref), self._out)
                 package_ref = PackageReference(conan_ref, package_id)
                 package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
-                if build_mode is True:
+                if conan_file.build_policy_missing:
                     output.info("Building package from source as defined by build_policy='missing'")
                 elif build_mode.forced(conan_ref, conan_file):
                     output.warn('Forced build from source')
+
+                self._build_requires.install(conan_ref, conan_file)
 
                 t1 = time.time()
                 # Assign to node the propagated info
@@ -248,8 +255,8 @@ class ConanInstaller(object):
         public_deps = [name for name, req in conan_file.requires.items() if not req.private]
         conan_file.cpp_info.public_deps = public_deps
         for n in node_order:
-            conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref)
-            conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref)
+            conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
+            conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
 
         # Update the env_values with the inherited from dependencies
         conan_file._env_values.update(conan_file.deps_env_info)

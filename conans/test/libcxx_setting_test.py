@@ -19,7 +19,7 @@ class ConanFileToolsTest(ConanFile):
 
     def build(self):
         self.output.warn("Building...")
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         self.output.warn(cmake.command_line)
         command = cmake.command_line.replace('-G "Visual Studio 12 Win64"', "")
         self.run('cmake . %s' % command)

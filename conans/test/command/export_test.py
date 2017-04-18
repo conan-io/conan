@@ -27,6 +27,26 @@ class TestConan(ConanFile):
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
 
+    def test_filename(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+"""
+        client.save({"myconanfile.py": conanfile,
+                     "conanfile.py": ""})
+        client.run("export lasote/stable --file=myconanfile.py")
+        self.assertIn("Hello/1.2@lasote/stable: A new conanfile.py version was exported",
+                      client.user_io.out)
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export(conan_ref)
+        conanfile = load(os.path.join(export_path, "conanfile.py"))
+        self.assertIn('name = "Hello"', conanfile)
+        manifest = load(os.path.join(export_path, "conanmanifest.txt"))
+        self.assertIn('conanfile.py: cac514c81a0af0d87fa379b0bf16fbaa', manifest)
+
     def test_exclude_basic(self):
         client = TestClient()
         conanfile = """
@@ -99,7 +119,7 @@ class ExportTest(unittest.TestCase):
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
-                         'CMakeLists.txt': '40c9a26a156aecb0304fded35c1db93b',
+                         'CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
                          'conanfile.py': '9e26c9274ae837c03764d1418c063ebb',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
@@ -184,7 +204,7 @@ class OpenSSLConan(ConanFile):
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
-                         'CMakeLists.txt': '40c9a26a156aecb0304fded35c1db93b',
+                         'CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
                          'conanfile.py': '9e26c9274ae837c03764d1418c063ebb',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
@@ -217,7 +237,7 @@ class OpenSSLConan(ConanFile):
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
-                         'CMakeLists.txt': '40c9a26a156aecb0304fded35c1db93b',
+                         'CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
                          'conanfile.py': 'b6ac37b87cf6cfd63991d355b48db40e',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}

@@ -52,6 +52,18 @@ class InstallTest(unittest.TestCase):
         self.assertIn("Hello1/0.1@lasote/stable: WARN: Forced build from source",
                       self.client.user_io.out)
 
+    def install_transitive_cache_test(self):
+        self._create("Hello0", "0.1")
+        self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
+        self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"])
+        self.client.run("install Hello2/0.1@lasote/stable %s --build=missing" % (self.settings))
+        self.assertIn("Hello0/0.1@lasote/stable: Generating the package",
+                      self.client.user_io.out)
+        self.assertIn("Hello1/0.1@lasote/stable: Generating the package",
+                      self.client.user_io.out)
+        self.assertIn("Hello2/0.1@lasote/stable: Generating the package",
+                      self.client.user_io.out)
+
     def partials_test(self):
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
@@ -59,8 +71,7 @@ class InstallTest(unittest.TestCase):
 
         self.client.run("install %s --build=missing" % (self.settings))
 
-        error = self.client.run("install %s --build=Bye" % (self.settings), ignore_error=True)
-        self.assertTrue(error)
+        self.client.run("install %s --build=Bye" % (self.settings))
         self.assertIn("No package matching 'Bye*' pattern", self.client.user_io.out)
 
         for package in ["Hello0", "Hello1"]:

@@ -1,4 +1,6 @@
 from collections import OrderedDict
+
+from conans.model.ref import ConanFileReference
 from conans.util.config_parser import ConfigParser
 from conans.model.scope import Scopes, _root
 from conans.errors import ConanException
@@ -8,6 +10,8 @@ from conans.model.options import OptionsValues
 import os
 from conans.util.files import load, mkdir
 from conans.model.values import Values
+from conans.paths import CONANINFO
+from conans.model.info import ConanInfo
 
 
 class Profile(object):
@@ -21,6 +25,7 @@ class Profile(object):
         self.env_values = EnvValues()
         self.scopes = Scopes()
         self.options = OptionsValues()
+        self.build_requires = OrderedDict()  # conan_ref Pattern: list of conan_ref
 
     @property
     def settings_values(self):
@@ -32,6 +37,18 @@ class Profile(object):
         for pkg, settings in self.package_settings.items():
             result[pkg] = list(settings.items())
         return result
+
+    @staticmethod
+    def read_conaninfo(current_path):
+        profile = Profile()
+        conan_info_path = os.path.join(current_path, CONANINFO)
+        if os.path.exists(conan_info_path):
+            existing_info = ConanInfo.load_file(conan_info_path)
+            profile.settings = OrderedDict(existing_info.full_settings.as_list())
+            profile.options = existing_info.full_options
+            profile.scopes = existing_info.scope
+            profile.env_values = existing_info.env_values
+        return profile
 
     @staticmethod
     def read_file(profile_name, cwd, default_folder):
@@ -76,7 +93,7 @@ class Profile(object):
         """ Parse and return a Profile object from a text config like representation
         """
         def get_package_name_value(item):
-            '''Parse items like package:name=value or name=value'''
+            """Parse items like package:name=value or name=value"""
             package_name = None
             if ":" in item:
                 tmp = item.split(":", 1)
@@ -89,7 +106,7 @@ class Profile(object):
 
         try:
             obj = Profile()
-            doc = ConfigParser(text, allowed_fields=["settings", "env", "scopes", "options"])
+            doc = ConfigParser(text, allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
 
             for setting in doc.settings.splitlines():
                 setting = setting.strip()
@@ -101,6 +118,17 @@ class Profile(object):
                         obj.package_settings[package_name][name] = value
                     else:
                         obj.settings[name] = value
+
+            if doc.build_requires:
+                # FIXME CHECKS OF DUPLICATED?
+                for req in doc.build_requires.splitlines():
+                    tokens = req.split(":", 1)
+                    if len(tokens) == 1:
+                        pattern, req_list = "*", req
+                    else:
+                        pattern, req_list = tokens
+                    req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
+                    obj.build_requires.setdefault(pattern, []).extend(req_list)
 
             if doc.scopes:
                 obj.scopes = Scopes.from_list(doc.scopes.splitlines())
@@ -117,7 +145,10 @@ class Profile(object):
             raise ConanException("Error parsing the profile text file: %s" % str(exc))
 
     def dumps(self):
-        result = ["[settings]"]
+        result = ["[build_requires]"]
+        for pattern, req_list in self.build_requires.items():
+            result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
+        result.append("[settings]")
         for name, value in self.settings.items():
             result.append("%s=%s" % (name, value))
         for package, values in self.package_settings.items():

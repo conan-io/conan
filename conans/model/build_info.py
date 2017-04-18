@@ -30,6 +30,7 @@ class _CppInfo(object):
         self.sharedlinkflags = []  # linker flags
         self.exelinkflags = []  # linker flags
         self.rootpath = ""
+        self.sysroot = None
 
     @property
     def include_paths(self):
@@ -71,6 +72,7 @@ class CppInfo(_CppInfo):
         self.bindirs.append(DEFAULT_BIN)
         self.resdirs.append(DEFAULT_RES)
         self.builddirs.append("")
+        # public_deps is needed to accumulate list of deps for cmake targets
         self.public_deps = []
         self.configs = {}
 
@@ -79,6 +81,7 @@ class CppInfo(_CppInfo):
         def _get_cpp_info():
             result = _CppInfo()
             result.rootpath = self.rootpath
+            result.sysroot = self.sysroot
             result.includedirs.append(DEFAULT_INCLUDE)
             result.libdirs.append(DEFAULT_LIB)
             result.bindirs.append(DEFAULT_BIN)
@@ -111,6 +114,9 @@ class _BaseDepsCppInfo(_CppInfo):
         self.cflags = merge_lists(dep_cpp_info.cflags, self.cflags)
         self.sharedlinkflags = merge_lists(dep_cpp_info.sharedlinkflags, self.sharedlinkflags)
         self.exelinkflags = merge_lists(dep_cpp_info.exelinkflags, self.exelinkflags)
+
+        if not self.sysroot:
+            self.sysroot = dep_cpp_info.sysroot
 
     @property
     def include_paths(self):
@@ -201,11 +207,14 @@ class DepsCppInfo(_BaseDepsCppInfo):
 
         return result
 
-    def update(self, dep_cpp_info, conan_ref):
+    def update(self, dep_cpp_info, pkg_name):
         assert isinstance(dep_cpp_info, CppInfo)
-        self._dependencies[conan_ref.name] = dep_cpp_info
-
+        self._dependencies[pkg_name] = dep_cpp_info
         super(DepsCppInfo, self).update(dep_cpp_info)
-
         for config, cpp_info in dep_cpp_info.configs.items():
             self.configs.setdefault(config, _BaseDepsCppInfo()).update(cpp_info)
+
+    def update_deps_cpp_info(self, dep_cpp_info):
+        assert isinstance(dep_cpp_info, DepsCppInfo)
+        for pkg_name, cpp_info in dep_cpp_info.dependencies:
+            self.update(cpp_info, pkg_name)

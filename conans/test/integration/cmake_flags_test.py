@@ -30,7 +30,8 @@ conanfile = """[requires]
 Hello/0.1@lasote/testing
 """
 
-cmake = """
+cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
@@ -155,3 +156,49 @@ class CMakeFlagsTest(unittest.TestCase):
                       "$<$<CONFIG:Release>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
         self.assertIn("CHAT_CXX_FLAGS=MyChatFlag1;MyChatFlag2;"
                       "$<$<CONFIG:Release>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+
+    def cmake_test_needed_settings(self):
+        conanfile = """
+import os
+from conans import ConanFile, CMake
+
+class MyLib(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    %s
+
+    def build(self):
+        cmake = CMake(self)
+        """
+        for settings_line in ('', 'settings="arch"', 'settings="compiler"'):
+            client = TestClient()
+            client.save({"conanfile.py": conanfile % settings_line})
+            client.run("build", ignore_error=True)
+            self.assertIn("You must specify compiler, compiler.version and arch in "
+                          "your settings to use a CMake generator", client.user_io.out,)
+
+    def cmake_shared_flag_test(self):
+        conanfile = """
+import os
+from conans import ConanFile, CMake
+
+class MyLib(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    options = {"shared": [True, False]}
+    default_options= "shared=%s"
+    settings = "arch", "compiler"
+
+    def build(self):
+        cmake = CMake(self)
+        if self.options.shared:
+            assert(cmake.definitions["BUILD_SHARED_LIBS"] ==  "ON")
+        else:
+            assert(cmake.definitions["BUILD_SHARED_LIBS"] ==  "OFF")
+        """
+        client = TestClient()
+        client.save({"conanfile.py": conanfile % "True"})
+        client.run("build")
+
+        client.save({"conanfile.py": conanfile % "False"}, clean_first=True)
+        client.run("build")

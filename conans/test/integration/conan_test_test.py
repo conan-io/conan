@@ -93,7 +93,7 @@ class HelloReuseConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
@@ -116,7 +116,7 @@ class HelloReuseConan(ConanFile):
         self.requires("Hello0/0.1@ lasote/stable")
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
@@ -137,7 +137,9 @@ class HelloReuseConan(ConanFile):
         files[CONANFILE] = files[CONANFILE].replace(', "arch"',
                                                     ', "arch", "build_type"')
 
-        cmakelist = """PROJECT(MyHello)
+        cmakelist = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -153,8 +155,8 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         client.run("export lasote/stable")
         error = client.run("test -s build_type=Release")
         self.assertFalse(error)
-        self.assertNotIn("Project: WARN: conanbuildinfo.txt file not found", client.user_io.out)
-        self.assertNotIn("Project: WARN: conanenv.txt file not found", client.user_io.out)
+        self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.user_io.out)
+        self.assertNotIn("WARN: conanenv.txt file not found", client.user_io.out)
         self.assertIn('Hello Hello0', client.user_io.out)
         error = client.run("test -s Hello0:build_type=Debug -o Hello0:language=1")
         self.assertFalse(error)

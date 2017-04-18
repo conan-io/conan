@@ -10,18 +10,47 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
+from conans.model.conan_file import create_exports, create_exports_sources
+from conans.client.loader_parse import load_conanfile_class
 
 
-def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, short_paths,
-                     keep_source):
+def load_export_conanfile(conanfile_path, output):
+    conanfile = load_conanfile_class(conanfile_path)
+
+    for field in ["url", "license", "description"]:
+        field_value = getattr(conanfile, field, None)
+        if not field_value:
+            output.warn("Conanfile doesn't have '%s'.\n"
+                        "It is recommended to add it as attribute" % field)
+    if getattr(conanfile, "conan_info", None):
+        output.warn("conan_info() method is deprecated, use package_id() instead")
+
+    try:
+        # Exports is the only object field, we need to do this, because conan export needs it
+        conanfile.exports = create_exports(conanfile)
+        conanfile.exports_sources = create_exports_sources(conanfile)
+    except Exception as e:  # re-raise with file name
+        raise ConanException("%s: %s" % (conanfile_path, str(e)))
+
+    # check name and version were specified
+
+    if not hasattr(conanfile, "name") or not conanfile.name:
+        raise ConanException("conanfile didn't specify name")
+    if not hasattr(conanfile, "version") or not conanfile.version:
+        raise ConanException("conanfile didn't specify version")
+
+    return conanfile
+
+
+def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source, filename):
     destination_folder = paths.export(conan_ref)
     previous_digest = _init_export_folder(destination_folder)
-    execute_export(conanfile, origin_folder, destination_folder, output)
+    execute_export(conanfile, origin_folder, destination_folder, output, filename)
 
     digest = FileTreeManifest.create(destination_folder)
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
-    if previous_digest and previous_digest.file_sums == digest.file_sums:
+    if previous_digest and previous_digest == digest:
         digest = previous_digest
         output.info("The stored package has not changed")
         modified_recipe = False
@@ -30,7 +59,7 @@ def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, short_p
         output.info('Folder: %s' % destination_folder)
         modified_recipe = True
 
-    source = paths.source(conan_ref, short_paths)
+    source = paths.source(conan_ref, conanfile.short_paths)
     dirty = os.path.join(source, DIRTY_FILE)
     remove = False
     if os.path.exists(dirty):
@@ -67,7 +96,7 @@ def _init_export_folder(destination_folder):
     return previous_digest
 
 
-def execute_export(conanfile, origin_folder, destination_folder, output):
+def execute_export(conanfile, origin_folder, destination_folder, output, filename=None):
     def classify(patterns):
         patterns = patterns or []
         included, excluded = [], []
@@ -98,4 +127,5 @@ def execute_export(conanfile, origin_folder, destination_folder, output):
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)
 
-    shutil.copy2(os.path.join(origin_folder, CONANFILE), destination_folder)
+    shutil.copy2(os.path.join(origin_folder, filename or CONANFILE),
+                 os.path.join(destination_folder, CONANFILE))

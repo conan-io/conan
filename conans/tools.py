@@ -61,9 +61,20 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None):
         curdir = unix_path(cwd or os.path.abspath(os.path.curdir))
         # Needed to change to that dir inside the bash shell
         to_run = 'cd "%s" && %s ' % (curdir, bashcmd)
-        wincmd = 'bash --login -c %s' % escape_windows_cmd(to_run)
+        custom_bash_path = os.getenv("CONAN_BASH_PATH", "bash")
+        wincmd = '%s --login -c %s' % (custom_bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         conanfile.run(wincmd)
+
+
+def args_to_string(args):
+    if not args:
+        return ""
+    if sys.platform == 'win32':
+        return subprocess.list2cmdline(args)
+    else:
+        return " ".join("'" + arg.replace("'", r"'\''") + "'" for arg in args)
+
 
 @contextmanager
 def chdir(newdir):
@@ -111,7 +122,18 @@ def environment_append(env_vars):
         os.environ.update(old_env)
 
 
-def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
+def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
+                       arch=None):
+    """ Do both: set the environment variables and call the .sln build
+    """
+    vcvars = vcvars_command(settings)
+    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch)
+    command = "%s && %s" % (vcvars, build)
+    return command
+
+
+def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
+                      arch=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -120,11 +142,18 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True):
     """
     targets = targets or []
     command = "devenv %s /upgrade && " % sln_path if upgrade_project else ""
-    command += "msbuild %s /p:Configuration=%s" % (sln_path, settings.build_type)
-    if str(settings.arch) in ["x86_64", "x86"]:
+    build_type = build_type or settings.build_type
+    arch = arch or settings.arch
+    if not build_type:
+        raise ConanException("Cannot build_sln_command, build_type not defined")
+    if not arch:
+        raise ConanException("Cannot build_sln_command, arch not defined")
+    command += "msbuild %s /p:Configuration=%s" % (sln_path, build_type)
+    arch = str(arch)
+    if arch in ["x86_64", "x86"]:
         command += ' /p:Platform='
-        command += '"x64"' if settings.arch == "x86_64" else '"x86"'
-    elif "ARM" in str(settings.arch).upper():
+        command += '"x64"' if arch == "x86_64" else '"x86"'
+    elif "ARM" in arch.upper():
         command += ' /p:Platform="ARM"'
 
     if targets:
@@ -136,7 +165,7 @@ def vcvars_command(settings):
     param = "x86" if settings.arch == "x86" else "amd64"
     existing_version = os.environ.get("VisualStudioVersion")
     if existing_version:
-        command = ""
+        command = "echo Conan:vcvars already set"
         existing_version = existing_version.split(".")[0]
         if existing_version != settings.compiler.version:
             raise ConanException("Error, Visual environment already set to %s\n"
@@ -149,7 +178,7 @@ def vcvars_command(settings):
         except KeyError:
             raise ConanException("VS '%s' variable not defined. Please install VS or define "
                                  "the variable (VS2017)" % env_var)
-        if settings.compiler.version != "15":
+        if env_var != "vs150comntools":
             command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
         else:
             command = ('call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
@@ -339,10 +368,36 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
 
+def cross_building(settings, self_os=None, self_arch=None):
+    self_os = self_os or platform.system()
+    self_arch = self_arch or detected_architecture()
+    os_setting = settings.get_safe("os")
+    arch_setting = settings.get_safe("arch")
+    platform_os = {"Darwin": "Macos"}.get(self_os, self_os)
+    if self_os == os_setting and self_arch == "x86_64" and arch_setting == "x86":
+        return False  # not really considered cross
+
+    if os_setting and platform_os != os_setting:
+        return True
+    if arch_setting and self_arch != arch_setting:
+        return True
+
+    return False
+
+
+def detected_architecture():
+    # FIXME: Very weak check but not very common to run conan in other architectures
+    if "64" in platform.machine():
+        return "x86_64"
+    elif "86" in platform.machine():
+        return "x86"
+    return None
+
+
 # DETECT OS, VERSION AND DISTRIBUTIONS
 
 class OSInfo(object):
-    ''' Usage:
+    """ Usage:
         print(os_info.is_linux) # True/False
         print(os_info.is_windows) # True/False
         print(os_info.is_macos) # True/False
@@ -358,7 +413,7 @@ class OSInfo(object):
             pass
         if os_info.os_version == "10.1.0":
             pass
-    '''
+    """
 
     def __init__(self):
         self.os_version = None
@@ -402,7 +457,8 @@ class OSInfo(object):
                                  ("centos", "redhat", "fedora", "pidora", "scientific",
                                   "xenserver", "amazon", "oracle")
 
-    def get_win_os_version(self):
+    @staticmethod
+    def get_win_os_version():
         """
         Get's the OS major and minor versions.  Returns a tuple of
         (OS_MAJOR, OS_MINOR).
@@ -430,7 +486,8 @@ class OSInfo(object):
 
         return Version("%d.%d" % (os_version.dwMajorVersion, os_version.dwMinorVersion))
 
-    def get_debian_version_name(self, version):
+    @staticmethod
+    def get_debian_version_name(version):
         if not version:
             return None
         elif version.major() == "8.Y.Z":
@@ -448,7 +505,8 @@ class OSInfo(object):
         elif version.minor() == "3.0.Z":
             return "woody"
 
-    def get_win_version_name(self, version):
+    @staticmethod
+    def get_win_version_name(version):
         if not version:
             return None
         elif version.major() == "5.Y.Z":
@@ -464,7 +522,8 @@ class OSInfo(object):
         elif version.minor() == "10.0.Z":
             return "Windows 10"
 
-    def get_osx_version_name(self, version):
+    @staticmethod
+    def get_osx_version_name(version):
         if not version:
             return None
         elif version.minor() == "10.12.Z":
@@ -494,10 +553,12 @@ class OSInfo(object):
         elif version.minor() == "10.0.Z":
             return "Cheetha"
 
-    def get_freebsd_version(self):
+    @staticmethod
+    def get_freebsd_version():
         return platform.release().split("-")[0]
 
-    def get_solaris_version_name(self, version):
+    @staticmethod
+    def get_solaris_version_name(version):
         if not version:
             return None
         elif version.minor() == "5.10":

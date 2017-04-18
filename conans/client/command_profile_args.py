@@ -28,10 +28,10 @@ def _profile_parse_args(settings, options, envs, scopes):
             return []
         # Validate the pairs
         for item in items:
-            chunks = item.split("=")
+            chunks = item.split("=", 1)
             if len(chunks) != 2:
                 raise ConanException("Invalid input '%s', use 'name=value'" % item)
-        return [(item[0], item[1]) for item in [item.split("=") for item in items]]
+        return [(item[0], item[1]) for item in [item.split("=", 1) for item in items]]
 
     def _get_simple_and_package_tuples(items):
         """Parse items like "thing:item=value or item2=value2 and returns a tuple list for
@@ -70,5 +70,5 @@ def _profile_parse_args(settings, options, envs, scopes):
     result.settings = OrderedDict(settings)
     for pkg, values in package_settings.items():
         result.package_settings[pkg] = OrderedDict(values)
-    result.scopes = Scopes.from_list(scopes) if scopes else None
+    result.scopes = Scopes.from_list(scopes) if scopes else Scopes()
     return result

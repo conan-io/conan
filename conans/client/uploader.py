@@ -4,16 +4,16 @@ import time
 from conans.errors import ConanException, NotFoundException
 from conans.model.ref import PackageReference, is_a_reference, ConanFileReference
 from conans.util.log import logger
+from conans.client.loader_parse import load_conanfile_class
 
 
 class ConanUploader(object):
 
-    def __init__(self, paths, user_io, remote_proxy, search_manager, loader):
+    def __init__(self, paths, user_io, remote_proxy, search_manager):
         self._paths = paths
         self._user_io = user_io
         self._remote_proxy = remote_proxy
         self._search_manager = search_manager
-        self._loader = loader
 
     def upload(self, pattern, force=False, all_packages=False, confirm=False,
                retry=None, retry_wait=None, skip_upload=False):
@@ -57,7 +57,7 @@ class ConanUploader(object):
     def check_reference(self, conan_reference):
         try:
             conanfile_path = self._paths.conanfile(conan_reference)
-            conan_file = self._loader.load_class(conanfile_path)
+            conan_file = load_conanfile_class(conanfile_path)
         except NotFoundException:
             raise NotFoundException("There is no local conanfile exported as %s"
                                     % str(conan_reference))
@@ -85,7 +85,7 @@ class ConanUploader(object):
 
         local_manifest = self._paths.load_manifest(conan_ref)
 
-        if (remote_recipe_manifest.file_sums != local_manifest.file_sums and
+        if (remote_recipe_manifest != local_manifest and
                 remote_recipe_manifest.time > local_manifest.time):
             raise ConanException("Remote recipe is newer than local recipe: "
                                  "\n Remote date: %s\n Local date: %s" %

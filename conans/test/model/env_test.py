@@ -1,4 +1,3 @@
-import os
 import unittest
 from conans.model.env_info import DepsEnvInfo, EnvValues, EnvInfo
 from conans.model.ref import ConanFileReference
@@ -36,10 +35,10 @@ class EnvValuesTest(unittest.TestCase):
         env_info = EnvInfo()
         env_info.path.append("SOME/PATH")
         deps_info = DepsEnvInfo()
-        deps_info.update(env_info, ConanFileReference.loads("lib/1.0@lasote/stable"))
+        deps_info.update(env_info, "lib")
 
         deps_info2 = DepsEnvInfo()
-        deps_info2.update(env_info, ConanFileReference.loads("lib2/1.0@lasote/stable"))
+        deps_info2.update(env_info, "lib2")
 
         env = EnvValues()
         env.add("PATH", ["MYPATH"])

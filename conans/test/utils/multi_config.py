@@ -11,7 +11,7 @@ class {name}Conan(ConanFile):
     exports = '*'
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         if cmake.is_multi_configuration:
             cmd = 'cmake "%s" %s' % (self.conanfile_directory, cmake.command_line)
             self.run(cmd)
@@ -51,7 +51,7 @@ class TestConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         if cmake.is_multi_configuration:
             cmd = 'cmake "%s" %s' % (self.conanfile_directory, cmake.command_line)
             self.run(cmd)
@@ -101,7 +101,8 @@ int main(){{
     hello{name}();
 }}
 """
-cmake = """
+cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
@@ -116,7 +117,8 @@ set_target_properties(say_hello PROPERTIES DEBUG_POSTFIX _d)
 target_link_libraries(say_hello hello{name})
 
 """
-testcmake = """
+testcmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
