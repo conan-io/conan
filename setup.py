@@ -53,7 +53,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=load_version(),  # + ".rc5",
+    version=load_version(), # + ".rc1",
 
     description='Conan C/C++ package manager',
     # long_description="An open source, decentralized package manager, to automate building and sharing of packages",
@@ -63,8 +63,8 @@ setup(
     url='https://conan.io',
 
     # Author details
-    author='Luis Martinez de Bartolome',
-    author_email='lasote@gmail.com',
+    author='JFrog LTD',
+    author_email='luism@jfrog.com',
 
     # Choose your license
     license='MIT',
@@ -126,6 +126,7 @@ setup(
         'console_scripts': [
             'conan=conans.conan:run',
             'conan_server=conans.conan_server:run',
+            'conan_build_info=conans.build_info.command:run'
         ],
     },
 )

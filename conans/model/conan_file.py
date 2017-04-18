@@ -3,8 +3,9 @@ from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
 from conans.errors import ConanException
-from conans.model.env_info import DepsEnvInfo
+from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
+from conans.paths import RUN_LOG_NAME
 
 
 def create_options(conanfile):
@@ -14,10 +15,8 @@ def create_options(conanfile):
 
         default_options = getattr(conanfile, "default_options", None)
         if default_options:
-            if isinstance(default_options, tuple):
-                default_values = OptionsValues.loads("\n".join(default_options))
-            elif isinstance(default_options, list):
-                default_values = OptionsValues.from_list(default_options)
+            if isinstance(default_options, (list, tuple)):
+                default_values = OptionsValues(default_options)
             elif isinstance(default_options, str):
                 default_values = OptionsValues.loads(default_options)
             else:
@@ -66,8 +65,17 @@ def create_exports(conanfile):
         return conanfile.exports
 
 
+def create_exports_sources(conanfile):
+    if not hasattr(conanfile, "exports_sources"):
+        return None
+    else:
+        if isinstance(conanfile.exports_sources, str):
+            return (conanfile.exports_sources, )
+        return conanfile.exports_sources
+
+
 class ConanFile(object):
-    """ The base class for all conans
+    """ The base class for all package recipes
     """
 
     name = None
@@ -80,11 +88,7 @@ class ConanFile(object):
     build_policy = None
     short_paths = False
 
-    def __init__(self, output, runner, settings, conanfile_directory):
-        '''
-        param settings: Settings
-        '''
-
+    def __init__(self, output, runner, settings, conanfile_directory, user=None, channel=None):
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
         if isinstance(self.generators, str):
@@ -95,7 +99,7 @@ class ConanFile(object):
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
         self.exports = create_exports(self)
-
+        self.exports_sources = create_exports_sources(self)
         # needed variables to pack the project
         self.cpp_info = None  # Will be initialized at processing time
         self.deps_cpp_info = DepsCppInfo()
@@ -114,6 +118,35 @@ class ConanFile(object):
         self._conanfile_directory = conanfile_directory
         self.package_folder = None  # Assigned at runtime
         self._scope = None
+
+        # user specified env variables
+        self._env_values = EnvValues()  # Updated at runtime, user specified -e
+        self._user = user
+        self._channel = channel
+
+    @property
+    def env(self):
+        simple, multiple = self._env_values.env_dicts(self.name)
+        simple.update(multiple)
+        return simple
+
+    @property
+    def channel(self):
+        if not self._channel:
+            self._channel = os.getenv("CONAN_CHANNEL")
+            if not self._channel:
+                raise ConanException("CONAN_CHANNEL environment variable not defined, "
+                                     "but self.channel is used in conanfile")
+        return self._channel
+
+    @property
+    def user(self):
+        if not self._user:
+            self._user = os.getenv("CONAN_USERNAME")
+            if not self._user:
+                raise ConanException("CONAN_USERNAME environment variable not defined, "
+                                     "but self.user is used in conanfile")
+        return self._user
 
     def collect_libs(self, folder="lib"):
         if not self.package_folder:
@@ -165,9 +198,6 @@ class ConanFile(object):
     def source(self):
         pass
 
-    def requirements(self):
-        pass
-
     def system_requirements(self):
         """ this method can be overwritten to implement logic for system package
         managers, as apt-get
@@ -208,11 +238,11 @@ class ConanFile(object):
         """ runs such a command in the folder the Conan
         is defined
         """
-        retcode = self._runner(command, output, cwd)
+        retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME),  cwd)
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
 
-    def conan_info(self):
+    def package_id(self):
         """ modify the conans info, typically to narrow values
         eg.: conaninfo.package_references = []
         """
@@ -221,7 +251,4 @@ class ConanFile(object):
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
-        result = []
-        result.append("name: %s" % self.name)
-        result.append("version: %s" % self.version)
-        return '\n'.join(result)
+        return 'Conanfile:%s/%s' % (self.name, self.version)

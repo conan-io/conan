@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestServer, TestClient
+from conans.test.utils.tools import TestServer, TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
 from nose.plugins.attrib import attr
@@ -9,8 +9,7 @@ import os
 from conans.paths import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE
 import platform
 from conans.util.log import logger
-import time
-import shutil
+from conans.test.utils.test_files import wait_until_removed
 
 
 @attr("slow")
@@ -23,8 +22,9 @@ class DiamondTest(unittest.TestCase):
         self.servers = {"default": test_server}
         self.conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-    def _export_upload(self, name, version=None, deps=None, use_cmake=True):
-        files = cpp_hello_conan_files(name, version, deps, need_patch=True, use_cmake=use_cmake)
+    def _export_upload(self, name, version=None, deps=None, use_cmake=True, cmake_targets=False):
+        files = cpp_hello_conan_files(name, version, deps, need_patch=True, use_cmake=use_cmake,
+                                      cmake_targets=cmake_targets)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.conan.save(files, clean_first=True)
         self.conan.run("export lasote/stable")
@@ -55,6 +55,9 @@ class DiamondTest(unittest.TestCase):
     def diamond_cmake_test(self):
         self._diamond_test(use_cmake=True)
 
+    def diamond_cmake_targets_test(self):
+        self._diamond_test(use_cmake=True, cmake_targets=True)
+
     def diamond_default_test(self):
         self._diamond_test(use_cmake=False)
 
@@ -68,28 +71,23 @@ class DiamondTest(unittest.TestCase):
         install = "install -s compiler=gcc -s compiler.libcxx=libstdc++ -s compiler.version=4.9"
         self._diamond_test(install=install, use_cmake=False)
 
-    def _diamond_test(self, install="install", use_cmake=True):
-        def wait_until_removed(folder):
-            latest_exception = None
-            for _ in range(50):  # Max 5 seconds
-                time.sleep(0.1)
-                try:
-                    shutil.rmtree(folder)
-                    break
-                except Exception as e:
-                    latest_exception = e
-            else:
-                raise Exception("Could remove folder %s: %s" % (folder, latest_exception))
+    def _diamond_test(self, install="install", use_cmake=True, cmake_targets=False):
 
-        self._export_upload("Hello0", "0.1", use_cmake=use_cmake)
-        self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake)
-        self._export_upload("Hello2", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake)
+        if not use_cmake and platform.system() == "SunOS":
+            return  # If is using sun-cc the gcc generator doesn't work
+
+        self._export_upload("Hello0", "0.1", use_cmake=use_cmake, cmake_targets=cmake_targets)
+        self._export_upload("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake,
+                            cmake_targets=cmake_targets)
+        self._export_upload("Hello2", "0.1", ["Hello0/0.1@lasote/stable"], use_cmake=use_cmake,
+                            cmake_targets=cmake_targets)
         self._export_upload("Hello3", "0.1", ["Hello1/0.1@lasote/stable",
-                                              "Hello2/0.1@lasote/stable"], use_cmake=use_cmake)
+                                              "Hello2/0.1@lasote/stable"], use_cmake=use_cmake,
+                            cmake_targets=cmake_targets)
 
-        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]}, path_with_spaces=use_cmake)
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"],
-                                       use_cmake=use_cmake)
+                                       use_cmake=use_cmake, cmake_targets=cmake_targets)
 
         # Add some stuff to base project conanfile to test further the individual
         # flags in build_info (txt, cmake) files
@@ -103,6 +101,13 @@ class DiamondTest(unittest.TestCase):
         client.save(files3)
 
         client.run("%s . --build missing" % install)
+        if use_cmake:
+            if cmake_targets:
+                self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
+                self.assertNotIn("Conan: Using cmake global configuration", client.user_io.out)
+            else:
+                self.assertIn("Conan: Using cmake global configuration", client.user_io.out)
+                self.assertNotIn("Conan: Using cmake targets configuration", client.user_io.out)
         client.run("build .")
         self._check_individual_deps(client)
 
@@ -113,7 +118,7 @@ class DiamondTest(unittest.TestCase):
                          str(client.user_io.out).splitlines()[-6:])
 
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1,
-                                       use_cmake=use_cmake)
+                                       use_cmake=use_cmake, cmake_targets=cmake_targets)
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         wait_until_removed(client.current_folder)
         client.save(files3)
@@ -135,9 +140,9 @@ class DiamondTest(unittest.TestCase):
         client.run("upload Hello0/0.1@lasote/stable --all")
         self.assertEqual(str(client.user_io.out).count("Uploading package"), 2)
 
-        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        client2 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]}, path_with_spaces=use_cmake)
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"],
-                                       use_cmake=use_cmake)
+                                       use_cmake=use_cmake, cmake_targets=cmake_targets)
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         client2.save(files3)
         client2.run("%s . --build missing" % install)
@@ -153,7 +158,7 @@ class DiamondTest(unittest.TestCase):
                          str(client2.user_io.out).splitlines()[-6:])
 
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1,
-                                       use_cmake=use_cmake)
+                                       use_cmake=use_cmake, cmake_targets=cmake_targets)
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         wait_until_removed(client2.current_folder)
         client2.save(files3)

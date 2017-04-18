@@ -1,9 +1,8 @@
 import unittest
-from conans.test.tools import TestServer, TestClient
+from conans.test.utils.tools import TestServer, TestClient
 from conans.model.version import Version
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from collections import OrderedDict
-from conans.paths import CONANFILE
 
 
 class VersionCheckTest(unittest.TestCase):
@@ -45,9 +44,9 @@ class VersionCheckTest(unittest.TestCase):
                                  min_server_compatible_version=1)
 
         errors = self.client.run("search something -r default", ignore_error=True)
-        self.assertIn("The conan remote version is outdated (v1). Please, contact"
-                      " with your system administrator and upgrade the remote to"
-                      " avoid deprecation", self.client.user_io.out)
+        self.assertNotIn("The conan remote version is outdated (v1). Please, contact"
+                         " with your system administrator and upgrade the remote to"
+                         " avoid deprecation", self.client.user_io.out)
         self.assertFalse(errors)  # No Errors
 
         # Server deprecated

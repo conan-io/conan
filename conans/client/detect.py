@@ -86,6 +86,18 @@ def _visual_compiler_last(output):
     return last_version
 
 
+def _sun_cc_compiler(output, compiler_exe="cc"):
+    try:
+        _, out = _execute('%s -V' % compiler_exe)
+        compiler = "sun-cc"
+        installed_version = re.search("([0-9]+\.[0-9]+)", out).group()
+        if installed_version:
+            output.success("Found %s %s" % (compiler, installed_version))
+            return compiler, installed_version
+    except:
+        return None
+
+
 def _get_default_compiler(output):
     cc = os.environ.get("CC", "")
     cxx = os.environ.get("CXX", "")
@@ -96,6 +108,8 @@ def _get_default_compiler(output):
             return _gcc_compiler(output, command)
         if "clang" in command.lower():
             return _clang_compiler(output, command)
+        if platform.system() == "SunOS" and command.lower() == "cc":
+            return _sun_cc_compiler(output, command)
         # I am not able to find its version
         output.error("Not able to automatically detect '%s' version" % command)
         return None
@@ -104,11 +118,15 @@ def _get_default_compiler(output):
         vs = _visual_compiler_last(output)
     gcc = _gcc_compiler(output)
     clang = _clang_compiler(output)
+    if platform.system() == "SunOS":
+        sun_cc = _sun_cc_compiler(output)
 
     if platform.system() == "Windows":
         return vs or gcc or clang
     elif platform.system() == "Darwin":
         return clang or gcc
+    elif platform.system() == "SunOS":
+        return sun_cc or gcc or clang
     else:
         return gcc or clang
 
@@ -127,8 +145,18 @@ def _detect_compiler_version(result, output):
             result.append(("compiler.runtime", "MD"))
         elif compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
-        elif compiler == "gcc" or "clang" in compiler:
+        elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
+        elif compiler == "cc":
+            if platform.system() == "SunOS":
+                result.append(("compiler.libstdcxx", "libstdcxx4"))
+        elif compiler == "clang":
+            if platform.system() == "FreeBSD":
+                result.append(("compiler.libcxx", "libc++"))
+            else:
+                result.append(("compiler.libcxx", "libstdc++"))
+        elif compiler == "sun-cc":
+            result.append(("compiler.libcxx", "libCstd"))
 
 
 def detected_os():
@@ -140,8 +168,10 @@ def detected_os():
 def _detect_os_arch(result, output):
     architectures = {'i386': 'x86',
                      'i686': 'x86',
+                     'i86pc': 'x86',
                      'amd64': 'x86_64',
-                     'aarch64': 'armv8'}
+                     'aarch64': 'armv8',
+                     'sun4v': 'sparc'}
 
     result.append(("os", detected_os()))
     arch = architectures.get(platform.machine().lower(), platform.machine().lower())
@@ -160,7 +190,7 @@ def detect_defaults_settings(output):
     """ try to deduce current machine values without any
     constraints at all
     """
-    output.writeln("\nIt seems to be the first time you run conan", Color.BRIGHT_YELLOW)
+    output.writeln("\nIt seems to be the first time you've ran conan", Color.BRIGHT_YELLOW)
     output.writeln("Auto detecting your dev setup to initialize conan.conf", Color.BRIGHT_YELLOW)
 
     result = []

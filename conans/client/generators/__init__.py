@@ -1,3 +1,5 @@
+from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
+from conans.errors import ConanException
 from conans.model import registered_generators
 from conans.util.files import save, normalize
 from os.path import join
@@ -6,11 +8,14 @@ from .gcc import GCCGenerator
 from .cmake import CMakeGenerator
 from .qmake import QmakeGenerator
 from .qbs import QbsGenerator
+from .scons import SConsGenerator
 from .visualstudio import VisualStudioGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
-from conans.client.generators.env import ConanEnvGenerator
+from .env import ConanEnvGenerator
+from .cmake_multi import CMakeMultiGenerator
+from .virtualbuildenv import VirtualBuildEnvGenerator
 
 
 def _save_generator(name, klass):
@@ -20,13 +25,17 @@ def _save_generator(name, klass):
 _save_generator("txt", TXTGenerator)
 _save_generator("gcc", GCCGenerator)
 _save_generator("cmake", CMakeGenerator)
+_save_generator("cmake_multi", CMakeMultiGenerator)
 _save_generator("qmake", QmakeGenerator)
 _save_generator("qbs", QbsGenerator)
+_save_generator("scons", SConsGenerator)
 _save_generator("visual_studio", VisualStudioGenerator)
 _save_generator("xcode", XCodeGenerator)
 _save_generator("ycm", YouCompleteMeGenerator)
 _save_generator("virtualenv", VirtualEnvGenerator)
 _save_generator("env", ConanEnvGenerator)
+_save_generator("virtualbuildenv", VirtualBuildEnvGenerator)
+_save_generator("virtualrunenv", VirtualRunEnvGenerator)
 
 
 def write_generators(conanfile, path, output):
@@ -63,3 +72,4 @@ def write_generators(conanfile, path, output):
             except Exception as e:
                 output.error("Generator %s(file:%s) failed\n%s"
                              % (generator_name, generator.filename, str(e)))
+                raise ConanException(e)

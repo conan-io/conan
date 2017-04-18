@@ -112,7 +112,7 @@ def _change_permissions(func, path, exc_info):
         os.chmod(path, stat.S_IWUSR)
         func(path)
     else:
-        raise
+        raise Exception()
 
 
 def rmdir(path):
@@ -126,18 +126,16 @@ def rmdir(path):
         raise
 
 
-def mkdir(path, raise_if_already_exists=False):
-    """Recursive mkdir. If dir already exists
-    only raise if raise_if_already_exists"""
+def mkdir(path):
+    """Recursive mkdir, doesnt fail if already existing"""
     try:
         os.makedirs(path)
     except OSError as err:
-        if err.errno == EEXIST and not raise_if_already_exists:
-            return
-        raise
+        if err.errno != EEXIST:
+            raise
 
 
-def path_exists(path, basedir=None):
+def path_exists(path, basedir):
     """Case sensitive, for windows, optional
     basedir for skip caps check for tmp folders in testing for example (returned always
     in lowercase for some strange reason)"""
@@ -146,30 +144,25 @@ def path_exists(path, basedir=None):
         return exists
 
     path = os.path.normpath(path)
-
-    if basedir:
-        path = os.path.relpath(path, basedir)
-        chunks = path.split(os.sep)
-        tmp = basedir
-    else:
-        chunks = path.split(os.sep)
-        tmp = chunks[0]  # Skip unit (c:)
-        chunks = chunks[1:]
+    path = os.path.relpath(path, basedir)
+    chunks = path.split(os.sep)
+    tmp = basedir
 
     for chunk in chunks:
-        tmp = tmp + os.sep
         if chunk and chunk not in os.listdir(tmp):
             return False
-        tmp += chunk
+        tmp = os.path.normpath(tmp + os.sep + chunk)
     return True
 
 
-def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=9, **kwargs):
+def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, **kwargs):
     """ !! Method overrided by laso to pass mtime=0 (!=None) to avoid time.time() was
         setted in Gzip file causing md5 to change. Not possible using the
         previous tarfile open because arguments are not passed to GzipFile constructor
     """
     from tarfile import CompressionError, ReadError
+
+    compresslevel = compresslevel or int(os.getenv("CONAN_COMPRESSION_LEVEL", 9))
 
     if mode not in ("r", "w"):
         raise ValueError("mode must be 'r' or 'w'")
@@ -238,3 +231,10 @@ def list_folder_subdirs(basedir="", level=None):
         else:
             ret.append("/".join(dir_split))
     return ret
+
+
+def exception_message_safe(exc):
+    try:
+        return str(exc)
+    except:
+        return decode_text(repr(exc))

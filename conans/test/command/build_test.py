@@ -1,4 +1,4 @@
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 import unittest
 from conans.paths import CONANFILE
 from conans.model.ref import PackageReference

@@ -40,19 +40,22 @@ class ManifestManager(object):
     def _check(self, reference, manifest, remote, path):
         if os.path.exists(path):
             existing_manifest = FileTreeManifest.loads(load(path))
-            if existing_manifest.file_sums == manifest.file_sums:
+            if existing_manifest == manifest:
                 self._log.append("Manifest for '%s': OK" % str(reference))
                 return
 
         if self._verify:
+            diff = existing_manifest.difference(manifest)
+            error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
+                                        % (fname, h1, h2) for fname, (h1, h2) in diff.items())
             raise ConanException("Modified or new manifest '%s' detected.\n"
-                                 "Remote: %s\nProject manifest doesn't match installed one"
-                                 % (str(reference), remote))
+                                 "Remote: %s\nProject manifest doesn't match installed one\n%s"
+                                 % (str(reference), remote, error_msg))
 
         self._handle_add(reference, remote, manifest, path)
 
     def _match_manifests(self, read_manifest, expected_manifest, reference):
-        if read_manifest is None or read_manifest.file_sums != expected_manifest.file_sums:
+        if read_manifest is None or read_manifest != expected_manifest:
             raise ConanException("%s local cache package is corrupted: "
                                  "some file hash doesn't match manifest"
                                  % (str(reference)))

@@ -1,6 +1,6 @@
 import unittest
 from conans.paths import CONANFILE
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.util.files import load
 import os
 
@@ -14,7 +14,6 @@ from conans import ConanFile
 class ConanLib(ConanFile):
     name = "Hello"
     version = "0.1"
-    exports = "*"
 
     def source(self):
         self.output.info("Running source!")

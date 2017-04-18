@@ -18,9 +18,26 @@ class Requirement(object):
                     needed for building or testing, but not affects the package hash at all
         """
         self.conan_reference = conan_reference
+        self.range_reference = conan_reference
         self.private = private
         self.override = override
         self.dev = dev
+
+    @property
+    def version_range(self):
+        """ returns the version range expression, without brackets []
+        or None if it is not an expression
+        """
+        version = self.range_reference.version
+        if version.startswith("[") and version.endswith("]"):
+            return version[1:-1]
+
+    @property
+    def is_resolved(self):
+        """ returns True if the version_range reference has been already resolved to a
+        concrete reference
+        """
+        return self.conan_reference != self.range_reference
 
     def __repr__(self):
         return ("%s" % str(self.conan_reference) + (" P" if self.private else ""))
@@ -38,9 +55,6 @@ class Requirement(object):
 class Requirements(OrderedDict):
     """ {name: Requirement} in order, e.g. {"Hello": Requirement for Hello}
     """
-    # auxiliary class variable so output messages when overriding requirements
-    # FIXME: A more elegant solution
-    output = None
 
     def __init__(self, *args):
         super(Requirements, self).__init__()
@@ -78,7 +92,8 @@ class Requirements(OrderedDict):
 
     def copy(self):
         """ We need a custom copy as the normal one requires __init__ to be
-        properly defined
+        properly defined. This is not a deep-copy, in fact, requirements in the dict
+        are changed by RequireResolver, and are propagated upstream
         """
         result = Requirements()
         for name, req in self.items():
@@ -94,18 +109,15 @@ class Requirements(OrderedDict):
         assert isinstance(reference, six.string_types)
         if dev and not self.allow_dev:
             return
-        try:
-            conan_reference = ConanFileReference.loads(reference)
-            name = conan_reference.name
-        except ConanException:
-            conan_reference = None
-            name = reference
+
+        conan_reference = ConanFileReference.loads(reference)
+        name = conan_reference.name
 
         new_requirement = Requirement(conan_reference, private, override, dev)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
-            self.output.werror("Duplicated requirement %s != %s"
-                               % (old_requirement, new_requirement))
+            raise ConanException("Duplicated requirement %s != %s"
+                                 % (old_requirement, new_requirement))
         else:
             self[name] = new_requirement
 

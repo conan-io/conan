@@ -1,11 +1,11 @@
 import unittest
 import os
-from conans.paths import CONANFILE, CONAN_MANIFEST
+from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_DIR
 from conans.util.files import save, load
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 
 
 class ExportSettingsTest(unittest.TestCase):
@@ -22,10 +22,76 @@ class TestConan(ConanFile):
         files = {CONANFILE: conanfile}
         client.save(files)
         client.run("export lasote/stable")
-        self.assertIn("WARN: Conanfile doesn't have a 'license'", client.user_io.out)
+        self.assertIn("WARN: Conanfile doesn't have 'license'", client.user_io.out)
         client.run("install Hello/1.2@lasote/stable -s os=Windows", ignore_error=True)
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
+
+    def test_filename(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+"""
+        client.save({"myconanfile.py": conanfile,
+                     "conanfile.py": ""})
+        client.run("export lasote/stable --file=myconanfile.py")
+        self.assertIn("Hello/1.2@lasote/stable: A new conanfile.py version was exported",
+                      client.user_io.out)
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export(conan_ref)
+        conanfile = load(os.path.join(export_path, "conanfile.py"))
+        self.assertIn('name = "Hello"', conanfile)
+        manifest = load(os.path.join(export_path, "conanmanifest.txt"))
+        self.assertIn('conanfile.py: cac514c81a0af0d87fa379b0bf16fbaa', manifest)
+
+    def test_exclude_basic(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "*.txt", "!*file1.txt"
+    exports_sources = "*.cpp", "!*temp.cpp"
+"""
+
+        client.save({CONANFILE: conanfile,
+                     "file.txt": "",
+                     "file1.txt": "",
+                     "file.cpp": "",
+                     "file_temp.cpp": ""})
+        client.run("export lasote/stable")
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export(conan_ref)
+        self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
+        self.assertFalse(os.path.exists(os.path.join(export_path, "file1.txt")))
+        self.assertTrue(os.path.exists(os.path.join(export_path, EXPORT_SOURCES_DIR, "file.cpp")))
+        self.assertFalse(os.path.exists(os.path.join(export_path, EXPORT_SOURCES_DIR,
+                                                     "file_temp.cpp")))
+
+    def test_exclude_folders(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "*.txt", "!*/temp/*"
+"""
+
+        client.save({CONANFILE: conanfile,
+                     "file.txt": "",
+                     "any/temp/file1.txt": "",
+                     "other/sub/file2.txt": ""})
+        client.run("export lasote/stable")
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export(conan_ref)
+        self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
+        self.assertFalse(os.path.exists(os.path.join(export_path, "any/temp/file1.txt")))
+        self.assertTrue(os.path.exists(os.path.join(export_path, "other/sub/file2.txt")))
 
 
 class ExportTest(unittest.TestCase):
@@ -53,8 +119,8 @@ class ExportTest(unittest.TestCase):
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
-                         'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '5632cf850a7161388ab24f42b9bdb3fd',
+                         'CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
+                         'conanfile.py': '9e26c9274ae837c03764d1418c063ebb',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
@@ -79,7 +145,8 @@ class OpenSSLConan(ConanFile):
         save(os.path.join(self.conan.current_folder, CONANFILE), content)
         self.conan.run("export lasote/stable")
         reg_path = self.conan.paths.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
-        self.assertEqual(sorted(os.listdir(reg_path)), [CONANFILE, CONAN_MANIFEST])
+        self.assertEqual(sorted(os.listdir(reg_path)),
+                         [EXPORT_SOURCES_DIR, CONANFILE, CONAN_MANIFEST])
 
         content = """
 from conans import ConanFile
@@ -93,7 +160,8 @@ class OpenSSLConan(ConanFile):
         self.conan.run("export lasote/stable")
         reg_path = self.conan.paths.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST, 'helloHello0.h'])
+                         [EXPORT_SOURCES_DIR, 'CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
+                          'helloHello0.h'])
 
         # Now exports being a list instead a tuple
         content = """
@@ -108,7 +176,7 @@ class OpenSSLConan(ConanFile):
         self.conan.run("export lasote/stable")
         reg_path = self.conan.paths.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
+                         [EXPORT_SOURCES_DIR, 'CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
                           'helloHello0.h'])
 
     def test_export_the_same_code(self):
@@ -136,8 +204,8 @@ class OpenSSLConan(ConanFile):
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
-                         'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '5632cf850a7161388ab24f42b9bdb3fd',
+                         'CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
+                         'conanfile.py': '9e26c9274ae837c03764d1418c063ebb',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest2.file_sums)
@@ -169,8 +237,8 @@ class OpenSSLConan(ConanFile):
 
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
-                         'CMakeLists.txt': 'bc3405da4bb0b51a3b9f05aca71e58c8',
-                         'conanfile.py': '7f7a5352e781be814b86e8f333593b4f',
+                         'CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
+                         'conanfile.py': 'b6ac37b87cf6cfd63991d355b48db40e',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, digest3.file_sums)

@@ -1,5 +1,5 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 import platform
 from conans.util.files import load
 import os
@@ -19,7 +19,7 @@ class ConanFileToolsTest(ConanFile):
 
     def build(self):
         self.output.warn("Building...")
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         self.output.warn(cmake.command_line)
         command = cmake.command_line.replace('-G "Visual Studio 12 Win64"', "")
         self.run('cmake . %s' % command)
@@ -58,20 +58,35 @@ class LibcxxSettingTest(unittest.TestCase):
         client = TestClient()
         client.save(self.files)
         client.run("export lasote/testing")
-        client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++ ', ignore_error=False)
-        client.run('build')
-        self.assertIn("-stdlib=libstdc++", str(client.user_io.out))
-        self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=0", str(client.user_io.out))
 
-        client.run('install -s compiler=clang -s compiler.libcxx=libstdc++11', ignore_error=False)
-        client.run('build')
-        self.assertIn("-stdlib=libstdc++", str(client.user_io.out))
-        self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=1", str(client.user_io.out))
+        if platform.system() == "SunOS":
+            client.run('install -s compiler=sun-cc -s compiler.libcxx=libCstd', ignore_error=False)
+            client.run('build')
+            self.assertIn("-library=Cstd", str(client.user_io.out))
 
-        client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libc++', ignore_error=False)
-        client.run('build')
-        self.assertIn("-stdlib=libc++", str(client.user_io.out))
-        self.assertNotIn("Found Define: _GLIBCXX_USE_CXX11", str(client.user_io.out))
+            client.run('install -s compiler=sun-cc -s compiler.libcxx=libstdcxx', ignore_error=False)
+            client.run('build')
+            self.assertIn("-library=stdcxx4", str(client.user_io.out))
+
+            client.run('install -s compiler=sun-cc -s compiler.libcxx=libstlport', ignore_error=False)
+            client.run('build')
+            self.assertIn("-library=stlport4", str(client.user_io.out))
+
+        else:
+            client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++ ', ignore_error=False)
+            client.run('build')
+            self.assertIn("-stdlib=libstdc++", str(client.user_io.out))
+            self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=0", str(client.user_io.out))
+
+            client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++11', ignore_error=False)
+            client.run('build')
+            self.assertIn("-stdlib=libstdc++", str(client.user_io.out))
+            self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=1", str(client.user_io.out))
+
+            client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libc++', ignore_error=False)
+            client.run('build')
+            self.assertIn("-stdlib=libc++", str(client.user_io.out))
+            self.assertNotIn("Found Define: _GLIBCXX_USE_CXX11", str(client.user_io.out))
 
     def test_C_only(self):
         config = '''

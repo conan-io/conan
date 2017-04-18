@@ -1,14 +1,42 @@
 import unittest
-from conans.test.tools import TestClient
+from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
 from conans.util.files import load
 from conans.model.ref import PackageReference
 import os
+from conans.paths import CONANFILE
 
 
 @attr("slow")
 class ConanTestTest(unittest.TestCase):
+
+    def scopes_test_package_test(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def build(self):
+        self.output.info("Scope: %s" % self.scope)
+"""
+        test_conanfile = """
+from conans import ConanFile, CMake
+import os
+
+class HelloReuseConan(ConanFile):
+    requires = "Hello/0.1@lasote/stable"
+
+    def test(self):
+        self.conanfile_directory
+"""
+        client.save({"conanfile.py": conanfile,
+                     "test/conanfile.py": test_conanfile})
+        client.run("test_package --scope Hello:dev=True --build=missing")
+        self.assertIn("Hello/0.1@lasote/stable: Scope: dev=True", client.user_io.out)
 
     def fail_test_package_test(self):
         client = TestClient()
@@ -65,7 +93,7 @@ class HelloReuseConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
@@ -88,7 +116,7 @@ class HelloReuseConan(ConanFile):
         self.requires("Hello0/0.1@ lasote/stable")
 
     def build(self):
-        cmake = CMake(self.settings)
+        cmake = CMake(self)
         self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
@@ -101,8 +129,17 @@ class HelloReuseConan(ConanFile):
     def _test_with_conanfile(self, test_conanfile):
         client = TestClient()
         files = cpp_hello_conan_files("Hello0", "0.1")
+        print_build = 'self.output.warn("BUILD_TYPE=>%s" % self.settings.build_type)'
+        files[CONANFILE] = files[CONANFILE].replace("def build(self):",
+                                                    'def build(self):\n        %s' % print_build)
 
-        cmakelist = """PROJECT(MyHello)
+        # Add build_type setting
+        files[CONANFILE] = files[CONANFILE].replace(', "arch"',
+                                                    ', "arch", "build_type"')
+
+        cmakelist = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -118,7 +155,10 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         client.run("export lasote/stable")
         error = client.run("test -s build_type=Release")
         self.assertFalse(error)
+        self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.user_io.out)
+        self.assertNotIn("WARN: conanenv.txt file not found", client.user_io.out)
         self.assertIn('Hello Hello0', client.user_io.out)
-        error = client.run("test -s build_type=Release -o Hello0:language=1")
+        error = client.run("test -s Hello0:build_type=Debug -o Hello0:language=1")
         self.assertFalse(error)
         self.assertIn('Hola Hello0', client.user_io.out)
+        self.assertIn('BUILD_TYPE=>Debug', client.user_io.out)

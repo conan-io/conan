@@ -1,12 +1,14 @@
 import unittest
-from conans.test.tools import TestServer, TestClient
+from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
 import platform
 import os
 from conans.test.utils.context_manager import CustomEnvPath
 from conans.test.utils.test_files import hello_conan_files
+from nose.plugins.attrib import attr
 
 
+@attr('golang')
 class GoDiamondTest(unittest.TestCase):
 
     def setUp(self):

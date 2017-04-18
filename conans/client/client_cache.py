@@ -1,16 +1,17 @@
 import os
-from conans.util.files import save, load, path_exists, mkdir
+
+from conans.errors import ConanException
+from conans.util.files import save, load, normalize
 from conans.model.settings import Settings
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.model.values import Values
 from conans.client.detect import detect_defaults_settings
 from conans.model.ref import ConanFileReference
 from conans.model.manifest import FileTreeManifest
-from conans.paths import SimplePaths, CONANINFO
+from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
 from genericpath import isdir
-from conans.model.profile import Profile
 from conans.model.info import ConanInfo
-from conans.errors import ConanException
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -33,6 +34,29 @@ class ClientCache(SimplePaths):
         super(ClientCache, self).__init__(self._store_folder)
 
     @property
+    def put_headers_path(self):
+        return os.path.join(self.conan_folder, PUT_HEADERS)
+
+    def read_put_headers(self):
+        ret = {}
+        if not os.path.exists(self.put_headers_path):
+            save(self.put_headers_path, "")
+            return ret
+        try:
+            contents = load(self.put_headers_path)
+            for line in contents.splitlines():
+                if line and not line.strip().startswith("#"):
+                    tmp = line.split("=", 1)
+                    if len(tmp) != 2:
+                        raise Exception()
+                    name = tmp[0].strip()
+                    value = tmp[1].strip()
+                    ret[str(name)] = str(value)
+            return ret
+        except Exception:
+            raise ConanException("Invalid %s file!" % self.put_headers_path)
+
+    @property
     def registry(self):
         return os.path.join(self.conan_folder, REGISTRY)
 
@@ -42,7 +66,7 @@ class ClientCache(SimplePaths):
             default_settings = detect_defaults_settings(self._output)
             default_setting_values = Values.from_list(default_settings)
             client_conf = default_client_conf + default_setting_values.dumps()
-            save(self.conan_conf_path, client_conf)
+            save(self.conan_conf_path, normalize(client_conf))
 
         if not self._conan_config:
             if not os.path.exists(self.conan_conf_path):
@@ -75,12 +99,12 @@ class ClientCache(SimplePaths):
         if not self._settings:
             # TODO: Read default environment settings
             if not os.path.exists(self.settings_path):
-                save(self.settings_path, default_settings_yml)
+                save(self.settings_path, normalize(default_settings_yml))
                 settings = Settings.loads(default_settings_yml)
             else:
                 content = load(self.settings_path)
                 settings = Settings.loads(content)
-            settings.values = self.conan_config.settings_defaults
+            self.conan_config.settings_defaults(settings)
             self._settings = settings
         return self._settings
 
@@ -123,7 +147,7 @@ class ClientCache(SimplePaths):
 
     def conan_manifests(self, conan_reference):
         digest_path = self.digestfile_conanfile(conan_reference)
-        if not path_exists(digest_path, self.store):
+        if not os.path.exists(digest_path):
             return None, None
         return self._digests(digest_path)
 
@@ -148,20 +172,3 @@ class ClientCache(SimplePaths):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
-
-    def profile_path(self, name):
-        if not os.path.exists(self.profiles_path):
-            mkdir(self.profiles_path)
-        return os.path.join(self.profiles_path, name)
-
-    def load_profile(self, name):
-        try:
-            text = load(self.profile_path(name))
-        except Exception:
-            current_profiles = ", ".join(self.current_profiles()) or "[]"
-            raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                                 "%s" % (name, current_profiles))
-        return Profile.loads(text)
-
-    def current_profiles(self):
-        return [name for name in os.listdir(self.profiles_path) if not os.path.isdir(name)]

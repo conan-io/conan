@@ -1,0 +1,6 @@
+[run]
+omit =
+    *conanfile.py*
+
+include = 
+    *conans*
