@@ -4,7 +4,9 @@ import re
 
 class Username(str):
 
-    base_er = "[a-zA-Z][a-zA-Z0-9_]{1,29}"
+    max_len = 30
+    min_len = 2
+    base_er = "[a-zA-Z][a-zA-Z0-9_-]{%s,%s}" % (min_len-1, max_len-1)
     pattern = re.compile("^%s$" % base_er)
 
     def __new__(cls, name):
@@ -24,11 +26,13 @@ class Username(str):
         if Username.pattern.match(name) is None:
             if pattern and name == "*":
                 return
-            if len(name) > 30:
-                message = "'%s' is too long. Valid names must contain at most 30 characters."
-            elif len(name) < 2:
-                message = "'%s' is too short. Valid names must contain at least 2 characters."
+            if len(name) > Username.max_len:
+                message = "'%s' is too long. Valid names must contain at most %s characters." \
+                          "" % (name, Username.max_len)
+            elif len(name) < Username.min_len:
+                message = "'%s' is too short. Valid names must contain at least %s characters." \
+                          "" % (name, Username.min_len)
             else:
                 message = "'%s' is an invalid name. "\
-                          "Valid names should begin with alphanumerical characters."
-            raise InvalidNameException(message % name)
+                          "Valid names should begin with alphanumerical characters, '_' and '-'." % name
+            raise InvalidNameException(message)
