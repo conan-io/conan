@@ -34,5 +34,6 @@ class Username(str):
                           "" % (name, Username.min_len)
             else:
                 message = "'%s' is an invalid name. "\
-                          "Valid names should begin with alphanumerical characters, '_' and '-'." % name
+                          "Valid names have to start with alphanumerical characters and contain only " \
+                          "alphanumerical characters, '_' and '-',"
             raise InvalidNameException(message)
