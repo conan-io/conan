@@ -2,41 +2,49 @@ from collections import namedtuple
 import re
 from conans.errors import ConanException, InvalidNameException
 from conans.model.version import Version
-from conans.model.username import Username
 
 
-def _validate_conan_name(name, version=False):
-    """Check for name compliance with pattern rules"""
-    if name == "*":
-        return
-    if ConanFileReference.validation_pattern.match(name) is None:
-        if version and name.startswith("[") and name.endswith("]"):
-            return
-        if len(name) > ConanFileReference.max_chars:
-            message = "'%s' is too long. Valid names must " \
-                      "contain at most %s characters." % (name,
-                                                          ConanFileReference.max_chars)
-        elif len(name) < ConanFileReference.min_chars:
-            message = "'%s' is too short. Valid names must contain"\
-                      " at least %s characters." % (name, ConanFileReference.min_chars)
+class ConanName(object):
+    _max_chars = 40
+    _min_chars = 2
+    _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
+                                     % (_min_chars - 1, _max_chars))
+
+    @staticmethod
+    def invalid_name_message(name):
+        if len(name) > ConanName._max_chars:
+            message = ("'%s' is too long. Valid names must contain at most %s characters."
+                       % (name, ConanName._max_chars))
+        elif len(name) < ConanName._min_chars:
+            message = ("'%s' is too short. Valid names must contain at least %s characters."
+                       % (name, ConanName._min_chars))
         else:
-            message = "'%s' is an invalid name. Valid names MUST begin with a "\
-                      "letter or number, have between %s-%s chars, including "\
-                      "letters, numbers, underscore,"\
-                      " dot and dash" % (name, ConanFileReference.min_chars,
-                                         ConanFileReference.max_chars)
+            message = ("'%s' is an invalid name. Valid names MUST begin with a "
+                       "letter or number, have between %s-%s chars, including "
+                       "letters, numbers, underscore, dot and dash"
+                       % (name, ConanName._min_chars, ConanName._max_chars))
         raise InvalidNameException(message)
+
+    @staticmethod
+    def validate_user(username):
+        if ConanName._validation_pattern.match(username) is None:
+            ConanName.invalid_name_message(username)
+
+    @staticmethod
+    def validate_name(name, version=False):
+        """Check for name compliance with pattern rules"""
+        if name == "*":
+            return
+        if ConanName._validation_pattern.match(name) is None:
+            if version and name.startswith("[") and name.endswith("]"):
+                return
+            ConanName.invalid_name_message(name)
 
 
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
-    """ Full reference of a conans, e.g.:
+    """ Full reference of a package recipes, e.g.:
     opencv/2.4.10@lasote/testing
     """
-    max_chars = 40
-    min_chars = 2
-    base_er = "[a-zA-Z0-9_]+[a-zA-Z0-9_\+\.-]{%s,%s}" % (min_chars - 1, max_chars)
-    regular_expression = "^%s$" % base_er
-    validation_pattern = re.compile(regular_expression)
     whitespace_pattern = re.compile(r"\s+")
     sep_pattern = re.compile("@|/")
 
@@ -45,10 +53,10 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         @param name:        string containing the desired name
         @param validate:    checks for valid complex name. default True
         """
-        _validate_conan_name(name)
-        _validate_conan_name(version, True)
-        Username.validate(user, pattern=True)
-        _validate_conan_name(channel)
+        ConanName.validate_name(name)
+        ConanName.validate_name(version, True)
+        ConanName.validate_name(user)
+        ConanName.validate_name(channel)
         version = Version(version)
         return super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
 

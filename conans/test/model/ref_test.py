@@ -19,6 +19,13 @@ class RefTest(unittest.TestCase):
         self.assertEqual(ref.channel, "testing")
         self.assertEqual(str(ref), "opencv_lite/2.4.10@phil_lewis/testing")
 
+        ref = ConanFileReference.loads("opencv/2.4.10@3rd-party/testing")
+        self.assertEqual(ref.name, "opencv")
+        self.assertEqual(ref.version, "2.4.10")
+        self.assertEqual(ref.user, "3rd-party")
+        self.assertEqual(ref.channel, "testing")
+        self.assertEqual(str(ref), "opencv/2.4.10@3rd-party/testing")
+
     def errors_test(self):
         self.assertRaises(ConanException, ConanFileReference.loads, "")
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv/2.4.10")
@@ -26,4 +33,12 @@ class RefTest(unittest.TestCase):
         self.assertRaises(ConanException, ConanFileReference.loads, "opencv??/2.4.10@laso/testing")
         self.assertRaises(ConanException, ConanFileReference.loads, ".opencv/2.4.10@lasote/testing")
         self.assertRaises(ConanException, ConanFileReference.loads, "o/2.4.10 @ lasote/testing")
-        self.assertRaises(ConanException, ConanFileReference.loads, "lib/1.0@user.surname/channel")
+        self.assertRaises(ConanException, ConanFileReference.loads, "lib/1.0@user&surname/channel")
+        self.assertRaises(ConanException, ConanFileReference.loads,
+                          "opencv%s/2.4.10@laso/testing" % "A" * 40)
+        self.assertRaises(ConanException, ConanFileReference.loads,
+                          "opencv/2.4.10%s@laso/testing" % "A" * 40)
+        self.assertRaises(ConanException, ConanFileReference.loads,
+                          "opencv/2.4.10@laso%s/testing" % "A" * 40)
+        self.assertRaises(ConanException, ConanFileReference.loads,
+                          "opencv/2.4.10@laso/testing%s" % "A" * 40)
