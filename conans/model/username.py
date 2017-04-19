@@ -6,7 +6,7 @@ class Username(str):
 
     max_len = 30
     min_len = 2
-    base_er = "[a-zA-Z][a-zA-Z0-9_-]{%s,%s}" % (min_len-1, max_len-1)
+    base_er = "[a-zA-Z0-9_-]{%s,%s}" % (min_len, max_len)
     pattern = re.compile("^%s$" % base_er)
 
     def __new__(cls, name):
