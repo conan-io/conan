@@ -8,6 +8,7 @@ from conans.paths import CONANFILE, CONANINFO
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
+from conans import tools
 
 
 class ConanEnvTest(unittest.TestCase):
@@ -161,10 +162,11 @@ CXXFLAGS=-fPIC -DPIC
         client.save(files, clean_first=True)
         client.run("install --profile ./myprofile --build missing")
 
-        if platform.system() != "Windows":
-            ret = os.system("cd '%s' && chmod +x %s && ./%s" % (client.current_folder, "activate.sh", "activate.sh"))
-        else:
-            ret = os.system('cd "%s" && %s' % (client.current_folder, "activate.bat"))
+        with tools.chdir(client.current_folder):
+            if platform.system() != "Windows":
+                ret = os.system("chmod +x activate.sh && ./activate.sh")
+            else:
+                ret = os.system("activate.bat")
         self.assertEquals(ret, 0)
 
     def conan_env_deps_test(self):
