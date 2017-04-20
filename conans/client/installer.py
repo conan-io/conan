@@ -56,6 +56,7 @@ class BuildMode(object):
         self.outdated = False
         self.missing = False
         self.patterns = []
+        self._unused_patterns = []
         self.all = False
         if params is None:
             return
@@ -77,6 +78,7 @@ class BuildMode(object):
 
             if never and (self.outdated or self.missing or self.patterns):
                 raise ConanException("--build=never not compatible with other options")
+        self._unused_patterns = list(self.patterns)
 
     def forced(self, reference, conanfile):
         if self.all:
@@ -97,10 +99,14 @@ class BuildMode(object):
                 conanfile.build_policy_missing)
 
     def check_matches(self, references):
-        for pattern in self.patterns:
+        for pattern in list(self._unused_patterns):
             matched = any(fnmatch.fnmatch(ref, pattern) for ref in references)
-            if not matched:
-                raise ConanException("No package matching '%s' pattern" % pattern)
+            if matched:
+                self._unused_patterns.remove(pattern)
+
+    def report_matches(self):
+        for pattern in self._unused_patterns:
+            self._out.error("No package matching '%s' pattern" % pattern)
 
 
 class ConanInstaller(object):
@@ -114,7 +120,7 @@ class ConanInstaller(object):
         self._remote_proxy = remote_proxy
         self._build_requires = build_requires
 
-    def install(self, deps_graph, build_modes, current_path):
+    def install(self, deps_graph, build_mode, current_path):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         self._deps_graph = deps_graph  # necessary for _build_package
@@ -124,7 +130,6 @@ class ConanInstaller(object):
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
         t1 = time.time()
-        build_mode = BuildMode(build_modes, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         logger.debug("Install-Process private %s" % (time.time() - t1))
         t1 = time.time()
@@ -162,11 +167,10 @@ class ConanInstaller(object):
         skippable_private_nodes = deps_graph.private_nodes(skip_nodes)
         return skippable_private_nodes
 
-    def nodes_to_build(self, deps_graph, build_modes):
+    def nodes_to_build(self, deps_graph, build_mode):
         """Called from info command when a build policy is used in build_order parameter"""
         # Get the nodes in order and if we have to build them
         nodes_by_level = deps_graph.by_levels()
-        build_mode = BuildMode(build_modes, self._out)
         skip_private_nodes = self._compute_private_nodes(deps_graph, build_mode)
         nodes = self._get_nodes(nodes_by_level, skip_private_nodes, build_mode)
         return [(PackageReference(conan_ref, package_id), conan_file)

@@ -189,7 +189,7 @@ class CMake(object):
                 if arch_abi_settings:
                     ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
 
-        logger.info("Setting Cross build flags: %s" % " ,".join(["%s=%s" for k,v in ret.items()]))
+        logger.info("Setting Cross build flags: %s" % ", ".join(["%s=%s" % (k, v) for k, v in ret.items()]))
         return ret
 
     @property
@@ -205,17 +205,28 @@ class CMake(object):
     def command_line(self):
         return _join_arguments([
             '-G "%s"' % self.generator,
-            self.build_type,
-            self.runtime,
             self.flags,
             '-Wno-dev'
         ])
 
     @property
     def build_type(self):
+        return self._defs_to_string(self._build_type_definition())
+
+    def _build_type_definition(self):
         if self._build_type and not self.is_multi_configuration:
-            return '-DCMAKE_BUILD_TYPE="%s"' % self._build_type
-        return ""
+            return {'CMAKE_BUILD_TYPE': self._build_type}
+        return {}
+
+
+    @property
+    def runtime(self):
+        return self._defs_to_string(self._runtime_definition())
+
+    def _runtime_definition(self):
+        if self._runtime:
+            return {"CONAN_LINK_RUNTIME": "/%s" % self._runtime}
+        return {}
 
     @property
     def build_config(self):
@@ -226,8 +237,10 @@ class CMake(object):
         return ""
 
     def _get_cmake_definitions(self):
-
-        ret = self._cmake_compiler_options(the_os=self._os,  arch=self._arch)
+        ret = OrderedDict()
+        ret.update(self._build_type_definition())
+        ret.update(self._runtime_definition())
+        ret.update(self._cmake_compiler_options(the_os=self._os,  arch=self._arch))
         ret.update(self._cmake_cross_build_defines(the_os=self._os, os_ver=self._op_system_version))
 
         ret["CONAN_EXPORTED"] = "1"
@@ -263,12 +276,6 @@ class CMake(object):
                 ret["CONAN_CXX_FLAGS"] = "/MP%s" % cpus
                 ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
         return ret
-
-    @property
-    def runtime(self):
-        if self._runtime:
-            return "-DCONAN_LINK_RUNTIME=/%s" % self._runtime
-        return ""
 
     def _configure_old(self, conanfile, args=None, defs=None, source_dir=None, build_dir=None):
         """Deprecated in 0.22"""

@@ -11,7 +11,7 @@ def _install_pyintaller(pyinstaller_path):
     if not os.path.exists(pyinstaller_path):
         subprocess.call('git clone https://github.com/pyinstaller/pyinstaller.git',
                         cwd=os.path.curdir, shell=True)
-        subprocess.call('git checkout v3.1.1', cwd=pyinstaller_path, shell=True)
+        subprocess.call('git checkout v3.2.1', cwd=pyinstaller_path, shell=True)
 
 
 def _run_bin(pyinstaller_path):

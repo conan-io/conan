@@ -11,7 +11,7 @@ from conans.client.export import export_conanfile, load_export_conanfile
 from conans.client.generators import write_generators
 from conans.client.grapher import ConanGrapher, ConanHTMLGrapher
 from conans.client.importer import run_imports, undo_imports
-from conans.client.installer import ConanInstaller
+from conans.client.installer import ConanInstaller, BuildMode
 from conans.client.loader import load_consumer_conanfile, ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import ScopedOutput, Color
@@ -183,7 +183,8 @@ class ConanManager(object):
 
         if build_modes is not None:
             installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, None)
-            nodes = installer.nodes_to_build(deps_graph, build_modes)
+            build_mode = BuildMode(build_modes, self._user_io.out)
+            nodes = installer.nodes_to_build(deps_graph, build_mode)
             counter = Counter(ref.conan.name for ref, _ in nodes)
             self._user_io.out.info(", ".join((str(ref)
                                               if counter[ref.conan.name] > 1 else str(ref.conan))
@@ -272,15 +273,18 @@ class ConanManager(object):
         except ConanException:  # Setting os doesn't exist
             pass
 
+        build_mode = BuildMode(build_modes, self._user_io.out)
         build_requires = BuildRequires(loader, remote_proxy, self._user_io.out, self._client_cache,
-                                       self._search_manager, profile.build_requires, current_path)
+                                       self._search_manager, profile.build_requires, current_path,
+                                       build_mode)
 
         # Apply build_requires to consumer conanfile
         build_requires.install("", conanfile)
         installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy,
                                    build_requires)
 
-        installer.install(deps_graph, build_modes, current_path)
+        installer.install(deps_graph, build_mode, current_path)
+        build_mode.report_matches()
 
         prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
         output = ScopedOutput(prefix, self._user_io.out)

@@ -14,7 +14,6 @@ class Tool(ConanFile):
     name = "Tool"
     version = "0.1"
     exports_sources = "mytool*"
-    build_policy = "missing"
 
     def package(self):
         self.copy("mytool*")
@@ -31,7 +30,6 @@ class Tool(ConanFile):
     name = "PythonTool"
     version = "0.1"
     exports_sources = "mypythontool.py"
-    build_policy = "missing"
 
     def package(self):
         self.copy("mypythontool.py")
@@ -113,6 +111,36 @@ class BuildRequiresTest(unittest.TestCase):
         client.run("build")
         self.assertIn("Hello World!", client.user_io.out)
         self.assertIn("Project: Hello world from python tool!", client.user_io.out)
+
+    def test_build_mode_requires(self):
+        client = TestClient()
+        self._create(client)
+
+        client.save({CONANFILE: lib_conanfile,
+                     "profile.txt": profile}, clean_first=True)
+
+        error = client.run("install --profile ./profile.txt", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Missing prebuilt package for 'PythonTool/0.1@lasote/stable'",
+                      client.user_io.out)
+        error = client.run("install --profile ./profile.txt --build=PythonTool",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'",
+                      client.user_io.out)
+        client.run("install --profile ./profile.txt --build=*Tool")
+        self.assertIn("Installed build requires: [Tool/0.1@lasote/stable, "
+                      "PythonTool/0.1@lasote/stable]", client.user_io.out)
+        self.assertIn("Tool/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
+        self.assertIn("PythonTool/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
+
+        # now remove packages, ensure --build=missing also creates them
+        client.run('remove "*" -p -f')
+        client.run("install --profile ./profile.txt --build=missing")
+        self.assertIn("Installed build requires: [Tool/0.1@lasote/stable, "
+                      "PythonTool/0.1@lasote/stable]", client.user_io.out)
+        self.assertIn("Tool/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
+        self.assertIn("PythonTool/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
 
     def test_profile_test_requires(self):
         client = TestClient()
