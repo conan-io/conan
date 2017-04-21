@@ -178,7 +178,7 @@ class BasicAuthorizer(Authorizer):
             # TODO: Log error
             raise InternalErrorException("Invalid server configuration. "
                                          "Contact the administrator.")
-        authorized_users = rule[1].split(",")
+        authorized_users = [_.strip() for _ in rule[1].split(",")]
         if len(authorized_users) < 1:
             raise InternalErrorException("Invalid server configuration. "
                                          "Contact the administrator.")
