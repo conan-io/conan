@@ -799,9 +799,12 @@ class Command(object):
         self._user_io.out.writeln('Conan commands. Type $conan "command" -h for help',
                                   Color.BRIGHT_YELLOW)
         commands = self._commands()
+        # future-proof way to ensure tabular formatting
+        max_len = max((len(c) for c in commands)) + 2
+        fmt = '  %-{}s'.format(max_len)
         for name in sorted(self._commands()):
-            self._user_io.out.write('  %-10s' % name, Color.GREEN)
-            self._user_io.out.writeln(commands[name].__doc__.split('\n', 1)[0])
+            self._user_io.out.write(fmt % name, Color.GREEN)
+            self._user_io.out.writeln(commands[name].__doc__.split('\n', 1)[0].strip())
 
     def _commands(self):
         """ returns a list of available commands
