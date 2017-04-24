@@ -195,8 +195,8 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
 
 
 def tar_extract(fileobj, destination_dir):
-    '''Extract tar file controlling not absolute paths and fixing the routes
-    if the tar was zipped in windows'''
+    """Extract tar file controlling not absolute paths and fixing the routes
+    if the tar was zipped in windows"""
     def badpath(path, base):
         # joinpath will ignore base if path is absolute
         return not realpath(abspath(joinpath(base, path))).startswith(base)
@@ -213,6 +213,7 @@ def tar_extract(fileobj, destination_dir):
                 yield finfo
 
     the_tar = tarfile.open(fileobj=fileobj)
+    the_tar.errorlevel = 2  # raise exception if any error
     the_tar.extractall(path=destination_dir, members=safemembers(the_tar))
     the_tar.close()
 
