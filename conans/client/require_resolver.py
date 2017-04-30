@@ -63,7 +63,8 @@ class RequireResolver(object):
                                  % (version_range, base_conanref, str(resolved)))
             require.conan_reference = resolved
         else:
-            raise ConanException("The version in '%s' could not be resolved" % version_range)
+            raise ConanException(
+                "The version in '%s' from requirement '%s' could not be resolved" % (version_range, require))
 
     def _resolve_local(self, search_ref, version_range):
         if self._local_search:
