@@ -20,10 +20,20 @@ class DepsCppCmake(object):
         self.libs = " ".join(deps_cpp_info.libs)
         self.defines = "\n\t\t\t".join("-D%s" % d for d in deps_cpp_info.defines)
         self.compile_definitions = "\n\t\t\t".join(deps_cpp_info.defines)
+
         self.cppflags = " ".join(deps_cpp_info.cppflags)
         self.cflags = " ".join(deps_cpp_info.cflags)
         self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
         self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
+
+        # For modern CMake targets we need to prepare a list to not
+        # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
+        # Issue: #1251
+        self.cppflags_list = ";".join(deps_cpp_info.cppflags)
+        self.cflags_list = ";".join(deps_cpp_info.cflags)
+        self.sharedlinkflags_list = ";".join(deps_cpp_info.sharedlinkflags)
+        self.exelinkflags_list = ";".join(deps_cpp_info.exelinkflags)
+
         self.rootpath = '"%s"' % deps_cpp_info.rootpath.replace("\\", "/")
 
 
