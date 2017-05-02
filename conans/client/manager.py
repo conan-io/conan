@@ -314,7 +314,7 @@ class ConanManager(object):
                                                 self._client_cache.settings, self._runner,
                                                 output)
             export_folder = reference
-            config_source_local(export_folder, current_path, conanfile, output)
+            config_source_local(current_path, conanfile, output)
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conanfile_path = self._client_cache.conanfile(reference)
@@ -352,16 +352,17 @@ class ConanManager(object):
             dest_folder = current_path
         run_imports(conanfile, dest_folder, output)
 
-    def local_package(self, current_path, build_folder):
-        if current_path == build_folder:
+    def local_package(self, package_folder, recipe_folder, build_folder, source_folder):
+        if package_folder == build_folder:
             raise ConanException("Cannot 'conan package' to the build folder. "
-                                 "Please move to another folder and try again")
+                                 "--build_folder and --package_folder can't be the same")
         output = ScopedOutput("PROJECT", self._user_io.out)
-        conan_file_path = os.path.join(build_folder, CONANFILE)
-        conanfile = load_consumer_conanfile(conan_file_path, current_path,
+        conan_file_path = os.path.join(recipe_folder, CONANFILE)
+        conanfile = load_consumer_conanfile(conan_file_path, build_folder,
                                             self._client_cache.settings,
                                             self._runner, output)
-        packager.create_package(conanfile, build_folder, current_path, output, local=True)
+        packager.create_package(conanfile, source_folder, build_folder, package_folder, output,
+                                local=True)
 
     def package(self, reference, package_id):
         # Package paths
@@ -385,6 +386,7 @@ class ConanManager(object):
         else:
             packages = [PackageReference(reference, package_id)]
 
+        package_source_folder = self._client_cache.source(reference, conanfile.short_paths)
         for package_reference in packages:
             build_folder = self._client_cache.build(package_reference, short_paths=None)
             if not os.path.exists(build_folder):
@@ -402,26 +404,26 @@ class ConanManager(object):
                                                 self._client_cache.settings,
                                                 self._runner, output, reference)
             rmdir(package_folder)
+            if getattr(conanfile, 'no_copy_source', False):
+                source_folder = package_source_folder
+            else:
+                source_folder = None
             with environment_append(conanfile.env):
-                packager.create_package(conanfile, build_folder, package_folder, output)
+                packager.create_package(conanfile, source_folder, build_folder, package_folder,
+                                        output)
 
-    def build(self, conanfile_path, current_path, test=False, filename=None):
+    def build(self, conanfile_path, source_folder, build_folder, test=False):
         """ Call to build() method saved on the conanfile.py
         param conanfile_path: the original source directory of the user containing a
                             conanfile.py
         """
-        logger.debug("Building in %s" % current_path)
+        logger.debug("Building in %s" % build_folder)
         logger.debug("Conanfile in %s" % conanfile_path)
-
-        if filename and filename.endswith(".txt"):
-            raise ConanException("A conanfile.py is needed to call 'conan build'")
-
-        conan_file_path = os.path.join(conanfile_path, filename or CONANFILE)
 
         try:
             # Append env_vars to execution environment and clear when block code ends
             output = ScopedOutput("Project", self._user_io.out)
-            conan_file = load_consumer_conanfile(conan_file_path, current_path,
+            conan_file = load_consumer_conanfile(conanfile_path, build_folder,
                                                  self._client_cache.settings,
                                                  self._runner, output)
         except NotFoundException:
@@ -431,8 +433,10 @@ class ConanManager(object):
                                  "requirements and generators from '%s' file"
                                  % (CONANFILE, CONANFILE, CONANFILE_TXT))
         try:
-            os.chdir(current_path)
-            conan_file._conanfile_directory = conanfile_path
+            os.chdir(build_folder)
+            conan_file._conanfile_directory = source_folder
+            conan_file.build_folder = build_folder
+            conan_file.source_folder = source_folder
             with environment_append(conan_file.env):
                 conan_file.build()
 

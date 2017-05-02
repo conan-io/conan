@@ -203,7 +203,9 @@ class Command(object):
                               update=args.update,
                               generators=["txt"]
                               )
-        self._manager.build(test_folder, build_folder, test=True)
+
+        test_conanfile = os.path.join(test_folder, CONANFILE)
+        self._manager.build(test_conanfile, test_folder, build_folder, test=True)
 
     # Alias to test
     def test(self, *args):
@@ -425,7 +427,14 @@ class Command(object):
             root_path = os.path.abspath(args.path)
         else:
             root_path = current_path
-        self._manager.build(root_path, current_path, filename=args.file)
+
+        build_folder = current_path
+        source_folder = root_path
+
+        if args.file and args.file.endswith(".txt"):
+            raise ConanException("A conanfile.py is needed to call 'conan build'")
+        conanfile_path = os.path.join(root_path, args.file or CONANFILE)
+        self._manager.build(conanfile_path, source_folder, build_folder)
 
     def package(self, *args):
         """ Calls your conanfile.py 'package' method for a specific package recipe.
@@ -455,6 +464,9 @@ class Command(object):
                                  ' This optional parameter is only used for the local conan '
                                  'cache. If not specified, ALL binaries for this recipe are '
                                  're-packaged')
+        parser.add_argument("--build_folder", "-bf", help="local folder containing the build")
+        parser.add_argument("--package_folder", "-pf", help="local folder containing the package")
+        parser.add_argument("--source_folder", "-sf", help="local folder containing the sources")
 
         args = parser.parse_args(*args)
         log_command("package", vars(args))
@@ -466,10 +478,17 @@ class Command(object):
         except:
             if "@" in args.reference:
                 raise
-            build_folder = args.reference
+            recipe_folder = args.reference
+            if not os.path.isabs(recipe_folder):
+                recipe_folder = os.path.normpath(os.path.join(current_path, recipe_folder))
+            build_folder = args.build_folder or current_path
             if not os.path.isabs(build_folder):
                 build_folder = os.path.normpath(os.path.join(current_path, build_folder))
-            self._manager.local_package(current_path, build_folder)
+            package_folder = args.package_folder or current_path
+            if not os.path.isabs(package_folder):
+                package_folder = os.path.normpath(os.path.join(current_path, package_folder))
+            source_folder = args.source_folder
+            self._manager.local_package(package_folder, recipe_folder, build_folder, source_folder)
 
     def source(self, *args):
         """ Calls your conanfile.py 'source()' method to configure the source directory.

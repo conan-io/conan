@@ -32,7 +32,7 @@ class ExportPathTest(unittest.TestCase):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
-                         'conanfile.py': '9e26c9274ae837c03764d1418c063ebb',
+                         'conanfile.py': '355949fbf0b4fc32b8f1c5a338dfe1ae',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
@@ -61,7 +61,7 @@ class ExportPathTest(unittest.TestCase):
         expected_sums = {'hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
-                         'conanfile.py': '9e26c9274ae837c03764d1418c063ebb',
+                         'conanfile.py': '355949fbf0b4fc32b8f1c5a338dfe1ae',
                          'executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
@@ -95,7 +95,7 @@ class ExportPathTest(unittest.TestCase):
         expected_sums = {'source/hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'source/main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'source/CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
-                         'conanfile.py': '41c0a463c6f20084671502154f5b33f4',
+                         'conanfile.py': '3ac566eb5b2e4df4417003f0e606e237',
                          'source/executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'source/helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
@@ -132,7 +132,7 @@ class ExportPathTest(unittest.TestCase):
         expected_sums = {'source/hello.cpp': '4f005274b2fdb25e6113b69774dac184',
                          'source/main.cpp': '0479f3c223c9a656a718f3148e044124',
                          'source/CMakeLists.txt': '52546396c42f16be3daf72ecf7ab7143',
-                         'conanfile.py': '41c0a463c6f20084671502154f5b33f4',
+                         'conanfile.py': '3ac566eb5b2e4df4417003f0e606e237',
                          'source/executable': '68b329da9893e34099c7d8ad5cb9c940',
                          'source/helloHello0.h': '9448df034392fc8781a47dd03ae71bdd'}
         self.assertEqual(expected_sums, manif.file_sums)
