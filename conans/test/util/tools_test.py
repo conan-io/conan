@@ -262,6 +262,26 @@ class ToolsTest(unittest.TestCase):
             self.assertIn("Conan:vcvars already set", str(output))
             self.assertIn("VS140COMNTOOLS=", str(output))
 
+    def vcvars_constrained_test(self):
+        text = """os: [Windows]
+compiler:
+    Visual Studio:
+        version: ["14"]
+        """
+        settings = Settings.loads(text)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        with self.assertRaisesRegexp(ConanException,
+                                     "compiler.version setting required for vcvars not defined"):
+            tools.vcvars_command(settings)
+        settings.compiler.version = "14"
+        cmd = tools.vcvars_command(settings)
+        self.assertIn("vcvarsall.bat", cmd)
+        with tools.environment_append({"VisualStudioVersion": "12"}):
+            with self.assertRaisesRegexp(ConanException,
+                                         "Error, Visual environment already set to 12"):
+                tools.vcvars_command(settings)
+
     def run_in_bash_test(self):
         if platform.system() != "Windows":
             return

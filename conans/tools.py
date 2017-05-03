@@ -162,17 +162,22 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
 
 
 def vcvars_command(settings):
-    param = "x86" if settings.arch == "x86" else "amd64"
+    arch_setting = settings.get_safe("arch")
+    compiler_version = settings.get_safe("compiler.version")
+    if not compiler_version:
+        raise ConanException("compiler.version setting required for vcvars not defined")
+
+    param = "x86" if arch_setting == "x86" else "amd64"
     existing_version = os.environ.get("VisualStudioVersion")
     if existing_version:
         command = "echo Conan:vcvars already set"
         existing_version = existing_version.split(".")[0]
-        if existing_version != settings.compiler.version:
+        if existing_version != compiler_version:
             raise ConanException("Error, Visual environment already set to %s\n"
                                  "Current settings visual version: %s"
-                                 % (existing_version, settings.compiler.version))
+                                 % (existing_version, compiler_version))
     else:
-        env_var = "vs%s0comntools" % settings.compiler.version
+        env_var = "vs%s0comntools" % compiler_version
         try:
             vs_path = os.environ[env_var]
         except KeyError:
