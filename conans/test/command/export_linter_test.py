@@ -2,6 +2,7 @@ import unittest
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 import six
+import os
 
 
 conanfile = """
@@ -40,3 +41,15 @@ class ExportLinterTest(unittest.TestCase):
         client.run("export lasote/stable")
         self.assertNotIn("ERROR: Py3 incompatibility", client.user_io.out)
         self.assertNotIn("WARN: Linter", client.user_io.out)
+
+    def test_custom_rc_linter(self):
+        client = TestClient()
+        pylintrc = """[FORMAT]
+indent-string='  '
+        """
+        client.save({CONANFILE: conanfile,
+                     "pylintrc": pylintrc})
+        client.run('config set general.pylintrc="%s"'
+                   % os.path.join(client.current_folder, "pylintrc"))
+        client.run("export lasote/stable")
+        self.assertIn("Bad indentation. Found 4 spaces, expected 2", client.user_io.out)

@@ -1,20 +1,14 @@
-
-from pylint.reporters.json import JSONReporter
-import six
-from pylint.lint import Run
+import os
 import json
 import sys
+import six
 from six import StringIO
+
+from pylint.reporters.json import JSONReporter
+from pylint.lint import Run
+
 from conans.client.output import Color
-import os
-
-
-class WritableObject(object):
-    def __init__(self):
-        self.content = []
-
-    def write(self, st):
-        self.content.append(st)
+from conans.errors import ConanException
 
 
 def conan_linter(conanfile_path, out):
@@ -22,13 +16,14 @@ def conan_linter(conanfile_path, out):
     if not apply_lint or apply_lint == "False":
         return
     try:
-        dirname = os.path.dirname(conanfile_path)
+        dirname = os.path.dirname(conanfile_path, )
         sys.path.append(dirname)
-        py3_msgs = lint_py3(conanfile_path)
+        py3_msgs = _lint_py3(conanfile_path)
         if py3_msgs:
-            out.writeln("Python 3 incompatibilities\n    ERROR: %s" % "\n    ERROR: ".join(py3_msgs),
+            out.writeln("Python 3 incompatibilities\n    ERROR: %s"
+                        % "\n    ERROR: ".join(py3_msgs),
                         front=Color.BRIGHT_MAGENTA)
-        msgs = normal_linter(conanfile_path)
+        msgs = _normal_linter(conanfile_path)
         if msgs:
             out.writeln("Linter warnings\n    WARN: %s" % "\n    WARN: ".join(msgs),
                         front=Color.MAGENTA)
@@ -36,9 +31,17 @@ def conan_linter(conanfile_path, out):
         sys.path.pop()
 
 
+class _WritableObject(object):
+    def __init__(self):
+        self.content = []
+
+    def write(self, st):
+        self.content.append(st)
+
+
 def _runner(args):
     try:
-        output = WritableObject()
+        output = _WritableObject()
         stdout_ = sys.stderr
         stream = StringIO()
         sys.stderr = stream
@@ -52,22 +55,31 @@ def _runner(args):
         return []
 
 
-def lint_py3(conanfile_path):
+def _lint_py3(conanfile_path):
     if six.PY3:
         return
 
-    args = ['--py3k', "--reports=no", "--disable=no-absolute-import", "--persistent=no", conanfile_path]
+    args = ['--py3k', "--reports=no", "--disable=no-absolute-import", "--persistent=no",
+            conanfile_path]
+
     output_json = _runner(args)
 
     result = []
     for msg in output_json:
         if msg.get("type") in ("warning", "error"):
-            result.append("Py3 incompatibility. Line %s: %s" % (msg.get("line"), msg.get("message")))
+            result.append("Py3 incompatibility. Line %s: %s"
+                          % (msg.get("line"), msg.get("message")))
     return result
 
 
-def normal_linter(conanfile_path):
+def _normal_linter(conanfile_path):
     args = ["--reports=no", "--disable=no-absolute-import", "--persistent=no", conanfile_path]
+    pylintrc = os.environ.get("CONAN_PYLINTRC", None)
+    if pylintrc:
+        if not os.path.exists(pylintrc):
+            raise ConanException("File %s defined by PYLINTRC doesn't exist" % pylintrc)
+        args.append('--rcfile=%s' % pylintrc)
+
     output_json = _runner(args)
 
     result = []
