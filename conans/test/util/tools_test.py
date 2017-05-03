@@ -263,6 +263,8 @@ class ToolsTest(unittest.TestCase):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     def vcvars_constrained_test(self):
+        if platform.system() != "Windows":
+            return
         text = """os: [Windows]
 compiler:
     Visual Studio:

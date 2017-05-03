@@ -16,12 +16,18 @@ from conans.test.utils.test_files import temp_folder
 from conans.util.files import save
 
 
+class MockSetting(str):
+    @property
+    def value(self):
+        return self
+
+
 class MockCompiler(object):
 
     def __init__(self, name, libcxx, version):
         self.name = name
         self.libcxx = libcxx
-        self.version = version
+        self.version = MockSetting(version)
 
     def __repr__(self, *args, **kwargs):  # @UnusedVariable
         return self.name
@@ -51,7 +57,7 @@ class MockSettings(Settings):
 
     @property
     def arch(self):
-        return self._arch
+        return MockSetting(self._arch)
 
     @property
     def compiler(self):
