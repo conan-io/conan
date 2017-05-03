@@ -1,7 +1,10 @@
+import os
 import unittest
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
 import platform
+
+from conans.util.files import load
 
 conanfile_py = """
 from conans import ConanFile
@@ -80,3 +83,27 @@ class CMakeTargetsTest(unittest.TestCase):
             self.assertIn("Configuring done", client.user_io.out)
             self.assertIn("Generating done", client.user_io.out)
             self.assertIn("Build files have been written", client.user_io.out)
+
+    def apple_framework_test(self):
+
+        if platform.system() != "Darwin":
+            return
+
+
+        client = TestClient()
+        conanfile_fr = conanfile_py + '''
+    def package_info(self):
+        self.cpp_info.sharedlinkflags = ["-framework Foundation"]
+        self.cpp_info.exelinkflags = self.cpp_info.sharedlinkflags
+'''
+        client.save({"conanfile.py": conanfile_fr,
+                     "hello.h": hello})
+
+        client.run("export lasote/testing")
+        client.save({"conanfile.txt": conanfile,
+                     "CMakeLists.txt": cmake,
+                     "main.cpp": main}, clean_first=True)
+
+        client.run("install -g cmake")
+        bili = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        self.assertIn("-framework Foundation", bili)
