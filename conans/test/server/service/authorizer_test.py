@@ -136,4 +136,18 @@ class AuthorizerTest(unittest.TestCase):
         self.assertRaises(ForbiddenException,
                           authorizer.check_write_package, "pepe", self.package_reference2)
 
+    def users_test(self):
+        """Check that lists of user names are parsed correctly"""
+
+        # Simple user list
+        read_perms = [("openssl/*@lasote/testing", "user1,user2,user3")]
+        authorizer = BasicAuthorizer(read_perms, [])
+        for u in ['user1','user2','user3']:
+            authorizer.check_read_conan(u, self.openssl_ref)
+
+        # Spaces bewteen user names should be ignored
+        read_perms = [("openssl/*@lasote/testing", "user1 , user2,\tuser3")]
+        authorizer = BasicAuthorizer(read_perms, [])
+        for u in ['user1','user2','user3']:
+            authorizer.check_read_conan(u, self.openssl_ref)
 

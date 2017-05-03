@@ -34,6 +34,8 @@ def configure_logger():
     formatter = MultiLineFormatter('%(levelname)-6s:%(filename)-15s[%(lineno)d]: '
                                    '%(message)s [%(asctime)s]')
     hdlr.setFormatter(formatter)
+    for hand in logger.handlers:
+        logger.removeHandler(hand)
     logger.addHandler(hdlr)
     logger.setLevel(logging_level)
     return logger
