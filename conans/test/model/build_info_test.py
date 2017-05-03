@@ -10,6 +10,22 @@ import platform
 
 class BuildInfoTest(unittest.TestCase):
 
+    def parse_test(self):
+        text = """[includedirs]
+C:/Whenever
+[includedirs_Boost]
+F:/ChildrenPath
+[includedirs_My_Lib]
+mylib_path
+[includedirs_My_Other_Lib]
+otherlib_path
+        """
+        deps_info = DepsCppInfo.loads(text)
+        self.assertEqual(deps_info.includedirs, ['C:/Whenever'])
+        self.assertEqual(deps_info["Boost"].includedirs, ['F:/ChildrenPath'])
+        self.assertEqual(deps_info["My_Lib"].includedirs, ['mylib_path'])
+        self.assertEqual(deps_info["My_Other_Lib"].includedirs, ['otherlib_path'])
+
     def help_test(self):
         deps_env_info = DepsEnvInfo()
         deps_cpp_info = DepsCppInfo()
