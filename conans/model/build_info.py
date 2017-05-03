@@ -186,7 +186,7 @@ class DepsCppInfo(_BaseDepsCppInfo):
                     var_name, config = tokens
                 else:
                     config = None
-                tokens = var_name.split("_")
+                tokens = var_name.split("_", 1)
                 field = tokens[0]
                 if len(tokens) == 2:
                     dep = tokens[1]
