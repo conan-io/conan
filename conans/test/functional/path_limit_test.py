@@ -42,7 +42,7 @@ class PathLengthLimitTest(unittest.TestCase):
     def remove_test(self):
         short_home = tempfile.mkdtemp(dir=CONAN_TEST_FOLDER)
         client = TestClient()
-        files = {"conanfile.py": base}
+        files = {"conanfile.py": base.replace("108", "90")}  # shorten to pass appveyor
         client.save(files)
         with environment_append({"CONAN_USER_HOME_SHORT": short_home}):
             client.run("export lasote/channel")
