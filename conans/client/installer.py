@@ -373,7 +373,7 @@ class ConanInstaller(object):
             source_folder = self._client_cache.source(package_reference.conan,
                                                       conan_file.short_paths)
         else:
-            source_folder = None
+            source_folder = build_folder
         with environment_append(conan_file.env):
             create_package(conan_file, source_folder, build_folder, package_folder, output, False)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)

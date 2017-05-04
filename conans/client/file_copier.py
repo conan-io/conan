@@ -24,7 +24,7 @@ class FileCopier(object):
     imports: package folder -> user folder
     export: user folder -> store "export" folder
     """
-    def __init__(self, root_source_folder, root_destination_folder):
+    def __init__(self, root_source_folder, root_destination_folder, excluded=None):
         """
         Takes the base folders to copy resources src -> dst. These folders names
         will not be used in the relative names while copying
@@ -36,6 +36,9 @@ class FileCopier(object):
         self._base_src = root_source_folder
         self._base_dst = root_destination_folder
         self._copied = []
+        self._excluded = [root_destination_folder]
+        if excluded:
+            self._excluded.append(excluded)
 
     def report(self, output, warn=False):
         report_copied_files(self._copied, output, warn)
@@ -69,13 +72,14 @@ class FileCopier(object):
         self._copied.extend(files_to_copy)
         return copied_files
 
-    @staticmethod
-    def _filter_files(src, pattern, excludes=None):
+    def _filter_files(self, src, pattern, excludes=None):
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
         """
         filenames = []
         for root, subfolders, files in os.walk(src, followlinks=True):
+            if root in self._excluded:
+                continue
             basename = os.path.basename(root)
             # Skip git or svn subfolders
             if basename in [".git", ".svn"]:

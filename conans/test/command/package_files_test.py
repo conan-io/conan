@@ -64,7 +64,7 @@ class TestConan(ConanFile):
         client.save({"Release_x86/lib/libmycoollib.a": ""}, clean_first=True)
         settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
                     '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("package_files Hello/0.1@lasote/stable %s --path=Release_x86" % settings)
+        client.run("package_files Hello/0.1@lasote/stable %s -pf=Release_x86" % settings)
         self._consume(client, settings + " -g cmake")
 
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
@@ -86,7 +86,7 @@ class TestConan(ConanFile):
         client.save({"Release_x86/lib/libmycoollib.a": ""}, clean_first=True)
         settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
                     '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("package_files Hello1/0.1@lasote/stable %s --path=Release_x86" % settings)
+        client.run("package_files Hello1/0.1@lasote/stable %s -pf=Release_x86" % settings)
 
         # consumer
         consumer = """

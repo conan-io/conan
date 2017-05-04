@@ -80,7 +80,7 @@ class ConanManager(object):
         export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
                          filename)
 
-    def package_files(self, reference, path, profile):
+    def package_files(self, reference, package_folder, profile):
         """ Bundle pre-existing binaries
         @param reference: ConanFileReference
         """
@@ -88,7 +88,7 @@ class ConanManager(object):
         if not os.path.exists(conan_file_path):
             raise ConanException("Package recipe '%s' does not exist" % str(reference))
 
-        current_path = path
+        current_path = package_folder
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
                                   remote_name=None, update=False, check_updates=False,
                                   manifest_manager=None)
@@ -102,12 +102,14 @@ class ConanManager(object):
         nodes = deps_graph.direct_requires()
         _, conanfile = nodes[0]
         packages_folder = self._client_cache.packages(reference)
-        package_folder = os.path.join(packages_folder, conanfile.info.package_id())
-        shutil.copytree(path, package_folder)
-        save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
+        pkg_id = conanfile.info.package_id()
+        self._user_io.out.info("Packaging to %s" % pkg_id)
+        dest_package_folder = os.path.join(packages_folder, pkg_id)
+        shutil.copytree(package_folder, dest_package_folder)
+        save(os.path.join(dest_package_folder, CONANINFO), conanfile.info.dumps())
         # Create the digest for the package
-        digest = FileTreeManifest.create(package_folder)
-        save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))
+        digest = FileTreeManifest.create(dest_package_folder)
+        save(os.path.join(dest_package_folder, CONAN_MANIFEST), str(digest))
 
     def download(self, reference, package_ids, remote=None):
         """ Download conanfile and specified packages to local repository
@@ -312,7 +314,7 @@ class ConanManager(object):
             conanfile_path = os.path.join(reference, CONANFILE)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
                                                 self._client_cache.settings, self._runner,
-                                                output)
+                                                output, error=None)
             export_folder = reference
             config_source_local(current_path, conanfile, output)
         else:
@@ -320,7 +322,7 @@ class ConanManager(object):
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
                                                 self._client_cache.settings, self._runner,
-                                                output, reference)
+                                                output, reference, error=None)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             config_source(export_folder, src_folder, conanfile, output, force)
@@ -407,7 +409,7 @@ class ConanManager(object):
             if getattr(conanfile, 'no_copy_source', False):
                 source_folder = package_source_folder
             else:
-                source_folder = None
+                source_folder = build_folder
             with environment_append(conanfile.env):
                 packager.create_package(conanfile, source_folder, build_folder, package_folder,
                                         output)

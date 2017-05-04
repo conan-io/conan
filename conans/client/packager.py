@@ -32,8 +32,8 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
     conanfile.copy_res = wrap(DEFAULT_RES)
     try:
         package_output = ScopedOutput("%s package()" % output.scope, output)
-        if source_folder:
-            conanfile.copy = FileCopier(source_folder, package_folder)
+        if source_folder != build_folder:
+            conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
             conanfile.package()
             conanfile.copy.report(package_output, warn=True)
         conanfile.copy = FileCopier(build_folder, package_folder)
