@@ -136,8 +136,8 @@ class ConanFileToolsTest(ConanFile):
 class DevOutSourceFlowTest(unittest.TestCase):
 
     def _assert_pkg(self, folder):
-        self.assertItemsEqual(['file.h', 'myartifact.lib', 'conaninfo.txt', 'conanmanifest.txt'],
-                              os.listdir(folder))
+        self.assertEqual(sorted(['file.h', 'myartifact.lib', 'conaninfo.txt', 'conanmanifest.txt']),
+                         sorted(os.listdir(folder)))
 
     def parallel_folders_test(self):
         client = TestClient()
