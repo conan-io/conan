@@ -34,37 +34,58 @@ class QmakeGenerator(Generator):
     def content(self):
         deps = DepsCppQmake(self.deps_build_info)
 
-        template = ('CONAN_INCLUDEPATH{dep_name} += {deps.include_paths}\n'
-                    'CONAN_LIBS{dep_name} += {deps.lib_paths}\n'
-                    'CONAN_BINDIRS{dep_name} += {deps.bin_paths}\n'
-                    'CONAN_RESDIRS{dep_name} += {deps.res_paths}\n'
-                    'CONAN_BUILDDIRS{dep_name} += {deps.build_paths}\n'
-                    'CONAN_DEFINES{dep_name} += {deps.defines}\n'
-                    'CONAN_QMAKE_CXXFLAGS{dep_name} += {deps.cppflags}\n'
-                    'CONAN_QMAKE_CFLAGS{dep_name} += {deps.cflags}\n'
-                    'CONAN_QMAKE_LFLAGS{dep_name} += {deps.sharedlinkflags}\n'
-                    'CONAN_QMAKE_LFLAGS{dep_name} += {deps.exelinkflags}\n')
+        template = ('CONAN_INCLUDEPATH{dep_name}{build_type} += {deps.include_paths}\n'
+                    'CONAN_LIBS{dep_name}{build_type} += {deps.libs}\n'
+                    'CONAN_LIBDIRS{dep_name}{build_type} += {deps.lib_paths}\n'
+                    'CONAN_BINDIRS{dep_name}{build_type} += {deps.bin_paths}\n'
+                    'CONAN_RESDIRS{dep_name}{build_type} += {deps.res_paths}\n'
+                    'CONAN_BUILDDIRS{dep_name}{build_type} += {deps.build_paths}\n'
+                    'CONAN_DEFINES{dep_name}{build_type} += {deps.defines}\n'
+                    'CONAN_QMAKE_CXXFLAGS{dep_name}{build_type} += {deps.cppflags}\n'
+                    'CONAN_QMAKE_CFLAGS{dep_name}{build_type} += {deps.cflags}\n'
+                    'CONAN_QMAKE_LFLAGS{dep_name}{build_type} += {deps.sharedlinkflags}\n'
+                    'CONAN_QMAKE_LFLAGS{dep_name}{build_type} += {deps.exelinkflags}\n')
         sections = []
         template_all = template
-        all_flags = template_all.format(dep_name="", deps=deps)
+        all_flags = template_all.format(dep_name="", deps=deps, build_type="")
         sections.append(all_flags)
 
-        template_deps = template + 'CONAN{dep_name}_ROOT = "{deps.rootpath}"\n'
+        for config, cpp_info in self.deps_build_info.configs.items():
+            deps = DepsCppQmake(cpp_info)
+            dep_flags = template_all.format(dep_name="", deps=deps,
+                                            build_type="_" + str(config).upper())
+            sections.append(dep_flags)
+
+        template_deps = template + 'CONAN{dep_name}_ROOT{build_type} = "{deps.rootpath}"\n'
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             deps = DepsCppQmake(dep_cpp_info)
-            dep_flags = template_deps.format(dep_name="_" + dep_name.upper(), deps=deps)
+            dep_flags = template_deps.format(dep_name="_" + dep_name.upper(), deps=deps,
+                                             build_type="")
             sections.append(dep_flags)
+
+            for config, cpp_info in dep_cpp_info.configs.items():
+                deps = DepsCppQmake(cpp_info)
+                dep_flags = template_deps.format(dep_name="_" + dep_name.upper(), deps=deps,
+                                                 build_type="_" + str(config).upper())
+                sections.append(dep_flags)
 
         output = "\n".join(sections)
         output += ('\nCONFIG(conan_basic_setup) {\n'
                    '    INCLUDEPATH += $$CONAN_INCLUDEPATH\n'
                    '    LIBS += $$CONAN_LIBS\n'
+                   '    QMAKE_LIBDIRS += $$CONAN_LIBDIRS\n'
                    '    BINDIRS += $$CONAN_BINDIRS\n'
                    '    DEFINES += $$CONAN_DEFINES\n'
                    '    QMAKE_CXXFLAGS += $$CONAN_QMAKE_CXXFLAGS\n'
                    '    QMAKE_CFLAGS += $$CONAN_QMAKE_CFLAGS\n'
                    '    QMAKE_LFLAGS += $$CONAN_QMAKE_LFLAGS\n'
+                   '    QMAKE_CXXFLAGS_DEBUG += $$CONAN_QMAKE_CXXFLAGS_DEBUG\n'
+                   '    QMAKE_CFLAGS_DEBUG += $$CONAN_QMAKE_CFLAGS_DEBUG\n'
+                   '    QMAKE_LFLAGS_DEBUG += $$CONAN_QMAKE_LFLAGS_DEBUG\n'
+                   '    QMAKE_CXXFLAGS_RELEASE += $$CONAN_QMAKE_CXXFLAGS_RELEASE\n'
+                   '    QMAKE_CFLAGS_RELEASE += $$CONAN_QMAKE_CFLAGS_RELEASE\n'
+                   '    QMAKE_LFLAGS_RELEASE += $$CONAN_QMAKE_LFLAGS_RELEASE\n'
                    '}\n')
 
         return output
