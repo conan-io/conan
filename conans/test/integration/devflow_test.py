@@ -1,7 +1,7 @@
 import unittest
 from conans.test.utils.tools import TestClient
 import os
-from conans.util.files import mkdir
+from conans.util.files import mkdir, load
 from conans.model.ref import ConanFileReference
 
 
@@ -19,6 +19,7 @@ class ConanFileToolsTest(ConanFile):
     def build(self):
         self.output.info("Source files: %s" % load(os.path.join(self.source_folder, "file.h")))
         save("myartifact.lib", "artifact contents!")
+        save("subdir/myartifact2.lib", "artifact2 contents!")
 
     def package(self):
         self.copy("*.h")
@@ -29,8 +30,13 @@ class ConanFileToolsTest(ConanFile):
 class DevInSourceFlowTest(unittest.TestCase):
 
     def _assert_pkg(self, folder):
-        self.assertEqual(sorted(['file.h', 'myartifact.lib', 'conaninfo.txt', 'conanmanifest.txt']),
+        self.assertEqual(sorted(['file.h', 'myartifact.lib', 'subdir', 'conaninfo.txt',
+                                 'conanmanifest.txt']),
                          sorted(os.listdir(folder)))
+        self.assertEqual(load(os.path.join(folder, "myartifact.lib")),
+                         "artifact contents!")
+        self.assertEqual(load(os.path.join(folder, "subdir/myartifact2.lib")),
+                         "artifact2 contents!")
 
     def parallel_folders_test(self):
         client = TestClient()

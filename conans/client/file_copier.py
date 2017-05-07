@@ -79,6 +79,7 @@ class FileCopier(object):
         filenames = []
         for root, subfolders, files in os.walk(src, followlinks=True):
             if root in self._excluded:
+                subfolders[:] = []
                 continue
             basename = os.path.basename(root)
             # Skip git or svn subfolders

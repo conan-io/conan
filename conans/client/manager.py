@@ -357,7 +357,7 @@ class ConanManager(object):
     def local_package(self, package_folder, recipe_folder, build_folder, source_folder):
         if package_folder == build_folder:
             raise ConanException("Cannot 'conan package' to the build folder. "
-                                 "--build_folder and --package_folder can't be the same")
+                                 "--build_folder and package folder can't be the same")
         output = ScopedOutput("PROJECT", self._user_io.out)
         conan_file_path = os.path.join(recipe_folder, CONANFILE)
         conanfile = load_consumer_conanfile(conan_file_path, build_folder,
