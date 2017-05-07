@@ -41,7 +41,7 @@ class FileCopier(object):
         report_copied_files(self._copied, output, warn)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
-                 excludes=None):
+                 excludes=None, filter_matches_dirs=False):
         """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -52,6 +52,8 @@ class FileCopier(object):
                          src to dst folders, or just drop. False is useful if you want
                          to collect e.g. many *.libs among many dirs into a single
                          lib dir
+        param filter_matches_dirs: Set to true if you want directories that match the filter
+                                   to be created, even if the content is not copied
         return: list of copied files
         """
         if symlinks is not None:
@@ -64,13 +66,13 @@ class FileCopier(object):
 
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
-        files_to_copy = self._filter_files(src, pattern, excludes)
+        files_to_copy = self._filter_files(src, pattern, excludes, filter_matches_dirs)
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
         self._copied.extend(files_to_copy)
         return copied_files
 
     @staticmethod
-    def _filter_files(src, pattern, excludes=None):
+    def _filter_files(src, pattern, excludes=None, filter_matches_dirs=False):
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
         """
@@ -86,8 +88,9 @@ class FileCopier(object):
                     subfolders.remove("build")
                 except:
                     pass
-
             relative_path = os.path.relpath(root, src)
+            if filter_matches_dirs:
+                filenames.append(os.path.normpath(relative_path))
             for f in files:
                 relative_name = os.path.normpath(os.path.join(relative_path, f))
                 filenames.append(relative_name)
@@ -121,6 +124,11 @@ class FileCopier(object):
                 except OSError:
                     pass
                 os.symlink(linkto, abs_dst_name)  # @UndefinedVariable
+            elif os.path.isdir(abs_src_name):
+                try:
+                    os.makedirs(abs_dst_name)
+                except OSError:
+                    pass
             else:
                 shutil.copy2(abs_src_name, abs_dst_name)
             copied_files.append(abs_dst_name)

@@ -85,4 +85,43 @@ class FileCopierTest(unittest.TestCase):
         copier("*.txt", excludes=("*Test*.txt", "*Impl*"))
         self.assertEqual(['MyLib.txt'], os.listdir(folder2))
 
+    def _empty_dir_common(self, filter, filter_matches_dirs = None):
+        src_folder = temp_folder()
+        sub = os.path.join(src_folder, "subdir")
+        sub = os.path.join(sub, "sub2")
+        os.makedirs(sub)
+        target_folder = temp_folder()
+        copier = FileCopier(src_folder, target_folder)
+        if filter_matches_dirs is None:
+            copier(filter) # for testing default behavior
+        else:
+            copier(filter, filter_matches_dirs=filter_matches_dirs)
+        sub_expected = os.path.join(target_folder, "subdir")
+        return sub_expected
+
+    def empty_dir_default_ignore_test(self):
+        sub_expected = self._empty_dir_common("*")
+        self.assertFalse(os.path.exists(sub_expected))
+
+    def empty_dir_matches_all_test(self):
+        sub_expected = self._empty_dir_common("*", True)
+        self.assertTrue(os.path.exists(sub_expected))
+        sub2_expected = os.path.join(sub_expected, "sub2")
+        self.assertTrue(os.path.exists(sub2_expected))
+
+    def empty_dir_matches_base_test(self):
+        sub_expected = self._empty_dir_common("subdir", True)
+        self.assertTrue(os.path.exists(sub_expected))
+        sub2_expected = os.path.join(sub_expected, "sub2")
+        self.assertFalse(os.path.exists(sub2_expected))
+
+    def empty_dir_matches_subdir_test(self):
+        sub_expected = self._empty_dir_common("*sub2", True)
+        self.assertTrue(os.path.exists(sub_expected))
+        sub2_expected = os.path.join(sub_expected, "sub2")
+        self.assertTrue(os.path.exists(sub2_expected))
+
+    def empty_dir_not_match_test(self):
+        sub_expected = self._empty_dir_common("*.*", True)
+        self.assertFalse(os.path.exists(sub_expected))
 
