@@ -1,6 +1,7 @@
 import unittest
 from conans.test.utils.tools import TestClient
 import os
+from conans.util.files import load
 
 
 class GeneratorsTest(unittest.TestCase):
@@ -27,3 +28,7 @@ ycm
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
                                  'conanbuildinfo.xcconfig', '.ycm_extra_conf.py']),
                          sorted(os.listdir(client.current_folder)))
+
+        qmake = load(os.path.join(client.current_folder, "conanbuildinfo.pri"))
+        self.assertIn("CONAN_RESDIRS += ", qmake)
+        self.assertEqual(qmake.count("CONAN_LIBS += "), 1)
