@@ -26,6 +26,7 @@ from conans.model.ref import ConanFileReference, is_a_reference
 from conans.model.version import Version
 from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
+from conans.tools_factory import ToolsFactory
 from conans.util.config_parser import get_bool_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, save_files, exception_message_safe
@@ -69,13 +70,14 @@ class Command(object):
     collaborators.
     It can also show help of the tool
     """
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager):
+    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager, tools):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
-        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
+        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager, tools)
+        self._tools = tools
 
     @property
     def client_cache(self):
@@ -169,7 +171,7 @@ class Command(object):
         profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
         conanfile = load_consumer_conanfile(test_conanfile, "",
                                             self._client_cache.settings, self._runner,
-                                            self._user_io.out)
+                                            self._user_io.out, self._tools)
         try:
             # convert to list from ItemViews required for python3
             if hasattr(conanfile, "requirements"):
@@ -974,14 +976,20 @@ def migrate_and_get_client_cache(base_folder, out, storage_folder=None):
 
 def get_command():
 
-    def instance_remote_manager(client_cache):
+    def get_basic_requester(client_cache):
         requester = requests.Session()
         requester.proxies = client_cache.conan_config.proxies
+        return requester
+
+    def instance_remote_manager(client_cache):
+
+        # To handle remote connections
         # Verify client version against remotes
+        requester = get_basic_requester(client_cache)
         version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
                                                             Version(MIN_SERVER_COMPATIBLE_VERSION),
                                                             out)
-        # To handle remote connections
+
         put_headers = client_cache.read_put_headers()
         rest_api_client = RestApiClient(out, requester=version_checker_requester, put_headers=put_headers)
         # To store user and token
@@ -1010,6 +1018,10 @@ def get_command():
         out.error(str(e))
         sys.exit(True)
 
+    # Get a conanfile tools object
+    requester = get_basic_requester(client_cache)
+    tools = ToolsFactory.new(requester=requester, output=user_io.out)
+
     with tools.environment_append(client_cache.conan_config.env_vars):
         # Adjust CONAN_LOGGING_LEVEL with the env readed
         conans.util.log.logger = configure_logger()
@@ -1020,7 +1032,7 @@ def get_command():
         # Get a search manager
         search_adapter = DiskSearchAdapter()
         search_manager = DiskSearchManager(client_cache, search_adapter)
-        command = Command(client_cache, user_io, get_conan_runner(), remote_manager, search_manager)
+        command = Command(client_cache, user_io, get_conan_runner(), remote_manager, search_manager, tools)
 
     return command
 

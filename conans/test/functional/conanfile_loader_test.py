@@ -1,6 +1,7 @@
 import unittest
 from conans.client.loader import ConanFileTextLoader, ConanFileLoader
 from conans.errors import ConanException
+from conans.tools_factory import ToolsFactory
 from conans.util.files import save
 import os
 from conans.model.requires import Requirements
@@ -16,7 +17,7 @@ from collections import OrderedDict
 class ConanLoaderTest(unittest.TestCase):
 
     def requires_init_test(self):
-        loader = ConanFileLoader(None, Settings(), Profile())
+        loader = ConanFileLoader(None, ToolsFactory.new(), Settings(), Profile())
         tmp_dir = temp_folder()
         conanfile_path = os.path.join(tmp_dir, "conanfile.py")
         conanfile = """from conans import ConanFile
@@ -83,7 +84,7 @@ OpenCV2:other_option=Cosa
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Settings(), Profile())
+        loader = ConanFileLoader(None, ToolsFactory.new(), Settings(), Profile())
         ret = loader.load_conan_txt(file_path, None)
         options1 = OptionsValues.loads("""OpenCV:use_python=True
 OpenCV:other_option=False
@@ -110,7 +111,7 @@ OpenCV/2.4.104phil/stable <- use_python:True, other_option:False
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Settings(), Profile())
+        loader = ConanFileLoader(None, ToolsFactory.new(), Settings(), Profile())
         with self.assertRaisesRegexp(ConanException, "Wrong package recipe reference(.*)"):
             loader.load_conan_txt(file_path, None)
 
@@ -122,7 +123,7 @@ OpenCV/bin/* - ./bin
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
         save(file_path, file_content)
-        loader = ConanFileLoader(None, Settings(), Profile())
+        loader = ConanFileLoader(None, ToolsFactory.new(), Settings(), Profile())
         with self.assertRaisesRegexp(ConanException, "is too long. Valid names must contain"):
             loader.load_conan_txt(file_path, None)
 
@@ -142,21 +143,21 @@ class MyTest(ConanFile):
         # Apply windows for MyPackage
         profile = Profile()
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Windows")])}
-        loader = ConanFileLoader(None, Settings({"os": ["Windows", "Linux"]}), profile)
+        loader = ConanFileLoader(None, ToolsFactory.new(), Settings({"os": ["Windows", "Linux"]}), profile)
 
         recipe = loader.load_conan(conanfile_path, None)
         self.assertEquals(recipe.settings.os, "Windows")
 
         # Apply Linux for MyPackage
         profile.package_settings = {"MyPackage": OrderedDict([("os", "Linux")])}
-        loader = ConanFileLoader(None, Settings({"os": ["Windows", "Linux"]}), profile)
+        loader = ConanFileLoader(None, ToolsFactory.new(), Settings({"os": ["Windows", "Linux"]}), profile)
 
         recipe = loader.load_conan(conanfile_path, None)
         self.assertEquals(recipe.settings.os, "Linux")
 
         # If the package name is different from the conanfile one, it wont apply
         profile.package_settings = {"OtherPACKAGE": OrderedDict([("os", "Linux")])}
-        loader = ConanFileLoader(None, Settings({"os": ["Windows", "Linux"]}), profile)
+        loader = ConanFileLoader(None, ToolsFactory.new(), Settings({"os": ["Windows", "Linux"]}), profile)
 
         recipe = loader.load_conan(conanfile_path, None)
         self.assertIsNone(recipe.settings.os.value)
