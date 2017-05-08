@@ -7,11 +7,12 @@ import os
 from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO, EXPORT_SOURCES_DIR
 import platform
 import stat
+
+from conans.tools_factory import ToolsFactory
 from conans.util.files import save
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import uncompress_packaged_files
-from conans.tools import untargz
 from requests.packages.urllib3.exceptions import ConnectionError
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
@@ -273,7 +274,7 @@ class TestConan(ConanFile):
         self.assertTrue(os.path.exists(os.path.join(self.server_reg_folder, CONANFILE)))
         self.assertTrue(os.path.exists(os.path.join(self.server_reg_folder, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
-        untargz(os.path.join(self.server_reg_folder, EXPORT_TGZ_NAME), tmp)
+        ToolsFactory.new().untargz(os.path.join(self.server_reg_folder, EXPORT_TGZ_NAME), tmp)
         for f in files:
             if f not in (CONANFILE, CONAN_MANIFEST):
                 self.assertTrue(os.path.exists(os.path.join(tmp, f)))

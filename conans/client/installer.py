@@ -16,7 +16,6 @@ from conans.client.output import ScopedOutput
 from conans.model.env_info import EnvInfo
 from conans.client.source import config_source
 from conans.client.generators.env import ConanEnvGenerator
-from conans.tools import environment_append
 from conans.util.tracer import log_package_built
 
 
@@ -348,7 +347,7 @@ class ConanInstaller(object):
         export_folder = self._client_cache.export(conan_ref)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
-        with environment_append(conan_file.env):
+        with conan_file.tools.environment_append(conan_file.env):
             self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
         return build_folder
 
@@ -369,7 +368,7 @@ class ConanInstaller(object):
 
         os.chdir(build_folder)
 
-        with environment_append(conan_file.env):
+        with conan_file.tools.environment_append(conan_file.env):
             create_package(conan_file, build_folder, package_folder, output)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
 

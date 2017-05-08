@@ -16,13 +16,11 @@ conanfile_build_new_env = """
     def build(self):
         import os
         from conans import VisualStudioBuildEnvironment, AutoToolsBuildEnvironment
-        from conans.tools import environment_append, vcvars_command, save
-
 
         if self.settings.compiler == "Visual Studio":
             env_build = VisualStudioBuildEnvironment(self)
-            with environment_append(env_build.vars):
-                vcvars = vcvars_command(self.settings)
+            with self.tools.environment_append(env_build.vars):
+                vcvars = self.tools.vcvars_command(self.settings)
                 flags = " ".join("%s.lib" % lib for lib in self.deps_cpp_info.libs)
                 lang = '/DCONAN_LANGUAGE=%s' % self.options.language
                 if self.options.static:
@@ -61,7 +59,7 @@ AC_OUTPUT
             env_build = AutoToolsBuildEnvironment(self)
             env_build.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
 
-            with environment_append(env_build.vars):
+            with self.tools.environment_append(env_build.vars):
                 self.run("./configure")
                 self.run("make")
 
@@ -106,7 +104,6 @@ AC_OUTPUT
 
 conanfile_template = """
 from conans import ConanFile, CMake
-from conans.tools import replace_in_file
 import platform
 
 class {name}Conan(ConanFile):
@@ -129,11 +126,11 @@ class {name}Conan(ConanFile):
     def source(self):
         # Try-except necessary, not all tests have all files
         try:
-            replace_in_file("CMakeLists.txt", "projct", "project")
+            self.tools.replace_in_file("CMakeLists.txt", "projct", "project")
         except:
             pass
         try:
-            replace_in_file("main.cpp", "retunr", "return")
+            self.tools.replace_in_file("main.cpp", "retunr", "return")
         except:
             pass
 

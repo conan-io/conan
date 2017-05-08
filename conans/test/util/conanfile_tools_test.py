@@ -14,7 +14,6 @@ from conans.util.files import save, load
 
 base_conanfile = '''
 from conans import ConanFile
-from conans.tools import patch, replace_in_file
 import os
 
 class ConanFileToolsTest(ConanFile):
@@ -47,7 +46,7 @@ class ConanfileToolsTest(unittest.TestCase):
     def test_replace_in_file(self):
         file_content = base_conanfile + '''
     def build(self):
-        replace_in_file("text.txt", "ONE TWO THREE", "FOUR FIVE SIX")
+        self.tools.replace_in_file("text.txt", "ONE TWO THREE", "FOUR FIVE SIX")
 '''
         tmp_dir, file_path, text_file = self._save_files(file_content)
         self._build_and_check(tmp_dir, file_path, text_file, "FOUR FIVE SIX")
@@ -57,7 +56,7 @@ class ConanfileToolsTest(unittest.TestCase):
         if strip:
             file_content = base_conanfile + '''
     def build(self):
-        patch(patch_file="file.patch", strip=%s)
+        self.tools.patch(patch_file="file.patch", strip=%s)
 ''' % strip
             patch_content = '''--- %s/text.txt\t2016-01-25 17:57:11.452848309 +0100
 +++ %s/text_new.txt\t2016-01-25 17:57:28.839869950 +0100
@@ -67,7 +66,7 @@ class ConanfileToolsTest(unittest.TestCase):
         else:
             file_content = base_conanfile + '''
     def build(self):
-        patch(patch_file="file.patch")
+        self.tools.patch(patch_file="file.patch")
 '''
             patch_content = '''--- text.txt\t2016-01-25 17:57:11.452848309 +0100
 +++ text_new.txt\t2016-01-25 17:57:28.839869950 +0100
@@ -88,7 +87,7 @@ class ConanfileToolsTest(unittest.TestCase):
 @@ -1 +1 @@
 -ONE TWO THREE
 +ONE TWO DOH!\'''
-        patch(patch_string=patch_content)
+        self.tools.patch(patch_string=patch_content)
 
 '''
         tmp_dir, file_path, text_file = self._save_files(file_content)
@@ -98,7 +97,7 @@ class ConanfileToolsTest(unittest.TestCase):
         file_content = base_conanfile + '''
     def build(self):
         patch_content = "some corrupted patch"
-        patch(patch_string=patch_content, output=self.output)
+        self.tools.patch(patch_string=patch_content, output=self.output)
 
 '''
         client = TestClient()

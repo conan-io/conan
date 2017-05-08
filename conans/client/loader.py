@@ -138,6 +138,8 @@ class ConanFileLoader(object):
                                                                parser.import_parameters)
         conanfile.scope = self._scopes.package_scope()
         conanfile._env_values.update(self._env_values)
+        # Assign tools
+        conanfile.tools = self._tools
         return conanfile
 
     def load_virtual(self, references, current_path, scope_options=True):

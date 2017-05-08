@@ -27,7 +27,6 @@ from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST
-from conans.tools import environment_append
 from conans.util.files import save,  rmdir, normalize, mkdir
 from conans.util.log import logger
 from conans.model.manifest import FileTreeManifest
@@ -404,7 +403,7 @@ class ConanManager(object):
                                                 self._client_cache.settings,
                                                 self._runner, output, self._tools, reference)
             rmdir(package_folder)
-            with environment_append(conanfile.env):
+            with conanfile.tools.environment_append(conanfile.env):
                 packager.create_package(conanfile, build_folder, package_folder, output)
 
     def build(self, conanfile_path, current_path, test=False, filename=None):
@@ -435,7 +434,7 @@ class ConanManager(object):
         try:
             os.chdir(current_path)
             conan_file._conanfile_directory = conanfile_path
-            with environment_append(conan_file.env):
+            with conan_file.tools.environment_append(conan_file.env):
                 conan_file.build()
 
             if test:

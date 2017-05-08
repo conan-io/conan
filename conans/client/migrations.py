@@ -1,6 +1,5 @@
 from conans.client.client_cache import CONAN_CONF
 from conans.migrations import Migrator
-from conans.tools import replace_in_file
 from conans.util.files import load, save
 from conans.model.version import Version
 import os
