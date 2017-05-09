@@ -6,7 +6,9 @@ from collections import namedtuple
 from nose.plugins.attrib import attr
 
 from conans import tools
+from conans.client.command import get_command
 from conans.client.conf import default_settings_yml
+from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
@@ -66,6 +68,35 @@ class ToolsTest(unittest.TestCase):
         self.assertGreaterEqual(cpus, 1)
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEquals(tools.cpu_count(), 34)
+
+    def test_global_tools_overrided(self):
+        client = TestClient()
+
+        tools._global_requester = None
+        tools._global_output = None
+
+        conanfile = """
+from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def build(self):
+        assert(tools._global_requester != None)
+        assert(tools._global_output != None)
+        
+        """
+        client.save({"conanfile.py": conanfile})
+        client.run("build")
+
+
+        # Not test the real commmand get_command if it's setting the module global vars
+        tools._global_requester = None
+        tools._global_output = None
+        get_command()
+        self.assertIsNotNone(tools._global_requester.proxies)
+        self.assertIsNotNone(tools._global_output.warn)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):

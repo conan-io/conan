@@ -973,10 +973,15 @@ def migrate_and_get_client_cache(base_folder, out, storage_folder=None):
 
 
 def get_command():
+    # Default values
 
-    def instance_remote_manager(client_cache):
+    def get_basic_requester(client_cache):
         requester = requests.Session()
         requester.proxies = client_cache.conan_config.proxies
+        return requester
+
+    def instance_remote_manager(client_cache):
+        requester = get_basic_requester(client_cache)
         # Verify client version against remotes
         version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
                                                             Version(MIN_SERVER_COMPATIBLE_VERSION),
@@ -1016,6 +1021,10 @@ def get_command():
 
         # Get the new command instance after migrations have been done
         remote_manager = instance_remote_manager(client_cache)
+
+        # Patch the globals in tools
+        tools._global_requester = get_basic_requester(client_cache)
+        tools._global_output = user_io.out
 
         # Get a search manager
         search_adapter = DiskSearchAdapter()
