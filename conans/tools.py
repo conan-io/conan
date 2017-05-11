@@ -250,7 +250,7 @@ def unzip(filename, destination=".", keep_permissions=False):
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(extracted_size, uncompress_size):
             txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
-            _global_output.info(txt_msg, end='')
+            _global_output.info(txt_msg)
     else:
         def print_progress(extracted_size, uncompress_size):
             pass
