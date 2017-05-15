@@ -20,7 +20,7 @@ class TgzMd5Test(unittest.TestCase):
             "Two_file.txt": os.path.join(folder, "Two_file.txt"),
         }
 
-        compress_files(files, PACKAGE_TGZ_NAME, dest_dir=folder)
+        compress_files(files, {}, PACKAGE_TGZ_NAME, dest_dir=folder)
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_a = md5sum(file_path)
@@ -28,7 +28,7 @@ class TgzMd5Test(unittest.TestCase):
         time.sleep(1)  # Timestamps change
 
         folder = temp_folder()
-        compress_files(files, PACKAGE_TGZ_NAME, dest_dir=folder)
+        compress_files(files, {}, PACKAGE_TGZ_NAME, dest_dir=folder)
         file_path = os.path.join(folder, PACKAGE_TGZ_NAME)
 
         md5_b = md5sum(file_path)
