@@ -128,6 +128,12 @@ class MyLib(ConanFile):
     requires = "MyLibParent/0.1@lasote/stable"
     generators = "cmake"
 
+    def config_options(self):
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
+
+    def requirements(self):
+        assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")
+
     def build(self):
         # only from BuildRequire
         assert(os.environ["PROFILE_VAR_ENV"] == "PROFILE_VAR_VALUE")

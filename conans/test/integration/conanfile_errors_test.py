@@ -89,8 +89,8 @@ class HelloConan(ConanFile):
         client.save(files)
         client.run("export lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build", ignore_error=True)
-        self.assertIn("Hello/0.1@lasote/stable: Error in config, config_options or configure()"
-                      " method, line 9",
+        self.assertIn("Hello/0.1@lasote/stable: Error in requirements, config, config_options "
+                      "or configure() method, line 9",
                       client.user_io.out)
         self.assertIn('self.copy2()',
                       client.user_io.out)

@@ -213,7 +213,9 @@ def tar_extract(fileobj, destination_dir):
                 yield finfo
 
     the_tar = tarfile.open(fileobj=fileobj)
-    the_tar.errorlevel = 2  # raise exception if any error
+    # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
+    # "could not change modification time", with time=0
+    # the_tar.errorlevel = 2  # raise exception if any error
     the_tar.extractall(path=destination_dir, members=safemembers(the_tar))
     the_tar.close()
 
