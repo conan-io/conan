@@ -71,21 +71,36 @@ class QmakeGenerator(Generator):
                 sections.append(dep_flags)
 
         output = "\n".join(sections)
-        output += ('\nCONFIG(conan_basic_setup) {\n'
-                   '    INCLUDEPATH += $$CONAN_INCLUDEPATH\n'
-                   '    LIBS += $$CONAN_LIBS\n'
-                   '    QMAKE_LIBDIRS += $$CONAN_LIBDIRS\n'
-                   '    BINDIRS += $$CONAN_BINDIRS\n'
-                   '    DEFINES += $$CONAN_DEFINES\n'
-                   '    QMAKE_CXXFLAGS += $$CONAN_QMAKE_CXXFLAGS\n'
-                   '    QMAKE_CFLAGS += $$CONAN_QMAKE_CFLAGS\n'
-                   '    QMAKE_LFLAGS += $$CONAN_QMAKE_LFLAGS\n'
-                   '    QMAKE_CXXFLAGS_DEBUG += $$CONAN_QMAKE_CXXFLAGS_DEBUG\n'
-                   '    QMAKE_CFLAGS_DEBUG += $$CONAN_QMAKE_CFLAGS_DEBUG\n'
-                   '    QMAKE_LFLAGS_DEBUG += $$CONAN_QMAKE_LFLAGS_DEBUG\n'
-                   '    QMAKE_CXXFLAGS_RELEASE += $$CONAN_QMAKE_CXXFLAGS_RELEASE\n'
-                   '    QMAKE_CFLAGS_RELEASE += $$CONAN_QMAKE_CFLAGS_RELEASE\n'
-                   '    QMAKE_LFLAGS_RELEASE += $$CONAN_QMAKE_LFLAGS_RELEASE\n'
-                   '}\n')
+        output += ("""\nCONFIG(conan_basic_setup) {
+    INCLUDEPATH += $$CONAN_INCLUDEPATH
+    LIBS += $$CONAN_LIBS
+    LIBS += $$CONAN_LIBDIRS
+    BINDIRS += $$CONAN_BINDIRS
+    DEFINES += $$CONAN_DEFINES
+    CONFIG(release, debug|release) {
+        message("Release config")
+        INCLUDEPATH += $$CONAN_INCLUDEPATH_RELEASE
+        LIBS += $$CONAN_LIBS_RELEASE
+        LIBS += $$CONAN_LIBDIRS_RELEASE
+        BINDIRS += $$CONAN_BINDIRS_RELEASE
+        DEFINES += $$CONAN_DEFINES_RELEASE
+    } else {
+        message("Debug config")
+        INCLUDEPATH += $$CONAN_INCLUDEPATH_DEBUG
+        LIBS += $$CONAN_LIBS_DEBUG
+        LIBS += $$CONAN_LIBDIRS_DEBUG
+        BINDIRS += $$CONAN_BINDIRS_DEBUG
+        DEFINES += $$CONAN_DEFINES_DEBUG
+    }
+    QMAKE_CXXFLAGS += $$CONAN_QMAKE_CXXFLAGS
+    QMAKE_CFLAGS += $$CONAN_QMAKE_CFLAGS
+    QMAKE_LFLAGS += $$CONAN_QMAKE_LFLAGS
+    QMAKE_CXXFLAGS_DEBUG += $$CONAN_QMAKE_CXXFLAGS_DEBUG
+    QMAKE_CFLAGS_DEBUG += $$CONAN_QMAKE_CFLAGS_DEBUG
+    QMAKE_LFLAGS_DEBUG += $$CONAN_QMAKE_LFLAGS_DEBUG
+    QMAKE_CXXFLAGS_RELEASE += $$CONAN_QMAKE_CXXFLAGS_RELEASE
+    QMAKE_CFLAGS_RELEASE += $$CONAN_QMAKE_CFLAGS_RELEASE
+    QMAKE_LFLAGS_RELEASE += $$CONAN_QMAKE_LFLAGS_RELEASE
+}""")
 
         return output
