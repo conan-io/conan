@@ -18,6 +18,8 @@ class HelloConan(ConanFile):
     def build(self):
         save("file1.txt", "Hello1")
         os.symlink("file1.txt", "file1.txt.1")
+        save("version1/file2.txt", "Hello2")
+        os.symlink("version1", "latest")
 
     def package(self):
         self.copy("*.txt*", links=True)
@@ -49,6 +51,12 @@ class SymLinksTest(unittest.TestCase):
             # Save any different string, random, or the base path
             save(filepath, base)
             self.assertEqual(load(link), base)
+            filepath = os.path.join(base, "version1")
+            link = os.path.join(base, "latest")
+            self.assertEqual(os.readlink(link), "version1")
+            filepath = os.path.join(base, "latest/file2.txt")
+            file1 = load(filepath)
+            self.assertEqual("Hello2", file1)
 
     def basic_test(self):
         if platform.system() == "Windows":

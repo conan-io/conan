@@ -441,9 +441,8 @@ class ConanManager(object):
             conan_file.source_folder = source_folder
             with environment_append(conan_file.env):
                 conan_file.build()
-
-            if test:
-                conan_file.test()
+                if test:
+                    conan_file.test()
         except ConanException:
             raise  # Raise but not let to reach the Exception except (not print traceback)
         except Exception:

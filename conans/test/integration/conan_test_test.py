@@ -11,6 +11,36 @@ from conans.paths import CONANFILE
 @attr("slow")
 class ConanTestTest(unittest.TestCase):
 
+    def test_package_env_test(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    def package_info(self):
+        self.env_info.PYTHONPATH.append("new/pythonpath/value")
+        '''
+        test_package = '''
+import os
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    name = "HelloTest"
+    version = "0.1"
+    requires = "Hello/0.1@lasote/testing"
+
+    def build(self):
+        assert("new/pythonpath/value" in os.environ["PYTHONPATH"])
+
+    def test(self):
+        assert("new/pythonpath/value" in os.environ["PYTHONPATH"])
+'''
+
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
+        client.run("test_package")
+
     def scopes_test_package_test(self):
         client = TestClient()
         conanfile = """
