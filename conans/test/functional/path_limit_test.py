@@ -1,10 +1,10 @@
 import unittest
 from conans.test.utils.tools import TestClient, TestServer
+from conans.tools_factory import ToolsFactory
 from conans.util.files import load
 import os
 from conans.model.ref import PackageReference, ConanFileReference
 import platform
-from conans.tools import environment_append
 from conans.test import CONAN_TEST_FOLDER
 import tempfile
 
@@ -44,7 +44,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client = TestClient()
         files = {"conanfile.py": base.replace("108", "90")}  # shorten to pass appveyor
         client.save(files)
-        with environment_append({"CONAN_USER_HOME_SHORT": short_home}):
+        with ToolsFactory.new().environment_append({"CONAN_USER_HOME_SHORT": short_home}):
             client.run("export lasote/channel")
             client.run("install lib/0.1@lasote/channel --build")
             client.run('remove "lib*" -b -p -f')

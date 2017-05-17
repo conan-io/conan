@@ -32,6 +32,7 @@ from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USE
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
+from conans.tools_factory import ToolsFactory
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, load, save
 from conans.util.log import logger
@@ -389,6 +390,8 @@ class TestClient(object):
         auth_manager = ConanApiAuthManager(self.rest_api_client, self.user_io, self.localdb)
         # Handle remote connections
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
+        # Tools object
+        self.tools = ToolsFactory.new(self.requester, output)
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
@@ -405,7 +408,8 @@ class TestClient(object):
         """
         self.init_dynamic_vars(user_io)
 
-        command = Command(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
+        command = Command(self.client_cache, self.user_io, self.runner,
+                          self.remote_manager, self.search_manager, self.tools)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)

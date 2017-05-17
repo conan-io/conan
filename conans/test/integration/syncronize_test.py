@@ -4,10 +4,11 @@ from conans.model.ref import ConanFileReference, PackageReference
 import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from nose.plugins.attrib import attr
+
+from conans.tools_factory import ToolsFactory
 from conans.util.files import load, save
 from conans.test.utils.test_files import uncompress_packaged_files, temp_folder
 from conans.paths import EXPORT_TGZ_NAME, CONAN_MANIFEST, PACKAGE_TGZ_NAME
-from conans.tools import untargz
 from conans.model.manifest import FileTreeManifest
 
 
@@ -18,6 +19,7 @@ class SynchronizeTest(unittest.TestCase):
         test_server = TestServer()
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        self.tools = ToolsFactory.new()
 
     def upload_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
@@ -37,7 +39,7 @@ class SynchronizeTest(unittest.TestCase):
         # Verify the files are there
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
-        untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
+        self.tools.untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
         self.assertTrue(load(os.path.join(tmp, "to_be_deleted.txt")), "delete me")
         self.assertTrue(load(os.path.join(tmp, "to_be_deleted2.txt")), "delete me2")
 
@@ -47,7 +49,7 @@ class SynchronizeTest(unittest.TestCase):
         self.client.run("upload %s" % str(conan_reference))
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
-        untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
+        self.tools.untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
         self.assertFalse(os.path.exists(os.path.join(tmp, "to_be_deleted.txt")))
         self.assertTrue(os.path.exists(os.path.join(tmp, "to_be_deleted2.txt")))
 
@@ -62,7 +64,7 @@ class SynchronizeTest(unittest.TestCase):
         # Verify all is correct
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
-        untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
+        self.tools.untargz(os.path.join(server_conan_path, EXPORT_TGZ_NAME), tmp)
         self.assertTrue(load(os.path.join(tmp, "to_be_deleted2.txt")), "modified content")
         self.assertTrue(load(os.path.join(tmp, "new_file.lib")), "new file")
         self.assertFalse(os.path.exists(os.path.join(tmp, "to_be_deleted.txt")))

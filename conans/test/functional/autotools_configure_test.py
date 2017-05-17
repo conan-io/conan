@@ -2,6 +2,7 @@ import unittest
 
 from conans.client.configure_build_environment import AutoToolsBuildEnvironment
 from conans import tools
+from conans.tools_factory import ToolsFactory
 
 
 class MockDepsCppInfo(object):
@@ -23,6 +24,7 @@ class MockConanfile(object):
     def __init__(self, settings):
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
+        self.tools = ToolsFactory.new()
 
 
 class MockSettings(object):

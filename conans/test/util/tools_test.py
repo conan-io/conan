@@ -14,7 +14,7 @@ from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.visual_project_files import get_vs_project_files
-from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool
+from conans.tools_factory import ToolsFactory
 
 
 class RunnerMock(object):
@@ -43,9 +43,11 @@ class ReplaceInFileTest(unittest.TestCase):
         with open(self.bytes_file, "wb") as handler:
             handler.write(text)
 
+        self.tools = ToolsFactory.new()
+
     def test_replace_in_file(self):
-        replace_in_file(self.win_file, "nis", "nus")
-        replace_in_file(self.bytes_file, "nis", "nus")
+        self.tools.replace_in_file(self.win_file, "nis", "nus")
+        self.tools.replace_in_file(self.bytes_file, "nis", "nus")
 
         with open(self.win_file, "rt") as handler:
             content = handler.read()
@@ -59,6 +61,9 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
+
+    def setUp(self):
+        self.tools = ToolsFactory.new()
 
     def cpu_count_test(self):
         cpus = tools.cpu_count()
@@ -85,7 +90,7 @@ class ToolsTest(unittest.TestCase):
 
     def system_package_tool_fail_when_not_0_returned_test(self):
         runner = RunnerMock(return_ok=False)
-        spt = SystemPackageTool(runner=runner)
+        spt = self.tools.SystemPackageTool(runner=runner)
         if platform.system() == "Linux" or platform.system() == "Darwin":
             msg = "Command 'sudo apt-get update' failed" if platform.system() == "Linux" \
                                                          else "Command 'brew update' failed"
@@ -99,37 +104,37 @@ class ToolsTest(unittest.TestCase):
         runner = RunnerMock()
 
         # fake os info to linux debian, default sudo
-        os_info = OSInfo()
+        os_info = self.tools.OSInfo()
         os_info.is_linux = True
         os_info.linux_distro = "debian"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
         spt.update()
         self.assertEquals(runner.command_called, "sudo apt-get update")
 
         os_info.linux_distro = "ubuntu"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
         spt.update()
         self.assertEquals(runner.command_called, "sudo apt-get update")
 
         os_info.linux_distro = "knoppix"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
         spt.update()
         self.assertEquals(runner.command_called, "sudo apt-get update")
 
         os_info.linux_distro = "fedora"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
         spt.update()
         self.assertEquals(runner.command_called, "sudo yum check-update")
 
         os_info.linux_distro = "redhat"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
         spt.install("a_package", force=False)
         self.assertEquals(runner.command_called, "rpm -q a_package")
         spt.install("a_package", force=True)
         self.assertEquals(runner.command_called, "sudo yum install -y a_package")
 
         os_info.linux_distro = "debian"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
         with self.assertRaises(ConanException):
             runner.return_ok = False
             spt.install("a_package")
@@ -142,7 +147,7 @@ class ToolsTest(unittest.TestCase):
         os_info.is_macos = True
         os_info.is_linux = False
 
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
         spt.update()
         self.assertEquals(runner.command_called, "brew update")
         spt.install("a_package", force=True)
@@ -150,17 +155,17 @@ class ToolsTest(unittest.TestCase):
 
         os.environ["CONAN_SYSREQUIRES_SUDO"] = "False"
 
-        os_info = OSInfo()
+        os_info = self.tools.OSInfo()
         os_info.is_linux = True
         os_info.linux_distro = "redhat"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
         spt.install("a_package", force=True)
         self.assertEquals(runner.command_called, "yum install -y a_package")
         spt.update()
         self.assertEquals(runner.command_called, "yum check-update")
 
         os_info.linux_distro = "ubuntu"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
         spt.install("a_package", force=True)
         self.assertEquals(runner.command_called, "apt-get install -y a_package")
 
@@ -169,7 +174,7 @@ class ToolsTest(unittest.TestCase):
 
         os_info.is_macos = True
         os_info.is_linux = False
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt = self.tools.SystemPackageTool(runner=runner, os_info=os_info)
 
         spt.update()
         self.assertEquals(runner.command_called, "brew update")
@@ -191,17 +196,17 @@ class ToolsTest(unittest.TestCase):
         packages = ["a_package", "another_package", "yet_another_package"]
 
         runner = RunnerMultipleMock(["dpkg -s another_package"])
-        spt = SystemPackageTool(runner=runner, tool=AptTool())
+        spt = self.tools.SystemPackageTool(runner=runner, tool=self.tools.AptTool())
         spt.install(packages)
         self.assertEquals(2, runner.calls)
 
         runner = RunnerMultipleMock(["sudo apt-get update", "sudo apt-get install -y yet_another_package"])
-        spt = SystemPackageTool(runner=runner, tool=AptTool())
+        spt = self.tools.SystemPackageTool(runner=runner, tool=self.tools.AptTool())
         spt.install(packages)
         self.assertEquals(7, runner.calls)
 
         runner = RunnerMultipleMock(["sudo apt-get update"])
-        spt = SystemPackageTool(runner=runner, tool=AptTool())
+        spt = self.tools.SystemPackageTool(runner=runner, tool=self.tools.AptTool())
         with self.assertRaises(ConanException):
             spt.install(packages)
         self.assertEquals(7, runner.calls)
@@ -209,7 +214,7 @@ class ToolsTest(unittest.TestCase):
     def system_package_tool_installed_test(self):
         if platform.system() != "Linux" and platform.system() != "Macos":
             return
-        spt = SystemPackageTool()
+        spt = self.tools.SystemPackageTool()
         # Git should be installed on development/testing machines
         self.assertTrue(spt._tool.installed("git"))
         # This package hopefully doesn't exist

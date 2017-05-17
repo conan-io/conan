@@ -27,7 +27,6 @@ from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST
-from conans.tools import environment_append
 from conans.util.files import save,  rmdir, normalize, mkdir
 from conans.util.log import logger
 from conans.model.manifest import FileTreeManifest
@@ -40,7 +39,7 @@ class ConanManager(object):
     """ Manage all the commands logic  The main entry point for all the client
     business logic
     """
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager):
+    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager, tools):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
@@ -49,6 +48,7 @@ class ConanManager(object):
         self._remote_manager = remote_manager
         self._current_scopes = None
         self._search_manager = search_manager
+        self._tools = tools
 
     def export(self, user, conan_file_path, keep_source=False, filename=None):
         """ Export the conans
@@ -92,7 +92,7 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
                                   remote_name=None, update=False, check_updates=False,
                                   manifest_manager=None)
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        loader = ConanFileLoader(self._runner, self._tools, self._client_cache.settings, profile)
         conanfile = loader.load_virtual([reference], current_path)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
@@ -171,7 +171,7 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=False, check_updates=check_updates)
 
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        loader = ConanFileLoader(self._runner, self._tools, self._client_cache.settings, profile)
         conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
@@ -254,7 +254,7 @@ class ConanManager(object):
                                            interactive=manifest_interactive) if manifest_folder else None
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=update, check_updates=False, manifest_manager=manifest_manager)
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        loader = ConanFileLoader(self._runner, self._tools, self._client_cache.settings, profile)
         conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
@@ -312,7 +312,7 @@ class ConanManager(object):
             conanfile_path = os.path.join(reference, CONANFILE)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
                                                 self._client_cache.settings, self._runner,
-                                                output)
+                                                output, self._tools)
             export_folder = reference
             config_source_local(export_folder, current_path, conanfile, output)
         else:
@@ -320,7 +320,7 @@ class ConanManager(object):
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
                                                 self._client_cache.settings, self._runner,
-                                                output, reference)
+                                                output, self._tools, reference)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             config_source(export_folder, src_folder, conanfile, output, force)
@@ -342,7 +342,8 @@ class ConanManager(object):
 
         conanfile = load_consumer_conanfile(conan_file_path, current_path,
                                             self._client_cache.settings,
-                                            self._runner, output, reference, error=True)
+                                            self._runner, output, self._tools,
+                                            reference, error=True)
 
         if dest_folder:
             if not os.path.isabs(dest_folder):
@@ -360,7 +361,7 @@ class ConanManager(object):
         conan_file_path = os.path.join(build_folder, CONANFILE)
         conanfile = load_consumer_conanfile(conan_file_path, current_path,
                                             self._client_cache.settings,
-                                            self._runner, output)
+                                            self._runner, output, self._tools)
         packager.create_package(conanfile, build_folder, current_path, output, local=True)
 
     def package(self, reference, package_id):
@@ -400,9 +401,9 @@ class ConanManager(object):
             output.info("Re-packaging %s" % package_reference.package_id)
             conanfile = load_consumer_conanfile(conan_file_path, build_folder,
                                                 self._client_cache.settings,
-                                                self._runner, output, reference)
+                                                self._runner, output, self._tools, reference)
             rmdir(package_folder)
-            with environment_append(conanfile.env):
+            with conanfile.tools.environment_append(conanfile.env):
                 packager.create_package(conanfile, build_folder, package_folder, output)
 
     def build(self, conanfile_path, current_path, test=False, filename=None):
@@ -423,7 +424,7 @@ class ConanManager(object):
             output = ScopedOutput("Project", self._user_io.out)
             conan_file = load_consumer_conanfile(conan_file_path, current_path,
                                                  self._client_cache.settings,
-                                                 self._runner, output)
+                                                 self._runner, output, self._tools)
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"
@@ -433,7 +434,7 @@ class ConanManager(object):
         try:
             os.chdir(current_path)
             conan_file._conanfile_directory = conanfile_path
-            with environment_append(conan_file.env):
+            with conan_file.tools.environment_append(conan_file.env):
                 conan_file.build()
                 if test:
                     conan_file.test()

@@ -4,11 +4,12 @@ import os
 from conans.paths import PACKAGE_TGZ_NAME
 import tempfile
 from conans.test import CONAN_TEST_FOLDER
-from conans.tools import untargz
 from conans.errors import ConanException
 import time
 import shutil
 import platform
+
+from conans.tools_factory import ToolsFactory
 
 
 def wait_until_removed(folder):
@@ -44,7 +45,7 @@ def uncompress_packaged_files(paths, package_reference):
     if not(os.path.exists(os.path.join(package_path, PACKAGE_TGZ_NAME))):
         raise ConanException("%s not found in %s" % (PACKAGE_TGZ_NAME, package_path))
     tmp = temp_folder()
-    untargz(os.path.join(package_path, PACKAGE_TGZ_NAME), tmp)
+    ToolsFactory().new().untargz(os.path.join(package_path, PACKAGE_TGZ_NAME), tmp)
     return tmp
 
 

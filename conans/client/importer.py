@@ -7,7 +7,6 @@ from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
-from conans.tools import environment_append
 from conans.util.files import save, md5sum, load
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
@@ -51,7 +50,7 @@ def undo_imports(current_path, output):
 def run_imports(conanfile, dest_folder, output):
     file_importer = FileImporter(conanfile, dest_folder)
     conanfile.copy = file_importer
-    with environment_append(conanfile.env):
+    with conanfile.tools.environment_append(conanfile.env):
         conanfile.imports()
     copied_files = file_importer.execute()
     import_output = ScopedOutput("%s imports()" % output.scope, output)

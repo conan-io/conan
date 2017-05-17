@@ -9,6 +9,7 @@ from conans.client.deps_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues, option_not_exist_msg, option_wrong_value_msg
 from conans.client.loader import ConanFileLoader
+from conans.tools_factory import ToolsFactory
 from conans.util.files import save
 from conans.model.settings import Settings, bad_value_msg
 from conans.errors import ConanException
@@ -128,7 +129,7 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
+        self.loader = ConanFileLoader(None, ToolsFactory.new(), Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         MockRequireResolver())
@@ -1499,7 +1500,7 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings.values = Values.loads(settings)
         profile = Profile()
         profile.options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, full_settings, profile)
+        loader = ConanFileLoader(None, ToolsFactory.new(), full_settings, profile)
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
@@ -1782,7 +1783,7 @@ class ChatConan(ConanFile):
         profile.options = OptionsValues.loads("Say:myoption_say=123\n"
                                               "Hello:myoption_hello=True\n"
                                               "myoption_chat=on")
-        loader = ConanFileLoader(None, Settings.loads(""), profile)
+        loader = ConanFileLoader(None, ToolsFactory.new(), Settings.loads(""), profile)
         retriever = Retriever(loader, output)
         builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver())
         retriever.conan(say_ref, say_content)

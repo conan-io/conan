@@ -4,9 +4,10 @@ from conans.client.output import ConanOutput
 from six import StringIO
 from conans.client.rest.uploader_downloader import print_progress
 from conans.test.utils.test_files import temp_folder
-from conans import tools
 import zipfile
 import os
+
+from conans.tools_factory import ToolsFactory
 from conans.util.files import save, load
 import sys
 from conans.test.utils.tools import TestClient
@@ -66,6 +67,7 @@ class PkgConan(ConanFile):
         old_out = sys.stdout
         try:
             sys.stdout = new_out
+            tools = ToolsFactory.new(None, ConanOutput(new_out))
             tools.unzip(zip_path, output_dir)
         finally:
             sys.stdout = old_out

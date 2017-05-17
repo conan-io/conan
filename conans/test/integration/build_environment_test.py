@@ -5,7 +5,7 @@ import unittest
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
-from conans.tools import unix_path
+from conans.tools_factory import ToolsFactory
 from conans.util.files import md5sum
 
 mylibh = '''
@@ -143,7 +143,8 @@ class ConanBash(ConanFile):
         client.save({CONANFILE: conanfile})
         client.run("export lasote/stable")
         client.run("install bash/0.1@lasote/stable --build")
-        expected_curdir_base = unix_path(client.client_cache.conan(ConanFileReference.loads("bash/0.1@lasote/stable")))
+        tools = ToolsFactory.new()
+        expected_curdir_base = tools.unix_path(client.client_cache.conan(ConanFileReference.loads("bash/0.1@lasote/stable")))
         self.assertIn(expected_curdir_base, client.user_io.out)
 
     def use_build_virtualenv_test(self):

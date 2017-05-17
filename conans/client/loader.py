@@ -32,10 +32,10 @@ def _load_info_file(current_path, conanfile, output, error=False):
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
 
 
-def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, reference=None,
+def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, tools, reference=None,
                             error=False):
     profile = Profile.read_conaninfo(current_path)
-    loader = ConanFileLoader(runner, settings, profile)
+    loader = ConanFileLoader(runner, tools, settings, profile)
     if conanfile_path.endswith(".py"):
         consumer = not reference
         conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
@@ -46,7 +46,7 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, profile):
+    def __init__(self, runner, tools, settings, profile):
         '''
         @param settings: Settings object, to assign to ConanFile at load time
         @param options: OptionsValues, necessary so the base conanfile loads the options
@@ -55,6 +55,7 @@ class ConanFileLoader(object):
         @param cached_env_values: EnvValues object
         '''
         self._runner = runner
+        self._tools = tools
         settings.values = profile.settings_values
         assert settings is None or isinstance(settings, Settings)
         # assert package_settings is None or isinstance(package_settings, dict)
@@ -95,6 +96,8 @@ class ConanFileLoader(object):
             else:
                 result.scope = self._scopes.package_scope(result.name)
 
+            # Assing tools
+            result.tools = self._tools
             return result
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
@@ -135,6 +138,8 @@ class ConanFileLoader(object):
                                                                parser.import_parameters)
         conanfile.scope = self._scopes.package_scope()
         conanfile._env_values.update(self._env_values)
+        # Assign tools
+        conanfile.tools = self._tools
         return conanfile
 
     def load_virtual(self, references, current_path, scope_options=True):
@@ -156,5 +161,7 @@ class ConanFileLoader(object):
 
         conanfile.generators = []  # remove the default txt generator
         conanfile.scope = self._scopes.package_scope()
+        # Assign tools
+        conanfile.tools = self._tools
 
         return conanfile

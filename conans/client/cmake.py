@@ -6,7 +6,6 @@ from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir
-from conans.tools import cpu_count, args_to_string
 from conans import tools
 import os
 import platform
@@ -296,11 +295,11 @@ class CMake(object):
         mkdir(self.build_dir)
         arg_list = _join_arguments([
             self.command_line,
-            args_to_string(args),
+            self._conanfile.tools.args_to_string(args),
             _defs_to_string(defs),
-            args_to_string([source_dir])
+            self._conanfile.tools.args_to_string([source_dir])
         ])
-        command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
+        command = "cd %s && cmake %s" % (self._conanfile.tools.args_to_string([self.build_dir]), arg_list)
         if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
             with clean_sh_from_path():
                 self._conanfile.run(command)
@@ -327,12 +326,12 @@ class CMake(object):
             if "Makefiles" in self.generator:
                 if "--" not in args:
                     args.append("--")
-                args.append("-j%i" % cpu_count())
+                args.append("-j%i" % self._conanfile.tools.cpu_count())
 
         arg_list = _join_arguments([
-            args_to_string([build_dir]),
+            self._conanfile.tools.args_to_string([build_dir]),
             self.build_config,
-            args_to_string(args)
+            self._conanfile.tools.args_to_string(args)
         ])
         command = "cmake --build %s" % arg_list
         self._conanfile.run(command)

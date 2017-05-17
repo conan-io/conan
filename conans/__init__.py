@@ -1,5 +1,10 @@
 # Allow conans to import ConanFile from here
 # to allow refactors
+import sys
+from conans.tools_factory import ToolsFactory
+tools = ToolsFactory.new()
+sys.modules["conans.tools"] = tools
+
 from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.settings import Settings

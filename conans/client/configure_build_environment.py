@@ -2,8 +2,6 @@ import copy
 import platform
 import os
 
-from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
-
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
                             "libstdcxx": "-library=stdcxx4",
                             "libstlport": "-library=stlport4",
@@ -95,7 +93,7 @@ class AutoToolsBuildEnvironment(object):
 
     def _get_host_build_target_flags(self, arch_detected, os_detected):
         """Based on google search for build/host triplets, it could need a lot and complex verification"""
-        if not cross_building(self._conanfile.settings, os_detected, arch_detected):
+        if not self._conanfile.tools.cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
         arch_setting = self._conanfile.settings.get_safe("arch")
@@ -142,7 +140,7 @@ class AutoToolsBuildEnvironment(object):
         configure_dir = configure_dir or "./"
         auto_build, auto_host, auto_target = None, None, None
         if build is None or host is None or target is None:
-            auto_build, auto_host, auto_target = self._get_host_build_target_flags(detected_architecture(),
+            auto_build, auto_host, auto_target = self._get_host_build_target_flags(self._conanfile.tools.detected_architecture(),
                                                                                    platform.system())
 
         triplet_args = []
@@ -159,13 +157,13 @@ class AutoToolsBuildEnvironment(object):
             if target or auto_target:  # User specified value or automatic
                 triplet_args.append("--target %s" % (target or auto_target))
 
-        with environment_append(self.vars):
-            self._conanfile.run("%sconfigure %s %s" % (configure_dir, args_to_string(args), " ".join(triplet_args)))
+        with self._conanfile.tools.environment_append(self.vars):
+            self._conanfile.run("%sconfigure %s %s" % (configure_dir, self._conanfile.tools.args_to_string(args), " ".join(triplet_args)))
 
     def make(self, args=""):
-        with environment_append(self.vars):
-            str_args = args_to_string(args)
-            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else ""
+        with self._conanfile.tools.environment_append(self.vars):
+            str_args = self._conanfile.tools.args_to_string(args)
+            cpu_count_option = ("-j%s" % self._conanfile.tools.cpu_count()) if "-j" not in str_args else ""
             self._conanfile.run("make %s %s" % (str_args, cpu_count_option))
 
     @property

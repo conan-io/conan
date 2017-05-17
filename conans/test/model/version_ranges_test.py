@@ -6,6 +6,7 @@ from conans.client.deps_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
 from conans.model.options import OptionsValues
 from conans.client.loader import ConanFileLoader
+from conans.tools_factory import ToolsFactory
 from conans.util.files import save, list_folder_subdirs
 from conans.model.settings import Settings
 from conans.model.requires import Requirements
@@ -153,7 +154,7 @@ class VersionRangesTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
+        self.loader = ConanFileLoader(None, ToolsFactory.new(), Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)

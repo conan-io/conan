@@ -5,15 +5,18 @@ import tempfile
 import unittest
 from collections import namedtuple
 
+import requests
+
 from conans import tools
 from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
 from conans.client.cmake import CMake
-from conans.tools import cpu_count
+
 
 import platform
 
+from conans.tools_factory import ToolsFactory
 from conans.util.files import save
 
 
@@ -230,7 +233,7 @@ build_type: [ Release]
 
         cmake.configure()
 
-        cores = '-DCONAN_CXX_FLAGS="/MP{0}" -DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count())
+        cores = '-DCONAN_CXX_FLAGS="/MP{0}" -DCONAN_C_FLAGS="/MP{0}" '.format(conan_file.tools.cpu_count())
         self.assertEqual('cd {0} && cmake -G "Visual Studio 12 2013" -DCONAN_LINK_RUNTIME="/MDd" {1}-DCONAN_EXPORTED="1"'
                          ' -DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" {2}'
                          '-Wno-dev {0}'.format(dot_dir, cross, cores),
@@ -296,16 +299,17 @@ build_type: [ Release]
         settings.compiler.version = "5.4"
         cmake = CMake(conan_file)
         cmake.build()
-        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. -- -j%i' % cpu_count())), conan_file.command)
+        tools = ToolsFactory.new()
+        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. -- -j%i' % tools.cpu_count())), conan_file.command)
 
         cmake.test()
-        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. --target test -- -j%i' % cpu_count())), conan_file.command)
+        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. --target test -- -j%i' % tools.cpu_count())), conan_file.command)
 
         cmake.build(args=['foo', '--', 'bar'])
-        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. foo -- bar -j%i' % cpu_count())), conan_file.command)
+        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. foo -- bar -j%i' % tools.cpu_count())), conan_file.command)
 
         cmake.test(args=['foo', '--', 'bar'])
-        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. --target test foo -- bar -j%i' % cpu_count())), conan_file.command)
+        self.assertEqual('cmake --build %s' % (CMakeTest.scape('. --target test foo -- bar -j%i' % tools.cpu_count())), conan_file.command)
 
         cmake = CMake(conan_file, parallel=False)
         cmake.build()
@@ -390,6 +394,7 @@ class ConanFileMock(ConanFile):
         self.settings = None
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = namedtuple("output", "warn")(lambda x: x)
+        self.tools = ToolsFactory.new(requests, self.output)
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
 
