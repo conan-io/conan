@@ -27,7 +27,7 @@ class ExportDirtyTest(unittest.TestCase):
         file_open = os.path.join(source_path, "main.cpp")
 
         self.f = open(file_open, 'wb')
-        self.f.write("Hello world")
+        self.f.write(b"Hello world")
         files[CONANFILE] = files[CONANFILE].replace("build2(", "build3(")
         self.client.save(files)
         self.client.run("export lasote/stable")
