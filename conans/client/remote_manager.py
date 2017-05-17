@@ -32,11 +32,11 @@ class RemoteManager(object):
 
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
-        files = gather_files(export_folder)
+        files, symlinks = gather_files(export_folder)
 
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
-        the_files = compress_recipe_files(files, export_folder, self._output)
+        the_files = compress_recipe_files(files, symlinks, export_folder, self._output)
         if skip_upload:
             return None
 
@@ -59,7 +59,7 @@ class RemoteManager(object):
         # existing package, will use short paths if defined
         package_folder = self._client_cache.package(package_reference, short_paths=None)
         # Get all the files in that directory
-        files = gather_files(package_folder)
+        files, symlinks = gather_files(package_folder)
 
         self._output.rewrite_line("Checking package integrity...")
         if CONANINFO not in files or CONAN_MANIFEST not in files:
@@ -92,7 +92,7 @@ class RemoteManager(object):
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
         logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
-        the_files = compress_package_files(files, package_folder, self._output)
+        the_files = compress_package_files(files, symlinks, package_folder, self._output)
         if not skip_upload:
 
             tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
@@ -239,7 +239,7 @@ class RemoteManager(object):
             raise ConanException(exc)
 
 
-def compress_recipe_files(files, dest_folder, output):
+def compress_recipe_files(files, symlinks, dest_folder, output):
     # This is the minimum recipe
     result = {CONANFILE: files.pop(CONANFILE),
               CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
@@ -259,7 +259,7 @@ def compress_recipe_files(files, dest_folder, output):
                              if f.startswith(EXPORT_SOURCES_DIR)}
             if tgz_files:
                 output.rewrite_line(msg)
-                tgz_path = compress_files(tgz_files, tgz_name, dest_folder)
+                tgz_path = compress_files(tgz_files, symlinks, tgz_name, dest_folder)
                 result[tgz_name] = tgz_path
 
     add_tgz(EXPORT_TGZ_NAME, export_tgz_path, "Compressing recipe...")
@@ -268,19 +268,19 @@ def compress_recipe_files(files, dest_folder, output):
     return result
 
 
-def compress_package_files(files, dest_folder, output):
+def compress_package_files(files, symlinks, dest_folder, output):
     tgz_path = files.get(PACKAGE_TGZ_NAME)
     if not tgz_path:
         output.rewrite_line("Compressing package...")
         tgz_files = {f: path for f, path in files.items() if f not in [CONANINFO, CONAN_MANIFEST]}
-        tgz_path = compress_files(tgz_files, PACKAGE_TGZ_NAME, dest_dir=dest_folder)
+        tgz_path = compress_files(tgz_files, symlinks, PACKAGE_TGZ_NAME, dest_dir=dest_folder)
 
     return {PACKAGE_TGZ_NAME: tgz_path,
             CONANINFO: files[CONANINFO],
             CONAN_MANIFEST: files[CONAN_MANIFEST]}
 
 
-def compress_files(files, name, dest_dir):
+def compress_files(files, symlinks, name, dest_dir):
     """Compress the package and returns the new dict (name => content) of files,
     only with the conanXX files and the compressed file"""
     t1 = time.time()
@@ -289,6 +289,12 @@ def compress_files(files, name, dest_dir):
     with open(tgz_path, "wb") as tgz_handle:
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
+
+        for filename, dest in symlinks.items():
+            info = tarfile.TarInfo(name=filename)
+            info.type = tarfile.SYMTYPE
+            info.linkname = dest
+            tgz.addfile(tarinfo=info)
 
         for filename, abs_path in files.items():
             info = tarfile.TarInfo(name=filename)
