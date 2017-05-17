@@ -5,7 +5,7 @@ import fnmatch
 import shutil
 
 from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME, CONANFILE
-from conans.util.files import save, rmdir
+from conans.util.files import save, rmdir, mkdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import ConanException, format_conanfile_exception
@@ -369,8 +369,13 @@ class ConanInstaller(object):
 
         os.chdir(build_folder)
 
+        if getattr(conan_file, 'no_copy_source', False):
+            source_folder = self._client_cache.source(package_reference.conan,
+                                                      conan_file.short_paths)
+        else:
+            source_folder = build_folder
         with environment_append(conan_file.env):
-            create_package(conan_file, build_folder, package_folder, output)
+            create_package(conan_file, source_folder, build_folder, package_folder, output, False)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
 
     def _raise_package_not_found_error(self, conan_ref, conan_file):
@@ -452,10 +457,17 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
                     output.warn("Filename too long, file excluded: %s" % dest_path)
             return filtered_files
 
-        shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
-        logger.debug("Copied to %s" % build_folder)
-        logger.debug("Files copied %s" % os.listdir(build_folder))
+        if getattr(conan_file, 'no_copy_source', False):
+            mkdir(build_folder)
+            conan_file.source_folder = src_folder
+        else:
+            shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
+            logger.debug("Copied to %s" % build_folder)
+            logger.debug("Files copied %s" % os.listdir(build_folder))
+            conan_file.source_folder = build_folder
+
         os.chdir(build_folder)
+        conan_file.build_folder = build_folder
         conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files
         logger.debug("Writing generators")
@@ -470,7 +482,6 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
         try:
             # This is necessary because it is different for user projects
             # than for packages
-            conan_file._conanfile_directory = build_folder
             logger.debug("Call conanfile.build() with files in build folder: %s" % os.listdir(build_folder))
             conan_file.build()
 

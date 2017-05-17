@@ -8,9 +8,9 @@ conanfile_build_cmake = """    def build(self):
             "BUILD_SHARED_LIBS": not self.options.static,
             "CONAN_LANGUAGE": self.options.language
         }
-        cmake = CMake(self.settings)
-        cmake.configure(self, defs=defs)
-        cmake.build(self)"""
+        cmake = CMake(self)
+        cmake.configure(defs=defs)
+        cmake.build()"""
 
 conanfile_build_new_env = """
     def build(self):
@@ -310,7 +310,7 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
                           pure_c=False, config=True, build=True, collect_libs=False,
-                          use_cmake=True, cmake_targets=False):
+                          use_cmake=True, cmake_targets=False, no_copy_source=False):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -353,9 +353,13 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                           libcxx_remove=libcxx_remove,
                                           build=build_env)
 
+    if no_copy_source:
+        conanfile = conanfile.replace("exports = '*'", """exports = '*'
+    no_copy_source=True""")
+
     if pure_c:
         conanfile = conanfile.replace("hello.cpp", "hello.c").replace("main.cpp", "main.c")
-        conanfile = conanfile.replace("c++", "cc" if platform.system()!="Windows" else "gcc")
+        conanfile = conanfile.replace("c++", "cc" if platform.system() != "Windows" else "gcc")
     if not build:
         conanfile = conanfile.replace("build(", "build2(")
     if not config:

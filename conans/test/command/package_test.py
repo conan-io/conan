@@ -55,11 +55,11 @@ class MyConan(ConanFile):
                  CONANFILE: conanfile_template}
 
         client.save(files)
-        client.run("install -g env -g txt")
+        client.run("install -g txt")
         client.run("build")
         origin_folder = client.current_folder
         client.current_folder = temp_folder()
-        client.run('package "%s"' % origin_folder)
+        client.run('package "{0}" --build_folder="{0}"'.format(origin_folder))
         content = load(os.path.join(client.current_folder, "include/file.h"))
         self.assertEqual(content, "foo")
 
@@ -83,12 +83,12 @@ class MyConan(ConanFile):
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         client.current_folder = build_folder
-        client.run("install .. -g env -g txt")
-        client.run("source ..")
-        self.assertEqual(os.listdir(os.path.join(client.current_folder, "include")), ["file.h"])
-        client.run("build ..")
+        client.run("install .. -g txt")
+        # client.run("source ..")
+        # self.assertEqual(os.listdir(os.path.join(client.current_folder, "include")), ["file.h"])
+        # client.run("build ..")
         client.current_folder = temp_folder()
-        client.run('package "%s/build"' % origin_folder)
+        client.run('package "{0}" --build_folder="{0}/build" --source_folder="{0}"'.format(origin_folder))
         content = load(os.path.join(client.current_folder, "include/file.h"))
         self.assertEqual(content, "foo")
 
@@ -115,7 +115,7 @@ class MyConan(ConanFile):
         package_folder = os.path.join(origin_folder, "package")
         mkdir(package_folder)
         client.current_folder = package_folder
-        client.run('package ..')
+        client.run('package .. --build_folder=..')
         content = load(os.path.join(client.current_folder, "include/file.h"))
         self.assertEqual(content, "foo")
 

@@ -8,10 +8,8 @@ import shutil
 from conans.paths import CONANINFO
 from conans.client.packager import create_package
 from conans.client.loader import ConanFileLoader
-from conans.model.options import OptionsValues
 from conans.model.settings import Settings
 from conans.client.output import ScopedOutput
-from conans.model.scope import Scopes
 from conans.model.profile import Profile
 
 
@@ -84,7 +82,7 @@ class ExporterTest(unittest.TestCase):
         loader = ConanFileLoader(None, Settings(), Profile())
         conanfile = loader.load_conan(conanfile_path, None)
         output = ScopedOutput("", TestBufferConanOutput())
-        create_package(conanfile, build_folder, package_folder, output)
+        create_package(conanfile, build_folder, build_folder, package_folder, output)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

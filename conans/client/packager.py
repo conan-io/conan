@@ -11,7 +11,7 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
-def create_package(conanfile, build_folder, package_folder, output, local=False):
+def create_package(conanfile, source_folder, build_folder, package_folder, output, local=False):
     """ copies built artifacts, libs, headers, data, etc from build_folder to
     package folder
     """
@@ -20,7 +20,6 @@ def create_package(conanfile, build_folder, package_folder, output, local=False)
     # Make the copy of all the patterns
     output.info("Generating the package")
     output.info("Package folder %s" % (package_folder))
-    conanfile.copy = FileCopier(build_folder, package_folder)
 
     def wrap(dst_folder):
         def new_method(pattern, src=""):
@@ -32,8 +31,13 @@ def create_package(conanfile, build_folder, package_folder, output, local=False)
     conanfile.copy_bins = wrap(DEFAULT_BIN)
     conanfile.copy_res = wrap(DEFAULT_RES)
     try:
-        conanfile.package()
         package_output = ScopedOutput("%s package()" % output.scope, output)
+        if source_folder != build_folder:
+            conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
+            conanfile.package()
+            conanfile.copy.report(package_output, warn=True)
+        conanfile.copy = FileCopier(build_folder, package_folder)
+        conanfile.package()
         conanfile.copy.report(package_output, warn=True)
     except Exception as e:
         if not local:
