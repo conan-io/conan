@@ -5,7 +5,31 @@ from conans.util.files import load
 import os
 
 
-class OptionCachingTest(unittest.TestCase):
+class OptionTest(unittest.TestCase):
+
+    def parsing_test(self):
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+class EqualerrorConan(ConanFile):
+    name = "equal"
+    version = "1.0.0"
+    options = {"opt": "ANY"}
+
+    def build(self):
+        self.output.warn("OPTION %s" % self.options.opt)
+'''
+        client.save({"conanfile.py": conanfile})
+        client.run("export user/testing")
+        conanfile = '''
+[requires]
+equal/1.0.0@user/testing
+[options]
+equal:opt=a=b
+'''
+        client.save({"conanfile.txt": conanfile}, clean_first=True)
+        client.run("install . --build=missing")
+        self.assertIn("OPTION a=b", client.user_io.out)
 
     def basic_test(self):
         client = TestClient()
