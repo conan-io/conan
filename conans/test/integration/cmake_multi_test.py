@@ -137,7 +137,7 @@ class CMakeMultiTest(unittest.TestCase):
 class HelloConan(ConanFile):
     name = "Hello"
     version = "0.1"
-    settings = "os", "compiler", "arch", "build_type"
+    settings = "build_type"
     exports = '*'
 
     def package(self):
@@ -148,17 +148,24 @@ class HelloConan(ConanFile):
                      "Debug/FindHello.cmake": 'message(STATUS "FIND HELLO DEBUG!")',
                      "Release/FindHello.cmake": 'message(STATUS "FIND HELLO RELEASE!")'})
         client.run("export lasote/testing")
-        cmake = """cmake_minimum_required(VERSION 2.8)
+        cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8)
 include(conanbuildinfo_multi.cmake)
 conan_basic_setup()
 find_package(Hello)
 """
-        client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/testing",
+        conanfile = """from conans import ConanFile, CMake
+class HelloConan(ConanFile):
+    requires = "Hello/0.1@lasote/testing"
+    settings = "build_type"
+    generators = "cmake_multi"
+    """
+        client.save({"conanfile.py": conanfile,
                      "CMakeLists.txt": cmake}, clean_first=True)
-        settings = ("-s compiler=gcc -s compiler.version=4.9 -s compiler.libcxx=libstdc++ "
-                    "--build=missing -g cmake_multi ")
-        client.run("install . %s" % settings)
-        client.run("install . %s -s build_type=Debug" % settings)
+
+        client.run("install . --build=missing ")
+        client.run("install . -s build_type=Debug --build=missing ")
 
         client.runner('cmake . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug',
                       cwd=client.current_folder)
