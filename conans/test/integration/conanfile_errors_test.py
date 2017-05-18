@@ -92,10 +92,9 @@ class HelloConan(ConanFile):
 
         self.assertIn("""ERROR: Hello/0.1@lasote/stable: Error in configure() method, line 9
 	self.copy2()
-	AttributeError: 'HelloConan' object has no attribute 'copy2'""",
+	AttributeError: 'HelloConan' object has no attribute 'copy2'""", client.user_io.out)
 
-        self.assertIn("Hello/0.1@lasote/stable: Error in requirements, config, config_options "
-                      "or configure() method, line 9",
+        self.assertIn("ERROR: Hello/0.1@lasote/stable: Error in configure() method, line 9", client.user_io.out)
 
 
     def source_error_test(self):
