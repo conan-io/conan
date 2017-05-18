@@ -10,6 +10,7 @@ from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
 from collections import defaultdict
+from conans.tools import environment_append
 
 
 class Node(namedtuple("Node", "conan_ref conanfile")):
@@ -366,53 +367,53 @@ class DepsGraphBuilder(object):
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
-            if hasattr(conanfile, "config"):
-                if not conanref:
-                    output = ScopedOutput(str("PROJECT"), self._output)
-                    output.warn("config() has been deprecated."
-                                " Use config_options and configure")
-                with conanfile_exception_formatter(str(conanfile), "config"):
-                    conanfile.config()
+            with environment_append(conanfile.env):
+                if hasattr(conanfile, "config"):
+                    if not conanref:
+                        output = ScopedOutput(str("PROJECT"), self._output)
+                        output.warn("config() has been deprecated."
+                                    " Use config_options and configure")
+                    with conanfile_exception_formatter(str(conanfile), "config"):
+                        conanfile.config()
+                with conanfile_exception_formatter(str(conanfile), "config_options"):
+                    conanfile.config_options()
+                conanfile.options.propagate_upstream(down_options, down_ref, conanref, self._output)
+                if hasattr(conanfile, "config"):
+                    with conanfile_exception_formatter(str(conanfile), "config"):
+                        conanfile.config()
 
-            with conanfile_exception_formatter(str(conanfile), "config_options"):
-                conanfile.config_options()
+                with conanfile_exception_formatter(str(conanfile), "configure"):
+                    conanfile.configure()
 
-            conanfile.options.propagate_upstream(down_options, down_ref, conanref, self._output)
-            if hasattr(conanfile, "config"):
-                with conanfile_exception_formatter(str(conanfile), "config"):
-                    conanfile.config()
+                conanfile.settings.validate()  # All has to be ok!
+                conanfile.options.validate()
 
-            with conanfile_exception_formatter(str(conanfile), "configure"):
-                conanfile.configure()
+                # Update requirements (overwrites), computing new upstream
+                if hasattr(conanfile, "requirements"):
+                    # If re-evaluating the recipe, in a diamond graph, with different options,
+                    # it could happen that one execution path of requirements() defines a package
+                    # and another one a different package raising Duplicate dependency error
+                    # Or the two consecutive calls, adding 2 different dependencies for the two paths
+                    # So it is necessary to save the "requires" state and restore it before a second
+                    # execution of requirements(). It is a shallow copy, if first iteration is
+                    # RequireResolve'd or overridden, the inner requirements are modified
+                    if not hasattr(conanfile, "_original_requires"):
+                        conanfile._original_requires = conanfile.requires.copy()
+                    else:
+                        conanfile.requires = conanfile._original_requires.copy()
 
-            conanfile.settings.validate()  # All has to be ok!
-            conanfile.options.validate()
+                    with conanfile_exception_formatter(str(conanfile), "requirements"):
+                        conanfile.requirements()
 
-            # Update requirements (overwrites), computing new upstream
-            if hasattr(conanfile, "requirements"):
-                # If re-evaluating the recipe, in a diamond graph, with different options,
-                # it could happen that one execution path of requirements() defines a package
-                # and another one a different package raising Duplicate dependency error
-                # Or the two consecutive calls, adding 2 different dependencies for the two paths
-                # So it is necessary to save the "requires" state and restore it before a second
-                # execution of requirements(). It is a shallow copy, if first iteration is
-                # RequireResolve'd or overridden, the inner requirements are modified
-                if not hasattr(conanfile, "_original_requires"):
-                    conanfile._original_requires = conanfile.requires.copy()
-                else:
-                    conanfile.requires = conanfile._original_requires.copy()
-
-                with conanfile_exception_formatter(str(conanfile), "requirements"):
-                    conanfile.requirements()
-
-            new_options = conanfile.options.deps_package_values
-            new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
+                new_options = conanfile.options.deps_package_values
+                new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
         except ConanExceptionInUserConanfileMethod:
             raise
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
         except Exception as e:
             raise ConanException(e)
+
         return new_down_reqs, new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req):

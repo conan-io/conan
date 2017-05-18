@@ -40,6 +40,7 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
         conanfile.copy = FileCopier(build_folder, package_folder)
         with conanfile_exception_formatter(str(conanfile), "package"):
             conanfile.package()
+
         conanfile.copy.report(package_output, warn=True)
     except Exception as e:
         if not local:
