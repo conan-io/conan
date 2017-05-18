@@ -4,6 +4,7 @@ from nose.plugins.attrib import attr
 import platform
 import os
 from conans.test.utils.multi_config import multi_config_files
+from conans.client.cmake import clean_sh_from_path
 
 conanfile_py = """
 from conans import ConanFile, CMake
@@ -167,16 +168,18 @@ class HelloConan(ConanFile):
         client.run("install . --build=missing ")
         client.run("install . -s build_type=Debug --build=missing ")
 
-        client.runner('cmake . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug',
-                      cwd=client.current_folder)
-        self.assertIn("FIND HELLO DEBUG!", client.user_io.out)
-        self.assertNotIn("FIND HELLO RELEASE!", client.user_io.out)
+        with clean_sh_from_path():
+            generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
+            client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Debug' % generator,
+                          cwd=client.current_folder)
+            self.assertIn("FIND HELLO DEBUG!", client.user_io.out)
+            self.assertNotIn("FIND HELLO RELEASE!", client.user_io.out)
 
-        client.init_dynamic_vars()  # to reset output
-        client.runner('cmake . -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release',
-                      cwd=client.current_folder)
-        self.assertIn("FIND HELLO RELEASE!", client.user_io.out)
-        self.assertNotIn("FIND HELLO DEBUG!", client.user_io.out)
+            client.init_dynamic_vars()  # to reset output
+            client.runner('cmake . -G "%s" -DCMAKE_BUILD_TYPE=Release' % generator,
+                          cwd=client.current_folder)
+            self.assertIn("FIND HELLO RELEASE!", client.user_io.out)
+            self.assertNotIn("FIND HELLO DEBUG!", client.user_io.out)
 
     def cmake_multi_test(self):
         if platform.system() not in ["Windows", "Darwin"]:
