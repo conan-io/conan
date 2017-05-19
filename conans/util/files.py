@@ -1,6 +1,6 @@
 import os
 import shutil
-from errno import ENOENT, EEXIST
+from errno import ENOENT, EEXIST, EACCES, ENOTEMPTY
 import hashlib
 import sys
 from os.path import abspath, realpath, join as joinpath
@@ -9,6 +9,7 @@ import re
 import six
 from conans.util.log import logger
 import tarfile
+import time
 
 
 def decode_text(text):
@@ -112,18 +113,32 @@ def _change_permissions(func, path, exc_info):
         os.chmod(path, stat.S_IWUSR)
         func(path)
     else:
-        raise Exception()
-
-
-def rmdir(path):
-    '''Recursive rm of a directory. If dir not exists
-    only raise exception if raise_if_not_exist'''
-    try:
-        shutil.rmtree(path, onerror=_change_permissions)
-    except OSError as err:
-        if err.errno == ENOENT:
-            return
         raise
+
+
+if platform.system() == "Windows":
+    def rmdir(path):
+        for _ in range(10):  # Max 2 seconds
+            try:
+                shutil.rmtree(path, onerror=_change_permissions)
+                return
+            except OSError as err:
+                if err.errno == ENOENT:
+                    return
+                if err.errno == ENOTEMPTY or err.errno == EACCES:
+                    # failed removal, try again, damn windows
+                    time.sleep(0.2)
+                else:
+                    raise
+        raise
+else:
+    def rmdir(path):
+        try:
+            shutil.rmtree(path, onerror=_change_permissions)
+        except OSError as err:
+            if err.errno == ENOENT:
+                return
+            raise
 
 
 def mkdir(path):
@@ -220,19 +235,16 @@ def tar_extract(fileobj, destination_dir):
     the_tar.close()
 
 
-def list_folder_subdirs(basedir="", level=None):
+def list_folder_subdirs(basedir, level):
     ret = []
     for root, dirs, _ in os.walk(basedir):
         rel_path = os.path.relpath(root, basedir)
         if rel_path == ".":
             continue
         dir_split = rel_path.split(os.sep)
-        if level is not None:
-            if len(dir_split) == level:
-                ret.append("/".join(dir_split))
-                dirs[:] = []  # Stop iterate subdirs
-        else:
+        if len(dir_split) == level:
             ret.append("/".join(dir_split))
+            dirs[:] = []  # Stop iterate subdirs
     return ret
 
 
