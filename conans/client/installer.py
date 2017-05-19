@@ -492,7 +492,10 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
             self._out.writeln("")
             output.error("Package '%s' build failed" % conan_file.info.package_id())
             output.warn("Build folder %s" % build_folder)
-            raise exc
+            if isinstance(exc, ConanExceptionInUserConanfileMethod):
+                raise
+            raise ConanException(exc)
+
         finally:
             conan_file._conanfile_directory = export_folder
             # Now remove all files that were imported with imports()
