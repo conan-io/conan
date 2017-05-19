@@ -74,6 +74,7 @@ class FileCopier(object):
         return copied_files
 
     def _filter_files(self, src, pattern, links, excludes=None):
+
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
         """
@@ -83,6 +84,7 @@ class FileCopier(object):
             if root in self._excluded:
                 subfolders[:] = []
                 continue
+
             if links and os.path.islink(root):
                 linked_folders.append(root)
                 subfolders[:] = []

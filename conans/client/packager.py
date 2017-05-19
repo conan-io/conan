@@ -4,7 +4,7 @@ import shutil
 from conans.util.files import mkdir, save, rmdir
 from conans.util.log import logger
 from conans.paths import CONANINFO, CONAN_MANIFEST
-from conans.errors import ConanException, format_conanfile_exception
+from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, conanfile_exception_formatter
 from conans.model.build_info import DEFAULT_RES, DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
@@ -34,10 +34,13 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
         package_output = ScopedOutput("%s package()" % output.scope, output)
         if source_folder != build_folder:
             conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
-            conanfile.package()
+            with conanfile_exception_formatter(str(conanfile), "package"):
+                conanfile.package()
             conanfile.copy.report(package_output, warn=True)
         conanfile.copy = FileCopier(build_folder, package_folder)
-        conanfile.package()
+        with conanfile_exception_formatter(str(conanfile), "package"):
+            conanfile.package()
+
         conanfile.copy.report(package_output, warn=True)
     except Exception as e:
         if not local:
@@ -48,8 +51,9 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
                 output.error("Unable to remove package folder %s\n%s" % (package_folder, str(e_rm)))
                 output.warn("**** Please delete it manually ****")
 
-        msg = format_conanfile_exception(output.scope, "package", e)
-        raise ConanException(msg)
+        if isinstance(e, ConanExceptionInUserConanfileMethod):
+            raise
+        raise ConanException(e)
 
     _create_aux_files(build_folder, package_folder, conanfile)
     output.success("Package '%s' created" % os.path.basename(package_folder))

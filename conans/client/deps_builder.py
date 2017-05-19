@@ -5,7 +5,7 @@ from conans.model.requires import Requirements
 from collections import namedtuple
 from conans.model.ref import PackageReference
 from conans.model.info import ConanInfo
-from conans.errors import ConanException, format_conanfile_exception
+from conans.errors import ConanException, conanfile_exception_formatter, ConanExceptionInUserConanfileMethod
 from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
@@ -129,7 +129,8 @@ class DepsGraph(object):
                     # Deprecated in 0.19
                     conanfile.conan_info()
                 else:
-                    conanfile.package_id()
+                    with conanfile_exception_formatter(str(conanfile), "package_id"):
+                        conanfile.package_id()
         return ordered
 
     def direct_requires(self):
@@ -372,12 +373,17 @@ class DepsGraphBuilder(object):
                         output = ScopedOutput(str("PROJECT"), self._output)
                         output.warn("config() has been deprecated."
                                     " Use config_options and configure")
-                    conanfile.config()
-                conanfile.config_options()
+                    with conanfile_exception_formatter(str(conanfile), "config"):
+                        conanfile.config()
+                with conanfile_exception_formatter(str(conanfile), "config_options"):
+                    conanfile.config_options()
                 conanfile.options.propagate_upstream(down_options, down_ref, conanref, self._output)
                 if hasattr(conanfile, "config"):
-                    conanfile.config()
-                conanfile.configure()
+                    with conanfile_exception_formatter(str(conanfile), "config"):
+                        conanfile.config()
+
+                with conanfile_exception_formatter(str(conanfile), "configure"):
+                    conanfile.configure()
 
                 conanfile.settings.validate()  # All has to be ok!
                 conanfile.options.validate()
@@ -396,16 +402,18 @@ class DepsGraphBuilder(object):
                     else:
                         conanfile.requires = conanfile._original_requires.copy()
 
-                    conanfile.requirements()
+                    with conanfile_exception_formatter(str(conanfile), "requirements"):
+                        conanfile.requirements()
 
                 new_options = conanfile.options.deps_package_values
                 new_down_reqs = conanfile.requires.update(down_reqs, self._output, conanref, down_ref)
+        except ConanExceptionInUserConanfileMethod:
+            raise
         except ConanException as e:
             raise ConanException("%s: %s" % (conanref or "Conanfile", str(e)))
         except Exception as e:
-            msg = format_conanfile_exception(str(conanref or "Conanfile"),
-                                             "requirements, config, config_options or configure", e)
-            raise ConanException(msg)
+            raise ConanException(e)
+
         return new_down_reqs, new_options
 
     def _create_new_node(self, current_node, dep_graph, requirement, public_deps, name_req):
