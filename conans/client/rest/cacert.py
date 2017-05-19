@@ -5720,7 +5720,7 @@ lBlGGSW4gNfL1IYoakRwJiNiqZ+Gb7+6kHDSVneFeO/qJakXzlByjAA6quPbYzSf
 # Workaround to avoid pyinstaller statics hell.
 # request (at the end because openssl) needs a file with
 # certs, it can't be injected. Damned coupled code.
-dir_path = conan_expand_user("~/.conan")
-file_path = os.path.join(dir_path, "cacert.pem")
+dir_path = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
+file_path = os.path.join(dir_path, ".conan", "cacert.pem")
 if not os.path.exists(file_path):
     save(file_path, cacert)
