@@ -8,7 +8,7 @@ from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME, CONANFIL
 from conans.util.files import save, rmdir, mkdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
-from conans.errors import ConanException, conanfile_exception_formatter
+from conans.errors import ConanException, conanfile_exception_formatter, ConanExceptionInUserConanfileMethod
 from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
@@ -493,7 +493,7 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
             output.error("Package '%s' build failed" % conan_file.info.package_id())
             output.warn("Build folder %s" % build_folder)
             if isinstance(exc, ConanExceptionInUserConanfileMethod):
-                raise
+                raise exc
             raise ConanException(exc)
 
         finally:
