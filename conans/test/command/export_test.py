@@ -27,6 +27,20 @@ class TestConan(ConanFile):
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
 
+    def test_conanfile_case(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "*"
+"""
+        client.save({"Conanfile.py": conanfile})
+        error = client.run("export lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Wrong 'conanfile.py' case", client.user_io.out)
+
     def test_filename(self):
         client = TestClient()
         conanfile = """
