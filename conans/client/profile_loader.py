@@ -33,7 +33,7 @@ class ProfileLoader(object):
         return profile
 
     @staticmethod
-    def _get_includes(self, text):
+    def _get_includes(text):
         ret = []
         for line in text.splitlines():
             if not line:
@@ -47,11 +47,11 @@ class ProfileLoader(object):
         return ret
 
     @staticmethod
-    def get_vars(self, text):
+    def get_vars(text, cwd):
         vars = OrderedDict() # Order matters, if user declares F=1 and then FOO=12, and in profile MYVAR=$FOO, it will
                              # be replaced with F getting: MYVAR=1OO
 
-        vars["PROFILE_DIR"] = os.path.abspath(self._cwd)  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
+        vars["PROFILE_DIR"] = os.path.abspath(cwd)  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
         for line in text.splitlines():
             if not line:
                 continue
@@ -102,7 +102,7 @@ class ProfileLoader(object):
                                  "%s" % (self._profile_name, current_profiles))
 
         try:
-            return Profile._loads(text, os.path.dirname(profile_path), self._default_folder)
+            return self._loads(text, profile_path, self._default_folder)
         except ConanException as exc:
             raise ConanException("Error reading '%s' profile: %s" % (self._profile_name, exc))
 
@@ -114,7 +114,7 @@ class ProfileLoader(object):
         return text
 
     @staticmethod
-    def _loads(text, cwd, default_folder):
+    def _loads(text, profile_path, default_folder):
         """ Parse and return a Profile object from a text config like representation.
             cwd is needed to be able to load the includes
         """
@@ -132,8 +132,9 @@ class ProfileLoader(object):
 
         try:
             parent_profile = Profile()
-            for include in ProfileLoader.get_includes(text):
-                # Recursion
+            for include in ProfileLoader._get_includes(text):
+                # Recursion !!
+                cwd = os.path.dirname(os.path.abspath(profile_path))
                 loader = ProfileLoader(include, cwd, default_folder)
                 tmp = loader.read_file()
                 parent_profile.update(tmp)

@@ -7,6 +7,7 @@ from conans import __version__ as CLIENT_VERSION
 from conans.client.conan_api import (Conan, str_only_options, str_path_only_options,
                                      default_manifest_folder)
 from conans.client.output import Color
+
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
@@ -555,6 +556,7 @@ class Command(object):
         profile = args.profile if hasattr(args, 'profile') else None
 
         return self._conan.profile(args.subcommand, profile)
+
 
     def _show_help(self):
         """ prints a summary of all commands

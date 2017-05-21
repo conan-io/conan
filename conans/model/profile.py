@@ -68,6 +68,7 @@ class Profile(object):
         other.env_values.update(self.env_values)
         self.env_values = other.env_values
         self.options.update(other.options)
+        self.build_requires.update(other.build_requires)
 
     def update_settings(self, new_settings):
         '''Mix the specified settings with the current profile.
