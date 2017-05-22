@@ -5,6 +5,7 @@ from collections import OrderedDict
 from nose_parameterized import parameterized
 
 from conans.client.profile_loader import ProfileLoader
+from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -370,3 +371,93 @@ class DefaultNameConan(ConanFile):
         self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
         self.assertIn('''Requires:
         WinRequire/0.1@lasote/stable''', self.client.user_io.out)
+
+    def profile_vars_test(self):
+        tmp = temp_folder()
+        def get_profile(txt):
+            abs_profile_path = os.path.join(tmp, "Myprofile.txt")
+            save(abs_profile_path, txt)
+            return ProfileLoader.read_file(abs_profile_path, None, None)
+
+        txt = '''
+        MY_MAGIC_VAR=The owls are not
+
+        [env]
+        MYVAR=$MY_MAGIC_VAR what they seem.
+        '''
+        profile = get_profile(txt)
+        self.assertEquals("The owls are not what they seem.", profile.env_values.data[None]["MYVAR"])
+
+        # Order in replacement, variable names (simplification of preprocessor)
+        txt = '''
+                P=Diane, the coffee at the Great Northern
+                P2=is delicious
+
+                [env]
+                MYVAR=$P2
+                '''
+        profile = get_profile(txt)
+        self.assertEquals("Diane, the coffee at the Great Northern2", profile.env_values.data[None]["MYVAR"])
+
+        # Variables without spaces
+        txt = '''
+VARIABLE WITH SPACES=12
+[env]
+MYVAR=$VARIABLE WITH SPACES
+                        '''
+        with self.assertRaisesRegexp(ConanException, "The names of the variables cannot contain spaces"):
+            get_profile(txt)
+
+    def test_profiles_includes(self):
+
+        tmp = temp_folder()
+        def save_profile(txt, name):
+            abs_profile_path = os.path.join(tmp, name)
+            save(abs_profile_path, txt)
+
+
+        profile1 = """
+MYVAR=1
+[settings]
+os=Windows
+[options]
+zlib:aoption=1
+[env]
+MYVAR=$MYVAR
+"""
+        save_profile(profile1, "profile1.txt")
+
+        profile2 = """
+include(./profile1.txt)
+[settings]
+os=$MYVAR
+"""
+
+        save_profile(profile2, "profile2.txt")
+        profile3 = """
+OTHERVAR=34
+
+"""
+        save_profile(profile3, "profile3.txt")
+
+        profile4 = """
+        include(./profile2.txt)
+        include(./profile3.txt)
+
+        [env]
+        MYVAR=FromProfile3And$OTHERVAR
+
+        """
+
+        save_profile(profile4, "profile4.txt")
+
+        profile = ProfileLoader("./profile4.txt", tmp, None).read_file()
+
+        self.assertEquals("FromProfile3And34",
+                          profile.env_values.data[None]["MYVAR"])
+
+        # assert settings and so on
+
+
+
+        # TODO: Test different folders for includes, each relative to the previous one

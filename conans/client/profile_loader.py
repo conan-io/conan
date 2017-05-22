@@ -38,13 +38,23 @@ class ProfileLoader(object):
         for line in text.splitlines():
             if not line:
                 continue
-            if line.strip().startswith("#include "):
-                ret.append(line[line.find("#include "):].strip())
-                return vars
+            if line.strip().startswith("include("):
+                include = line.split("include(", 1)[1]
+                if not include.endswith(")"):
+                    raise ConanException("Invalid include statement")
+                include = include[:-1]
+                ret.append(include)
             else:
                 return ret
 
         return ret
+
+    @staticmethod
+    def get_clean_config_file(text):
+        """Without vars nor includes"""
+        if not "[" in text:
+            return ""
+        return "[" + text.split("[", 1)[1]
 
     @staticmethod
     def get_vars(text, cwd):
@@ -57,7 +67,7 @@ class ProfileLoader(object):
                 continue
             if line.strip().startswith("["):
                 return vars
-            elif line.strip().startswith("#include"):
+            elif line.strip().startswith("include("):
                 # includes, later
                 pass
             else:
@@ -109,7 +119,7 @@ class ProfileLoader(object):
     @staticmethod
     def _apply_variables(text, variables):
         for name, value in variables.items():
-            text = text.replace_all(name, value)
+            text = text.replace(name, value)
 
         return text
 
@@ -132,18 +142,21 @@ class ProfileLoader(object):
 
         try:
             parent_profile = Profile()
+            cwd = os.path.dirname(os.path.abspath(profile_path))
             for include in ProfileLoader._get_includes(text):
                 # Recursion !!
-                cwd = os.path.dirname(os.path.abspath(profile_path))
                 loader = ProfileLoader(include, cwd, default_folder)
                 tmp = loader.read_file()
                 parent_profile.update(tmp)
 
             # Replace the variables from parents
             text = ProfileLoader._apply_variables(text, parent_profile.vars)
+            inner_vars = ProfileLoader.get_vars(text, cwd)
 
             # Current profile before update with parents (but parent variables already applied)
             obj = Profile()
+            obj.vars = inner_vars
+            text = ProfileLoader.get_clean_config_file(text)
             doc = ConfigParser(text, allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
 
             for setting in doc.settings.splitlines():

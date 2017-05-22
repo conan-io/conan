@@ -612,6 +612,7 @@ class Command(object):
         except ConanException as exc:
             errors = True
 
+
         return errors
 
 
