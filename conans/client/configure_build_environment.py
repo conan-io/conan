@@ -139,7 +139,7 @@ class AutoToolsBuildEnvironment(object):
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
 
         """
-        configure_dir = configure_dir or "./"
+        configure_dir = configure_dir or "."
         auto_build, auto_host, auto_target = None, None, None
         if build is None or host is None or target is None:
             auto_build, auto_host, auto_target = self._get_host_build_target_flags(detected_architecture(),
@@ -160,7 +160,7 @@ class AutoToolsBuildEnvironment(object):
                 triplet_args.append("--target %s" % (target or auto_target))
 
         with environment_append(self.vars):
-            self._conanfile.run("%sconfigure %s %s" % (configure_dir, args_to_string(args), " ".join(triplet_args)))
+            self._conanfile.run("%s/configure %s %s" % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
     def make(self, args=""):
         with environment_append(self.vars):
