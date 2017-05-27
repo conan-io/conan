@@ -44,7 +44,7 @@ class FileCopier(object):
         report_copied_files(self._copied, output, warn)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
-                 excludes=None):
+                 excludes=None, ignore_case=False):
         """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -67,13 +67,14 @@ class FileCopier(object):
 
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
-        files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes)
+        files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
+                                                         ignore_case)
         self._link_folders(src, dst, link_folders)
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
         self._copied.extend(files_to_copy)
         return copied_files
 
-    def _filter_files(self, src, pattern, links, excludes=None):
+    def _filter_files(self, src, pattern, links, excludes, ignore_case):
 
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
@@ -104,6 +105,10 @@ class FileCopier(object):
             for f in files:
                 relative_name = os.path.normpath(os.path.join(relative_path, f))
                 filenames.append(relative_name)
+
+        if ignore_case:
+            filenames = [f.lower() for f in filenames]
+            pattern = pattern.lower()
 
         files_to_copy = fnmatch.filter(filenames, pattern)
         if excludes:

@@ -2,7 +2,6 @@ import unittest
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 import os
-from conans.client.importer import IMPORTS_MANIFESTS
 
 
 class ImportFoldersTest(unittest.TestCase):
@@ -33,14 +32,13 @@ class TestConan(ConanFile):
         conanfile = conanfile % "LibD" + "    requires='LibC/0.1@lasote/testing'"
         conanfile += """
     def imports(self):
-        self.copy("license*", dst="licenses", folder=True)
+        self.copy("license*", dst="licenses", folder=True, ignore_case=True)
         import os
         self.output.info("IMPORTED FOLDERS: %s " % sorted(os.listdir(self.imports_folder)))
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
         client.run("install --build=missing")
-        self.assertIn("IMPORTED FOLDERS: ['conanbuildinfo.txt', 'conanfile.py', "
-                      "'conanfile.pyc', 'conaninfo.txt', 'licenses']", client.user_io.out)
+        self.assertIn("IMPORTED FOLDERS: [", client.user_io.out)
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibA/LICENSE.txt")),
                          "LicenseA")
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibB/LICENSE.md")),

@@ -83,7 +83,7 @@ class _FileImporter(object):
         self._dst_folder = dst_folder
         self.copied_files = set()
 
-    def __call__(self, pattern, dst="", src="", root_package=None, folder=False):
+    def __call__(self, pattern, dst="", src="", root_package=None, folder=False, ignore_case=False):
         """ FileImporter is lazy, it just store requested copies, and execute them later
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -102,7 +102,7 @@ class _FileImporter(object):
         for name, matching_path in matching_paths.items():
             final_dst_path = os.path.join(real_dst_folder, name) if folder else real_dst_folder
             file_copier = FileCopier(matching_path, final_dst_path)
-            files = file_copier(pattern, src=src, links=True)
+            files = file_copier(pattern, src=src, links=True, ignore_case=ignore_case)
             self.copied_files.update(files)
 
     def _get_folders(self, pattern):
