@@ -1,7 +1,7 @@
 import os
 
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
-from conans.client.profile_loader import ProfileLoader
+from conans.client.profile_loader import read_conaninfo_profile
 from conans.errors import ConanException, NotFoundException
 from conans.model.build_info import DepsCppInfo
 from conans.model.conan_file import ConanFile
@@ -34,7 +34,7 @@ def _load_info_file(current_path, conanfile, output, error):
 
 def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, reference=None,
                             error=False):
-    profile = ProfileLoader.read_conaninfo(current_path)
+    profile = read_conaninfo_profile(current_path)
     loader = ConanFileLoader(runner, settings, profile)
     if conanfile_path.endswith(".py"):
         consumer = not reference

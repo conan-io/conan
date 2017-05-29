@@ -4,7 +4,7 @@ from collections import OrderedDict
 
 from nose_parameterized import parameterized
 
-from conans.client.profile_loader import ProfileLoader
+from conans.client.profile_loader import load_profile, read_profile
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.paths import CONANFILE
@@ -256,7 +256,7 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
     def test_empty_env(self):
-        profile = ProfileLoader._loads("[settings]", None, None)
+        profile = load_profile("[settings]", None, None)
         self.assertTrue(isinstance(profile.env_values, EnvValues))
 
     def test_package_test(self):
@@ -377,7 +377,7 @@ class DefaultNameConan(ConanFile):
         def get_profile(txt):
             abs_profile_path = os.path.join(tmp, "Myprofile.txt")
             save(abs_profile_path, txt)
-            return ProfileLoader.read_file(abs_profile_path, None, None)
+            return load_profile(abs_profile_path, None, None)
 
         txt = '''
         MY_MAGIC_VAR=The owls are not
@@ -423,7 +423,7 @@ os=Windows
 [options]
 zlib:aoption=1
 [env]
-MYVAR=$MYVAR
+package1:ENVY=$MYVAR
 """
         save_profile(profile1, "profile1.txt")
 
@@ -451,10 +451,16 @@ OTHERVAR=34
 
         save_profile(profile4, "profile4.txt")
 
-        profile = ProfileLoader("./profile4.txt", tmp, None).read_file()
+        profile, vars = read_profile("./profile4.txt", tmp, None)
 
         self.assertEquals("FromProfile3And34",
                           profile.env_values.data[None]["MYVAR"])
+
+        self.assertEquals("1",
+                          profile.env_values.data["package1"]["ENVY"])
+
+        self.assertEquals("FromProfile3And34",
+                          profile.settings)
 
         # assert settings and so on
 
