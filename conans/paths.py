@@ -169,6 +169,11 @@ class SimplePaths(object):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self.conan(conan_reference), EXPORT_FOLDER))
 
+    def export_sources(self, conan_reference, short_paths):
+        assert isinstance(conan_reference, ConanFileReference)
+        p = join(self.conan(conan_reference), EXPORT_FOLDER, EXPORT_SOURCES_DIR)
+        return self._shortener(p, short_paths)
+
     def source(self, conan_reference, short_paths=False):
         assert isinstance(conan_reference, ConanFileReference)
         p = normpath(join(self.conan(conan_reference), SRC_FOLDER))

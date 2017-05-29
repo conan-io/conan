@@ -45,7 +45,10 @@ class ConanUploader(object):
         if not force:
             self._check_recipe_date(conan_ref)
         self._user_io.out.info("Uploading %s" % str(conan_ref))
-        self._remote_proxy.upload_recipe(conan_ref, retry, retry_wait, skip_upload)
+        conanfile_path = self._paths.conanfile(conan_ref)
+        conanfile = load_conanfile_class(conanfile_path)
+        self._remote_proxy.upload_recipe(conan_ref, conanfile.short_paths, retry, retry_wait,
+                                         skip_upload)
         if all_packages:
             self.check_reference(conan_ref)
 

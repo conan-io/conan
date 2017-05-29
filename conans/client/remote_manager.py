@@ -157,7 +157,7 @@ class RemoteManager(object):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
-    def get_recipe_sources(self, conan_reference, export_folder, remote):
+    def get_recipe_sources(self, conan_reference, export_folder, sources_folder, remote):
         t1 = time.time()
 
         def filter_function(urls):
@@ -173,7 +173,6 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_sources_download(conan_reference, duration, remote, zipped_files)
 
-        sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
         if not zipped_files:
             mkdir(sources_folder)  # create the folder even if no source files
             return
