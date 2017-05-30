@@ -132,8 +132,7 @@ class ConanFileLoader(object):
         conanfile.options.initialize_upstream(self._user_options)
 
         # imports method
-        conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
-                                                               parser.import_parameters)
+        conanfile.imports = parser.imports_method(conanfile)
         conanfile.scope = self._scopes.package_scope()
         conanfile._env_values.update(self._env_values)
         return conanfile

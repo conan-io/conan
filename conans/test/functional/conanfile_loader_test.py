@@ -8,9 +8,9 @@ from conans.model.options import OptionsValues
 from mock import Mock
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
-from conans.model.scope import Scopes
 from conans.model.profile import Profile
 from collections import OrderedDict
+from mock.mock import call
 
 
 class ConanLoaderTest(unittest.TestCase):
@@ -42,6 +42,14 @@ OpenCV/2.4.10@phil/stable # My requirement for CV
         file_content = '{hello}'
         with self.assertRaisesRegexp(ConanException, "Unexpected line"):
             ConanFileTextLoader(file_content)
+
+        file_content = '[imports]\nhello'
+        with self.assertRaisesRegexp(ConanException, "Invalid imports line: hello"):
+            ConanFileTextLoader(file_content).imports_method(None)
+
+        file_content = '[imports]\nbin, * -> bin @ kk=3 '
+        with self.assertRaisesRegexp(ConanException, "Unknown argument kk"):
+            ConanFileTextLoader(file_content).imports_method(None)
 
     def plain_text_parser_test(self):
         # Valid content
@@ -125,6 +133,28 @@ OpenCV/bin/* - ./bin
         loader = ConanFileLoader(None, Settings(), Profile())
         with self.assertRaisesRegexp(ConanException, "is too long. Valid names must contain"):
             loader.load_conan_txt(file_path, None)
+
+    def load_imports_arguments_test(self):
+        file_content = '''
+[imports]
+OpenCV/bin, * -> ./bin # I need this binaries
+OpenCV/lib, * -> ./lib @ root_package=Pkg
+OpenCV/data, * -> ./data @ root_package=Pkg, folder=True # Irrelevant
+docs, * -> ./docs @ root_package=Pkg, folder=True, ignore_case=True, excludes="a b c" # Other
+'''
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "file.txt")
+        save(file_path, file_content)
+        loader = ConanFileLoader(None, Settings(), Profile())
+        ret = loader.load_conan_txt(file_path, None)
+
+        ret.copy = Mock()
+        ret.imports()
+        expected = [call(u'*', u'./bin', u'OpenCV/bin', None, False, False, None),
+                    call(u'*', u'./lib', u'OpenCV/lib', u'Pkg', False, False, None),
+                    call(u'*', u'./data', u'OpenCV/data', u'Pkg', True, False, None),
+                    call(u'*', u'./docs', u'docs', u'Pkg', True, True, [u'"a', u'b', u'c"'])]
+        self.assertEqual(ret.copy.call_args_list, expected)
 
     def test_package_settings(self):
         # CREATE A CONANFILE TO LOAD

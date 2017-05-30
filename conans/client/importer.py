@@ -83,8 +83,9 @@ class _FileImporter(object):
         self._dst_folder = dst_folder
         self.copied_files = set()
 
-    def __call__(self, pattern, dst="", src="", root_package=None, folder=False, ignore_case=False):
-        """ FileImporter is lazy, it just store requested copies, and execute them later
+    def __call__(self, pattern, dst="", src="", root_package=None, folder=False,
+                 ignore_case=False, excludes=None):
+        """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
                    the files will be copied. Eg: "bin"
@@ -102,19 +103,15 @@ class _FileImporter(object):
         for name, matching_path in matching_paths.items():
             final_dst_path = os.path.join(real_dst_folder, name) if folder else real_dst_folder
             file_copier = FileCopier(matching_path, final_dst_path)
-            files = file_copier(pattern, src=src, links=True, ignore_case=ignore_case)
+            files = file_copier(pattern, src=src, links=True, ignore_case=ignore_case,
+                                excludes=excludes)
             self.copied_files.update(files)
 
     def _get_folders(self, pattern):
         """ given the current deps graph, compute a dict {name: store-path} of
         each dependency
         """
-        package_folders = {}
         if not pattern:
-            for name, deps_info in self._conanfile.deps_cpp_info.dependencies:
-                package_folders[name] = deps_info.rootpath
-        else:
-            for name, deps_info in self._conanfile.deps_cpp_info.dependencies:
-                if fnmatch.fnmatch(name, pattern):
-                    package_folders[name] = deps_info.rootpath
-        return package_folders
+            return {pkg: deps.rootpath for pkg, deps in self._conanfile.deps_cpp_info.dependencies}
+        return {pkg: deps.rootpath for pkg, deps in self._conanfile.deps_cpp_info.dependencies
+                if fnmatch.fnmatch(pkg, pattern)}
