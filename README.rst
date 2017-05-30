@@ -163,6 +163,16 @@ A few minutes later it should print ``OK``:
 
     OK
 
+To run specific tests, you can specify the test name too, something like:
+
+::
+
+    $ nosetests conans.test.integration.flat_requirements_test --nocapture
+
+
+The ``--nocapture`` argument can be useful to see some output that otherwise is captured by nosetests.
+
+
 Create a launcher
 ~~~~~~~~~~~~~~~~~
 
