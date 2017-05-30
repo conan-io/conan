@@ -8,14 +8,13 @@ from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE,\
-    CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_DIR
+    CONAN_MANIFEST, CONANINFO
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 
 
-
-conaninfo ='''
+conaninfo = '''
 [settings]
     arch=x64
     os=Windows
@@ -28,6 +27,7 @@ conaninfo ='''
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@fenix/testing:33333
 '''
+
 
 class RemoveTest(unittest.TestCase):
 
@@ -64,7 +64,7 @@ class RemoveTest(unittest.TestCase):
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i)
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
 
-            exports_sources_dir = os.path.join(client.client_cache.export(ref), EXPORT_SOURCES_DIR)
+            exports_sources_dir = client.client_cache.export_sources(ref)
             os.makedirs(exports_sources_dir)
 
         client.save(files, client.client_cache.store)

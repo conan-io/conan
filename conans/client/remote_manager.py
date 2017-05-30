@@ -9,7 +9,7 @@ from requests.exceptions import ConnectionError
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
-    rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR
+    rm_conandir, EXPORT_SOURCES_TGZ_NAME
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch
@@ -33,10 +33,12 @@ class RemoteManager(object):
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
         files, symlinks = gather_files(export_folder)
-
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
-        the_files = compress_recipe_files(files, symlinks, export_folder, self._output)
+        export_src_folder = self._client_cache.export_sources(conan_reference)
+        src_files, src_symlinks = gather_files(export_src_folder)
+        the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
+                                           self._output)
         if skip_upload:
             return None
 
@@ -238,7 +240,7 @@ class RemoteManager(object):
             raise ConanException(exc)
 
 
-def compress_recipe_files(files, symlinks, dest_folder, output):
+def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder, output):
     # This is the minimum recipe
     result = {CONANFILE: files.pop(CONANFILE),
               CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
@@ -246,23 +248,17 @@ def compress_recipe_files(files, symlinks, dest_folder, output):
     export_tgz_path = files.pop(EXPORT_TGZ_NAME, None)
     sources_tgz_path = files.pop(EXPORT_SOURCES_TGZ_NAME, None)
 
-    def add_tgz(tgz_name, tgz_path, msg):
+    def add_tgz(tgz_name, tgz_path, tgz_files, tgz_symlinks, msg):
         if tgz_path:
             result[tgz_name] = tgz_path
-        else:
-            if tgz_name == EXPORT_TGZ_NAME:
-                tgz_files = {f: path for f, path in files.items()
-                             if not f.startswith(EXPORT_SOURCES_DIR)}
-            else:
-                tgz_files = {f: path for f, path in files.items()
-                             if f.startswith(EXPORT_SOURCES_DIR)}
-            if tgz_files:
-                output.rewrite_line(msg)
-                tgz_path = compress_files(tgz_files, symlinks, tgz_name, dest_folder)
-                result[tgz_name] = tgz_path
+        elif tgz_files:
+            output.rewrite_line(msg)
+            tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder)
+            result[tgz_name] = tgz_path
 
-    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, "Compressing recipe...")
-    add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, "Compressing recipe sources...")
+    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing recipe...")
+    add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, src_files, src_symlinks,
+            "Compressing recipe sources...")
 
     return result
 

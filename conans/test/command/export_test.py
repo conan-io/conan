@@ -1,6 +1,6 @@
 import unittest
 import os
-from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_DIR
+from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.util.files import save, load
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -66,11 +66,11 @@ class TestConan(ConanFile):
         client.run("export lasote/stable")
         conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
         export_path = client.paths.export(conan_ref)
+        exports_sources_path = client.paths.export_sources(conan_ref)
         self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
         self.assertFalse(os.path.exists(os.path.join(export_path, "file1.txt")))
-        self.assertTrue(os.path.exists(os.path.join(export_path, EXPORT_SOURCES_DIR, "file.cpp")))
-        self.assertFalse(os.path.exists(os.path.join(export_path, EXPORT_SOURCES_DIR,
-                                                     "file_temp.cpp")))
+        self.assertTrue(os.path.exists(os.path.join(exports_sources_path, "file.cpp")))
+        self.assertFalse(os.path.exists(os.path.join(exports_sources_path, "file_temp.cpp")))
 
     def test_exclude_folders(self):
         client = TestClient()
@@ -146,7 +146,7 @@ class OpenSSLConan(ConanFile):
         self.conan.run("export lasote/stable")
         reg_path = self.conan.paths.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         [EXPORT_SOURCES_DIR, CONANFILE, CONAN_MANIFEST])
+                         [CONANFILE, CONAN_MANIFEST])
 
         content = """
 from conans import ConanFile
@@ -160,7 +160,7 @@ class OpenSSLConan(ConanFile):
         self.conan.run("export lasote/stable")
         reg_path = self.conan.paths.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         [EXPORT_SOURCES_DIR, 'CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
+                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
                           'helloHello0.h'])
 
         # Now exports being a list instead a tuple
@@ -176,8 +176,7 @@ class OpenSSLConan(ConanFile):
         self.conan.run("export lasote/stable")
         reg_path = self.conan.paths.export(ConanFileReference.loads('openssl/2.0.1@lasote/stable'))
         self.assertEqual(sorted(os.listdir(reg_path)),
-                         [EXPORT_SOURCES_DIR, 'CMakeLists.txt', CONANFILE, CONAN_MANIFEST,
-                          'helloHello0.h'])
+                         ['CMakeLists.txt', CONANFILE, CONAN_MANIFEST, 'helloHello0.h'])
 
     def test_export_the_same_code(self):
         file_list = self._create_packages_and_builds()

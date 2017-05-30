@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME, CONANFILE
+from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME
 from conans.util.files import save, rmdir, mkdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -219,7 +219,7 @@ class ConanInstaller(object):
                 # Assign to node the propagated info
                 self._propagate_info(conan_ref, conan_file, flat)
 
-                self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
+                self._remote_proxy.get_recipe_sources(conan_ref)
                 # Call the conanfile's build method
                 build_folder = self._build_conanfile(conan_ref, conan_file, package_ref,
                                                      package_folder, output)
@@ -344,10 +344,12 @@ class ConanInstaller(object):
         # build_id is not caching the build folder, so actually rebuild the package
         src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
         export_folder = self._client_cache.export(conan_ref)
+        export_source_folder = self._client_cache.export_sources(conan_ref)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
         with environment_append(conan_file.env):
-            self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
+            self._build_package(export_folder, export_source_folder, src_folder, build_folder,
+                                package_folder, conan_file, output)
         return build_folder
 
     def _package_conanfile(self, conan_ref, conan_file, package_reference, build_folder,
@@ -421,7 +423,8 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
             output.error("while executing system_requirements(): %s" % str(e))
             raise ConanException("Error in system requirements")
 
-    def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file, output):
+    def _build_package(self, export_folder, export_source_folder, src_folder, build_folder,
+                       package_folder, conan_file, output):
         """ builds the package, creating the corresponding build folder if necessary
         and copying there the contents from the src folder. The code is duplicated
         in every build, as some configure processes actually change the source
@@ -436,7 +439,7 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
                                  "Close any app using it, and retry" % str(e))
 
         output.info('Building your package in %s' % build_folder)
-        config_source(export_folder, src_folder, conan_file, output)
+        config_source(export_folder, export_source_folder, src_folder, conan_file, output)
         output.info('Copying sources to build folder')
 
         def check_max_path_len(src, files):
