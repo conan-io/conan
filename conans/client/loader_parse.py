@@ -111,6 +111,32 @@ class ConanFileTextLoader(object):
 
     @property
     def _import_parameters(self):
+        def _parse_args(param_string):
+            root_package, ignore_case, folder, excludes = None, False, False, None
+            params = param_string.split(",")
+            params = [p.split("=") for p in params]
+            for (var, value) in params:
+                var = var.strip()
+                value = value.strip()
+                if var == "root_package":
+                    root_package = value
+                elif var == "ignore_case":
+                    ignore_case = (value.lower() == "true")
+                elif var == "folder":
+                    folder = (value.lower() == "true")
+                elif var == "excludes":
+                    excludes = value.split()
+                else:
+                    raise Exception("Invalid imports. Unknown argument %s" % var)
+            return root_package, ignore_case, folder, excludes
+
+        def _parse_import(line):
+            pair = line.split("->")
+            source = pair[0].strip().split(',', 1)
+            dest = pair[1].strip()
+            src, pattern = source[0].strip(), source[1].strip()
+            return pattern, dest, src
+
         ret = []
         local_install_text = self._config_parser.imports
         for line in local_install_text.splitlines():
@@ -126,28 +152,13 @@ class ConanFileTextLoader(object):
                                                  "Import's paths can't begin with '/' or '..'"))
             try:
                 tokens = line.split("@", 1)
-                root_package, ignore_case, folder, excludes = None, False, False, None
                 if len(tokens) > 1:
                     line = tokens[0]
-                    params = tokens[1].split(",")
-                    params = [p.split("=") for p in params]
-                    for (var, value) in params:
-                        var = var.strip()
-                        value = value.strip()
-                        if var == "root_package":
-                            root_package = value
-                        elif var == "ignore_case":
-                            ignore_case = (value.lower() == "true")
-                        elif var == "folder":
-                            folder = (value.lower() == "true")
-                        elif var == "excludes":
-                            excludes = value.split()
-                        else:
-                            raise Exception("Invalid imports. Unknown argument %s" % var)
-                pair = line.split("->")
-                source = pair[0].strip().split(',', 1)
-                dest = pair[1].strip()
-                src, pattern = source[0].strip(), source[1].strip()
+                    params = tokens[1]
+                else:
+                    params = ""
+                root_package, ignore_case, folder, excludes = _parse_args(params)
+                pattern, dest, src = _parse_import(line)
                 ret.append((pattern, dest, src, root_package, folder, ignore_case, excludes))
             except Exception as e:
                 raise ConanException("%s\n%s" % (invalid_line_msg, str(e)))
