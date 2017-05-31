@@ -10,7 +10,7 @@ class UsernameTest(unittest.TestCase):
         Username("userwith-hypens")
         self.assertRaises(ConanException, Username, "")
         self.assertRaises(ConanException, Username, "a")
-        self.assertRaises(ConanException, Username, "A"*42)
+        self.assertRaises(ConanException, Username, "A"*52)
         Username("A"*30)
 
         self.assertRaises(ConanException, Username, "-A")
