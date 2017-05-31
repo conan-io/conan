@@ -1,7 +1,7 @@
 Conan
 =====
 
-A distributed, open source, package manager.
+A distributed, open source, package manager by JFrog.
 
 +------------------------+-------------------------+----------------------+-----------------------+
 | **master (linux/osx)** | **develop (linux/osx)** | **master (windows)** | **develop** (windows) |
