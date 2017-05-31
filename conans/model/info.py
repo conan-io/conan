@@ -289,7 +289,7 @@ class ConanInfo(object):
         def indent(text):
             if not text:
                 return ""
-            return '\n'.join("    " + line for line in text.splitlines())
+            return '\n'.join("" + line for line in text.splitlines())
         result = list()
 
         result.append("[settings]")

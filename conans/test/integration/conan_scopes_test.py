@@ -106,7 +106,7 @@ class HelloConan(ConanFile):
 
         client.run("install --build -sc other=True")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-        self.assertIn("[scope]    dev=True    other=True", "".join(conaninfo.splitlines()))
+        self.assertIn("[scope]dev=Trueother=True", "".join(conaninfo.splitlines()))
         self.assertIn("dev=True, other=True", client.user_io.out)
         self.assertNotIn("WARN: DEP DEV", client.user_io.out)
         self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
@@ -117,7 +117,7 @@ class HelloConan(ConanFile):
 
         client.run("install --build -sc Hello:dev=True")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-        self.assertIn("[scope]    dev=True    Hello:dev=True",
+        self.assertIn("[scope]dev=TrueHello:dev=True",
                       "".join(conaninfo.splitlines()))
         self.assertIn("WARN: DEP DEV", client.user_io.out)
         self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
@@ -128,7 +128,7 @@ class HelloConan(ConanFile):
 
         client.run("install --build -sc Hello:other=True")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-        self.assertIn("[scope]    dev=True    Hello:other=True",
+        self.assertIn("[scope]dev=TrueHello:other=True",
                       "".join(conaninfo.splitlines()))
         self.assertNotIn("WARN: DEP DEV", client.user_io.out)
         self.assertIn("WARN: DEP OTHER", client.user_io.out)
@@ -139,7 +139,7 @@ class HelloConan(ConanFile):
 
         client.run("install --build -sc Hello:other=False")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-        self.assertIn("[scope]    dev=True    Hello:other=False",
+        self.assertIn("[scope]dev=TrueHello:other=False",
                       "".join(conaninfo.splitlines()))
         self.assertNotIn("WARN: DEP DEV", client.user_io.out)
         self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
@@ -150,7 +150,7 @@ class HelloConan(ConanFile):
 
         client.run("build")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-        self.assertIn("[scope]    dev=True    Hello:other=False",
+        self.assertIn("[scope]dev=TrueHello:other=False",
                       "".join(conaninfo.splitlines()))
         self.assertNotIn("WARN: DEP DEV", client.user_io.out)
         self.assertNotIn("WARN: DEP OTHER", client.user_io.out)
@@ -207,7 +207,7 @@ class HelloConan(ConanFile):
 
         client.run("install --build -sc ALL:other=True")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-        self.assertIn("[scope]    dev=True    ALL:other=True",
+        self.assertIn("[scope]dev=TrueALL:other=True",
                       "".join(conaninfo.splitlines()))
         self.assertNotIn("WARN: DEP DEV", client.user_io.out)
         self.assertIn("WARN: DEP OTHER", client.user_io.out)
