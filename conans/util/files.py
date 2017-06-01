@@ -51,6 +51,10 @@ def sha1sum(file_path):
     return _generic_algorithm_sum(file_path, "sha1")
 
 
+def sha256sum(file_path):
+    return _generic_algorithm_sum(file_path, "sha256")
+
+
 def _generic_algorithm_sum(file_path, algorithm_name):
 
     with open(file_path, 'rb') as fh:
@@ -112,12 +116,10 @@ def _change_permissions(func, path, exc_info):
         os.chmod(path, stat.S_IWUSR)
         func(path)
     else:
-        raise Exception()
+        raise
 
 
 def rmdir(path):
-    '''Recursive rm of a directory. If dir not exists
-    only raise exception if raise_if_not_exist'''
     try:
         shutil.rmtree(path, onerror=_change_permissions)
     except OSError as err:
@@ -195,8 +197,8 @@ def gzopen_without_timestamps(name, mode="r", fileobj=None, compresslevel=None, 
 
 
 def tar_extract(fileobj, destination_dir):
-    '''Extract tar file controlling not absolute paths and fixing the routes
-    if the tar was zipped in windows'''
+    """Extract tar file controlling not absolute paths and fixing the routes
+    if the tar was zipped in windows"""
     def badpath(path, base):
         # joinpath will ignore base if path is absolute
         return not realpath(abspath(joinpath(base, path))).startswith(base)
@@ -213,23 +215,23 @@ def tar_extract(fileobj, destination_dir):
                 yield finfo
 
     the_tar = tarfile.open(fileobj=fileobj)
+    # NOTE: The errorlevel=2 has been removed because it was failing in Win10, it didn't allow to
+    # "could not change modification time", with time=0
+    # the_tar.errorlevel = 2  # raise exception if any error
     the_tar.extractall(path=destination_dir, members=safemembers(the_tar))
     the_tar.close()
 
 
-def list_folder_subdirs(basedir="", level=None):
+def list_folder_subdirs(basedir, level):
     ret = []
     for root, dirs, _ in os.walk(basedir):
         rel_path = os.path.relpath(root, basedir)
         if rel_path == ".":
             continue
         dir_split = rel_path.split(os.sep)
-        if level is not None:
-            if len(dir_split) == level:
-                ret.append("/".join(dir_split))
-                dirs[:] = []  # Stop iterate subdirs
-        else:
+        if len(dir_split) == level:
             ret.append("/".join(dir_split))
+            dirs[:] = []  # Stop iterate subdirs
     return ret
 
 

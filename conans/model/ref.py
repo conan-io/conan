@@ -5,7 +5,7 @@ from conans.model.version import Version
 
 
 class ConanName(object):
-    _max_chars = 40
+    _max_chars = 50
     _min_chars = 2
     _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
                                      % (_min_chars - 1, _max_chars))

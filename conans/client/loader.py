@@ -13,7 +13,7 @@ from conans.model.profile import Profile
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
 
 
-def _load_info_file(current_path, conanfile, output, error=False):
+def _load_info_file(current_path, conanfile, output, error):
     if not current_path:
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
@@ -41,7 +41,8 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
         conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
     else:
         conanfile = loader.load_conan_txt(conanfile_path, output)
-    _load_info_file(current_path, conanfile, output, error)
+    if error is not None:
+        _load_info_file(current_path, conanfile, output, error)
     return conanfile
 
 

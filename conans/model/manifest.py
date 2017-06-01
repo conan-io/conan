@@ -13,9 +13,14 @@ def discarded_file(filename):
 
 def gather_files(folder):
     file_dict = {}
-
+    symlinks = {}
     for root, dirs, files in os.walk(folder):
         dirs[:] = [d for d in dirs if d != "__pycache__"]  # Avoid recursing pycache
+        for d in dirs:
+            abs_path = os.path.join(root, d)
+            if os.path.islink(abs_path):
+                rel_path = abs_path[len(folder) + 1:].replace("\\", "/")
+                symlinks[rel_path] = os.readlink(abs_path)
         for f in files:
             if discarded_file(f):
                 continue
@@ -28,7 +33,7 @@ def gather_files(folder):
                                      "you are packaging the needed destination files: '%s'"
                                      % abs_path)
 
-    return file_dict
+    return file_dict, symlinks
 
 
 class FileTreeManifest(object):
@@ -78,7 +83,7 @@ class FileTreeManifest(object):
         """ Walks a folder and create a FileTreeManifest for it, reading file contents
         from disk, and capturing current time
         """
-        files = gather_files(folder)
+        files, _ = gather_files(folder)
         for f in (PACKAGE_TGZ_NAME, EXPORT_TGZ_NAME, CONAN_MANIFEST, EXPORT_SOURCES_TGZ_NAME):
             files.pop(f, None)
 

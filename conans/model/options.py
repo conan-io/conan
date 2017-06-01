@@ -239,7 +239,7 @@ class OptionsValues(object):
             line = line.strip()
             if not line:
                 continue
-            name, value = line.split("=")
+            name, value = line.split("=", 1)
             result.append((name.strip(), value.strip()))
         return OptionsValues(result)
 

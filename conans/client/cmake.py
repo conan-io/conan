@@ -34,11 +34,6 @@ def _get_env_cmake_system_name():
     return {"False": False, "True": True, "": None}.get(env_system_name, env_system_name)
 
 
-def _get_env_cmake_system_name():
-    env_system_name = get_env("CONAN_CMAKE_SYSTEM_NAME", "")
-    return {"False": False, "True": True, "": None}.get(env_system_name, env_system_name)
-
-
 class CMake(object):
 
     def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True, parallel=True):
@@ -79,7 +74,6 @@ class CMake(object):
             self._cmake_system_name = cmake_system_name
         self.parallel = parallel
         self.definitions = self._get_cmake_definitions()
-
 
     @property
     def flags(self):
@@ -218,7 +212,6 @@ class CMake(object):
             return {'CMAKE_BUILD_TYPE': self._build_type}
         return {}
 
-
     @property
     def runtime(self):
         return self._defs_to_string(self._runtime_definition())
@@ -290,8 +283,8 @@ class CMake(object):
             raise ConanException(deprecated_conanfile_param_message)
         args = args or []
         defs = defs or {}
-        source_dir = source_dir or self._conanfile.conanfile_directory
-        self.build_dir = build_dir or self.build_dir or self._conanfile.conanfile_directory
+        source_dir = source_dir or self._conanfile.source_folder
+        self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
         mkdir(self.build_dir)
         arg_list = _join_arguments([
@@ -319,7 +312,7 @@ class CMake(object):
         if isinstance(args, ConanFile):
             raise ConanException(deprecated_conanfile_param_message)
         args = args or []
-        build_dir = build_dir or self.build_dir or self._conanfile.conanfile_directory
+        build_dir = build_dir or self.build_dir or self._conanfile.build_folder
         if target is not None:
             args = ["--target", target] + args
 

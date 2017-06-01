@@ -67,14 +67,16 @@ class HelloReuseConan(ConanFile):
     def test_local_commands(self):
         error = self.client.run("install", ignore_error=True)
         self.assertEqual(error, True)
-        self.assertIn("ERROR: Conanfile: CONAN_USERNAME environment variable not defined, "
-                      "but self.user is used in conanfile", self.client.user_io.out)
+        self.assertIn('''ERROR: Hello/0.1@PROJECT: Error in requirements() method, line 10
+	self.requires("Say/0.1@%s/%s" % (self.user, self.channel))
+	ConanException: CONAN_USERNAME environment variable not defined, but self.user is used in conanfile''', self.client.user_io.out)
 
         os.environ["CONAN_USERNAME"] = "lasote"
         error = self.client.run("install", ignore_error=True)
         self.assertEqual(error, True)
-        self.assertIn("ERROR: Conanfile: CONAN_CHANNEL environment variable not defined, "
-                      "but self.channel is used in conanfile", self.client.user_io.out)
+        self.assertIn("""ERROR: Hello/0.1@PROJECT: Error in requirements() method, line 10
+	self.requires("Say/0.1@%s/%s" % (self.user, self.channel))
+	ConanException: CONAN_CHANNEL environment variable not defined, but self.channel is used in conanfile""", self.client.user_io.out)
 
         os.environ["CONAN_CHANNEL"] = "stable"
         self.client.run("install")

@@ -5,10 +5,10 @@ import fnmatch
 import shutil
 
 from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME, CONANFILE
-from conans.util.files import save, rmdir
+from conans.util.files import save, rmdir, mkdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
-from conans.errors import ConanException, format_conanfile_exception
+from conans.errors import ConanException, conanfile_exception_formatter
 from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
@@ -41,10 +41,8 @@ def build_id(conanfile):
         build_id_info = conanfile.info.copy()
         conanfile.info_build = build_id_info
         # effectively call the user function to change the package values
-        try:
+        with conanfile_exception_formatter(str(conanfile), "build_id"):
             conanfile.build_id()
-        except Exception as e:
-            raise ConanException("Error in 'build_id()': %s" % str(e))
         # compute modified ID
         return build_id_info.package_id()
     return None
@@ -369,8 +367,13 @@ class ConanInstaller(object):
 
         os.chdir(build_folder)
 
+        if getattr(conan_file, 'no_copy_source', False):
+            source_folder = self._client_cache.source(package_reference.conan,
+                                                      conan_file.short_paths)
+        else:
+            source_folder = build_folder
         with environment_append(conan_file.env):
-            create_package(conan_file, build_folder, package_folder, output)
+            create_package(conan_file, source_folder, build_folder, package_folder, output, False)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
 
     def _raise_package_not_found_error(self, conan_ref, conan_file):
@@ -452,10 +455,17 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
                     output.warn("Filename too long, file excluded: %s" % dest_path)
             return filtered_files
 
-        shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
-        logger.debug("Copied to %s" % build_folder)
-        logger.debug("Files copied %s" % os.listdir(build_folder))
+        if getattr(conan_file, 'no_copy_source', False):
+            mkdir(build_folder)
+            conan_file.source_folder = src_folder
+        else:
+            shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
+            logger.debug("Copied to %s" % build_folder)
+            logger.debug("Files copied %s" % os.listdir(build_folder))
+            conan_file.source_folder = build_folder
+
         os.chdir(build_folder)
+        conan_file.build_folder = build_folder
         conan_file._conanfile_directory = build_folder
         # Read generators from conanfile and generate the needed files
         logger.debug("Writing generators")
@@ -470,20 +480,19 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
         try:
             # This is necessary because it is different for user projects
             # than for packages
-            conan_file._conanfile_directory = build_folder
             logger.debug("Call conanfile.build() with files in build folder: %s" % os.listdir(build_folder))
-            conan_file.build()
+            with conanfile_exception_formatter(str(conan_file), "build"):
+                conan_file.build()
 
             self._out.writeln("")
             output.success("Package '%s' built" % conan_file.info.package_id())
             output.info("Build folder %s" % build_folder)
-        except Exception as e:
+        except Exception as exc:
             os.chdir(src_folder)
             self._out.writeln("")
             output.error("Package '%s' build failed" % conan_file.info.package_id())
             output.warn("Build folder %s" % build_folder)
-            _show_partial_trace(output, CONANFILE)
-            raise ConanException("%s: %s" % (conan_file.name, str(e)))
+            raise exc
         finally:
             conan_file._conanfile_directory = export_folder
             # Now remove all files that were imported with imports()
@@ -497,23 +506,6 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
     def _package_info_conanfile(self, conan_ref, conan_file):
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
-        try:
+        with conanfile_exception_formatter(str(conan_file), "package_info"):
             conan_file.package_info()
-        except Exception as e:
-            msg = format_conanfile_exception(str(conan_ref), "package_info", e)
-            raise ConanException(msg)
 
-
-def _show_partial_trace(output, start_keyword):
-    try:
-        import traceback
-        traces = traceback.format_exc()
-        active = False
-        for trace in traces.splitlines():
-            if start_keyword in trace:
-                active = True
-            if active:
-                output.warn(trace)
-    except:
-        # Any error (encoding or whatever, just ignore it)
-        pass

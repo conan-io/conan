@@ -41,8 +41,8 @@ class RequireResolver(object):
             resolved = self._resolve_version(version_range, [ref])
             if not resolved:
                 self._output.werror("Version range '%s' required by '%s' not valid for "
-                                  "downstream requirement '%s'"
-                                  % (version_range, base_conanref, str(ref)))
+                                    "downstream requirement '%s'"
+                                    % (version_range, base_conanref, str(ref)))
             else:
                 self._output.success("Version range '%s' required by '%s' valid for "
                                      "downstream requirement '%s'"
@@ -63,7 +63,8 @@ class RequireResolver(object):
                                  % (version_range, base_conanref, str(resolved)))
             require.conan_reference = resolved
         else:
-            raise ConanException("The version in '%s' could not be resolved" % version_range)
+            raise ConanException(
+                "The version in '%s' from requirement '%s' could not be resolved" % (version_range, require))
 
     def _resolve_local(self, search_ref, version_range):
         if self._local_search:

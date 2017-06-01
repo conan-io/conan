@@ -5,6 +5,9 @@ from conans.client.require_resolver import RequireResolver
 from conans.client.deps_builder import DepsGraphBuilder
 import fnmatch
 import copy
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+from collections import OrderedDict
 
 
 def _apply_build_requires(deps_graph, conanfile):
@@ -17,6 +20,31 @@ def _apply_build_requires(deps_graph, conanfile):
 
         conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref.name)
         conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
+
+
+class _RecipeBuildRequires(OrderedDict):
+    def __init__(self, conanfile):
+        super(_RecipeBuildRequires, self).__init__()
+        build_requires = getattr(conanfile, "build_requires", [])
+        if not isinstance(build_requires, (list, tuple)):
+            build_requires = [build_requires]
+        for build_require in build_requires:
+            self.add(build_require)
+
+    def add(self, build_require):
+        if not isinstance(build_require, ConanFileReference):
+            build_require = ConanFileReference.loads(build_require)
+        self[build_require.name] = build_require
+
+    def __call__(self, build_require):
+        self.add(build_require)
+
+    def update(self, build_requires):
+        for build_require in build_requires:
+            self.add(build_require)
+
+    def __str__(self):
+        return ", ".join(str(r) for r in self.values())
 
 
 class BuildRequires(object):
@@ -32,21 +60,35 @@ class BuildRequires(object):
         self._build_requires = build_requires
         self._build_modes = build_modes
 
+    def _get_recipe_build_requires(self, conanfile):
+        conanfile.build_requires = _RecipeBuildRequires(conanfile)
+        if hasattr(conanfile, "build_requirements"):
+            try:
+                conanfile.build_requirements()
+            except Exception as e:
+                raise ConanException("Error in 'build_requirements()': %s" % str(e))
+        return conanfile.build_requires
+
     def install(self, reference, conanfile):
         str_ref = str(reference)
+        package_build_requires = self._get_recipe_build_requires(conanfile)
         for pattern, build_requires in self._build_requires.items():
             if ((not str_ref and pattern == "&") or
                     (str_ref and pattern == "&!") or
                     fnmatch.fnmatch(str_ref, pattern)):
-                self._output.info("%s: Build requires: [%s]"
-                                  % (str(reference), ", ".join(str(r) for r in build_requires)))
 
-                cached_graph = self._cached_graphs.get(pattern)
-                if not cached_graph:
-                    cached_graph = self._install(build_requires)
-                    self._cached_graphs[pattern] = cached_graph
+                package_build_requires.update(build_requires)
 
-                _apply_build_requires(cached_graph, conanfile)
+        if package_build_requires:
+            str_build_requires = str(package_build_requires)
+            self._output.info("%s: Build requires: [%s]" % (str(reference), str_build_requires))
+
+            cached_graph = self._cached_graphs.get(str_build_requires)
+            if not cached_graph:
+                cached_graph = self._install(package_build_requires.values())
+                self._cached_graphs[str_build_requires] = cached_graph
+
+            _apply_build_requires(cached_graph, conanfile)
 
     def _install(self, references):
         self._output.info("Installing build requires: [%s]"

@@ -314,7 +314,6 @@ build_type: [ Release]
         cmake.test()
         self.assertEqual('cmake --build %s' % CMakeTest.scape('. --target test'), conan_file.command)
 
-
     def test_clean_sh_path(self):
 
         if platform.system() != "Windows":
@@ -387,6 +386,7 @@ class ConanFileMock(ConanFile):
         self.command = None
         self.path = None
         self._conanfile_directory = "."
+        self.source_folder = self.build_folder = "."
         self.settings = None
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = namedtuple("output", "warn")(lambda x: x)
