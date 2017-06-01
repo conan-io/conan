@@ -47,8 +47,8 @@ class FileCopierTest(unittest.TestCase):
 
             for links in (False, True):
                 folder2 = temp_folder()
-                copier = FileCopier(folder1, folder2, links=links)
-                copier("*.txt", "texts")
+                copier = FileCopier(folder1, folder2)
+                copier("*.txt", "texts", links=links)
                 if links:
                     self.assertEqual(os.readlink(os.path.join(folder2, "texts/subdir2")), "subdir1")
                 self.assertEqual("Hello1", load(os.path.join(folder2, "texts/subdir1/file1.txt")))
