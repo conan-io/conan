@@ -35,7 +35,7 @@ class VisualStudioGenerator(Generator):
     item_template = '''
     <Conan-{name}-Root>{root_dir}</Conan-{name}-Root>'''
 
-    def _format_items(self, deps_cpp_info):
+    def _format_items(self):
         sections = []
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
             fields = {
@@ -52,18 +52,17 @@ class VisualStudioGenerator(Generator):
 
     @property
     def content(self):
-        per_item_props = self._format_items(self._deps_build_info)
+        per_item_props = self._format_items()
         fields = {
             'item_properties': per_item_props,
             'bin_dirs': "".join("%s;" % p for p in self._deps_build_info.bin_paths).replace("\\", "/"),
             'include_dirs': "".join("%s;" % p for p in self._deps_build_info.include_paths).replace("\\", "/"),
             'lib_dirs': "".join("%s;" % p for p in self._deps_build_info.lib_paths).replace("\\", "/"),
             'libs': "".join(['%s.lib;' % lib if not lib.endswith(".lib")
-                                  else '%s;' % lib for lib in self._deps_build_info.libs]),
+                             else '%s;' % lib for lib in self._deps_build_info.libs]),
             'definitions': "".join("%s;" % d for d in self._deps_build_info.defines),
             'compiler_flags': " ".join(self._deps_build_info.cppflags + self._deps_build_info.cflags),
             'linker_flags': " ".join(self._deps_build_info.sharedlinkflags),
             'exe_flags': " ".join(self._deps_build_info.exelinkflags)
         }
         return self.template.format(**fields)
-

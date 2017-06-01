@@ -113,7 +113,7 @@ OpenCV2:other_option=Cosa""")
 
         # Now something that fails
         file_content = '''[requires]
-OpenCV/2.4.104phil/stable <- use_python:True, other_option:False
+OpenCV/2.4.104phil/stable
 '''
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
@@ -123,7 +123,7 @@ OpenCV/2.4.104phil/stable <- use_python:True, other_option:False
             loader.load_conan_txt(file_path, None)
 
         file_content = '''[requires]
-OpenCV/2.4.10@phil/stable <- use_python:True, other_option:False
+OpenCV/2.4.10@phil/stable111111111111111111111111111111111111111111111111111111111111111
 [imports]
 OpenCV/bin/* - ./bin
 '''
