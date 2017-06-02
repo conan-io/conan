@@ -213,6 +213,7 @@ class SearchTest(unittest.TestCase):
         shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
         self.client.run("remove Hello* -f")
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
+        self.assertIn("outdated from recipe: False", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
