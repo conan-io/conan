@@ -4,7 +4,7 @@ import os
 import sys
 
 from conans import __version__ as CLIENT_VERSION
-from conans.client.conan_api import (Conan, get_conan_api, str_only_options, str_path_only_options,
+from conans.client.conan_api import (Conan, str_only_options, str_path_only_options,
                                      default_manifest_folder)
 from conans.client.output import Color
 from conans.errors import ConanException
@@ -643,7 +643,7 @@ def main(args):
     """ main entry point of the conan application, using a Command to
     parse parameters
     """
-    conan_api = get_conan_api()
+    conan_api = Conan.new()
     command = Command(conan_api)
     current_dir = os.getcwd()
     try:
