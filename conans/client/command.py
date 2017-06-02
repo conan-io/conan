@@ -643,7 +643,7 @@ def main(args):
     """ main entry point of the conan application, using a Command to
     parse parameters
     """
-    conan_api = Conan.new()
+    conan_api = Conan.factory()
     command = Command(conan_api)
     current_dir = os.getcwd()
     try:
