@@ -81,7 +81,7 @@ default_manifest_folder = '.conan_manifests'
 class ConanAPIV1(object):
 
     @staticmethod
-    def new():
+    def factory():
         """Factory"""
         def instance_remote_manager(client_cache):
             requester = requests.Session()
@@ -295,6 +295,7 @@ class ConanAPIV1(object):
             config_parser.set_item(key.strip(), value.strip())
         elif subcommand == "get":
             self._user_io.out.info(config_parser.get_item(item))
+            return config_parser.get_item(item)
         elif subcommand == "rm":
             config_parser.rm_item(item)
 
@@ -322,18 +323,18 @@ class ConanAPIV1(object):
 
         profile = profile_from_args(profile_name, settings, options, env, scope, self._cwd,
                                     self._client_cache.profiles_path)
-        self._manager.info(reference=reference,
-                           current_path=current_path,
-                           remote=remote,
-                           profile=profile,
-                           info=only,
-                           package_filter=package_filter,
-                           check_updates=update,
-                           filename=filename,
-                           build_order=build_order,
-                           build_modes=build,
-                           graph_filename=graph,
-                           show_paths=paths)
+        return self._manager.info(reference=reference,
+                                  current_path=current_path,
+                                  remote=remote,
+                                  profile=profile,
+                                  info=only,
+                                  package_filter=package_filter,
+                                  check_updates=update,
+                                  filename=filename,
+                                  build_order=build_order,
+                                  build_modes=build,
+                                  graph_filename=graph,
+                                  show_paths=paths)
 
     @api_method_decorator
     def build(self, path="", source_folder=None, filename=None):
