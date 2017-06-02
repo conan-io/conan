@@ -302,8 +302,7 @@ class ConanAPIV1(object):
     @api_method_decorator
     def info(self, reference, only=None, paths=False, remote=None, package_filter=None,
              settings=None, options=None, env=None, scope=None, build=None, profile_name=None,
-             update=False, filename=None,
-             build_order=None, graph=None):
+             update=False, filename=None, build_order=None, graph=None, json_output=None):
 
         current_path = os.getcwd()
         try:
@@ -334,7 +333,8 @@ class ConanAPIV1(object):
                                   build_order=build_order,
                                   build_modes=build,
                                   graph_filename=graph,
-                                  show_paths=paths)
+                                  show_paths=paths,
+                                  json_output=json_output)
 
     @api_method_decorator
     def build(self, path="", source_folder=None, filename=None):

@@ -214,6 +214,9 @@ class Command(object):
         parser.add_argument("--build_order", "-bo",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
+        parser.add_argument("--json", "-j",
+                            help='Only with --build_order option, return the information in a json file. e.j'
+                                 ' --json=/path/to/filename.json')
         parser.add_argument("--graph", "-g",
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
@@ -226,7 +229,8 @@ class Command(object):
         return self._conan.info(args.reference, only=args.only, paths=args.paths, remote=args.remote,
                                 package_filter=args.package_filter, settings=args.settings, options=args.options,
                                 env=args.env, scope=args.scope, build=args.build, profile_name=args.profile,
-                                update=args.update, filename=args.file, build_order=args.build_order, graph=args.graph)
+                                update=args.update, filename=args.file, build_order=args.build_order, graph=args.graph,
+                                json_output=args.json)
 
     def build(self, *args):
         """ Utility command to run your current project 'conanfile.py' build() method.

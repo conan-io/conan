@@ -1,3 +1,4 @@
+import json
 import os
 import time
 import shutil
@@ -169,7 +170,7 @@ class ConanManager(object):
     def info(self, reference, current_path, profile, remote=None,
              info=None, filename=None, check_updates=False,
              build_order=None, build_modes=None, graph_filename=None, package_filter=None,
-             show_paths=False):
+             show_paths=False, json_output=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param current_path: where the output files will be saved
@@ -177,7 +178,6 @@ class ConanManager(object):
         @param profile: Profile object with both the -s introduced options and profile readed values
         @param build_modes: List of build_modes specified
         @param filename: Optional filename of the conanfile
-
         """
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
@@ -190,8 +190,13 @@ class ConanManager(object):
 
         if build_order:
             result = deps_graph.build_order(build_order)
-            self._user_io.out.info(", ".join(str(s) for s in result))
-            return
+            msg = ", ".join(str(s) for s in result)
+            if not json_output:  # Path or false, so output the
+                self._user_io.out.info(msg)
+            else:
+                data = {"groups": [[str(ref) for ref in group] for group in result]}
+                save(json_output, json.dumps(data))
+            return result
 
         if build_modes is not None:
             installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, None)
