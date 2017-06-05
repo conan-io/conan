@@ -68,7 +68,8 @@ class FileCopier(object):
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
 
-        files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes)
+        files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
+                                                         ignore_case)
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
         self._link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
