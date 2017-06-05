@@ -1,6 +1,6 @@
 import os
 import shutil
-from errno import ENOENT, EEXIST, EACCES, ENOTEMPTY
+from errno import ENOENT, EEXIST
 import hashlib
 import sys
 from os.path import abspath, realpath, join as joinpath
@@ -9,7 +9,6 @@ import re
 import six
 from conans.util.log import logger
 import tarfile
-import time
 
 
 def decode_text(text):
@@ -50,6 +49,10 @@ def md5sum(file_path):
 
 def sha1sum(file_path):
     return _generic_algorithm_sum(file_path, "sha1")
+
+
+def sha256sum(file_path):
+    return _generic_algorithm_sum(file_path, "sha256")
 
 
 def _generic_algorithm_sum(file_path, algorithm_name):
@@ -116,29 +119,13 @@ def _change_permissions(func, path, exc_info):
         raise
 
 
-if platform.system() == "Windows":
-    def rmdir(path):
-        for _ in range(10):  # Max 2 seconds
-            try:
-                shutil.rmtree(path, onerror=_change_permissions)
-                return
-            except OSError as err:
-                if err.errno == ENOENT:
-                    return
-                if err.errno == ENOTEMPTY or err.errno == EACCES:
-                    # failed removal, try again, damn windows
-                    time.sleep(0.2)
-                else:
-                    raise
+def rmdir(path):
+    try:
+        shutil.rmtree(path, onerror=_change_permissions)
+    except OSError as err:
+        if err.errno == ENOENT:
+            return
         raise
-else:
-    def rmdir(path):
-        try:
-            shutil.rmtree(path, onerror=_change_permissions)
-        except OSError as err:
-            if err.errno == ENOENT:
-                return
-            raise
 
 
 def mkdir(path):

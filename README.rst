@@ -78,6 +78,13 @@ For running the client:
 
     $ sudo pip install -r conans/requirements.txt
 
+
+In OSX you should also install:
+
+::
+
+    $ sudo pip install -r conans/requirements_osx.txt
+
 Server:
 
 ::
@@ -85,16 +92,19 @@ Server:
     $ sudo apt-get install python-dev
     $ sudo pip install -r conans/requirements_server.txt
 
-Development:
+Development (for running the tests):
 
 ::
 
     $ sudo pip install -r conans/requirements_dev.txt
 
+
+If you are in Windows, using ``sudo`` is not required.
+
 Running the tests
 ~~~~~~~~~~~~~~~~~~
 
-Make sure that the Python requirements have been installed.
+Make sure that the Python requirements for testing have been installed, as explained above.
 
 Before you can run the tests, you need to set a few environment
 variables first.
@@ -108,7 +118,7 @@ On Windows it would be (while being in the conan root directory):
 
 ::
 
-    $ export PYTHONPATH=.
+    $ set PYTHONPATH=.
 
 Ensure that your ``cmake`` has version 2.8 or later. You can see the
 version with the following command:
@@ -162,6 +172,16 @@ A few minutes later it should print ``OK``:
     Ran 146 tests in 50.993s
 
     OK
+
+To run specific tests, you can specify the test name too, something like:
+
+::
+
+    $ nosetests conans.test.integration.flat_requirements_test --nocapture
+
+
+The ``--nocapture`` argument can be useful to see some output that otherwise is captured by nosetests.
+
 
 Create a launcher
 ~~~~~~~~~~~~~~~~~

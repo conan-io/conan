@@ -104,7 +104,7 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.user_io.out)
         self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
 
     def targets_own_flags_test(self):
         client = TestClient()
@@ -127,7 +127,7 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertIn("CmdCXXFlag", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 CmdCXXFlag", client.user_io.out)
         self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
 
     def transitive_targets_flags_test(self):
         client = TestClient()
@@ -153,9 +153,9 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
                       client.user_io.out)
         self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
         self.assertIn("CHAT_CXX_FLAGS=MyChatFlag1;MyChatFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
 
     def cmake_test_needed_settings(self):
         conanfile = """

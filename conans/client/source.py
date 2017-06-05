@@ -4,7 +4,8 @@ import shutil
 import six
 
 from conans import tools
-from conans.errors import ConanException, format_conanfile_exception
+from conans.errors import ConanException, conanfile_exception_formatter, \
+    ConanExceptionInUserConanfileMethod
 from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME,\
     CONANFILE
 from conans.util.files import rmdir, save
@@ -74,7 +75,8 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
         os.chdir(src_folder)
         try:
             with tools.environment_append(conan_file.env):
-                conan_file.source()
+                with conanfile_exception_formatter(str(conan_file), "source"):
+                    conan_file.source()
             os.remove(dirty)  # Everything went well, remove DIRTY flag
         except Exception as e:
             os.chdir(export_folder)
@@ -82,8 +84,9 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
             # and raise to interrupt any other processes (build, package)
             output.warn("Trying to remove dirty source folder")
             remove_source(raise_error=False)
-            msg = format_conanfile_exception(output.scope, "source", e)
-            raise ConanException(msg)
+            if isinstance(e, ConanExceptionInUserConanfileMethod):
+                raise e
+            raise ConanException(e)
 
 
 def config_source_local(current_path, conan_file, output):
@@ -94,9 +97,11 @@ def config_source_local(current_path, conan_file, output):
 
     save(dirty, "")  # Creation of DIRTY flag
     try:
-        with tools.environment_append(conan_file.env):
-            conan_file.source()
-        os.remove(dirty)  # Everything went well, remove DIRTY flag
+        with conanfile_exception_formatter(str(conan_file), "source"):
+            with tools.environment_append(conan_file.env):
+                conan_file.source()
+            os.remove(dirty)  # Everything went well, remove DIRTY flag
+    except ConanExceptionInUserConanfileMethod:
+        raise
     except Exception as e:
-        msg = format_conanfile_exception(output.scope, "source", e)
-        raise ConanException(msg)
+        raise ConanException(e)

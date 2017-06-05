@@ -85,7 +85,7 @@ class ConanManager(object):
         export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
                          filename)
 
-    def package_files(self, reference, package_folder, profile):
+    def package_files(self, reference, package_folder, profile, force):
         """ Bundle pre-existing binaries
         @param reference: ConanFileReference
         """
@@ -110,6 +110,12 @@ class ConanManager(object):
         pkg_id = conanfile.info.package_id()
         self._user_io.out.info("Packaging to %s" % pkg_id)
         dest_package_folder = os.path.join(packages_folder, pkg_id)
+        if os.path.exists(dest_package_folder):
+            if force:
+                shutil.rmtree(dest_package_folder)
+            else:
+                raise ConanException("Package already exists. "
+                                     "Please use --force, -f to overwrite it")
         shutil.copytree(package_folder, dest_package_folder)
         save(os.path.join(dest_package_folder, CONANINFO), conanfile.info.dumps())
         # Create the digest for the package
@@ -216,11 +222,7 @@ class ConanManager(object):
         if isinstance(reference, ConanFileReference):
             project_reference = None
         else:
-            if conanfile.name is not None and conanfile.version is not None:
-                project_reference = "%s/%s@" % (conanfile.name, conanfile.version)
-                project_reference += "PROJECT"
-            else:
-                project_reference = "PROJECT"
+            project_reference = str(conanfile)
 
         # Print results
         if graph_filename:

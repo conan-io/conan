@@ -230,6 +230,8 @@ class Command(object):
         parser.add_argument("--settings", "-s",
                             help='Settings for this package e.g., -s compiler=gcc',
                             nargs=1, action=Extender)
+        parser.add_argument('-f', '--force', default=False,
+                            action='store_true', help='Overwrite existing package if existing')
 
         args = parser.parse_args(*args)
         args.env = None
@@ -243,7 +245,7 @@ class Command(object):
 
         profile = profile_from_args(args, current_path, self._client_cache.profiles_path)
         self._manager.package_files(reference=reference, package_folder=package_folder,
-                                    profile=profile)
+                                    profile=profile, force=args.force)
 
     def install(self, *args):
         """Installs the requirements specified in a 'conanfile.py' or 'conanfile.txt'.

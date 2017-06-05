@@ -56,8 +56,7 @@ class {package_name}Conan(ConanFile):
         self.cpp_info.libs = self.collect_libs()
 """
 
-conanfile_sources = """from conans import ConanFile, CMake, tools
-import os
+conanfile_sources = """from conans import ConanFile, CMake
 
 
 class {package_name}Conan(ConanFile):
@@ -65,21 +64,21 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
+    description = "Description of {package_name}"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
     generators = "cmake"
-    exports_sources = "hello/*"
+    exports_sources = "src/*"
 
     def build(self):
         cmake = CMake(self)
-        shared = "-DBUILD_SHARED_LIBS=ON" if self.options.shared else ""
-        self.run('cmake hello %s %s' % (cmake.command_line, shared))
+        self.run('cmake %s/src %s' % (self.source_folder, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
-        self.copy("*.h", dst="include", src="hello")
-        self.copy("*hello.lib", dst="lib", keep_path=False)
+        self.copy("*.h", dst="include", src="src")
+        self.copy("*.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
         self.copy("*.dylib*", dst="lib", keep_path=False)
         self.copy("*.so", dst="lib", keep_path=False)
@@ -180,11 +179,15 @@ hello_cpp = """#include <iostream>
 #include "hello.h"
 
 void hello(){
-    std::cout << "Hello World!" <<std::endl;
+    #ifdef NDEBUG
+    std::cout << "Hello World Release!" <<std::endl;
+    #else
+    std::cout << "Hello World Debug!" <<std::endl;
+    #endif
 }
 """
 
-cmake = """PROJECT(MyHello CXX)
+cmake = """project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -230,9 +233,9 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
     elif exports_sources:
         files = {"conanfile.py": conanfile_sources.format(name=name, version=version,
                                                           package_name=package_name),
-                 "hello/hello.cpp": hello_cpp,
-                 "hello/hello.h": hello_h,
-                 "hello/CMakeLists.txt": cmake}
+                 "src/hello.cpp": hello_cpp,
+                 "src/hello.h": hello_h,
+                 "src/CMakeLists.txt": cmake}
     elif bare:
         files = {"conanfile.py": conanfile_bare.format(name=name, version=version,
                                                        package_name=package_name)}

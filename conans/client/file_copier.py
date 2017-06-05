@@ -44,7 +44,7 @@ class FileCopier(object):
         report_copied_files(self._copied, output, warn)
 
     def __call__(self, pattern, dst="", src="", keep_path=True, links=False, symlinks=None,
-                 excludes=None):
+                 excludes=None, ignore_case=False):
         """
         param pattern: an fnmatch file pattern of the files that should be copied. Eg. *.dll
         param dst: the destination local folder, wrt to current conanfile dir, to which
@@ -67,13 +67,16 @@ class FileCopier(object):
 
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
-        files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes)
-        self._link_folders(src, dst, link_folders)
+
+        files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
+                                                         ignore_case)
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
+        self._link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
         return copied_files
 
-    def _filter_files(self, src, pattern, links, excludes=None):
+    def _filter_files(self, src, pattern, links, excludes, ignore_case):
+
         """ return a list of the files matching the patterns
         The list will be relative path names wrt to the root src folder
         """
@@ -83,6 +86,7 @@ class FileCopier(object):
             if root in self._excluded:
                 subfolders[:] = []
                 continue
+
             if links and os.path.islink(root):
                 linked_folders.append(root)
                 subfolders[:] = []
@@ -103,12 +107,21 @@ class FileCopier(object):
                 relative_name = os.path.normpath(os.path.join(relative_path, f))
                 filenames.append(relative_name)
 
+        if ignore_case:
+            filenames = {f.lower(): f for f in filenames}
+            pattern = pattern.lower()
+
         files_to_copy = fnmatch.filter(filenames, pattern)
         if excludes:
             if not isinstance(excludes, (tuple, list)):
                 excludes = (excludes, )
+            if ignore_case:
+                excludes = [e.lower() for e in excludes]
             for exclude in excludes:
                 files_to_copy = [f for f in files_to_copy if not fnmatch.fnmatch(f, exclude)]
+
+        if ignore_case:
+            files_to_copy = [filenames[f] for f in files_to_copy]
 
         return files_to_copy, linked_folders
 
@@ -117,11 +130,13 @@ class FileCopier(object):
             relpath = os.path.relpath(f, src)
             link = os.readlink(f)
             abs_target = os.path.join(dst, relpath)
+            abs_link = os.path.join(dst, link)
             try:
                 os.remove(abs_target)
             except OSError:
                 pass
-            os.symlink(link, abs_target)
+            if os.path.exists(abs_link):
+                os.symlink(link, abs_target)
 
     @staticmethod
     def _copy_files(files, src, dst, keep_path, symlinks):

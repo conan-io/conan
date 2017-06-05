@@ -251,4 +251,10 @@ class ConanFile(object):
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
-        return 'Conanfile:%s/%s' % (self.name, self.version)
+        if self.name and self.version and self._channel and self._user:
+            return "%s/%s@%s/%s" % (self.name, self.version, self.user, self.channel)
+        elif self.name and self.version:
+            return "%s/%s@PROJECT" % (self.name, self.version)
+        else:
+            return "PROJECT"
+
