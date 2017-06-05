@@ -28,6 +28,9 @@ class VisualStudioGenerator(Generator):
       <AdditionalDependencies>{libs}%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>{linker_flags} %(AdditionalOptions)</AdditionalOptions>
     </Link>
+	<ResourceCompile>
+      <AdditionalIncludeDirectories>{res_dirs}%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>'''
@@ -58,6 +61,7 @@ class VisualStudioGenerator(Generator):
             'bin_dirs': "".join("%s;" % p for p in self._deps_build_info.bin_paths).replace("\\", "/"),
             'include_dirs': "".join("%s;" % p for p in self._deps_build_info.include_paths).replace("\\", "/"),
             'lib_dirs': "".join("%s;" % p for p in self._deps_build_info.lib_paths).replace("\\", "/"),
+			'res_dirs': "".join("%s;" % p for p in self._deps_build_info.res_paths).replace("\\", "/"),
             'libs': "".join(['%s.lib;' % lib if not lib.endswith(".lib")
                              else '%s;' % lib for lib in self._deps_build_info.libs]),
             'definitions': "".join("%s;" % d for d in self._deps_build_info.defines),
