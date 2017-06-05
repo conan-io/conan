@@ -68,8 +68,8 @@ class FileCopier(object):
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
         files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes)
-        self._link_folders(src, dst, link_folders)
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
+        self._link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
         return copied_files
 
@@ -119,11 +119,13 @@ class FileCopier(object):
             relpath = os.path.relpath(f, src)
             link = os.readlink(f)
             abs_target = os.path.join(dst, relpath)
+            abs_link = os.path.join(dst, link)
             try:
                 os.remove(abs_target)
             except OSError:
                 pass
-            os.symlink(link, abs_target)
+            if os.path.exists(abs_link):
+                os.symlink(link, abs_target)
 
     @staticmethod
     def _copy_files(files, src, dst, keep_path, symlinks):
