@@ -10,6 +10,7 @@ from conans.client.output import Color
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
+from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
 
 
@@ -190,7 +191,18 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-        return self._conan.config(args.subcommand, args.item)
+        if args.subcommand == "set":
+            try:
+                key, value = args.item.split("=", 1)
+            except:
+                msg = "Please specify key=value"
+                self._conan._user_io.out.error(msg)
+                raise ConanException(msg)
+            return self._conan.config_set(key, value)
+        elif args.subcommand == "get":
+            return self._conan.config_get(args.item)
+        elif args.subcommand == "rm":
+            return self._conan.config_rm(args.item)
 
     def info(self, *args):
         """Prints information about a package recipe's dependency graph.
@@ -497,12 +509,31 @@ class Command(object):
         args = parser.parse_args(*args)
 
         reference = args.reference if hasattr(args, 'reference') else None
-        verify_ssl = args.verify_ssl if hasattr(args, 'verify_ssl') else False
+        try:
+            verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
+        except ConanException as exc:
+            self._conan._user_io.out.error(exc.message)
+            raise
+
         remote = args.remote if hasattr(args, 'remote') else None
         url = args.url if hasattr(args, 'url') else None
 
-        return self._conan.remote(subcommand=args.subcommand, reference=reference, verify_ssl=verify_ssl,
-                                  remote=remote, url=url)
+        if args.subcommand == "list":
+            return self._conan.remote_list()
+        elif args.subcommand == "add":
+            return self._conan.remote_add(remote, url, verify_ssl)
+        elif args.subcommand == "remove":
+            return self._conan.remote_remove(remote)
+        elif args.subcommand == "update":
+            return self._conan.remote_update(remote, url, verify_ssl)
+        elif args.subcommand == "list_ref":
+            return self._conan.remote_list_ref()
+        elif args.subcommand == "add_ref":
+            return self._conan.remote_add_ref(reference, remote)
+        elif args.subcommand == "remove_ref":
+            return self._conan.remote_remove_ref(reference)
+        elif args.subcommand == "update_ref":
+            return self._conan.remote_update_ref(reference, remote)
 
     def profile(self, *args):
         """ List profiles in the '.conan/profiles' folder, or show profile details.

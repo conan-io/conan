@@ -39,7 +39,7 @@ from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
 
 
-def api_method_decorator(f):
+def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
         try:
@@ -142,14 +142,14 @@ class ConanAPIV1(object):
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
         self._cwd = cwd
 
-    @api_method_decorator
+    @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False):
         files = get_files(name, header=header, pure_c=pure_c, test=test, exports_sources=exports_sources, bare=bare)
         save_files(self._cwd , files)
         for f in sorted(files):
             self._user_io.out.success("File saved: %s" % f)
 
-    @api_method_decorator
+    @api_method
     def test_package(self, path=None, profile_name=None, settings=None, options=None, env=None, scope=None,
                      test_folder=None, not_export=False, build=None, keep_source=False,
                      verify=default_manifest_folder, manifests=default_manifest_folder,
@@ -228,11 +228,11 @@ class ConanAPIV1(object):
         self._manager.build(test_conanfile, test_folder, build_folder, test=True)
 
     # Alias to test
-    @api_method_decorator
+    @api_method
     def test(self, *args):
         self.test_package(*args)
 
-    @api_method_decorator
+    @api_method
     def package_files(self, reference, package_folder=None, profile_name=None,
                       force=False, settings=None, options=None):
 
@@ -245,7 +245,7 @@ class ConanAPIV1(object):
         self._manager.package_files(reference=reference, package_folder=package_folder,
                                     profile=profile, force=force)
 
-    @api_method_decorator
+    @api_method
     def install(self, reference="", package=None, settings=None, options=None, env=None, scope=None, all=False,
                 remote=None, werror=False, verify=default_manifest_folder, manifests=default_manifest_folder,
                 manifests_interactive=default_manifest_folder, build=None, profile_name=None,
@@ -284,22 +284,26 @@ class ConanAPIV1(object):
                                   generators=generator,
                                   no_imports=no_imports)
 
-    @api_method_decorator
-    def config(self, subcommand, item):
+    @api_method
+    def config_get(self, item):
         config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
-        if subcommand == "set":
-            try:
-                key, value = item.split("=", 1)
-            except:
-                raise ConanException("Please specify key=value")
-            config_parser.set_item(key.strip(), value.strip())
-        elif subcommand == "get":
-            self._user_io.out.info(config_parser.get_item(item))
-            return config_parser.get_item(item)
-        elif subcommand == "rm":
-            config_parser.rm_item(item)
+        self._user_io.out.info(config_parser.get_item(item))
+        return config_parser.get_item(item)
 
-    @api_method_decorator
+
+    @api_method
+    def config_set(self, item, value):
+        config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
+        config_parser.set_item(item, value)
+
+
+    @api_method
+    def config_rm(self, item):
+        config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
+        config_parser.rm_item(item)
+
+
+    @api_method
     def info(self, reference, only=None, paths=False, remote=None, package_filter=None,
              settings=None, options=None, env=None, scope=None, build=None, profile_name=None,
              update=False, filename=None,
@@ -336,7 +340,7 @@ class ConanAPIV1(object):
                                   graph_filename=graph,
                                   show_paths=paths)
 
-    @api_method_decorator
+    @api_method
     def build(self, path="", source_folder=None, filename=None):
 
         current_path = os.getcwd()
@@ -355,7 +359,7 @@ class ConanAPIV1(object):
         conanfile_path = os.path.join(root_path, filename or CONANFILE)
         self._manager.build(conanfile_path, source_folder, build_folder)
 
-    @api_method_decorator
+    @api_method
     def package(self, reference="", package=None, build_folder=None, source_folder=None):
 
         current_path = os.getcwd()
@@ -374,12 +378,12 @@ class ConanAPIV1(object):
             source_folder = source_folder or recipe_folder
             self._manager.local_package(package_folder, recipe_folder, build_folder, source_folder)
 
-    @api_method_decorator
+    @api_method
     def source(self, reference, force=False):
         current_path, reference = _get_reference(reference)
         self._manager.source(current_path, reference, force)
 
-    @api_method_decorator
+    @api_method
     def imports(self, reference, undo=False, dest=None, filename=None):
         if undo:
             if not os.path.isabs(reference):
@@ -391,12 +395,12 @@ class ConanAPIV1(object):
             current_path, reference = _get_reference(reference)
             self._manager.imports(current_path, reference, filename, dest)
 
-    @api_method_decorator
+    @api_method
     def export(self, user, path=None, keep_source=False, filename=None):
         current_path = os.path.abspath(path or os.getcwd())
         self._manager.export(user, current_path, keep_source, filename=filename)
 
-    @api_method_decorator
+    @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False, remote=None):
         reference = _check_query_parameter_and_get_reference(query, pattern)
 
@@ -409,7 +413,7 @@ class ConanAPIV1(object):
         self._manager.remove(reference or pattern, package_ids_filter=packages, build_ids=builds,
                              src=src, force=force, remote=remote, packages_query=query)
 
-    @api_method_decorator
+    @api_method
     def copy(self, reference="", user_channel="", force=False, all=False, package=None):
         reference = ConanFileReference.loads(reference)
         new_ref = ConanFileReference.loads("%s/%s@%s" % (reference.name,
@@ -419,7 +423,7 @@ class ConanAPIV1(object):
             package = []
         self._manager.copy(reference, package, new_ref.user, new_ref.channel, force)
 
-    @api_method_decorator
+    @api_method
     def user(self, name=None, clean=False, remote=None, password=None):
         if clean:
             localdb = LocalDB(self._client_cache.localdb)
@@ -428,7 +432,7 @@ class ConanAPIV1(object):
             return
         self._manager.user(remote, name, password)
 
-    @api_method_decorator
+    @api_method
     def search(self, pattern, query=None, remote=None, case_sensitive=False):
         reference = _check_query_parameter_and_get_reference(query, pattern)
 
@@ -437,7 +441,7 @@ class ConanAPIV1(object):
                              ignorecase=not case_sensitive,
                              packages_query=query)
 
-    @api_method_decorator
+    @api_method
     def upload(self, pattern, package=None, remote=None, all=False, force=False, confirm=False, retry=2, retry_wait=5,
                skip_upload=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
@@ -450,7 +454,7 @@ class ConanAPIV1(object):
                              force=force, confirm=confirm, retry=retry,
                              retry_wait=retry_wait, skip_upload=skip_upload)
 
-    @api_method_decorator
+    @api_method
     def remote(self, subcommand, reference=None, verify_ssl=False, remote=None, url=None):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         if subcommand == "list":
@@ -474,7 +478,49 @@ class ConanAPIV1(object):
         elif subcommand == "update_ref":
             registry.update_ref(reference, remote)
 
-    @api_method_decorator
+    @api_method
+    def remote_list(self):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        for r in registry.remotes:
+            self._user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+
+    @api_method
+    def remote_add(self, remote, url, verify_ssl=True):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        return registry.add(remote, url, verify_ssl)
+
+    @api_method
+    def remote_remove(self, remote):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        return registry.remove(remote)
+
+    @api_method
+    def remote_update(self, remote, url, verify_ssl=True):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        return registry.update(remote, url, verify_ssl)
+
+    @api_method
+    def remote_list_ref(self):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        for ref, remote in registry.refs.items():
+            self._user_io.out.info("%s: %s" % (ref, remote))
+
+    @api_method
+    def remote_add_ref(self, reference, remote):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        return registry.add_ref(reference, remote)
+
+    @api_method
+    def remote_remove_ref(self, reference):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        return registry.remove_ref(reference)
+
+    @api_method
+    def remote_update_ref(self, reference, remote):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        return registry.update_ref(reference, remote)
+
+    @api_method
     def profile(self, subcommand, profile=None):
         if subcommand == "list":
             folder = self._client_cache.profiles_path
