@@ -65,7 +65,11 @@ class ConanManager(object):
             user_name, channel = user, "testing"
 
         src_folder = conan_file_path
-        conan_file_path = os.path.join(conan_file_path, filename or CONANFILE)
+        conanfile_name = filename or CONANFILE
+        conan_file_path = os.path.join(conan_file_path, conanfile_name)
+        if ((os.path.exists(conan_file_path) and conanfile_name not in os.listdir(src_folder)) or
+                (conanfile_name != "conanfile.py" and conanfile_name.lower() == "conanfile.py")):
+            raise ConanException("Wrong '%s' case" % conanfile_name)
         conan_linter(conan_file_path, self._user_io.out)
         conanfile = load_export_conanfile(conan_file_path, self._user_io.out)
         conan_ref = ConanFileReference(conanfile.name, conanfile.version, user_name, channel)

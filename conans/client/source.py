@@ -9,7 +9,6 @@ from conans.errors import ConanException, conanfile_exception_formatter, \
 from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME,\
     CONANFILE
 from conans.util.files import rmdir, save
-from conans.client.export import execute_export
 
 
 def _merge_directories(src, dst):
