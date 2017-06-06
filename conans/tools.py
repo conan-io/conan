@@ -294,6 +294,25 @@ def get(url):
     os.unlink(filename)
 
 
+def ftp_download(ip, filename, login='', password=''):
+    import ftplib
+    try:
+        ftp = ftplib.FTP(ip, login, password)
+        ftp.login()
+        filepath, filename = os.path.split(filename)
+        if filepath:
+            ftp.cwd(filepath)
+        with open(filename, 'wb') as f:
+            ftp.retrbinary('RETR ' + filename, f.write)
+    except Exception as e:
+        raise ConanException("Error in FTP download from %s\n%s" % (ip, str(e)))
+    finally:
+        try:
+            ftp.quit()
+        except:
+            pass
+
+
 def download(url, filename, verify=True, out=None, retry=2, retry_wait=5):
     out = out or ConanOutput(sys.stdout, True)
     if verify:
