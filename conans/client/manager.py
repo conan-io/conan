@@ -498,10 +498,15 @@ class ConanManager(object):
         if isinstance(pattern_or_reference, ConanFileReference):
             packages_props = adapter.search_packages(pattern_or_reference, packages_query)
             ordered_packages = OrderedDict(sorted(packages_props.items()))
-            try:
-                recipe_hash = self._client_cache.load_manifest(pattern_or_reference).summary_hash
-            except IOError:  # It could not exist in local
-                recipe_hash = None
+            if remote:
+                remote = remote_proxy.registry.remote(remote)
+                manifest = self._remote_manager.get_conan_digest(pattern_or_reference, remote)
+                recipe_hash = manifest.summary_hash
+            else:
+                try:
+                    recipe_hash = self._client_cache.load_manifest(pattern_or_reference).summary_hash
+                except IOError:  # It could not exist in local
+                    recipe_hash = None
             printer.print_search_packages(ordered_packages, pattern_or_reference,
                                           recipe_hash, packages_query)
         else:
