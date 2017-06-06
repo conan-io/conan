@@ -1,5 +1,6 @@
 from conans.errors import ConanException
 import re
+from conans.model.ref import ConanName, ConanFileReference
 
 
 conanfile = """from conans import ConanFile, CMake, tools
@@ -219,6 +220,9 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
     except:
         raise ConanException("Bad parameter, please use full package name,"
                              "e.g: MyLib/1.2.3@user/testing")
+
+    # Validate it is a valid reference
+    ConanFileReference(name, version, user, channel)
 
     if header and exports_sources:
         raise ConanException("--header and --sources are incompatible options")
