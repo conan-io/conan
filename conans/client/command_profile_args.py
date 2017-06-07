@@ -11,7 +11,7 @@ def profile_from_args(args, cwd, default_folder):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
-    file_profile = read_profile(args.profile, cwd, default_folder).read_file()
+    file_profile, _ = read_profile(args.profile, cwd, default_folder).read_file()
     args_profile = _profile_parse_args(args.settings, args.options, args.env, args.scope)
 
     if file_profile:

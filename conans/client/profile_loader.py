@@ -123,7 +123,7 @@ def read_profile(profile_name, cwd, default_folder):
     return: a Profile object
     """
     if not profile_name:
-        return None
+        return None, None
 
     if os.path.isabs(profile_name):
         profile_path = profile_name
@@ -135,6 +135,7 @@ def read_profile(profile_name, cwd, default_folder):
         if not os.path.exists(default_folder):
             mkdir(default_folder)
         profile_path = os.path.join(default_folder, profile_name)
+        folder = default_folder
 
     try:
         text = load(profile_path)

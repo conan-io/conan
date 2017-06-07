@@ -256,7 +256,7 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
     def test_empty_env(self):
-        profile = load_profile("[settings]", None, None)
+        profile, _ = load_profile("[settings]", None, None)
         self.assertTrue(isinstance(profile.env_values, EnvValues))
 
     def test_package_test(self):

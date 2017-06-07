@@ -15,6 +15,7 @@ from conans.client.migrations import ClientMigrator
 from conans.client.new import get_files
 from conans.client.output import ConanOutput, Color
 from conans.client.printer import Printer
+from conans.client.profile_loader import read_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -531,7 +532,7 @@ class ConanAPIV1(object):
             else:
                 self._user_io.out.info("No profiles defined")
         elif subcommand == "show":
-            p = Profile.read_file(profile, os.getcwd(), self._client_cache.profiles_path)
+            p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
             Printer(self._user_io.out).print_profile(profile, p)
 
 
@@ -611,7 +612,7 @@ def profile_from_args(profile, settings, options, env, scope, cwd, default_folde
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
-    file_profile = Profile.read_file(profile, cwd, default_folder)
+    file_profile, _ = read_profile(profile, cwd, default_folder)
     args_profile = _profile_parse_args(settings, options, env, scope)
 
     if file_profile:
