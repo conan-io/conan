@@ -22,6 +22,19 @@ class NewTest(unittest.TestCase):
         client.run("info test_package")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 
+    def new_error_test(self):
+        """ packages with short name
+        """
+        client = TestClient()
+        error = client.run('new A/1.3@myuser/testing', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: 'A' is too short. Valid names must contain at least 2 characters.",
+                      client.user_io.out)
+        error = client.run('new A2/1.3@myuser/u', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: 'u' is too short. Valid names must contain at least 2 characters.",
+                      client.user_io.out)
+
     def new_dash_test(self):
         """ packages with dash
         """
