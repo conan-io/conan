@@ -421,8 +421,9 @@ MYVAR=$VARIABLE WITH SPACES
         profile0 = """
 ROOTVAR=0
 
+
 [build_requires]
-one/1.$ROOTVAR@lasote/stable
+  one/1.$ROOTVAR@lasote/stable
 two/1.2@lasote/stable
 
 """
@@ -431,6 +432,10 @@ two/1.2@lasote/stable
         profile1 = """
  # Include in subdir, curdir
 include(profile0.txt)
+
+
+
+
 MYVAR=1
 [settings]
 os=Windows

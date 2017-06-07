@@ -157,6 +157,51 @@ def load_profile(text, profile_path, default_folder):
     """ Parse and return a Profile object from a text config like representation.
         cwd is needed to be able to load the includes
     """
+
+    try:
+        inherited_profile = Profile()
+        cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
+        profile_parser = ProfileParser(text)
+        inherited_vars = dict()
+        # Iterate the includes and call recursive to get the profile and variables from parent profiles
+        for include in profile_parser.includes:
+            # Recursion !!
+            profile, declared_vars = read_profile(include, cwd, default_folder)
+            inherited_profile.update(profile)
+            inherited_vars.update(declared_vars)
+
+        # Apply the automatic PROFILE_DIR variable
+        if cwd:
+            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd)  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
+
+        # Replace the variables from parents in the current profile
+        profile_parser.apply_variables(inherited_vars)
+
+        # Current profile before update with parents (but parent variables already applied)
+        doc = ConfigParser(profile_parser.config_block_text,
+                           allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
+
+        # Merge the inherited profile with the readed from current profile
+        _apply_inner_profile(doc, inherited_profile)
+
+        # Return the intherited vars to apply them in the parent profile if exists
+        inherited_vars.update(profile_parser.local_vars)
+        return inherited_profile, inherited_vars
+
+    except ConanException:
+        raise
+    except Exception as exc:
+        raise ConanException("Error parsing the profile text file: %s" % str(exc))
+
+
+def _apply_inner_profile(doc, base_profile):
+    """
+
+    :param doc: ConfigParser object from the current profile (excluding includes and vars, and with values already replaced)
+    :param base_profile: Profile inherited, it's used as a base profile to modify it.
+    :return: None
+    """
+
     def get_package_name_value(item):
         """Parse items like package:name=value or name=value"""
         package_name = None
@@ -169,60 +214,32 @@ def load_profile(text, profile_path, default_folder):
         value = unquote(value)
         return package_name, name, value
 
-    try:
-        obj = Profile()
-        cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
-        profile_parser = ProfileParser(text)
-        inherited_vars = dict()
-        for include in profile_parser.includes:
-            # Recursion !!
-            profile, declared_vars = read_profile(include, cwd, default_folder)
-            obj.update(profile)
-            inherited_vars.update(declared_vars)
+    for setting in doc.settings.splitlines():
+        setting = setting.strip()
+        if setting and not setting.startswith("#"):
+            if "=" not in setting:
+                raise ConanException("Invalid setting line '%s'" % setting)
+            package_name, name, value = get_package_name_value(setting)
+            if package_name:
+                base_profile.package_settings[package_name][name] = value
+            else:
+                base_profile.settings[name] = value
 
-        if cwd:
-            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd)  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
+    if doc.build_requires:
+        # FIXME CHECKS OF DUPLICATED?
+        for req in doc.build_requires.splitlines():
+            tokens = req.split(":", 1)
+            if len(tokens) == 1:
+                pattern, req_list = "*", req
+            else:
+                pattern, req_list = tokens
+            req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
+            base_profile.build_requires.setdefault(pattern, []).extend(req_list)
 
-        # Replace the variables from parents
-        profile_parser.apply_variables(inherited_vars)
+    if doc.scopes:
+        base_profile.update_scopes(Scopes.from_list(doc.scopes.splitlines()))
 
-        # Current profile before update with parents (but parent variables already applied)
-        doc = ConfigParser(profile_parser.config_block_text,
-                           allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
+    if doc.options:
+        base_profile.options.update(OptionsValues.loads(doc.options))
 
-        for setting in doc.settings.splitlines():
-            setting = setting.strip()
-            if setting and not setting.startswith("#"):
-                if "=" not in setting:
-                    raise ConanException("Invalid setting line '%s'" % setting)
-                package_name, name, value = get_package_name_value(setting)
-                if package_name:
-                    obj.package_settings[package_name][name] = value
-                else:
-                    obj.settings[name] = value
-
-        if doc.build_requires:
-            # FIXME CHECKS OF DUPLICATED?
-            for req in doc.build_requires.splitlines():
-                tokens = req.split(":", 1)
-                if len(tokens) == 1:
-                    pattern, req_list = "*", req
-                else:
-                    pattern, req_list = tokens
-                req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
-                obj.build_requires.setdefault(pattern, []).extend(req_list)
-
-        if doc.scopes:
-            obj.update_scopes(Scopes.from_list(doc.scopes.splitlines()))
-
-        if doc.options:
-            obj.options.update(OptionsValues.loads(doc.options))
-
-        obj.env_values.update(EnvValues.loads(doc.env))
-        inherited_vars.update(profile_parser.local_vars)
-        return obj, inherited_vars
-
-    except ConanException:
-        raise
-    except Exception as exc:
-        raise ConanException("Error parsing the profile text file: %s" % str(exc))
+    base_profile.env_values.update(EnvValues.loads(doc.env))
