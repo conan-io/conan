@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.profile_loader import ProfileLoader
+from conans.client.profile_loader import load_profile
 from conans.model.env_info import EnvValues
 
 from conans.test.utils.tools import TestClient
@@ -255,7 +255,7 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
     def test_empty_env(self):
-        profile = ProfileLoader._loads("[settings]", None, None)
+        profile, _ = load_profile("[settings]", None, None)
         self.assertTrue(isinstance(profile.env_values, EnvValues))
 
     def test_package_test(self):

@@ -2,6 +2,7 @@ import os
 import unittest
 from collections import OrderedDict
 
+from conans.model.ref import ConanFileReference
 from nose_parameterized import parameterized
 
 from conans.client.profile_loader import load_profile, read_profile
@@ -377,7 +378,7 @@ class DefaultNameConan(ConanFile):
         def get_profile(txt):
             abs_profile_path = os.path.join(tmp, "Myprofile.txt")
             save(abs_profile_path, txt)
-            return load_profile(abs_profile_path, None, None)
+            return read_profile(abs_profile_path, None, None)
 
         txt = '''
         MY_MAGIC_VAR=The owls are not
@@ -385,7 +386,7 @@ class DefaultNameConan(ConanFile):
         [env]
         MYVAR=$MY_MAGIC_VAR what they seem.
         '''
-        profile = get_profile(txt)
+        profile, vars = get_profile(txt)
         self.assertEquals("The owls are not what they seem.", profile.env_values.data[None]["MYVAR"])
 
         # Order in replacement, variable names (simplification of preprocessor)
@@ -396,7 +397,7 @@ class DefaultNameConan(ConanFile):
                 [env]
                 MYVAR=$P2
                 '''
-        profile = get_profile(txt)
+        profile, vars = get_profile(txt)
         self.assertEquals("Diane, the coffee at the Great Northern2", profile.env_values.data[None]["MYVAR"])
 
         # Variables without spaces
@@ -415,20 +416,38 @@ MYVAR=$VARIABLE WITH SPACES
             abs_profile_path = os.path.join(tmp, name)
             save(abs_profile_path, txt)
 
+        os.mkdir(os.path.join(tmp, "subdir"))
+
+        profile0 = """
+ROOTVAR=0
+
+[build_requires]
+one/1.$ROOTVAR@lasote/stable
+two/1.2@lasote/stable
+
+"""
+        save_profile(profile0, "subdir/profile0.txt")
 
         profile1 = """
+ # Include in subdir, curdir
+include(profile0.txt)
 MYVAR=1
 [settings]
 os=Windows
 [options]
 zlib:aoption=1
+zlib:otheroption=1
 [env]
 package1:ENVY=$MYVAR
+[scopes]
+my_scope=TRUE
 """
-        save_profile(profile1, "profile1.txt")
+
+        save_profile(profile1, "subdir/profile1.txt")
 
         profile2 = """
-include(./profile1.txt)
+#  Include in subdir
+include(subdir/profile1.txt)
 [settings]
 os=$MYVAR
 """
@@ -436,6 +455,13 @@ os=$MYVAR
         save_profile(profile2, "profile2.txt")
         profile3 = """
 OTHERVAR=34
+
+[scopes]
+my_scope=AVALUE
+
+[build_requires]
+one/1.5@lasote/stable
+
 
 """
         save_profile(profile3, "profile3.txt")
@@ -447,23 +473,21 @@ OTHERVAR=34
         [env]
         MYVAR=FromProfile3And$OTHERVAR
 
+        [options]
+        zlib:otheroption=12
+
         """
 
         save_profile(profile4, "profile4.txt")
 
         profile, vars = read_profile("./profile4.txt", tmp, None)
 
-        self.assertEquals("FromProfile3And34",
-                          profile.env_values.data[None]["MYVAR"])
-
-        self.assertEquals("1",
-                          profile.env_values.data["package1"]["ENVY"])
-
-        self.assertEquals("FromProfile3And34",
-                          profile.settings)
-
-        # assert settings and so on
-
-
-
-        # TODO: Test different folders for includes, each relative to the previous one
+        self.assertEquals(vars, {"MYVAR": "1", "OTHERVAR": "34", "PROFILE_DIR": tmp , "ROOTVAR": "0"})
+        self.assertEquals("FromProfile3And34", profile.env_values.data[None]["MYVAR"])
+        self.assertEquals("1", profile.env_values.data["package1"]["ENVY"])
+        self.assertEquals(profile.settings, {"os": "1"})
+        self.assertEquals(profile.scopes.package_scope(), {"dev": True, "my_scope": "AVALUE"})
+        self.assertEquals(profile.options.as_list(), [('zlib:aoption', '1'), ('zlib:otheroption', '12')])
+        self.assertEquals(profile.build_requires, {"*": [ConanFileReference.loads("one/1.0@lasote/stable"),
+                                                         ConanFileReference.loads("two/1.2@lasote/stable"),
+                                                         ConanFileReference.loads("one/1.5@lasote/stable")]})

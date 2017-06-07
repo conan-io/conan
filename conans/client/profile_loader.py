@@ -23,7 +23,7 @@ class ProfileParser(object):
         """Returns the text for #includes and vars declaration"""
         ret_lines = []
         for line in self.text.splitlines():
-            if not line:
+            if not line or line.strip().startswith("#"):
                 continue
             elif line.strip().startswith("["):
                 return "\n".join(ret_lines)
@@ -65,7 +65,7 @@ class ProfileParser(object):
     def includes(self):
         ret = []
         for line in self._defs_block_text.splitlines():
-            if not line:
+            if not line or line.strip().startswith("#"):
                 continue
             if line.strip().startswith("include("):
                 include = line.split("include(", 1)[1]
@@ -94,7 +94,6 @@ class ProfileParser(object):
                 # includes, later
                 pass
             else:
-                print(line)
                 name, value = line.split("=", 1)
                 name = name.strip()
                 if " " in name:
@@ -128,7 +127,7 @@ def read_profile(profile_name, cwd, default_folder):
     if os.path.isabs(profile_name):
         profile_path = profile_name
         folder = os.path.dirname(profile_name)
-    elif profile_name.startswith("."):  # relative path name
+    elif os.path.exists(os.path.join(cwd, profile_name)):  # relative path name
         profile_path = os.path.abspath(os.path.join(cwd, profile_name))
         folder = os.path.dirname(profile_path)
     else:
@@ -151,8 +150,6 @@ def read_profile(profile_name, cwd, default_folder):
     try:
         return load_profile(text, profile_path, default_folder)
     except ConanException as exc:
-        import traceback
-        print(traceback.format_exc())
         raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
 
@@ -216,17 +213,16 @@ def load_profile(text, profile_path, default_folder):
                 obj.build_requires.setdefault(pattern, []).extend(req_list)
 
         if doc.scopes:
-            obj.scopes = Scopes.from_list(doc.scopes.splitlines())
+            obj.update_scopes(Scopes.from_list(doc.scopes.splitlines()))
 
         if doc.options:
-            obj.options = OptionsValues.loads(doc.options)
+            obj.options.update(OptionsValues.loads(doc.options))
 
-        obj.env_values = EnvValues.loads(doc.env)
-        return obj, profile_parser.local_vars
+        obj.env_values.update(EnvValues.loads(doc.env))
+        inherited_vars.update(profile_parser.local_vars)
+        return obj, inherited_vars
 
     except ConanException:
         raise
     except Exception as exc:
-        import traceback
-        print(traceback.format_exc())
         raise ConanException("Error parsing the profile text file: %s" % str(exc))
