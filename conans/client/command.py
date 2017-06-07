@@ -100,10 +100,10 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-        return self._conan.test_package(args.path, args.profile, args.settings, args.options, args.env, args.scope,
-                                 args.test_folder, args.not_export, args.build, args.keep_source,
-                                 args.verify, args.manifests, args.manifests_interactive,
-                                 args.remote, args.update)
+        return self._conan.test_package(args.path, args.profile, args.settings, args.options,
+                                        args.env, args.scope, args.test_folder, args.not_export,
+                                        args.build, args.keep_source, args.verify, args.manifests,
+                                        args.manifests_interactive, args.remote, args.update)
 
     # Alias to test
     def test(self, *args):
