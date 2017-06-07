@@ -512,7 +512,7 @@ class Command(object):
         try:
             verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
         except ConanException as exc:
-            self._conan._user_io.out.error(exc.message)
+            self._conan._user_io.out.error(str(exc))
             raise
 
         remote = args.remote if hasattr(args, 'remote') else None
