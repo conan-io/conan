@@ -1,14 +1,16 @@
 import os
 import platform
+import tempfile
 import unittest
 
 from collections import namedtuple
+
+from conans.client.client_cache import CONAN_CONF
 from nose.plugins.attrib import attr
 
 from conans import tools
-from conans.client.command import get_command
-from conans.client.conf import default_settings_yml
-from conans.client.output import ConanOutput
+from conans.client.conan_api import ConanAPIV1
+from conans.client.conf import default_settings_yml, default_client_conf
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
@@ -17,10 +19,10 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.visual_project_files import get_vs_project_files
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool
+from conans.util.files import save
 
 
 class RunnerMock(object):
-
     def __init__(self, return_ok=True):
         self.command_called = None
         self.return_ok = return_ok
@@ -31,7 +33,6 @@ class RunnerMock(object):
 
 
 class ReplaceInFileTest(unittest.TestCase):
-
     def setUp(self):
         text = u'J\xe2nis\xa7'
         self.tmp_folder = temp_folder()
@@ -61,7 +62,6 @@ class ReplaceInFileTest(unittest.TestCase):
 
 
 class ToolsTest(unittest.TestCase):
-
     def cpu_count_test(self):
         cpus = tools.cpu_count()
         self.assertIsInstance(cpus, int)
@@ -85,16 +85,21 @@ class HelloConan(ConanFile):
     def build(self):
         assert(tools._global_requester != None)
         assert(tools._global_output != None)
-        
+
         """
         client.save({"conanfile.py": conanfile})
         client.run("build")
 
-
         # Not test the real commmand get_command if it's setting the module global vars
         tools._global_requester = None
         tools._global_output = None
-        get_command()
+        tmp = tempfile.mkdtemp()
+        conf = default_client_conf.replace("\n[proxies]", "[proxies]\nhttp = http://myproxy.com")
+        os.mkdir(os.path.join(tmp, ".conan"))
+        save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
+        with tools.environment_append({"CONAN_USER_HOME": tmp}):
+            conan_api = ConanAPIV1.factory()
+        conan_api.remote_list()
         self.assertIsNotNone(tools._global_requester.proxies)
         self.assertIsNotNone(tools._global_output.warn)
 
@@ -119,7 +124,7 @@ class HelloConan(ConanFile):
         spt = SystemPackageTool(runner=runner)
         if platform.system() == "Linux" or platform.system() == "Darwin":
             msg = "Command 'sudo apt-get update' failed" if platform.system() == "Linux" \
-                                                         else "Command 'brew update' failed"
+                else "Command 'brew update' failed"
             with self.assertRaisesRegexp(ConanException, msg):
                 spt.update()
         else:
@@ -320,7 +325,6 @@ compiler:
             return
 
         class MockConanfile(object):
-
             def __init__(self):
                 self.command = ""
                 self.output = namedtuple("output", "info")(lambda x: None)
