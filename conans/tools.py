@@ -195,7 +195,6 @@ def vcvars_command(settings):
 
 
 def cpu_count():
-    global _global_output
     try:
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
         return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
@@ -239,7 +238,6 @@ def unzip(filename, destination=".", keep_permissions=False):
     zip was created correctly.
     :return:
     """
-    global _global_output
     if (filename.endswith(".tar.gz") or filename.endswith(".tgz") or
             filename.endswith(".tbz2") or filename.endswith(".tar.bz2") or
             filename.endswith(".tar")):
@@ -301,7 +299,6 @@ def get(url):
 
 
 def download(url, filename, verify=True, out=None, retry=2, retry_wait=5):
-    global _global_requester
     out = out or ConanOutput(sys.stdout, True)
     if verify:
         # We check the certificate using a list of known verifiers
@@ -626,7 +623,6 @@ class SystemPackageTool(object):
         self._install_any(packages)
 
     def _installed(self, packages):
-        global _global_output
         for pkg in packages:
             if self._tool.installed(pkg):
                 _global_output.info("Package already installed: %s" % pkg)
@@ -649,7 +645,6 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        global _global_output
         _global_output.warn("Only available for linux with apt-get or yum or OSx with brew")
 
     def installed(self, package_name):
@@ -693,7 +688,6 @@ class BrewTool(object):
 
 
 def _run(runner, command):
-    global _global_output
     _global_output.info("Running: %s" % command)
     if runner(command, True) != 0:
         raise ConanException("Command '%s' failed" % command)
