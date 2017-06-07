@@ -307,7 +307,7 @@ class ConanAPIV1(object):
     def info(self, reference, only=None, paths=False, remote=None, package_filter=None,
              settings=None, options=None, env=None, scope=None, build=None, profile_name=None,
              update=False, filename=None,
-             build_order=None, graph=None):
+             build_order=None, graph=None, json_output=None):
 
         current_path = os.getcwd()
         try:
