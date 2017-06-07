@@ -100,7 +100,7 @@ class HelloConan(ConanFile):
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
             conan_api = ConanAPIV1.factory()
         conan_api.remote_list()
-        self.assertIsNotNone(tools._global_requester.proxies)
+        self.assertEquals(tools._global_requester.proxies, {"http": "http://myproxy.com"})
         self.assertIsNotNone(tools._global_output.warn)
 
     def test_environment_nested(self):
