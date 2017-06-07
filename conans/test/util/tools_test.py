@@ -94,7 +94,7 @@ class HelloConan(ConanFile):
         tools._global_requester = None
         tools._global_output = None
         tmp = tempfile.mkdtemp()
-        conf = default_client_conf.replace("\n[proxies]", "[proxies]\nhttp = http://myproxy.com")
+        conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
         os.mkdir(os.path.join(tmp, ".conan"))
         save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):

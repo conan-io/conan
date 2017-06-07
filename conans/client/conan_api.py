@@ -39,12 +39,20 @@ from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
 
 
+def get_basic_requester(client_cache):
+    requester = requests.Session()
+    requester.proxies = client_cache.conan_config.proxies
+    return requester
+
 def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
         try:
             log_command(f.__name__, kwargs)
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
+                # Patch the globals in tools
+                tools._global_requester = get_basic_requester(the_self._client_cache)
+                tools._global_output = the_self._user_io.out
                 return f(*args, **kwargs)
         except ConanException as exc:
             # import traceback
@@ -83,9 +91,9 @@ class ConanAPIV1(object):
     @staticmethod
     def factory():
         """Factory"""
+
         def instance_remote_manager(client_cache):
-            requester = requests.Session()
-            requester.proxies = client_cache.conan_config.proxies
+            requester = get_basic_requester(client_cache)
             # Verify client version against remotes
             version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
                                                                 Version(MIN_SERVER_COMPATIBLE_VERSION),
@@ -117,7 +125,7 @@ class ConanAPIV1(object):
             client_cache = migrate_and_get_client_cache(user_folder, out)
         except Exception as e:
             out.error(str(e))
-            sys.exit(True)
+            raise
 
         with tools.environment_append(client_cache.conan_config.env_vars):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
