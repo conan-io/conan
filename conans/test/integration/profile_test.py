@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.profile_loader import load_profile
+from conans.client.profile_loader import _load_profile
 from conans.model.env_info import EnvValues
 
 from conans.test.utils.tools import TestClient
@@ -253,10 +253,6 @@ class ProfileTest(unittest.TestCase):
         # The env variable shouldn't persist after install command
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
-
-    def test_empty_env(self):
-        profile, _ = load_profile("[settings]", None, None)
-        self.assertTrue(isinstance(profile.env_values, EnvValues))
 
     def test_package_test(self):
         test_conanfile = '''from conans.model.conan_file import ConanFile

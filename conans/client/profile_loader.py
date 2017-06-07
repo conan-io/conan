@@ -127,7 +127,7 @@ def read_profile(profile_name, cwd, default_folder):
     if os.path.isabs(profile_name):
         profile_path = profile_name
         folder = os.path.dirname(profile_name)
-    elif os.path.exists(os.path.join(cwd, profile_name)):  # relative path name
+    elif cwd and os.path.exists(os.path.join(cwd, profile_name)):  # relative path name
         profile_path = os.path.abspath(os.path.join(cwd, profile_name))
         folder = os.path.dirname(profile_path)
     else:
@@ -148,12 +148,12 @@ def read_profile(profile_name, cwd, default_folder):
                              "%s" % (profile_name, current_profiles))
 
     try:
-        return load_profile(text, profile_path, default_folder)
+        return _load_profile(text, profile_path, default_folder)
     except ConanException as exc:
         raise ConanException("Error reading '%s' profile: %s" % (profile_name, exc))
 
 
-def load_profile(text, profile_path, default_folder):
+def _load_profile(text, profile_path, default_folder):
     """ Parse and return a Profile object from a text config like representation.
         cwd is needed to be able to load the includes
     """

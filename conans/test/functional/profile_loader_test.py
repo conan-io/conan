@@ -2,10 +2,12 @@ import os
 import unittest
 from collections import OrderedDict
 
+from conans.model.profile import Profile
+
 from conans.model.ref import ConanFileReference
 from nose_parameterized import parameterized
 
-from conans.client.profile_loader import load_profile, read_profile
+from conans.client.profile_loader import _load_profile, read_profile
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.paths import CONANFILE
@@ -42,6 +44,120 @@ class ProfileTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
+
+    def profile_loads_test(self):
+        prof = '''[env]
+    CXX_FLAGS="-DAAA=0"
+    [settings]
+    '''
+        new_profile, _ = _load_profile(prof, None, None)
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+
+        prof = '''[env]
+    CXX_FLAGS="-DAAA=0"
+    MyPackage:VAR=1
+    MyPackage:OTHER=2
+    OtherPackage:ONE=ONE
+    [settings]
+    '''
+        new_profile, _ = _load_profile(prof, None, None)
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+        self.assertEquals(new_profile.env_values.env_dicts("MyPackage"), ({"OTHER": "2",
+                                                                           "VAR": "1",
+                                                                           'CXX_FLAGS': '-DAAA=0'}, {}))
+
+        self.assertEquals(new_profile.env_values.env_dicts("OtherPackage"), ({'CXX_FLAGS': '-DAAA=0',
+                                                                              'ONE': 'ONE'}, {}))
+
+        prof = '''[env]
+    CXX_FLAGS='-DAAA=0'
+    [settings]
+    '''
+        new_profile, _ = _load_profile(prof, None, None)
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+
+        prof = '''[env]
+    CXX_FLAGS=-DAAA=0
+    [settings]
+    '''
+        new_profile, _ = _load_profile(prof, None, None)
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
+
+        prof = '''[env]
+    CXX_FLAGS="-DAAA=0
+    [settings]
+    '''
+        new_profile, _ = _load_profile(prof, None, None)
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '"-DAAA=0'}, {}))
+
+        prof = '''
+    [settings]
+    zlib:compiler=gcc
+    compiler=Visual Studio
+    '''
+        new_profile, _ = _load_profile(prof, None, None)
+        self.assertEquals(new_profile.package_settings["zlib"], {"compiler": "gcc"})
+        self.assertEquals(new_profile.settings["compiler"], "Visual Studio")
+
+    def test_empty_env(self):
+        profile, _ = _load_profile("[settings]", None, None)
+        self.assertTrue(isinstance(profile.env_values, EnvValues))
+
+    def profile_loads_win_test(self):
+            prof = '''[env]
+    QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin
+    QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
+    '''
+            new_profile, _ = _load_profile(prof, None, None)
+            self.assertEqual(new_profile.env_values.data[None]["QTPATH"],
+                             "C:/QtCommercial/5.8/msvc2015_64/bin")
+            self.assertEqual(new_profile.env_values.data[None]["QTPATH2"],
+                             "C:/QtCommercial2/5.8/msvc2015_64/bin")
+            self.assertIn("QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin", new_profile.dumps())
+            self.assertIn("QTPATH2=C:/QtCommercial2/5.8/msvc2015_64/bin", new_profile.dumps())
+
+    def profile_load_dump_test(self):
+
+        # Empty profile
+        profile = Profile()
+        dump = profile.dumps()
+        new_profile, _ = _load_profile(dump, None, None)
+        self.assertEquals(new_profile.settings, profile.settings)
+
+        # Settings
+        profile = Profile()
+        profile.settings["arch"] = "x86_64"
+        profile.settings["compiler"] = "Visual Studio"
+        profile.settings["compiler.version"] = "12"
+
+        profile.env_values.add("CXX", "path/to/my/compiler/g++")
+        profile.env_values.add("CC", "path/to/my/compiler/gcc")
+
+        profile.scopes["p1"]["conaning"] = "1"
+        profile.scopes["p2"]["testing"] = "2"
+
+        profile.build_requires["*"] = ["android_toolchain/1.2.8@lasote/testing"]
+        profile.build_requires["zlib/*"] = ["cmake/1.0.2@lasote/stable",
+                                            "autotools/1.0.3@lasote/stable"]
+
+        dump = profile.dumps()
+        new_profile, _ = _load_profile(dump, None, None)
+        self.assertEquals(new_profile.settings, profile.settings)
+        self.assertEquals(new_profile.settings["arch"], "x86_64")
+        self.assertEquals(new_profile.settings["compiler.version"], "12")
+        self.assertEquals(new_profile.settings["compiler"], "Visual Studio")
+
+        self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX': 'path/to/my/compiler/g++',
+                                                                  'CC': 'path/to/my/compiler/gcc'}, {}))
+
+        self.assertEquals(dict(new_profile.scopes)["p1"]["conaning"], '1')
+        self.assertEquals(dict(new_profile.scopes)["p2"]["testing"], '2')
+
+        self.assertEquals(new_profile.build_requires["zlib/*"],
+                          [ConanFileReference.loads("cmake/1.0.2@lasote/stable"),
+                           ConanFileReference.loads("autotools/1.0.3@lasote/stable")])
+        self.assertEquals(new_profile.build_requires["*"],
+                          [ConanFileReference.loads("android_toolchain/1.2.8@lasote/testing")])
 
     def bad_syntax_test(self):
         self.client.save({CONANFILE: conanfile_scope_env})
@@ -257,7 +373,7 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
     def test_empty_env(self):
-        profile, _ = load_profile("[settings]", None, None)
+        profile, _ = _load_profile("[settings]", None, None)
         self.assertTrue(isinstance(profile.env_values, EnvValues))
 
     def test_package_test(self):
@@ -496,3 +612,25 @@ one/1.5@lasote/stable
         self.assertEquals(profile.build_requires, {"*": [ConanFileReference.loads("one/1.0@lasote/stable"),
                                                          ConanFileReference.loads("two/1.2@lasote/stable"),
                                                          ConanFileReference.loads("one/1.5@lasote/stable")]})
+
+    def profile_dir_test(self):
+        tmp = temp_folder()
+        txt = '''
+[env]
+PYTHONPATH=$PROFILE_DIR/my_python_tools
+'''
+
+        def assert_path(profile):
+            pythonpath = profile.env_values.env_dicts("")[0]["PYTHONPATH"].replace("/", "\\")
+            self.assertEquals(pythonpath, os.path.join(tmp, "my_python_tools").replace("/", "\\"))
+
+        abs_profile_path = os.path.join(tmp, "Myprofile.txt")
+        save(abs_profile_path, txt)
+        profile, _ = read_profile(abs_profile_path, None, None)
+        assert_path(profile)
+
+        profile, _ = read_profile("./Myprofile.txt", tmp, None)
+        assert_path(profile)
+
+        profile, _ = read_profile("Myprofile.txt", None, tmp)
+        assert_path(profile)
