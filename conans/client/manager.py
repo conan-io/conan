@@ -116,6 +116,8 @@ class ConanManager(object):
                 raise ConanException("Package already exists. "
                                      "Please use --force, -f to overwrite it")
         shutil.copytree(package_folder, dest_package_folder)
+        recipe_hash = self._client_cache.load_manifest(reference).summary_hash
+        conanfile.info.recipe_hash = recipe_hash
         save(os.path.join(dest_package_folder, CONANINFO), conanfile.info.dumps())
         # Create the digest for the package
         digest = FileTreeManifest.create(dest_package_folder)
