@@ -557,7 +557,6 @@ class Command(object):
 
         return self._conan.profile(args.subcommand, profile)
 
-
     def _show_help(self):
         """ prints a summary of all commands
         """
@@ -611,7 +610,6 @@ class Command(object):
             errors = True
         except ConanException as exc:
             errors = True
-
 
         return errors
 
