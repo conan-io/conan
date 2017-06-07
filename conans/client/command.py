@@ -669,7 +669,6 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
         --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 '''
 
-
 def main(args):
     """ main entry point of the conan application, using a Command to
     parse parameters

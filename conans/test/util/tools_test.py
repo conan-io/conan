@@ -11,6 +11,7 @@ from nose.plugins.attrib import attr
 from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
+
 from conans.errors import ConanException
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
@@ -85,10 +86,10 @@ class HelloConan(ConanFile):
     def build(self):
         assert(tools._global_requester != None)
         assert(tools._global_output != None)
-
         """
         client.save({"conanfile.py": conanfile})
         client.run("build")
+
 
         # Not test the real commmand get_command if it's setting the module global vars
         tools._global_requester = None
@@ -101,6 +102,7 @@ class HelloConan(ConanFile):
             conan_api = ConanAPIV1.factory()
         conan_api.remote_list()
         self.assertEquals(tools._global_requester.proxies, {"http": "http://myproxy.com"})
+
         self.assertIsNotNone(tools._global_output.warn)
 
     def test_environment_nested(self):
