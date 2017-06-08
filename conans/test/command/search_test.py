@@ -163,6 +163,13 @@ class SearchTest(unittest.TestCase):
                           "NodeInfo/1.0.2@fenix/stable\n"
                           "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
+    def search_raw(self):
+        self.client.run("search Hello* --raw")
+        self.assertEquals("Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n"
+                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+
     def recipe_pattern_search_test(self):
         self.client.run("search Hello*")
         self.assertEquals("Existing package recipes:\n\n"
