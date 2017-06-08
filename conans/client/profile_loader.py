@@ -16,74 +16,43 @@ from conans.util.files import load, mkdir
 class ProfileParser(object):
 
     def __init__(self, text):
-        self.text = text
+        self.vars = self._parse_vars(text)
+        self.includes = self._parse_includes(text)
+        self.profile_text = self._parse_profile_text(text)
 
-    @property
-    def _defs_block_text(self):
-        """Returns the text for #includes and vars declaration"""
-        ret_lines = []
-        for line in self.text.splitlines():
-            if not line or line.strip().startswith("#"):
-                continue
-            elif line.strip().startswith("["):
-                return "\n".join(ret_lines)
-            else:
-                ret_lines.append(line)
-        return "\n".join(ret_lines)
+    def apply_vars(self, repl_vars):
+        self.vars = self._apply_in_vars(repl_vars)
+        self.includes = self._apply_in_includes(repl_vars)
+        self.profile_text = self._apply_in_profile_text(repl_vars)
 
-    @property
-    def config_block_text(self):
-        """Returns the text for pure profile"""
-        if not "[" in self.text:
-            return ""
-        return "[" + self.text.split("[", 1)[1]
+    def _apply_in_vars(self, repl_vars):
+        tmp_vars = OrderedDict()
+        for key, value in self.vars.items():
+            for repl_key, repl_value in repl_vars.items():
+                key = key.replace("$%s" % repl_key, repl_value)
+                value = value.replace("$%s" % repl_key, repl_value)
+            tmp_vars[key] = value
+        return tmp_vars
 
-    def _apply_parent_variables(self, variables):
-        # Only directly applied to vars definitions
-        tmp_block_defs = self._defs_block_text
-        for name, value in variables.items():
-            tmp_block_defs = tmp_block_defs.replace(name, value)
+    def _apply_in_includes(self, repl_vars):
+        tmp_includes = []
+        for include in self.includes:
+            for repl_key, repl_value in repl_vars.items():
+                include = include.replace("$%s" % repl_key, repl_value)
+            tmp_includes.append(include)
+        return tmp_includes
 
-        self.text = tmp_block_defs + "\n" + self.config_block_text
+    def _apply_in_profile_text(self, repl_vars):
+        tmp_text = self.profile_text
+        for repl_key, repl_value in repl_vars.items():
+            tmp_text = tmp_text.replace("$%s" % repl_key, repl_value)
+        return tmp_text
 
-    def apply_variables(self, parent_vars):
-        # First apply the parent variables in the inner variable declarations
-        self._apply_parent_variables(parent_vars)
-        # Then merge local and parent variables and apply them
-        local_vars = self.local_vars
-        for name, value in parent_vars.items():
-            if name not in local_vars:
-                local_vars[name] = value
-
-        tmp_block_text = self.config_block_text
-        for name, value in local_vars.items():
-            tmp_block_text = tmp_block_text.replace("$%s" % name, value)
-
-        self.text = self._defs_block_text + "\n" + tmp_block_text
-
-    @property
-    def includes(self):
-        ret = []
-        for line in self._defs_block_text.splitlines():
-            if not line or line.strip().startswith("#"):
-                continue
-            if line.strip().startswith("include("):
-                include = line.split("include(", 1)[1]
-                if not include.endswith(")"):
-                    raise ConanException("Invalid include statement")
-                include = include[:-1]
-                ret.append(include)
-            else:
-                return ret
-
-        return ret
-
-    @property
-    def local_vars(self):
+    def _parse_vars(self, text):
         vars = OrderedDict()  # Order matters, if user declares F=1 and then FOO=12, and in profile MYVAR=$FOO, it will
         # be replaced with F getting: MYVAR=1OO
 
-        for line in self._defs_block_text.splitlines():
+        for line in text.splitlines():
             if not line:
                 continue
             elif line.strip().startswith("#"):
@@ -102,6 +71,30 @@ class ProfileParser(object):
                 vars[name] = value
 
         return vars
+
+    def _parse_includes(self, text):
+        ret = []
+        for line in text.splitlines():
+            if not line or line.strip().startswith("#"):
+                continue
+            elif line.strip().startswith("["):
+                return ret
+            elif line.strip().startswith("include("):
+                include = line.split("include(", 1)[1]
+                if not include.endswith(")"):
+                    raise ConanException("Invalid include statement")
+                include = include[:-1]
+                ret.append(include)
+            else:
+                continue
+        return ret
+
+    def _parse_profile_text(self, text):
+        for counter, line in enumerate(text.splitlines()):
+            if line.strip().startswith("["):
+                return "\n".join(text.splitlines()[counter:])
+
+        return ""
 
 
 def read_conaninfo_profile(current_path):
@@ -162,7 +155,7 @@ def _load_profile(text, profile_path, default_folder):
         inherited_profile = Profile()
         cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
         profile_parser = ProfileParser(text)
-        inherited_vars = dict()
+        inherited_vars = profile_parser.vars
         # Iterate the includes and call recursive to get the profile and variables from parent profiles
         for include in profile_parser.includes:
             # Recursion !!
@@ -175,17 +168,17 @@ def _load_profile(text, profile_path, default_folder):
             inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd)  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
 
         # Replace the variables from parents in the current profile
-        profile_parser.apply_variables(inherited_vars)
+        profile_parser.apply_vars(inherited_vars)
 
         # Current profile before update with parents (but parent variables already applied)
-        doc = ConfigParser(profile_parser.config_block_text,
+        doc = ConfigParser(profile_parser.profile_text,
                            allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
 
         # Return the intherited vars to apply them in the parent profile if exists
-        inherited_vars.update(profile_parser.local_vars)
+        inherited_vars.update(profile_parser.vars)
         return inherited_profile, inherited_vars
 
     except ConanException:

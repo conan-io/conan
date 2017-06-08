@@ -7,7 +7,7 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from nose_parameterized import parameterized
 
-from conans.client.profile_loader import _load_profile, read_profile
+from conans.client.profile_loader import read_profile, ProfileParser
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.paths import CONANFILE
@@ -16,6 +16,49 @@ from conans.test.utils.profiles import create_profile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
+
+
+class ProfileParserTest(unittest.TestCase):
+
+    def test_parser(self):
+        txt = """
+include(a/path/to\profile.txt)
+VAR=2
+include(other/path/to/file.txt)
+OTHERVAR=thing
+
+[settings]
+os=2
+"""
+        a = ProfileParser(txt)
+        self.assertEquals(a.vars, {"VAR": "2", "OTHERVAR": "thing"})
+        self.assertEquals(a.includes, ["a/path/to\profile.txt", "other/path/to/file.txt"])
+        self.assertEquals(a.profile_text, """[settings]
+os=2""")
+
+        txt = ""
+        a = ProfileParser(txt)
+        self.assertEquals(a.vars, {})
+        self.assertEquals(a.includes, [])
+        self.assertEquals(a.profile_text, "")
+
+        txt = """
+include(a/path/to\profile.txt)
+VAR=$REPLACE_VAR
+include(other/path/to/$FILE)
+OTHERVAR=thing
+
+[settings]
+os=$OTHERVAR
+"""
+        a = ProfileParser(txt)
+        a.apply_vars({"REPLACE_VAR": "22", "FILE": "MyFile", "OTHERVAR": "thing"})
+        self.assertEquals(a.vars, {"VAR": "22", "OTHERVAR": "thing"})
+        self.assertEquals(a.includes, ["a/path/to\profile.txt", "other/path/to/MyFile"])
+        self.assertEquals(a.profile_text, """[settings]
+os=thing""")
+
+
 
 
 conanfile_scope_env = """
@@ -46,11 +89,14 @@ class ProfileTest(unittest.TestCase):
         self.client = TestClient()
 
     def profile_loads_test(self):
+
+        tmp = temp_folder()
+
         prof = '''[env]
     CXX_FLAGS="-DAAA=0"
     [settings]
     '''
-        new_profile, _ = _load_profile(prof, None, None)
+        new_profile, _ = self._get_profile(tmp, prof)
         self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
         prof = '''[env]
@@ -60,7 +106,7 @@ class ProfileTest(unittest.TestCase):
     OtherPackage:ONE=ONE
     [settings]
     '''
-        new_profile, _ = _load_profile(prof, None, None)
+        new_profile, _ = self._get_profile(tmp, prof)
         self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
         self.assertEquals(new_profile.env_values.env_dicts("MyPackage"), ({"OTHER": "2",
                                                                            "VAR": "1",
@@ -73,21 +119,21 @@ class ProfileTest(unittest.TestCase):
     CXX_FLAGS='-DAAA=0'
     [settings]
     '''
-        new_profile, _ = _load_profile(prof, None, None)
+        new_profile, _ = self._get_profile(tmp, prof)
         self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
         prof = '''[env]
     CXX_FLAGS=-DAAA=0
     [settings]
     '''
-        new_profile, _ = _load_profile(prof, None, None)
+        new_profile, _ = self._get_profile(tmp, prof)
         self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '-DAAA=0'}, {}))
 
         prof = '''[env]
     CXX_FLAGS="-DAAA=0
     [settings]
     '''
-        new_profile, _ = _load_profile(prof, None, None)
+        new_profile, _ = self._get_profile(tmp, prof)
         self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX_FLAGS': '"-DAAA=0'}, {}))
 
         prof = '''
@@ -95,33 +141,36 @@ class ProfileTest(unittest.TestCase):
     zlib:compiler=gcc
     compiler=Visual Studio
     '''
-        new_profile, _ = _load_profile(prof, None, None)
+        new_profile, _ = self._get_profile(tmp, prof)
         self.assertEquals(new_profile.package_settings["zlib"], {"compiler": "gcc"})
         self.assertEquals(new_profile.settings["compiler"], "Visual Studio")
 
     def test_empty_env(self):
-        profile, _ = _load_profile("[settings]", None, None)
+        tmp = temp_folder()
+        profile, _ = self._get_profile(tmp, "")
         self.assertTrue(isinstance(profile.env_values, EnvValues))
 
     def profile_loads_win_test(self):
-            prof = '''[env]
+        tmp = temp_folder()
+        prof = '''[env]
     QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin
     QTPATH2="C:/QtCommercial2/5.8/msvc2015_64/bin"
     '''
-            new_profile, _ = _load_profile(prof, None, None)
-            self.assertEqual(new_profile.env_values.data[None]["QTPATH"],
-                             "C:/QtCommercial/5.8/msvc2015_64/bin")
-            self.assertEqual(new_profile.env_values.data[None]["QTPATH2"],
-                             "C:/QtCommercial2/5.8/msvc2015_64/bin")
-            self.assertIn("QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin", new_profile.dumps())
-            self.assertIn("QTPATH2=C:/QtCommercial2/5.8/msvc2015_64/bin", new_profile.dumps())
+        new_profile, _ = self._get_profile(tmp, prof)
+        self.assertEqual(new_profile.env_values.data[None]["QTPATH"],
+                         "C:/QtCommercial/5.8/msvc2015_64/bin")
+        self.assertEqual(new_profile.env_values.data[None]["QTPATH2"],
+                         "C:/QtCommercial2/5.8/msvc2015_64/bin")
+        self.assertIn("QTPATH=C:/QtCommercial/5.8/msvc2015_64/bin", new_profile.dumps())
+        self.assertIn("QTPATH2=C:/QtCommercial2/5.8/msvc2015_64/bin", new_profile.dumps())
 
     def profile_load_dump_test(self):
 
         # Empty profile
+        tmp = temp_folder()
         profile = Profile()
         dump = profile.dumps()
-        new_profile, _ = _load_profile(dump, None, None)
+        new_profile, _ = self._get_profile(tmp, "")
         self.assertEquals(new_profile.settings, profile.settings)
 
         # Settings
@@ -141,7 +190,7 @@ class ProfileTest(unittest.TestCase):
                                             "autotools/1.0.3@lasote/stable"]
 
         dump = profile.dumps()
-        new_profile, _ = _load_profile(dump, None, None)
+        new_profile, _ = self._get_profile(tmp, dump)
         self.assertEquals(new_profile.settings, profile.settings)
         self.assertEquals(new_profile.settings["arch"], "x86_64")
         self.assertEquals(new_profile.settings["compiler.version"], "12")
@@ -372,8 +421,14 @@ class ProfileTest(unittest.TestCase):
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
 
+    def _get_profile(self, folder, txt):
+        abs_profile_path = os.path.join(folder, "Myprofile.txt")
+        save(abs_profile_path, txt)
+        return read_profile(abs_profile_path, None, None)
+
     def test_empty_env(self):
-        profile, _ = _load_profile("[settings]", None, None)
+        tmp = temp_folder()
+        profile, _ = self._get_profile(tmp, "[settings]")
         self.assertTrue(isinstance(profile.env_values, EnvValues))
 
     def test_package_test(self):
@@ -491,10 +546,6 @@ class DefaultNameConan(ConanFile):
 
     def profile_vars_test(self):
         tmp = temp_folder()
-        def get_profile(txt):
-            abs_profile_path = os.path.join(tmp, "Myprofile.txt")
-            save(abs_profile_path, txt)
-            return read_profile(abs_profile_path, None, None)
 
         txt = '''
         MY_MAGIC_VAR=The owls are not
@@ -502,7 +553,7 @@ class DefaultNameConan(ConanFile):
         [env]
         MYVAR=$MY_MAGIC_VAR what they seem.
         '''
-        profile, vars = get_profile(txt)
+        profile, vars = self._get_profile(tmp, txt)
         self.assertEquals("The owls are not what they seem.", profile.env_values.data[None]["MYVAR"])
 
         # Order in replacement, variable names (simplification of preprocessor)
@@ -513,7 +564,7 @@ class DefaultNameConan(ConanFile):
                 [env]
                 MYVAR=$P2
                 '''
-        profile, vars = get_profile(txt)
+        profile, vars = self._get_profile(tmp, txt)
         self.assertEquals("Diane, the coffee at the Great Northern2", profile.env_values.data[None]["MYVAR"])
 
         # Variables without spaces
@@ -523,7 +574,7 @@ VARIABLE WITH SPACES=12
 MYVAR=$VARIABLE WITH SPACES
                         '''
         with self.assertRaisesRegexp(ConanException, "The names of the variables cannot contain spaces"):
-            get_profile(txt)
+            self._get_profile(tmp, txt)
 
     def test_profiles_includes(self):
 
@@ -547,12 +598,13 @@ two/1.2@lasote/stable
 
         profile1 = """
  # Include in subdir, curdir
+MYVAR=1
 include(profile0.txt)
 
 
 
 
-MYVAR=1
+
 [settings]
 os=Windows
 [options]
