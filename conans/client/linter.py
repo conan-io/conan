@@ -27,6 +27,9 @@ def conan_linter(conanfile_path, out):
         if msgs:
             out.writeln("Linter warnings\n    WARN: %s" % "\n    WARN: ".join(msgs),
                         front=Color.MAGENTA)
+        pylint_werr = os.environ.get("CONAN_PYLINT_WERR", None)
+        if pylint_werr and (py3_msgs or msgs):
+            raise ConanException("Package recipe has linter errors. Please fix them.")
     finally:
         sys.path.pop()
 
@@ -82,9 +85,23 @@ def _normal_linter(conanfile_path):
 
     output_json = _runner(args)
 
+    dynamic_fields = "source_folder", "build_folder", "info_build"
+
+    def _accept_message(msg):
+        symbol = msg.get("symbol")
+        text = msg.get("message")
+        if symbol == "no-member":
+            for field in dynamic_fields:
+                if field in text:
+                    return False
+        if symbol == "not-callable" and "self.copy is not callable" == text:
+            return False
+        return True
+
     result = []
     for msg in output_json:
         if msg.get("type") in ("warning", "error"):
-            if msg.get("message") != "self.copy is not callable":
+            if _accept_message(msg):
                 result.append("Linter. Line %s: %s" % (msg.get("line"), msg.get("message")))
+
     return result

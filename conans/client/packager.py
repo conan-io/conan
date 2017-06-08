@@ -26,6 +26,7 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
             conanfile.copy(pattern, dst_folder, src)
         return new_method
 
+    # FIXME: Deprecate these methods. Not documented. Confusing. Rely on LINTER
     conanfile.copy_headers = wrap(DEFAULT_INCLUDE)
     conanfile.copy_libs = wrap(DEFAULT_LIB)
     conanfile.copy_bins = wrap(DEFAULT_BIN)
