@@ -205,7 +205,7 @@ class ConanAPIV1(object):
             user_channel = "%s/%s" % (first_dep.user, first_dep.channel)
             self._manager.export(user_channel, root_folder, keep_source=keep_source)
 
-        lib_to_test = first_dep.name + "*"
+        lib_to_test = first_dep.name
         # Get False or a list of patterns to check
         if build is None and lib_to_test:  # Not specified, force build the tested library
             build = [lib_to_test]

@@ -72,7 +72,7 @@ class BuildMode(object):
                 elif param == "never":
                     never = True
                 else:
-                    self.patterns.append("%s*" % param)
+                    self.patterns.append("%s" % param)
 
             if never and (self.outdated or self.missing or self.patterns):
                 raise ConanException("--build=never not compatible with other options")
@@ -82,12 +82,12 @@ class BuildMode(object):
         if self.all:
             return True
 
-        ref = str(reference)
         if conanfile.build_policy_always:
-            out = ScopedOutput(ref, self._out)
+            out = ScopedOutput(str(reference), self._out)
             out.info("Building package from source as defined by build_policy='always'")
             return True
 
+        ref = reference.name
         # Patterns to match, if package matches pattern, build is forced
         force_build = any([fnmatch.fnmatch(ref, pattern) for pattern in self.patterns])
         return force_build
@@ -306,7 +306,7 @@ class ConanInstaller(object):
         # A check to be sure that if introduced a pattern, something is going to be built
 
         if build_mode.patterns:
-            to_build = [str(n[0]) for n in nodes_to_build if n[3]]
+            to_build = [str(n[0].name) for n in nodes_to_build if n[3]]
             build_mode.check_matches(to_build)
 
         return nodes_to_build
