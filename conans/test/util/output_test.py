@@ -65,7 +65,7 @@ class PkgConan(ConanFile):
         new_out = StringIO()
         old_out = sys.stdout
         try:
-            sys.stdout = new_out
+            tools._global_output = ConanOutput(new_out)
             tools.unzip(zip_path, output_dir)
         finally:
             sys.stdout = old_out
