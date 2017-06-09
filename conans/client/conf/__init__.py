@@ -140,6 +140,15 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
 
                }
+        # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
+        try:
+            proxies = self.get_conf("proxies")
+            no_proxy = dict(proxies).get("no_proxy")
+            if no_proxy:
+                ret["NO_PROXY"] = no_proxy
+        except:
+            pass
+
         # Filter None values
         return {name: value for name, value in ret.items() if value is not None}
 

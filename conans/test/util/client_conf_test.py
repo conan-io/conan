@@ -34,6 +34,18 @@ class ClientConfTest(unittest.TestCase):
         config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
         self.assertEqual(config.env_vars["CONAN_TRACE_FILE"], "Path/with/quotes")
 
+    def test_proxies(self):
+        tmp_dir = temp_folder()
+        save(os.path.join(tmp_dir, CONAN_CONF), "")
+        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+        self.assertNotIn("NO_PROXY", config.env_vars)
+        save(os.path.join(tmp_dir, CONAN_CONF), "[proxies]")
+        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+        self.assertNotIn("NO_PROXY", config.env_vars)
+        save(os.path.join(tmp_dir, CONAN_CONF), "[proxies]\nno_proxy=localhost")
+        config = ConanClientConfigParser(os.path.join(tmp_dir, CONAN_CONF))
+        self.assertEqual(config.env_vars["NO_PROXY"], "localhost")
+
     def env_setting_override_test(self):
         tmp_dir = temp_folder()
         save(os.path.join(tmp_dir, CONAN_CONF), default_client_conf)
