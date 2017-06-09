@@ -16,9 +16,29 @@ from conans.util.files import load, mkdir
 class ProfileParser(object):
 
     def __init__(self, text):
-        self.vars = self._parse_vars(text)
-        self.includes = self._parse_includes(text)
-        self.profile_text = self._parse_profile_text(text)
+        self.vars = OrderedDict() # Order matters, if user declares F=1 and then FOO=12, and in profile MYVAR=$FOO, it will
+        self.includes = []
+        self.profile_text = ""
+
+        for counter, line in enumerate(text.splitlines()):
+            if not line or line.strip().startswith("#"):
+                continue
+            elif line.strip().startswith("["):
+                self.profile_text = "\n".join(text.splitlines()[counter:])
+                break
+            elif line.strip().startswith("include("):
+                include = line.split("include(", 1)[1]
+                if not include.endswith(")"):
+                    raise ConanException("Invalid include statement")
+                include = include[:-1]
+                self.includes.append(include)
+            else:
+                name, value = line.split("=", 1)
+                name = name.strip()
+                if " " in name:
+                    raise ConanException("The names of the variables cannot contain spaces")
+                value = unquote(value)
+                self.vars[name] = value
 
     def apply_vars(self, repl_vars):
         self.vars = self._apply_in_vars(repl_vars)
@@ -47,55 +67,6 @@ class ProfileParser(object):
         for repl_key, repl_value in repl_vars.items():
             tmp_text = tmp_text.replace("$%s" % repl_key, repl_value)
         return tmp_text
-
-    def _parse_vars(self, text):
-        vars = OrderedDict()  # Order matters, if user declares F=1 and then FOO=12, and in profile MYVAR=$FOO, it will
-        # be replaced with F getting: MYVAR=1OO
-
-        for line in text.splitlines():
-            if not line:
-                continue
-            elif line.strip().startswith("#"):
-                continue
-            elif line.strip().startswith("["):
-                return vars
-            elif line.strip().startswith("include("):
-                # includes, later
-                pass
-            else:
-                name, value = line.split("=", 1)
-                name = name.strip()
-                if " " in name:
-                    raise ConanException("The names of the variables cannot contain spaces")
-                value = unquote(value)
-                vars[name] = value
-
-        return vars
-
-    def _parse_includes(self, text):
-        ret = []
-        for line in text.splitlines():
-            if not line or line.strip().startswith("#"):
-                continue
-            elif line.strip().startswith("["):
-                return ret
-            elif line.strip().startswith("include("):
-                include = line.split("include(", 1)[1]
-                if not include.endswith(")"):
-                    raise ConanException("Invalid include statement")
-                include = include[:-1]
-                ret.append(include)
-            else:
-                continue
-        return ret
-
-    def _parse_profile_text(self, text):
-        for counter, line in enumerate(text.splitlines()):
-            if line.strip().startswith("["):
-                return "\n".join(text.splitlines()[counter:])
-
-        return ""
-
 
 def read_conaninfo_profile(current_path):
     profile = Profile()
