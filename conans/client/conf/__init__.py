@@ -6,7 +6,7 @@ from conans.util.files import save, load
 from six.moves.configparser import ConfigParser, NoSectionError
 from conans.model.values import Values
 import urllib
-from conans.paths import conan_expand_user
+from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
 from collections import OrderedDict
 from conans.model.env_info import unquote
 
@@ -217,6 +217,13 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("Invalid configuration, missing %s" % varname)
 
     @property
+    def default_profile_name(self):
+        try:
+            return self.get_item("general.default_profile")
+        except ConanException:
+            return DEFAULT_PROFILE_NAME
+
+    @property
     def storage(self):
         return dict(self.get_conf("storage"))
 
@@ -249,7 +256,9 @@ class ConanClientConfigParser(ConfigParser, object):
         except:
             return None
 
-    def settings_defaults(self, settings):
+
+
+    def _____settings_defaults(self, settings):
         default_settings = self.get_conf("settings_defaults")
         values = Values.from_list(default_settings)
         settings.values = values

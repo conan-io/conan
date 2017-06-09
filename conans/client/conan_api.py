@@ -268,6 +268,10 @@ class ConanAPIV1(object):
         else:  # Classic install, package chosen with settings and options
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, self._cwd, self._client_cache.profiles_path)
             manifest_folder, manifest_interactive, manifest_verify = manifests
+            # Apply the default profile first
+            # settings, options, env, build_requires, scopes
+
+
             profile = profile_from_args(profile_name, settings, options, env, scope, self._cwd,
                                         self._client_cache.profiles_path)
 

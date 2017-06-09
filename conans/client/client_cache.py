@@ -108,6 +108,11 @@ class ClientCache(SimplePaths):
             self._settings = settings
         return self._settings
 
+    @property
+    def default_profile(self):
+        default_one = self.conan_config.default_profile_name
+        read_profile
+
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """
         assert isinstance(conan_reference, ConanFileReference)
