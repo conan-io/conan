@@ -391,6 +391,10 @@ class TestClient(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
+        # Patch the globals in tools
+        tools._global_requester = requests
+        tools._global_output = self.user_io.out
+
     def init_dynamic_vars(self, user_io=None):
         # Migration system
         self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
