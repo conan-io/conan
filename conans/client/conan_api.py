@@ -51,8 +51,6 @@ def api_method(f):
             log_command(f.__name__, kwargs)
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
-                tools._global_requester = get_basic_requester(the_self._client_cache)
-                tools._global_output = the_self._user_io.out
                 return f(*args, **kwargs)
         except ConanException as exc:
             # import traceback
@@ -149,6 +147,9 @@ class ConanAPIV1(object):
         self._runner = runner
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
         self._cwd = cwd
+        # Patch the tools module with a good requester and user_io
+        tools._global_requester = get_basic_requester(self._client_cache)
+        tools._global_output = self._user_io.out
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False):
