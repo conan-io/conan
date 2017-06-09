@@ -247,6 +247,15 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'LIBS': '-lonelib -ltwolib'}
         self.assertEquals(be.vars, expected)
 
+    def test_previous_env(self):
+        settings = MockSettings({"arch": "x86",
+                                 "os": "Linux"})
+        conanfile = MockConanfile(settings)
+
+        with tools.environment_append({"CPPFLAGS": "MyCppFlag"}):
+            be = AutoToolsBuildEnvironment(conanfile)
+            self.assertEquals(be.vars["CPPFLAGS"], "MyCppFlag")
+
     def cross_build_flags_test(self):
         def get_values(this_os, this_arch, setting_os, setting_arch):
             settings = MockSettings({"arch": setting_arch,

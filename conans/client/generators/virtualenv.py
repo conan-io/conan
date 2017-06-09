@@ -6,10 +6,14 @@ from conans.model import Generator
 
 class VirtualEnvGenerator(Generator):
 
+    append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS"]
+
     def __init__(self, conanfile):
         self.conanfile = conanfile
         self.env = conanfile.env
+
         super(VirtualEnvGenerator, self).__init__(conanfile)
+
 
     @property
     def filename(self):
@@ -30,10 +34,17 @@ class VirtualEnvGenerator(Generator):
                     ret.append(command_set + ' ' + name + '=' + value)
             else:
                 if isinstance(value, list):
-                    value = os.pathsep.join(['"%s"' % val for val in value])
+                    if name in self.append_with_spaces:
+                        # Variables joined with spaces look like: CPPFLAGS="one two three"
+                        value = " ".join(value)
+                        ret.append(name + '="' + value + '%s$' % " " + name + '"')
+                    else:
+                        # Variables joined with : or ; (os.pathset) look like: PATH="one path":"two paths"
+                        value = os.pathsep.join(['"%s"' % val for val in value])
+                        ret.append(name + '=' + value + '%s$' % os.pathsep + name)
+
                     # Standard UNIX "sh" does not allow "export VAR=xxx" on one line
                     # So for portability reasons we split into two commands
-                    ret.append(name + '=' + value + ':$' + name)
                     ret.append(command_set + ' ' + name)
                 else:
                     ret.append(name + '="' + value + '"')

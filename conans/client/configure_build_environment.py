@@ -218,8 +218,7 @@ class AutoToolsBuildEnvironment(object):
     def _architecture_flag(self):
         return architecture_dict.get(self._arch, "")
 
-    @property
-    def vars(self):
+    def _get_vars(self):
         def append(*args):
             ret = []
             for arg in args:
@@ -244,11 +243,40 @@ class AutoToolsBuildEnvironment(object):
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags)
         c_flags = tmp_compilation_flags
 
-        def environ_values(var_name):
-            if os.environ.get(var_name, ""):
-                return " %s" % os.environ.get(var_name, "")
-            else:
-                return ""
+        return ld_flags, cpp_flags, libs, cxx_flags, c_flags
+
+    @property
+    def vars_list(self):
+
+        ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
+
+        if os.environ.get("CPPFLAGS", None):
+            cpp_flags.append(os.environ.get("CPPFLAGS", None))
+
+        if os.environ.get("CXXFLAGS", None):
+            cxx_flags.append(os.environ.get("CXXFLAGS", None))
+
+        if os.environ.get("CFLAGS", None):
+            c_flags.append(os.environ.get("CFLAGS", None))
+
+        if os.environ.get("LDFLAGS", None):
+            ld_flags.append(os.environ.get("LDFLAGS", None))
+
+        if os.environ.get("LIBS", None):
+            libs.append(os.environ.get("LIBS", None))
+
+        ret = {"CPPFLAGS": cpp_flags,
+               "CXXFLAGS": cxx_flags,
+               "CFLAGS": c_flags,
+               "LDFLAGS": ld_flags,
+               "LIBS": libs,
+               }
+        return ret
+
+    @property
+    def vars(self):
+
+        ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
 
         cpp_flags = " ".join(cpp_flags) + environ_values("CPPFLAGS")
         cxx_flags = " ".join(cxx_flags) + environ_values("CXXFLAGS")
@@ -256,11 +284,18 @@ class AutoToolsBuildEnvironment(object):
         ldflags = " ".join(ld_flags) + environ_values("LDFLAGS")
         libs = " ".join(libs) + environ_values("LIBS")
 
-        ret = {"CPPFLAGS": cpp_flags,
-               "CXXFLAGS": cxx_flags,
-               "CFLAGS": cflags,
-               "LDFLAGS": ldflags,
-               "LIBS": libs,
+        ret = {"CPPFLAGS": cpp_flags.strip(),
+               "CXXFLAGS": cxx_flags.strip(),
+               "CFLAGS": cflags.strip(),
+               "LDFLAGS": ldflags.strip(),
+               "LIBS": libs.strip(),
                }
 
         return ret
+
+
+def environ_values(var_name):
+    if os.environ.get(var_name, ""):
+        return " %s" % os.environ.get(var_name, "")
+    else:
+        return ""
