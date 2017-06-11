@@ -72,21 +72,21 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() or package()'
                             'methods. Useful in combination with "package_files" command')
-        parser.add_argument("--ci_shared", action='store_true', default=False,
+        parser.add_argument("-cis", "--ci_shared", action='store_true', default=False,
                             help='Package will have a "shared" option to be used in CI')
-        parser.add_argument("--ci_travis_linux", action='store_true', default=False,
+        parser.add_argument("-cil", "--ci_travis_linux", action='store_true', default=False,
                             help='Generate travis-ci files for linux gcc')
-        parser.add_argument("--ci_travis_osx", action='store_true', default=False,
+        parser.add_argument("-cio", "--ci_travis_osx", action='store_true', default=False,
                             help='Generate travis-ci files for OSX apple-clang')
-        parser.add_argument("--ci_appveyor", action='store_true', default=False,
+        parser.add_argument("-ciw", "--ci_appveyor_win", action='store_true', default=False,
                             help='Generate appveyor files for Appveyor Visual Studio')
-        parser.add_argument("--ci_upload_url",
+        parser.add_argument("-ciu", "--ci_upload_url",
                             help='Define URL of the repository to upload')
 
         args = parser.parse_args(*args)
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
-                        visual_versions=args.ci_appveyor,
+                        visual_versions=args.ci_appveyor_win,
                         linux_gcc_versions=args.ci_travis_linux,
                         osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
                         upload_url=args.ci_upload_url)
@@ -685,6 +685,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
         --build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
         --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 '''
+
 
 def main(args):
     """ main entry point of the conan application, using a Command to

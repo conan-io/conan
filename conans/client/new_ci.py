@@ -7,12 +7,11 @@ services:
   - docker
 env:
   global:
-    - CONAN_UPLOAD: {upload}
     - CONAN_REFERENCE: "{name}/{version}"
     - CONAN_USERNAME: "{user}"
     - CONAN_CHANNEL: "{channel}"
     - CONAN_TOTAL_PAGES: 1
-
+    {upload}
 matrix:
    include:
 {configs}
@@ -101,12 +100,11 @@ environment:
     PYTHON_VERSION: "2.7.8"
     PYTHON_ARCH: "32"
 
-    CONAN_UPLOAD: {upload}
     CONAN_REFERENCE: "{name}/{version}"
     CONAN_USERNAME: "{user}"
     CONAN_CHANNEL: "{channel}"
     VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\Tools\\"
-
+    {upload}
     matrix:
 {configs}
 
@@ -146,8 +144,9 @@ def get_travis(name, version, user, channel, linux_gcc_versions, osx_clang_versi
         config.append(osx_config.format(xcode=xcode, version=apple_clang.replace(".", "")))
 
     configs = "".join(config)
+    upload = ("- CONAN_UPLOAD: %s\n" % upload_url) if upload_url else ""
     files = {".travis.yml": travis.format(name=name, version=version, user=user, channel=channel,
-                                          configs=configs, upload=upload_url),
+                                          configs=configs, upload=upload),
              ".travis/install.sh": travis_install,
              ".travis/run.sh": travis_run}
     return files
@@ -165,14 +164,15 @@ def get_appveyor(name, version, user, channel, visual_versions, upload_url):
         config.append(visual_config.format(image=image, version=visual_version, arch=""))
 
     configs = "".join(config)
+    upload = ("CONAN_UPLOAD: %s\n" % upload_url) if upload_url else ""
     files = {"appveyor.yml": appveyor.format(name=name, version=version, user=user,
-                                             channel=channel, configs=configs, upload=upload_url)}
+                                             channel=channel, configs=configs, upload=upload)}
     return files
 
 
 def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versions,
                  osx_clang_versions, shared, upload_url):
-    if shared and not (visual_versions, linux_gcc_versions, osx_clang_versions):
+    if shared and not (visual_versions or linux_gcc_versions or osx_clang_versions):
         raise ConanException("Trying to specify 'shared' in CI, but no CI system specified")
     if not (visual_versions or linux_gcc_versions or osx_clang_versions):
         return {}

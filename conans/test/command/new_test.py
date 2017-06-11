@@ -106,3 +106,59 @@ class NewTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/conanfile.py")))
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertFalse(os.path.exists(os.path.join(root, "test_package/example.cpp")))
+
+    def new_ci_test(self):
+        client = TestClient()
+        client.run('new MyPackage/1.3@myuser/testing -cis -ciw -cil -cio -ciu=myurl')
+        root = client.current_folder
+        build_py = load(os.path.join(root, "build.py"))
+        self.assertIn('builder.add_common_builds(shared_option_name="MyPackage:shared")',
+                      build_py)
+        self.assertIn('visual_versions=["12", "14", "15"]', build_py)
+        self.assertIn('gcc_versions=["4.9", "5.4", "6.3"]', build_py)
+        self.assertIn('apple_clang_versions=["7.3", "8.0", "8.1"]', build_py)
+        appveyor = load(os.path.join(root, "appveyor.yml"))
+        self.assertIn("CONAN_UPLOAD: myurl", appveyor)
+        self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', appveyor)
+        self.assertIn('CONAN_USERNAME: "myuser"', appveyor)
+        self.assertIn('CONAN_CHANNEL: "testing"', appveyor)
+        self.assertIn('CONAN_CURRENT_PAGE: VisualStudio_15_x86_64', appveyor)
+
+        travis = load(os.path.join(root, ".travis.yml"))
+        self.assertIn("- CONAN_UPLOAD: myurl", travis)
+        self.assertIn('- CONAN_REFERENCE: "MyPackage/1.3"', travis)
+        self.assertIn('- CONAN_USERNAME: "myuser"', travis)
+        self.assertIn('- CONAN_CHANNEL: "testing"', travis)
+        self.assertIn('env: CONAN_GCC_VERSIONS=5.4 CONAN_CURRENT_PAGE=gcc_54 CONAN_USE_DOCKER=1',
+                      travis)
+
+    def new_ci_test_partial(self):
+        client = TestClient()
+        root = client.current_folder
+        error = client.run('new MyPackage/1.3@myuser/testing -cis', ignore_error=True)
+        self.assertTrue(error)
+
+        client.run('new MyPackage/1.3@myuser/testing -cil')
+        self.assertTrue(os.path.exists(os.path.join(root, "build.py")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".travis.yml")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".travis/install.sh")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".travis/run.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
+
+        client = TestClient()
+        root = client.current_folder
+        client.run('new MyPackage/1.3@myuser/testing -ciw')
+        self.assertTrue(os.path.exists(os.path.join(root, "build.py")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/install.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
+        self.assertTrue(os.path.exists(os.path.join(root, "appveyor.yml")))
+
+        client = TestClient()
+        root = client.current_folder
+        client.run('new MyPackage/1.3@myuser/testing -cio')
+        self.assertTrue(os.path.exists(os.path.join(root, "build.py")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".travis.yml")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".travis/install.sh")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".travis/run.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
