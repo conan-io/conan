@@ -501,7 +501,7 @@ class Command(object):
         parser_add.add_argument('url',  help='url of the remote')
         parser_add.add_argument('verify_ssl',  help='Verify SSL certificated. Default True',
                                 default="True", nargs="?")
-        parser_add.add_argument("-i", "--insert", nargs='1', default=0, type=int,
+        parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int,
                                 help="insert remote at specific index")
         parser_rm = subparsers.add_parser('remove', help='remove a remote')
         parser_rm.add_argument('remote',  help='name of the remote')

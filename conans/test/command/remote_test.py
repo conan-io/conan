@@ -24,7 +24,8 @@ class RemoteTest(unittest.TestCase):
 
         self.client.run("remote add origin https://myurl")
         self.client.run("remote list")
-        self.assertIn("origin: https://myurl", self.client.user_io.out)
+        lines = str(self.client.user_io.out).splitlines()
+        self.assertIn("origin: https://myurl", lines[3])
 
         self.client.run("remote update origin https://2myurl")
         self.client.run("remote list")
@@ -57,7 +58,7 @@ class RemoteTest(unittest.TestCase):
         lines = str(self.client.user_io.out).splitlines()
         self.assertIn("origin2: https://myurl2", lines[0])
         self.assertIn("origin3: https://myurl3", lines[1])
-        self.assertIn("origin: https://myurl", lines[1])
+        self.assertIn("origin: https://myurl", lines[2])
 
     def verify_ssl_test(self):
         client = TestClient()
