@@ -501,9 +501,9 @@ class ConanAPIV1(object):
             self._user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     @api_method
-    def remote_add(self, remote, url, verify_ssl=True):
+    def remote_add(self, remote, url, verify_ssl=True, insert=None):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.add(remote, url, verify_ssl)
+        return registry.add(remote, url, verify_ssl, insert)
 
     @api_method
     def remote_remove(self, remote):
