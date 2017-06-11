@@ -72,10 +72,24 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() or package()'
                             'methods. Useful in combination with "package_files" command')
+        parser.add_argument("--ci_shared", action='store_true', default=False,
+                            help='Package will have a "shared" option to be used in CI')
+        parser.add_argument("--ci_travis_linux", action='store_true', default=False,
+                            help='Generate travis-ci files for linux gcc')
+        parser.add_argument("--ci_travis_osx", action='store_true', default=False,
+                            help='Generate travis-ci files for OSX apple-clang')
+        parser.add_argument("--ci_appveyor", action='store_true', default=False,
+                            help='Generate appveyor files for Appveyor Visual Studio')
+        parser.add_argument("--ci_upload_url",
+                            help='Define URL of the repository to upload')
 
         args = parser.parse_args(*args)
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
-                        exports_sources=args.sources, bare=args.bare)
+                        exports_sources=args.sources, bare=args.bare,
+                        visual_versions=args.ci_appveyor,
+                        linux_gcc_versions=args.ci_travis_linux,
+                        osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
+                        upload_url=args.ci_upload_url)
 
     def test_package(self, *args):
         """ Export, build package and test it with a consumer project.

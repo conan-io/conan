@@ -1,6 +1,7 @@
-from conans.errors import ConanException
 import re
-from conans.model.ref import ConanName, ConanFileReference
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+from conans.client.new_ci import ci_get_files
 
 
 conanfile = """from conans import ConanFile, CMake, tools
@@ -206,7 +207,9 @@ add_library(hello hello.cpp)
 """
 
 
-def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False):
+def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
+              visual_versions=None, linux_gcc_versions=None, osx_clang_versions=None, shared=None,
+              upload_url=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -257,4 +260,6 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
         files["test_package/CMakeLists.txt"] = test_cmake
         files["test_package/example.cpp"] = test_main
 
+    files.update(ci_get_files(name, version, user, channel, visual_versions,
+                              linux_gcc_versions, osx_clang_versions, shared, upload_url))
     return files
