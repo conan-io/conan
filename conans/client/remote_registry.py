@@ -7,7 +7,8 @@ from conans.util.config_parser import get_bool_from_text_value
 from conans.util.log import logger
 
 
-default_remotes = """conan.io https://server.conan.io True
+default_remotes = """conan-center https://conan.bintray.com True
+conan-transit https://conan-transit.bintray.com True
 """
 
 Remote = namedtuple("Remote", "name url verify_ssl")
