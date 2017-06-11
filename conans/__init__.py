@@ -15,5 +15,4 @@ import os
 COMPLEX_SEARCH_CAPABILITY = "complex_search"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
-__version__ = '0.23.1'
-
+__version__ = '0.23.2'
