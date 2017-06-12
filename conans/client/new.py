@@ -208,8 +208,8 @@ add_library(hello hello.cpp)
 
 
 def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-              visual_versions=None, linux_gcc_versions=None, osx_clang_versions=None, shared=None,
-              upload_url=None):
+              visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
+              shared=None, upload_url=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -228,11 +228,11 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
     ConanFileReference(name, version, user, channel)
 
     if header and exports_sources:
-        raise ConanException("--header and --sources are incompatible options")
+        raise ConanException("'header' and 'sources' are incompatible options")
     if pure_c and (header or exports_sources):
-        raise ConanException("--pure_c is incompatible with --header and --sources")
+        raise ConanException("'pure_c' is incompatible with 'header' and 'sources'")
     if bare and (header or exports_sources):
-        raise ConanException("--bare is incompatible with --header and --sources")
+        raise ConanException("'bare' is incompatible with 'header' and 'sources'")
 
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,
@@ -261,5 +261,5 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
         files["test_package/example.cpp"] = test_main
 
     files.update(ci_get_files(name, version, user, channel, visual_versions,
-                              linux_gcc_versions, osx_clang_versions, shared, upload_url))
+                              linux_gcc_versions, linux_clang_versions, osx_clang_versions, shared, upload_url))
     return files

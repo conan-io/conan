@@ -154,13 +154,14 @@ class ConanAPIV1(object):
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-            visual_versions=None, linux_gcc_versions=None, osx_clang_versions=None, shared=None,
-            upload_url=None):
+            visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
+            shared=None, upload_url=None):
         from conans.client.new import get_files
         files = get_files(name, header=header, pure_c=pure_c, test=test,
                           exports_sources=exports_sources, bare=bare,
                           visual_versions=visual_versions,
                           linux_gcc_versions=linux_gcc_versions,
+                          linux_clang_versions=linux_clang_versions,
                           osx_clang_versions=osx_clang_versions, shared=shared,
                           upload_url=upload_url)
 
