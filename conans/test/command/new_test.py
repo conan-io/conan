@@ -109,7 +109,7 @@ class NewTest(unittest.TestCase):
 
     def new_ci_test(self):
         client = TestClient()
-        client.run('new MyPackage/1.3@myuser/testing -cis -ciw -cil -cio -ciu=myurl')
+        client.run('new MyPackage/1.3@myuser/testing -cis -ciw -cilg -cilc -cio -ciu=myurl')
         root = client.current_folder
         build_py = load(os.path.join(root, "build.py"))
         self.assertIn('builder.add_common_builds(shared_option_name="MyPackage:shared")',
