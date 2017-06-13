@@ -174,8 +174,13 @@ class OptionsValues(object):
 
     def descope_options(self, name):
         package_values = self._reqs_options.pop(name, None)
-        if package_values:
-            self._package_values.update(package_values)
+        if not package_values:
+            return self
+        result = OptionsValues()
+        result._reqs_options = self._reqs_options
+        result._package_values = self._package_values.copy()
+        result._package_values.update(package_values)
+        return result
 
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())
