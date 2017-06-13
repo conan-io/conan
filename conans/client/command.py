@@ -7,6 +7,7 @@ from conans import __version__ as CLIENT_VERSION
 from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
+
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
@@ -742,7 +743,6 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
         --build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
         --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 '''
-
 
 def main(args):
     """ main entry point of the conan application, using a Command to

@@ -25,7 +25,13 @@ def _gcc_compiler(output, compiler_exe="gcc"):
     try:
         _, out = _execute('%s -dumpversion' % compiler_exe)
         compiler = "gcc"
-        installed_version = re.search("([0-9]\.[0-9])", out).group()
+        installed_version = re.search("([0-9](\.[0-9])?)", out).group()
+        # Since GCC 7.1, -dumpversion return the major version number
+        # only ("7"). We must use -dumpfullversion to get the full version
+        # number ("7.1.1").
+        if len(installed_version) == 1:
+            _, out = _execute('%s -dumpfullversion' % compiler_exe)
+            installed_version = re.search("([0-9]\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version

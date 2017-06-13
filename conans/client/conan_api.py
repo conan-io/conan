@@ -15,6 +15,7 @@ from conans.client.migrations import ClientMigrator
 from conans.client.new import get_files
 from conans.client.output import ConanOutput, Color
 from conans.client.printer import Printer
+from conans.client.profile_loader import read_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -39,12 +40,18 @@ from conans.util.log import logger, configure_logger
 from conans.util.tracer import log_command, log_exception
 
 
+def get_basic_requester(client_cache):
+    requester = requests.Session()
+    requester.proxies = client_cache.conan_config.proxies
+    return requester
+
 def api_method(f):
     def wrapper(*args, **kwargs):
         the_self = args[0]
         try:
             log_command(f.__name__, kwargs)
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
+                # Patch the globals in tools
                 return f(*args, **kwargs)
         except ConanException as exc:
             # import traceback
@@ -87,9 +94,9 @@ class ConanAPIV1(object):
     @staticmethod
     def factory():
         """Factory"""
+
         def instance_remote_manager(client_cache):
-            requester = requests.Session()
-            requester.proxies = client_cache.conan_config.proxies
+            requester = get_basic_requester(client_cache)
             # Verify client version against remotes
             version_checker_requester = VersionCheckerRequester(requester, Version(CLIENT_VERSION),
                                                                 Version(MIN_SERVER_COMPATIBLE_VERSION),
@@ -121,7 +128,7 @@ class ConanAPIV1(object):
             client_cache = migrate_and_get_client_cache(user_folder, out)
         except Exception as e:
             out.error(str(e))
-            sys.exit(True)
+            raise
 
         with tools.environment_append(client_cache.conan_config.env_vars):
             # Adjust CONAN_LOGGING_LEVEL with the env readed
@@ -137,14 +144,17 @@ class ConanAPIV1(object):
 
         return conan
 
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager):
+    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager, cwd):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
-
+        self._cwd = cwd
+        # Patch the tools module with a good requester and user_io
+        tools._global_requester = get_basic_requester(self._client_cache)
+        tools._global_output = self._user_io.out
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False, cwd=None):
@@ -211,7 +221,7 @@ class ConanAPIV1(object):
             user_channel = "%s/%s" % (first_dep.user, first_dep.channel)
             self._manager.export(user_channel, root_folder, keep_source=keep_source)
 
-        lib_to_test = first_dep.name + "*"
+        lib_to_test = first_dep.name
         # Get False or a list of patterns to check
         if build is None and lib_to_test:  # Not specified, force build the tested library
             build = [lib_to_test]
@@ -525,7 +535,7 @@ class ConanAPIV1(object):
             else:
                 self._user_io.out.info("No profiles defined")
         elif subcommand == "show":
-            p = Profile.read_file(profile, cwd, self._client_cache.profiles_path)
+            p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
             Printer(self._user_io.out).print_profile(profile, p)
 
 
@@ -592,7 +602,7 @@ def profile_from_args(profile, settings, options, env, scope, cwd, default_folde
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
-    file_profile = Profile.read_file(profile, cwd, default_folder)
+    file_profile, _ = read_profile(profile, cwd, default_folder)
     args_profile = _profile_parse_args(settings, options, env, scope)
 
     if file_profile:
