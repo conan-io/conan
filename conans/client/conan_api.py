@@ -144,14 +144,13 @@ class ConanAPIV1(object):
 
         return conan
 
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager, cwd):
+    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
-        self._cwd = cwd
         # Patch the tools module with a good requester and user_io
         tools._global_requester = get_basic_requester(self._client_cache)
         tools._global_output = self._user_io.out

@@ -409,8 +409,7 @@ class TestClient(object):
             tuple if required
         """
         self.init_dynamic_vars(user_io)
-        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager,
-                      self.current_folder)
+        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
         command = Command(conan, self.client_cache, self.user_io)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
