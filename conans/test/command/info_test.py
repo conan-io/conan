@@ -288,6 +288,9 @@ class MyTest(ConanFile):
         self.assertEqual('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
                          load(os.path.join(self.client.current_folder, "file.json")))
 
+        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json")
+        self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}', self.client.user_io.out)
+
     def diamond_build_order_test(self):
         self.client = TestClient()
         self._create("LibA", "0.1")

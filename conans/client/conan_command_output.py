@@ -19,17 +19,20 @@ class CommandOutputer(object):
         self.user_io = user_io
         self.client_cache = client_cache
 
-    def info_json(self, info, json_output, cwd):
-        cwd = prepare_cwd(cwd)
+    def build_order(self, info):
         msg = ", ".join(str(s) for s in info)
-        if not json_output:  # Path or false, so output the
-            self.user_io.out.info(msg)
-        else:
+        self.user_io.out.info(msg)
+
+    def json_build_order(self, info, json_output, cwd):
+        data = {"groups": [[str(ref) for ref in group] for group in info]}
+        json_str = json.dumps(data)
+        if json_output is True: # To the output
+            self.user_io.out.write(json_str)
+        else: # Path to a file
+            cwd = prepare_cwd(cwd)
             if not os.path.isabs(json_output):
                 json_output = os.path.join(cwd, json_output)
-            data = {"groups": [[str(ref) for ref in group] for group in info]}
-            save(json_output, json.dumps(data))
-        return
+            save(json_output, json_str)
 
     def _read_dates(self, deps_graph):
         ret = {}

@@ -233,9 +233,9 @@ class Command(object):
         parser.add_argument("--build_order", "-bo",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
-        parser.add_argument("--json", "-j",
-                            help='Only with --build_order option, return the information in a json file. e.j'
-                                 ' --json=/path/to/filename.json')
+        parser.add_argument("--json", "-j", nargs='?', const="1", type=str,
+                            help='Only with --build_order option, return the information in a json. e.j'
+                                 ' --json=/path/to/filename.json or --json to output the json')
         parser.add_argument("--graph", "-g",
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
@@ -253,7 +253,12 @@ class Command(object):
                                                env=args.env, scope=args.scope, profile_name=args.profile,
                                                filename=args.file, remote=args.remote, build_order=args.build_order,
                                                check_updates=args.update, cwd=args.cwd)
-            outputer.info_json(ret, args.json, args.cwd)
+            if args.json:
+                json_arg = True if args.json == "1" else args.json
+                outputer.json_build_order(ret, json_arg, args.cwd)
+            else:
+                outputer.build_order(ret)
+
         # INSTALL SIMULATION, NODES TO INSTALL
         elif args.build is not None:
             nodes, _ = self._conan.info_nodes_to_build(args.reference, build_modes=args.build,
