@@ -119,7 +119,7 @@ class NewTest(unittest.TestCase):
         self.assertNotIn('clang_versions=', build_py)
         self.assertNotIn('apple_clang_versions=', build_py)
         appveyor = load(os.path.join(root, "appveyor.yml"))
-        self.assertIn("CONAN_UPLOAD: myurl", appveyor)
+        self.assertIn("CONAN_UPLOAD: \"myurl\"", appveyor)
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', appveyor)
         self.assertIn('CONAN_USERNAME: "myuser"', appveyor)
         self.assertIn('CONAN_CHANNEL: "testing"', appveyor)
@@ -128,7 +128,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('CONAN_VISUAL_VERSIONS: 15', appveyor)
 
         travis = load(os.path.join(root, ".travis.yml"))
-        self.assertIn("- CONAN_UPLOAD: myurl", travis)
+        self.assertIn("- CONAN_UPLOAD: \"myurl\"", travis)
         self.assertIn('- CONAN_REFERENCE: "MyPackage/1.3"', travis)
         self.assertIn('- CONAN_USERNAME: "myuser"', travis)
         self.assertIn('- CONAN_CHANNEL: "testing"', travis)
@@ -165,3 +165,9 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, ".travis/install.sh")))
         self.assertTrue(os.path.exists(os.path.join(root, ".travis/run.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
+
+        client = TestClient()
+        root = client.current_folder
+        client.run('new MyPackage/1.3@myuser/testing -gi')
+        self.assertTrue(os.path.exists(os.path.join(root, ".gitignore")))
+

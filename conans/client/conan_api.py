@@ -155,7 +155,7 @@ class ConanAPIV1(object):
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
             visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-            shared=None, upload_url=None):
+            shared=None, upload_url=None, gitignore=None):
         from conans.client.new import get_files
         files = get_files(name, header=header, pure_c=pure_c, test=test,
                           exports_sources=exports_sources, bare=bare,
@@ -163,7 +163,7 @@ class ConanAPIV1(object):
                           linux_gcc_versions=linux_gcc_versions,
                           linux_clang_versions=linux_clang_versions,
                           osx_clang_versions=osx_clang_versions, shared=shared,
-                          upload_url=upload_url)
+                          upload_url=upload_url, gitignore=gitignore)
 
         save_files(self._cwd, files)
         for f in sorted(files):

@@ -82,6 +82,8 @@ class Command(object):
                             help='Generate travis-ci files for OSX apple-clang')
         parser.add_argument("-ciw", "--ci_appveyor_win", action='store_true', default=False,
                             help='Generate appveyor files for Appveyor Visual Studio')
+        parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
+                            help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci_upload_url",
                             help='Define URL of the repository to upload')
 
@@ -91,6 +93,7 @@ class Command(object):
                         visual_versions=args.ci_appveyor_win,
                         linux_gcc_versions=args.ci_travis_gcc,
                         linux_clang_versions=args.ci_travis_clang,
+                        gitignore=args.gitignore,
                         osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
                         upload_url=args.ci_upload_url)
 
