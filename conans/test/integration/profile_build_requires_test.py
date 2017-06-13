@@ -244,3 +244,10 @@ class MyLib(ConanFile):
                       client.user_io.out)
         client.run("build")
         self.assertIn("Project: Coverage True", client.user_io.out)
+
+        client.save({CONANFILE: conanfile}, clean_first=True)
+        client.run("install -o coverage=True")
+        self.assertIn("Installing build requires: [MyTool/0.1@lasote/stable]",
+                      client.user_io.out)
+        client.run("build")
+        self.assertIn("Project: Coverage True", client.user_io.out)
