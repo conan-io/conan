@@ -1,16 +1,22 @@
 from conans.errors import ConanException
 
-travis = """os: linux
-language: python
-sudo: required
-services:
-  - docker
+travis = """
 env:
-  global:
-    - CONAN_REFERENCE: "{name}/{version}"
-    - CONAN_USERNAME: "{user}"
-    - CONAN_CHANNEL: "{channel}"
-    {upload}
+   global:
+     - CONAN_REFERENCE: "{name}/{version}"
+     - CONAN_USERNAME: "{user}"
+     - CONAN_CHANNEL: "{channel}"
+     {upload}
+linux: &linux
+   os: linux
+   sudo: required
+   language: python
+   python: "3.6"
+   services:
+     - docker
+osx: &osx
+   os: osx
+   language: generic
 matrix:
    include:
 {configs}
@@ -24,11 +30,7 @@ script:
 """
 
 linux_config = """
-      - os: linux
-        services:
-          - docker
-        sudo: required
-        language: python"""
+      - <<: *linux"""
 
 
 linux_config_gcc = linux_config + """
@@ -40,9 +42,8 @@ linux_config_clang = linux_config + """
 """
 
 osx_config = """
-      - os: osx
+      - <<: *osx
         osx_image: xcode{xcode}
-        language: generic
         env: CONAN_APPLE_CLANG_VERSIONS={version}
 """
 
@@ -76,8 +77,9 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     pyenv activate conan
 fi
 
-pip install conan_package_tools # It install conan too
 pip install conan --upgrade
+pip install conan_package_tools
+
 conan user
 """
 
@@ -114,8 +116,8 @@ environment:
 
 install:
   - set PATH=%PATH%;%PYTHON%/Scripts/
-  - pip.exe install conan_package_tools # It install conan too
   - pip.exe install conan --upgrade
+  - pip.exe install conan_package_tools
   - conan user # It creates the conan data directory
 
 test_script:
@@ -131,11 +133,13 @@ def get_build_py(name, user, channel, shared):
 def get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_versions, osx_clang_versions, upload_url):
     config = []
 
-    for gcc in linux_gcc_versions:
-        config.append(linux_config_gcc.format(version=gcc, name=gcc.replace(".", "")))
+    if linux_gcc_versions:
+        for gcc in linux_gcc_versions:
+            config.append(linux_config_gcc.format(version=gcc, name=gcc.replace(".", "")))
 
-    for clang in linux_clang_versions:
-        config.append(linux_config_clang.format(version=clang, name=clang.replace(".", "")))
+    if linux_clang_versions:
+        for clang in linux_clang_versions:
+            config.append(linux_config_clang.format(version=clang, name=clang.replace(".", "")))
 
     xcode_map = {"8.1": "8.3",
                  "8.0": "8.2",
@@ -145,7 +149,7 @@ def get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_ver
         config.append(osx_config.format(xcode=xcode, version=apple_clang))
 
     configs = "".join(config)
-    upload = ("- CONAN_UPLOAD: %s\n" % upload_url) if upload_url else ""
+    upload = ('- CONAN_UPLOAD: "%s"\n' % upload_url) if upload_url else ""
     files = {".travis.yml": travis.format(name=name, version=version, user=user, channel=channel,
                                           configs=configs, upload=upload),
              ".travis/install.sh": travis_install,
@@ -163,7 +167,7 @@ def get_appveyor(name, version, user, channel, visual_versions, upload_url):
         config.append(visual_config.format(image=image, version=visual_version))
 
     configs = "".join(config)
-    upload = ("CONAN_UPLOAD: %s\n" % upload_url) if upload_url else ""
+    upload = ('CONAN_UPLOAD: "%s"\n' % upload_url) if upload_url else ""
     files = {"appveyor.yml": appveyor.format(name=name, version=version, user=user,
                                              channel=channel, configs=configs, upload=upload)}
     return files
