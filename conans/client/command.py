@@ -72,10 +72,30 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() or package()'
                             'methods. Useful in combination with "package_files" command')
+        parser.add_argument("-cis", "--ci_shared", action='store_true', default=False,
+                            help='Package will have a "shared" option to be used in CI')
+        parser.add_argument("-cilg", "--ci_travis_gcc", action='store_true', default=False,
+                            help='Generate travis-ci files for linux gcc')
+        parser.add_argument("-cilc", "--ci_travis_clang", action='store_true', default=False,
+                            help='Generate travis-ci files for linux clang')
+        parser.add_argument("-cio", "--ci_travis_osx", action='store_true', default=False,
+                            help='Generate travis-ci files for OSX apple-clang')
+        parser.add_argument("-ciw", "--ci_appveyor_win", action='store_true', default=False,
+                            help='Generate appveyor files for Appveyor Visual Studio')
+        parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
+                            help='Generate a .gitignore with the known patterns to excluded')
+        parser.add_argument("-ciu", "--ci_upload_url",
+                            help='Define URL of the repository to upload')
 
         args = parser.parse_args(*args)
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
-                        exports_sources=args.sources, bare=args.bare)
+                        exports_sources=args.sources, bare=args.bare,
+                        visual_versions=args.ci_appveyor_win,
+                        linux_gcc_versions=args.ci_travis_gcc,
+                        linux_clang_versions=args.ci_travis_clang,
+                        gitignore=args.gitignore,
+                        osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
+                        upload_url=args.ci_upload_url)
 
     def test_package(self, *args):
         """ Export, build package and test it with a consumer project.
@@ -487,6 +507,8 @@ class Command(object):
         parser_add.add_argument('url',  help='url of the remote')
         parser_add.add_argument('verify_ssl',  help='Verify SSL certificated. Default True',
                                 default="True", nargs="?")
+        parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int,
+                                help="insert remote at specific index")
         parser_rm = subparsers.add_parser('remove', help='remove a remote')
         parser_rm.add_argument('remote',  help='name of the remote')
         parser_upd = subparsers.add_parser('update', help='update the remote url')
@@ -522,7 +544,7 @@ class Command(object):
         if args.subcommand == "list":
             return self._conan.remote_list()
         elif args.subcommand == "add":
-            return self._conan.remote_add(remote, url, verify_ssl)
+            return self._conan.remote_add(remote, url, verify_ssl, args.insert)
         elif args.subcommand == "remove":
             return self._conan.remote_remove(remote)
         elif args.subcommand == "update":
@@ -669,6 +691,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
         --build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
         --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 '''
+
 
 def main(args):
     """ main entry point of the conan application, using a Command to
