@@ -91,6 +91,7 @@ class ConanFileLoader(object):
             if consumer:
                 self._user_options.descope_options(result.name)
                 result.options.initialize_upstream(self._user_options)
+                self._user_options.clear_unscoped_options()
                 # If this is the consumer project, it has no name
                 result.scope = self._scopes.package_scope()
             else:

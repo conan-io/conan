@@ -177,6 +177,9 @@ class OptionsValues(object):
         if package_values:
             self._package_values.update(package_values)
 
+    def clear_unscoped_options(self):
+        self._package_values.clear()
+
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())
 
