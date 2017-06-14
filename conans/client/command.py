@@ -74,12 +74,16 @@ class Command(object):
                             'methods. Useful in combination with "package_files" command')
         parser.add_argument("-cis", "--ci_shared", action='store_true', default=False,
                             help='Package will have a "shared" option to be used in CI')
-        parser.add_argument("-cil", "--ci_travis_linux", action='store_true', default=False,
+        parser.add_argument("-cilg", "--ci_travis_gcc", action='store_true', default=False,
                             help='Generate travis-ci files for linux gcc')
+        parser.add_argument("-cilc", "--ci_travis_clang", action='store_true', default=False,
+                            help='Generate travis-ci files for linux clang')
         parser.add_argument("-cio", "--ci_travis_osx", action='store_true', default=False,
                             help='Generate travis-ci files for OSX apple-clang')
         parser.add_argument("-ciw", "--ci_appveyor_win", action='store_true', default=False,
                             help='Generate appveyor files for Appveyor Visual Studio')
+        parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
+                            help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci_upload_url",
                             help='Define URL of the repository to upload')
 
@@ -87,7 +91,9 @@ class Command(object):
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
                         exports_sources=args.sources, bare=args.bare,
                         visual_versions=args.ci_appveyor_win,
-                        linux_gcc_versions=args.ci_travis_linux,
+                        linux_gcc_versions=args.ci_travis_gcc,
+                        linux_clang_versions=args.ci_travis_clang,
+                        gitignore=args.gitignore,
                         osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
                         upload_url=args.ci_upload_url)
 
