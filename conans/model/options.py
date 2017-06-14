@@ -139,7 +139,6 @@ class OptionsValues(object):
     def __init__(self, values=None):
         self._package_values = PackageOptionValues()
         self._reqs_options = {}  # {name("Boost": PackageOptionValues}
-
         if not values:
             return
 
