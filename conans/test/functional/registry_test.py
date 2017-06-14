@@ -70,3 +70,20 @@ class RegistryTest(unittest.TestCase):
         registry.set_ref(ref, remotes[0])
         remote = registry.get_ref(ref)
         self.assertEqual(remote, remotes[0])
+
+    def insert_test(self):
+        f = os.path.join(temp_folder(), "aux_file")
+        save(f, "conan.io https://server.conan.io True")
+        registry = RemoteRegistry(f, TestBufferConanOutput())
+        registry.add("repo1", "url1", True, insert=0)
+        self.assertEqual(registry.remotes, [("repo1", "url1", True),
+                                            ("conan.io", "https://server.conan.io", True)])
+        registry.add("repo2", "url2", True, insert=1)
+        self.assertEqual(registry.remotes, [("repo1", "url1", True),
+                                            ("repo2", "url2", True),
+                                            ("conan.io", "https://server.conan.io", True)])
+        registry.add("repo3", "url3", True, insert=5)
+        self.assertEqual(registry.remotes, [("repo1", "url1", True),
+                                            ("repo2", "url2", True),
+                                            ("conan.io", "https://server.conan.io", True),
+                                            ("repo3", "url3", True)])

@@ -13,6 +13,7 @@ from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
+from conans.util.files import exception_message_safe
 
 
 class Extender(argparse.Action):
@@ -74,10 +75,30 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() or package()'
                             'methods. Useful in combination with "package_files" command')
+        parser.add_argument("-cis", "--ci_shared", action='store_true', default=False,
+                            help='Package will have a "shared" option to be used in CI')
+        parser.add_argument("-cilg", "--ci_travis_gcc", action='store_true', default=False,
+                            help='Generate travis-ci files for linux gcc')
+        parser.add_argument("-cilc", "--ci_travis_clang", action='store_true', default=False,
+                            help='Generate travis-ci files for linux clang')
+        parser.add_argument("-cio", "--ci_travis_osx", action='store_true', default=False,
+                            help='Generate travis-ci files for OSX apple-clang')
+        parser.add_argument("-ciw", "--ci_appveyor_win", action='store_true', default=False,
+                            help='Generate appveyor files for Appveyor Visual Studio')
+        parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
+                            help='Generate a .gitignore with the known patterns to excluded')
+        parser.add_argument("-ciu", "--ci_upload_url",
+                            help='Define URL of the repository to upload')
 
         args = parser.parse_args(*args)
         self._conan.new(args.name, header=args.header, pure_c=args.pure_c, test=args.test,
-                        exports_sources=args.sources, bare=args.bare)
+                        exports_sources=args.sources, bare=args.bare,
+                        visual_versions=args.ci_appveyor_win,
+                        linux_gcc_versions=args.ci_travis_gcc,
+                        linux_clang_versions=args.ci_travis_clang,
+                        gitignore=args.gitignore,
+                        osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
+                        upload_url=args.ci_upload_url)
 
     def test_package(self, *args):
         """ Export, build package and test it with a consumer project.
@@ -282,7 +303,7 @@ class Command(object):
                 self._raise_exception_printing("Invalid --only value '%s' with --path specified, allowed values: [%s]."
                                                % (only, str_path_only_options))
             elif only and not args.paths and (set(only) - set(info_only_options)):
-                self._raise_exception_printing("Invalid --only value '%s', allowed values: [%s].\n" \
+                self._raise_exception_printing("Invalid --only value '%s', allowed values: [%s].\n"
                                                "Use --only=None to show only the references." %
                                                (only, str_only_options))
 
@@ -494,7 +515,8 @@ class Command(object):
         parser.add_argument('--case-sensitive', default=False,
                             action='store_true', help='Make a case-sensitive search')
         parser.add_argument('-r', '--remote', help='Remote origin')
-        parser.add_argument('--raw', default=False, action='store_true', help='Make a case-sensitive search')
+        parser.add_argument('--raw', default=False, action='store_true',
+                            help='Make a case-sensitive search')
         parser.add_argument('-q', '--query', default=None, help='Packages query: "os=Windows AND '
                                                                 '(arch=x86 OR compiler=gcc)".'
                                                                 ' The "pattern" parameter '
@@ -506,14 +528,19 @@ class Command(object):
 
         try:
             reference = ConanFileReference.loads(args.pattern)
+        except:
+            reference = None
+
+        if reference:
             ret = self._conan.search_packages(reference, query=args.query, remote=args.remote)
             ordered_packages, reference, recipe_hash, packages_query = ret
-            outputer.print_search_packages(ordered_packages, reference, recipe_hash, packages_query)
-        except:
-            refs = self._conan.search_recipes(args.pattern, remote=args.remote, case_sensitive=args.case_sensitive)
+            outputer.print_search_packages(ordered_packages, reference, recipe_hash,
+                                           packages_query)
+        else:
+            refs = self._conan.search_recipes(args.pattern, remote=args.remote,
+                                              case_sensitive=args.case_sensitive)
             self._check_query_parameter_and_get_reference(args.pattern, args.query)
             outputer.print_search_references(refs, args.pattern, args.raw)
-        return
 
     def upload(self, *args):
         """ Uploads a package recipe and the generated binary packages to a specified remote
@@ -558,6 +585,8 @@ class Command(object):
         parser_add.add_argument('url',  help='url of the remote')
         parser_add.add_argument('verify_ssl',  help='Verify SSL certificated. Default True',
                                 default="True", nargs="?")
+        parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int,
+                                help="insert remote at specific index")
         parser_rm = subparsers.add_parser('remove', help='remove a remote')
         parser_rm.add_argument('remote',  help='name of the remote')
         parser_upd = subparsers.add_parser('update', help='update the remote url')
@@ -593,7 +622,7 @@ class Command(object):
         if args.subcommand == "list":
             return self._conan.remote_list()
         elif args.subcommand == "add":
-            return self._conan.remote_add(remote, url, verify_ssl)
+            return self._conan.remote_add(remote, url, verify_ssl, args.insert)
         elif args.subcommand == "remove":
             return self._conan.remote_remove(remote)
         elif args.subcommand == "update":
@@ -632,7 +661,7 @@ class Command(object):
         """ prints a summary of all commands
         """
         self._user_io.out.writeln('Conan commands. Type $conan "command" -h for help',
-                                         Color.BRIGHT_YELLOW)
+                                  Color.BRIGHT_YELLOW)
         commands = self._commands()
         # future-proof way to ensure tabular formatting
         max_len = max((len(c) for c in commands)) + 2
@@ -691,12 +720,18 @@ class Command(object):
                 self._show_help()
                 return False
             method(args[0][1:])
-
         except (KeyboardInterrupt, SystemExit) as exc:
             logger.error(exc)
             errors = True
         except ConanException as exc:
             errors = True
+            msg = exception_message_safe(exc)
+            self._user_io.out.error(msg)
+        except Exception as exc:
+            import traceback
+            print(traceback.format_exc())
+            msg = exception_message_safe(exc)
+            self._user_io.out.error(msg)
 
         return errors
 
@@ -743,6 +778,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
         --build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
         --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
 '''
+
 
 def main(args):
     """ main entry point of the conan application, using a Command to
