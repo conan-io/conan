@@ -12,8 +12,7 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigP
 from conans.client.loader import load_consumer_conanfile
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
-from conans.client.new import get_files
-from conans.client.output import ConanOutput, Color
+from conans.client.output import ConanOutput
 from conans.client.printer import Printer
 from conans.client.profile_loader import read_profile
 from conans.client.remote_manager import RemoteManager
@@ -33,17 +32,20 @@ from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, conan_expand_user
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
-from conans.util.config_parser import get_bool_from_text
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, save_files, exception_message_safe
-from conans.util.log import logger, configure_logger
+from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
+
+
+default_manifest_folder = '.conan_manifests'
 
 
 def get_basic_requester(client_cache):
     requester = requests.Session()
     requester.proxies = client_cache.conan_config.proxies
     return requester
+
 
 def api_method(f):
     def wrapper(*args, **kwargs):
@@ -53,30 +55,15 @@ def api_method(f):
             with tools.environment_append(the_self._client_cache.conan_config.env_vars):
                 # Patch the globals in tools
                 return f(*args, **kwargs)
-        except ConanException as exc:
-            # import traceback
-            # logger.debug(traceback.format_exc())
+        except Exception as exc:
             msg = exception_message_safe(exc)
-            the_self._user_io.out.error(msg)
             try:
                 log_exception(exc, msg)
             except:
                 pass
             raise
-        except Exception as exc:
-            import traceback
-            print(traceback.format_exc())
-            msg = exception_message_safe(exc)
-            try:
-                log_exception(exc, msg)
-            except:
-                pass
-            raise exc
 
     return wrapper
-
-
-default_manifest_folder = '.conan_manifests'
 
 
 def prepare_cwd(cwd):
@@ -156,9 +143,19 @@ class ConanAPIV1(object):
         tools._global_output = self._user_io.out
 
     @api_method
-    def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False, cwd=None):
+    def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False, cwd=None,
+            visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
+            shared=None, upload_url=None, gitignore=None):
+        from conans.client.new import get_files
         cwd = prepare_cwd(cwd)
-        files = get_files(name, header=header, pure_c=pure_c, test=test, exports_sources=exports_sources, bare=bare)
+        files = get_files(name, header=header, pure_c=pure_c, test=test,
+                          exports_sources=exports_sources, bare=bare,
+                          visual_versions=visual_versions,
+                          linux_gcc_versions=linux_gcc_versions,
+                          linux_clang_versions=linux_clang_versions,
+                          osx_clang_versions=osx_clang_versions, shared=shared,
+                          upload_url=upload_url, gitignore=gitignore)
+
         save_files(cwd, files)
         for f in sorted(files):
             self._user_io.out.success("File saved: %s" % f)
@@ -201,7 +198,8 @@ class ConanAPIV1(object):
         rmdir(build_folder)
         # shutil.copytree(test_folder, build_folder)
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, cwd, self._client_cache.profiles_path)
+        profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
+                                    self._client_cache.profiles_path)
         conanfile = load_consumer_conanfile(test_conanfile, "",
                                             self._client_cache.settings, self._runner,
                                             self._user_io.out)
@@ -225,7 +223,8 @@ class ConanAPIV1(object):
         if build is None and lib_to_test:  # Not specified, force build the tested library
             build = [lib_to_test]
 
-        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, root_folder, cwd)
+        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive,
+                                               root_folder, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
         self._manager.install(reference=test_folder,
                               current_path=build_folder,
@@ -284,7 +283,8 @@ class ConanAPIV1(object):
                                      "e.g., MyPackage/1.2@user/channel")
             self._manager.download(ref, package, remote=remote)
         else:  # Classic install, package chosen with settings and options
-            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd, self._client_cache.profiles_path)
+            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd,
+                                                   self._client_cache.profiles_path)
             manifest_folder, manifest_interactive, manifest_verify = manifests
             profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                         self._client_cache.profiles_path)
@@ -308,18 +308,15 @@ class ConanAPIV1(object):
         self._user_io.out.info(config_parser.get_item(item))
         return config_parser.get_item(item)
 
-
     @api_method
     def config_set(self, item, value):
         config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
         config_parser.set_item(item, value)
 
-
     @api_method
     def config_rm(self, item):
         config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
         config_parser.rm_item(item)
-
 
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None, scope=None, profile_name=None,
@@ -433,10 +430,10 @@ class ConanAPIV1(object):
         self._manager.export(user, current_path, keep_source, filename=filename)
 
     @api_method
-    def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False, remote=None):
+    def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
+               remote=None):
         self._manager.remove(pattern, package_ids_filter=packages, build_ids=builds,
                              src=src, force=force, remote=remote, packages_query=query)
-
 
     @api_method
     def copy(self, reference="", user_channel="", force=False, all=False, package=None):
@@ -468,12 +465,14 @@ class ConanAPIV1(object):
         return ret
 
     @api_method
-    def upload(self, pattern, package=None, remote=None, all=False, force=False, confirm=False, retry=2, retry_wait=5,
+    def upload(self, pattern, package=None, remote=None, all=False, force=False, confirm=False,
+               retry=2, retry_wait=5,
                skip_upload=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         if package and not is_a_reference(pattern):
-            raise ConanException("-p parameter only allowed with a valid recipe reference, not with a pattern")
+            raise ConanException("-p parameter only allowed with a valid recipe reference, "
+                                 "not with a pattern")
 
         self._manager.upload(pattern, package,
                              remote, all_packages=all,
@@ -487,9 +486,9 @@ class ConanAPIV1(object):
             self._user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
 
     @api_method
-    def remote_add(self, remote, url, verify_ssl=True):
+    def remote_add(self, remote, url, verify_ssl=True, insert=None):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.add(remote, url, verify_ssl)
+        return registry.add(remote, url, verify_ssl, insert)
 
     @api_method
     def remote_remove(self, remote):
@@ -541,6 +540,19 @@ class ConanAPIV1(object):
 Conan = ConanAPIV1
 
 
+def _check_query_parameter_and_get_reference(query, pattern):
+    reference = None
+    if pattern:
+        try:
+            reference = ConanFileReference.loads(pattern)
+        except ConanException:
+            if query is not None:
+                raise ConanException("-q parameter only allowed with a valid recipe "
+                                     "reference as search pattern. e.j conan search "
+                                     "MyPackage/1.2@user/channel -q \"os=Windows\"")
+    return reference
+
+
 def _parse_manifests_arguments(verify, manifests, manifests_interactive, reference, current_path):
     if manifests and manifests_interactive:
         raise ConanException("Do not specify both manifests and "
@@ -561,6 +573,7 @@ def _parse_manifests_arguments(verify, manifests, manifests_interactive, referen
         manifest_verify = manifest_interactive = False
 
     return manifest_folder, manifest_interactive, manifest_verify
+
 
 def get_conan_runner():
     print_commands_to_output = get_env("CONAN_PRINT_RUN_COMMANDS", False)
