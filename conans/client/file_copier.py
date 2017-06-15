@@ -1,5 +1,5 @@
-import fnmatch
 import os
+import fnmatch
 import shutil
 from collections import defaultdict
 
@@ -73,7 +73,7 @@ class FileCopier(object):
         files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
                                                          ignore_case)
         copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
-        self._link_folders(src, dst, link_folders, files_to_copy)
+        self._link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
         return copied_files
 
@@ -128,14 +128,12 @@ class FileCopier(object):
         return files_to_copy, linked_folders
 
     @staticmethod
-    def _link_folders(src, dst, linked_folders, files_to_copy):
+    def _link_folders(src, dst, linked_folders):
         for linked_folder in linked_folders:
             link = os.readlink(os.path.join(src, linked_folder))
             # The link is relative to the directory of the "linker_folder"
             dest_dir = os.path.join(os.path.dirname(linked_folder), link)
-            # Check if any of the files to be copied are in the destination dir
-            will_have_contents = any([filepath.startswith(dest_dir) for filepath in files_to_copy])
-            if will_have_contents:
+            if os.path.exists(os.path.join(dst, dest_dir)):
                 with tools.chdir(dst):
                     try:
                         # Remove the previous symlink
@@ -143,8 +141,7 @@ class FileCopier(object):
                     except OSError:
                         pass
                     # link is a string relative to linked_folder
-                    # e.j: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar
-                    # in ./foo/test_link
+                    # e.j: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
                     os.symlink(link, linked_folder)
 
     @staticmethod
