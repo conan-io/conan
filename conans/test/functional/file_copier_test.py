@@ -102,7 +102,9 @@ class FileCopierTest(unittest.TestCase):
         folder2 = temp_folder()
         copier = FileCopier(folder1, folder2)
         copier("*", links=True)
-        self.assertTrue(os.path.islink(os.path.join(folder2, "foo", "symlink")))
+        symlink = os.path.join(folder2, "foo", "symlink")
+        self.assertTrue(os.path.islink(symlink))
+        self.assertTrue(load(os.path.join(symlink, "file.txt")), "Hello")
 
     def excludes_test(self):
         folder1 = temp_folder()

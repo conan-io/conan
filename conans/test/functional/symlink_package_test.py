@@ -41,6 +41,7 @@ class TestlinksTestConan(ConanFile):
 
     def test(self):
         foopath = self.deps_cpp_info["test_links"].rootpath + "/foo/test_link"
+        assert os.path.exists(os.path.join(foopath, "hello_world.txt"))
         if not os.path.islink(foopath):
             raise ConanException("Not a link!")
 """
