@@ -87,6 +87,22 @@ class FileCopierTest(unittest.TestCase):
         self.assertEqual("Hello1", load(os.path.join(folder2, "subdir1/file1.txt")))
         self.assertEqual("Hello1", load(os.path.join(folder2, "subdir2/file1.txt")))
 
+    def linked_relative_test(self):
+        if platform.system() != "Linux" and platform.system() != "Darwin":
+            return
+
+        folder1 = temp_folder()
+        sub1 = os.path.join(folder1, "foo/other/file")
+        os.makedirs(sub1)
+        save(os.path.join(sub1, "file.txt"), "Hello")
+        sub2 = os.path.join(folder1, "foo/symlink")
+        os.symlink("other/file", sub2)
+
+        folder2 = temp_folder()
+        copier = FileCopier(folder1, folder2)
+        copier("*", links=True)
+        self.assertTrue(os.path.islink(os.path.join(folder2, "foo", "symlink")))
+
     def excludes_test(self):
         folder1 = temp_folder()
         sub1 = os.path.join(folder1, "subdir1")
