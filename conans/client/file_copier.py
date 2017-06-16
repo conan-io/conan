@@ -3,6 +3,8 @@ import fnmatch
 import shutil
 from collections import defaultdict
 
+from conans import tools
+
 
 def report_copied_files(copied, output, warn=False):
     ext_files = defaultdict(list)
@@ -88,7 +90,7 @@ class FileCopier(object):
                 continue
 
             if links and os.path.islink(root):
-                linked_folders.append(root)
+                linked_folders.append(os.path.relpath(root, src))
                 subfolders[:] = []
                 continue
             basename = os.path.basename(root)
@@ -125,18 +127,22 @@ class FileCopier(object):
 
         return files_to_copy, linked_folders
 
-    def _link_folders(self, src, dst, linked_folders):
-        for f in linked_folders:
-            relpath = os.path.relpath(f, src)
-            link = os.readlink(f)
-            abs_target = os.path.join(dst, relpath)
-            abs_link = os.path.join(dst, link)
-            try:
-                os.remove(abs_target)
-            except OSError:
-                pass
-            if os.path.exists(abs_link):
-                os.symlink(link, abs_target)
+    @staticmethod
+    def _link_folders(src, dst, linked_folders):
+        for linked_folder in linked_folders:
+            link = os.readlink(os.path.join(src, linked_folder))
+            # The link is relative to the directory of the "linker_folder"
+            dest_dir = os.path.join(os.path.dirname(linked_folder), link)
+            if os.path.exists(os.path.join(dst, dest_dir)):
+                with tools.chdir(dst):
+                    try:
+                        # Remove the previous symlink
+                        os.remove(linked_folder)
+                    except OSError:
+                        pass
+                    # link is a string relative to linked_folder
+                    # e.j: os.symlink("test/bar", "./foo/test_link") will create a link to foo/test/bar in ./foo/test_link
+                    os.symlink(link, linked_folder)
 
     @staticmethod
     def _copy_files(files, src, dst, keep_path, symlinks):

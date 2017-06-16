@@ -1,9 +1,10 @@
-import unittest
 import os
-from conans.util.files import save, load
-from conans.test.utils.test_files import temp_folder
 import platform
+import unittest
+
 from conans.client.file_copier import FileCopier
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save, load
 
 
 class FileCopierTest(unittest.TestCase):
@@ -86,6 +87,24 @@ class FileCopierTest(unittest.TestCase):
         self.assertEqual(os.readlink(os.path.join(folder2, "subdir2")), "subdir1")
         self.assertEqual("Hello1", load(os.path.join(folder2, "subdir1/file1.txt")))
         self.assertEqual("Hello1", load(os.path.join(folder2, "subdir2/file1.txt")))
+
+    def linked_relative_test(self):
+        if platform.system() != "Linux" and platform.system() != "Darwin":
+            return
+
+        folder1 = temp_folder()
+        sub1 = os.path.join(folder1, "foo/other/file")
+        os.makedirs(sub1)
+        save(os.path.join(sub1, "file.txt"), "Hello")
+        sub2 = os.path.join(folder1, "foo/symlink")
+        os.symlink("other/file", sub2)
+
+        folder2 = temp_folder()
+        copier = FileCopier(folder1, folder2)
+        copier("*", links=True)
+        symlink = os.path.join(folder2, "foo", "symlink")
+        self.assertTrue(os.path.islink(symlink))
+        self.assertTrue(load(os.path.join(symlink, "file.txt")), "Hello")
 
     def excludes_test(self):
         folder1 = temp_folder()
