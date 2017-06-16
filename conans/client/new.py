@@ -1,5 +1,7 @@
-from conans.errors import ConanException
 import re
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+from conans.client.new_ci import ci_get_files
 
 
 conanfile = """from conans import ConanFile, CMake, tools
@@ -36,6 +38,7 @@ conan_basic_setup()''')
         self.copy("*hello.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
         self.copy("*.so", dst="lib", keep_path=False)
+        self.copy("*.dylib", dst="lib", keep_path=False)
         self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
@@ -204,8 +207,16 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 add_library(hello hello.cpp)
 """
 
+gitignore_template = """
+*.pyc
+test_package/build
 
-def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False):
+"""
+
+
+def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
+              visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
+              shared=None, upload_url=None, gitignore=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -220,12 +231,15 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
         raise ConanException("Bad parameter, please use full package name,"
                              "e.g: MyLib/1.2.3@user/testing")
 
+    # Validate it is a valid reference
+    ConanFileReference(name, version, user, channel)
+
     if header and exports_sources:
-        raise ConanException("--header and --sources are incompatible options")
+        raise ConanException("'header' and 'sources' are incompatible options")
     if pure_c and (header or exports_sources):
-        raise ConanException("--pure_c is incompatible with --header and --sources")
+        raise ConanException("'pure_c' is incompatible with 'header' and 'sources'")
     if bare and (header or exports_sources):
-        raise ConanException("--bare is incompatible with --header and --sources")
+        raise ConanException("'bare' is incompatible with 'header' and 'sources'")
 
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,
@@ -253,4 +267,9 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
         files["test_package/CMakeLists.txt"] = test_cmake
         files["test_package/example.cpp"] = test_main
 
+    if gitignore:
+        files[".gitignore"] = gitignore_template
+
+    files.update(ci_get_files(name, version, user, channel, visual_versions,
+                              linux_gcc_versions, linux_clang_versions, osx_clang_versions, shared, upload_url))
     return files

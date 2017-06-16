@@ -139,7 +139,6 @@ class OptionsValues(object):
     def __init__(self, values=None):
         self._package_values = PackageOptionValues()
         self._reqs_options = {}  # {name("Boost": PackageOptionValues}
-
         if not values:
             return
 
@@ -176,6 +175,9 @@ class OptionsValues(object):
         package_values = self._reqs_options.pop(name, None)
         if package_values:
             self._package_values.update(package_values)
+
+    def clear_unscoped_options(self):
+        self._package_values.clear()
 
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())

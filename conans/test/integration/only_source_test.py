@@ -181,14 +181,14 @@ class MyPackage(ConanFile):
         # Use an invalid pattern and check that its not builded from source
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build HelloInvalid" % str(conan_reference))
-        self.assertIn("No package matching 'HelloInvalid*' pattern", other_conan.user_io.out)
+        self.assertIn("No package matching 'HelloInvalid' pattern", other_conan.user_io.out)
         self.assertFalse(os.path.exists(other_conan.paths.builds(conan_reference)))
         # self.assertFalse(os.path.exists(other_conan.paths.packages(conan_reference)))
 
         # Use another valid pattern and check that its not builded from source
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         other_conan.run("install %s --build HelloInvalid -b Hello" % str(conan_reference))
-        self.assertIn("No package matching 'HelloInvalid*' pattern", other_conan.user_io.out)
+        self.assertIn("No package matching 'HelloInvalid' pattern", other_conan.user_io.out)
         # self.assertFalse(os.path.exists(other_conan.paths.builds(conan_reference)))
         # self.assertFalse(os.path.exists(other_conan.paths.packages(conan_reference)))
 

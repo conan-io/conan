@@ -94,7 +94,8 @@ class AutoToolsBuildEnvironment(object):
         self.fpic = None
 
     def _get_host_build_target_flags(self, arch_detected, os_detected):
-        """Based on google search for build/host triplets, it could need a lot and complex verification"""
+        """Based on google search for build/host triplets, it could need a lot
+        and complex verification"""
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
@@ -139,7 +140,10 @@ class AutoToolsBuildEnvironment(object):
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
 
         """
-        configure_dir = configure_dir or "./"
+        if configure_dir:
+            configure_dir = configure_dir.rstrip("/")
+        else:
+            configure_dir = "."
         auto_build, auto_host, auto_target = None, None, None
         if build is None or host is None or target is None:
             auto_build, auto_host, auto_target = self._get_host_build_target_flags(detected_architecture(),
@@ -160,7 +164,8 @@ class AutoToolsBuildEnvironment(object):
                 triplet_args.append("--target %s" % (target or auto_target))
 
         with environment_append(self.vars):
-            self._conanfile.run("%sconfigure %s %s" % (configure_dir, args_to_string(args), " ".join(triplet_args)))
+            self._conanfile.run("%s/configure %s %s"
+                                % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
     def make(self, args=""):
         with environment_append(self.vars):

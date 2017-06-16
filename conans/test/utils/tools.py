@@ -14,7 +14,8 @@ from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
-from conans.client.command import Command, migrate_and_get_client_cache
+from conans.client.command import Command
+from conans.client.conan_api import migrate_and_get_client_cache, Conan
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
 from conans.client.remote_manager import RemoteManager
@@ -390,6 +391,10 @@ class TestClient(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
+        # Patch the globals in tools
+        tools._global_requester = requests
+        tools._global_output = self.user_io.out
+
     def init_dynamic_vars(self, user_io=None):
         # Migration system
         self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
@@ -404,8 +409,8 @@ class TestClient(object):
             tuple if required
         """
         self.init_dynamic_vars(user_io)
-
-        command = Command(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
+        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
+        command = Command(conan, self.client_cache, self.user_io)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)

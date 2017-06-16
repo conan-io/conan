@@ -163,6 +163,13 @@ class SearchTest(unittest.TestCase):
                           "NodeInfo/1.0.2@fenix/stable\n"
                           "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
+    def search_raw(self):
+        self.client.run("search Hello* --raw")
+        self.assertEquals("Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n"
+                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+
     def recipe_pattern_search_test(self):
         self.client.run("search Hello*")
         self.assertEquals("Existing package recipes:\n\n"
@@ -213,6 +220,7 @@ class SearchTest(unittest.TestCase):
         shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
         self.client.run("remove Hello* -f")
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
+        self.assertIn("outdated from recipe: False", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)

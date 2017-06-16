@@ -23,16 +23,15 @@ class ExportLinterTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export lasote/stable")
-        if six.PY2:
-            self.assertIn("ERROR: Py3 incompatibility. Line 7: print statement used",
-                          client.user_io.out)
-            self.assertIn("ERROR: Py3 incompatibility. Line 8: Calling a dict.iter*() method",
-                          client.user_io.out)
+        self._check_linter(client.user_io.out)
 
-        self.assertIn("WARN: Linter. Line 8: Unused variable 'k'",
-                      client.user_io.out)
-        self.assertIn("WARN: Linter. Line 8: Unused variable 'v'",
-                      client.user_io.out)
+    def _check_linter(self, output):
+        if six.PY2:
+            self.assertIn("ERROR: Py3 incompatibility. Line 7: print statement used", output)
+            self.assertIn("ERROR: Py3 incompatibility. Line 8: Calling a dict.iter*() method",
+                          output)
+        self.assertIn("WARN: Linter. Line 8: Unused variable 'k'", output)
+        self.assertIn("WARN: Linter. Line 8: Unused variable 'v'", output)
 
     def test_disable_linter(self):
         client = TestClient()
@@ -53,3 +52,36 @@ indent-string='  '
                    % os.path.join(client.current_folder, "pylintrc"))
         client.run("export lasote/stable")
         self.assertIn("Bad indentation. Found 4 spaces, expected 2", client.user_io.out)
+
+    def test_dynamic_fields(self):
+        client = TestClient()
+        conanfile2 = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    def build(self):
+        self.output.info(self.source_folder)
+        self.output.info(self.package_folder)
+        self.output.info(self.build_folder)
+        self.output.info(self.conanfile_directory)
+    def package(self):
+        self.copy("*")
+    def build_id(self):
+        self.output.info(str(self.info_build))
+"""
+        client.save({CONANFILE: conanfile2})
+        client.run("export lasote/stable")
+        self.assertNotIn("Linter", client.user_io.out)
+        # ensure nothing breaks
+        client.run("install Hello/1.2@lasote/stable --build")
+
+    def test_warning_as_errors(self):
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("config set general.pylint_werr=True")
+        error = client.run("export lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self._check_linter(client.user_io.out)
+        self.assertIn("ERROR: Package recipe has linter errors. Please fix them",
+                      client.user_io.out)
