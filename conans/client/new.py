@@ -216,7 +216,7 @@ test_package/build
 
 def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
               visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-              shared=None, upload_url=None, gitignore=None):
+              shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -271,5 +271,7 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
         files[".gitignore"] = gitignore_template
 
     files.update(ci_get_files(name, version, user, channel, visual_versions,
-                              linux_gcc_versions, linux_clang_versions, osx_clang_versions, shared, upload_url))
+                              linux_gcc_versions, linux_clang_versions,
+                              osx_clang_versions, shared, upload_url,
+                              gitlab_gcc_versions, gitlab_clang_versions))
     return files
