@@ -114,6 +114,7 @@ class DepsGraph(object):
                 # Make sure not duplicated
                 indirect_reqs.difference_update(direct_reqs)
                 # There might be options that are not upstream
+                conanfile._backup_options = conanfile.options.values
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
                 non_devs = self.non_dev_nodes(node)

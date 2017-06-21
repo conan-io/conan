@@ -71,6 +71,7 @@ class BuildRequires(object):
 
     def install(self, reference, conanfile):
         str_ref = str(reference)
+        print "CURRENT OPTIONS ", reference, conanfile.name, conanfile.options.values.dumps()
         package_build_requires = self._get_recipe_build_requires(conanfile)
         for pattern, build_requires in self._build_requires.items():
             if ((not str_ref and pattern == "&") or
@@ -85,15 +86,15 @@ class BuildRequires(object):
 
             cached_graph = self._cached_graphs.get(str_build_requires)
             if not cached_graph:
-                cached_graph = self._install(package_build_requires.values())
+                cached_graph = self._install(package_build_requires.values(),conanfile._backup_options)
                 self._cached_graphs[str_build_requires] = cached_graph
 
             _apply_build_requires(cached_graph, conanfile)
 
-    def _install(self, references):
+    def _install(self, references, options):
         self._output.info("Installing build requires: [%s]"
                           % ", ".join(str(r) for r in references))
-        conanfile = self._loader.load_virtual(references, None, scope_options=False)  # No need current path
+        conanfile = self._loader.load_virtual(references, None, scope_options=False, build_require_options=options)  # No need current path
 
         # FIXME: Forced update=True, build_mode, Where to define it?
         update = False

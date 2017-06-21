@@ -94,3 +94,30 @@ class BuildRequiresTest(unittest.TestCase):
         self.assertNotIn("Tool/0.2", client.user_io.out)
         self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.user_io.out)
         self.assertIn("ToolPath: MyToolPath", client.user_io.out)
+
+    def options_test(self):
+        conanfile = """from conans import ConanFile
+class package(ConanFile):
+    name            = "first"
+    version         = "0.0.0"
+    options         = {"coverage": [True, False]}
+    default_options = "coverage=False"
+    def build(self):
+        self.output.info("Coverage: %s" % self.options.coverage)
+    """
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/stable")
+
+        consumer = """from conans import ConanFile
+
+class package(ConanFile):
+    name            = "second"
+    version         = "0.0.0"
+    default_options = "first:coverage=True"
+    build_requires  = "first/0.0.0@lasote/stable"
+"""
+        client.save({"conanfile.py": consumer})
+        client.run("install --build=missing")
+        print client.user_io.out
+        self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.user_io.out)
