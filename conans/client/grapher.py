@@ -39,7 +39,21 @@ def html_binary_graph(reference, ordered_packages, recipe_hash, table_filename):
     border: 1px solid black;
     border-collapse: collapse;
 }
+.selected {
+    border: 3px solid black;
+}
 </style>
+<script type="text/javascript">
+    function handleEvent(id) {
+        selected = document.getElementsByClassName('selected');
+        if (selected[0]) selected[0].className = '';
+        cell = document.getElementById(id);
+        cell.className = 'selected';
+        elem = document.getElementById('SelectedPackage');
+        elem.innerHTML = id;
+    }
+
+</script>
 <h1>%s</h1>
     """ % str(reference)]
     headers = sorted(columns)
@@ -55,14 +69,19 @@ def html_binary_graph(reference, ordered_packages, recipe_hash, table_filename):
         for header in headers:
             col = columns.get(header, "")
             if col:
-                if col.outdated:
-                    result.append("<td bgcolor=#ffff00></td>")
-                else:
-                    result.append("<td bgcolor=#00ff00></td>")
+                color = "#ffff00" if col.outdated else "#00ff00"
+                result.append('<td bgcolor=%s id="%s" onclick=handleEvent("%s")></td>' % (color, col.ID, col.ID))
             else:
                 result.append("<td></td>")
         result.append("</tr>")
     result.append("</table>")
+
+    result.append('<br>Selected: <div id="SelectedPackage"></div>')
+
+    result.append("<br>Legend<br>"
+                  "<table><tr><td bgcolor=#ffff00>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Outdated from recipe</td></tr>"
+                  "<tr><td bgcolor=#00ff00>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Updated</td></tr>"
+                  "<tr><td>&nbsp;&nbsp;&nbsp;&nbsp;</td><td>Non existing</td></tr></table>")
     html_contents = "\n".join(result)
     save(table_filename, html_contents)
 
