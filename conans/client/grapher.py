@@ -1,5 +1,70 @@
 from conans.util.files import save
 from conans.client.installer import build_id
+from collections import defaultdict, namedtuple
+
+
+def html_binary_graph(reference, ordered_packages, recipe_hash, table_filename):
+    binary = namedtuple("Binary", "ID outdated")
+    columns = set()
+    table = defaultdict(dict)
+    for package_id, properties in ordered_packages.items():
+        settings = properties.get("settings", None)
+        if settings:
+            row_name = "%s %s %s" % (settings.get("os", "None"), settings.get("compiler", "None"),
+                                     settings.get("compiler.version", "None"))
+            column_name = "%s %s" % (settings.get("build_type", ""),
+                                     settings.get("arch", ""))
+        else:
+            row_name = "NO settings"
+            column_name = ""
+
+        options = properties.get("options", None)
+        if options:
+            for k, v in options.items():
+                column_name += "<br>%s=%s" % (k, v)
+
+        column_name = column_name or "NO options"
+        columns.add(column_name)
+        package_recipe_hash = properties.get("recipe_hash", None)
+        # Always compare outdated with local recipe, simplification,
+        # if a remote check is needed install recipe first
+        if recipe_hash:
+            outdated = (recipe_hash != package_recipe_hash)
+        else:
+            outdated = None
+        table[row_name][column_name] = binary(package_id, outdated)
+
+    result = ["""<style>
+    table, th, td {
+    border: 1px solid black;
+    border-collapse: collapse;
+}
+</style>
+<h1>%s</h1>
+    """ % str(reference)]
+    headers = sorted(columns)
+    result.append("<table>")
+    result.append("<tr>")
+    result.append("<th></th>")
+    for header in headers:
+        result.append("<th>%s</th>" % header)
+    result.append("</tr>")
+    for row, columns in sorted(table.items()):
+        result.append("<tr>")
+        result.append("<td>%s</td>" % row)
+        for header in headers:
+            col = columns.get(header, "")
+            if col:
+                if col.outdated:
+                    result.append("<td bgcolor=#ffff00></td>")
+                else:
+                    result.append("<td bgcolor=#00ff00></td>")
+            else:
+                result.append("<td></td>")
+        result.append("</tr>")
+    result.append("</table>")
+    html_contents = "\n".join(result)
+    save(table_filename, html_contents)
 
 
 class ConanGrapher(object):
