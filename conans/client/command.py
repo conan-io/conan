@@ -124,6 +124,10 @@ class Command(object):
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
+        parser.add_argument("-a", "--user",
+                            help='export the package with this user name')
+        parser.add_argument("-c", "--channel",
+                            help='export the package with this channel')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -133,7 +137,8 @@ class Command(object):
         return self._conan.test_package(args.path, args.profile, args.settings, args.options,
                                         args.env, args.scope, args.test_folder, args.not_export,
                                         args.build, args.keep_source, args.verify, args.manifests,
-                                        args.manifests_interactive, args.remote, args.update)
+                                        args.manifests_interactive, args.remote, args.update,
+                                        user=args.user, channel=args.channel)
 
     # Alias to test
     def test(self, *args):
@@ -427,7 +432,12 @@ class Command(object):
                                  'Use for testing purposes only')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         args = parser.parse_args(*args)
-        return self._conan.export(user=args.user, path=args.path, keep_source=args.keep_source, filename=args.file)
+        try:
+            user, channel = args.user.split("/")
+        except:
+            user, channel = args.user, "testing"
+        return self._conan.export(user=user, channel=channel, path=args.path,
+                                  keep_source=args.keep_source, filename=args.file)
 
     def remove(self, *args):
         """Remove any package recipe or binary matching a pattern.
