@@ -69,6 +69,7 @@ class upload_with_progress(object):
     def __init__(self, totalsize, iterator, chunk_size, output):
         self.totalsize = totalsize
         self.output = output
+        self.chunk_size = chunk_size
         self.aprox_chunks = self.totalsize * 1.0 / chunk_size
         self.groups = iterator
 
@@ -79,12 +80,14 @@ class upload_with_progress(object):
                 index = self.aprox_chunks
 
             units = progress_units(index, self.aprox_chunks)
+            progress = human_readable_progress(index * self.chunk_size, self.totalsize)
             if last_progress != units:  # Avoid screen refresh if nothing has change
-                print_progress(self.output, units)
+                print_progress(self.output, units, progress)
                 last_progress = units
             yield chunk
 
-        print_progress(self.output, progress_units(100, 100))
+        progress = human_readable_progress(self.totalsize, self.totalsize)
+        print_progress(self.output, progress_units(100, 100), progress)
 
     def __len__(self):
         return self.totalsize
@@ -142,9 +145,10 @@ class Downloader(object):
                         save(file_path, data, append=True)
 
                     units = progress_units(dl, total_length)
+                    progress = human_readable_progress(dl, total_length)
                     if last_progress != units:  # Avoid screen refresh if nothing has change
                         if self.output:
-                            print_progress(self.output, units)
+                            print_progress(self.output, units, progress)
                         last_progress = units
 
             duration = time.time() - t1
@@ -174,9 +178,26 @@ def progress_units(progress, total):
     return int(50 * progress / total)
 
 
-def print_progress(output, units):
+def human_readable_progress(bytes_transferred, total_bytes):
+    units = ["B", "KB", "MB", "GB"] # Units indices map to 1024^i
+
+    unit_idx = len(units) - 1
+    for (i, _) in enumerate(units):
+        if total_bytes < 1024**i:
+            unit_idx = i-1
+            break
+
+    scaled_bytes_transferred = bytes_transferred / 1024.0**unit_idx
+    scaled_total_bytes       = total_bytes / 1024.0**unit_idx
+
+    return "{0:.2f}{2}/{1:.2f}{2}".format(
+        scaled_bytes_transferred, scaled_total_bytes, units[unit_idx]
+    )
+
+
+def print_progress(output, units, progress=""):
     if output.is_terminal():
-        output.rewrite_line("[%s%s]" % ('=' * units, ' ' * (50 - units)))
+        output.rewrite_line("[%s%s] %s" % ('=' * units, ' ' * (50 - units), progress))
 
 
 def call_with_retry(out, retry, retry_wait, method, *args, **kwargs):
