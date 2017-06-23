@@ -69,7 +69,7 @@ class Command(object):
                                  'deleting "self.settings.compiler.libcxx" setting '
                                  'in the configure method')
         parser.add_argument("-s", "--sources", action='store_true', default=False,
-                            help='Create a package with embedded sources in "hello" folder, '
+                            help='Create a package with embedded sources in "src" folder, '
                                  'using "exports_sources" instead of retrieving external code with '
                                  'the "source()" method')
         parser.add_argument("-b", "--bare", action='store_true', default=False,
@@ -115,8 +115,8 @@ class Command(object):
 
         parser = argparse.ArgumentParser(description=self.test_package.__doc__,
                                          prog="conan test_package")
-        parser.add_argument("path", nargs='?', default="", help='path to conanfile file, '
-                            'e.g. /my_project/')
+        parser.add_argument("user_channel", nargs='?', default="", help='user and channel, '
+                            'e.g. myuser/stable')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile before test execution')
         parser.add_argument("-tf", "--test_folder",
@@ -124,21 +124,23 @@ class Command(object):
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
-        parser.add_argument("-a", "--user",
-                            help='export the package with this user name')
-        parser.add_argument("-c", "--channel",
-                            help='export the package with this channel')
+        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
 
-        return self._conan.test_package(args.path, args.profile, args.settings, args.options,
+        try:
+            user, channel = args.user_channel.split("/")
+        except:
+            user, channel = None, None
+
+        return self._conan.test_package(args.profile, args.settings, args.options,
                                         args.env, args.scope, args.test_folder, args.not_export,
                                         args.build, args.keep_source, args.verify, args.manifests,
                                         args.manifests_interactive, args.remote, args.update,
-                                        user=args.user, channel=args.channel)
+                                        cwd=args.cwd, user=user, channel=channel)
 
     # Alias to test
     def test(self, *args):
@@ -149,7 +151,8 @@ class Command(object):
         """Creates a package binary from given precompiled artifacts in user folder, skipping
            the package recipe build() and package() methods
         """
-        parser = argparse.ArgumentParser(description=self.package_files.__doc__, prog="conan package_files")
+        parser = argparse.ArgumentParser(description=self.package_files.__doc__,
+                                         prog="conan package_files")
         parser.add_argument("reference",
                             help='package recipe reference e.g., MyPackage/1.2@user/channel')
         parser.add_argument("--package_folder", "-pf",
@@ -166,9 +169,10 @@ class Command(object):
                             action='store_true', help='Overwrite existing package if existing')
 
         args = parser.parse_args(*args)
-        return self._conan.package_files(reference=args.reference, package_folder=args.package_folder,
-                                         profile_name=args.profile, force=args.force, settings=args.settings,
-                                         options=args.options)
+        return self._conan.package_files(reference=args.reference,
+                                         package_folder=args.package_folder,
+                                         profile_name=args.profile, force=args.force,
+                                         settings=args.settings, options=args.options)
 
     def install(self, *args):
         """Installs the requirements specified in a 'conanfile.py' or 'conanfile.txt'.
@@ -199,16 +203,19 @@ class Command(object):
                             help='Install specified packages but avoid running imports')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
+        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
 
         args = parser.parse_args(*args)
 
-        return self._conan.install(reference=args.reference, package=args.package, settings=args.settings,
-                                   options=args.options,
-                                   env=args.env, scope=args.scope, all=args.all, remote=args.remote, werror=args.werror,
+        return self._conan.install(reference=args.reference, package=args.package,
+                                   settings=args.settings, options=args.options,
+                                   env=args.env, scope=args.scope, all=args.all,
+                                   remote=args.remote, werror=args.werror,
                                    verify=args.verify, manifests=args.manifests,
                                    manifests_interactive=args.manifests_interactive,
                                    build=args.build, profile_name=args.profile, update=args.update,
-                                   generator=args.generator, no_imports=args.no_imports, filename=args.file)
+                                   generator=args.generator, no_imports=args.no_imports,
+                                   filename=args.file, cwd=args.cwd)
 
     def config(self, *args):
         """Manages conan.conf information
@@ -422,8 +429,8 @@ class Command(object):
         Also, from the local cache, it can be uploaded to any remote with the "upload" command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
-        parser.add_argument("user", help='user_name[/channel]. By default, channel is '
-                                         '"testing", e.g., phil or phil/stable')
+        parser.add_argument("user_channel", help='user_name[/channel]. By default, channel is '
+                                                 '"testing", e.g., phil or phil/stable')
         parser.add_argument('--path', '-p', default=None,
                             help='Optional. Folder with a %s. Default current directory.'
                             % CONANFILE)
@@ -433,9 +440,9 @@ class Command(object):
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         args = parser.parse_args(*args)
         try:
-            user, channel = args.user.split("/")
+            user, channel = args.user_channel.split("/")
         except:
-            user, channel = args.user, "testing"
+            user, channel = args.user_channel, "testing"
         return self._conan.export(user=user, channel=channel, path=args.path,
                                   keep_source=args.keep_source, filename=args.file)
 

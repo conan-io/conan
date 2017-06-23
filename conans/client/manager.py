@@ -159,6 +159,16 @@ class ConanManager(object):
 
         return conanfile
 
+    def _inject_require(self, conanfile, inject_require):
+        """ test_package functionality requires injecting the tested package as requirement
+        before running the install
+        """
+        require = conanfile.requires.get(inject_require.name)
+        if require:
+            require.conan_reference = require.range_reference = inject_require
+        else:
+            conanfile.requires(str(inject_require))
+
     def _get_graph_builder(self, loader, update, remote_proxy):
         local_search = None if update else self._search_manager
         resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
@@ -249,11 +259,7 @@ class ConanManager(object):
         loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
         conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         if inject_require:
-            require = conanfile.requires.get(inject_require.name)
-            if require:
-                require.conan_reference = require.range_reference = inject_require
-            else:
-                conanfile.requires(str(inject_require))
+            self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 

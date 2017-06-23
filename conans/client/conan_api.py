@@ -164,7 +164,7 @@ class ConanAPIV1(object):
             self._user_io.out.success("File saved: %s" % f)
 
     @api_method
-    def test_package(self, path=None, profile_name=None, settings=None, options=None, env=None,
+    def test_package(self, profile_name=None, settings=None, options=None, env=None,
                      scope=None, test_folder=None, not_export=False, build=None, keep_source=False,
                      verify=default_manifest_folder, manifests=default_manifest_folder,
                      manifests_interactive=default_manifest_folder,
@@ -174,8 +174,7 @@ class ConanAPIV1(object):
         env = env or []
         cwd = prepare_cwd(cwd)
 
-        root_folder = os.path.normpath(os.path.join(cwd, path))
-        conanfile_path = os.path.join(root_folder, "conanfile.py")
+        conanfile_path = os.path.join(cwd, "conanfile.py")
         conanfile = load_conanfile_class(conanfile_path)
         package_name = getattr(conanfile, "name", None)
         package_version = getattr(conanfile, "version", None)
@@ -184,7 +183,7 @@ class ConanAPIV1(object):
 
         test_folders = [test_folder] if test_folder else ["test_package", "test"]
         for test_folder_name in test_folders:
-            test_folder = os.path.join(root_folder, test_folder_name)
+            test_folder = os.path.join(cwd, test_folder_name)
             test_conanfile_path = os.path.join(test_folder, "conanfile.py")
             if os.path.exists(test_conanfile_path):
                 break
@@ -208,12 +207,20 @@ class ConanAPIV1(object):
         try:
             if hasattr(test_conanfile, "requirements"):
                 test_conanfile.requirements()
-            requirement = test_conanfile.requires.get(package_name)
-            if requirement:
-                user = user or requirement.conan_reference.user
-                channel = channel or requirement.conan_reference.channel
-        except Exception:
-            raise ConanException("Unable to retrieve first requirement of test conanfile.py")
+        except Exception as e:
+            raise ConanException("Error in test_package/conanfile.py requirements(). %s" % str(e))
+
+        requirement = test_conanfile.requires.get(package_name)
+        if requirement:
+            if requirement.conan_reference.version != package_version:
+                raise ConanException("package version is '%s', but test_package/conanfile "
+                                     "is requiring version '%s'\n"
+                                     "You can remove this requirement and use "
+                                     "'conan test_package user/channel' instead"
+                                     % (package_version, requirement.conan_reference.version))
+            user = user or requirement.conan_reference.user
+            channel = channel or requirement.conan_reference.channel
+
         if not user or not channel:
             raise ConanException("Please specify user and channel")
         conanfile_reference = ConanFileReference(package_name, package_version, user, channel)
@@ -221,13 +228,12 @@ class ConanAPIV1(object):
         # Forcing an export!
         if not not_export:
             self._user_io.out.info("Exporting package recipe")
-            self._manager.export(user, channel, root_folder, keep_source=keep_source)
+            self._manager.export(user, channel, cwd, keep_source=keep_source)
 
         if build is None:  # Not specified, force build the tested library
             build = [package_name]
 
-        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive,
-                                               root_folder, cwd)
+        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
         self._manager.install(inject_require=conanfile_reference,
                               reference=test_folder,
@@ -287,8 +293,7 @@ class ConanAPIV1(object):
                                      "e.g., MyPackage/1.2@user/channel")
             self._manager.download(ref, package, remote=remote)
         else:  # Classic install, package chosen with settings and options
-            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd,
-                                                   self._client_cache.profiles_path)
+            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
             profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                         self._client_cache.profiles_path)
@@ -557,7 +562,7 @@ def _check_query_parameter_and_get_reference(query, pattern):
     return reference
 
 
-def _parse_manifests_arguments(verify, manifests, manifests_interactive, reference, current_path):
+def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
     if manifests and manifests_interactive:
         raise ConanException("Do not specify both manifests and "
                              "manifests-interactive arguments")
@@ -567,10 +572,7 @@ def _parse_manifests_arguments(verify, manifests, manifests_interactive, referen
     manifest_folder = verify or manifests or manifests_interactive
     if manifest_folder:
         if not os.path.isabs(manifest_folder):
-            if isinstance(reference, ConanFileReference):
-                manifest_folder = os.path.join(current_path, manifest_folder)
-            else:
-                manifest_folder = os.path.join(reference, manifest_folder)
+            manifest_folder = os.path.join(cwd, manifest_folder)
         manifest_verify = verify is not None
         manifest_interactive = manifests_interactive is not None
     else:
