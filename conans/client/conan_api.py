@@ -9,7 +9,7 @@ import conans
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
-from conans.client.loader import load_consumer_conanfile
+from conans.client.loader import load_consumer_conanfile, ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput
@@ -202,9 +202,10 @@ class ConanAPIV1(object):
 
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
-        conanfile = load_consumer_conanfile(test_conanfile, "",
-                                            self._client_cache.settings, self._runner,
-                                            self._user_io.out)
+
+        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
+
         try:
             # convert to list from ItemViews required for python3
             if hasattr(conanfile, "requirements"):
