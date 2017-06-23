@@ -283,7 +283,7 @@ class ConanAPIV1(object):
         try:
             ref = ConanFileReference.loads(reference)
         except:
-            ref = os.path.normpath(os.path.join(os.getcwd(), reference))
+            ref = os.path.normpath(os.path.join(cwd, reference))
 
         if all or package:  # Install packages without settings (fixed ids or all)
             if all:

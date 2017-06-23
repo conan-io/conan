@@ -262,8 +262,8 @@ class TestConan(ConanFile):
         client.run("export lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
-        client.run("install --build=missing -s os=Windows -c=win_dir")
-        client.run("install --build=missing -s os=Macos -c=os_dir")
+        client.run("install .. --build=missing -s os=Windows -c=win_dir")
+        client.run("install .. --build=missing -s os=Macos -c=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertNotIn("os=Macos", conaninfo)
