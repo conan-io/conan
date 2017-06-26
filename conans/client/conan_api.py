@@ -9,7 +9,7 @@ import conans
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
-from conans.client.loader import load_consumer_conanfile
+from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput
@@ -145,7 +145,7 @@ class ConanAPIV1(object):
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False, cwd=None,
             visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-            shared=None, upload_url=None, gitignore=None):
+            shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
         from conans.client.new import get_files
         cwd = prepare_cwd(cwd)
         files = get_files(name, header=header, pure_c=pure_c, test=test,
@@ -154,7 +154,9 @@ class ConanAPIV1(object):
                           linux_gcc_versions=linux_gcc_versions,
                           linux_clang_versions=linux_clang_versions,
                           osx_clang_versions=osx_clang_versions, shared=shared,
-                          upload_url=upload_url, gitignore=gitignore)
+                          upload_url=upload_url, gitignore=gitignore,
+                          gitlab_gcc_versions=gitlab_gcc_versions,
+                          gitlab_clang_versions=gitlab_clang_versions)
 
         save_files(cwd, files)
         for f in sorted(files):
@@ -200,9 +202,10 @@ class ConanAPIV1(object):
 
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
-        conanfile = load_consumer_conanfile(test_conanfile, "",
-                                            self._client_cache.settings, self._runner,
-                                            self._user_io.out)
+
+        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        conanfile = loader.load_conan(test_conanfile, self._user_io.out, consumer=True)
+
         try:
             # convert to list from ItemViews required for python3
             if hasattr(conanfile, "requirements"):

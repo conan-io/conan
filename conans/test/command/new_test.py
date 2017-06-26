@@ -109,7 +109,7 @@ class NewTest(unittest.TestCase):
 
     def new_ci_test(self):
         client = TestClient()
-        client.run('new MyPackage/1.3@myuser/testing -cis -ciw -cilg -cilc -cio -ciu=myurl')
+        client.run('new MyPackage/1.3@myuser/testing -cis -ciw -cilg -cilc -cio -ciglg -ciglc -ciu=myurl')
         root = client.current_folder
         build_py = load(os.path.join(root, "build.py"))
         self.assertIn('builder.add_common_builds(shared_option_name="MyPackage:shared")',
@@ -118,6 +118,9 @@ class NewTest(unittest.TestCase):
         self.assertNotIn('gcc_versions=', build_py)
         self.assertNotIn('clang_versions=', build_py)
         self.assertNotIn('apple_clang_versions=', build_py)
+        self.assertNotIn('gitlab_gcc_versions=', build_py)
+        self.assertNotIn('gitlab_clang_versions=', build_py)
+
         appveyor = load(os.path.join(root, "appveyor.yml"))
         self.assertIn("CONAN_UPLOAD: \"myurl\"", appveyor)
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', appveyor)
@@ -135,6 +138,13 @@ class NewTest(unittest.TestCase):
         self.assertIn('env: CONAN_GCC_VERSIONS=5.4 CONAN_DOCKER_IMAGE=lasote/conangcc54',
                       travis)
 
+        gitlab = load(os.path.join(root, ".gitlab-ci.yml"))
+        self.assertIn("CONAN_UPLOAD: \"myurl\"", gitlab)
+        self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', gitlab)
+        self.assertIn('CONAN_USERNAME: "myuser"', gitlab)
+        self.assertIn('CONAN_CHANNEL: "testing"', gitlab)
+        self.assertIn('CONAN_GCC_VERSIONS: "5.4"', gitlab)
+
     def new_ci_test_partial(self):
         client = TestClient()
         root = client.current_folder
@@ -147,6 +157,7 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, ".travis/install.sh")))
         self.assertTrue(os.path.exists(os.path.join(root, ".travis/run.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
 
         client = TestClient()
         root = client.current_folder
@@ -156,6 +167,7 @@ class NewTest(unittest.TestCase):
         self.assertFalse(os.path.exists(os.path.join(root, ".travis/install.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
         self.assertTrue(os.path.exists(os.path.join(root, "appveyor.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
 
         client = TestClient()
         root = client.current_folder
@@ -165,9 +177,29 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, ".travis/install.sh")))
         self.assertTrue(os.path.exists(os.path.join(root, ".travis/run.sh")))
         self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
 
         client = TestClient()
         root = client.current_folder
         client.run('new MyPackage/1.3@myuser/testing -gi')
         self.assertTrue(os.path.exists(os.path.join(root, ".gitignore")))
 
+        client = TestClient()
+        root = client.current_folder
+        client.run('new MyPackage/1.3@myuser/testing -ciglg')
+        self.assertTrue(os.path.exists(os.path.join(root, "build.py")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/install.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))
+
+        client = TestClient()
+        root = client.current_folder
+        client.run('new MyPackage/1.3@myuser/testing -ciglc')
+        self.assertTrue(os.path.exists(os.path.join(root, "build.py")))
+        self.assertTrue(os.path.exists(os.path.join(root, ".gitlab-ci.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis.yml")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/install.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, ".travis/run.sh")))
+        self.assertFalse(os.path.exists(os.path.join(root, "appveyor.yml")))

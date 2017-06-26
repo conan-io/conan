@@ -85,6 +85,10 @@ class Command(object):
                             help='Generate travis-ci files for OSX apple-clang')
         parser.add_argument("-ciw", "--ci_appveyor_win", action='store_true', default=False,
                             help='Generate appveyor files for Appveyor Visual Studio')
+        parser.add_argument("-ciglg", "--ci_gitlab_gcc", action='store_true', default=False,
+                            help='Generate GitLab files for linux gcc')
+        parser.add_argument("-ciglc", "--ci_gitlab_clang", action='store_true', default=False,
+                            help='Generate GitLab files for linux clang')
         parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
                             help='Generate a .gitignore with the known patterns to excluded')
         parser.add_argument("-ciu", "--ci_upload_url",
@@ -98,7 +102,9 @@ class Command(object):
                         linux_clang_versions=args.ci_travis_clang,
                         gitignore=args.gitignore,
                         osx_clang_versions=args.ci_travis_osx, shared=args.ci_shared,
-                        upload_url=args.ci_upload_url)
+                        upload_url=args.ci_upload_url,
+                        gitlab_gcc_versions=args.ci_gitlab_gcc,
+                        gitlab_clang_versions=args.ci_gitlab_clang)
 
     def test_package(self, *args):
         """ Export, build package and test it with a consumer project.

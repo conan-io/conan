@@ -12,7 +12,7 @@ from conans.model import Generator
 from conans.paths import BUILD_INFO
 from conans import ConanFile, CMake
 
-class MyCustomGenerator(Generator):
+class MyCustom_Generator(Generator):
     @property
     def filename(self):
         return "customfile.gen"
@@ -33,7 +33,7 @@ Hello0/0.1@lasote/stable
 MyCustomGen/0.2@lasote/stable
 
 [generators]
-MyCustomGenerator
+MyCustom_Generator
 """
 
 generator_multi = """
