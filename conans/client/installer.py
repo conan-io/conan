@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME, CONANFILE
+from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME
 from conans.util.files import save, rmdir, mkdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger

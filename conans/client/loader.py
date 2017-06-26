@@ -138,7 +138,8 @@ class ConanFileLoader(object):
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, references, current_path, scope_options=True, build_require_options=None):
+    def load_virtual(self, references, current_path, scope_options=True,
+                     build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(None, self._runner, self._settings.copy(), current_path)
@@ -153,8 +154,8 @@ class ConanFileLoader(object):
         if scope_options:
             assert len(references) == 1
             self._user_options.scope_options(references[0].name)
-        if build_require_options:
-            conanfile.options.initialize_upstream(build_require_options)
+        if build_requires_options:
+            conanfile.options.initialize_upstream(build_requires_options)
         else:
             conanfile.options.initialize_upstream(self._user_options)
 

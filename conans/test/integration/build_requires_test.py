@@ -118,6 +118,5 @@ class package(ConanFile):
     build_requires  = "first/0.0.0@lasote/stable"
 """
         client.save({"conanfile.py": consumer})
-        client.run("install --build=missing")
-        print client.user_io.out
+        client.run("install --build=missing -o Pkg:someoption=3")
         self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.user_io.out)

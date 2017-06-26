@@ -55,7 +55,6 @@ class BuildRequires(object):
         self._output = output
         self._current_path = current_path
         self._loader = loader
-        self._cached_graphs = {}
         self._search_manager = search_manager
         self._build_requires = build_requires
         self._build_modes = build_modes
@@ -71,7 +70,6 @@ class BuildRequires(object):
 
     def install(self, reference, conanfile):
         str_ref = str(reference)
-        print "CURRENT OPTIONS ", reference, conanfile.name, conanfile.options.values.dumps()
         package_build_requires = self._get_recipe_build_requires(conanfile)
         for pattern, build_requires in self._build_requires.items():
             if ((not str_ref and pattern == "&") or
@@ -81,20 +79,21 @@ class BuildRequires(object):
                 package_build_requires.update(build_requires)
 
         if package_build_requires:
+
             str_build_requires = str(package_build_requires)
             self._output.info("%s: Build requires: [%s]" % (str(reference), str_build_requires))
 
-            cached_graph = self._cached_graphs.get(str_build_requires)
-            if not cached_graph:
-                cached_graph = self._install(package_build_requires.values(),conanfile._backup_options)
-                self._cached_graphs[str_build_requires] = cached_graph
+            build_require_graph = self._install(package_build_requires.values(),
+                                                conanfile.build_requires_options)
 
-            _apply_build_requires(cached_graph, conanfile)
+            _apply_build_requires(build_require_graph, conanfile)
 
-    def _install(self, references, options):
+    def _install(self, references, build_requires_options):
         self._output.info("Installing build requires: [%s]"
                           % ", ".join(str(r) for r in references))
-        conanfile = self._loader.load_virtual(references, None, scope_options=False, build_require_options=options)  # No need current path
+        # No need current path
+        conanfile = self._loader.load_virtual(references, None, scope_options=False,
+                                              build_requires_options=build_requires_options)
 
         # FIXME: Forced update=True, build_mode, Where to define it?
         update = False
