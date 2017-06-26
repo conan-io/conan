@@ -207,7 +207,7 @@ class DepsEnvInfo(EnvInfo):
     def dumps(self):
         result = []
 
-        for var, values in self.vars.items():
+        for var, values in sorted(self.vars.items()):
             result.append("[%s]" % var)
             if isinstance(values, list):
                 result.extend(values)
@@ -215,8 +215,8 @@ class DepsEnvInfo(EnvInfo):
                 result.append(values)
         result.append("")
 
-        for name, env_info in self._dependencies_.items():
-            for var, values in env_info.vars.items():
+        for name, env_info in sorted(self._dependencies_.items()):
+            for var, values in sorted(env_info.vars.items()):
                 result.append("[%s:%s]" % (name, var))
                 if isinstance(values, list):
                     result.extend(values)

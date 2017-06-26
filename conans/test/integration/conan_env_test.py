@@ -72,14 +72,14 @@ OTHER_VALUE2
 OTHER_VALUE3
 OTHER_VALUE
 
-[Test:OTHER_VAR]
-OTHER_VALUE2
-OTHER_VALUE3
-
 [Pkg:MY_VAR]
 MY_VALUE
 [Pkg:OTHER_VAR]
 OTHER_VALUE
+
+[Test:OTHER_VAR]
+OTHER_VALUE2
+OTHER_VALUE3
 """
         self.assertEqual(contents.splitlines(), result.splitlines())
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
