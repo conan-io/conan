@@ -1,9 +1,9 @@
 import hashlib
 import os
 import sys
+from collections import defaultdict, OrderedDict
 
 import requests
-from collections import defaultdict, OrderedDict
 
 import conans
 from conans import __version__ as CLIENT_VERSION, tools
@@ -13,7 +13,6 @@ from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput
-from conans.client.printer import Printer
 from conans.client.profile_loader import read_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
@@ -36,7 +35,6 @@ from conans.util.env_reader import get_env
 from conans.util.files import rmdir, save_files, exception_message_safe
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-
 
 default_manifest_folder = '.conan_manifests'
 
@@ -485,8 +483,7 @@ class ConanAPIV1(object):
     @api_method
     def remote_list(self):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        for r in registry.remotes:
-            self._user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+        return registry.remotes
 
     @api_method
     def remote_add(self, remote, url, verify_ssl=True, insert=None):
@@ -506,8 +503,7 @@ class ConanAPIV1(object):
     @api_method
     def remote_list_ref(self):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        for ref, remote in registry.refs.items():
-            self._user_io.out.info("%s: %s" % (ref, remote))
+        return registry.refs
 
     @api_method
     def remote_add_ref(self, reference, remote):
@@ -525,19 +521,18 @@ class ConanAPIV1(object):
         return registry.update_ref(reference, remote)
 
     @api_method
-    def profile(self, subcommand, profile=None, cwd=None):
-        cwd = prepare_cwd(cwd)
-        if subcommand == "list":
-            folder = self._client_cache.profiles_path
-            if os.path.exists(folder):
-                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-                for p in sorted(profiles):
-                    self._user_io.out.info(p)
-            else:
-                self._user_io.out.info("No profiles defined")
-        elif subcommand == "show":
-            p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
-            Printer(self._user_io.out).print_profile(profile, p)
+    def profile_list(self):
+        folder = self._client_cache.profiles_path
+        if os.path.exists(folder):
+            return [name for name in os.listdir(folder) if not os.path.isdir(name)]
+        else:
+            self._user_io.out.info("No profiles defined")
+            return []
+
+    @api_method
+    def read_profile(self, profile=None):
+        p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
+        return p
 
 
 Conan = ConanAPIV1
