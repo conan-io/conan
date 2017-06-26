@@ -2,36 +2,7 @@ import unittest
 
 from conans.client.configure_build_environment import AutoToolsBuildEnvironment
 from conans import tools
-
-
-class MockDepsCppInfo(object):
-
-    def __init__(self):
-        self.include_paths = []
-        self.lib_paths = []
-        self.libs = []
-        self.defines = []
-        self.cflags = []
-        self.cppflags = []
-        self.sharedlinkflags = []
-        self.exelinkflags = []
-        self.sysroot = ""
-
-
-class MockConanfile(object):
-
-    def __init__(self, settings):
-        self.deps_cpp_info = MockDepsCppInfo()
-        self.settings = settings
-
-
-class MockSettings(object):
-
-    def __init__(self, values):
-        self.values = values
-
-    def get_safe(self, value):
-        return self.values.get(value, None)
+from conans.test.utils.conanfile import MockConanfile, MockSettings
 
 
 class AutoToolsConfigureTest(unittest.TestCase):

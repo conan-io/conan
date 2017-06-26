@@ -6,14 +6,13 @@ from conans.model import Generator
 
 class VirtualEnvGenerator(Generator):
 
-    append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS"]
+    append_with_spaces = ["CPPFLAGS", "CFLAGS", "CXXFLAGS", "LIBS", "LDFLAGS", "CL"]
 
     def __init__(self, conanfile):
         self.conanfile = conanfile
         self.env = conanfile.env
 
         super(VirtualEnvGenerator, self).__init__(conanfile)
-
 
     @property
     def filename(self):
