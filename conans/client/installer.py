@@ -117,8 +117,7 @@ class ConanInstaller(object):
         self._remote_proxy = remote_proxy
         self._build_requires = build_requires
         self._build_mode = build_mode
-        self._build_requires._installer = self
-        self._installed_packages = set()
+        self._built_packages = set()  # To avoid re-building twice the same package reference
 
     def install(self, deps_graph, current_path):
         """ given a DepsGraph object, build necessary nodes or retrieve them
@@ -201,8 +200,7 @@ class ConanInstaller(object):
         nodes_to_process = self._get_nodes(nodes_by_level, skip_private_nodes)
 
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
-
-            if build_needed:
+            if build_needed and (conan_ref, package_id) not in self._built_packages:
                 build_allowed = self._build_mode.allowed(conan_ref, conan_file)
                 if not build_allowed:
                     self._raise_package_not_found_error(conan_ref, conan_file)
@@ -215,7 +213,7 @@ class ConanInstaller(object):
                 elif self._build_mode.forced(conan_ref, conan_file):
                     output.warn('Forced build from source')
 
-                self._build_requires.install(conan_ref, conan_file)
+                self._build_requires.install(conan_ref, conan_file, self)
 
                 t1 = time.time()
                 # Assign to node the propagated info
@@ -237,6 +235,7 @@ class ConanInstaller(object):
                 log_file = os.path.join(build_folder, RUN_LOG_NAME)
                 log_file = log_file if os.path.exists(log_file) else None
                 log_package_built(package_ref, duration, log_file)
+                self._built_packages.add((conan_ref, package_id))
             else:
                 # Get the package, we have a not outdated remote package
                 if conan_ref:

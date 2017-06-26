@@ -7,6 +7,9 @@ from collections import OrderedDict
 
 def _apply_build_requires(deps_graph, conanfile):
     requires_nodes = deps_graph.direct_requires()
+    print "Applying build requires to ", conanfile
+    print "requires nodes ", requires_nodes
+    print "Current env_info ", conanfile.deps_env_info.dumps()
     for node in requires_nodes:
         conan_ref, build_require_conanfile = node
 
@@ -15,6 +18,7 @@ def _apply_build_requires(deps_graph, conanfile):
 
         conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref.name)
         conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
+    print "Final env_info ", conanfile.deps_env_info.dumps()
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -46,7 +50,6 @@ class BuildRequires(object):
     def __init__(self, loader, graph_builder, registry, output, build_requires):
         self._loader = loader
         self._graph_builder = graph_builder
-        self._installer = None
         self._output = output
         self._registry = registry
         self._build_requires = build_requires
@@ -60,7 +63,7 @@ class BuildRequires(object):
                 raise ConanException("Error in 'build_requirements()': %s" % str(e))
         return conanfile.build_requires
 
-    def install(self, reference, conanfile):
+    def install(self, reference, conanfile, installer):
         str_ref = str(reference)
         package_build_requires = self._get_recipe_build_requires(conanfile)
         for pattern, build_requires in self._build_requires.items():
@@ -73,12 +76,13 @@ class BuildRequires(object):
             str_build_requires = str(package_build_requires)
             self._output.info("%s: Build requires: [%s]" % (str(reference), str_build_requires))
 
+            conanfile.build_requires_options.clear_unscoped_options()
             build_require_graph = self._install(package_build_requires.values(),
-                                                conanfile.build_requires_options)
+                                                conanfile.build_requires_options, installer)
 
             _apply_build_requires(build_require_graph, conanfile)
 
-    def _install(self, build_requires_references, build_requires_options):
+    def _install(self, build_requires_references, build_requires_options, installer):
         self._output.info("Installing build requires: [%s]"
                           % ", ".join(str(r) for r in build_requires_references))
         # No need current path
@@ -93,7 +97,7 @@ class BuildRequires(object):
         self._build_requires.pop("*", None)
         self._build_requires.pop("&!", None)
 
-        self._installer.install(deps_graph, "")
+        installer.install(deps_graph, "")
         self._build_requires = old_build_requires  # Restore original values
         self._output.info("Installed build requires: [%s]"
                           % ", ".join(str(r) for r in build_requires_references))

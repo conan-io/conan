@@ -90,7 +90,6 @@ class BuildRequiresTest(unittest.TestCase):
         self.assertIn("MyLib/0.1@lasote/stable: Already installed!", client.user_io.out)
 
         client.run("install MyLib/0.1@lasote/stable --profile ./profile2.txt --build")
-        print client.user_io.out
         self.assertNotIn("Tool/0.1", client.user_io.out)
         self.assertNotIn("Tool/0.2", client.user_io.out)
         self.assertIn("Tool/0.3@lasote/stable: Generating the package", client.user_io.out)
