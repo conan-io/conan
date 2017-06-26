@@ -25,6 +25,10 @@ from conans.model.version import Version
 from conans.util.files import _generic_algorithm_sum, load, save, sha256sum, sha1sum, md5sum, md5
 from conans.util.log import logger
 
+# Default values
+_global_requester = requests
+_global_output = ConanOutput(sys.stdout)
+
 
 def unix_path(path):
     """"Used to translate windows paths to MSYS unix paths like
@@ -195,7 +199,7 @@ def cpu_count():
         env_cpu_count = os.getenv("CONAN_CPU_COUNT", None)
         return int(env_cpu_count) if env_cpu_count else multiprocessing.cpu_count()
     except NotImplementedError:
-        print("WARN: multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
+        _global_output.warn("multiprocessing.cpu_count() not implemented. Defaulting to 1 cpu")
     return 1  # Safe guess
 
 
@@ -243,15 +247,15 @@ def unzip(filename, destination=".", keep_permissions=False):
 
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(extracted_size, uncompress_size):
-            txt_msg = "Unzipping %.0f %%\r" % (extracted_size * 100.0 / uncompress_size)
-            print(txt_msg, end='')
+            txt_msg = "Unzipping %.0f %%" % (extracted_size * 100.0 / uncompress_size)
+            _global_output.rewrite_line(txt_msg)
     else:
         def print_progress(extracted_size, uncompress_size):
             pass
 
     with zipfile.ZipFile(filename, "r") as z:
         uncompress_size = sum((file_.file_size for file_ in z.infolist()))
-        print("Unzipping %s, this can take a while" % human_size(uncompress_size))
+        _global_output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
         extracted_size = 0
         if platform.system() == "Windows":
             for file_ in z.infolist():
@@ -263,7 +267,7 @@ def unzip(filename, destination=".", keep_permissions=False):
                         raise ValueError("Filename too long")
                     z.extract(file_, full_path)
                 except Exception as e:
-                    print("Error extract %s\n%s" % (file_.filename, str(e)))
+                    _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
         else:  # duplicated for, to avoid a platform check for each zipped file
             for file_ in z.infolist():
                 extracted_size += file_.file_size
@@ -276,7 +280,7 @@ def unzip(filename, destination=".", keep_permissions=False):
                         perm = file_.external_attr >> 16 & 0xFFF
                         os.chmod(os.path.join(full_path, file_.filename), perm)
                 except Exception as e:
-                    print("Error extract %s\n%s" % (file_.filename, str(e)))
+                    _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
 
 
 def untargz(filename, destination="."):
@@ -319,7 +323,7 @@ def download(url, filename, verify=True, out=None, retry=2, retry_wait=5):
         # We check the certificate using a list of known verifiers
         import conans.client.rest.cacert as cacert
         verify = cacert.file_path
-    downloader = Downloader(requests, out, verify=verify)
+    downloader = Downloader(_global_requester, out, verify=verify)
     downloader.download(url, filename, retry=retry, retry_wait=retry_wait)
     out.writeln("")
 
@@ -422,16 +426,16 @@ def detected_architecture():
 
 class OSInfo(object):
     """ Usage:
-        print(os_info.is_linux) # True/False
-        print(os_info.is_windows) # True/False
-        print(os_info.is_macos) # True/False
-        print(os_info.is_freebsd) # True/False
-        print(os_info.is_solaris) # True/False
+        (os_info.is_linux) # True/False
+        (os_info.is_windows) # True/False
+        (os_info.is_macos) # True/False
+        (os_info.is_freebsd) # True/False
+        (os_info.is_solaris) # True/False
 
-        print(os_info.linux_distro)  # debian, ubuntu, fedora, centos...
+        (os_info.linux_distro)  # debian, ubuntu, fedora, centos...
 
-        print(os_info.os_version) # 5.1
-        print(os_info.os_version_name) # Windows 7, El Capitan
+        (os_info.os_version) # 5.1
+        (os_info.os_version_name) # Windows 7, El Capitan
 
         if os_info.os_version > "10.1":
             pass
@@ -595,7 +599,7 @@ try:
     os_info = OSInfo()
 except Exception as exc:
     logger.error(exc)
-    print("Error detecting os_info")
+    _global_output.error("Error detecting os_info")
 
 
 class SystemPackageTool(object):
@@ -640,7 +644,7 @@ class SystemPackageTool(object):
     def _installed(self, packages):
         for pkg in packages:
             if self._tool.installed(pkg):
-                print("Package already installed: %s" % pkg)
+                _global_output.info("Package already installed: %s" % pkg)
                 return True
         return False
 
@@ -660,7 +664,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        print("Warn: Only available for linux with apt-get or yum or OSx with brew")
+        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew")
 
     def installed(self, package_name):
         return False
@@ -703,6 +707,6 @@ class BrewTool(object):
 
 
 def _run(runner, command):
-    print("Running: %s" % command)
+    _global_output.info("Running: %s" % command)
     if runner(command, True) != 0:
         raise ConanException("Command '%s' failed" % command)

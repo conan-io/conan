@@ -61,7 +61,8 @@ def _get_upload_modules_with_deps(uploaded_files, downloaded_files):
             else PackageReference.loads(module_id)
         # Store recipe and package dependencies
         if mod_doc["type"] == "package":
-            conan_infos = [file_doc for file_doc in mod_doc["files"] if file_doc["name"] == "conaninfo.txt"]
+            conan_infos = [file_doc for file_doc in mod_doc["files"]
+                           if file_doc["name"] == "conaninfo.txt"]
             if conan_infos:
                 conan_info = conan_infos[0]["path"]
                 info = ConanInfo.loads(load(conan_info))
@@ -99,17 +100,17 @@ def _get_only_downloads_module(downloaded_files):
     """
     ret = BuildInfoModule()
     ret.id = "DownloadOnly"
-    for ref, file_docs in downloaded_files.items():
+    for _, file_docs in downloaded_files.items():
         files = file_docs["files"]
         for file_doc in files:
             the_type = _get_type(file_doc["path"])
-            dep = BuildInfoModuleDependency(file_doc["name"], the_type, file_doc["sha1"], file_doc["md5"])
+            dep = BuildInfoModuleDependency(file_doc["name"], the_type, file_doc["sha1"],
+                                            file_doc["md5"])
             ret.dependencies.append(dep)
     return ret
 
 
 def _build_modules(trace_path):
-
     uploaded_files = _extract_uploads_from_conan_trace(trace_path)
     downloaded_files = _extract_downloads_from_conan_trace(trace_path)
     if uploaded_files:

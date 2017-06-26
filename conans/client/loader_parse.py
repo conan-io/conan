@@ -29,7 +29,7 @@ def _parse_module(conanfile_module, filename):
     """
     result = None
     for name, attr in conanfile_module.__dict__.items():
-        if "_" in name:
+        if name[0] == "_":
             continue
         if (inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile and
                 attr.__dict__["__module__"] == filename):
