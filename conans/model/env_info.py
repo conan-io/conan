@@ -1,6 +1,5 @@
 import copy
 import os
-import re
 from collections import OrderedDict, defaultdict
 
 from conans.errors import ConanException
@@ -158,7 +157,7 @@ class EnvValues(object):
                             del ret_multi[name]
         return ret, ret_multi
 
-    def __repr__(self, *args, **kwargs):
+    def __repr__(self):
         return str(dict(self._data))
 
 
@@ -210,34 +209,22 @@ class DepsEnvInfo(EnvInfo):
 
         for var, values in self.vars.items():
             result.append("[%s]" % var)
-            result.extend(values)
+            if isinstance(values, list):
+                result.extend(values)
+            else:
+                result.append(values)
         result.append("")
 
         for name, env_info in self._dependencies_.items():
             for var, values in env_info.vars.items():
                 result.append("[%s:%s]" % (name, var))
-                result.extend(values)
+                if isinstance(values, list):
+                    result.extend(values)
+                else:
+                    result.append(values)
             result.append("")
 
         return os.linesep.join(result)
-
-    @staticmethod
-    def loads(text):
-        pattern = re.compile("^\[([a-zA-Z0-9_:-]+)\]([^\[]+)", re.MULTILINE)
-        result = DepsEnvInfo()
-
-        for m in pattern.finditer(text):
-            var_name = m.group(1)
-            lines = [line.strip() for line in m.group(2).splitlines() if line.strip()]
-            tokens = var_name.split(":")
-            if len(tokens) == 2:
-                library = tokens[0]
-                var_name = tokens[1]
-                result._dependencies_.setdefault(library, EnvInfo()).vars[var_name] = lines
-            else:
-                result.vars[var_name] = lines
-
-        return result
 
     @property
     def dependencies(self):

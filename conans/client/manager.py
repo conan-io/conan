@@ -1,4 +1,3 @@
-import json
 import os
 import time
 import shutil
@@ -10,7 +9,6 @@ from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.detect import detected_os
 from conans.client.export import export_conanfile, load_export_conanfile
 from conans.client.generators import write_generators
-from conans.client.grapher import ConanGrapher, ConanHTMLGrapher
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import ConanInstaller, BuildMode
 from conans.client.loader import load_consumer_conanfile, ConanFileLoader
