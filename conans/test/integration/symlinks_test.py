@@ -75,6 +75,33 @@ class SymLinksTest(unittest.TestCase):
         client.run("install --build -f=conanfile.txt")
         self._check(client, ref)
 
+    def package_files_test(self):
+        if platform.system() == "Windows":
+            return
+
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/stable")
+        client.save({}, clean_first=True)
+        file1 = os.path.join(client.current_folder, "file1.txt")
+        file2 = os.path.join(client.current_folder, "version1/file2.txt")
+        file11 = os.path.join(client.current_folder, "file1.txt.1")
+        latest = os.path.join(client.current_folder, "latest")
+        save(file1, "Hello1")
+        os.symlink("file1.txt", file11)
+        save(file2, "Hello2")
+        os.symlink("version1", latest)
+        client.run("package_files Hello/0.1@lasote/stable")
+        ref = PackageReference.loads("Hello/0.1@lasote/stable:"
+                                     "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+
+        self._check(client, ref, build=False)
     def export_test(self):
         if platform.system() == "Windows":
             return
