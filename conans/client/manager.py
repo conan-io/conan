@@ -187,9 +187,10 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=False, check_updates=check_updates)
         deps_graph, _, conanfile = self._get_deps_graph(reference, profile, filename, cwd, remote_proxy)
-        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, None)
         build_mode = BuildMode(build_modes, self._user_io.out)
-        nodes = installer.nodes_to_build(deps_graph, build_mode)
+        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, build_mode,
+                                   None)
+        nodes = installer.nodes_to_build(deps_graph)
         counter = Counter(ref.conan.name for ref, _ in nodes)
         ret = [ref if counter[ref.conan.name] > 1 else str(ref.conan) for ref, _ in nodes]
         return ret, self._get_project_reference(reference, conanfile)
@@ -270,16 +271,14 @@ class ConanManager(object):
             pass
 
         build_mode = BuildMode(build_modes, self._user_io.out)
-        build_requires = BuildRequires(loader, remote_proxy, self._user_io.out, self._client_cache,
-                                       self._search_manager, profile.build_requires, current_path,
-                                       build_mode)
-
+        build_requires = BuildRequires(loader, graph_builder, registry,
+                                       self._user_io.out, profile.build_requires)
+        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy,
+                                   build_mode, build_requires)
         # Apply build_requires to consumer conanfile
         build_requires.install("", conanfile)
-        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy,
-                                   build_requires)
 
-        installer.install(deps_graph, build_mode, current_path)
+        installer.install(deps_graph, current_path)
         build_mode.report_matches()
 
         prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)

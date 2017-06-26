@@ -1,10 +1,5 @@
-from conans.client.remote_registry import RemoteRegistry
 from conans.client.printer import Printer
-from conans.client.installer import ConanInstaller
-from conans.client.require_resolver import RequireResolver
-from conans.client.deps_builder import DepsGraphBuilder
 import fnmatch
-import copy
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from collections import OrderedDict
@@ -48,16 +43,13 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class BuildRequires(object):
-    def __init__(self, loader, remote_proxy, output, client_cache, search_manager, build_requires,
-                 current_path, build_modes):
-        self._remote_proxy = remote_proxy
-        self._client_cache = client_cache
-        self._output = output
-        self._current_path = current_path
+    def __init__(self, loader, graph_builder, registry, output, build_requires):
         self._loader = loader
-        self._search_manager = search_manager
+        self._graph_builder = graph_builder
+        self._installer = None
+        self._output = output
+        self._registry = registry
         self._build_requires = build_requires
-        self._build_modes = build_modes
 
     def _get_recipe_build_requires(self, conanfile):
         conanfile.build_requires = _RecipeBuildRequires(conanfile)
@@ -75,11 +67,9 @@ class BuildRequires(object):
             if ((not str_ref and pattern == "&") or
                     (str_ref and pattern == "&!") or
                     fnmatch.fnmatch(str_ref, pattern)):
-
                 package_build_requires.update(build_requires)
 
         if package_build_requires:
-
             str_build_requires = str(package_build_requires)
             self._output.info("%s: Build requires: [%s]" % (str(reference), str_build_requires))
 
@@ -88,33 +78,23 @@ class BuildRequires(object):
 
             _apply_build_requires(build_require_graph, conanfile)
 
-    def _install(self, references, build_requires_options):
+    def _install(self, build_requires_references, build_requires_options):
         self._output.info("Installing build requires: [%s]"
-                          % ", ".join(str(r) for r in references))
+                          % ", ".join(str(r) for r in build_requires_references))
         # No need current path
-        conanfile = self._loader.load_virtual(references, None, scope_options=False,
+        conanfile = self._loader.load_virtual(build_requires_references, None, scope_options=False,
                                               build_requires_options=build_requires_options)
 
-        # FIXME: Forced update=True, build_mode, Where to define it?
-        update = False
-
-        local_search = None if update else self._search_manager
-        resolver = RequireResolver(self._output, local_search, self._remote_proxy)
-        graph_builder = DepsGraphBuilder(self._remote_proxy, self._output, self._loader, resolver)
-        deps_graph = graph_builder.load(conanfile)
-
-        registry = RemoteRegistry(self._client_cache.registry, self._output)
-        Printer(self._output).print_graph(deps_graph, registry)
+        deps_graph = self._graph_builder.load(conanfile)
+        Printer(self._output).print_graph(deps_graph, self._registry)
 
         # Make sure we recursively do not propagate the "*" pattern
-        build_requires = copy.copy(self)
-        build_requires._build_requires = self._build_requires.copy()
-        build_requires._build_requires.pop("*", None)
-        build_requires._build_requires.pop("&!", None)
+        old_build_requires = self._build_requires.copy()
+        self._build_requires.pop("*", None)
+        self._build_requires.pop("&!", None)
 
-        installer = ConanInstaller(self._client_cache, self._output, self._remote_proxy,
-                                   build_requires)
-        installer.install(deps_graph, self._build_modes, self._current_path)
+        self._installer.install(deps_graph, "")
+        self._build_requires = old_build_requires  # Restore original values
         self._output.info("Installed build requires: [%s]"
-                          % ", ".join(str(r) for r in references))
+                          % ", ".join(str(r) for r in build_requires_references))
         return deps_graph
