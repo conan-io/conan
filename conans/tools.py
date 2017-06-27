@@ -483,7 +483,7 @@ class OSInfo(object):
     def with_yum(self):
         return self.is_linux and self.linux_distro in \
                                  ("centos", "redhat", "fedora", "pidora", "scientific",
-                                  "xenserver", "amazon", "oracle")
+                                  "xenserver", "amazon", "oracle", "rhel")
 
     @staticmethod
     def get_win_os_version():

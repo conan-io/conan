@@ -1,4 +1,3 @@
-import json
 import os
 import time
 import shutil
@@ -10,7 +9,6 @@ from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.detect import detected_os
 from conans.client.export import export_conanfile, load_export_conanfile
 from conans.client.generators import write_generators
-from conans.client.grapher import ConanGrapher, ConanHTMLGrapher
 from conans.client.importer import run_imports, undo_imports
 from conans.client.installer import ConanInstaller, BuildMode
 from conans.client.loader import load_consumer_conanfile, ConanFileLoader
@@ -116,7 +114,7 @@ class ConanManager(object):
             else:
                 raise ConanException("Package already exists. "
                                      "Please use --force, -f to overwrite it")
-        shutil.copytree(package_folder, dest_package_folder)
+        shutil.copytree(package_folder, dest_package_folder, symlinks=True)
         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
         conanfile.info.recipe_hash = recipe_hash
         save(os.path.join(dest_package_folder, CONANINFO), conanfile.info.dumps())
