@@ -5,7 +5,6 @@ from conans.client.new_ci import ci_get_files
 
 
 conanfile = """from conans import ConanFile, CMake, tools
-import os
 
 
 class {package_name}Conan(ConanFile):
@@ -29,8 +28,7 @@ conan_basic_setup()''')
 
     def build(self):
         cmake = CMake(self)
-        shared = "-DBUILD_SHARED_LIBS=ON" if self.options.shared else ""
-        self.run('cmake hello %s %s' % (cmake.command_line, shared))
+        self.run('cmake hello %s' % cmake.command_line)
         self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
