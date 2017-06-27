@@ -1,11 +1,10 @@
 import unittest
 from conans.test.utils.tools import TestClient, TestServer
-from conans.paths import CONANFILE, CONANENV, BUILD_INFO
+from conans.paths import CONANFILE, BUILD_INFO
 from conans.util.files import load, save
 import os
 from conans.test.utils.test_files import temp_folder
 from conans.model.info import ConanInfo
-from conans.model.env_info import EnvValues
 
 
 conanfile = """from conans import ConanFile
@@ -72,9 +71,7 @@ class PythonBuildTest(unittest.TestCase):
         client.run("export lasote/stable")
 
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("install .  -g txt -g env")
-        content = load(os.path.join(client.current_folder, CONANENV))
-        self.assertIn("PYTHONPATH", content)
+        client.run("install .  -g txt")
         self.assertIn("Hello Bar", client.user_io.out)
         self.assertNotIn("Hello Foo", client.user_io.out)
         client.run("build")

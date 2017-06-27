@@ -11,7 +11,7 @@ class {name}Conan(ConanFile):
     version = "{version}"
     requires = ({requires})
     exports = '*'
-    generators = "virtualenv", "env"
+    generators = "virtualenv"
     build_policy = "missing"
 
     def build(self):
