@@ -269,10 +269,10 @@ class ConanManager(object):
             pass
 
         build_mode = BuildMode(build_modes, self._user_io.out)
-        build_requires = BuildRequires(loader, graph_builder, registry,
-                                       self._user_io.out, profile.build_requires)
-        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy,
-                                   build_mode, build_requires)
+        build_requires = BuildRequires(loader, graph_builder, registry, self._user_io.out,
+                                       profile.build_requires)
+        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, build_mode,
+                                   build_requires)
 
         # Apply build_requires to consumer conanfile
         if not isinstance(reference, ConanFileReference):

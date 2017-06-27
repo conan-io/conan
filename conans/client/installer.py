@@ -28,10 +28,9 @@ def _init_package_info(deps_graph, paths, current_path):
             package_folder = paths.package(package_reference, conan_file.short_paths)
             conan_file.package_folder = package_folder
             conan_file.cpp_info = CppInfo(package_folder)
-            conan_file.env_info = EnvInfo(package_folder)
         else:
             conan_file.cpp_info = CppInfo(current_path)
-            conan_file.env_info = EnvInfo(current_path)
+        conan_file.env_info = EnvInfo()
 
 
 def build_id(conanfile):
@@ -121,7 +120,6 @@ class ConanInstaller(object):
     def install(self, deps_graph, current_path):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
-        self._deps_graph = deps_graph  # necessary for _build_package
         t1 = time.time()
         _init_package_info(deps_graph, self._client_cache, current_path)
         # order by levels and propagate exports as download imports
@@ -131,7 +129,7 @@ class ConanInstaller(object):
         skip_private_nodes = self._compute_private_nodes(deps_graph)
         logger.debug("Install-Process private %s" % (time.time() - t1))
         t1 = time.time()
-        self._build(nodes_by_level, skip_private_nodes)
+        self._build(nodes_by_level, skip_private_nodes, deps_graph)
         logger.debug("Install-build %s" % (time.time() - t1))
 
     def _compute_private_nodes(self, deps_graph):
@@ -174,7 +172,7 @@ class ConanInstaller(object):
         return [(PackageReference(conan_ref, package_id), conan_file)
                 for conan_ref, package_id, conan_file, build in nodes if build]
 
-    def _build(self, nodes_by_level, skip_private_nodes):
+    def _build(self, nodes_by_level, skip_private_nodes, deps_graph):
         """ The build assumes an input of conans ordered by degree, first level
         should be independent from each other, the next-second level should have
         dependencies only to first level conans.
@@ -188,7 +186,7 @@ class ConanInstaller(object):
 
         """
 
-        inverse = self._deps_graph.inverse_levels()
+        inverse = deps_graph.inverse_levels()
         flat = []
 
         for level in inverse:
@@ -199,10 +197,6 @@ class ConanInstaller(object):
         nodes_to_process = self._get_nodes(nodes_by_level, skip_private_nodes)
 
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
-            if conan_ref:
-                self._out.info("\nInstalling package %s:%s" % (str(conan_ref), package_id))
-            if str(conan_ref) == "MyLib/0.1@lasote/stable":
-                print "BUILD ", conan_ref, package_id, build_needed
             if build_needed and (conan_ref, package_id) not in self._built_packages:
                 build_allowed = self._build_mode.allowed(conan_ref, conan_file)
                 if not build_allowed:
@@ -216,15 +210,11 @@ class ConanInstaller(object):
                 elif self._build_mode.forced(conan_ref, conan_file):
                     output.warn('Forced build from source')
 
-                if str(conan_ref) == "MyLib/0.1@lasote/stable":
-                    print "Env PRE ", conan_file.env.items()
                 self._build_requires.install(conan_ref, conan_file, self)
-                if str(conan_ref) == "MyLib/0.1@lasote/stable":
-                    print "Env POS ", conan_file.env.items()
 
                 t1 = time.time()
                 # Assign to node the propagated info
-                self._propagate_info(conan_ref, conan_file, flat)
+                self._propagate_info(conan_ref, conan_file, flat, deps_graph)
 
                 self._remote_proxy.get_recipe_sources(conan_ref)
                 # Call the conanfile's build method
@@ -250,14 +240,14 @@ class ConanInstaller(object):
 
                 # Assign to the node the propagated info
                 # (conan_ref could be None if user project, but of course assign the info
-                self._propagate_info(conan_ref, conan_file, flat)
+                self._propagate_info(conan_ref, conan_file, flat, deps_graph)
 
                 # Call the info method
                 self._package_info_conanfile(conan_file)
 
-    def _propagate_info(self, conan_ref, conan_file, flat):
+    def _propagate_info(self, conan_ref, conan_file, flat, deps_graph):
         # Get deps_cpp_info from upstream nodes
-        node_order = self._deps_graph.ordered_closure((conan_ref, conan_file), flat)
+        node_order = deps_graph.ordered_closure((conan_ref, conan_file), flat)
         public_deps = [name for name, req in conan_file.requires.items() if not req.private]
         conan_file.cpp_info.public_deps = public_deps
         for n in node_order:
