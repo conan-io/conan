@@ -90,6 +90,7 @@ def migrate_to_default_profile(conf_path, default_profile_path):
             save(conf_path, new_conf)
             settings = rest[:rest.find("[")].strip()
         else:
+            save(conf_path, new_conf)
             settings = rest.strip()
         # Now generate the default profile from the read settings_defaults
         new_profile = "[settings]\n%s" % settings
