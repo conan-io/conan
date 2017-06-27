@@ -223,7 +223,7 @@ def human_size(size_bytes):
     else:
         formatted_size = str(round(num, ndigits=precision))
 
-    return "%s %s" % (formatted_size, suffix)
+    return "%s%s" % (formatted_size, suffix)
 
 
 def unzip(filename, destination=".", keep_permissions=False):
