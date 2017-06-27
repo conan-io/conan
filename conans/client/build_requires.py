@@ -7,9 +7,6 @@ from collections import OrderedDict
 
 def _apply_build_requires(deps_graph, conanfile):
     requires_nodes = deps_graph.direct_requires()
-    print "Applying build requires to ", conanfile
-    print "requires nodes ", requires_nodes
-    print "Current env_info ", conanfile.deps_env_info.dumps()
     for node in requires_nodes:
         conan_ref, build_require_conanfile = node
 
@@ -18,7 +15,6 @@ def _apply_build_requires(deps_graph, conanfile):
 
         conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref.name)
         conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
-    print "Final env_info ", conanfile.deps_env_info.dumps()
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -73,9 +69,9 @@ class BuildRequires(object):
                 package_build_requires.update(build_requires)
 
         if package_build_requires:
-            str_build_requires = str(package_build_requires)
-            self._output.info("%s: Build requires: [%s]" % (str(reference), str_build_requires))
+            self._output.info("Installing build requirements of: %s" % (str_ref or "PROJECT"))
 
+            # clear root package options, they won't match the build-require
             conanfile.build_requires_options.clear_unscoped_options()
             build_require_graph = self._install(package_build_requires.values(),
                                                 conanfile.build_requires_options, installer)

@@ -19,7 +19,7 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
     conanfile: the loaded conanfile object withs its values
     """
     def __repr__(self):
-        return "%s => %s" % (repr(self.conan_ref), repr(self.conanfile)[:100].replace("\n", " "))
+        return repr(self.conanfile)
 
     def __cmp__(self, other):
         if other is None:

@@ -93,7 +93,7 @@ class ConanProxy(object):
         installed = False
         local_package = os.path.exists(package_folder)
         if local_package:
-            output.info('Already installed!')
+            output.success('Already installed!')
             installed = True
             log_package_got_from_local_cache(package_ref)
         else:

@@ -199,6 +199,10 @@ class ConanInstaller(object):
         nodes_to_process = self._get_nodes(nodes_by_level, skip_private_nodes)
 
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
+            if conan_ref:
+                self._out.info("\nInstalling package %s:%s" % (str(conan_ref), package_id))
+            if str(conan_ref) == "MyLib/0.1@lasote/stable":
+                print "BUILD ", conan_ref, package_id, build_needed
             if build_needed and (conan_ref, package_id) not in self._built_packages:
                 build_allowed = self._build_mode.allowed(conan_ref, conan_file)
                 if not build_allowed:
@@ -212,7 +216,11 @@ class ConanInstaller(object):
                 elif self._build_mode.forced(conan_ref, conan_file):
                     output.warn('Forced build from source')
 
+                if str(conan_ref) == "MyLib/0.1@lasote/stable":
+                    print "Env PRE ", conan_file.env.items()
                 self._build_requires.install(conan_ref, conan_file, self)
+                if str(conan_ref) == "MyLib/0.1@lasote/stable":
+                    print "Env POS ", conan_file.env.items()
 
                 t1 = time.time()
                 # Assign to node the propagated info
@@ -325,7 +333,7 @@ class ConanInstaller(object):
         # is that package is already installed and OK. If don't, the proxy
         # will print some other message about it
         if not os.path.exists(package_folder):
-            output.info("Installing package %s" % package_id)
+            output.info("Retrieving package %s" % package_id)
 
         if self._remote_proxy.get_package(package_reference, short_paths=conan_file.short_paths):
             self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
@@ -482,7 +490,6 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
             with conanfile_exception_formatter(str(conan_file), "build"):
                 conan_file.build()
 
-            self._out.writeln("")
             output.success("Package '%s' built" % conan_file.info.package_id())
             output.info("Build folder %s" % build_folder)
         except Exception as exc:
