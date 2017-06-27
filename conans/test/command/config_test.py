@@ -11,15 +11,6 @@ class ConfigTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
-        self.settings_defaults = """arch = x86_64
-build_type = Release
-compiler = Visual Studio
-compiler.runtime = MD
-compiler.version = 14
-os = Windows
-"""
-        client_conf = default_client_conf + self.settings_defaults
-        save(self.client.paths.conan_conf_path, client_conf)
 
     def basic_test(self):
         # show the full file
@@ -58,35 +49,21 @@ os = Windows
         self.assertIn("Please specify key=value",
                       self.client.user_io.out)
 
-    def settings_test(self):
-        # show the full file
-        self.client.run("config get settings_defaults")
-        self.assertEqual(self.settings_defaults.splitlines(),
-                         str(self.client.user_io.out).splitlines())
-
-        self.client.run("config get settings_defaults.os")
-        self.assertIn("Windows", self.client.user_io.out)
-
-        self.client.run("config get settings_defaults.compiler.version")
-        self.assertIn("14", self.client.user_io.out)
-
     def define_test(self):
-        self.client.run("config set settings_defaults.os=Linux")
+        self.client.run("config set general.fakeos=Linux")
         conf_file = load(self.client.paths.conan_conf_path)
-        self.assertIn("os = Linux", conf_file)
-        self.assertNotIn("Windows", conf_file)
+        self.assertIn("fakeos = Linux", conf_file)
 
-        self.client.run('config set settings_defaults.compiler="Other compiler"')
+        self.client.run('config set general.compiler="Other compiler"')
         conf_file = load(self.client.paths.conan_conf_path)
         self.assertIn('compiler = Other compiler', conf_file)
-        self.assertNotIn("Visual", conf_file)
 
-        self.client.run('config set settings_defaults.compiler.version=123.4.5')
+        self.client.run('config set general.compiler.version=123.4.5')
         conf_file = load(self.client.paths.conan_conf_path)
         self.assertIn('compiler.version = 123.4.5', conf_file)
         self.assertNotIn("14", conf_file)
 
-        self.client.run('config set settings_defaults.new_setting=mysetting ')
+        self.client.run('config set general.new_setting=mysetting ')
         conf_file = load(self.client.paths.conan_conf_path)
         self.assertIn('new_setting = mysetting', conf_file)
 
@@ -95,9 +72,10 @@ os = Windows
         self.assertIn("https = myurl", conf_file.splitlines())
 
     def remove_test(self):
-        self.client.run('config rm settings_defaults.arch')
+        self.client.run('config set proxies.https=myurl')
+        self.client.run('config rm proxies.https')
         conf_file = load(self.client.paths.conan_conf_path)
-        self.assertNotIn('arch', conf_file)
+        self.assertNotIn('myurl', conf_file)
 
     def remove_section_test(self):
         self.client.run('config rm proxies')

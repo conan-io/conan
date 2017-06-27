@@ -36,5 +36,6 @@ def run():
         print(exc)
         exit(1)
 
+
 if __name__ == "__main__":
     run()

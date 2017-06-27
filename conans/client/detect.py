@@ -192,20 +192,19 @@ def _detect_os_arch(result, output):
     result.append(("arch", arch))
 
 
-def detect_defaults_settings(output):
+def detect_defaults_settings(output, default_profile_path):
     """ try to deduce current machine values without any
     constraints at all
     """
-    output.writeln("\nIt seems to be the first time you've ran conan", Color.BRIGHT_YELLOW)
-    output.writeln("Auto detecting your dev setup to initialize conan.conf", Color.BRIGHT_YELLOW)
+    output.writeln("Auto detecting your dev setup to initialize the default profile (%s)" % default_profile_path, Color.BRIGHT_YELLOW)
 
     result = []
     _detect_os_arch(result, output)
     _detect_compiler_version(result, output)
     result.append(("build_type", "Release"))
 
-    output.writeln("Default conan.conf settings", Color.BRIGHT_YELLOW)
+    output.writeln("Default settings", Color.BRIGHT_YELLOW)
     output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in result]), Color.BRIGHT_YELLOW)
-    output.writeln("*** You can change them in ~/.conan/conan.conf ***", Color.BRIGHT_MAGENTA)
+    output.writeln("*** You can change them in %s ***" % default_profile_path, Color.BRIGHT_MAGENTA)
     output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n", Color.BRIGHT_MAGENTA)
     return result

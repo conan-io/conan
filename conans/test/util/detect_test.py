@@ -8,7 +8,7 @@ class DetectTest(unittest.TestCase):
 
     def detect_test(self):
         output = TestBufferConanOutput()
-        detect_defaults_settings(output)
-        self.assertIn("It seems to be the first time you've ran conan", output)
+        detect_defaults_settings(output, "")
+        self.assertIn("Auto detecting your dev setup to initialize the default profile", output)
         if platform.system() == "Linux":
             self.assertIn("Found gcc", output)

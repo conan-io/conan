@@ -1,17 +1,18 @@
 import os
-
-from conans.errors import ConanException
-from conans.util.files import save, load, normalize
-from conans.model.settings import Settings
-from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
-from conans.model.values import Values
-from conans.client.detect import detect_defaults_settings
-from conans.model.ref import ConanFileReference
-from conans.model.manifest import FileTreeManifest
-from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
+from collections import OrderedDict
 from genericpath import isdir
-from conans.model.info import ConanInfo
 
+from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
+from conans.client.detect import detect_defaults_settings
+from conans.client.profile_loader import read_profile
+from conans.errors import ConanException
+from conans.model.info import ConanInfo
+from conans.model.manifest import FileTreeManifest
+from conans.model.profile import Profile
+from conans.model.ref import ConanFileReference
+from conans.model.settings import Settings
+from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
+from conans.util.files import save, load, normalize
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -31,6 +32,7 @@ class ClientCache(SimplePaths):
         self._settings = None
         self._output = output
         self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
+        self._default_profile = None
         super(ClientCache, self).__init__(self._store_folder)
 
     @property
@@ -63,10 +65,7 @@ class ClientCache(SimplePaths):
     @property
     def conan_config(self):
         def generate_default_config_file():
-            default_settings = detect_defaults_settings(self._output)
-            default_setting_values = Values.from_list(default_settings)
-            client_conf = default_client_conf + default_setting_values.dumps()
-            save(self.conan_conf_path, normalize(client_conf))
+            save(self.conan_conf_path, normalize(default_client_conf))
 
         if not self._conan_config:
             if not os.path.exists(self.conan_conf_path):
@@ -93,9 +92,33 @@ class ClientCache(SimplePaths):
         return os.path.join(self.conan_folder, CONAN_SETTINGS)
 
     @property
+    def default_profile_path(self):
+        return os.path.join(self.conan_folder, PROFILES_FOLDER, self.conan_config.default_profile_name)
+
+    @property
+    def default_profile(self):
+        if self._default_profile is None:
+            if not os.path.exists(self.default_profile_path):
+                default_settings = detect_defaults_settings(self._output, self.default_profile_path)
+                self._default_profile = Profile()
+                tmp = OrderedDict()
+                for k, v in default_settings:
+                    tmp[k] = v
+                self._default_profile.update_settings(tmp)
+                save(self.default_profile_path, self._default_profile.dumps())
+            else:
+                self._default_profile, _ = read_profile(self.default_profile_path, None, None)
+
+            # Mix profile settings with environment
+            mixed_settings = _mix_settings_with_env(self._default_profile.settings)
+            self._default_profile.settings = mixed_settings
+
+        return self._default_profile
+
+    @property
     def settings(self):
         """Returns {setting: [value, ...]} defining all the possible
-           settings and their values"""
+           settings without values"""
         if not self._settings:
             # TODO: Read default environment settings
             if not os.path.exists(self.settings_path):
@@ -104,14 +127,9 @@ class ClientCache(SimplePaths):
             else:
                 content = load(self.settings_path)
                 settings = Settings.loads(content)
-            self.conan_config.settings_defaults(settings)
+
             self._settings = settings
         return self._settings
-
-    @property
-    def default_profile(self):
-        default_one = self.conan_config.default_profile_name
-        read_profile
 
     def conan_packages(self, conan_reference):
         """ Returns a list of package_id from a local cache package folder """
@@ -136,16 +154,17 @@ class ClientCache(SimplePaths):
         return builds
 
     def load_manifest(self, conan_reference):
-        '''conan_id = sha(zip file)'''
+        """conan_id = sha(zip file)"""
         filename = self.digestfile_conanfile(conan_reference)
         return FileTreeManifest.loads(load(filename))
 
     def load_package_manifest(self, package_reference):
-        '''conan_id = sha(zip file)'''
+        """conan_id = sha(zip file)"""
         filename = self.digestfile_package(package_reference, short_paths=None)
         return FileTreeManifest.loads(load(filename))
 
-    def read_package_recipe_hash(self, package_folder):
+    @staticmethod
+    def read_package_recipe_hash(package_folder):
         filename = os.path.join(package_folder, CONANINFO)
         info = ConanInfo.loads(load(filename))
         return info.recipe_hash
@@ -162,7 +181,8 @@ class ClientCache(SimplePaths):
             return None, None
         return self._digests(digest_path)
 
-    def _digests(self, digest_path):
+    @staticmethod
+    def _digests(digest_path):
         readed_digest = FileTreeManifest.loads(load(digest_path))
         expected_digest = FileTreeManifest.create(os.path.dirname(digest_path))
         return readed_digest, expected_digest
@@ -177,3 +197,34 @@ class ClientCache(SimplePaths):
                     except OSError:
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
+
+
+def _mix_settings_with_env(settings):
+    """Reads CONAN_ENV_XXXX variables from environment
+    and if it's defined uses these value instead of the default
+    from conf file. If you specify a compiler with ENV variable you
+    need to specify all the subsettings, the file defaulted will be
+    ignored"""
+
+    def get_env_value(name):
+        env_name = "CONAN_ENV_%s" % name.upper().replace(".", "_")
+        return os.getenv(env_name, None)
+
+    def get_setting_name(env_name):
+        return env_name[10:].lower().replace("_", ".")
+
+    ret = OrderedDict()
+    for name, value in settings.items():
+        if get_env_value(name):
+            ret[name] = get_env_value(name)
+        else:
+            # being a subsetting, if parent exist in env discard this, because
+            # env doesn't define this setting. EX: env=>Visual Studio but
+            # env doesn't define compiler.libcxx
+            if "." not in name or not get_env_value(name.split(".")[0]):
+                ret[name] = value
+    # Now read if there are more env variables
+    for env, value in sorted(os.environ.items()):
+        if env.startswith("CONAN_ENV_") and get_setting_name(env) not in ret:
+            ret[get_setting_name(env)] = value
+    return ret

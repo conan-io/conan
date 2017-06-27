@@ -1,3 +1,4 @@
+import copy
 from collections import OrderedDict
 from collections import defaultdict
 
@@ -69,21 +70,35 @@ class Profile(object):
             self.build_requires.setdefault(pattern, []).extend(req_list)
 
     def update_settings(self, new_settings):
-        '''Mix the specified settings with the current profile.
-        Specified settings are prioritized to profile'''
+        """Mix the specified settings with the current profile.
+        Specified settings are prioritized to profile"""
+
+        assert(isinstance(new_settings, OrderedDict))
+
         # apply the current profile
+        res = copy.copy(self.settings)
         if new_settings:
-            self.settings.update(new_settings)
+            # Invalidate the current subsettings if the parent setting changes
+            # Example: new_settings declare a different "compiler", so invalidate the current "compiler.XXX"
+            for name, value in new_settings.items():
+                if "." not in name:
+                    if name in self.settings and self.settings[name] != new_settings[name]:
+                        for cur_name, _ in self.settings.items():
+                            if cur_name.startswith(name):
+                                del res[cur_name]
+            # Now merge the new values
+            res.update(new_settings)
+            self.settings = res
 
     def update_package_settings(self, package_settings):
-        '''Mix the specified package settings with the specified profile.
-        Specified package settings are prioritized to profile'''
+        """Mix the specified package settings with the specified profile.
+        Specified package settings are prioritized to profile"""
         for package_name, settings in package_settings.items():
             self.package_settings[package_name].update(settings)
 
     def update_scopes(self, new_scopes):
-        '''Mix the specified settings with the current profile.
-        Specified settings are prioritized to profile'''
+        """Mix the specified settings with the current profile.
+        Specified settings are prioritized to profile"""
         # apply the current profile
         if new_scopes:
             self.scopes.update(new_scopes)

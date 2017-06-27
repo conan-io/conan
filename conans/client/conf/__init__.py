@@ -1,14 +1,13 @@
 import os
-from conans.errors import ConanException
-import logging
-from conans.util.env_reader import get_env
-from conans.util.files import save, load
-from six.moves.configparser import ConfigParser, NoSectionError
-from conans.model.values import Values
 import urllib
-from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
-from collections import OrderedDict
+
+from six.moves.configparser import ConfigParser, NoSectionError
+
+from conans.errors import ConanException
 from conans.model.env_info import unquote
+from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
+from conans.util.env_reader import get_env
+from conans.util.files import load
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
@@ -47,8 +46,7 @@ compiler:
 build_type: [None, Debug, Release]
 """
 
-# Keep for the migration (could be removed in ~0.22 and directly appended to default_client_conf)
-new_default_confs_from_env = '''
+default_client_conf = """
 [log]
 run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
 run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
@@ -57,6 +55,7 @@ level = 50                  # environment CONAN_LOGGING_LEVEL
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
 [general]
+default_profile_name = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
@@ -73,9 +72,9 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # cmake_find_root_path_mode_include   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
 
 # cpu_count = 1             # environment CONAN_CPU_COUNT
-'''
 
-default_client_conf = '''[storage]
+
+[storage]
 # This is the default path, but you can write your own
 path = ~/.conan/data
 
@@ -87,11 +86,11 @@ path = ~/.conan/data
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
 
-%s
 
-[settings_defaults]
+# Default settings now declared in the default profile
 
-''' % new_default_confs_from_env
+
+""" % DEFAULT_PROFILE_NAME
 
 
 class ConanClientConfigParser(ConfigParser, object):
@@ -219,7 +218,7 @@ class ConanClientConfigParser(ConfigParser, object):
     @property
     def default_profile_name(self):
         try:
-            return self.get_item("general.default_profile")
+            return self.get_item("general.default_profile_name")
         except ConanException:
             return DEFAULT_PROFILE_NAME
 
@@ -255,44 +254,3 @@ class ConanClientConfigParser(ConfigParser, object):
             return dict(proxies)
         except:
             return None
-
-
-
-    def _____settings_defaults(self, settings):
-        default_settings = self.get_conf("settings_defaults")
-        values = Values.from_list(default_settings)
-        settings.values = values
-        mixed_settings = _mix_settings_with_env(default_settings)
-        values = Values.from_list(mixed_settings)
-        settings.values = values
-
-
-def _mix_settings_with_env(settings):
-    """Reads CONAN_ENV_XXXX variables from environment
-    and if it's defined uses these value instead of the default
-    from conf file. If you specify a compiler with ENV variable you
-    need to specify all the subsettings, the file defaulted will be
-    ignored"""
-
-    def get_env_value(name):
-        env_name = "CONAN_ENV_%s" % name.upper().replace(".", "_")
-        return os.getenv(env_name, None)
-
-    def get_setting_name(env_name):
-        return env_name[10:].lower().replace("_", ".")
-
-    ret = OrderedDict()
-    for name, value in settings:
-        if get_env_value(name):
-            ret[name] = get_env_value(name)
-        else:
-            # being a subsetting, if parent exist in env discard this, because
-            # env doesn't define this setting. EX: env=>Visual Studio but
-            # env doesn't define compiler.libcxx
-            if "." not in name or not get_env_value(name.split(".")[0]):
-                ret[name] = value
-    # Now read if there are more env variables
-    for env, value in sorted(os.environ.items()):
-        if env.startswith("CONAN_ENV_") and get_setting_name(env) not in ret:
-            ret[get_setting_name(env)] = value
-    return list(ret.items())

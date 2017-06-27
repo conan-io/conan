@@ -48,13 +48,13 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
 
 class ConanFileLoader(object):
     def __init__(self, runner, settings, profile):
-        '''
+        """
         @param settings: Settings object, to assign to ConanFile at load time
         @param options: OptionsValues, necessary so the base conanfile loads the options
                         to start propagation, and having them in order to call build()
         @param package_settings: Dict with {recipe_name: {setting_name: setting_value}}
         @param cached_env_values: EnvValues object
-        '''
+        """
         self._runner = runner
         settings.values = profile.settings_values
         assert settings is None or isinstance(settings, Settings)
@@ -91,6 +91,7 @@ class ConanFileLoader(object):
             if consumer:
                 self._user_options.descope_options(result.name)
                 result.options.initialize_upstream(self._user_options)
+                self._user_options.clear_unscoped_options()
                 # If this is the consumer project, it has no name
                 result.scope = self._scopes.package_scope()
             else:

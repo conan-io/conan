@@ -68,6 +68,7 @@ class ProfileParser(object):
             tmp_text = tmp_text.replace("$%s" % repl_key, repl_value)
         return tmp_text
 
+
 def read_conaninfo_profile(current_path):
     profile = Profile()
     conan_info_path = os.path.join(current_path, CONANINFO)

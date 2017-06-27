@@ -337,25 +337,33 @@ class TestClient(object):
     def _default_settings(self, compiler, compiler_version, libcxx):
         """ allows to change the default settings in the file, to change compiler, version
         """
-        # Set default settings in global defined
-        self.client_cache.conan_config  # For create the default file if not existing
-        text = load(self.client_cache.conan_conf_path)
-        # prevent TestClient instances with reused paths to write again the compiler
-        if compiler != "Visual Studio":
-            text = text.replace("compiler.runtime=MD", "")
-        if "compiler=" not in text:
-            # text = text.replace("build_type=Release", "")
-
-            text += "\ncompiler=%s" % compiler
-            text += "\ncompiler.version=%s" % compiler_version
-            if compiler != "Visual Studio":
-                text += "\ncompiler.libcxx=%s" % libcxx
-            save(self.client_cache.conan_conf_path, text)
+        pass
+        # # Set default settings in global defined
+        # self.client_cache.conan_config  # To create the default file if not existing
+        # self.client_cache.default_profile  # To create the default profile if needed
+        # text = load(self.client_cache.default_profile_path)
+        #
+        # # prevent TestClient instances with reused paths to write again the compiler
+        # if compiler != "Visual Studio":
+        #     text = text.replace("compiler.runtime", "# compiler.runtime")
+        # else:
+        #     text = text.replace("compiler.libcxx", "# compiler.libcxx")
+        #
+        # text = text.replace("compiler=", "# compiler=")
+        # text = text.replace("compiler.version=", "# compiler.version=")
+        # text = text.replace("compiler.libcxx=", "# compiler.libcxx=")
+        #
+        # text = text.replace("[settings]", "[settings]\ncompiler.version=%s" % compiler_version)
+        # if compiler != "Visual Studio":
+        #     text = text.replace("[settings]", "[settings]\ncompiler.libcxx=%s" % libcxx)
+        # text = text.replace("[settings]", "[settings]\ncompiler=%s" % compiler)
+        #
+        # save(self.client_cache.default_profile_path, text)
 
     @property
     def default_compiler_visual_studio(self):
-        text = load(self.client_cache.conan_conf_path)
-        return "compiler=Visual Studio" in text
+        settings = self.client_cache.default_profile.settings
+        return settings.get("compiler", None) == "Visual Studio"
 
     def _init_collaborators(self, user_io=None):
 
@@ -409,9 +417,8 @@ class TestClient(object):
             tuple if required
         """
         self.init_dynamic_vars(user_io)
-        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager,
-                      self.current_folder)
-        command = Command(conan)
+        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
+        command = Command(conan, self.client_cache, self.user_io)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
