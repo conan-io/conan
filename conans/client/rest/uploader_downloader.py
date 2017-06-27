@@ -5,6 +5,7 @@ from conans.util.files import save, sha1sum, exception_message_safe
 import os
 import time
 from conans.util.tracer import log_download
+import conans.tools
 
 
 class Uploader(object):
@@ -179,20 +180,8 @@ def progress_units(progress, total):
 
 
 def human_readable_progress(bytes_transferred, total_bytes):
-    units = ["B", "KB", "MB", "GB"] # Units indices map to 1024^i
-
-    unit_idx = len(units) - 1
-    for (i, _) in enumerate(units):
-        if total_bytes < 1024**i:
-            unit_idx = i-1
-            break
-
-    scaled_bytes_transferred = bytes_transferred / 1024.0**unit_idx
-    scaled_total_bytes       = total_bytes / 1024.0**unit_idx
-
-    return "{0:.2f}{2}/{1:.2f}{2}".format(
-        scaled_bytes_transferred, scaled_total_bytes, units[unit_idx]
-    )
+    return "%s / %s" % (conans.tools.human_size(bytes_transferred),
+                        conans.tools.human_size(total_bytes))
 
 
 def print_progress(output, units, progress=""):
