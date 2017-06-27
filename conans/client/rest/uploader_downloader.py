@@ -180,8 +180,8 @@ def progress_units(progress, total):
 
 
 def human_readable_progress(bytes_transferred, total_bytes):
-    return "%s / %s" % (conans.tools.human_size(bytes_transferred),
-                        conans.tools.human_size(total_bytes))
+    return "%s/%s" % (conans.tools.human_size(bytes_transferred),
+                      conans.tools.human_size(total_bytes))
 
 
 def print_progress(output, units, progress=""):
