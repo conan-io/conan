@@ -62,10 +62,10 @@ class FileCopier(object):
         if symlinks is not None:
             links = symlinks
         # Check for ../ patterns and allow them
-        reldir = os.path.abspath(os.path.join(self._base_src, pattern))
-        if self._base_src.startswith(os.path.dirname(reldir)):  # ../ relative dir
-            self._base_src = os.path.dirname(reldir)
-            pattern = os.path.basename(reldir)
+        abs_wildcard_path = os.path.abspath(os.path.join(self._base_src, pattern))
+        #if self._base_src.startswith(os.path.dirname(reldir)):  # ../ relative dir
+        self._base_src = os.path.dirname(abs_wildcard_path)
+        pattern = os.path.basename(abs_wildcard_path)
 
         src = os.path.join(self._base_src, src)
         dst = os.path.join(self._base_dst, dst)
