@@ -198,7 +198,10 @@ class MyLib(ConanFile):
         """
         client = TestClient()
         client.save({"conanfile.py": conanfile % "True"})
-        client.run("build")
+        client.run("build", ignore_error=True)
+        self.assertIn("You must specify compiler, compiler.version and "
+                      "arch in your settings to use a CMake generator", client.user_io.out)
 
         client.save({"conanfile.py": conanfile % "False"}, clean_first=True)
+        client.run("install -g txt")
         client.run("build")

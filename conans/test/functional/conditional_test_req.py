@@ -34,6 +34,6 @@ class TestConanLib(ConanFile):
         save(settings_path, settings)
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("test_package -s os=Windows -s product=onion")
+        client.run("test_package -s os=Windows -s product=onion -s build_type=Release")
         self.assertIn("PROJECT: Conditional test requirement: Windows, Release, onion",
                       client.user_io.out)
