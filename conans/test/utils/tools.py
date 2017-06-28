@@ -310,10 +310,6 @@ class TestClient(object):
         search_adapter = DiskSearchAdapter()
         self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
 
-        self._default_settings(get_env("CONAN_COMPILER", "gcc"),
-                               get_env("CONAN_COMPILER_VERSION", "4.8"),
-                               get_env("CONAN_LIBCXX", "libstdc++"))
-
         self.requester_class = requester_class
         self.conan_runner = runner
 
@@ -333,32 +329,6 @@ class TestClient(object):
     @property
     def paths(self):
         return self.client_cache
-
-    def _default_settings(self, compiler, compiler_version, libcxx):
-        """ allows to change the default settings in the file, to change compiler, version
-        """
-        pass
-        # # Set default settings in global defined
-        # self.client_cache.conan_config  # To create the default file if not existing
-        # self.client_cache.default_profile  # To create the default profile if needed
-        # text = load(self.client_cache.default_profile_path)
-        #
-        # # prevent TestClient instances with reused paths to write again the compiler
-        # if compiler != "Visual Studio":
-        #     text = text.replace("compiler.runtime", "# compiler.runtime")
-        # else:
-        #     text = text.replace("compiler.libcxx", "# compiler.libcxx")
-        #
-        # text = text.replace("compiler=", "# compiler=")
-        # text = text.replace("compiler.version=", "# compiler.version=")
-        # text = text.replace("compiler.libcxx=", "# compiler.libcxx=")
-        #
-        # text = text.replace("[settings]", "[settings]\ncompiler.version=%s" % compiler_version)
-        # if compiler != "Visual Studio":
-        #     text = text.replace("[settings]", "[settings]\ncompiler.libcxx=%s" % libcxx)
-        # text = text.replace("[settings]", "[settings]\ncompiler=%s" % compiler)
-        #
-        # save(self.client_cache.default_profile_path, text)
 
     @property
     def default_compiler_visual_studio(self):
