@@ -253,11 +253,12 @@ class HelloConan(ConanFile):
     def package_info(self):
         self.env_info.var1="good value"
         self.env_info.var2.append("value3")
+        self.env_info.CPPFLAGS.append("MYCPPFLAG=1")
     '''
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
         client.run("export lasote/stable")
-        client.run("install Hello2/0.1@lasote/stable --build -g virtualenv")
+        client.run("install Hello2/0.1@lasote/stable --build -g virtualenv -e CPPFLAGS=[OtherFlag=2]")
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate.%s" % ext)))
@@ -273,6 +274,7 @@ class HelloConan(ConanFile):
             self.assertIn('var2=value3;value2;%var2%', activate_contents)
         else:
             self.assertIn('var2="value3":"value2":$var2', activate_contents)
+            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 $CPPFLAGS"', activate_contents)
         self.assertIn("Another value", activate_contents)
         if platform.system() == "Windows":
             self.assertIn("PATH=/dir", activate_contents)
