@@ -55,7 +55,7 @@ level = 50                  # environment CONAN_LOGGING_LEVEL
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
 [general]
-default_profile_name = %s
+default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
@@ -216,9 +216,9 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("Invalid configuration, missing %s" % varname)
 
     @property
-    def default_profile_name(self):
+    def default_profile(self):
         try:
-            return self.get_item("general.default_profile_name")
+            return self.get_item("general.default_profile")
         except ConanException:
             return DEFAULT_PROFILE_NAME
 

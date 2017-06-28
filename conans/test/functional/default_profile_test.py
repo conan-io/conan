@@ -1,13 +1,60 @@
 import unittest
 
+import os
+
 from conans.paths import CONANFILE
+from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 
 class DefaultProfileTest(unittest.TestCase):
 
+    def change_default_profile_test(self):
+        br = '''
+import os
+from conans import ConanFile
+
+class MyConanfile(ConanFile):
+    name = "mylib"
+    version = "0.1"
+
+    def build(self):
+        assert(os.environ.get("Value1") == "A")
+
+'''
+        tmp = temp_folder()
+        default_profile_path = os.path.join(tmp, "myprofile")
+        save(default_profile_path, "[env]\nValue1=A")
+        client = TestClient()
+        client.run("config set general.default_profile='%s'" % default_profile_path)
+        client.save({CONANFILE: br})
+        client.run("export lasote/stable")
+        client.run('install mylib/0.1@lasote/stable --build')
+
+        # Now use a name, in the default profile folder
+        os.unlink(default_profile_path)
+        save(os.path.join(client.client_cache.profiles_path, "other"), "[env]\nValue1=A")
+        client.run("config set general.default_profile=other")
+        client.save({CONANFILE: br})
+        client.run("export lasote/stable")
+        client.run('install mylib/0.1@lasote/stable --build')
+
     def test_profile_applied_ok(self):
+        br = '''
+import os
+from conans import ConanFile
+
+class BuildRequireConanfile(ConanFile):
+    name = "br"
+    version = "0.1"
+    settings = "os", "compiler", "arch"
+
+    def package_info(self):
+        self.env_info.MYVAR="from_build_require"
+
+'''
+
         client = TestClient()
 
         default_profile = """
@@ -28,18 +75,7 @@ mypackage:option1=2
 br/1.0@lasote/stable
 """
         save(client.client_cache.default_profile_path, default_profile)
-        br = '''
-from conans import ConanFile
 
-class BuildRequireConanfile(ConanFile):
-    name = "br"
-    version = "0.1"
-    settings = "os", "compiler", "arch"
-
-    def package_info(self):
-        self.env_info.MYVAR="from_build_require"
-
-'''
         client.save({CONANFILE: br})
         client.run("export lasote/stable")
 

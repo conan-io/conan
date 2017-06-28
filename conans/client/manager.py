@@ -270,7 +270,7 @@ class ConanManager(object):
         Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         try:
-            if detected_os() != loader._settings.os:
+            if loader._settings.os and detected_os() != loader._settings.os:
                 message = "Cross-platform from '%s' to '%s'" % (detected_os(), loader._settings.os)
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist

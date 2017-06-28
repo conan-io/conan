@@ -93,7 +93,10 @@ class ClientCache(SimplePaths):
 
     @property
     def default_profile_path(self):
-        return os.path.join(self.conan_folder, PROFILES_FOLDER, self.conan_config.default_profile_name)
+        if os.path.isabs(self.conan_config.default_profile):
+            return self.conan_config.default_profile
+        else:
+            return os.path.join(self.conan_folder, PROFILES_FOLDER, self.conan_config.default_profile)
 
     @property
     def default_profile(self):
@@ -101,9 +104,7 @@ class ClientCache(SimplePaths):
             if not os.path.exists(self.default_profile_path):
                 default_settings = detect_defaults_settings(self._output, self.default_profile_path)
                 self._default_profile = Profile()
-                tmp = OrderedDict()
-                for k, v in default_settings:
-                    tmp[k] = v
+                tmp = OrderedDict(default_settings)
                 self._default_profile.update_settings(tmp)
                 save(self.default_profile_path, self._default_profile.dumps())
             else:
