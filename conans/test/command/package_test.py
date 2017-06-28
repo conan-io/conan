@@ -107,7 +107,7 @@ class MyConan(ConanFile):
 
         client.save(files)
         origin_folder = client.current_folder
-        client.run("install -g env -g txt")
+        client.run("install -g txt")
         client.run("source")
         client.run("build")
         client.run("package .", ignore_error=True)

@@ -29,5 +29,3 @@ class BuildInfoModule(object):
 
 BuildInfoModuleArtifact = namedtuple("BuildInfoModuleArtifact", ['type', 'sha1', 'md5', 'name'])
 BuildInfoModuleDependency = namedtuple('BuildInfoModuleDependency', ['id', 'type', 'sha1', 'md5'])
-
-
