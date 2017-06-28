@@ -15,7 +15,7 @@ class ConfigTest(unittest.TestCase):
     def basic_test(self):
         # show the full file
         self.client.run("config get")
-        self.assertIn("default_profile = conan_default", self.client.user_io.out)
+        self.assertIn("default_profile = default", self.client.user_io.out)
         self.assertIn("path = ~/.conan/data", self.client.user_io.out)
 
     def storage_test(self):

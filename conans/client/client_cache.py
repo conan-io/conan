@@ -4,6 +4,7 @@ from genericpath import isdir
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.detect import detect_defaults_settings
+from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException
 from conans.model.info import ConanInfo
@@ -102,7 +103,15 @@ class ClientCache(SimplePaths):
     def default_profile(self):
         if self._default_profile is None:
             if not os.path.exists(self.default_profile_path):
-                default_settings = detect_defaults_settings(self._output, self.default_profile_path)
+                self._output.writeln("Auto detecting your dev setup to initialize the "
+                                     "default profile (%s)" % self.default_profile_path, Color.BRIGHT_YELLOW)
+
+                default_settings = detect_defaults_settings(self._output)
+                self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
+                self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]), Color.BRIGHT_YELLOW)
+                self._output.writeln("*** You can change them in %s ***" % self.default_profile_path, Color.BRIGHT_MAGENTA)
+                self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n", Color.BRIGHT_MAGENTA)
+
                 self._default_profile = Profile()
                 tmp = OrderedDict(default_settings)
                 self._default_profile.update_settings(tmp)

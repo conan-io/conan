@@ -1,3 +1,4 @@
+import copy
 import os
 
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
@@ -32,10 +33,13 @@ def _load_info_file(current_path, conanfile, output, error):
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
 
 
-def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, reference=None,
+def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, default_profile, reference=None,
                             error=False):
+    tmp_profile = copy.copy(default_profile)
     profile = read_conaninfo_profile(current_path)
-    loader = ConanFileLoader(runner, settings, profile)
+    tmp_profile.update(profile)
+
+    loader = ConanFileLoader(runner, settings, tmp_profile)
     if conanfile_path.endswith(".py"):
         consumer = not reference
         conanfile = loader.load_conan(conanfile_path, output, consumer, reference)

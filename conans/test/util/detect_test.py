@@ -8,7 +8,8 @@ class DetectTest(unittest.TestCase):
 
     def detect_test(self):
         output = TestBufferConanOutput()
-        detect_defaults_settings(output, "")
-        self.assertIn("Auto detecting your dev setup to initialize the default profile", output)
+        result = detect_defaults_settings(output)
         if platform.system() == "Linux":
-            self.assertIn("Found gcc", output)
+            for (name, value) in result:
+                if name == "compiler":
+                    self.assertEquals(value, "gcc")

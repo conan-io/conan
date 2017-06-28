@@ -51,7 +51,7 @@ os=Windows
         out = MockOut()
         cache = ClientCache(tmp_dir, None, out)
 
-        base_settings = OrderedDict(detect_defaults_settings(out, tmp_dir))
+        base_settings = OrderedDict(detect_defaults_settings(out))
 
         with tools.environment_append({"CONAN_ENV_COMPILER_VERSION": "4.6"}):
             expected = copy.copy(base_settings)
