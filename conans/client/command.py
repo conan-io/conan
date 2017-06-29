@@ -522,7 +522,9 @@ class Command(object):
                             action='store_true', help='Make a case-sensitive search')
         parser.add_argument('-r', '--remote', help='Remote origin')
         parser.add_argument('--raw', default=False, action='store_true',
-                            help='Make a case-sensitive search')
+                            help='Print just the list of recipes')
+        parser.add_argument('--table',
+                            help='Outputs html file with a table of binaries')
         parser.add_argument('-q', '--query', default=None, help='Packages query: "os=Windows AND '
                                                                 '(arch=x86 OR compiler=gcc)".'
                                                                 ' The "pattern" parameter '
@@ -541,7 +543,7 @@ class Command(object):
             ret = self._conan.search_packages(reference, query=args.query, remote=args.remote)
             ordered_packages, reference, recipe_hash, packages_query = ret
             outputer.print_search_packages(ordered_packages, reference, recipe_hash,
-                                           packages_query)
+                                           packages_query, args.table)
         else:
             refs = self._conan.search_recipes(args.pattern, remote=args.remote,
                                               case_sensitive=args.case_sensitive)
