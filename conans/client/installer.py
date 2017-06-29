@@ -4,7 +4,7 @@ import platform
 import fnmatch
 import shutil
 
-from conans.paths import CONANINFO, BUILD_INFO, CONANENV, RUN_LOG_NAME, CONANFILE
+from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.files import save, rmdir, mkdir
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -15,7 +15,6 @@ from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
 from conans.model.env_info import EnvInfo
 from conans.client.source import config_source
-from conans.client.generators.env import ConanEnvGenerator
 from conans.tools import environment_append
 from conans.util.tracer import log_package_built
 
@@ -362,8 +361,6 @@ class ConanInstaller(object):
         output.info("Generated %s" % CONANINFO)
         save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
         output.info("Generated %s" % BUILD_INFO)
-        save(os.path.join(build_folder, CONANENV), ConanEnvGenerator(conan_file).content)
-        output.info("Generated %s" % CONANENV)
 
         os.chdir(build_folder)
 
