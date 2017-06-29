@@ -97,7 +97,8 @@ class ClientCache(SimplePaths):
         if os.path.isabs(self.conan_config.default_profile):
             return self.conan_config.default_profile
         else:
-            return os.path.join(self.conan_folder, PROFILES_FOLDER, self.conan_config.default_profile)
+            return os.path.expanduser(os.path.join(self.conan_folder, PROFILES_FOLDER,
+                                                   self.conan_config.default_profile))
 
     @property
     def default_profile(self):

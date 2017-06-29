@@ -35,11 +35,15 @@ def _load_info_file(current_path, conanfile, output, error):
 
 def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, default_profile, reference=None,
                             error=False):
-    tmp_profile = copy.copy(default_profile)
-    profile = read_conaninfo_profile(current_path)
-    tmp_profile.update(profile)
 
-    loader = ConanFileLoader(runner, settings, tmp_profile)
+    profile = read_conaninfo_profile(current_path)
+    if not profile:
+        # If the local command like conan build doesn't find a previous conaninfo from an install, use the
+        # default profile, the conaninfo settings should contain the full settings (merged with the defaults when
+        # the install was executed)
+        profile = default_profile
+
+    loader = ConanFileLoader(runner, settings, profile)
     if conanfile_path.endswith(".py"):
         consumer = not reference
         conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
