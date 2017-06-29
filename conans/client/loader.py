@@ -33,15 +33,12 @@ def _load_info_file(current_path, conanfile, output, error):
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
 
 
-def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, default_profile, reference=None,
+def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, default_profile=None, reference=None,
                             error=False):
 
-    profile = read_conaninfo_profile(current_path)
+    profile = read_conaninfo_profile(current_path) or default_profile
     if not profile:
-        # If the local command like conan build doesn't find a previous conaninfo from an install, use the
-        # default profile, the conaninfo settings should contain the full settings (merged with the defaults when
-        # the install was executed)
-        profile = default_profile
+        raise ConanException("Execute 'conan install -g txt' first.")
 
     loader = ConanFileLoader(runner, settings, profile)
     if conanfile_path.endswith(".py"):

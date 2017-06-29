@@ -315,15 +315,15 @@ class ConanManager(object):
             conanfile_path = os.path.join(reference, CONANFILE)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
                                                 self._client_cache.settings, self._runner,
-                                                output, self._client_cache.default_profile, error=None)
-            export_folder = reference
+                                                output, default_profile=self._client_cache.default_profile,  error=None)
             config_source_local(current_path, conanfile, output)
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
                                                 self._client_cache.settings, self._runner,
-                                                output, self._client_cache.default_profile, reference, error=None)
+                                                output, default_profile=self._client_cache.default_profile,
+                                                reference=reference, error=None)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             config_source(export_folder, src_folder, conanfile, output, force)
@@ -345,8 +345,8 @@ class ConanManager(object):
 
         conanfile = load_consumer_conanfile(conan_file_path, current_path,
                                             self._client_cache.settings,
-                                            self._runner, output, self._client_cache.default_profile,
-                                            reference, error=True)
+                                            self._runner, output,
+                                            reference=reference, error=True)
 
         if dest_folder:
             if not os.path.isabs(dest_folder):
@@ -364,7 +364,7 @@ class ConanManager(object):
         conan_file_path = os.path.join(recipe_folder, CONANFILE)
         conanfile = load_consumer_conanfile(conan_file_path, build_folder,
                                             self._client_cache.settings,
-                                            self._runner, output, self._client_cache.default_profile)
+                                            self._runner, output)
         packager.create_package(conanfile, source_folder, build_folder, package_folder, output,
                                 local=True)
 
@@ -406,7 +406,7 @@ class ConanManager(object):
             output.info("Re-packaging %s" % package_reference.package_id)
             conanfile = load_consumer_conanfile(conan_file_path, build_folder,
                                                 self._client_cache.settings,
-                                                self._runner, output, self._client_cache.default_profile, reference)
+                                                self._runner, output, reference=reference)
             rmdir(package_folder)
             if getattr(conanfile, 'no_copy_source', False):
                 source_folder = package_source_folder
@@ -429,7 +429,7 @@ class ConanManager(object):
             output = ScopedOutput("Project", self._user_io.out)
             conan_file = load_consumer_conanfile(conanfile_path, build_folder,
                                                  self._client_cache.settings,
-                                                 self._runner, output, self._client_cache.default_profile)
+                                                 self._runner, output)
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"
