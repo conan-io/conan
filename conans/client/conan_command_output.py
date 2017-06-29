@@ -1,8 +1,8 @@
 import json
 import os
 
+
 from conans.client.conan_api import prepare_cwd
-from conans.client.grapher import ConanHTMLGrapher, ConanGrapher
 from conans.client.printer import Printer
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.files import save
@@ -36,9 +36,9 @@ class CommandOutputer(object):
     def json_build_order(self, info, json_output, cwd):
         data = {"groups": [[str(ref) for ref in group] for group in info]}
         json_str = json.dumps(data)
-        if json_output is True: # To the output
+        if json_output is True:  # To the output
             self.user_io.out.write(json_str)
-        else: # Path to a file
+        else:  # Path to a file
             cwd = prepare_cwd(cwd)
             if not os.path.isabs(json_output):
                 json_output = os.path.join(cwd, json_output)
@@ -65,8 +65,10 @@ class CommandOutputer(object):
 
     def info_graph(self, graph_filename, deps_graph, project_reference, cwd):
         if graph_filename.endswith(".html"):
+            from conans.client.grapher import ConanHTMLGrapher
             grapher = ConanHTMLGrapher(project_reference, deps_graph)
         else:
+            from conans.client.grapher import ConanGrapher
             grapher = ConanGrapher(project_reference, deps_graph)
 
         cwd = prepare_cwd(cwd)
@@ -78,6 +80,10 @@ class CommandOutputer(object):
         printer = Printer(self.user_io.out)
         printer.print_search_recipes(references, pattern, raw)
 
-    def print_search_packages(self, ordered_packages, pattern, recipe_hash, packages_query):
-        printer = Printer(self.user_io.out)
-        printer.print_search_packages(ordered_packages, pattern, recipe_hash, packages_query)
+    def print_search_packages(self, ordered_packages, pattern, recipe_hash, packages_query, table):
+        if table:
+            from conans.client.grapher import html_binary_graph
+            html_binary_graph(pattern, ordered_packages, recipe_hash, table)
+        else:
+            printer = Printer(self.user_io.out)
+            printer.print_search_packages(ordered_packages, pattern, recipe_hash, packages_query)

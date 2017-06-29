@@ -71,6 +71,6 @@ class PkgConan(ConanFile):
             sys.stdout = old_out
 
         output = new_out.getvalue()
-        self.assertRegexpMatches(output, "Unzipping [\d]+ bytes, this can take a while")
+        self.assertRegexpMatches(output, "Unzipping [\d]+B, this can take a while")
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
