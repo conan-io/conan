@@ -468,18 +468,16 @@ class ConanAPIV1(object):
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all=False, force=False, confirm=False,
-               retry=2, retry_wait=5,
-               skip_upload=False):
+               retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         if package and not is_a_reference(pattern):
             raise ConanException("-p parameter only allowed with a valid recipe reference, "
                                  "not with a pattern")
 
-        self._manager.upload(pattern, package,
-                             remote, all_packages=all,
-                             force=force, confirm=confirm, retry=retry,
-                             retry_wait=retry_wait, skip_upload=skip_upload)
+        self._manager.upload(pattern, package, remote, all_packages=all, force=force,
+                             confirm=confirm, retry=retry, retry_wait=retry_wait,
+                             skip_upload=skip_upload, integrity_check=integrity_check)
 
     @api_method
     def remote_list(self):

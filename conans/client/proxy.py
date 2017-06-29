@@ -281,12 +281,13 @@ class ConanProxy(object):
                 remote = self._registry.default_remote
         return remote, ref_remote
 
-    def upload_package(self, package_ref, retry, retry_wait, skip_upload):
+    def upload_package(self, package_ref, retry, retry_wait, skip_upload, integrity_check):
         remote, current_remote = self._get_remote(package_ref.conan)
         if not current_remote:
             self._out.warn("Remote for '%s' not defined, uploading to %s"
                            % (str(package_ref.conan), remote.name))
-        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait, skip_upload)
+        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait,
+                                                     skip_upload, integrity_check)
         if not current_remote and not skip_upload:
             self._registry.set_ref(package_ref.conan, remote)
         return result

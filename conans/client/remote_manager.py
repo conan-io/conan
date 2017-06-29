@@ -53,21 +53,7 @@ class RemoteManager(object):
         self._output.info(msg)
         return ret
 
-    def upload_package(self, package_reference, remote, retry, retry_wait, skip_upload=False):
-        """Will upload the package to the first remote"""
-        t1 = time.time()
-        # existing package, will use short paths if defined
-        package_folder = self._client_cache.package(package_reference, short_paths=None)
-        # Get all the files in that directory
-        files, symlinks = gather_files(package_folder)
-
-        self._output.rewrite_line("Checking package integrity...")
-        if CONANINFO not in files or CONAN_MANIFEST not in files:
-            logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
-            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
-
-        logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
-
+    def _package_integrity_check(self, package_reference, files, package_folder):
         # If package has been modified remove tgz to regenerate it
         read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
 
@@ -91,7 +77,28 @@ class RemoteManager(object):
         else:
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
-        logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
+
+    def upload_package(self, package_reference, remote, retry, retry_wait, skip_upload=False,
+                       integrity_check=False):
+        """Will upload the package to the first remote"""
+        t1 = time.time()
+        # existing package, will use short paths if defined
+        package_folder = self._client_cache.package(package_reference, short_paths=None)
+        # Get all the files in that directory
+        files, symlinks = gather_files(package_folder)
+
+        self._output.rewrite_line("Checking package integrity...")
+        if CONANINFO not in files or CONAN_MANIFEST not in files:
+            logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
+            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
+
+        logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
+
+        if integrity_check:
+            self._package_integrity_check(package_reference, files, package_folder)
+            logger.debug("====> Time remote_manager check package integrity : %f"
+                         % (time.time() - t1))
+
         the_files = compress_package_files(files, symlinks, package_folder, self._output)
         if not skip_upload:
 
