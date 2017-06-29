@@ -287,6 +287,7 @@ class ConanAPIV1(object):
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd,
                                                    self._client_cache.profiles_path)
             manifest_folder, manifest_interactive, manifest_verify = manifests
+
             profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                         self._client_cache.profiles_path)
 

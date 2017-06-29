@@ -68,15 +68,17 @@ class ProfileParser(object):
             tmp_text = tmp_text.replace("$%s" % repl_key, repl_value)
         return tmp_text
 
+
 def read_conaninfo_profile(current_path):
-    profile = Profile()
     conan_info_path = os.path.join(current_path, CONANINFO)
-    if os.path.exists(conan_info_path):
-        existing_info = ConanInfo.load_file(conan_info_path)
-        profile.settings = OrderedDict(existing_info.full_settings.as_list())
-        profile.options = existing_info.full_options
-        profile.scopes = existing_info.scope
-        profile.env_values = existing_info.env_values
+    if not os.path.exists(conan_info_path):
+        return None
+    existing_info = ConanInfo.load_file(conan_info_path)
+    profile = Profile()
+    profile.settings = OrderedDict(existing_info.full_settings.as_list())
+    profile.options = existing_info.full_options
+    profile.scopes = existing_info.scope
+    profile.env_values = existing_info.env_values
     return profile
 
 

@@ -1,9 +1,9 @@
+import os
+import platform
 import re
 from subprocess import Popen, PIPE, STDOUT
-import platform
-from conans.client.output import Color
+
 from conans.model.version import Version
-import os
 
 
 def _execute(command):
@@ -193,19 +193,11 @@ def _detect_os_arch(result, output):
 
 
 def detect_defaults_settings(output):
-    """ try to deduce current machine values without any
-    constraints at all
+    """ try to deduce current machine values without any constraints at all
     """
-    output.writeln("\nIt seems to be the first time you've ran conan", Color.BRIGHT_YELLOW)
-    output.writeln("Auto detecting your dev setup to initialize conan.conf", Color.BRIGHT_YELLOW)
-
     result = []
     _detect_os_arch(result, output)
     _detect_compiler_version(result, output)
     result.append(("build_type", "Release"))
 
-    output.writeln("Default conan.conf settings", Color.BRIGHT_YELLOW)
-    output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in result]), Color.BRIGHT_YELLOW)
-    output.writeln("*** You can change them in ~/.conan/conan.conf ***", Color.BRIGHT_MAGENTA)
-    output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n", Color.BRIGHT_MAGENTA)
     return result

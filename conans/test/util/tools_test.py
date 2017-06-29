@@ -88,8 +88,8 @@ class HelloConan(ConanFile):
         assert(tools._global_output != None)
         """
         client.save({"conanfile.py": conanfile})
+        client.run("install -g txt")
         client.run("build")
-
 
         # Not test the real commmand get_command if it's setting the module global vars
         tools._global_requester = None

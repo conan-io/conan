@@ -3,6 +3,8 @@ import time
 import shutil
 from collections import OrderedDict, Counter
 
+import copy
+
 from conans.client import packager
 from conans.client.client_cache import ClientCache
 from conans.client.deps_builder import DepsGraphBuilder
@@ -48,6 +50,12 @@ class ConanManager(object):
         self._remote_manager = remote_manager
         self._current_scopes = None
         self._search_manager = search_manager
+
+    def _profile_with_defaults(self, profile):
+        # Get the defaults, and apply on it the profile
+        tmp_profile = copy.copy(self._client_cache.default_profile)
+        tmp_profile.update(profile)
+        return tmp_profile
 
     def export(self, user, conan_file_path, keep_source=False, filename=None):
         """ Export the conans
@@ -95,7 +103,8 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
                                   remote_name=None, update=False, check_updates=False,
                                   manifest_manager=None)
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+
+        loader = ConanFileLoader(self._runner, self._client_cache.settings, self._profile_with_defaults(profile))
         conanfile = loader.load_virtual([reference], current_path)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
@@ -112,8 +121,7 @@ class ConanManager(object):
             if force:
                 shutil.rmtree(dest_package_folder)
             else:
-                raise ConanException("Package already exists. "
-                                     "Please use --force, -f to overwrite it")
+                raise ConanException("Package already exists. Please use --force, -f to overwrite it")
         shutil.copytree(package_folder, dest_package_folder, symlinks=True)
         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
         conanfile.info.recipe_hash = recipe_hash
@@ -168,7 +176,7 @@ class ConanManager(object):
         return graph_builder
 
     def _get_deps_graph(self, reference, profile, filename, current_path, remote_proxy):
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        loader = ConanFileLoader(self._runner, self._client_cache.settings, self._profile_with_defaults(profile))
         conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
@@ -248,7 +256,8 @@ class ConanManager(object):
                                            interactive=manifest_interactive) if manifest_folder else None
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=update, check_updates=False, manifest_manager=manifest_manager)
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+
+        loader = ConanFileLoader(self._runner, self._client_cache.settings, self._profile_with_defaults(profile))
         conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
@@ -261,7 +270,7 @@ class ConanManager(object):
         Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         try:
-            if detected_os() != loader._settings.os:
+            if loader._settings.os and detected_os() != loader._settings.os:
                 message = "Cross-platform from '%s' to '%s'" % (detected_os(), loader._settings.os)
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
@@ -306,15 +315,15 @@ class ConanManager(object):
             conanfile_path = os.path.join(reference, CONANFILE)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
                                                 self._client_cache.settings, self._runner,
-                                                output, error=None)
-            export_folder = reference
+                                                output, default_profile=self._client_cache.default_profile,  error=None)
             config_source_local(current_path, conanfile, output)
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
                                                 self._client_cache.settings, self._runner,
-                                                output, reference, error=None)
+                                                output, default_profile=self._client_cache.default_profile,
+                                                reference=reference, error=None)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             config_source(export_folder, src_folder, conanfile, output, force)
@@ -336,7 +345,8 @@ class ConanManager(object):
 
         conanfile = load_consumer_conanfile(conan_file_path, current_path,
                                             self._client_cache.settings,
-                                            self._runner, output, reference, error=True)
+                                            self._runner, output,
+                                            reference=reference, error=True)
 
         if dest_folder:
             if not os.path.isabs(dest_folder):
@@ -396,7 +406,7 @@ class ConanManager(object):
             output.info("Re-packaging %s" % package_reference.package_id)
             conanfile = load_consumer_conanfile(conan_file_path, build_folder,
                                                 self._client_cache.settings,
-                                                self._runner, output, reference)
+                                                self._runner, output, reference=reference)
             rmdir(package_folder)
             if getattr(conanfile, 'no_copy_source', False):
                 source_folder = package_source_folder

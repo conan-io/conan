@@ -311,10 +311,6 @@ class TestClient(object):
         search_adapter = DiskSearchAdapter()
         self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
 
-        self._default_settings(get_env("CONAN_COMPILER", "gcc"),
-                               get_env("CONAN_COMPILER_VERSION", "4.8"),
-                               get_env("CONAN_LIBCXX", "libstdc++"))
-
         self.requester_class = requester_class
         self.conan_runner = runner
 
@@ -335,28 +331,10 @@ class TestClient(object):
     def paths(self):
         return self.client_cache
 
-    def _default_settings(self, compiler, compiler_version, libcxx):
-        """ allows to change the default settings in the file, to change compiler, version
-        """
-        # Set default settings in global defined
-        self.client_cache.conan_config  # For create the default file if not existing
-        text = load(self.client_cache.conan_conf_path)
-        # prevent TestClient instances with reused paths to write again the compiler
-        if compiler != "Visual Studio":
-            text = text.replace("compiler.runtime=MD", "")
-        if "compiler=" not in text:
-            # text = text.replace("build_type=Release", "")
-
-            text += "\ncompiler=%s" % compiler
-            text += "\ncompiler.version=%s" % compiler_version
-            if compiler != "Visual Studio":
-                text += "\ncompiler.libcxx=%s" % libcxx
-            save(self.client_cache.conan_conf_path, text)
-
     @property
     def default_compiler_visual_studio(self):
-        text = load(self.client_cache.conan_conf_path)
-        return "compiler=Visual Studio" in text
+        settings = self.client_cache.default_profile.settings
+        return settings.get("compiler", None) == "Visual Studio"
 
     def _init_collaborators(self, user_io=None):
 
