@@ -16,6 +16,7 @@ from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan
+from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
 from conans.client.remote_manager import RemoteManager
@@ -410,7 +411,8 @@ class TestClient(object):
         """
         self.init_dynamic_vars(user_io)
         conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
-        command = Command(conan, self.client_cache, self.user_io)
+        outputer = CommandOutputer(self.user_io, self.client_cache)
+        command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)

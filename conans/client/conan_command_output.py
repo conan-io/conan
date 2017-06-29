@@ -1,9 +1,10 @@
-import os
 import json
+import os
 
+
+from conans.client.conan_api import prepare_cwd
 from conans.client.printer import Printer
 from conans.client.remote_registry import RemoteRegistry
-from conans.client.conan_api import prepare_cwd
 from conans.util.files import save
 
 
@@ -12,6 +13,21 @@ class CommandOutputer(object):
     def __init__(self, user_io, client_cache):
         self.user_io = user_io
         self.client_cache = client_cache
+
+    def print_profile(self, profile, profile_text):
+        Printer(self.user_io.out).print_profile(profile, profile_text)
+
+    def profile_list(self, profiles):
+        for p in sorted(profiles):
+            self.user_io.out.info(p)
+
+    def remote_list(self, remotes):
+        for r in remotes:
+            self.user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+
+    def remote_ref_list(self, refs):
+        for ref, remote in refs.items():
+            self.user_io.out.info("%s: %s" % (ref, remote))
 
     def build_order(self, info):
         msg = ", ".join(str(s) for s in info)

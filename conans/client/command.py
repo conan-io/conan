@@ -48,11 +48,12 @@ class Command(object):
     collaborators.
     It can also show help of the tool
     """
-    def __init__(self, conan_api, client_cache, user_io):
+    def __init__(self, conan_api, client_cache, user_io, outputer):
         assert isinstance(conan_api, Conan)
         self._conan = conan_api
         self._client_cache = client_cache
         self._user_io = user_io
+        self._outputer = outputer
 
     def new(self, *args):
         """Creates a new package recipe template with a 'conanfile.py'.
@@ -274,7 +275,6 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=build_help)
         args = parser.parse_args(*args)
 
-        outputer = CommandOutputer(self._user_io, self._client_cache)
         # BUILD ORDER ONLY
         if args.build_order:
             ret = self._conan.info_build_order(args.reference, settings=args.settings, options=args.options,
@@ -283,18 +283,18 @@ class Command(object):
                                                check_updates=args.update, cwd=args.cwd)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                outputer.json_build_order(ret, json_arg, args.cwd)
+                self._outputer.json_build_order(ret, json_arg, args.cwd)
             else:
-                outputer.build_order(ret)
+                self._outputer.build_order(ret)
 
         # INSTALL SIMULATION, NODES TO INSTALL
         elif args.build is not None:
             nodes, _ = self._conan.info_nodes_to_build(args.reference, build_modes=args.build,
                                                        settings=args.settings,
                                                        options=args.options, env=args.env, scope=args.scope,
-                                                       profile_name=args.profile, filename=args.file, remote=args.remote,
-                                                       check_updates=args.update, cwd=args.cwd)
-            outputer.nodes_to_build(nodes)
+                                                       profile_name=args.profile, filename=args.file,
+                                                       remote=args.remote, check_updates=args.update, cwd=args.cwd)
+            self._outputer.nodes_to_build(nodes)
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
             data = self._conan.info_get_graph(args.reference, remote=args.remote, settings=args.settings,
@@ -314,10 +314,10 @@ class Command(object):
                                                (only, str_only_options))
 
             if args.graph:
-                outputer.info_graph(args.graph, deps_graph, project_reference, args.cwd)
+                self._outputer.info_graph(args.graph, deps_graph, project_reference, args.cwd)
             else:
-                outputer.info(deps_graph, graph_updates_info, only, args.remote, args.package_filter, args.paths,
-                              project_reference)
+                self._outputer.info(deps_graph, graph_updates_info, only, args.remote, args.package_filter, args.paths,
+                                    project_reference)
         return
 
     def build(self, *args):
@@ -532,7 +532,6 @@ class Command(object):
                                                                 'reference: MyPackage/1.2'
                                                                 '@user/channel')
         args = parser.parse_args(*args)
-        outputer = CommandOutputer(self._user_io, self._client_cache)
 
         try:
             reference = ConanFileReference.loads(args.pattern)
@@ -542,13 +541,13 @@ class Command(object):
         if reference:
             ret = self._conan.search_packages(reference, query=args.query, remote=args.remote)
             ordered_packages, reference, recipe_hash, packages_query = ret
-            outputer.print_search_packages(ordered_packages, reference, recipe_hash,
-                                           packages_query, args.table)
+            self._outputer.print_search_packages(ordered_packages, reference, recipe_hash,
+                                                 packages_query, args.table)
         else:
             refs = self._conan.search_recipes(args.pattern, remote=args.remote,
                                               case_sensitive=args.case_sensitive)
             self._check_query_parameter_and_get_reference(args.pattern, args.query)
-            outputer.print_search_references(refs, args.pattern, args.raw)
+            self._outputer.print_search_references(refs, args.pattern, args.raw)
 
     def upload(self, *args):
         """ Uploads a package recipe and the generated binary packages to a specified remote
@@ -628,7 +627,8 @@ class Command(object):
         url = args.url if hasattr(args, 'url') else None
 
         if args.subcommand == "list":
-            return self._conan.remote_list()
+            remotes = self._conan.remote_list()
+            self._outputer.remote_list(remotes)
         elif args.subcommand == "add":
             return self._conan.remote_add(remote, url, verify_ssl, args.insert)
         elif args.subcommand == "remove":
@@ -636,7 +636,8 @@ class Command(object):
         elif args.subcommand == "update":
             return self._conan.remote_update(remote, url, verify_ssl)
         elif args.subcommand == "list_ref":
-            return self._conan.remote_list_ref()
+            refs = self._conan.remote_list_ref()
+            self._outputer.remote_ref_list(refs)
         elif args.subcommand == "add_ref":
             return self._conan.remote_add_ref(reference, remote)
         elif args.subcommand == "remove_ref":
@@ -663,7 +664,14 @@ class Command(object):
 
         profile = args.profile if hasattr(args, 'profile') else None
 
-        return self._conan.profile(args.subcommand, profile)
+        if args.subcommand == "list":
+            profiles = self._conan.profile_list()
+            self._outputer.profile_list(profiles)
+        elif args.subcommand == "show":
+            profile_text = self._conan.read_profile(profile)
+            self._outputer.print_profile(profile, profile_text)
+
+        return
 
     def _show_help(self):
         """ prints a summary of all commands
@@ -793,7 +801,8 @@ def main(args):
     parse parameters
     """
     conan_api = Conan.factory()
-    command = Command(conan_api, conan_api._client_cache, conan_api._user_io)
+    outputer = CommandOutputer(conan_api._user_io, conan_api._client_cache)
+    command = Command(conan_api, conan_api._client_cache, conan_api._user_io, outputer)
     current_dir = os.getcwd()
     try:
         import signal
