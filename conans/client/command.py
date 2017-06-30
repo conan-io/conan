@@ -566,6 +566,9 @@ class Command(object):
         parser.add_argument("--force", action='store_true',
                             default=False,
                             help='Do not check conan recipe date, override remote with local')
+        parser.add_argument("--check", action='store_true',
+                            default=False,
+                            help='Perform an integrity check, using the manifests, before upload')
         parser.add_argument('--confirm', '-c', default=False,
                             action='store_true', help='If pattern is given upload all matching recipes without '
                                                       'confirmation')
@@ -577,7 +580,7 @@ class Command(object):
         args = parser.parse_args(*args)
         return self._conan.upload(pattern=args.pattern, package=args.package, remote=args.remote, all=args.all,
                                   force=args.force, confirm=args.confirm, retry=args.retry, retry_wait=args.retry_wait,
-                                  skip_upload=args.skip_upload)
+                                  skip_upload=args.skip_upload, integrity_check=args.check)
 
     def remote(self, *args):
         """ Handles the remote list and the package recipes associated to a remote.
