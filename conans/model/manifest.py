@@ -8,7 +8,7 @@ import datetime
 
 
 def discarded_file(filename):
-    return filename == ".DS_Store" or filename.endswith(".pyc") or filename.endswith(".pyo")
+    return filename == ".DS_Store" or filename.endswith(".pyc") or filename.endswith(".pyo") or filename("__pycache__")
 
 
 def gather_files(folder):
