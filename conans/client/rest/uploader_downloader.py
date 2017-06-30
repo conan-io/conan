@@ -185,7 +185,7 @@ def human_readable_progress(bytes_transferred, total_bytes):
 
 
 def print_progress(output, units, progress=""):
-    if output.is_terminal():
+    if output.is_terminal:
         output.rewrite_line("[%s%s] %s" % ('=' * units, ' ' * (50 - units), progress))
 
 
