@@ -1,6 +1,7 @@
 import os
 
 from conans.errors import NotFoundException
+from conans.model.manifest import discarded_file
 from conans.model.ref import PackageReference
 from conans.util.files import load
 
@@ -20,6 +21,6 @@ class LocalFileGetter(object):
         if not os.path.exists(abs_path):
             raise NotFoundException("The specified path doesn't exist")
         if os.path.isdir(abs_path):
-            return os.listdir(abs_path)
+            return [path for path in os.listdir(abs_path) if not discarded_file(path)]
         else:
             return load(abs_path)

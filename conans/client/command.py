@@ -677,7 +677,7 @@ class Command(object):
         return
 
     def get(self, *args):
-        """ Gets a file or list a directory of a given reference or package. Specify -r to get a file from a remote
+        """ Gets a file or list a directory of a given reference or package
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
