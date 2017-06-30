@@ -8,20 +8,17 @@ os: linux
 sudo: required
 dist: trusty
 
-env:
-  - CONAN_COMPILER=gcc CONAN_COMPILER_VERSION=4.8
-
 matrix:
     include:
         - language: generic
           os: osx
           osx_image: xcode8.3
-          env: PYVER=py27 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=8.1 CONAN_LOGGING_LEVEL=20
+          env: PYVER=py27 CONAN_LOGGING_LEVEL=20
         
         - language: generic
           os: osx
           osx_image: xcode8.3
-          env: PYVER=py36 CONAN_COMPILER=apple-clang CONAN_COMPILER_VERSION=8.1 CONAN_LOGGING_LEVEL=20
+          env: PYVER=py36 CONAN_LOGGING_LEVEL=20
 
 # command to install dependencies
 install:
