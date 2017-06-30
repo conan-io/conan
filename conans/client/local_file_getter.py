@@ -21,6 +21,6 @@ class LocalFileGetter(object):
         if not os.path.exists(abs_path):
             raise NotFoundException("The specified path doesn't exist")
         if os.path.isdir(abs_path):
-            return [path for path in os.listdir(abs_path) if not discarded_file(path)]
+            return sorted([path for path in os.listdir(abs_path) if not discarded_file(path)])
         else:
             return load(abs_path)
