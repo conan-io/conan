@@ -96,17 +96,17 @@ class CommandOutputer(object):
             self.user_io.out.writeln("\n".join(list_files))
 
     def print_file_contents(self, contents, file_name, raw):
-        if raw:
-            self.user_io.out.write(contents)
+        if raw or not self.user_io.out.is_terminal:
+            self.user_io.out.writeln(contents)
             return
 
         from pygments import highlight
         from pygments.lexers import PythonLexer, IniLexer, TextLexer
         from pygments.formatters import Terminal256Formatter
 
-        if file_name.endswith(".py") and self.user_io.out.is_terminal:
+        if file_name.endswith(".py"):
             lexer = PythonLexer()
-        elif file_name.endswith(".txt") and self.user_io.out.is_terminal:
+        elif file_name.endswith(".txt"):
             lexer = IniLexer()
         else:
             lexer = TextLexer()
