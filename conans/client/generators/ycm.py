@@ -112,7 +112,7 @@ def MakeRelativePathsInFlagsAbsolute( flags, working_directory ):
 
 def IsHeaderFile( filename ):
   extension = os.path.splitext( filename )[ 1 ]
-  return extension in [ '.h', '.hxx', '.hpp', '.hh' ]
+  return extension.lower() in [ '.h', '.hxx', '.hpp', '.hh' ]
 
 
 def GetCompilationInfoForFile( filename ):
@@ -158,7 +158,7 @@ def FlagsForFile( filename, **kwargs ):
   _logger.info("Final flags for %s are %s" % (filename, ' '.join(final_flags)))
 
   return {{
-    'flags': final_flags + ["-I/usr/include", "-I/usr/include/c++/5"],
+    'flags': final_flags + ["-I/usr/include", "-I/usr/include/c++/{cxx_version}"],
     'do_cache': True
   }}
 '''
@@ -180,4 +180,5 @@ def FlagsForFile( filename, **kwargs ):
         flags.extend(prefixed("-I", self.build_info.include_paths))
         flags.extend(prefixed("-I", self.deps_build_info.include_paths))
 
-        return self.template.format(default_flags="'" + "', '".join(flags) + "'")
+        return self.template.format(default_flags="'" + "', '".join(flags) + "'",
+                cxx_version=str(self.settings.compiler.version).split('.')[0])
