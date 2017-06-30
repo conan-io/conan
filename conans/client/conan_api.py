@@ -533,6 +533,11 @@ class ConanAPIV1(object):
         p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
         return p
 
+    @api_method
+    def get_path(self, reference, package_id=None, path=None, remote=None):
+        reference = ConanFileReference.loads(str(reference) )
+        return self._manager.get_path(reference, package_id, path, remote)
+
 
 Conan = ConanAPIV1
 

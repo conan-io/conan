@@ -87,3 +87,28 @@ class CommandOutputer(object):
         else:
             printer = Printer(self.user_io.out)
             printer.print_search_packages(ordered_packages, pattern, recipe_hash, packages_query)
+
+    def print_dir_list(self, list_files, path, raw):
+        if not raw:
+            self.user_io.out.info("Listing directory '%s':" % path)
+            self.user_io.out.writeln("\n".join([" %s" % i for i in list_files]))
+        else:
+            self.user_io.out.writeln("\n".join(list_files))
+
+    def print_file_contents(self, contents, file_name, raw):
+        if raw:
+            self.user_io.out.write(contents)
+            return
+
+        from pygments import highlight
+        from pygments.lexers import PythonLexer, IniLexer, TextLexer
+        from pygments.formatters import Terminal256Formatter
+
+        if file_name.endswith(".py") and self.user_io.out.is_terminal:
+            lexer = PythonLexer()
+        elif file_name.endswith(".txt") and self.user_io.out.is_terminal:
+            lexer = IniLexer()
+        else:
+            lexer = TextLexer()
+
+        self.user_io.out.write(highlight(contents, lexer, Terminal256Formatter()))

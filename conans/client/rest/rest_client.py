@@ -9,7 +9,7 @@ from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
@@ -486,3 +486,45 @@ class RestApiClient(object):
                                  % ", ".join(failed))
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
+
+    def get_path(self, conan_reference, package_id, path):
+        """Gets a file content or a directory list"""
+
+        if not package_id:
+            url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
+        else:
+            url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
+                                                              "/".join(conan_reference),
+                                                              package_id)
+        try:
+            urls = self._get_json(url)
+        except NotFoundException:
+            if package_id:
+                raise NotFoundException("Package %s:%s not found" % (conan_reference, package_id))
+            else:
+                raise NotFoundException("Recipe %s not found" % str(conan_reference))
+
+        def is_dir(the_path):
+            if the_path == ".":
+                return True
+            for the_file in urls.keys():
+                if the_path == the_file:
+                    return False
+                elif the_file.startswith(the_path):
+                    return True
+            raise NotFoundException("The specified path doesn't exist")
+
+        if is_dir(path):
+            ret = []
+            for the_file in urls.keys():
+                if path == "." or the_file.startswith(path):
+                    tmp = the_file[len(path)-1:].split("/", 1)[0]
+                    if tmp not in ret:
+                        ret.append(tmp)
+            return sorted(ret)
+        else:
+            downloader = Downloader(self.requester, None, self.verify_ssl)
+            auth, _ = self._file_server_capabilities(urls[path])
+            content = downloader.download(urls[path], auth=auth)
+
+            return decode_text(content)
