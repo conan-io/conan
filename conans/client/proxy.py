@@ -1,4 +1,4 @@
-from conans.client.local_file_getter import LocalFileGetter
+from conans.client.local_file_getter import get_path
 from conans.client.output import ScopedOutput
 from conans.util.files import rmdir
 from conans.model.ref import PackageReference
@@ -357,8 +357,7 @@ class ConanProxy(object):
 
     def get_path(self, conan_ref, package_id, path):
         if not self._remote_name:
-            getter = LocalFileGetter(self._client_cache)
-            return getter.get_path(conan_ref, package_id, path)
+            return get_path(self._client_cache, conan_ref, package_id, path)
         else:
             remote = self._registry.remote(self._remote_name)
             return self._remote_manager.get_path(conan_ref, package_id, path, remote)
