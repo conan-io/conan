@@ -28,6 +28,48 @@ class TestConan(ConanFile):
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
 
+    def test_code_parent(self):
+        """ when referencing the parent, the relative folder "sibling" will be kept
+        """
+        base = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "../*.txt"
+"""
+        for conanfile in (base, base.replace("../*.txt", "../sibling*")):
+            client = TestClient()
+            files = {"recipe/conanfile.py": conanfile,
+                     "sibling/file.txt": "Hello World!"}
+            client.save(files)
+            client.current_folder = os.path.join(client.current_folder, "recipe")
+            client.run("export lasote/stable")
+            conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+            export_path = client.paths.export(conan_ref)
+            content = load(os.path.join(export_path, "sibling/file.txt"))
+            self.assertEqual("Hello World!", content)
+
+    def test_code_sibling(self):
+        # if provided a path with slash, it will use as a export base
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "../sibling/*.txt"
+"""
+        files = {"recipe/conanfile.py": conanfile,
+                 "sibling/file.txt": "Hello World!"}
+        client.save(files)
+        client.current_folder = os.path.join(client.current_folder, "recipe")
+        client.run("export lasote/stable")
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export(conan_ref)
+        content = load(os.path.join(export_path, "file.txt"))
+        self.assertEqual("Hello World!", content)
+
     def test_conanfile_case(self):
         if platform.system() != "Windows":
             return
