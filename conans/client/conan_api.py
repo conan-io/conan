@@ -240,12 +240,8 @@ class ConanAPIV1(object):
                               )
 
         test_conanfile = os.path.join(test_folder, CONANFILE)
-        self._manager.build(test_conanfile, test_folder, build_folder, test=True)
-
-    # Alias to test
-    @api_method
-    def test(self, *args):
-        self.test_package(*args)
+        self._manager.build(test_conanfile, test_folder, build_folder, package_folder=None,
+                            test=True)
 
     @api_method
     def package_files(self, reference, package_folder=None, profile_name=None,
@@ -367,7 +363,7 @@ class ConanAPIV1(object):
         return deps_graph, graph_updates_info, project_reference
 
     @api_method
-    def build(self, path="", source_folder=None, filename=None, cwd=None):
+    def build(self, path="", source_folder=None, package_folder=None, filename=None, cwd=None):
 
         current_path = prepare_cwd(cwd)
         if path:
@@ -380,10 +376,13 @@ class ConanAPIV1(object):
         if not os.path.isabs(source_folder):
             source_folder = os.path.normpath(os.path.join(current_path, source_folder))
 
+        if package_folder and not os.path.isabs(package_folder):
+            package_folder = os.path.normpath(os.path.join(current_path, package_folder))
+
         if filename and filename.endswith(".txt"):
             raise ConanException("A conanfile.py is needed to call 'conan build'")
         conanfile_path = os.path.join(root_path, filename or CONANFILE)
-        self._manager.build(conanfile_path, source_folder, build_folder)
+        self._manager.build(conanfile_path, source_folder, build_folder, package_folder)
 
     @api_method
     def package(self, reference="", package=None, build_folder=None, source_folder=None, cwd=None):

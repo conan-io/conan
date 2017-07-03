@@ -2,6 +2,8 @@ from conans.test.utils.tools import TestClient
 import unittest
 from conans.paths import CONANFILE
 from conans.model.ref import PackageReference
+import os
+from conans.util.files import load
 
 
 conanfile_scope_env = """
@@ -46,3 +48,33 @@ class ConanBuildTest(unittest.TestCase):
         self.assertIn("Project: HELLO ROOT PATH: %s" % package_folder, client.user_io.out)
         self.assertIn("Project: HELLO INCLUDE PATHS: %s/include"
                       % package_folder, client.user_io.out)
+
+    def build_cmake_install(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile, CMake
+
+class AConan(ConanFile):
+    settings = "os", "compiler", "build_type", "arch"
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.package()
+"""
+        cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
+project(Chat NONE)
+cmake_minimum_required(VERSION 2.8.12)
+
+        install(FILES header.h DESTINATION include)
+"""
+        client.save({CONANFILE: conanfile,
+                     "CMakeLists.txt": cmake,
+                     "header.h": "my header h!!"})
+        client.run("install")
+        error = client.run("build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("package_folder not defined, necessary to run 'cmake.package()'",
+                      client.user_io.out)
+        client.run("build -pf=mypkg")
+        header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
+        self.assertEqual(header, "my header h!!")

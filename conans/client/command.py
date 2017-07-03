@@ -333,8 +333,11 @@ class Command(object):
                             default="")
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--source_folder", "-sf", help="local folder containing the sources")
+        parser.add_argument("--package_folder", "-pf", help="local folder to install the package "
+                            "(when the build system and build() do it)")
         args = parser.parse_args(*args)
-        return self._conan.build(path=args.path, source_folder=args.source_folder, filename=args.file)
+        return self._conan.build(path=args.path, source_folder=args.source_folder,
+                                 package_folder=args.package_folder, filename=args.file)
 
     def package(self, *args):
         """ Calls your conanfile.py 'package' method for a specific package recipe.
