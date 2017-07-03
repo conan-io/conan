@@ -1,19 +1,18 @@
 import hashlib
 import os
 import sys
+from collections import defaultdict, OrderedDict
 
 import requests
-from collections import defaultdict, OrderedDict
 
 import conans
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
-from conans.client.loader import load_consumer_conanfile
+from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput
-from conans.client.printer import Printer
 from conans.client.profile_loader import read_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
@@ -37,7 +36,6 @@ from conans.util.files import rmdir, save_files, exception_message_safe
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
-
 
 default_manifest_folder = '.conan_manifests'
 
@@ -201,9 +199,10 @@ class ConanAPIV1(object):
 
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
-        test_conanfile = load_consumer_conanfile(test_conanfile_path, "",
-                                                 self._client_cache.settings, self._runner,
-                                                 self._user_io.out)
+
+        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        test_conanfile = loader.load_conan(test_conanfile_path, self._user_io.out, consumer=True)
+
         try:
             if hasattr(test_conanfile, "requirements"):
                 test_conanfile.requirements()
@@ -295,6 +294,7 @@ class ConanAPIV1(object):
         else:  # Classic install, package chosen with settings and options
             manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
+
             profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                         self._client_cache.profiles_path)
 
@@ -475,24 +475,21 @@ class ConanAPIV1(object):
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all=False, force=False, confirm=False,
-               retry=2, retry_wait=5,
-               skip_upload=False):
+               retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         if package and not is_a_reference(pattern):
             raise ConanException("-p parameter only allowed with a valid recipe reference, "
                                  "not with a pattern")
 
-        self._manager.upload(pattern, package,
-                             remote, all_packages=all,
-                             force=force, confirm=confirm, retry=retry,
-                             retry_wait=retry_wait, skip_upload=skip_upload)
+        self._manager.upload(pattern, package, remote, all_packages=all, force=force,
+                             confirm=confirm, retry=retry, retry_wait=retry_wait,
+                             skip_upload=skip_upload, integrity_check=integrity_check)
 
     @api_method
     def remote_list(self):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        for r in registry.remotes:
-            self._user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+        return registry.remotes
 
     @api_method
     def remote_add(self, remote, url, verify_ssl=True, insert=None):
@@ -512,8 +509,7 @@ class ConanAPIV1(object):
     @api_method
     def remote_list_ref(self):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        for ref, remote in registry.refs.items():
-            self._user_io.out.info("%s: %s" % (ref, remote))
+        return registry.refs
 
     @api_method
     def remote_add_ref(self, reference, remote):
@@ -531,19 +527,23 @@ class ConanAPIV1(object):
         return registry.update_ref(reference, remote)
 
     @api_method
-    def profile(self, subcommand, profile=None, cwd=None):
-        cwd = prepare_cwd(cwd)
-        if subcommand == "list":
-            folder = self._client_cache.profiles_path
-            if os.path.exists(folder):
-                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-                for p in sorted(profiles):
-                    self._user_io.out.info(p)
-            else:
-                self._user_io.out.info("No profiles defined")
-        elif subcommand == "show":
-            p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
-            Printer(self._user_io.out).print_profile(profile, p)
+    def profile_list(self):
+        folder = self._client_cache.profiles_path
+        if os.path.exists(folder):
+            return [name for name in os.listdir(folder) if not os.path.isdir(name)]
+        else:
+            self._user_io.out.info("No profiles defined")
+            return []
+
+    @api_method
+    def read_profile(self, profile=None):
+        p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
+        return p
+
+    @api_method
+    def get_path(self, reference, package_id=None, path=None, remote=None):
+        reference = ConanFileReference.loads(str(reference) )
+        return self._manager.get_path(reference, package_id, path, remote)
 
 
 Conan = ConanAPIV1

@@ -69,9 +69,10 @@ class SayConan(ConanFile):
 
     def invalid_settings_test(self):
         '''Test wrong values and wrong constraints'''
-        default_conf = load(self.client.paths.conan_conf_path)
+        self.client.client_cache.default_profile
+        default_conf = load(self.client.paths.default_profile_path)
         new_conf = default_conf.replace("os=", "# os=")
-        save(self.client.paths.conan_conf_path, new_conf)
+        save(self.client.paths.default_profile_path, new_conf)
         # MISSING VALUE FOR A SETTING
         content = """
 from conans import ConanFile

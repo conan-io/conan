@@ -1,3 +1,4 @@
+from conans.client.local_file_getter import get_path
 from conans.client.output import ScopedOutput
 from conans.util.files import rmdir
 from conans.model.ref import PackageReference
@@ -213,7 +214,12 @@ class ConanProxy(object):
             remote = self._registry.remote(self._remote_name)
             return _retrieve_from_remote(remote)
         else:
-            output.info("Not found, looking in remotes...")
+            ref_remote = self._registry.get_ref(conan_reference)
+            if ref_remote:
+                output.info("Retrieving from predefined remote '%s'" % ref_remote.name)
+                return _retrieve_from_remote(ref_remote)
+            else:
+                output.info("Not found, looking in remotes...")
 
         remotes = self._registry.remotes
         for remote in remotes:
@@ -281,12 +287,13 @@ class ConanProxy(object):
                 remote = self._registry.default_remote
         return remote, ref_remote
 
-    def upload_package(self, package_ref, retry, retry_wait, skip_upload):
+    def upload_package(self, package_ref, retry, retry_wait, skip_upload, integrity_check):
         remote, current_remote = self._get_remote(package_ref.conan)
         if not current_remote:
             self._out.warn("Remote for '%s' not defined, uploading to %s"
                            % (str(package_ref.conan), remote.name))
-        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait, skip_upload)
+        result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait,
+                                                     skip_upload, integrity_check)
         if not current_remote and not skip_upload:
             self._registry.set_ref(package_ref.conan, remote)
         return result
@@ -352,6 +359,13 @@ class ConanProxy(object):
             raise ConanException("Cannot remove, remote not defined")
         remote = self._registry.remote(self._remote_name)
         return self._remote_manager.remove_packages(conan_ref, remove_ids, remote)
+
+    def get_path(self, conan_ref, package_id, path):
+        if not self._remote_name:
+            return get_path(self._client_cache, conan_ref, package_id, path)
+        else:
+            remote = self._registry.remote(self._remote_name)
+            return self._remote_manager.get_path(conan_ref, package_id, path, remote)
 
     def download_packages(self, reference, package_ids):
         assert(isinstance(package_ids, list))

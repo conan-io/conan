@@ -1,3 +1,4 @@
+import copy
 import os
 
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
@@ -32,9 +33,13 @@ def _load_info_file(current_path, conanfile, output, error):
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
 
 
-def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, reference=None,
+def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, default_profile=None, reference=None,
                             error=False):
-    profile = read_conaninfo_profile(current_path)
+
+    profile = read_conaninfo_profile(current_path) or default_profile
+    if not profile:
+        raise ConanException("Execute 'conan install -g txt' first.")
+
     loader = ConanFileLoader(runner, settings, profile)
     if conanfile_path.endswith(".py"):
         consumer = not reference
@@ -48,13 +53,13 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
 
 class ConanFileLoader(object):
     def __init__(self, runner, settings, profile):
-        '''
+        """
         @param settings: Settings object, to assign to ConanFile at load time
         @param options: OptionsValues, necessary so the base conanfile loads the options
                         to start propagation, and having them in order to call build()
         @param package_settings: Dict with {recipe_name: {setting_name: setting_value}}
         @param cached_env_values: EnvValues object
-        '''
+        """
         self._runner = runner
         settings.values = profile.settings_values
         assert settings is None or isinstance(settings, Settings)

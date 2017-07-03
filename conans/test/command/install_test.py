@@ -70,9 +70,9 @@ class InstallTest(unittest.TestCase):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("install %s --build=missing" % (self.settings))
+        self.client.run("install %s --build=missing" % self.settings)
 
-        self.client.run("install %s --build=Bye" % (self.settings))
+        self.client.run("install %s --build=Bye" % self.settings)
         self.assertIn("No package matching 'Bye' pattern", self.client.user_io.out)
 
         for package in ["Hello0", "Hello1"]:

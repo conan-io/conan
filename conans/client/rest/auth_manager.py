@@ -171,6 +171,10 @@ class ConanApiAuthManager(object):
     def remove_packages(self, conan_reference, package_ids):
         return self._rest_client.remove_packages(conan_reference, package_ids)
 
+    @input_credentials_if_unauthorized
+    def get_path(self, conan_reference, path, package_id):
+        return self._rest_client.get_path(conan_reference, path, package_id)
+
     def authenticate(self, user, password):
         remote_url = self._remote.url
         prev_user = self._localdb.get_username(remote_url)
