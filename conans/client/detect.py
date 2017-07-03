@@ -56,26 +56,40 @@ def _clang_compiler(output, compiler_exe="clang"):
 
 def _visual_compiler(output, version):
     'version have to be 8.0, or 9.0 or... anything .0'
-    from six.moves import winreg
-
+    if not platform.system().startswith("CYGWIN"):
+        from six.moves import winreg
     try:
-        hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                              r"SOFTWARE\Microsoft\Windows\CurrentVersion")
-        winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
-        is_64bits = True
+        if not platform.system().startswith("CYGWIN"):
+            hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                                  r"SOFTWARE\Microsoft\Windows\CurrentVersion")
+            winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
+            is_64bits = True
+        else:
+            if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"):
+                 is_64bits = True
+            else:
+                 is_64bits = False
     except EnvironmentError:
         is_64bits = False
     finally:
-        winreg.CloseKey(hKey)
+        if not platform.system().startswith("CYGWIN"):
+            winreg.CloseKey(hKey)
 
-    if is_64bits:
+    if is_64bits and platform.machine().endswith('64') and platform.system().startswith("CYGWIN"):
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
+    elif is_64bits and platform.system() == "Windows":
         key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
     else:
         key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
 
     try:
-        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
-        winreg.QueryValueEx(key, version)
+        if not platform.system().startswith("CYGWIN"):
+            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
+            winreg.QueryValueEx(key, version)
+        else:
+            if not os.path.isfile("/proc/registry/" + key_name.replace('\\','/') + "/" + version):
+                return None
+        
         installed_version = Version(version).major(fill=False)
         compiler = "Visual Studio"
         output.success("Found %s %s" % (compiler, installed_version))
@@ -120,14 +134,14 @@ def _get_default_compiler(output):
         output.error("Not able to automatically detect '%s' version" % command)
         return None
 
-    if platform.system() == "Windows":
+    if detected_os() == "Windows":
         vs = _visual_compiler_last(output)
     gcc = _gcc_compiler(output)
     clang = _clang_compiler(output)
     if platform.system() == "SunOS":
         sun_cc = _sun_cc_compiler(output)
 
-    if platform.system() == "Windows":
+    if detected_os() == "Windows":
         return vs or gcc or clang
     elif platform.system() == "Darwin":
         return clang or gcc
@@ -168,6 +182,10 @@ def _detect_compiler_version(result, output):
 def detected_os():
     systems = {'Darwin': 'Macos'}
     detected_os = systems.get(platform.system(), platform.system())
+
+    if (detected_os.startswith("CYGWIN")):
+      detected_os = "Windows"
+
     return detected_os
 
 
