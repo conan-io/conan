@@ -180,5 +180,11 @@ def FlagsForFile( filename, **kwargs ):
         flags.extend(prefixed("-I", self.build_info.include_paths))
         flags.extend(prefixed("-I", self.deps_build_info.include_paths))
 
+        cxx_version = ''
+        try:
+            cxx_version = str(self.settings.compiler.version).split('.')[0]
+        except:
+            pass
+
         return self.template.format(default_flags="'" + "', '".join(flags) + "'",
-                cxx_version=str(self.settings.compiler.version).split('.')[0])
+                cxx_version=cxx_version)
