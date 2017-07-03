@@ -12,8 +12,14 @@ def html_binary_graph(reference, ordered_packages, recipe_hash, table_filename):
         if settings:
             row_name = "%s %s %s" % (settings.get("os", "None"), settings.get("compiler", "None"),
                                      settings.get("compiler.version", "None"))
-            column_name = "%s %s" % (settings.get("build_type", ""),
-                                     settings.get("arch", ""))
+            column_name = []
+            for setting, value in settings.items():
+                if setting.startswith("compiler."):
+                    if not setting.startswith("compiler.version"):
+                        row_name += " (%s)" % value
+                elif setting not in ("os", "compiler"):
+                    column_name.append(value)
+            column_name = " ".join(column_name)
         else:
             row_name = "NO settings"
             column_name = ""
