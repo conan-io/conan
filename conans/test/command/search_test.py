@@ -175,7 +175,7 @@ class SearchTest(unittest.TestCase):
         self.client.run("search Hello/1.4.10/fenix/testing --table=table.html")
         html = load(os.path.join(self.client.current_folder, "table.html"))
         self.assertIn("<h1>Hello/1.4.10@fenix/testing</h1>", html)
-        self.assertIn("<td>Linux gcc 4.5</td>", html)
+        self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
         self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
 
     def recipe_pattern_search_test(self):
