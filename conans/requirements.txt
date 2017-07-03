@@ -9,4 +9,5 @@ node-semver==0.1.1
 distro>=1.0.2, <1.1.0
 pylint==1.6.5
 future==0.16.0
+pygments>=2.0, <3.0
 

@@ -557,3 +557,11 @@ class ConanManager(object):
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
         return remote_proxy.authenticate(name, password)
+
+    def get_path(self, reference, package_id=None, path=None, remote=None):
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
+        if not path and not package_id:
+            path = "conanfile.py"
+        elif not path and package_id:
+            path = "conaninfo.txt"
+        return remote_proxy.get_path(reference, package_id, path), path

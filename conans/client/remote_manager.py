@@ -229,6 +229,9 @@ class RemoteManager(object):
         """
         return self._call_remote(remote, "remove_packages", conan_ref, remove_ids)
 
+    def get_path(self, conan_ref, package_id, path, remote):
+        return self._call_remote(remote, "get_path", conan_ref, package_id, path)
+
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password)
 

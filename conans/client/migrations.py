@@ -81,6 +81,8 @@ build_type: [None, Debug, Release]
 def migrate_to_default_profile(conf_path, default_profile_path):
     tag = "[settings_defaults]"
     old_conf = load(conf_path)
+    if tag not in old_conf:
+        return
     tmp = old_conf.find(tag)
     new_conf = old_conf[0:tmp]
     rest = old_conf[tmp + len(tag):]
