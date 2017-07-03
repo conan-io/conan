@@ -54,42 +54,53 @@ def _clang_compiler(output, compiler_exe="clang"):
         return None
 
 
-def _visual_compiler(output, version):
-    'version have to be 8.0, or 9.0 or... anything .0'
-    if not platform.system().startswith("CYGWIN"):
-        from six.moves import winreg
-    try:
-        if not platform.system().startswith("CYGWIN"):
-            hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                                  r"SOFTWARE\Microsoft\Windows\CurrentVersion")
-            winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
-            is_64bits = True
-        else:
-            if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"):
-                 is_64bits = True
-            else:
-                 is_64bits = False
-    except EnvironmentError:
+def _visual_compiler_cygwin(output, version):
+    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"):
+        is_64bits = True
+    else:
         is_64bits = False
-    finally:
-        if not platform.system().startswith("CYGWIN"):
-            winreg.CloseKey(hKey)
 
-    if is_64bits and platform.machine().endswith('64') and platform.system().startswith("CYGWIN"):
+    if is_64bits and platform.machine().endswith('64'):
         key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
     elif is_64bits and platform.system() == "Windows":
         key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
     else:
         key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
 
+    if not os.path.isfile("/proc/registry/" + key_name.replace('\\', '/') + "/" + version):
+        return None
+
+    installed_version = Version(version).major(fill=False)
+    compiler = "Visual Studio"
+    output.success("CYGWIN: Found %s %s" % (compiler, installed_version))
+    return compiler, installed_version
+
+
+def _visual_compiler(output, version):
+    'version have to be 8.0, or 9.0 or... anything .0'
+    if platform.system().startswith("CYGWIN"):
+        return _visual_compiler_cygwin(output, version)
+
+    from six.moves import winreg  # @UnresolvedImport
     try:
-        if not platform.system().startswith("CYGWIN"):
-            key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
-            winreg.QueryValueEx(key, version)
-        else:
-            if not os.path.isfile("/proc/registry/" + key_name.replace('\\','/') + "/" + version):
-                return None
-        
+        hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
+                              r"SOFTWARE\Microsoft\Windows\CurrentVersion")
+        winreg.QueryValueEx(hKey, "ProgramFilesDir (x86)")
+        is_64bits = True
+    except EnvironmentError:
+        is_64bits = False
+    finally:
+        winreg.CloseKey(hKey)
+
+    if is_64bits:
+        key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
+    else:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
+
+    try:
+        key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
+        winreg.QueryValueEx(key, version)
+
         installed_version = Version(version).major(fill=False)
         compiler = "Visual Studio"
         output.success("Found %s %s" % (compiler, installed_version))
@@ -184,7 +195,7 @@ def detected_os():
     detected_os = systems.get(platform.system(), platform.system())
 
     if (detected_os.startswith("CYGWIN")):
-      detected_os = "Windows"
+        detected_os = "Windows"
 
     return detected_os
 
