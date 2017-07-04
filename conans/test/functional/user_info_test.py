@@ -8,10 +8,9 @@ from conans.util.files import load
 
 class UserInfoTest(unittest.TestCase):
 
-    def setUp(self):
-        self.client = TestClient()
-
     def test_user_info_propagation(self):
+
+        client = TestClient()
 
         def export_lib(name, requires, infolines):
             base = '''
@@ -29,8 +28,8 @@ class MyConanfile(ConanFile):
     def package_info(self):
         %s
     '''
-            self.client.save({CONANFILE: base % (name, requires, infolines)}, clean_first=True)
-            self.client.run("export lasote/stable")
+            client.save({CONANFILE: base % (name, requires, infolines)}, clean_first=True)
+            client.run("export lasote/stable")
 
         export_lib("LIB_A", "", "self.user_info.VAR1=2")
         export_lib("LIB_B", "LIB_A/0.1@lasote/stable", "self.user_info.VAR1=2\n        "
@@ -54,19 +53,18 @@ class MyConanfile(ConanFile):
         assert(self.deps_user_info["LIB_C"].VAR1=="2")
         assert(self.deps_user_info["LIB_D"].var1=="2")
     '''
-        self.client.save({CONANFILE: reuse}, clean_first=True)
-        self.client.run("export lasote/stable")
-        self.client.run('install reuse/0.1@lasote/stable --build -g txt')
+        client.save({CONANFILE: reuse}, clean_first=True)
+        client.run("export lasote/stable")
+        client.run('install reuse/0.1@lasote/stable --build -g txt')
 
         # Assert generator TXT
-        txt_contents = load(os.path.join(self.client.current_folder, "conanbuildinfo.txt"))
-        self.assertIn("[USER_LIB_A:VAR1]%s2" % os.linesep, txt_contents)
-        self.assertIn("[USER_LIB_B:VAR1]%s2" % os.linesep, txt_contents)
-        self.assertIn("[USER_LIB_B:VAR2]%s3" % os.linesep, txt_contents)
-        self.assertIn("[USER_LIB_C:VAR1]%s2" % os.linesep, txt_contents)
-        self.assertIn("[USER_LIB_D:var1]%s2" % os.linesep, txt_contents)
+        txt_contents = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        self.assertIn("[USER_LIB_A]%sVAR1=2" % os.linesep, txt_contents)
+        self.assertIn("[USER_LIB_B]%sVAR1=2%sVAR2=3" % (os.linesep, os.linesep), txt_contents)
+        self.assertIn("[USER_LIB_C]%sVAR1=2" % os.linesep, txt_contents)
+        self.assertIn("[USER_LIB_D]%svar1=2" % os.linesep, txt_contents)
 
         # Now try local command with a consumer
-        self.client.run('install . --build -g txt')
-        self.client.run("build")
+        client.run('install . --build -g txt')
+        client.run("build")
 

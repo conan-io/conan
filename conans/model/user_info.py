@@ -1,3 +1,6 @@
+from collections import defaultdict
+
+
 class UserInfo(object):
     """ Class to be able to assign properties to a dict"""
 
@@ -22,3 +25,7 @@ class UserInfo(object):
     def vars(self):
         return self._values_
 
+
+class UserDepsInfo(defaultdict):
+    def __init__(self):
+        super(UserDepsInfo, self).__init__(UserInfo)

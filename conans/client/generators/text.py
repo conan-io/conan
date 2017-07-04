@@ -1,12 +1,10 @@
 import re
 import traceback
 
-from collections import defaultdict
-
 from conans.errors import ConanException
 from conans.model import Generator
 from conans.model.build_info import DepsCppInfo, CppInfo
-from conans.model.user_info import UserInfo
+from conans.model.user_info import UserDepsInfo
 from conans.paths import BUILD_INFO
 from conans.util.log import logger
 
@@ -53,16 +51,16 @@ class TXTGenerator(Generator):
 
     @staticmethod
     def _loads_deps_user_info(text):
-        ret = defaultdict(UserInfo)
-        var_name = None
+        ret = UserDepsInfo()
+        lib_name = None
         for line in text.splitlines():
-            if not var_name and not line.startswith("[USER_"):
+            if not lib_name and not line.startswith("[USER_"):
                 raise ConanException("Error, invalid file format reading user info variables")
-            if not var_name:
-                lib_name, var_name = line[6:-1].split(":", 1)
+            elif line.startswith("[USER_"):
+                lib_name = line[6:-1]
             else:
-                setattr(ret[lib_name], var_name, line)
-                var_name = lib_name = None
+                var_name, value = line.split("=", 1)
+                setattr(ret[lib_name], var_name, value)
         return ret
 
     @staticmethod
@@ -146,8 +144,8 @@ class TXTGenerator(Generator):
 
         # Generate the user info variables as [LIB_A_USER_VAR]\n
         for dep, the_vars in self._deps_user_info.items():
+            sections.append("[USER_%s]" % dep)
             for name, value in the_vars.vars.items():
-                header = "[USER_%s:%s]" % (dep, name)
-                sections.append("%s\n%s" % (header, value))
+                sections.append("%s=%s" % (name, value))
 
         return "\n".join(sections)
