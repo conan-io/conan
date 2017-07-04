@@ -1,10 +1,9 @@
-import copy
 import os
 
+from conans.client.generators.text import TXTGenerator
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.errors import ConanException, NotFoundException
-from conans.model.build_info import DepsCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
@@ -19,8 +18,9 @@ def _load_info_file(current_path, conanfile, output, error):
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
-        deps_info = DepsCppInfo.loads(load(info_file_path))
-        conanfile.deps_cpp_info = deps_info
+        deps_cpp_info, deps_user_info = TXTGenerator.loads(load(info_file_path))
+        conanfile.deps_cpp_info = deps_cpp_info
+        conanfile.deps_user_info = deps_user_info
     except IOError:
         error_msg = ("%s file not found in %s\nIt is %s for this command\n"
                      "You can generate it using 'conan install -g %s'"

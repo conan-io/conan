@@ -1,6 +1,6 @@
 from conans.model import Generator
 from conans.client.generators.cmake_common import cmake_dependency_vars, cmake_package_info,\
-    cmake_macros_multi, generate_targets_section, cmake_dependencies, cmake_global_vars
+    cmake_macros_multi, generate_targets_section, cmake_dependencies, cmake_global_vars, cmake_user_info_vars
 from conans.client.generators.cmake import DepsCppCmake
 from conans.model.build_info import CppInfo
 
@@ -60,11 +60,17 @@ class CMakeMultiGenerator(Generator):
         deps = DepsCppCmake(dep_cpp_info)
         all_flags = cmake_global_vars(deps=deps, build_type=build_type)
         sections.append(all_flags)
+
         return "\n".join(sections)
 
     @property
     def _content_multi(self):
         sections = []
+
+        # USER DECLARED VARS
+        sections.append("\n### Definition of user declared vars (user_info) ###\n")
+        sections.append(cmake_user_info_vars(self.conanfile.deps_user_info))
+
         sections.append(cmake_package_info(name=self.conanfile.name,
                                            version=self.conanfile.version))
 

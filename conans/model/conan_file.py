@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
@@ -5,6 +7,8 @@ from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to c
 from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
+
+from conans.model.user_info import UserInfo
 from conans.paths import RUN_LOG_NAME
 
 
@@ -107,6 +111,10 @@ class ConanFile(object):
         # environment variables declared in the package_info
         self.env_info = None  # Will be initialized at processing time
         self.deps_env_info = DepsEnvInfo()
+
+        # user declared variables
+        self.user_info = None  # Will be initializad at processing time
+        self.deps_user_info = defaultdict(UserInfo)  # Keys are the package names, and the values a dict with the vars
 
         self.copy = None  # initialized at runtime
 

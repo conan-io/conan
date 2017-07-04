@@ -1,5 +1,8 @@
 import re
 import unittest
+from collections import namedtuple
+
+from conans.client.generators.cmake_multi import CMakeMultiGenerator
 from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.client.generators.cmake import CMakeGenerator
@@ -23,6 +26,9 @@ class CMakeGeneratorTest(unittest.TestCase):
         cpp_info = CppInfo("dummy_root_folder2")
         cpp_info.defines = ["MYDEFINE2"]
         conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        conanfile.deps_user_info["LIB1"].myvar = "myvalue"
+        conanfile.deps_user_info["LIB1"].myvar2 = "myvalue2"
+        conanfile.deps_user_info["lib2"].MYVAR2 = "myvalue4"
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
@@ -30,6 +36,23 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn("set(CONAN_DEFINES_MYPKG2 -DMYDEFINE2)", cmake_lines)
         self.assertIn("set(CONAN_COMPILE_DEFINITIONS_MYPKG MYDEFINE1)", cmake_lines)
         self.assertIn("set(CONAN_COMPILE_DEFINITIONS_MYPKG2 MYDEFINE2)", cmake_lines)
+
+        self.assertIn('set(CONAN_USER_LIB1_myvar "myvalue")', cmake_lines)
+        self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
+        self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
+
+    def variables_cmake_multi_user_vars_test(self):
+        settings_mock = namedtuple("Settings", "build_type, constraint")
+        conanfile = ConanFile(None, None, settings_mock("Release", lambda x: x), None)
+        conanfile.deps_user_info["LIB1"].myvar = "myvalue"
+        conanfile.deps_user_info["LIB1"].myvar2 = "myvalue2"
+        conanfile.deps_user_info["lib2"].MYVAR2 = "myvalue4"
+        generator = CMakeMultiGenerator(conanfile)
+        content = generator.content["conanbuildinfo_multi.cmake"]
+        cmake_lines = content.splitlines()
+        self.assertIn('set(CONAN_USER_LIB1_myvar "myvalue")', cmake_lines)
+        self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
+        self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
 
     def multi_flag_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
