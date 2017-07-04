@@ -340,9 +340,10 @@ class CMake(object):
         command = "cmake --build %s" % arg_list
         self._conanfile.run(command)
 
-    def package(self):
-        if not self._conanfile.package_folder:
-            raise ConanException("package_folder not defined, necessary to run 'cmake.package()'")
+    def install(self):
+        if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
+            raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
+                                 "Make sure 'package_folder' is defined")
         self._conanfile.run("cmake --build . --target install")
 
     def test(self, args=None, build_dir=None, target=None):

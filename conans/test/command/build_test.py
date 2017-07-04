@@ -49,7 +49,7 @@ class ConanBuildTest(unittest.TestCase):
         self.assertIn("Project: HELLO INCLUDE PATHS: %s/include"
                       % package_folder, client.user_io.out)
 
-    def build_cmake_install(self):
+    def build_cmake_install_test(self):
         client = TestClient()
         conanfile = """
 from conans import ConanFile, CMake
@@ -59,7 +59,7 @@ class AConan(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-        cmake.package()
+        cmake.install()
 """
         cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
 project(Chat NONE)
@@ -73,7 +73,7 @@ cmake_minimum_required(VERSION 2.8.12)
         client.run("install")
         error = client.run("build", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("package_folder not defined, necessary to run 'cmake.package()'",
+        self.assertIn("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'",
                       client.user_io.out)
         client.run("build -pf=mypkg")
         header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))

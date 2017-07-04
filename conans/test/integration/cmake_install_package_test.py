@@ -16,7 +16,7 @@ class AConan(ConanFile):
     def build(self):
         cmake = CMake(self)
         cmake.configure()
-        cmake.package()
+        cmake.install()
 """
         test_conanfile = """from conans import ConanFile, load
 
