@@ -188,6 +188,7 @@ class Command(object):
                             help='Generators to use')
         parser.add_argument("--werror", action='store_true', default=False,
                             help='Error instead of warnings for graph inconsistencies')
+        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
 
         _add_manifests_arguments(parser)
 
@@ -204,7 +205,8 @@ class Command(object):
                                    verify=args.verify, manifests=args.manifests,
                                    manifests_interactive=args.manifests_interactive,
                                    build=args.build, profile_name=args.profile, update=args.update,
-                                   generator=args.generator, no_imports=args.no_imports, filename=args.file)
+                                   generator=args.generator, no_imports=args.no_imports, filename=args.file,
+                                   cwd=args.cwd)
 
     def config(self, *args):
         """Manages conan.conf information

@@ -172,8 +172,7 @@ class EnvInfo(object):
     env.Cosa.append("HOLA")
 
     """
-    def __init__(self, root_folder=None):
-        self._root_folder_ = root_folder
+    def __init__(self):
         self._values_ = {}
 
     def __getattr__(self, name):
