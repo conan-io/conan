@@ -60,11 +60,11 @@ class MyConanfile(ConanFile):
 
         # Assert generator TXT
         txt_contents = load(os.path.join(self.client.current_folder, "conanbuildinfo.txt"))
-        self.assertIn("[USER_LIB_A:VAR1]\n2", txt_contents)
-        self.assertIn("[USER_LIB_B:VAR1]\n2", txt_contents)
-        self.assertIn("[USER_LIB_B:VAR2]\n3", txt_contents)
-        self.assertIn("[USER_LIB_C:VAR1]\n2", txt_contents)
-        self.assertIn("[USER_LIB_D:var1]\n2", txt_contents)
+        self.assertIn("[USER_LIB_A:VAR1]%s2" % os.linesep, txt_contents)
+        self.assertIn("[USER_LIB_B:VAR1]%s2" % os.linesep, txt_contents)
+        self.assertIn("[USER_LIB_B:VAR2]%s3" % os.linesep, txt_contents)
+        self.assertIn("[USER_LIB_C:VAR1]%s2" % os.linesep, txt_contents)
+        self.assertIn("[USER_LIB_D:var1]%s2" % os.linesep, txt_contents)
 
         # Now try local command with a consumer
         self.client.run('install . --build -g txt')
