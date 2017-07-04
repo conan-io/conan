@@ -417,7 +417,7 @@ class ConanManager(object):
                 packager.create_package(conanfile, source_folder, build_folder, package_folder,
                                         output)
 
-    def build(self, conanfile_path, source_folder, build_folder, test=False):
+    def build(self, conanfile_path, source_folder, build_folder, package_folder, test=False):
         """ Call to build() method saved on the conanfile.py
         param conanfile_path: the original source directory of the user containing a
                             conanfile.py
@@ -442,6 +442,7 @@ class ConanManager(object):
             conan_file._conanfile_directory = source_folder
             conan_file.build_folder = build_folder
             conan_file.source_folder = source_folder
+            conan_file.package_folder = package_folder
             with environment_append(conan_file.env):
                 conan_file.build()
                 if test:
