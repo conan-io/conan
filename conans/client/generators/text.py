@@ -145,7 +145,7 @@ class TXTGenerator(Generator):
         # Generate the user info variables as [LIB_A_USER_VAR]\n
         for dep, the_vars in self._deps_user_info.items():
             sections.append("[USER_%s]" % dep)
-            for name, value in the_vars.vars.items():
+            for name, value in sorted(the_vars.vars.items()):
                 sections.append("%s=%s" % (name, value))
 
         return "\n".join(sections)
