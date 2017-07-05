@@ -417,8 +417,7 @@ class ConanManager(object):
             output.info("Re-packaging %s" % package_reference.package_id)
             conanfile = load_consumer_conanfile(conan_file_path, build_folder,
                                                 self._client_cache.settings,
-                                                self._runner, output, reference=reference,
-                                                deps_cpp_info_required=True)
+                                                self._runner, output, reference=reference)
             rmdir(package_folder)
             if getattr(conanfile, 'no_copy_source', False):
                 source_folder = package_source_folder
