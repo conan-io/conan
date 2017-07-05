@@ -9,6 +9,7 @@ from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
 from conans.client.detect import detected_os
+from conans.util.files import load
 
 
 class InstallTest(unittest.TestCase):
@@ -248,3 +249,24 @@ class InstallTest(unittest.TestCase):
         self._create("Hello0", "0.1")
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, ignore_error=True)
         self.assertIn(message, self.client.user_io.out)
+
+    def install_cwd_test(self):
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    settings = "os"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/stable")
+        client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
+
+        client.run("install .. --build=missing -s os=Windows -c=win_dir")
+        client.run("install .. --build=missing -s os=Macos -c=os_dir")
+        conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
+        self.assertIn("os=Windows", conaninfo)
+        self.assertNotIn("os=Macos", conaninfo)
+        conaninfo = load(os.path.join(client.current_folder, "os_dir/conaninfo.txt"))
+        self.assertNotIn("os=Windows", conaninfo)
+        self.assertIn("os=Macos", conaninfo)
