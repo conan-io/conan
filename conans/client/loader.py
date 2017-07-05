@@ -15,7 +15,7 @@ from conans.util.files import load
 
 def _load_deps_cpp_info(current_path, conanfile, required):
     class DepsCppInfoNotDefined(object):
-        def __getitem__(self):
+        def __getitem__(self, item):
             raise ConanException("self.deps_cpp_info not defined. If you need it for a "
                                  "local command run 'conan install -g txt'")
         __getattr__ = __getitem__
@@ -50,7 +50,7 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
     else:
         conanfile = loader.load_conan_txt(conanfile_path, output)
     if deps_cpp_info_required is not None:
-        _load_deps_cpp_info(current_path, conanfile, output, required=deps_cpp_info_required)
+        _load_deps_cpp_info(current_path, conanfile, required=deps_cpp_info_required)
     return conanfile
 
 

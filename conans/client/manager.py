@@ -25,7 +25,7 @@ from conans.client.require_resolver import RequireResolver
 from conans.client.source import config_source, config_source_local
 from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
-from conans.errors import NotFoundException, ConanException
+from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST
 from conans.tools import environment_append
@@ -455,9 +455,11 @@ class ConanManager(object):
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
             with environment_append(conan_file.env):
-                conan_file.build()
+                with conanfile_exception_formatter(str(conan_file), "build"):
+                    conan_file.build()
                 if test:
-                    conan_file.test()
+                    with conanfile_exception_formatter(str(conan_file), "test"):
+                        conan_file.test()
         except ConanException:
             raise  # Raise but not let to reach the Exception except (not print traceback)
         except Exception:
