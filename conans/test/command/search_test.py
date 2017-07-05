@@ -5,6 +5,7 @@ import os
 from conans.model.manifest import FileTreeManifest
 import shutil
 from conans import COMPLEX_SEARCH_CAPABILITY
+from conans.util.files import load
 
 
 conan_vars1 = '''
@@ -163,6 +164,20 @@ class SearchTest(unittest.TestCase):
                           "NodeInfo/1.0.2@fenix/stable\n"
                           "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
+    def search_raw_test(self):
+        self.client.run("search Hello* --raw")
+        self.assertEquals("Hello/1.4.10@fenix/testing\n"
+                          "Hello/1.4.11@fenix/testing\n"
+                          "Hello/1.4.12@fenix/testing\n"
+                          "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+
+    def search_html_table_test(self):
+        self.client.run("search Hello/1.4.10/fenix/testing --table=table.html")
+        html = load(os.path.join(self.client.current_folder, "table.html"))
+        self.assertIn("<h1>Hello/1.4.10@fenix/testing</h1>", html)
+        self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
+        self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
+
     def recipe_pattern_search_test(self):
         self.client.run("search Hello*")
         self.assertEquals("Existing package recipes:\n\n"
@@ -213,6 +228,7 @@ class SearchTest(unittest.TestCase):
         shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
         self.client.run("remove Hello* -f")
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
+        self.assertIn("outdated from recipe: False", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)

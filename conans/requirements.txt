@@ -1,5 +1,5 @@
-PyJWT>=1.4.0, <1.6.0
-requests>=2.7.0, <2.14.0
+PyJWT>=1.4.0, <2.0.0
+requests>=2.7.0, <3.0.0
 colorama>=0.3.3, <0.4.0
 PyYAML>=3.11, <3.13.0
 patch==1.16
@@ -9,4 +9,5 @@ node-semver==0.1.1
 distro>=1.0.2, <1.1.0
 pylint==1.6.5
 future==0.16.0
+pygments>=2.0, <3.0
 

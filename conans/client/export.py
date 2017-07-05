@@ -100,7 +100,8 @@ def _init_export_folder(destination_folder):
 
 def _execute_export(conanfile, origin_folder, destination_folder, destination_source_folder,
                     output, filename=None):
-    def classify(patterns):
+
+    def classify_patterns(patterns):
         patterns = patterns or []
         included, excluded = [], []
         for p in patterns:
@@ -110,8 +111,8 @@ def _execute_export(conanfile, origin_folder, destination_folder, destination_so
                 included.append(p)
         return included, excluded
 
-    included_exports, excluded_exports = classify(conanfile.exports)
-    included_sources, excluded_sources = classify(conanfile.exports_sources)
+    included_exports, excluded_exports = classify_patterns(conanfile.exports)
+    included_sources, excluded_sources = classify_patterns(conanfile.exports_sources)
 
     try:
         os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))

@@ -28,6 +28,10 @@ class Generator(object):
     def env_info(self):
         return self._env_info
 
+    @property
+    def settings(self):
+        return self.conanfile.settings
+
     @abstractproperty
     def content(self):
         raise NotImplementedError()

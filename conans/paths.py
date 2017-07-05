@@ -39,6 +39,8 @@ CONAN_LINK = ".conan_link"
 
 RUN_LOG_NAME = "conan_run.log"
 
+DEFAULT_PROFILE_NAME = "default"
+
 
 def conan_expand_user(path):
     """ wrapper to the original expanduser function, to workaround python returning

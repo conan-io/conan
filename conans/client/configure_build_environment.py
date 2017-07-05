@@ -41,24 +41,39 @@ class VisualStudioBuildEnvironment(object):
     - LIB: library paths with semicolon separator
     - CL: /I (include paths)
     """
-    def __init__(self, conanfile, quote_paths=True):
+    def __init__(self, conanfile):
         """
         :param conanfile: ConanFile instance
         :param quote_paths: The path directories will be quoted. If you are using the vars together with
                             environment_append keep it to True, for virtualbuildenv quote_paths=False is required.
         """
-        self._deps_cpp_info = conanfile.deps_cpp_info
-        self.quote_paths = quote_paths
+        self.include_paths = conanfile.deps_cpp_info.include_paths
+        self.lib_paths = conanfile.deps_cpp_info.lib_paths
 
     @property
     def vars(self):
-        if self.quote_paths:
-            cl_args = " ".join(['/I"%s"' % lib for lib in self._deps_cpp_info.include_paths])
-        else:
-            cl_args = " ".join(['/I%s' % lib for lib in self._deps_cpp_info.include_paths])
-        lib_paths = ";".join(['%s' % lib for lib in self._deps_cpp_info.lib_paths])
+        """Used in conanfile with environment_append"""
+        cl_args = " ".join(['/I"%s"' % lib for lib in self.include_paths]) + environ_value_prefix("CL")
+        lib_paths = ";".join(['%s' % lib for lib in self.lib_paths]) + environ_value_prefix("LIB", ";")
         return {"CL": cl_args,
                 "LIB": lib_paths}
+
+    @property
+    def vars_dict(self):
+        """Used in virtualbuildenvironment"""
+        # Here we do not quote the include paths, it's going to be used by virtual environment
+        cl = ['/I%s' % lib for lib in self.include_paths]
+        lib = [lib for lib in self.lib_paths] # copy
+
+        if os.environ.get("CL", None):
+            cl.append(os.environ.get("CL"))
+
+        if os.environ.get("LIB", None):
+            lib.append(os.environ.get("LIB"))
+
+        ret = {"CL": cl,
+               "LIB": lib}
+        return ret
 
 
 class AutoToolsBuildEnvironment(object):
@@ -94,7 +109,8 @@ class AutoToolsBuildEnvironment(object):
         self.fpic = None
 
     def _get_host_build_target_flags(self, arch_detected, os_detected):
-        """Based on google search for build/host triplets, it could need a lot and complex verification"""
+        """Based on google search for build/host triplets, it could need a lot
+        and complex verification"""
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
@@ -139,7 +155,10 @@ class AutoToolsBuildEnvironment(object):
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
 
         """
-        configure_dir = configure_dir or "./"
+        if configure_dir:
+            configure_dir = configure_dir.rstrip("/")
+        else:
+            configure_dir = "."
         auto_build, auto_host, auto_target = None, None, None
         if build is None or host is None or target is None:
             auto_build, auto_host, auto_target = self._get_host_build_target_flags(detected_architecture(),
@@ -160,7 +179,8 @@ class AutoToolsBuildEnvironment(object):
                 triplet_args.append("--target %s" % (target or auto_target))
 
         with environment_append(self.vars):
-            self._conanfile.run("%sconfigure %s %s" % (configure_dir, args_to_string(args), " ".join(triplet_args)))
+            self._conanfile.run("%s/configure %s %s"
+                                % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
     def make(self, args=""):
         with environment_append(self.vars):
@@ -213,8 +233,7 @@ class AutoToolsBuildEnvironment(object):
     def _architecture_flag(self):
         return architecture_dict.get(self._arch, "")
 
-    @property
-    def vars(self):
+    def _get_vars(self):
         def append(*args):
             ret = []
             for arg in args:
@@ -239,23 +258,59 @@ class AutoToolsBuildEnvironment(object):
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags)
         c_flags = tmp_compilation_flags
 
-        def environ_values(var_name):
-            if os.environ.get(var_name, ""):
-                return " %s" % os.environ.get(var_name, "")
-            else:
-                return ""
+        return ld_flags, cpp_flags, libs, cxx_flags, c_flags
 
-        cpp_flags = " ".join(cpp_flags) + environ_values("CPPFLAGS")
-        cxx_flags = " ".join(cxx_flags) + environ_values("CXXFLAGS")
-        cflags = " ".join(c_flags) + environ_values("CFLAGS")
-        ldflags = " ".join(ld_flags) + environ_values("LDFLAGS")
-        libs = " ".join(libs) + environ_values("LIBS")
+    @property
+    def vars_dict(self):
+
+        ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
+
+        if os.environ.get("CPPFLAGS", None):
+            cpp_flags.append(os.environ.get("CPPFLAGS", None))
+
+        if os.environ.get("CXXFLAGS", None):
+            cxx_flags.append(os.environ.get("CXXFLAGS", None))
+
+        if os.environ.get("CFLAGS", None):
+            c_flags.append(os.environ.get("CFLAGS", None))
+
+        if os.environ.get("LDFLAGS", None):
+            ld_flags.append(os.environ.get("LDFLAGS", None))
+
+        if os.environ.get("LIBS", None):
+            libs.append(os.environ.get("LIBS", None))
 
         ret = {"CPPFLAGS": cpp_flags,
                "CXXFLAGS": cxx_flags,
-               "CFLAGS": cflags,
-               "LDFLAGS": ldflags,
+               "CFLAGS": c_flags,
+               "LDFLAGS": ld_flags,
                "LIBS": libs,
+               }
+        return ret
+
+    @property
+    def vars(self):
+
+        ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
+
+        cpp_flags = " ".join(cpp_flags) + environ_value_prefix("CPPFLAGS")
+        cxx_flags = " ".join(cxx_flags) + environ_value_prefix("CXXFLAGS")
+        cflags = " ".join(c_flags) + environ_value_prefix("CFLAGS")
+        ldflags = " ".join(ld_flags) + environ_value_prefix("LDFLAGS")
+        libs = " ".join(libs) + environ_value_prefix("LIBS")
+
+        ret = {"CPPFLAGS": cpp_flags.strip(),
+               "CXXFLAGS": cxx_flags.strip(),
+               "CFLAGS": cflags.strip(),
+               "LDFLAGS": ldflags.strip(),
+               "LIBS": libs.strip(),
                }
 
         return ret
+
+
+def environ_value_prefix(var_name, prefix=" "):
+    if os.environ.get(var_name, ""):
+        return "%s%s" % (prefix, os.environ.get(var_name, ""))
+    else:
+        return ""

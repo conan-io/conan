@@ -7,7 +7,8 @@ from conans.util.config_parser import get_bool_from_text_value
 from conans.util.log import logger
 
 
-default_remotes = """conan.io https://server.conan.io True
+default_remotes = """conan-center https://conan.bintray.com True
+conan-transit https://conan-transit.bintray.com True
 """
 
 Remote = namedtuple("Remote", "name url verify_ssl")
@@ -150,12 +151,12 @@ class RemoteRegistry(object):
             refs[conan_reference] = remote
             self._save(remotes, refs)
 
-    def add(self, remote_name, remote, verify_ssl=True):
+    def add(self, remote_name, remote, verify_ssl=True, insert=None):
         def exists_function(remotes):
             if remote_name in remotes:
                 raise ConanException("Remote '%s' already exists in remotes (use update to modify)"
                                      % remote_name)
-        self._add_update(remote_name, remote, verify_ssl, exists_function)
+        self._add_update(remote_name, remote, verify_ssl, exists_function, insert)
 
     def remove(self, remote_name):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
@@ -172,12 +173,21 @@ class RemoteRegistry(object):
                 raise ConanException("Remote '%s' not found in remotes" % remote_name)
         self._add_update(remote_name, remote, verify_ssl, exists_function)
 
-    def _add_update(self, remote_name, remote, verify_ssl, exists_function):
+    def _add_update(self, remote_name, remote, verify_ssl, exists_function, insert=None):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
             exists_function(remotes)
             urls = {r[0]: name for name, r in remotes.items() if name != remote_name}
             if remote in urls:
                 raise ConanException("Remote '%s' already exists with same URL" % urls[remote])
-            remotes[remote_name] = (remote, verify_ssl)
+            if insert is not None:
+                try:
+                    insert_index = int(insert)
+                except:
+                    raise ConanException("insert argument must be an integer")
+                remotes_list = list(remotes.items())
+                remotes_list.insert(insert_index, (remote_name, (remote, verify_ssl)))
+                remotes = OrderedDict(remotes_list)
+            else:
+                remotes[remote_name] = (remote, verify_ssl)
             self._save(remotes, refs)

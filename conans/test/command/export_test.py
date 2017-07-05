@@ -6,6 +6,7 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.tools import TestClient
+import platform
 
 
 class ExportSettingsTest(unittest.TestCase):
@@ -27,6 +28,68 @@ class TestConan(ConanFile):
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
 
+    def test_code_parent(self):
+        """ when referencing the parent, the relative folder "sibling" will be kept
+        """
+        base = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "../*.txt"
+"""
+        for conanfile in (base, base.replace("../*.txt", "../sibling*")):
+            client = TestClient()
+            files = {"recipe/conanfile.py": conanfile,
+                     "sibling/file.txt": "Hello World!"}
+            client.save(files)
+            client.current_folder = os.path.join(client.current_folder, "recipe")
+            client.run("export lasote/stable")
+            conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+            export_path = client.paths.export(conan_ref)
+            content = load(os.path.join(export_path, "sibling/file.txt"))
+            self.assertEqual("Hello World!", content)
+
+    def test_code_sibling(self):
+        # if provided a path with slash, it will use as a export base
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "../sibling/*.txt"
+"""
+        files = {"recipe/conanfile.py": conanfile,
+                 "sibling/file.txt": "Hello World!"}
+        client.save(files)
+        client.current_folder = os.path.join(client.current_folder, "recipe")
+        client.run("export lasote/stable")
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export(conan_ref)
+        content = load(os.path.join(export_path, "file.txt"))
+        self.assertEqual("Hello World!", content)
+
+    def test_conanfile_case(self):
+        if platform.system() != "Windows":
+            return
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "*"
+"""
+        client.save({"Conanfile.py": conanfile})
+        error = client.run("export lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Wrong 'conanfile.py' case", client.user_io.out)
+
+        error = client.run("export lasote/stable -f Conanfile.py", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Wrong 'Conanfile.py' case", client.user_io.out)
+
     def test_filename(self):
         client = TestClient()
         conanfile = """
@@ -37,6 +100,12 @@ class TestConan(ConanFile):
 """
         client.save({"myconanfile.py": conanfile,
                      "conanfile.py": ""})
+
+        if platform.system() == "Windows":
+            error = client.run("export lasote/stable -f MyConanfile.py", ignore_error=True)
+            self.assertTrue(error)
+            self.assertIn("Wrong 'MyConanfile.py' case", client.user_io.out)
+
         client.run("export lasote/stable --file=myconanfile.py")
         self.assertIn("Hello/1.2@lasote/stable: A new conanfile.py version was exported",
                       client.user_io.out)

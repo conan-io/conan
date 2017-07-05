@@ -1,4 +1,34 @@
 
+class MockSettings(object):
+
+    def __init__(self, values):
+        self.values = values
+
+    def get_safe(self, value):
+        return self.values.get(value, None)
+
+
+class MockDepsCppInfo(object):
+
+    def __init__(self):
+        self.include_paths = []
+        self.lib_paths = []
+        self.libs = []
+        self.defines = []
+        self.cflags = []
+        self.cppflags = []
+        self.sharedlinkflags = []
+        self.exelinkflags = []
+        self.sysroot = ""
+
+
+class MockConanfile(object):
+
+    def __init__(self, settings):
+        self.deps_cpp_info = MockDepsCppInfo()
+        self.settings = settings
+
+
 class TestConanFile(object):
     def __init__(self, name="Hello", version="0.1", settings=None, requires=None, options=None,
                  default_options=None, package_id=None):

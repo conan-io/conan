@@ -18,7 +18,7 @@ from conans.server.store.disk_adapter import ServerDiskAdapter
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 
 
-class MockFileSaver():
+class MockFileSaver(object):
 
     def __init__(self, filename, content):
         self.filename = filename

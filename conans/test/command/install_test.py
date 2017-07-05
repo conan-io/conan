@@ -69,14 +69,13 @@ class InstallTest(unittest.TestCase):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("install %s --build=missing" % (self.settings))
+        self.client.run("install %s --build=missing" % self.settings)
 
-        self.client.run("install %s --build=Bye" % (self.settings))
-        self.assertIn("No package matching 'Bye*' pattern", self.client.user_io.out)
+        self.client.run("install %s --build=Bye" % self.settings)
+        self.assertIn("No package matching 'Bye' pattern", self.client.user_io.out)
 
         for package in ["Hello0", "Hello1"]:
-            error = self.client.run("install %s --build=%s" % (self.settings, package))
-            self.assertFalse(error)
+            self.client.run("install %s --build=%s" % (self.settings, package))
             self.assertNotIn("No package matching", self.client.user_io.out)
 
     def reuse_test(self):

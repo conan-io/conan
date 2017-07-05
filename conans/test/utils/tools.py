@@ -14,7 +14,9 @@ from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
-from conans.client.command import Command, migrate_and_get_client_cache
+from conans.client.command import Command
+from conans.client.conan_api import migrate_and_get_client_cache, Conan
+from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
 from conans.client.remote_manager import RemoteManager
@@ -309,10 +311,6 @@ class TestClient(object):
         search_adapter = DiskSearchAdapter()
         self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
 
-        self._default_settings(get_env("CONAN_COMPILER", "gcc"),
-                               get_env("CONAN_COMPILER_VERSION", "4.8"),
-                               get_env("CONAN_LIBCXX", "libstdc++"))
-
         self.requester_class = requester_class
         self.conan_runner = runner
 
@@ -333,28 +331,10 @@ class TestClient(object):
     def paths(self):
         return self.client_cache
 
-    def _default_settings(self, compiler, compiler_version, libcxx):
-        """ allows to change the default settings in the file, to change compiler, version
-        """
-        # Set default settings in global defined
-        self.client_cache.conan_config  # For create the default file if not existing
-        text = load(self.client_cache.conan_conf_path)
-        # prevent TestClient instances with reused paths to write again the compiler
-        if compiler != "Visual Studio":
-            text = text.replace("compiler.runtime=MD", "")
-        if "compiler=" not in text:
-            # text = text.replace("build_type=Release", "")
-
-            text += "\ncompiler=%s" % compiler
-            text += "\ncompiler.version=%s" % compiler_version
-            if compiler != "Visual Studio":
-                text += "\ncompiler.libcxx=%s" % libcxx
-            save(self.client_cache.conan_conf_path, text)
-
     @property
     def default_compiler_visual_studio(self):
-        text = load(self.client_cache.conan_conf_path)
-        return "compiler=Visual Studio" in text
+        settings = self.client_cache.default_profile.settings
+        return settings.get("compiler", None) == "Visual Studio"
 
     def _init_collaborators(self, user_io=None):
 
@@ -390,6 +370,10 @@ class TestClient(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
+        # Patch the globals in tools
+        tools._global_requester = requests
+        tools._global_output = self.user_io.out
+
     def init_dynamic_vars(self, user_io=None):
         # Migration system
         self.client_cache = migrate_and_get_client_cache(self.base_folder, TestBufferConanOutput(),
@@ -404,8 +388,9 @@ class TestClient(object):
             tuple if required
         """
         self.init_dynamic_vars(user_io)
-
-        command = Command(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
+        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
+        outputer = CommandOutputer(self.user_io, self.client_cache)
+        command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)

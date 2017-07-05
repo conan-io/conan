@@ -46,6 +46,7 @@ class ConanOutput(object):
         self._color = color
         self.werror_active = False
 
+    @property
     def is_terminal(self):
         return hasattr(self._stream, "isatty") and self._stream.isatty()
 

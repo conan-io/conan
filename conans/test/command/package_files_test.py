@@ -32,6 +32,16 @@ class TestConan(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable:3475bd55b91ae904ac96fde0f106a136ab951a5e",
                       client.user_io.out)
 
+        # Now repeat
+        client.save({"include/header.h": "//Windows header2"}, clean_first=True)
+        err = client.run("package_files Hello/0.1@lasote/stable -s os=Windows", ignore_error=True)
+        self.assertTrue(err)
+        self.assertIn("Package already exists. Please use --force, -f to overwrite it",
+                      client.user_io.out)
+        client.run("package_files Hello/0.1@lasote/stable -s os=Windows -f")
+        self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
+                         "//Windows header2")
+
     def _consume(self, client, install_args):
         consumer = """
 from conans import ConanFile
@@ -56,6 +66,10 @@ class TestConan(ConanFile):
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_HELLO mycoollib)", cmakeinfo)
         self.assertIn("set(CONAN_LIBS mycoollib ${CONAN_LIBS})", cmakeinfo)
+
+        # ensure the recipe hash is computed and added
+        client.run("search Hello/0.1@lasote/stable")
+        self.assertIn("outdated from recipe: False", client.user_io.out)
 
     def test_paths(self):
         client = TestClient()

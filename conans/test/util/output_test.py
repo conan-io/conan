@@ -65,12 +65,12 @@ class PkgConan(ConanFile):
         new_out = StringIO()
         old_out = sys.stdout
         try:
-            sys.stdout = new_out
+            tools._global_output = ConanOutput(new_out)
             tools.unzip(zip_path, output_dir)
         finally:
             sys.stdout = old_out
 
         output = new_out.getvalue()
-        self.assertRegexpMatches(output, "Unzipping [\d]+ bytes, this can take a while")
+        self.assertRegexpMatches(output, "Unzipping [\d]+B, this can take a while")
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")

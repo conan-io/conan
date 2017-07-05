@@ -1,16 +1,17 @@
+import copy
 import os
 
+from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
+from conans.client.profile_loader import read_conaninfo_profile
 from conans.errors import ConanException, NotFoundException
+from conans.model.build_info import DepsCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
-from conans.util.files import load
 from conans.paths import BUILD_INFO
-from conans.model.build_info import DepsCppInfo
-from conans.model.profile import Profile
-from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
+from conans.util.files import load
 
 
 def _load_info_file(current_path, conanfile, output, error):
@@ -32,9 +33,13 @@ def _load_info_file(current_path, conanfile, output, error):
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
 
 
-def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, reference=None,
+def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, default_profile=None, reference=None,
                             error=False):
-    profile = Profile.read_conaninfo(current_path)
+
+    profile = read_conaninfo_profile(current_path) or default_profile
+    if not profile:
+        raise ConanException("Execute 'conan install -g txt' first.")
+
     loader = ConanFileLoader(runner, settings, profile)
     if conanfile_path.endswith(".py"):
         consumer = not reference
@@ -48,13 +53,13 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
 
 class ConanFileLoader(object):
     def __init__(self, runner, settings, profile):
-        '''
+        """
         @param settings: Settings object, to assign to ConanFile at load time
         @param options: OptionsValues, necessary so the base conanfile loads the options
                         to start propagation, and having them in order to call build()
         @param package_settings: Dict with {recipe_name: {setting_name: setting_value}}
         @param cached_env_values: EnvValues object
-        '''
+        """
         self._runner = runner
         settings.values = profile.settings_values
         assert settings is None or isinstance(settings, Settings)
@@ -91,6 +96,7 @@ class ConanFileLoader(object):
             if consumer:
                 self._user_options.descope_options(result.name)
                 result.options.initialize_upstream(self._user_options)
+                self._user_options.clear_unscoped_options()
                 # If this is the consumer project, it has no name
                 result.scope = self._scopes.package_scope()
             else:
@@ -132,13 +138,13 @@ class ConanFileLoader(object):
         conanfile.options.initialize_upstream(self._user_options)
 
         # imports method
-        conanfile.imports = ConanFileTextLoader.imports_method(conanfile,
-                                                               parser.import_parameters)
+        conanfile.imports = parser.imports_method(conanfile)
         conanfile.scope = self._scopes.package_scope()
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, references, current_path, scope_options=True):
+    def load_virtual(self, references, current_path, scope_options=True,
+                     build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(None, self._runner, self._settings.copy(), current_path)
@@ -153,7 +159,10 @@ class ConanFileLoader(object):
         if scope_options:
             assert len(references) == 1
             self._user_options.scope_options(references[0].name)
-        conanfile.options.initialize_upstream(self._user_options)
+        if build_requires_options:
+            conanfile.options.initialize_upstream(build_requires_options)
+        else:
+            conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []  # remove the default txt generator
         conanfile.scope = self._scopes.package_scope()
