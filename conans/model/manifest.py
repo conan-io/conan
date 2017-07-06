@@ -95,7 +95,7 @@ class FileTreeManifest(object):
         if exports_sources_folder:
             export_files, _ = gather_files(exports_sources_folder)
             for name, filepath in export_files.items():
-                file_dict[".c_src/%s" % name] = md5sum(filepath)
+                file_dict[name] = md5sum(filepath)
 
         date = calendar.timegm(time.gmtime())
 

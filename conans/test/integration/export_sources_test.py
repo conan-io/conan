@@ -2,7 +2,7 @@ import unittest
 from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 import os
-from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME
+from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, EXPORT_SOURCES_DIR
 from nose_parameterized.parameterized import parameterized
 from conans.util.files import load, save, md5sum
 from conans.model.manifest import FileTreeManifest
@@ -121,19 +121,19 @@ class ExportsSourcesTest(unittest.TestCase):
 
     def _check_export_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
-            expected_src_exports = ["hello.h"]
+            expected_src_exports = [".c_src/hello.h"]
             expected_exports = ['conanfile.py', 'conanmanifest.txt']
         if mode == "exports":
             expected_src_exports = []
             expected_exports = ["hello.h", 'conanfile.py', 'conanmanifest.txt']
         if mode == "both":
-            expected_src_exports = ["hello.h"]
+            expected_src_exports = [".c_src/hello.h"]
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "data.txt"]
         if mode == "nested":
-            expected_src_exports = ["src/hello.h"]
+            expected_src_exports = [".c_src/src/hello.h"]
             expected_exports = ["src/data.txt", 'conanfile.py', 'conanmanifest.txt']
         if mode == "overlap":
-            expected_src_exports = ["src/hello.h", "src/data.txt"]
+            expected_src_exports = [".c_src/src/hello.h", ".c_src/src/data.txt"]
             expected_exports = ["src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt']
 
         self.assertEqual(scan_folder(export_folder or self.export_folder),
@@ -170,22 +170,22 @@ class ExportsSourcesTest(unittest.TestCase):
 
     def _check_export_uploaded_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
-            expected_src_exports = ["hello.h"]
+            expected_src_exports = [".c_src/hello.h"]
             expected_exports = ['conanfile.py', 'conanmanifest.txt', EXPORT_SOURCES_TGZ_NAME]
         if mode == "exports":
             expected_src_exports = []
             expected_exports = ["hello.h", 'conanfile.py', 'conanmanifest.txt', EXPORT_TGZ_NAME]
         if mode == "both":
-            expected_src_exports = ["hello.h"]
+            expected_src_exports = [".c_src/hello.h"]
             expected_exports = ['conanfile.py', 'conanmanifest.txt', "data.txt",
                                 EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
         if mode == "nested":
-            expected_src_exports = ["src/hello.h"]
+            expected_src_exports = [".c_src/src/hello.h"]
             expected_exports = ["src/data.txt", 'conanfile.py', 'conanmanifest.txt',
                                 EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
 
         if mode == "overlap":
-            expected_src_exports = ["src/hello.h", "src/data.txt"]
+            expected_src_exports = [".c_src/src/hello.h", ".c_src/src/data.txt"]
             expected_exports = ["src/data.txt", "src/hello.h", 'conanfile.py', 'conanmanifest.txt',
                                 EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME]
 
@@ -198,7 +198,6 @@ class ExportsSourcesTest(unittest.TestCase):
         manifest = load(os.path.join(self.client.current_folder,
                                      ".conan_manifests/Hello/0.1/lasote/testing/export/"
                                      "conanmanifest.txt"))
-        EXPORT_SOURCES_DIR = ".c_src"
         if mode == "exports_sources":
             self.assertIn("%s/hello.h: 5d41402abc4b2a76b9719d911017c592" % EXPORT_SOURCES_DIR,
                           manifest.splitlines())
