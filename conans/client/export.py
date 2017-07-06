@@ -49,7 +49,7 @@ def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_so
     _execute_export(conanfile, origin_folder, destination_folder, destination_source_folder,
                     output, filename)
 
-    digest = FileTreeManifest.create(destination_folder)
+    digest = FileTreeManifest.create(destination_folder, destination_source_folder)
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
     if previous_digest and previous_digest == digest:

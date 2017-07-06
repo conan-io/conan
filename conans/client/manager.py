@@ -540,7 +540,7 @@ class ConanManager(object):
         # Now we can actually copy
         conan_file_path = self._client_cache.conanfile(reference)
         conanfile = load_conanfile_class(conan_file_path)
-        remote_proxy.complete_recipe_sources(reference, conanfile.short_paths)
+        remote_proxy.complete_recipe_sources(reference)
         copier = PackageCopier(self._client_cache, self._user_io, conanfile.short_paths)
         if not package_ids:
             packages = self._client_cache.packages(reference)

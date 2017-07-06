@@ -186,7 +186,7 @@ class RemoteManager(object):
             mkdir(sources_folder)  # create the folder even if no source files
             return
 
-        unzip_and_get_files(zipped_files, export_folder, EXPORT_SOURCES_TGZ_NAME)
+        unzip_and_get_files(zipped_files, sources_folder, EXPORT_SOURCES_TGZ_NAME)
         for dirname, _, filenames in os.walk(sources_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))

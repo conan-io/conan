@@ -7,7 +7,7 @@ import os
 from conans.paths import CONAN_MANIFEST, EXPORT_TGZ_NAME, CONANINFO
 import platform
 import stat
-from conans.util.files import save
+from conans.util.files import save, mkdir
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.test_files import uncompress_packaged_files
@@ -83,6 +83,7 @@ class UploadTest(unittest.TestCase):
                           "my_lib/debug/libd.a": "//copy",
                           "my_data/readme.txt": "//copy",
                           "my_bin/executable": "//copy"}, path=reg_folder)
+        mkdir(self.client.client_cache.export_sources(self.conan_ref))
 
         self.package_ref = PackageReference(self.conan_ref, "myfakeid")
         self.server_pack_folder = self.test_server.paths.package(self.package_ref)
@@ -190,7 +191,7 @@ class UploadTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export frodo/stable")
 
-        user_io.request_string = lambda x: "y"
+        user_io.request_string = lambda _: "y"
         self.client.run("upload Hello*", user_io=user_io)
         self.assertIn("Uploading Hello1/1.2.1@frodo/stable", self.client.user_io.out)
 
@@ -198,7 +199,7 @@ class UploadTest(unittest.TestCase):
         self.client.save(files)
         self.client.run("export frodo/stable")
 
-        user_io.request_string = lambda x: "n"
+        user_io.request_string = lambda _: "n"
         self.client.run("upload Hello*", user_io=user_io)
         self.assertNotIn("Uploading Hello2/1.2.1@frodo/stable", self.client.user_io.out)
 

@@ -140,7 +140,7 @@ class PathLengthLimitTest(unittest.TestCase):
         files = {"conanfile.py": base}
         client.save(files)
         client.run("export user/channel")
-        client.run("install lib/0.1@user/channel --build", ignore_error=True)
+        client.run("install lib/0.1@user/channel --build")
         package_ref = PackageReference.loads("lib/0.1@user/channel:"
                                              "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         client.run("search")
