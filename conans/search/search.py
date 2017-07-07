@@ -63,7 +63,7 @@ class SearchManagerABC(object):
         pass
 
 
-def filter_packages(query, package_infos):
+def filter_packages(query, package_infos, recipe_hashs):
     if query is None:
         return package_infos
     try:
@@ -72,6 +72,11 @@ def filter_packages(query, package_infos):
         if " not " in query or query.startswith("not "):
             raise ConanException("'not' operator is not allowed")
         result = {}
+        if query == 'outdated':
+            for package_id, recipe_hash in recipe_hashs.items():
+                if recipe_hash != package_infos[package_id].get("recipe_hash", []):
+                    result[package_id] = package_infos[package_id]
+            return result
         postfix = infix_to_postfix(query) if query else []
         for package_id, info in package_infos.items():
             if evaluate_postfix_with_info(postfix, info):
@@ -152,7 +157,8 @@ class DiskSearchManager(SearchManagerABC):
         """
 
         infos = self._get_local_infos_min(reference)
-        return filter_packages(query, infos)
+        recipe_hashs = self.get_recipe_hashs(reference)
+        return filter_packages(query, infos, recipe_hashs)
 
     def _get_local_infos_min(self, reference):
         result = {}
@@ -172,8 +178,22 @@ class DiskSearchManager(SearchManagerABC):
                 result[package_id] = conan_vars_info
 
             except Exception as exc:
-                logger.error("Package %s has not ConanInfo file" % str(package_reference))
+                logger.error("Package %s has no ConanInfo file" % str(package_reference))
                 if str(exc):
                     logger.error(str(exc))
 
+        return result
+
+    def get_recipe_hashs(self, reference):
+        result = {}
+        packages_path = self._paths.packages(reference)
+        subdirs = self._adapter.list_folder_subdirs(packages_path, level=1)
+        for package_id in subdirs:
+            try:
+                package_reference = PackageReference(reference, package_id)
+                result[package_id] = self._paths.load_manifest(package_reference.conan).summary_hash
+            except Exception as exc:
+                logger.error("Package %s cannot load manifest" % str(package_reference))
+                if str(exc):
+                    logger.error(str(exc))
         return result
