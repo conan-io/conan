@@ -54,27 +54,24 @@ def _clang_compiler(output, compiler_exe="clang"):
         return None
 
 
-def _visual_compiler_cygwin(output, version):
-    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"):
-        is_64bits = True
-    else:
-        is_64bits = False
-
-    if is_64bits and platform.machine().endswith('64'):
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
-    elif is_64bits and platform.system() == "Windows":
-        key_name = r'SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
-    else:
-        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
-
-    if not os.path.isfile("/proc/registry/" + key_name.replace('\\', '/') + "/" + version):
-        return None
-
-    installed_version = Version(version).major(fill=False)
-    compiler = "Visual Studio"
-    output.success("CYGWIN: Found %s %s" % (compiler, installed_version))
-    return compiler, installed_version
-
+def _visual_compiler_cygwin(output, version): 
+    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"): 
+        is_64bits = True 
+    else: 
+        is_64bits = False 
+  
+    if is_64bits:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'  
+    else: 
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7' 
+  
+    if not os.path.isfile("/proc/registry/" + key_name.replace('\\', '/') + "/" + version): 
+        return None 
+  
+    installed_version = Version(version).major(fill=False) 
+    compiler = "Visual Studio" 
+    output.success("CYGWIN: Found %s %s" % (compiler, installed_version)) 
+    return compiler, installed_version 
 
 def _visual_compiler(output, version):
     'version have to be 8.0, or 9.0 or... anything .0'
