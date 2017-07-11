@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
@@ -8,7 +6,7 @@ from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
 
-from conans.model.user_info import UserInfo, UserDepsInfo
+from conans.model.user_info import UserDepsInfo
 from conans.paths import RUN_LOG_NAME
 
 
@@ -265,4 +263,3 @@ class ConanFile(object):
             return "%s/%s@PROJECT" % (self.name, self.version)
         else:
             return "PROJECT"
-
