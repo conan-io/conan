@@ -22,12 +22,14 @@ os:
         version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3"]
     FreeBSD:
     SunOS:
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64]
+    Arduino:
+        board: ANY
+arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr]
 compiler:
     sun-cc:
-       version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
-       threads: [None, posix]
-       libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
+        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
+        threads: [None, posix]
+        libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
         version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3", "7.1"]
         libcxx: [libstdc++, libstdc++11]
@@ -63,6 +65,7 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
+# cmake_toolchain_file                # environment CONAN_CMAKE_TOOLCHAIN_FILE
 # cmake_system_name                   # environment CONAN_CMAKE_SYSTEM_NAME
 # cmake_system_version                # environment CONAN_CMAKE_SYSTEM_VERSION
 # cmake_system_processor              # environment CONAN_CMAKE_SYSTEM_PROCESSOR
@@ -118,6 +121,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
                # http://www.vtk.org/Wiki/CMake_Cross_Compiling
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
+               "CONAN_CMAKE_TOOLCHAIN_FILE": self._env_c("general.cmake_toolchain_file", "CONAN_CMAKE_TOOLCHAIN_FILE", None),
                "CONAN_CMAKE_SYSTEM_NAME": self._env_c("general.cmake_system_name", "CONAN_CMAKE_SYSTEM_NAME", None),
                "CONAN_CMAKE_SYSTEM_VERSION": self._env_c("general.cmake_system_version", "CONAN_CMAKE_SYSTEM_VERSION", None),
                "CONAN_CMAKE_SYSTEM_PROCESSOR": self._env_c("general.cmake_system_processor",
