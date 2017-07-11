@@ -23,6 +23,7 @@ os:
     FreeBSD:
     SunOS:
     Arduino:
+        board: ANY
 arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr]
 compiler:
     sun-cc:
