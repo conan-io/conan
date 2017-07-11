@@ -65,6 +65,7 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
+# cmake_toolchain_file                # environment CONAN_CMAKE_TOOLCHAIN_FILE
 # cmake_system_name                   # environment CONAN_CMAKE_SYSTEM_NAME
 # cmake_system_version                # environment CONAN_CMAKE_SYSTEM_VERSION
 # cmake_system_processor              # environment CONAN_CMAKE_SYSTEM_PROCESSOR
@@ -120,6 +121,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
                # http://www.vtk.org/Wiki/CMake_Cross_Compiling
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
+               "CONAN_CMAKE_TOOLCHAIN_FILE": self._env_c("general.cmake_toolchain_file", "CONAN_CMAKE_TOOLCHAIN_FILE", None),
                "CONAN_CMAKE_SYSTEM_NAME": self._env_c("general.cmake_system_name", "CONAN_CMAKE_SYSTEM_NAME", None),
                "CONAN_CMAKE_SYSTEM_VERSION": self._env_c("general.cmake_system_version", "CONAN_CMAKE_SYSTEM_VERSION", None),
                "CONAN_CMAKE_SYSTEM_PROCESSOR": self._env_c("general.cmake_system_processor",
