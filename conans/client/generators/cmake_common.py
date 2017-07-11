@@ -356,7 +356,9 @@ macro(conan_global_flags)
 
     add_compile_options(${CONAN_DEFINES}
                         "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
-                        "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>")
+                        "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>"
+                        "$<$<CONFIG:RelWithDebInfo>:${CONAN_DEFINES_RELEASE}>"
+                        "$<$<CONFIG:MinSizeRel>:${CONAN_DEFINES_RELEASE}>")
 
     conan_set_flags("")
     conan_set_flags("_RELEASE")

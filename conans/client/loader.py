@@ -13,7 +13,13 @@ from conans.paths import BUILD_INFO
 from conans.util.files import load
 
 
-def _load_info_file(current_path, conanfile, output, error):
+def _load_deps_cpp_info(current_path, conanfile, required):
+    class DepsCppInfoNotDefined(object):
+        def __getitem__(self, item):
+            raise ConanException("self.deps_cpp_info not defined. If you need it for a "
+                                 "local command run 'conan install -g txt'")
+        __getattr__ = __getitem__
+
     if not current_path:
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
@@ -22,19 +28,17 @@ def _load_info_file(current_path, conanfile, output, error):
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
     except IOError:
-        error_msg = ("%s file not found in %s\nIt is %s for this command\n"
-                     "You can generate it using 'conan install -g %s'"
-                     % (BUILD_INFO, current_path, "required" if error else "recommended", "txt"))
-        if not error:
-            output.warn(error_msg)
-        else:
-            raise ConanException(error_msg)
+        if required:
+            raise ConanException("%s file not found in %s\nIt is required for this command\n"
+                                 "You can generate it using 'conan install -g txt'"
+                                 % (BUILD_INFO, current_path))
+        conanfile.deps_cpp_info = DepsCppInfoNotDefined()
     except ConanException:
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
 
 
-def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, default_profile=None, reference=None,
-                            error=False):
+def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output,
+                            default_profile=None, reference=None, deps_cpp_info_required=False):
 
     profile = read_conaninfo_profile(current_path) or default_profile
     if not profile:
@@ -46,8 +50,8 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
         conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
     else:
         conanfile = loader.load_conan_txt(conanfile_path, output)
-    if error is not None:
-        _load_info_file(current_path, conanfile, output, error)
+    if deps_cpp_info_required is not None:
+        _load_deps_cpp_info(current_path, conanfile, required=deps_cpp_info_required)
     return conanfile
 
 
