@@ -14,11 +14,15 @@ from conans.util.files import load
 
 
 def _load_deps_cpp_info(current_path, conanfile, required):
-    class DepsCppInfoNotDefined(object):
-        def __getitem__(self, item):
-            raise ConanException("self.deps_cpp_info not defined. If you need it for a "
-                                 "local command run 'conan install -g txt'")
-        __getattr__ = __getitem__
+
+    def get_forbidden_access_object(field_name):
+        class InfoObjectNotDefined(object):
+            def __getitem__(self, item):
+                raise ConanException("self.%s not defined. If you need it for a "
+                                     "local command run 'conan install -g txt'" % field_name)
+            __getattr__ = __getitem__
+
+        return InfoObjectNotDefined()
 
     if not current_path:
         return
@@ -32,7 +36,8 @@ def _load_deps_cpp_info(current_path, conanfile, required):
             raise ConanException("%s file not found in %s\nIt is required for this command\n"
                                  "You can generate it using 'conan install -g txt'"
                                  % (BUILD_INFO, current_path))
-        conanfile.deps_cpp_info = DepsCppInfoNotDefined()
+        conanfile.deps_cpp_info = get_forbidden_access_object("deps_cpp_info")
+        conanfile.deps_user_info = get_forbidden_access_object("deps_user_info")
     except ConanException:
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
 
