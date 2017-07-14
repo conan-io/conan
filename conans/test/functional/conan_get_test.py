@@ -73,7 +73,7 @@ class HelloConan(ConanFile):
 [scope]
 
 [recipe_hash]
-    06f53d6f5fba3d2f249f38aa1f34a6df
+    dcb3ad84f4e46fb3da40dbbea0017094
 
 [env]
 """, self.client.user_io.out)

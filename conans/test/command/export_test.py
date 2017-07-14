@@ -135,8 +135,7 @@ class TestConan(ConanFile):
         client.run("export lasote/stable")
         conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
         export_path = client.paths.export(conan_ref)
-        exports_sources_path = os.path.join(client.paths.export_sources(conan_ref),
-                                            EXPORT_SOURCES_DIR)
+        exports_sources_path = client.paths.export_sources(conan_ref)
         self.assertTrue(os.path.exists(os.path.join(export_path, "file.txt")))
         self.assertFalse(os.path.exists(os.path.join(export_path, "file1.txt")))
         self.assertTrue(os.path.exists(os.path.join(exports_sources_path, "file.cpp")))

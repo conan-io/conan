@@ -5,7 +5,7 @@ to the local store, as an initial step before building or uploading to remotes
 import shutil
 import os
 from conans.util.files import save, load, rmdir, mkdir
-from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE, EXPORT_SOURCES_DIR
+from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
@@ -46,8 +46,7 @@ def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_so
     destination_folder = paths.export(conan_ref)
     previous_digest = _init_export_folder(destination_folder)
     exports_source_folder = paths.export_sources(conan_ref)
-    destination_source_folder = os.path.join(exports_source_folder, EXPORT_SOURCES_DIR)
-    _execute_export(conanfile, origin_folder, destination_folder, destination_source_folder,
+    _execute_export(conanfile, origin_folder, destination_folder, exports_source_folder,
                     output, filename)
 
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)

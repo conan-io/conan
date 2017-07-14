@@ -16,6 +16,7 @@ from conans.util.files import touch
 from conans.util.log import logger
 from conans.util.tracer import log_package_upload, log_recipe_upload,\
     log_recipe_download, log_package_download, log_recipe_sources_download, log_uncompressed_file, log_compressed_files
+from conans.client.source import merge_directories
 
 
 class RemoteManager(object):
@@ -166,7 +167,7 @@ class RemoteManager(object):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
-    def get_recipe_sources(self, conan_reference, export_folder, sources_folder, remote):
+    def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
         t1 = time.time()
 
         def filter_function(urls):
@@ -183,11 +184,15 @@ class RemoteManager(object):
         log_recipe_sources_download(conan_reference, duration, remote, zipped_files)
 
         if not zipped_files:
-            mkdir(sources_folder)  # create the folder even if no source files
+            mkdir(export_sources_folder)  # create the folder even if no source files
             return
 
-        unzip_and_get_files(zipped_files, sources_folder, EXPORT_SOURCES_TGZ_NAME)
-        for dirname, _, filenames in os.walk(sources_folder):
+        unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME)
+        c_src_path = os.path.join(export_sources_folder, ".c_src")
+        if os.path.exists(c_src_path):
+            merge_directories(c_src_path, export_sources_folder)
+            shutil.rmtree(c_src_path)
+        for dirname, _, filenames in os.walk(export_sources_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
@@ -291,6 +296,7 @@ def compress_files(files, symlinks, name, dest_dir):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
+    is_export_sources = (name == EXPORT_SOURCES_TGZ_NAME)
     with open(tgz_path, "wb") as tgz_handle:
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
@@ -302,6 +308,8 @@ def compress_files(files, symlinks, name, dest_dir):
             tgz.addfile(tarinfo=info)
 
         for filename, abs_path in files.items():
+            if is_export_sources:  # temporary backwards compat TGZ creation
+                filename = ".c_src/%s" % filename
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
             info.mode = os.stat(abs_path).st_mode
