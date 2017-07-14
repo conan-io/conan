@@ -25,7 +25,7 @@ from conans.client.require_resolver import RequireResolver
 from conans.client.source import config_source, config_source_local
 from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
-from conans.errors import NotFoundException, ConanException
+from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST
 from conans.tools import environment_append
@@ -324,16 +324,17 @@ class ConanManager(object):
             output = ScopedOutput("PROJECT", self._user_io.out)
             conanfile_path = os.path.join(reference, CONANFILE)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
-                                                self._client_cache.settings, self._runner,
-                                                output, default_profile=self._client_cache.default_profile,  error=None)
+                                                self._client_cache.settings, self._runner, output,
+                                                default_profile=self._client_cache.default_profile,
+                                                deps_cpp_info_required=None)
             config_source_local(current_path, conanfile, output)
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
-                                                self._client_cache.settings, self._runner,
-                                                output, default_profile=self._client_cache.default_profile,
-                                                reference=reference, error=None)
+                                                self._client_cache.settings, self._runner, output,
+                                                default_profile=self._client_cache.default_profile,
+                                                reference=reference, deps_cpp_info_required=None)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             export_src_folder = self._client_cache.export_sources(reference)
@@ -357,7 +358,7 @@ class ConanManager(object):
         conanfile = load_consumer_conanfile(conan_file_path, current_path,
                                             self._client_cache.settings,
                                             self._runner, output,
-                                            reference=reference, error=True)
+                                            reference=reference, deps_cpp_info_required=True)
 
         if dest_folder:
             if not os.path.isabs(dest_folder):
@@ -454,9 +455,11 @@ class ConanManager(object):
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
             with environment_append(conan_file.env):
-                conan_file.build()
+                with conanfile_exception_formatter(str(conan_file), "build"):
+                    conan_file.build()
                 if test:
-                    conan_file.test()
+                    with conanfile_exception_formatter(str(conan_file), "test"):
+                        conan_file.test()
         except ConanException:
             raise  # Raise but not let to reach the Exception except (not print traceback)
         except Exception:
