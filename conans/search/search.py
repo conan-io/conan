@@ -63,7 +63,18 @@ class SearchManagerABC(object):
         pass
 
 
-def filter_packages(query, package_infos, recipe_hashs):
+def filter_outdated(packages_infos, recipe_hash):
+    result = {}
+    for package_id, info in packages_infos.items():
+        try:  # Existing package_info of old package might not have recipe_hash
+            if info["recipe_hash"] != recipe_hash:
+                result[package_id] = info
+        except KeyError:
+            pass
+    return result
+
+
+def filter_packages(query, package_infos):
     if query is None:
         return package_infos
     try:
@@ -71,13 +82,8 @@ def filter_packages(query, package_infos, recipe_hashs):
             raise ConanException("'!' character is not allowed")
         if " not " in query or query.startswith("not "):
             raise ConanException("'not' operator is not allowed")
-        result = {}
-        if query == 'outdated':
-            for package_id, recipe_hash in recipe_hashs.items():
-                if recipe_hash != package_infos[package_id].get("recipe_hash", []):
-                    result[package_id] = package_infos[package_id]
-            return result
         postfix = infix_to_postfix(query) if query else []
+        result = {}
         for package_id, info in package_infos.items():
             if evaluate_postfix_with_info(postfix, info):
                 result[package_id] = info
@@ -155,10 +161,8 @@ class DiskSearchManager(SearchManagerABC):
                                settings: {os: Windows}}}
         param conan_ref: ConanFileReference object
         """
-
         infos = self._get_local_infos_min(reference)
-        recipe_hashs = self.get_recipe_hashs(reference)
-        return filter_packages(query, infos, recipe_hashs)
+        return filter_packages(query, infos)
 
     def _get_local_infos_min(self, reference):
         result = {}
@@ -182,18 +186,4 @@ class DiskSearchManager(SearchManagerABC):
                 if str(exc):
                     logger.error(str(exc))
 
-        return result
-
-    def get_recipe_hashs(self, reference):
-        result = {}
-        packages_path = self._paths.packages(reference)
-        subdirs = self._adapter.list_folder_subdirs(packages_path, level=1)
-        for package_id in subdirs:
-            try:
-                package_reference = PackageReference(reference, package_id)
-                result[package_id] = self._paths.load_manifest(package_reference.conan).summary_hash
-            except Exception as exc:
-                logger.error("Package %s cannot load manifest" % str(package_reference))
-                if str(exc):
-                    logger.error(str(exc))
         return result

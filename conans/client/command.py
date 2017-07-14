@@ -477,6 +477,8 @@ class Command(object):
                                                                 'With "outdated" it is possible '
                                                                 'to remove packages outdated '
                                                                 'from recipe')
+        parser.add_argument("--outdated", "-out", help="Remove only outdated from recipe packages",
+                            default=False, action="store_true")
         args = parser.parse_args(*args)
         reference = self._check_query_parameter_and_get_reference(args.pattern, args.query)
 
@@ -486,8 +488,9 @@ class Command(object):
         if args.builds is not None and args.query:
             self._raise_exception_printing("'-q' and '-b' parameters can't be used at the same time")
 
-        return self._conan.remove(pattern=reference or args.pattern, query=args.query, packages=args.packages, builds=args.builds,
-                                  src=args.src, force=args.force, remote=args.remote)
+        return self._conan.remove(pattern=reference or args.pattern, query=args.query,
+                                  packages=args.packages, builds=args.builds, src=args.src,
+                                  force=args.force, remote=args.remote, outdated=args.outdated)
 
     def copy(self, *args):
         """ Copy conan recipes and packages to another user/channel.

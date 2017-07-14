@@ -14,8 +14,35 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 
 
+class RemoveOutdatedTest(unittest.TestCase):
+    def remove_outdated_test(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    name = "Test"
+    version = "0.1"
+    settings = "os"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/testing")
+        client.run("install Test/0.1@lasote/testing --build -s os=Windows")
+        client.save({"conanfile.py": "# comment\n%s" % conanfile})
+        client.run("export lasote/testing")
+        client.run("install Test/0.1@lasote/testing --build -s os=Linux")
+        client.run("upload * --all --confirm")
+        for remote in ("", "-r=default"):
+            client.run("search Test/0.1@lasote/testing %s" % remote)
+            self.assertIn("os: Windows", client.user_io.out)
+            self.assertIn("os: Linux", client.user_io.out)
+            client.run("remove Test/0.1@lasote/testing -p --outdated -f %s" % remote)
+            client.run("search Test/0.1@lasote/testing  %s" % remote)
+            self.assertNotIn("os: Windows", client.user_io.out)
+            self.assertIn("os: Linux", client.user_io.out)
 
-conaninfo ='''
+
+conaninfo = '''
 [settings]
     arch=x64
     os=Windows
@@ -28,6 +55,7 @@ conaninfo ='''
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@fenix/testing:33333
 '''
+
 
 class RemoveTest(unittest.TestCase):
 
