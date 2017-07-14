@@ -579,3 +579,17 @@ class ConanManager(object):
         elif not path and package_id:
             path = "conaninfo.txt"
         return remote_proxy.get_path(reference, package_id, path), path
+
+    def export_alias(self, reference, target_reference):
+
+        conanfile = """
+from conans import ConanFile
+
+class AliasConanfile(ConanFile):
+    alias = "%s"
+""" % str(target_reference)
+
+        export_path = self._client_cache.export(reference)
+        mkdir(export_path)
+        save(os.path.join(export_path, CONANFILE), conanfile)
+
