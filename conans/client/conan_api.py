@@ -12,7 +12,7 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigP
 from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
-from conans.client.output import ConanOutput
+from conans.client.output import ConanOutput, Color, ScopedOutput
 from conans.client.profile_loader import read_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
@@ -246,7 +246,7 @@ class ConanAPIV1(object):
 
         test_conanfile = os.path.join(test_folder, CONANFILE)
         self._manager.build(test_conanfile, test_folder, build_folder, package_folder=None,
-                            test=True)
+                            test=str(conanfile_reference))
 
     @api_method
     def create(self, profile_name=None, settings=None,
@@ -254,7 +254,7 @@ class ConanAPIV1(object):
                keep_source=False, verify=default_manifest_folder,
                manifests=default_manifest_folder, manifests_interactive=default_manifest_folder,
                remote=None, update=False, cwd=None,
-               user=None, channel=None, name=None, version=None,):
+               user=None, channel=None, name=None, version=None):
 
         settings = settings or []
         options = options or []
@@ -270,10 +270,12 @@ class ConanAPIV1(object):
                 raise ConanException("conanfile.py doesn't declare package name or version")
 
         reference = ConanFileReference(name, version, user, channel)
+        scoped_output = ScopedOutput(str(reference), self._user_io.out)
         # Forcing an export!
         if not not_export:
-            self._user_io.out.info("Exporting package recipe")
-            self._manager.export(user, channel, cwd, keep_source=keep_source)
+            scoped_output.highlight("Exporting package recipe")
+            self._manager.export(user, channel, cwd, keep_source=keep_source, name=name,
+                                 version=version)
 
         if build is None:  # Not specified, force build the tested library
             build = [name]
@@ -305,6 +307,7 @@ class ConanAPIV1(object):
                                    "while creating packages")
             return
 
+        scoped_output.highlight("Testing with 'test_package'")
         sha = hashlib.sha1("".join(options + settings).encode()).hexdigest()
         build_folder = os.path.join(test_folder, "build", sha)
         rmdir(build_folder)
@@ -321,7 +324,7 @@ class ConanAPIV1(object):
                               update=update
                               )
         self._manager.build(test_conanfile, test_folder, build_folder, package_folder=None,
-                            test=True)
+                            test=str(reference))
 
     @api_method
     def package_files(self, reference, package_folder=None, profile_name=None,

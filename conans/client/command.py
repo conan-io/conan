@@ -151,8 +151,8 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.create.__doc__,
                                          prog="conan create")
-        parser.add_argument("user_channel", help='user and channel, '
-                            'e.g. myuser/stable')
+        parser.add_argument("reference", help='a full package reference Pkg/version@user/channel, '
+                            'or just the user/channel if package and version are defined in recipe')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
         parser.add_argument("-tf", "--test_folder",
@@ -168,15 +168,19 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            user, channel = args.user_channel.split("/")
+            name_version, user_channel = args.reference.split("@")
+            name, version = name_version.split("/")
+            user, channel = user_channel.split("/")
         except:
-            user, channel = None, None
+            name, version = None, None
+            user, channel = args.reference.split("/")
 
         return self._conan.create(args.profile, args.settings, args.options,
-                                        args.env, args.scope, args.test_folder, args.not_export,
-                                        args.build, args.keep_source, args.verify, args.manifests,
-                                        args.manifests_interactive, args.remote, args.update,
-                                        cwd=args.cwd, user=user, channel=channel)
+                                  args.env, args.scope, args.test_folder, args.not_export,
+                                  args.build, args.keep_source, args.verify, args.manifests,
+                                  args.manifests_interactive, args.remote, args.update,
+                                  cwd=args.cwd, name=name, version=version, user=user,
+                                  channel=channel)
 
     def package_files(self, *args):
         """Creates a package binary from given precompiled artifacts in user folder, skipping

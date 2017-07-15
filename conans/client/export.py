@@ -14,7 +14,7 @@ from conans.model.conan_file import create_exports, create_exports_sources
 from conans.client.loader_parse import load_conanfile_class
 
 
-def load_export_conanfile(conanfile_path, output):
+def load_export_conanfile(conanfile_path, output, name, version):
     conanfile = load_conanfile_class(conanfile_path)
 
     for field in ["url", "license", "description"]:
@@ -35,9 +35,15 @@ def load_export_conanfile(conanfile_path, output):
     # check name and version were specified
 
     if not hasattr(conanfile, "name") or not conanfile.name:
-        raise ConanException("conanfile didn't specify name")
+        if name:
+            conanfile.name = name
+        else:
+            raise ConanException("conanfile didn't specify name")
     if not hasattr(conanfile, "version") or not conanfile.version:
-        raise ConanException("conanfile didn't specify version")
+        if version:
+            conanfile.version = version
+        else:
+            raise ConanException("conanfile didn't specify version")
 
     return conanfile
 

@@ -29,7 +29,6 @@ class MultiRemoteTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build=missing")
         self.assertIn("Hello0/0.1@lasote/stable: Retrieving from predefined remote 'remote1'",
                       self.client.user_io.out)
-        self.assertIn("Hello0/0.1@lasote/stable from remote1", self.client.user_io.out)
         self.client.run("remote list_ref")
         self.assertIn("Hello0/0.1@lasote/stable: remote1", self.client.user_io.out)
 

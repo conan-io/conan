@@ -476,7 +476,9 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
         try:
             # This is necessary because it is different for user projects
             # than for packages
-            logger.debug("Call conanfile.build() with files in build folder: %s" % os.listdir(build_folder))
+            logger.debug("Call conanfile.build() with files in build folder: %s"
+                         % os.listdir(build_folder))
+            output.highlight("Calling build()")
             with conanfile_exception_formatter(str(conan_file), "build"):
                 conan_file.build()
 
