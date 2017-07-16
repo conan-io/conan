@@ -4,7 +4,7 @@ from conans.util.files import load
 import os
 
 
-class ConanLinkTest(unittest.TestCase):
+class ConanAliasTest(unittest.TestCase):
 
     def setUp(self):
         test_server = TestServer()
@@ -25,7 +25,7 @@ class TestConan(ConanFile):
 class TestConan(ConanFile):
     name = "Hello"
     version = "0.X"
-    conan_link = "Hello/0.1@lasote/channel"
+    alias = "Hello/0.1@lasote/channel"
     """
         client.save({"conanfile.py": conanfile_link}, clean_first=True)
         client.run("export lasote/channel")

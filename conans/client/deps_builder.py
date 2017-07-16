@@ -426,8 +426,8 @@ class DepsGraphBuilder(object):
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
 
-        if getattr(dep_conanfile, "conan_link", None):
-            requirement.conan_reference = ConanFileReference.loads(dep_conanfile.conan_link)
+        if getattr(dep_conanfile, "alias", None):
+            requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
             return self._create_new_node(current_node, dep_graph, requirement, public_deps,
                                          name_req)
 
