@@ -1,4 +1,3 @@
-import copy
 import os
 
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
@@ -14,7 +13,13 @@ from conans.paths import BUILD_INFO
 from conans.util.files import load
 
 
-def _load_info_file(current_path, conanfile, output, error):
+def _load_deps_cpp_info(current_path, conanfile, required):
+    class DepsCppInfoNotDefined(object):
+        def __getitem__(self, item):
+            raise ConanException("self.deps_cpp_info not defined. If you need it for a "
+                                 "local command run 'conan install -g txt'")
+        __getattr__ = __getitem__
+
     if not current_path:
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
@@ -22,19 +27,17 @@ def _load_info_file(current_path, conanfile, output, error):
         deps_info = DepsCppInfo.loads(load(info_file_path))
         conanfile.deps_cpp_info = deps_info
     except IOError:
-        error_msg = ("%s file not found in %s\nIt is %s for this command\n"
-                     "You can generate it using 'conan install -g %s'"
-                     % (BUILD_INFO, current_path, "required" if error else "recommended", "txt"))
-        if not error:
-            output.warn(error_msg)
-        else:
-            raise ConanException(error_msg)
+        if required:
+            raise ConanException("%s file not found in %s\nIt is required for this command\n"
+                                 "You can generate it using 'conan install -g txt'"
+                                 % (BUILD_INFO, current_path))
+        conanfile.deps_cpp_info = DepsCppInfoNotDefined()
     except ConanException:
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
 
 
-def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, default_profile=None, reference=None,
-                            error=False):
+def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output,
+                            default_profile=None, reference=None, deps_cpp_info_required=False):
 
     profile = read_conaninfo_profile(current_path) or default_profile
     if not profile:
@@ -46,8 +49,8 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
         conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
     else:
         conanfile = loader.load_conan_txt(conanfile_path, output)
-    if error is not None:
-        _load_info_file(current_path, conanfile, output, error)
+    if deps_cpp_info_required is not None:
+        _load_deps_cpp_info(current_path, conanfile, required=deps_cpp_info_required)
     return conanfile
 
 
@@ -143,7 +146,8 @@ class ConanFileLoader(object):
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, references, current_path, scope_options=True):
+    def load_virtual(self, references, current_path, scope_options=True,
+                     build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
         conanfile = ConanFile(None, self._runner, self._settings.copy(), current_path)
@@ -158,7 +162,10 @@ class ConanFileLoader(object):
         if scope_options:
             assert len(references) == 1
             self._user_options.scope_options(references[0].name)
-        conanfile.options.initialize_upstream(self._user_options)
+        if build_requires_options:
+            conanfile.options.initialize_upstream(build_requires_options)
+        else:
+            conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []  # remove the default txt generator
         conanfile.scope = self._scopes.package_scope()
