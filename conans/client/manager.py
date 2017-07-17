@@ -594,4 +594,5 @@ class AliasConanfile(ConanFile):
         mkdir(export_path)
         save(os.path.join(export_path, CONANFILE), conanfile)
         mkdir(self._client_cache.export_sources(reference))
-
+        digest = FileTreeManifest.create(export_path)
+        save(os.path.join(export_path, CONAN_MANIFEST), str(digest))
