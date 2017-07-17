@@ -592,4 +592,5 @@ class AliasConanfile(ConanFile):
         export_path = self._client_cache.export(reference)
         mkdir(export_path)
         save(os.path.join(export_path, CONANFILE), conanfile)
+        mkdir(self._client_cache.export_sources(reference))
 

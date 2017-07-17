@@ -6,12 +6,10 @@ import os
 
 class ConanAliasTest(unittest.TestCase):
 
-    def setUp(self):
-        test_server = TestServer()
-        self.servers = {"default": test_server}
-
     def basic_test(self):
-        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        test_server = TestServer()
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         conanfile = """from conans import ConanFile
 
 class TestConan(ConanFile):
@@ -20,15 +18,7 @@ class TestConan(ConanFile):
     """
         client.save({"conanfile.py": conanfile})
         client.run("export lasote/channel")
-        conanfile_link = """from conans import ConanFile
-
-class TestConan(ConanFile):
-    name = "Hello"
-    version = "0.X"
-    alias = "Hello/0.1@lasote/channel"
-    """
-        client.save({"conanfile.py": conanfile_link}, clean_first=True)
-        client.run("export lasote/channel")
+        client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")
         conanfile_chat = """from conans import ConanFile
 
 class TestConan(ConanFile):
