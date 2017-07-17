@@ -34,6 +34,8 @@ class DiskRemover(object):
         self.remove_src(conan_ref)
         self.remove_builds(conan_ref)
         self.remove_packages(conan_ref)
+        self._remove(self._paths.export(conan_ref), conan_ref, "export folder")
+        self._remove(self._paths.export_sources(conan_ref), conan_ref, "export_source folder")
         self._remove(self._paths.conan(conan_ref), conan_ref)
 
     def remove_src(self, conan_ref):
