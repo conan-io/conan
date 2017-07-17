@@ -103,7 +103,7 @@ class LibcxxSettingTest(unittest.TestCase):
         client.run("install")
         # Also check that it not fails the config method with Visual Studio, because of the lack of libcxx
         client.run('install -s compiler="Visual Studio" -s compiler.version=12 -s compiler.runtime=MD', ignore_error=False)
-        self.assertIn("Generated cmake created conanbuildinfo.cmake", str(client.user_io.out))
+        self.assertIn("Generator cmake created conanbuildinfo.cmake", str(client.user_io.out))
 
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertNotIn("libcxx", conaninfo[:conaninfo.find("[full_settings]")])
@@ -130,7 +130,7 @@ class ConanFileToolsTest(ConanFile):
         new_client.save({"conanfile.py": newlib_content, "CMakeLists.txt": cmakelists})
         new_client.run('install -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=4.9', ignore_error=False)
         # Package is found and everything is ok
-        self.assertIn("Generated cmake created conanbuildinfo.cmake", str(new_client.user_io.out))
+        self.assertIn("Generator cmake created conanbuildinfo.cmake", str(new_client.user_io.out))
 
         # Try again without removing the setting, if we use libstdc++11, the C package won't be found
         self.files["conanfile.py"] = self.files["conanfile.py"].replace("def config", "def config222")
