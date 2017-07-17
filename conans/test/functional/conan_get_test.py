@@ -30,23 +30,23 @@ class HelloConan(ConanFile):
         # Local search, dir list
         self.client.run('get Hello0/0.1@lasote/channel .')
         self.assertEquals("""Listing directory '.':
- .c_src
  conanfile.py
  conanmanifest.txt
  other
 """, self.client.user_io.out)
 
-        self.client.run('get Hello0/0.1@lasote/channel .c_src --raw')
+        self.client.run('get Hello0/0.1@lasote/channel other --raw')
         self.assertEquals("path\n", self.client.user_io.out)
 
-        self.client.run('get Hello0/0.1@lasote/channel .c_src/path --raw')
+        self.client.run('get Hello0/0.1@lasote/channel other/path --raw')
         self.assertEquals("to\n", self.client.user_io.out)
 
-        self.client.run('get Hello0/0.1@lasote/channel .c_src/path/to')
-        self.assertEquals("Listing directory '.c_src/path/to':\n exported_source\n", self.client.user_io.out)
+        self.client.run('get Hello0/0.1@lasote/channel other/path/to')
+        self.assertEquals("Listing directory 'other/path/to':\n exported\n",
+                          self.client.user_io.out)
 
-        self.client.run('get Hello0/0.1@lasote/channel .c_src/path/to/exported_source')
-        self.assertEquals("1\n", self.client.user_io.out)
+        self.client.run('get Hello0/0.1@lasote/channel other/path/to/exported')
+        self.assertEquals("2\n", self.client.user_io.out)
 
         # Local search, conanfile print
         self.client.run('get Hello0/0.1@lasote/channel --raw')
@@ -73,7 +73,7 @@ class HelloConan(ConanFile):
 [scope]
 
 [recipe_hash]
-    06f53d6f5fba3d2f249f38aa1f34a6df
+    dcb3ad84f4e46fb3da40dbbea0017094
 
 [env]
 """, self.client.user_io.out)
