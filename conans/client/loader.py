@@ -87,7 +87,12 @@ class ConanFileLoader(object):
                 values_tuple = self._package_settings[result.name]
                 tmp_settings.values = Values.from_list(values_tuple)
 
-            user, channel = (reference.user, reference.channel) if reference else (None, None)
+            if reference:
+                result.name = reference.name
+                result.version = reference.version
+                user, channel = reference.user, reference.channel
+            else:
+                user, channel = None, None
 
             # Instance the conanfile
             result = result(output, self._runner, tmp_settings,

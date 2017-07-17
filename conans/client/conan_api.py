@@ -321,7 +321,8 @@ class ConanAPIV1(object):
                               manifest_interactive=manifest_interactive,
                               remote=remote,
                               profile=profile,
-                              update=update
+                              update=update,
+                              generators=["txt"]
                               )
         self._manager.build(test_conanfile, test_folder, build_folder, package_folder=None,
                             test=str(reference))
