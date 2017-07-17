@@ -186,6 +186,17 @@ class HelloConan(ConanFile):
         spt.install("a_package", force=True)
         self.assertEquals(runner.command_called, "brew install a_package")
 
+        os_info.is_freebsd = True
+        os_info.is_macos = False
+
+        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt.update()
+        self.assertEquals(runner.command_called, "sudo pkg update")
+        spt.install("a_package", force=True)
+        self.assertEquals(runner.command_called, "sudo pkg install -y a_package")
+        spt.install("a_package", force=False)
+        self.assertEquals(runner.command_called, "pkg info a_package")
+
         os.environ["CONAN_SYSREQUIRES_SUDO"] = "False"
 
         os_info = OSInfo()
@@ -213,6 +224,17 @@ class HelloConan(ConanFile):
         self.assertEquals(runner.command_called, "brew update")
         spt.install("a_package", force=True)
         self.assertEquals(runner.command_called, "brew install a_package")
+
+        os_info.is_freebsd = True
+        os_info.is_macos = False
+
+        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt.update()
+        self.assertEquals(runner.command_called, "pkg update")
+        spt.install("a_package", force=True)
+        self.assertEquals(runner.command_called, "pkg install -y a_package")
+        spt.install("a_package", force=False)
+        self.assertEquals(runner.command_called, "pkg info a_package")
 
         del os.environ["CONAN_SYSREQUIRES_SUDO"]
 

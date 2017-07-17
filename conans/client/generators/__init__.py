@@ -63,11 +63,11 @@ def write_generators(conanfile, path, output):
                                     % (generator_name,))
                     for k, v in content.items():
                         v = normalize(v)
-                        output.info("Generated %s created %s" % (generator_name, k))
+                        output.info("Generator %s created %s" % (generator_name, k))
                         save(join(path, k), v)
                 else:
                     content = normalize(content)
-                    output.info("Generated %s created %s" % (generator_name, generator.filename))
+                    output.info("Generator %s created %s" % (generator_name, generator.filename))
                     save(join(path, generator.filename), content)
             except Exception as e:
                 output.error("Generator %s(file:%s) failed\n%s"

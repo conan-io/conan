@@ -184,7 +184,8 @@ class ClientCache(SimplePaths):
         digest_path = self.digestfile_conanfile(conan_reference)
         if not os.path.exists(digest_path):
             return None, None
-        return self._digests(digest_path)
+        export_sources_path = self.export_sources(conan_reference)
+        return self._digests(digest_path, export_sources_path)
 
     def package_manifests(self, package_reference):
         digest_path = self.digestfile_package(package_reference, short_paths=None)
@@ -193,9 +194,10 @@ class ClientCache(SimplePaths):
         return self._digests(digest_path)
 
     @staticmethod
-    def _digests(digest_path):
+    def _digests(digest_path, exports_sources_folder=None):
         readed_digest = FileTreeManifest.loads(load(digest_path))
-        expected_digest = FileTreeManifest.create(os.path.dirname(digest_path))
+        expected_digest = FileTreeManifest.create(os.path.dirname(digest_path),
+                                                  exports_sources_folder)
         return readed_digest, expected_digest
 
     def delete_empty_dirs(self, deleted_refs):

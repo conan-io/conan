@@ -8,14 +8,13 @@ from conans.client.userio import UserIO
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.paths import PACKAGES_FOLDER, EXPORT_FOLDER, BUILD_FOLDER, SRC_FOLDER, CONANFILE,\
-    CONAN_MANIFEST, CONANINFO, EXPORT_SOURCES_DIR
+    CONAN_MANIFEST, CONANINFO
 from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 
 
-
-conaninfo ='''
+conaninfo = '''
 [settings]
     arch=x64
     os=Windows
@@ -28,6 +27,7 @@ conaninfo ='''
   OpenSSL/2.10@lasote/testing:2222
   HelloInfo1/0.45@fenix/testing:33333
 '''
+
 
 class RemoveTest(unittest.TestCase):
 
@@ -64,7 +64,7 @@ class RemoveTest(unittest.TestCase):
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONANINFO)] = conaninfo % str(i)
                 files["%s/%s/%s/%s" % (folder, PACKAGES_FOLDER, pack_id, CONAN_MANIFEST)] = ""
 
-            exports_sources_dir = os.path.join(client.client_cache.export(ref), EXPORT_SOURCES_DIR)
+            exports_sources_dir = client.client_cache.export_sources(ref)
             os.makedirs(exports_sources_dir)
 
         client.save(files, client.client_cache.store)
@@ -155,10 +155,10 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["build", "source", "export"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/1.4.10/fenix/testing")))
-        six.assertCountEqual(self, ["build", "source", "export"],
+        six.assertCountEqual(self, ["build", "source", "export", "export_source"],
                              os.listdir(os.path.join(self.client.storage_folder,
                                                      "Hello/2.4.11/fenix/testing")))
 
@@ -172,12 +172,12 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": True, "H2": True, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "source", "export"],
-                              os.listdir(os.path.join(self.client.storage_folder,
-                                                      "Hello/1.4.10/fenix/testing")))
-        six.assertCountEqual(self, ["package", "source", "export"],
-                              os.listdir(os.path.join(self.client.storage_folder,
-                                                      "Hello/2.4.11/fenix/testing")))
+        six.assertCountEqual(self, ["package", "source", "export", "export_source"],
+                             os.listdir(os.path.join(self.client.storage_folder,
+                                                     "Hello/1.4.10/fenix/testing")))
+        six.assertCountEqual(self, ["package", "source", "export", "export_source"],
+                             os.listdir(os.path.join(self.client.storage_folder,
+                                                     "Hello/2.4.11/fenix/testing")))
 
     def src_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
@@ -189,12 +189,12 @@ class RemoveTest(unittest.TestCase):
                             src_folders={"H1": False, "H2": False, "B": True, "O": True})
         folders = os.listdir(self.client.storage_folder)
         six.assertCountEqual(self, ["Hello", "Other", "Bye"], folders)
-        six.assertCountEqual(self, ["package", "build", "export"],
-                              os.listdir(os.path.join(self.client.storage_folder,
-                                                      "Hello/1.4.10/fenix/testing")))
-        six.assertCountEqual(self, ["package", "build", "export"],
-                              os.listdir(os.path.join(self.client.storage_folder,
-                                                      "Hello/2.4.11/fenix/testing")))
+        six.assertCountEqual(self, ["package", "build", "export", "export_source"],
+                             os.listdir(os.path.join(self.client.storage_folder,
+                                                     "Hello/1.4.10/fenix/testing")))
+        six.assertCountEqual(self, ["package", "build", "export", "export_source"],
+                             os.listdir(os.path.join(self.client.storage_folder,
+                                                     "Hello/2.4.11/fenix/testing")))
 
     def reject_removal_test(self):
         mocked_user_io = UserIO(out=TestBufferConanOutput())
