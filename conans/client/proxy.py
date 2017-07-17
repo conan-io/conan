@@ -220,7 +220,7 @@ class ConanProxy(object):
                 output.info("Retrieving from predefined remote '%s'" % ref_remote.name)
                 return _retrieve_from_remote(ref_remote)
             else:
-                output.info("Not found, looking in remotes...")
+                output.info("Not found in local cache, looking in remotes...")
 
         remotes = self._registry.remotes
         for remote in remotes:
