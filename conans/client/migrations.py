@@ -1,11 +1,11 @@
+import os
+import shutil
+
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
 from conans.errors import ConanException
 from conans.migrations import Migrator
-from conans.paths import DEFAULT_PROFILE_NAME
 from conans.util.files import load, save
 from conans.model.version import Version
-import os
-from conans.client.conf import default_settings_yml
 
 
 class ClientMigrator(Migrator):
@@ -16,6 +16,7 @@ class ClientMigrator(Migrator):
                                              current_version, out)
 
     def _update_settings_yml(self, old_settings):
+        from conans.client.conf import default_settings_yml
         settings_path = self.client_cache.settings_path
         if not os.path.exists(settings_path):
             self.out.warn("Migration: This conan installation doesn't have settings yet")
@@ -84,12 +85,16 @@ build_type: [None, Debug, Release]
                                      "a new one." % CONAN_CONF)
 
         if old_version < Version("0.25"):
+            from conans.paths import DEFAULT_PROFILE_NAME
             self.out.warn("Migration: Moving default settings from %s file to %s"
                           % (CONAN_CONF, DEFAULT_PROFILE_NAME))
             conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
             default_profile_path = os.path.join(self.client_cache.conan_folder, PROFILES_FOLDER,
                                                 DEFAULT_PROFILE_NAME)
             migrate_to_default_profile(conf_path, default_profile_path)
+
+            self.out.warn("Migration: export_source cache new layout")
+            migrate_c_src_export_source(self.client_cache, self.out)
 
 
 def migrate_to_default_profile(conf_path, default_profile_path):
@@ -111,3 +116,14 @@ def migrate_to_default_profile(conf_path, default_profile_path):
         # Now generate the default profile from the read settings_defaults
         new_profile = "[settings]\n%s" % settings
         save(default_profile_path, new_profile)
+
+
+def migrate_c_src_export_source(client_cache, out):
+    from conans.util.files import list_folder_subdirs
+    package_folders = list_folder_subdirs(client_cache.store, 4)
+    for package in package_folders:
+        package_folder = os.path.join(client_cache.store, package)
+        c_src = os.path.join(package_folder, "export/.c_src")
+        if os.path.exists(c_src):
+            out.warn("Migration: Removing package with old export_sources layout: %s" % package)
+            shutil.rmtree(package_folder)
