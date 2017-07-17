@@ -718,6 +718,19 @@ class Command(object):
 
         return
 
+    def alias(self, *args):
+        """ Creates and export an alias recipe
+        """
+        parser = argparse.ArgumentParser(description=self.upload.__doc__,
+                                         prog="conan alias")
+        parser.add_argument('reference', help='Alias reference. e.j: mylib/1.X@user/channel')
+        parser.add_argument('target', help='Target reference. e.j: mylib/1.12@user/channel')
+        args = parser.parse_args(*args)
+
+        self._conan.export_alias(args.reference, args.target)
+
+        return
+
     def _show_help(self):
         """ prints a summary of all commands
         """

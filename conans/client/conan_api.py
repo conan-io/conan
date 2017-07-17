@@ -541,8 +541,15 @@ class ConanAPIV1(object):
 
     @api_method
     def get_path(self, reference, package_id=None, path=None, remote=None):
-        reference = ConanFileReference.loads(str(reference) )
+        reference = ConanFileReference.loads(str(reference))
         return self._manager.get_path(reference, package_id, path, remote)
+
+    @api_method
+    def export_alias(self, reference, target_reference):
+        reference = ConanFileReference.loads(str(reference))
+        target_reference = ConanFileReference.loads(str(target_reference))
+        return self._manager.export_alias(reference, target_reference)
+
 
 
 Conan = ConanAPIV1
