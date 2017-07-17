@@ -36,7 +36,7 @@ class RemoteManager(object):
         files, symlinks = gather_files(export_folder)
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
-        export_src_folder = self._client_cache.export_sources(conan_reference)
+        export_src_folder = self._client_cache.export_sources(conan_reference, short_paths=False)
         src_files, src_symlinks = gather_files(export_src_folder)
         the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
                                            self._output)

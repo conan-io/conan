@@ -29,8 +29,8 @@ class PackageCopier(object):
         shutil.copytree(export_origin, export_dest)
         self._user_io.out.info("Copied %s to %s" % (str(reference), str(dest_ref)))
 
-        export_sources_origin = self._paths.export_sources(reference)
-        export_sources_dest = self._paths.export_sources(dest_ref)
+        export_sources_origin = self._paths.export_sources(reference, self._short_paths)
+        export_sources_dest = self._paths.export_sources(dest_ref, self._short_paths)
         if os.path.exists(export_sources_dest):
             rmdir(export_sources_dest)
         shutil.copytree(export_sources_origin, export_sources_dest)

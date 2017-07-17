@@ -337,7 +337,7 @@ class ConanManager(object):
                                                 reference=reference, deps_cpp_info_required=None)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
-            export_src_folder = self._client_cache.export_sources(reference)
+            export_src_folder = self._client_cache.export_sources(reference, conanfile.short_paths)
             config_source(export_folder, export_src_folder, src_folder, conanfile, output, force)
 
     def imports_undo(self, current_path):
@@ -543,7 +543,7 @@ class ConanManager(object):
         # Now we can actually copy
         conan_file_path = self._client_cache.conanfile(reference)
         conanfile = load_conanfile_class(conan_file_path)
-        remote_proxy.complete_recipe_sources(reference)
+        remote_proxy.complete_recipe_sources(reference, conanfile.short_paths)
         copier = PackageCopier(self._client_cache, self._user_io, conanfile.short_paths)
         if not package_ids:
             packages = self._client_cache.packages(reference)
