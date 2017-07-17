@@ -32,6 +32,23 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
+    def test_error_create_name_version(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create Hello/1.2@lasote/stable")
+        error = client.run("create Pkg/1.2@lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Package recipe exported with name Pkg!=Hello", client.out)
+        error = client.run("create Hello/1.1@lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Package recipe exported with version 1.1!=1.2", client.out)
+
     def create_user_channel_test(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile

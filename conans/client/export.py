@@ -33,17 +33,22 @@ def load_export_conanfile(conanfile_path, output, name, version):
         raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
     # check name and version were specified
-
-    if not hasattr(conanfile, "name") or not conanfile.name:
+    if not conanfile.name:
         if name:
             conanfile.name = name
         else:
             raise ConanException("conanfile didn't specify name")
-    if not hasattr(conanfile, "version") or not conanfile.version:
+    elif name and name != conanfile.name:
+        raise ConanException("Package recipe exported with name %s!=%s" % (name, conanfile.name))
+
+    if not conanfile.version:
         if version:
             conanfile.version = version
         else:
             raise ConanException("conanfile didn't specify version")
+    elif version and version != conanfile.version:
+        raise ConanException("Package recipe exported with version %s!=%s"
+                             % (version, conanfile.version))
 
     return conanfile
 
