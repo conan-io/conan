@@ -165,48 +165,6 @@ class DepsCppInfo(_BaseDepsCppInfo):
     def __getitem__(self, item):
         return self._dependencies[item]
 
-    @staticmethod
-    def loads(text):
-        pattern = re.compile("^\[([a-zA-Z0-9_:-]+)\]([^\[]+)", re.MULTILINE)
-        result = DepsCppInfo()
-
-        try:
-            for m in pattern.finditer(text):
-                var_name = m.group(1)
-                lines = []
-                for line in m.group(2).splitlines():
-                    line = line.strip()
-                    if not line or line[0] == "#":
-                        continue
-                    lines.append(line)
-                if not lines:
-                    continue
-                tokens = var_name.split(":")
-                if len(tokens) == 2:  # has config
-                    var_name, config = tokens
-                else:
-                    config = None
-                tokens = var_name.split("_", 1)
-                field = tokens[0]
-                if len(tokens) == 2:
-                    dep = tokens[1]
-                    dep_cpp_info = result._dependencies.setdefault(dep, CppInfo(root_folder=""))
-                    if field == "rootpath":
-                        lines = lines[0]
-                    item_to_apply = dep_cpp_info
-                else:
-                    item_to_apply = result
-                if config:
-                    config_deps = getattr(item_to_apply, config)
-                    setattr(config_deps, field, lines)
-                else:
-                    setattr(item_to_apply, field, lines)
-        except Exception as e:
-            logger.error(traceback.format_exc())
-            raise ConanException("There was an error parsing  conaninfo.txt: %s" % str(e))
-
-        return result
-
     def update(self, dep_cpp_info, pkg_name):
         assert isinstance(dep_cpp_info, CppInfo)
         self._dependencies[pkg_name] = dep_cpp_info

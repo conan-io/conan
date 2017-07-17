@@ -16,6 +16,8 @@ def _apply_build_requires(deps_graph, conanfile):
         conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref.name)
         conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
 
+        conanfile.deps_user_info[conan_ref.name] = build_require_conanfile.user_info
+
 
 class _RecipeBuildRequires(OrderedDict):
     def __init__(self, conanfile):

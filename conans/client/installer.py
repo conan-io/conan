@@ -4,6 +4,8 @@ import platform
 import fnmatch
 import shutil
 
+from conans.model.env_info import EnvInfo
+from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.files import save, rmdir, mkdir
 from conans.model.ref import PackageReference
@@ -13,7 +15,6 @@ from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
-from conans.model.env_info import EnvInfo
 from conans.client.source import config_source
 from conans.tools import environment_append
 from conans.util.tracer import log_package_built
@@ -30,7 +31,9 @@ def _init_package_info(deps_graph, paths, current_path):
             conan_file.cpp_info = CppInfo(package_folder)
         else:
             conan_file.cpp_info = CppInfo(current_path)
+
         conan_file.env_info = EnvInfo()
+        conan_file.user_info = UserInfo()
 
 
 def build_id(conanfile):
@@ -253,6 +256,7 @@ class ConanInstaller(object):
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
+            conan_file.deps_user_info[n.conan_ref.name] = n.conanfile.user_info
 
         # Update the env_values with the inherited from dependencies
         conan_file._env_values.update(conan_file.deps_env_info)
