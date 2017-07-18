@@ -545,8 +545,9 @@ class ConanAPIV1(object):
         return refs
 
     @api_method
-    def search_packages(self, reference, query=None, remote=None):
-        ret = self._manager.search_packages(reference, remote, packages_query=query)
+    def search_packages(self, reference, query=None, remote=None, outdated=False):
+        ret = self._manager.search_packages(reference, remote, packages_query=query,
+                                            outdated=outdated)
         return ret
 
     @api_method

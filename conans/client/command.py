@@ -507,11 +507,8 @@ class Command(object):
                                                                 ' The "pattern" parameter '
                                                                 'has to be a package recipe '
                                                                 'reference: MyPackage/1.2'
-                                                                '@user/channel'
-                                                                'With "outdated" it is possible '
-                                                                'to remove packages outdated '
-                                                                'from recipe')
-        parser.add_argument("--outdated", "-out", help="Remove only outdated from recipe packages",
+                                                                '@user/channel')
+        parser.add_argument("--outdated", "-o", help="Remove only outdated from recipe packages",
                             default=False, action="store_true")
         args = parser.parse_args(*args)
         reference = self._check_query_parameter_and_get_reference(args.pattern, args.query)
@@ -590,10 +587,9 @@ class Command(object):
                                                                 ' The "pattern" parameter '
                                                                 'has to be a package recipe '
                                                                 'reference: MyPackage/1.2'
-                                                                '@user/channel'
-                                                                'With "outdated" it is possible '
-                                                                'to search packages outdated '
-                                                                'from recipe')
+                                                                '@user/channel')
+        parser.add_argument('-o', '--outdated', default=False, action='store_true',
+                            help='Show only outdated from recipe packages')
         args = parser.parse_args(*args)
 
         try:
@@ -602,7 +598,8 @@ class Command(object):
             reference = None
 
         if reference:
-            ret = self._conan.search_packages(reference, query=args.query, remote=args.remote)
+            ret = self._conan.search_packages(reference, query=args.query, remote=args.remote,
+                                              outdated=args.outdated)
             ordered_packages, reference, recipe_hash, packages_query = ret
             self._outputer.print_search_packages(ordered_packages, reference, recipe_hash,
                                                  packages_query, args.table)

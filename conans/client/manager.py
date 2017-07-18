@@ -537,7 +537,7 @@ class ConanManager(object):
             except IOError:  # It could not exist in local
                 recipe_hash = None
         if outdated and recipe_hash:
-            filter_outdated(ordered_packages, recipe_hash)
+            ordered_packages = filter_outdated(ordered_packages, recipe_hash)
 
         return ordered_packages, reference, recipe_hash, packages_query
 
