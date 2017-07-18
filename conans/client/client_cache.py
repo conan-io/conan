@@ -184,7 +184,7 @@ class ClientCache(SimplePaths):
         digest_path = self.digestfile_conanfile(conan_reference)
         if not os.path.exists(digest_path):
             return None, None
-        export_sources_path = self.export_sources(conan_reference)
+        export_sources_path = self.export_sources(conan_reference, short_paths=None)
         return self._digests(digest_path, export_sources_path)
 
     def package_manifests(self, package_reference):

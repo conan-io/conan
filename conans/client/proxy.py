@@ -108,9 +108,9 @@ class ConanProxy(object):
             remote = self._registry.get_ref(package_ref.conan)
             self._manifest_manager.check_package(package_ref, remote)
 
-    def get_recipe_sources(self, conan_reference):
+    def get_recipe_sources(self, conan_reference, short_paths=False):
         export_path = self._client_cache.export(conan_reference)
-        sources_folder = self._client_cache.export_sources(conan_reference)
+        sources_folder = self._client_cache.export_sources(conan_reference, short_paths)
         if os.path.exists(sources_folder):
             return
 
@@ -177,7 +177,8 @@ class ConanProxy(object):
 
         if self._manifest_manager:
             # Just make sure that the recipe sources are there to check
-            self.get_recipe_sources(conan_reference)
+            conanfile = load_conanfile_class(conanfile_path)
+            self.get_recipe_sources(conan_reference, conanfile.short_paths)
             remote = self._registry.get_ref(conan_reference)
             self._manifest_manager.check_recipe(conan_reference, remote)
 
@@ -240,8 +241,8 @@ class ConanProxy(object):
 
         raise ConanException("No remote defined")
 
-    def complete_recipe_sources(self, conan_reference, force_complete=True):
-        sources_folder = self._client_cache.export_sources(conan_reference)
+    def complete_recipe_sources(self, conan_reference, force_complete=True, short_paths=False):
+        sources_folder = self._client_cache.export_sources(conan_reference, short_paths)
         ignore_deleted_file = None
         if not os.path.exists(sources_folder):
             # If not path to sources exists, we have a problem, at least an empty folder
@@ -253,7 +254,7 @@ class ConanProxy(object):
             if force_complete or current_remote != upload_remote:
                 # If uploading to a different remote than the one from which the recipe
                 # was retrieved, we definitely need to get the sources, so the recipe is complete
-                self.get_recipe_sources(conan_reference)
+                self.get_recipe_sources(conan_reference, short_paths=short_paths)
             else:
                 # But if same remote, no need to upload again the TGZ, it is already in the server
                 # But the upload API needs to know it to not remove the server file.
@@ -265,7 +266,10 @@ class ConanProxy(object):
         or to default remote, in that order.
         If the remote is not set, set it
         """
-        ignore_deleted_file = self.complete_recipe_sources(conan_reference, force_complete=False)
+        conan_file_path = self._client_cache.conanfile(conan_reference)
+        conanfile = load_conanfile_class(conan_file_path)
+        ignore_deleted_file = self.complete_recipe_sources(conan_reference, force_complete=False,
+                                                           short_paths=conanfile.short_paths)
         remote, ref_remote = self._get_remote(conan_reference)
 
         result = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,

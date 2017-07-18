@@ -56,7 +56,7 @@ def load_export_conanfile(conanfile_path, output, name, version):
 def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source, filename):
     destination_folder = paths.export(conan_ref)
     previous_digest = _init_export_folder(destination_folder)
-    exports_source_folder = paths.export_sources(conan_ref)
+    exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     _execute_export(conanfile, origin_folder, destination_folder, exports_source_folder,
                     output, filename)
 
