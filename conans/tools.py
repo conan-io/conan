@@ -618,6 +618,8 @@ class SystemPackageTool(object):
             return YumTool()
         elif os_info.is_macos:
             return BrewTool()
+        elif os_info.is_freebsd:
+            return PkgTool()
         else:
             return NullTool()
 
@@ -662,7 +664,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew")
+        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg")
 
     def installed(self, package_name):
         return False
@@ -701,6 +703,18 @@ class BrewTool(object):
 
     def installed(self, package_name):
         exit_code = self._runner('test -n "$(brew ls --versions %s)"' % package_name, None)
+        return exit_code == 0
+
+
+class PkgTool(object):
+    def update(self):
+        _run(self._runner, "%spkg update" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%spkg install -y %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner("pkg info %s" % package_name, None)
         return exit_code == 0
 
 

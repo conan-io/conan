@@ -1,10 +1,9 @@
-import copy
 import os
 
+from conans.client.generators.text import TXTGenerator
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.errors import ConanException, NotFoundException
-from conans.model.build_info import DepsCppInfo
 from conans.model.conan_file import ConanFile
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
@@ -14,27 +13,37 @@ from conans.paths import BUILD_INFO
 from conans.util.files import load
 
 
-def _load_info_file(current_path, conanfile, output, error):
+def _load_deps_cpp_info(current_path, conanfile, required):
+
+    def get_forbidden_access_object(field_name):
+        class InfoObjectNotDefined(object):
+            def __getitem__(self, item):
+                raise ConanException("self.%s not defined. If you need it for a "
+                                     "local command run 'conan install -g txt'" % field_name)
+            __getattr__ = __getitem__
+
+        return InfoObjectNotDefined()
+
     if not current_path:
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
-        deps_info = DepsCppInfo.loads(load(info_file_path))
-        conanfile.deps_cpp_info = deps_info
+        deps_cpp_info, deps_user_info = TXTGenerator.loads(load(info_file_path))
+        conanfile.deps_cpp_info = deps_cpp_info
+        conanfile.deps_user_info = deps_user_info
     except IOError:
-        error_msg = ("%s file not found in %s\nIt is %s for this command\n"
-                     "You can generate it using 'conan install -g %s'"
-                     % (BUILD_INFO, current_path, "required" if error else "recommended", "txt"))
-        if not error:
-            output.warn(error_msg)
-        else:
-            raise ConanException(error_msg)
+        if required:
+            raise ConanException("%s file not found in %s\nIt is required for this command\n"
+                                 "You can generate it using 'conan install -g txt'"
+                                 % (BUILD_INFO, current_path))
+        conanfile.deps_cpp_info = get_forbidden_access_object("deps_cpp_info")
+        conanfile.deps_user_info = get_forbidden_access_object("deps_user_info")
     except ConanException:
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
 
 
-def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output, default_profile=None, reference=None,
-                            error=False):
+def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output,
+                            default_profile=None, reference=None, deps_cpp_info_required=False):
 
     profile = read_conaninfo_profile(current_path) or default_profile
     if not profile:
@@ -46,8 +55,8 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
         conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
     else:
         conanfile = loader.load_conan_txt(conanfile_path, output)
-    if error is not None:
-        _load_info_file(current_path, conanfile, output, error)
+    if deps_cpp_info_required is not None:
+        _load_deps_cpp_info(current_path, conanfile, required=deps_cpp_info_required)
     return conanfile
 
 
@@ -84,7 +93,12 @@ class ConanFileLoader(object):
                 values_tuple = self._package_settings[result.name]
                 tmp_settings.values = Values.from_list(values_tuple)
 
-            user, channel = (reference.user, reference.channel) if reference else (None, None)
+            if reference:
+                result.name = reference.name
+                result.version = reference.version
+                user, channel = reference.user, reference.channel
+            else:
+                user, channel = None, None
 
             # Instance the conanfile
             result = result(output, self._runner, tmp_settings,

@@ -33,6 +33,7 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
     conanfile.copy_res = wrap(DEFAULT_RES)
     try:
         package_output = ScopedOutput("%s package()" % output.scope, output)
+        output.highlight("Calling package()")
         if source_folder != build_folder:
             conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
             with conanfile_exception_formatter(str(conanfile), "package"):

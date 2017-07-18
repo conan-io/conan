@@ -76,6 +76,9 @@ class ConanOutput(object):
     def info(self, data):
         self.writeln(data, Color.BRIGHT_CYAN)
 
+    def highlight(self, data):
+        self.writeln(data, Color.BRIGHT_MAGENTA)
+
     def success(self, data):
         self.writeln(data, Color.BRIGHT_GREEN)
 

@@ -135,6 +135,12 @@ class CMake(object):
     def _cmake_cross_build_defines(self, the_os, os_ver):
         ret = OrderedDict()
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", os_ver)
+        toolchain_file = get_env("CONAN_CMAKE_TOOLCHAIN_FILE", "")
+
+        if toolchain_file != "":
+            logger.info("Setting Cross build toolchain file: %s" % toolchain_file)
+            ret["CMAKE_TOOLCHAIN_FILE"] = toolchain_file
+            return ret
 
         if self._cmake_system_name is False:
             return ret

@@ -2,7 +2,7 @@ from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 from conans.client.generators.cmake_common import cmake_dependency_vars,\
     cmake_macros, generate_targets_section, cmake_dependencies, cmake_package_info,\
-    cmake_global_vars
+    cmake_global_vars, cmake_user_info_vars
 
 
 class DepsCppCmake(object):
@@ -77,5 +77,9 @@ class CMakeGenerator(Generator):
 
         # MACROS
         sections.append(cmake_macros)
+
+        # USER DECLARED VARS
+        sections.append("\n### Definition of user declared vars (user_info) ###\n")
+        sections.append(cmake_user_info_vars(self.conanfile.deps_user_info))
 
         return "\n".join(sections)

@@ -336,6 +336,10 @@ class TestClient(object):
         settings = self.client_cache.default_profile.settings
         return settings.get("compiler", None) == "Visual Studio"
 
+    @property
+    def out(self):
+        return self.user_io.out
+
     def _init_collaborators(self, user_io=None):
 
         output = TestBufferConanOutput()

@@ -102,7 +102,7 @@ class CommandOutputer(object):
 
         from pygments import highlight
         from pygments.lexers import PythonLexer, IniLexer, TextLexer
-        from pygments.formatters import Terminal256Formatter
+        from pygments.formatters import TerminalFormatter
 
         if file_name.endswith(".py"):
             lexer = PythonLexer()
@@ -111,4 +111,4 @@ class CommandOutputer(object):
         else:
             lexer = TextLexer()
 
-        self.user_io.out.write(highlight(contents, lexer, Terminal256Formatter()))
+        self.user_io.out.write(highlight(contents, lexer, TerminalFormatter()))

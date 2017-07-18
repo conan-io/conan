@@ -55,6 +55,15 @@ indent-string='  '
 
     def test_dynamic_fields(self):
         client = TestClient()
+        conanfile_base = """
+from conans import ConanFile
+class BaseConan(ConanFile):
+    name = "baselib"
+    version = "1.0"
+"""
+        client.save({CONANFILE: conanfile_base})
+        client.run("export conan/stable")
+
         conanfile2 = """
 from conans import ConanFile
 class TestConan(ConanFile):
@@ -67,14 +76,42 @@ class TestConan(ConanFile):
         self.output.info(self.conanfile_directory)
     def package(self):
         self.copy("*")
+
     def build_id(self):
         self.output.info(str(self.info_build))
+
+    def build_requirements(self):
+        self.build_requires("baselib/1.0@conan/stable")
 """
         client.save({CONANFILE: conanfile2})
         client.run("export lasote/stable")
         self.assertNotIn("Linter", client.user_io.out)
         # ensure nothing breaks
         client.run("install Hello/1.2@lasote/stable --build")
+
+    def test_catch_em_all(self):
+        client = TestClient()
+        conanfile_base = """
+from conans import ConanFile
+class BaseConan(ConanFile):
+    name = "baselib"
+    version = "1.0"
+
+    def source(self):
+        try:
+            raise Exception("Pikaaaaa!!")
+        except:
+            print("I got pikachu!!")
+
+        try:
+            raise Exception("Pikaaaaa!!")
+        except Exception:
+            print("I got pikachu!!")
+"""
+        client.save({CONANFILE: conanfile_base})
+        client.run("export conan/stable")
+        self.assertNotIn("Linter", client.user_io.out)
+
 
     def test_warning_as_errors(self):
         client = TestClient()
