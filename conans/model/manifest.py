@@ -80,7 +80,7 @@ class FileTreeManifest(object):
         return FileTreeManifest(time, file_sums)
 
     @classmethod
-    def create(cls, folder):
+    def create(cls, folder, exports_sources_folder=None):
         """ Walks a folder and create a FileTreeManifest for it, reading file contents
         from disk, and capturing current time
         """
@@ -91,6 +91,11 @@ class FileTreeManifest(object):
         file_dict = {}
         for name, filepath in files.items():
             file_dict[name] = md5sum(filepath)
+
+        if exports_sources_folder:
+            export_files, _ = gather_files(exports_sources_folder)
+            for name, filepath in export_files.items():
+                file_dict["export_source/%s" % name] = md5sum(filepath)
 
         date = calendar.timegm(time.gmtime())
 

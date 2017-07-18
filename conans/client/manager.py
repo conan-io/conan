@@ -25,7 +25,7 @@ from conans.client.require_resolver import RequireResolver
 from conans.client.source import config_source, config_source_local
 from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
-from conans.errors import NotFoundException, ConanException
+from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST
 from conans.tools import environment_append
@@ -35,6 +35,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.build_requires import BuildRequires
 from conans.client.linter import conan_linter
+from conans.search.search import filter_outdated
 
 
 class ConanManager(object):
@@ -57,7 +58,8 @@ class ConanManager(object):
         tmp_profile.update(profile)
         return tmp_profile
 
-    def export(self, user, channel, conan_file_path, keep_source=False, filename=None):
+    def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
+               version=None):
         """ Export the conans
         param conanfile_path: the original source directory of the user containing a
                            conanfile.py
@@ -74,7 +76,7 @@ class ConanManager(object):
                 (conanfile_name != "conanfile.py" and conanfile_name.lower() == "conanfile.py")):
             raise ConanException("Wrong '%s' case" % conanfile_name)
         conan_linter(conan_file_path, self._user_io.out)
-        conanfile = load_export_conanfile(conan_file_path, self._user_io.out)
+        conanfile = load_export_conanfile(conan_file_path, self._user_io.out, name, version)
         conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
         conan_ref_str = str(conan_ref)
         # Maybe a platform check could be added, but depends on disk partition
@@ -277,7 +279,15 @@ class ConanManager(object):
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
-        Printer(self._user_io.out).print_graph(deps_graph, registry)
+        if inject_require:
+            output = ScopedOutput("%s test package" % str(inject_require), self._user_io.out)
+            output.info("Installing dependencies")
+        elif not isinstance(reference, ConanFileReference):
+            output = ScopedOutput("PROJECT", self._user_io.out)
+            Printer(self._user_io.out).print_graph(deps_graph, registry)
+        else:
+            output = ScopedOutput(str(reference), self._user_io.out)
+            output.highlight("Installing package")
 
         try:
             if loader._settings.os and detected_os() != loader._settings.os:
@@ -287,9 +297,9 @@ class ConanManager(object):
             pass
 
         build_mode = BuildMode(build_modes, self._user_io.out)
-        build_requires = BuildRequires(loader, graph_builder, registry, self._user_io.out,
+        build_requires = BuildRequires(loader, graph_builder, registry, output,
                                        profile.build_requires)
-        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, build_mode,
+        installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
                                    build_requires)
 
         # Apply build_requires to consumer conanfile
@@ -298,9 +308,6 @@ class ConanManager(object):
 
         installer.install(deps_graph, current_path)
         build_mode.report_matches()
-
-        prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
-        output = ScopedOutput(prefix, self._user_io.out)
 
         # Write generators
         tmp = list(conanfile.generators)  # Add the command line specified generators
@@ -324,19 +331,21 @@ class ConanManager(object):
             output = ScopedOutput("PROJECT", self._user_io.out)
             conanfile_path = os.path.join(reference, CONANFILE)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
-                                                self._client_cache.settings, self._runner,
-                                                output, default_profile=self._client_cache.default_profile,  error=None)
+                                                self._client_cache.settings, self._runner, output,
+                                                default_profile=self._client_cache.default_profile,
+                                                deps_cpp_info_required=None)
             config_source_local(current_path, conanfile, output)
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = load_consumer_conanfile(conanfile_path, current_path,
-                                                self._client_cache.settings, self._runner,
-                                                output, default_profile=self._client_cache.default_profile,
-                                                reference=reference, error=None)
+                                                self._client_cache.settings, self._runner, output,
+                                                default_profile=self._client_cache.default_profile,
+                                                reference=reference, deps_cpp_info_required=None)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
-            config_source(export_folder, src_folder, conanfile, output, force)
+            export_src_folder = self._client_cache.export_sources(reference)
+            config_source(export_folder, export_src_folder, src_folder, conanfile, output, force)
 
     def imports_undo(self, current_path):
         undo_imports(current_path, self._user_io.out)
@@ -356,7 +365,7 @@ class ConanManager(object):
         conanfile = load_consumer_conanfile(conan_file_path, current_path,
                                             self._client_cache.settings,
                                             self._runner, output,
-                                            reference=reference, error=True)
+                                            reference=reference, deps_cpp_info_required=True)
 
         if dest_folder:
             if not os.path.isabs(dest_folder):
@@ -436,7 +445,8 @@ class ConanManager(object):
 
         try:
             # Append env_vars to execution environment and clear when block code ends
-            output = ScopedOutput("Project", self._user_io.out)
+            output = ScopedOutput(("%s test package" % test) if test else "Project",
+                                  self._user_io.out)
             conan_file = load_consumer_conanfile(conanfile_path, build_folder,
                                                  self._client_cache.settings,
                                                  self._runner, output)
@@ -453,9 +463,13 @@ class ConanManager(object):
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
             with environment_append(conan_file.env):
-                conan_file.build()
+                output.highlight("Running build()")
+                with conanfile_exception_formatter(str(conan_file), "build"):
+                    conan_file.build()
                 if test:
-                    conan_file.test()
+                    output.highlight("Running test()")
+                    with conanfile_exception_formatter(str(conan_file), "test"):
+                        conan_file.test()
         except ConanException:
             raise  # Raise but not let to reach the Exception except (not print traceback)
         except Exception:
@@ -500,7 +514,7 @@ class ConanManager(object):
         references = self._get_search_adapter(remote).search(pattern, ignorecase)
         return references
 
-    def search_packages(self, reference=None, remote=None, packages_query=None):
+    def search_packages(self, reference=None, remote=None, packages_query=None, outdated=False):
         """ Return the single information saved in conan.vars about all the packages
             or the packages which match with a pattern
 
@@ -522,6 +536,8 @@ class ConanManager(object):
                 recipe_hash = self._client_cache.load_manifest(reference).summary_hash
             except IOError:  # It could not exist in local
                 recipe_hash = None
+        if outdated and recipe_hash:
+            ordered_packages = filter_outdated(ordered_packages, recipe_hash)
 
         return ordered_packages, reference, recipe_hash, packages_query
 
@@ -535,11 +551,11 @@ class ConanManager(object):
         """
         # It is necessary to make sure the sources are complete before proceeding
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, None)
-        remote_proxy.complete_recipe_sources(reference)
 
         # Now we can actually copy
         conan_file_path = self._client_cache.conanfile(reference)
         conanfile = load_conanfile_class(conan_file_path)
+        remote_proxy.complete_recipe_sources(reference)
         copier = PackageCopier(self._client_cache, self._user_io, conanfile.short_paths)
         if not package_ids:
             packages = self._client_cache.packages(reference)
@@ -550,7 +566,7 @@ class ConanManager(object):
         copier.copy(reference, package_ids, username, channel, force)
 
     def remove(self, pattern, src=False, build_ids=None, package_ids_filter=None, force=False,
-               remote=None, packages_query=None):
+               remote=None, packages_query=None, outdated=False):
         """ Remove conans and/or packages
         @param pattern: string to match packages
         @param src: Remove src folder
@@ -563,7 +579,8 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
         remover = ConanRemover(self._client_cache, self._search_manager, self._user_io,
                                remote_proxy)
-        remover.remove(pattern, src, build_ids, package_ids_filter, force=force, packages_query=packages_query)
+        remover.remove(pattern, src, build_ids, package_ids_filter, force=force,
+                       packages_query=packages_query, outdated=outdated)
 
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
@@ -576,3 +593,19 @@ class ConanManager(object):
         elif not path and package_id:
             path = "conaninfo.txt"
         return remote_proxy.get_path(reference, package_id, path), path
+
+    def export_alias(self, reference, target_reference):
+
+        conanfile = """
+from conans import ConanFile
+
+class AliasConanfile(ConanFile):
+    alias = "%s"
+""" % str(target_reference)
+
+        export_path = self._client_cache.export(reference)
+        mkdir(export_path)
+        save(os.path.join(export_path, CONANFILE), conanfile)
+        mkdir(self._client_cache.export_sources(reference))
+        digest = FileTreeManifest.create(export_path)
+        save(os.path.join(export_path, CONAN_MANIFEST), str(digest))

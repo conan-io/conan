@@ -7,7 +7,7 @@ from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedCl
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
 import os
-from conans.paths import rm_conandir, EXPORT_SOURCES_DIR, EXPORT_SOURCES_TGZ_NAME
+from conans.paths import rm_conandir, EXPORT_SOURCES_TGZ_NAME
 from conans.client.remover import DiskRemover
 from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
@@ -110,7 +110,7 @@ class ConanProxy(object):
 
     def get_recipe_sources(self, conan_reference):
         export_path = self._client_cache.export(conan_reference)
-        sources_folder = os.path.join(export_path, EXPORT_SOURCES_DIR)
+        sources_folder = self._client_cache.export_sources(conan_reference)
         if os.path.exists(sources_folder):
             return
 
@@ -119,7 +119,8 @@ class ConanProxy(object):
             raise ConanException("Error while trying to get recipe sources for %s. "
                                  "No remote defined" % str(conan_reference))
         else:
-            self._remote_manager.get_recipe_sources(conan_reference, export_path, current_remote)
+            self._remote_manager.get_recipe_sources(conan_reference, export_path, sources_folder,
+                                                    current_remote)
 
     def get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
@@ -219,7 +220,7 @@ class ConanProxy(object):
                 output.info("Retrieving from predefined remote '%s'" % ref_remote.name)
                 return _retrieve_from_remote(ref_remote)
             else:
-                output.info("Not found, looking in remotes...")
+                output.info("Not found in local cache, looking in remotes...")
 
         remotes = self._registry.remotes
         for remote in remotes:
@@ -240,8 +241,7 @@ class ConanProxy(object):
         raise ConanException("No remote defined")
 
     def complete_recipe_sources(self, conan_reference, force_complete=True):
-        export_path = self._client_cache.export(conan_reference)
-        sources_folder = os.path.join(export_path, EXPORT_SOURCES_DIR)
+        sources_folder = self._client_cache.export_sources(conan_reference)
         ignore_deleted_file = None
         if not os.path.exists(sources_folder):
             # If not path to sources exists, we have a problem, at least an empty folder

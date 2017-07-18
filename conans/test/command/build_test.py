@@ -11,7 +11,7 @@ from conans import ConanFile
 
 class AConan(ConanFile):
     requires = "Hello/0.1@lasote/testing"
-    generators = "txt"
+    generators = "cmake"
 
     def build(self):
         self.output.info("INCLUDE PATH: %s" % self.deps_cpp_info.include_paths[0])
@@ -30,6 +30,37 @@ class AConan(ConanFile):
 
 class ConanBuildTest(unittest.TestCase):
 
+    def build_error_test(self):
+        """ If not using -g txt generator, and build() requires self.deps_cpp_info,
+        or self.deps_user_info it will fail
+        """
+        client = TestClient()
+        client.save({CONANFILE: conanfile_dep})
+        client.run("export lasote/testing")
+        client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
+        client.run("install --build=missing")
+        error = client.run("build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: PROJECT: Error in build() method, line 9", client.user_io.out)
+        self.assertIn("self.deps_cpp_info not defined", client.user_io.out)
+
+        conanfile_user_info = """
+from conans import ConanFile
+
+class AConan(ConanFile):
+    requires = "Hello/0.1@lasote/testing"
+    generators = "cmake"
+
+    def build(self):
+        self.deps_user_info.VAR
+"""
+        client.save({CONANFILE: conanfile_user_info}, clean_first=True)
+        client.run("install --build=missing")
+        error = client.run("build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: PROJECT: Error in build() method, line 9", client.user_io.out)
+        self.assertIn("self.deps_user_info not defined", client.user_io.out)
+
     def build_test(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
         """
@@ -38,7 +69,7 @@ class ConanBuildTest(unittest.TestCase):
         client.run("export lasote/testing")
 
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install --build=missing -g txt")
 
         client.run("build")
         ref = PackageReference.loads("Hello/0.1@lasote/testing:"

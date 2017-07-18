@@ -3,7 +3,7 @@ point, which could be both a user conanfile or an installed one
 """
 from conans.model.requires import Requirements
 from collections import namedtuple
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.info import ConanInfo
 from conans.errors import ConanException, conanfile_exception_formatter, ConanExceptionInUserConanfileMethod
 from conans.client.output import ScopedOutput
@@ -425,6 +425,11 @@ class DepsGraphBuilder(object):
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
+
+        if getattr(dep_conanfile, "alias", None):
+            requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
+            return self._create_new_node(current_node, dep_graph, requirement, public_deps,
+                                         name_req)
 
         new_node = Node(requirement.conan_reference, dep_conanfile)
         dep_graph.add_node(new_node)

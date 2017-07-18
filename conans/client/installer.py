@@ -4,6 +4,8 @@ import platform
 import fnmatch
 import shutil
 
+from conans.model.env_info import EnvInfo
+from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.files import save, rmdir, mkdir
 from conans.model.ref import PackageReference
@@ -13,7 +15,6 @@ from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
-from conans.model.env_info import EnvInfo
 from conans.client.source import config_source
 from conans.tools import environment_append
 from conans.util.tracer import log_package_built
@@ -30,7 +31,9 @@ def _init_package_info(deps_graph, paths, current_path):
             conan_file.cpp_info = CppInfo(package_folder)
         else:
             conan_file.cpp_info = CppInfo(current_path)
+
         conan_file.env_info = EnvInfo()
+        conan_file.user_info = UserInfo()
 
 
 def build_id(conanfile):
@@ -253,6 +256,7 @@ class ConanInstaller(object):
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
+            conan_file.deps_user_info[n.conan_ref.name] = n.conanfile.user_info
 
         # Update the env_values with the inherited from dependencies
         conan_file._env_values.update(conan_file.deps_env_info)
@@ -342,10 +346,12 @@ class ConanInstaller(object):
         # build_id is not caching the build folder, so actually rebuild the package
         src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
         export_folder = self._client_cache.export(conan_ref)
+        export_source_folder = self._client_cache.export_sources(conan_ref)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
         with environment_append(conan_file.env):
-            self._build_package(export_folder, src_folder, build_folder, package_folder, conan_file, output)
+            self._build_package(export_folder, export_source_folder, src_folder, build_folder,
+                                package_folder, conan_file, output)
         return build_folder
 
     def _package_conanfile(self, conan_ref, conan_file, package_reference, build_folder,
@@ -417,7 +423,8 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
             output.error("while executing system_requirements(): %s" % str(e))
             raise ConanException("Error in system requirements")
 
-    def _build_package(self, export_folder, src_folder, build_folder, package_folder, conan_file, output):
+    def _build_package(self, export_folder, export_source_folder, src_folder, build_folder,
+                       package_folder, conan_file, output):
         """ builds the package, creating the corresponding build folder if necessary
         and copying there the contents from the src folder. The code is duplicated
         in every build, as some configure processes actually change the source
@@ -432,7 +439,7 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
                                  "Close any app using it, and retry" % str(e))
 
         output.info('Building your package in %s' % build_folder)
-        config_source(export_folder, src_folder, conan_file, output)
+        config_source(export_folder, export_source_folder, src_folder, conan_file, output)
         output.info('Copying sources to build folder')
 
         def check_max_path_len(src, files):
@@ -476,7 +483,9 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
         try:
             # This is necessary because it is different for user projects
             # than for packages
-            logger.debug("Call conanfile.build() with files in build folder: %s" % os.listdir(build_folder))
+            logger.debug("Call conanfile.build() with files in build folder: %s"
+                         % os.listdir(build_folder))
+            output.highlight("Calling build()")
             with conanfile_exception_formatter(str(conan_file), "build"):
                 conan_file.build()
 

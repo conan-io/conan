@@ -258,3 +258,5 @@ class DepsEnvInfo(EnvInfo):
         assert isinstance(dep_env_info, DepsEnvInfo)
         for pkg_name, env_info in dep_env_info.dependencies:
             self.update(env_info, pkg_name)
+
+
