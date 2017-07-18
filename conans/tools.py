@@ -23,7 +23,7 @@ from conans.errors import ConanException
 from conans.model.version import Version
 # noinspection PyUnresolvedReferences
 from conans.util.files import _generic_algorithm_sum, load, save, sha256sum, \
-    sha1sum, md5sum, md5, touch, relative_dirs, rmdir, mkdir, path_exists
+    sha1sum, md5sum, md5, touch, relative_dirs, rmdir, mkdir
 from conans.util.log import logger
 
 # Default values
