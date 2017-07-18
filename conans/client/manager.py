@@ -57,7 +57,8 @@ class ConanManager(object):
         tmp_profile.update(profile)
         return tmp_profile
 
-    def export(self, user, channel, conan_file_path, keep_source=False, filename=None):
+    def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
+               version=None):
         """ Export the conans
         param conanfile_path: the original source directory of the user containing a
                            conanfile.py
@@ -74,7 +75,7 @@ class ConanManager(object):
                 (conanfile_name != "conanfile.py" and conanfile_name.lower() == "conanfile.py")):
             raise ConanException("Wrong '%s' case" % conanfile_name)
         conan_linter(conan_file_path, self._user_io.out)
-        conanfile = load_export_conanfile(conan_file_path, self._user_io.out)
+        conanfile = load_export_conanfile(conan_file_path, self._user_io.out, name, version)
         conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
         conan_ref_str = str(conan_ref)
         # Maybe a platform check could be added, but depends on disk partition
@@ -277,7 +278,15 @@ class ConanManager(object):
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
-        Printer(self._user_io.out).print_graph(deps_graph, registry)
+        if inject_require:
+            output = ScopedOutput("%s test package" % str(inject_require), self._user_io.out)
+            output.info("Installing dependencies")
+        elif not isinstance(reference, ConanFileReference):
+            output = ScopedOutput("PROJECT", self._user_io.out)
+            Printer(self._user_io.out).print_graph(deps_graph, registry)
+        else:
+            output = ScopedOutput(str(reference), self._user_io.out)
+            output.highlight("Installing package")
 
         try:
             if loader._settings.os and detected_os() != loader._settings.os:
@@ -287,9 +296,9 @@ class ConanManager(object):
             pass
 
         build_mode = BuildMode(build_modes, self._user_io.out)
-        build_requires = BuildRequires(loader, graph_builder, registry, self._user_io.out,
+        build_requires = BuildRequires(loader, graph_builder, registry, output,
                                        profile.build_requires)
-        installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, build_mode,
+        installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
                                    build_requires)
 
         # Apply build_requires to consumer conanfile
@@ -298,9 +307,6 @@ class ConanManager(object):
 
         installer.install(deps_graph, current_path)
         build_mode.report_matches()
-
-        prefix = "PROJECT" if not isinstance(reference, ConanFileReference) else str(reference)
-        output = ScopedOutput(prefix, self._user_io.out)
 
         # Write generators
         tmp = list(conanfile.generators)  # Add the command line specified generators
@@ -438,7 +444,8 @@ class ConanManager(object):
 
         try:
             # Append env_vars to execution environment and clear when block code ends
-            output = ScopedOutput("Project", self._user_io.out)
+            output = ScopedOutput(("%s test package" % test) if test else "Project",
+                                  self._user_io.out)
             conan_file = load_consumer_conanfile(conanfile_path, build_folder,
                                                  self._client_cache.settings,
                                                  self._runner, output)
@@ -455,9 +462,11 @@ class ConanManager(object):
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
             with environment_append(conan_file.env):
+                output.highlight("Running build()")
                 with conanfile_exception_formatter(str(conan_file), "build"):
                     conan_file.build()
                 if test:
+                    output.highlight("Running test()")
                     with conanfile_exception_formatter(str(conan_file), "test"):
                         conan_file.test()
         except ConanException:

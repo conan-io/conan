@@ -143,10 +143,44 @@ class Command(object):
                                         args.manifests_interactive, args.remote, args.update,
                                         cwd=args.cwd, user=user, channel=channel)
 
-    # Alias to test
-    def test(self, *args):
-        """ (deprecated). Alias to test_package, use it instead """
-        return self.test_package(*args)
+    def create(self, *args):
+        """ Export, build package and test it with a consumer project.
+        The consumer project must have a 'conanfile.py' with a 'test()' method, and should be
+        located in a subfolder, named 'test_package` by default. It must 'require' the package
+        under testing.
+        """
+        parser = argparse.ArgumentParser(description=self.create.__doc__,
+                                         prog="conan create")
+        parser.add_argument("reference", help='a full package reference Pkg/version@user/channel, '
+                            'or just the user/channel if package and version are defined in recipe')
+        parser.add_argument("-ne", "--not-export", default=False, action='store_true',
+                            help='Do not export the conanfile')
+        parser.add_argument("-tf", "--test_folder",
+                            help='alternative test folder name, by default is "test_package"')
+        parser.add_argument('--keep-source', '-k', default=False, action='store_true',
+                            help='Optional. Do not remove the source folder in local cache. '
+                                 'Use for testing purposes only')
+        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
+
+        _add_manifests_arguments(parser)
+        _add_common_install_arguments(parser, build_help=_help_build_policies)
+
+        args = parser.parse_args(*args)
+
+        try:
+            name_version, user_channel = args.reference.split("@")
+            name, version = name_version.split("/")
+            user, channel = user_channel.split("/")
+        except:
+            name, version = None, None
+            user, channel = args.reference.split("/")
+
+        return self._conan.create(args.profile, args.settings, args.options,
+                                  args.env, args.scope, args.test_folder, args.not_export,
+                                  args.build, args.keep_source, args.verify, args.manifests,
+                                  args.manifests_interactive, args.remote, args.update,
+                                  cwd=args.cwd, name=name, version=version, user=user,
+                                  channel=channel)
 
     def package_files(self, *args):
         """Creates a package binary from given precompiled artifacts in user folder, skipping
