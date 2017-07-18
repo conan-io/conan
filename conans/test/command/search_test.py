@@ -243,8 +243,7 @@ class SearchTest(unittest.TestCase):
         command = 'search Hello/1.4.10@fenix/testing -q \'%s\'' % query
         if remote:
             command += " -r %s" % remote
-        self.client.run(command, ignore_error=True)
-        print(self.client.user_io.out)
+        self.client.run(command)
 
         for pack_name in ["LinuxPackageSHA", "PlatformIndependantSHA", "WindowsPackageSHA"]:
             self.assertEquals(pack_name in self.client.user_io.out,
