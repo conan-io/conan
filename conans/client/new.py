@@ -116,14 +116,8 @@ class {package_name}Conan(ConanFile):
 test_conanfile = """from conans import ConanFile, CMake
 import os
 
-
-channel = os.getenv("CONAN_CHANNEL", "{channel}")
-username = os.getenv("CONAN_USERNAME", "{user}")
-
-
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    requires = "{name}/{version}@%s/%s" % (username, channel)
     generators = "cmake"
 
     def build(self):

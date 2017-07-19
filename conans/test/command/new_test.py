@@ -19,7 +19,7 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
         client.run("export myuser/testing")
-        client.run("info test_package")
+        client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 
     def new_error_test(self):
@@ -50,12 +50,12 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
         client.run("export myuser/testing")
-        client.run("info test_package")
+        client.run("search")
         self.assertIn("My-Package/1.3@myuser/testing", client.user_io.out)
 
     def new_header_test(self):
         client = TestClient()
-        client.run('new MyPackage/1.3@myuser/testing -t -i')
+        client.run('new MyPackage/1.3 -t -i')
         root = client.current_folder
         self.assertTrue(os.path.exists(os.path.join(root, "conanfile.py")))
         content = load(os.path.join(root, "conanfile.py"))
@@ -66,7 +66,7 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
         client.run("export myuser/testing")
-        client.run("info test_package")
+        client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 
     def new_sources_test(self):
@@ -81,7 +81,7 @@ class NewTest(unittest.TestCase):
         self.assertNotIn('source()', content)
         # assert they are correct at least
         client.run("export myuser/testing")
-        client.run("info test_package")
+        client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 
     def new_purec_test(self):
@@ -95,7 +95,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('del self.settings.compiler.libcxx', content)
         # assert they are correct at least
         client.run("export myuser/testing")
-        client.run("info test_package")
+        client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 
     def new_without_test(self):
