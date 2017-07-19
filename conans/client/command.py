@@ -733,14 +733,14 @@ class Command(object):
     def get(self, *args):
         """ Gets a file or list a directory of a given reference or package
         """
-        parser = argparse.ArgumentParser(description=self.upload.__doc__,
-                                         prog="conan upload")
+        parser = argparse.ArgumentParser(description=self.get.__doc__,
+                                         prog="conan get")
         parser.add_argument('reference', help='package recipe reference')
         parser.add_argument('path', help='Path to the file or directory. If not specified will get the conafile'
-                                         'if only a reference is specified and a conaninfo.txt file contents if '
+                                         ' if only a reference is specified and a conaninfo.txt file contents if '
                                          'the package is also specified', default=None, nargs="?")
         parser.add_argument("--package", "-p", default=None, help='package ID')
-        parser.add_argument("--remote", "-r", help='upload to this specific remote')
+        parser.add_argument("--remote", "-r", help='Get from this specific remote')
         parser.add_argument("--raw", "-raw", help='Do not decorate the text', default=False, action='store_true')
         args = parser.parse_args(*args)
 
