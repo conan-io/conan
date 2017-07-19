@@ -57,7 +57,7 @@ class ConsumerFileTest(ConanFile):
         self.client.save({"conanfile.py": conanfile,
                           "test_package/conanfile.py": test_conanfile}, clean_first=True)
         self.client.run("test_package --manifests%s" % dest)
-        self.assertIn("Project: TEST OK", self.client.user_io.out)
+        self.assertIn("Chat/0.1@lasote/stable test package: TEST OK", self.client.user_io.out)
         self.assertIn("Installed manifest for 'Chat/0.1@lasote/stable' from local cache",
                       self.client.user_io.out)
         self.assertIn("Installed manifest for 'Hello/0.1@lasote/stable' from local cache",

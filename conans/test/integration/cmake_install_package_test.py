@@ -39,4 +39,5 @@ cmake_minimum_required(VERSION 2.8.12)
                      "CMakeLists.txt": cmake,
                      "header.h": "my header h!!"})
         client.run("test_package")
-        self.assertIn("Project: Content: my header h!!", client.user_io.out)
+        self.assertIn("Test/0.1@user/channel test package: Content: my header h!!",
+                      client.user_io.out)

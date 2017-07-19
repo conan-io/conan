@@ -14,7 +14,7 @@ from conans.model.conan_file import create_exports, create_exports_sources
 from conans.client.loader_parse import load_conanfile_class
 
 
-def load_export_conanfile(conanfile_path, output):
+def load_export_conanfile(conanfile_path, output, name, version):
     conanfile = load_conanfile_class(conanfile_path)
 
     for field in ["url", "license", "description"]:
@@ -33,11 +33,22 @@ def load_export_conanfile(conanfile_path, output):
         raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
     # check name and version were specified
+    if not conanfile.name:
+        if name:
+            conanfile.name = name
+        else:
+            raise ConanException("conanfile didn't specify name")
+    elif name and name != conanfile.name:
+        raise ConanException("Package recipe exported with name %s!=%s" % (name, conanfile.name))
 
-    if not hasattr(conanfile, "name") or not conanfile.name:
-        raise ConanException("conanfile didn't specify name")
-    if not hasattr(conanfile, "version") or not conanfile.version:
-        raise ConanException("conanfile didn't specify version")
+    if not conanfile.version:
+        if version:
+            conanfile.version = version
+        else:
+            raise ConanException("conanfile didn't specify version")
+    elif version and version != conanfile.version:
+        raise ConanException("Package recipe exported with version %s!=%s"
+                             % (version, conanfile.version))
 
     return conanfile
 
@@ -45,7 +56,7 @@ def load_export_conanfile(conanfile_path, output):
 def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source, filename):
     destination_folder = paths.export(conan_ref)
     previous_digest = _init_export_folder(destination_folder)
-    exports_source_folder = paths.export_sources(conan_ref)
+    exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     _execute_export(conanfile, origin_folder, destination_folder, exports_source_folder,
                     output, filename)
 

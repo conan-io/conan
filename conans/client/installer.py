@@ -219,7 +219,7 @@ class ConanInstaller(object):
                 # Assign to node the propagated info
                 self._propagate_info(conan_ref, conan_file, flat, deps_graph)
 
-                self._remote_proxy.get_recipe_sources(conan_ref)
+                self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
                 # Call the conanfile's build method
                 build_folder = self._build_conanfile(conan_ref, conan_file, package_ref,
                                                      package_folder, output)
@@ -346,7 +346,7 @@ class ConanInstaller(object):
         # build_id is not caching the build folder, so actually rebuild the package
         src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
         export_folder = self._client_cache.export(conan_ref)
-        export_source_folder = self._client_cache.export_sources(conan_ref)
+        export_source_folder = self._client_cache.export_sources(conan_ref, conan_file.short_paths)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
         with environment_append(conan_file.env):
@@ -483,7 +483,9 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
         try:
             # This is necessary because it is different for user projects
             # than for packages
-            logger.debug("Call conanfile.build() with files in build folder: %s" % os.listdir(build_folder))
+            logger.debug("Call conanfile.build() with files in build folder: %s"
+                         % os.listdir(build_folder))
+            output.highlight("Calling build()")
             with conanfile_exception_formatter(str(conan_file), "build"):
                 conan_file.build()
 

@@ -18,6 +18,7 @@ class ConanLib(ConanFile):
     name = "lib"
     version = "0.1"
     short_paths = True
+    exports_sources = "*"
 
     def source(self):
         extra_path = "1/" * 108
@@ -42,7 +43,8 @@ class PathLengthLimitTest(unittest.TestCase):
     def remove_test(self):
         short_home = tempfile.mkdtemp(dir=CONAN_TEST_FOLDER)
         client = TestClient()
-        files = {"conanfile.py": base.replace("108", "90")}  # shorten to pass appveyor
+        files = {"conanfile.py": base.replace("108", "90"),
+                 "path/"*20 + "file0.txt": "file0 content"}  # shorten to pass appveyor
         client.save(files)
         with environment_append({"CONAN_USER_HOME_SHORT": short_home}):
             client.run("export lasote/channel")
@@ -87,6 +89,27 @@ class PathLengthLimitTest(unittest.TestCase):
             self.assertIn("myfile.txt", files)
             self.assertIn("myfile2.txt", files)
             self.assertNotIn("conan_package.tgz", files)
+
+    def export_source_test(self):
+        client = TestClient()
+        files = {"conanfile.py": base,
+                 "path/"*20 + "file0.txt": "file0 content"}
+        client.save(files)
+        client.run("export user/channel")
+        conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
+        if platform.system() == "Windows":
+            source_folder = client.client_cache.export_sources(conan_ref)
+            link_source = load(os.path.join(source_folder, ".conan_link"))
+            self.assertTrue(os.path.exists(link_source))
+            self.assertEqual(load(os.path.join(link_source + "/path"*20 + "/file0.txt")),
+                             "file0 content")
+            client.run("install lib/0.1@user/channel --build=missing")
+            package_ref = PackageReference.loads("lib/0.1@user/channel:"
+                                                 "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+            package_folder = client.client_cache.package(package_ref)
+            link_source = load(os.path.join(package_folder, ".conan_link"))
+            self.assertTrue(os.path.exists(link_source))
+            self.assertEqual(load(os.path.join(link_source + "/file0.txt")), "file0 content")
 
     def source_test(self):
         client = TestClient()

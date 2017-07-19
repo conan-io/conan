@@ -171,7 +171,8 @@ class TestMyLib(ConanFile):
         client.run("test_package --profile ./profile.txt --build missing")
         self.assertEqual(2, str(client.user_io.out).splitlines().count("Hello World!"))
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.user_io.out)
-        self.assertIn("Project: Hello world from python tool!", client.user_io.out)
+        self.assertIn("MyLib/0.1@lasote/stable test package: Hello world from python tool!",
+                      client.user_io.out)
 
     def test_consumer_patterns(self):
         client = TestClient()
