@@ -408,3 +408,30 @@ class SearchTest(unittest.TestCase):
         client = TestClient()
         client.run("search nonexist/1.0@lasote/stable")
         self.assertIn("There are no packages", self.client.user_io.out)
+
+
+class SearchOutdatedTest(unittest.TestCase):
+    def search_outdated_test(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    name = "Test"
+    version = "0.1"
+    settings = "os"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/testing")
+        client.run("install Test/0.1@lasote/testing --build -s os=Windows")
+        client.save({"conanfile.py": "# comment\n%s" % conanfile})
+        client.run("export lasote/testing")
+        client.run("install Test/0.1@lasote/testing --build -s os=Linux")
+        client.run("upload * --all --confirm")
+        for remote in ("", "-r=default"):
+            client.run("search Test/0.1@lasote/testing %s" % remote)
+            self.assertIn("os: Windows", client.user_io.out)
+            self.assertIn("os: Linux", client.user_io.out)
+            client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
+            self.assertIn("os: Windows", client.user_io.out)
+            self.assertNotIn("os: Linux", client.user_io.out)

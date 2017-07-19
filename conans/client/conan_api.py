@@ -520,9 +520,10 @@ class ConanAPIV1(object):
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
-               remote=None):
+               remote=None, outdated=False):
         self._manager.remove(pattern, package_ids_filter=packages, build_ids=builds,
-                             src=src, force=force, remote=remote, packages_query=query)
+                             src=src, force=force, remote=remote, packages_query=query,
+                             outdated=outdated)
 
     @api_method
     def copy(self, reference="", user_channel="", force=False, all=False, package=None):
@@ -549,8 +550,9 @@ class ConanAPIV1(object):
         return refs
 
     @api_method
-    def search_packages(self, reference, query=None, remote=None):
-        ret = self._manager.search_packages(reference, remote, packages_query=query)
+    def search_packages(self, reference, query=None, remote=None, outdated=False):
+        ret = self._manager.search_packages(reference, remote, packages_query=query,
+                                            outdated=outdated)
         return ret
 
     @api_method
