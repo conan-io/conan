@@ -5,7 +5,7 @@ to the local store, as an initial step before building or uploading to remotes
 import shutil
 import os
 from conans.util.files import save, load, rmdir, mkdir
-from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE, EXPORT_SOURCES_DIR
+from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
@@ -14,7 +14,7 @@ from conans.model.conan_file import create_exports, create_exports_sources
 from conans.client.loader_parse import load_conanfile_class
 
 
-def load_export_conanfile(conanfile_path, output):
+def load_export_conanfile(conanfile_path, output, name, version):
     conanfile = load_conanfile_class(conanfile_path)
 
     for field in ["url", "license", "description"]:
@@ -33,11 +33,22 @@ def load_export_conanfile(conanfile_path, output):
         raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
     # check name and version were specified
+    if not conanfile.name:
+        if name:
+            conanfile.name = name
+        else:
+            raise ConanException("conanfile didn't specify name")
+    elif name and name != conanfile.name:
+        raise ConanException("Package recipe exported with name %s!=%s" % (name, conanfile.name))
 
-    if not hasattr(conanfile, "name") or not conanfile.name:
-        raise ConanException("conanfile didn't specify name")
-    if not hasattr(conanfile, "version") or not conanfile.version:
-        raise ConanException("conanfile didn't specify version")
+    if not conanfile.version:
+        if version:
+            conanfile.version = version
+        else:
+            raise ConanException("conanfile didn't specify version")
+    elif version and version != conanfile.version:
+        raise ConanException("Package recipe exported with version %s!=%s"
+                             % (version, conanfile.version))
 
     return conanfile
 
@@ -45,9 +56,11 @@ def load_export_conanfile(conanfile_path, output):
 def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source, filename):
     destination_folder = paths.export(conan_ref)
     previous_digest = _init_export_folder(destination_folder)
-    execute_export(conanfile, origin_folder, destination_folder, output, filename)
+    exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
+    _execute_export(conanfile, origin_folder, destination_folder, exports_source_folder,
+                    output, filename)
 
-    digest = FileTreeManifest.create(destination_folder)
+    digest = FileTreeManifest.create(destination_folder, exports_source_folder)
     save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
     if previous_digest and previous_digest == digest:
@@ -96,7 +109,8 @@ def _init_export_folder(destination_folder):
     return previous_digest
 
 
-def execute_export(conanfile, origin_folder, destination_folder, output, filename=None):
+def _execute_export(conanfile, origin_folder, destination_folder, destination_source_folder,
+                    output, filename=None):
 
     def classify_patterns(patterns):
         patterns = patterns or []
@@ -120,9 +134,8 @@ def execute_export(conanfile, origin_folder, destination_folder, output, filenam
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
     # create directory for sources, and import them
-    export_sources_dir = os.path.join(destination_folder, EXPORT_SOURCES_DIR)
-    mkdir(export_sources_dir)
-    copier = FileCopier(origin_folder, export_sources_dir)
+    mkdir(destination_source_folder)
+    copier = FileCopier(origin_folder, destination_source_folder)
     for pattern in included_sources:
         copier(pattern, links=True, excludes=excluded_sources)
     package_output = ScopedOutput("%s export" % output.scope, output)

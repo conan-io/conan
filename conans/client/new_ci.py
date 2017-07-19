@@ -126,6 +126,37 @@ test_script:
   - python build.py
 """
 
+gitlab = """
+variables:
+    CONAN_USERNAME: "{user}"
+    CONAN_REFERENCE: "{name}/{version}"
+    CONAN_CHANNEL: "{channel}"
+    CONAN_LOGIN_USERNAME: "{user}"
+    {upload}
+.build-template: &build-template
+    before_script:
+        - sudo pip install --upgrade conan_package_tools
+        - conan user
+    script:
+        - python build.py
+{configs}
+"""
+
+gitlab_config_gcc = """
+gcc-{version}:
+    image: lasote/conangcc{name}
+    variables:
+        CONAN_GCC_VERSIONS: "{version}"
+    <<: *build-template
+"""
+
+gitlab_config_clang = """
+clang-{version}:
+    image: lasote/conanclang{name}
+    variables:
+        CONAN_CLANG_VERSIONS: "{version}"
+    <<: *build-template
+"""
 
 def get_build_py(name, user, channel, shared):
     shared = 'shared_option_name="{}:shared"'.format(name) if shared else ""
@@ -158,7 +189,6 @@ def get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_ver
              ".travis/run.sh": travis_run}
     return files
 
-
 def get_appveyor(name, version, user, channel, visual_versions, upload_url):
     config = []
     visual_config = """        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio {image}
@@ -174,32 +204,67 @@ def get_appveyor(name, version, user, channel, visual_versions, upload_url):
                                              channel=channel, configs=configs, upload=upload)}
     return files
 
+def get_gitlab(name, version, user, channel, linux_gcc_versions, linux_clang_versions, upload_url):
+    config = []
+
+    if linux_gcc_versions:
+        for gcc in linux_gcc_versions:
+            config.append(gitlab_config_gcc.format(version=gcc, name=gcc.replace(".", "")))
+
+    if linux_clang_versions:
+        for clang in linux_clang_versions:
+            config.append(gitlab_config_clang.format(version=clang, name=clang.replace(".", "")))
+
+    configs = "".join(config)
+    upload = ('CONAN_UPLOAD: "%s"\n' % upload_url) if upload_url else ""
+    files = {".gitlab-ci.yml": gitlab.format(name=name, version=version, user=user, channel=channel,
+                                          configs=configs, upload=upload)}
+    return files
 
 def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versions, linux_clang_versions,
-                 osx_clang_versions, shared, upload_url):
-    if shared and not (visual_versions or linux_gcc_versions or linux_clang_versions or osx_clang_versions):
+                 osx_clang_versions, shared, upload_url, gitlab_gcc_versions, gitlab_clang_versions):
+    if shared and not (visual_versions or linux_gcc_versions or linux_clang_versions or osx_clang_versions or
+            gitlab_gcc_versions or gitlab_clang_versions):
         raise ConanException("Trying to specify 'shared' in CI, but no CI system specified")
-    if not (visual_versions or linux_gcc_versions or linux_clang_versions or osx_clang_versions):
+    if not (visual_versions or linux_gcc_versions or linux_clang_versions or osx_clang_versions or
+            gitlab_gcc_versions or gitlab_clang_versions):
         return {}
+    gcc_versions = ["4.9", "5.4", "6.3"]
+    clang_versions = ["3.9", "4.0"]
     if visual_versions is True:
         visual_versions = ["12", "14", "15"]
     if linux_gcc_versions is True:
-        linux_gcc_versions = ["4.9", "5.4", "6.3"]
+        linux_gcc_versions = gcc_versions
+    if gitlab_gcc_versions is True:
+        gitlab_gcc_versions = gcc_versions
     if linux_clang_versions is True:
-        linux_clang_versions = ["3.9", "4.0"]
+        linux_clang_versions = clang_versions
+    if gitlab_clang_versions is True:
+        gitlab_clang_versions = clang_versions
     if osx_clang_versions is True:
         osx_clang_versions = ["7.3", "8.0", "8.1"]
     if not visual_versions:
         visual_versions = []
     if not linux_gcc_versions:
         linux_gcc_versions = []
+    if not linux_clang_versions:
+        linux_clang_versions = []
     if not osx_clang_versions:
         osx_clang_versions = []
+    if not gitlab_gcc_versions:
+        gitlab_gcc_versions = []
+    if not gitlab_clang_versions:
+        gitlab_clang_versions = []
     build_py = get_build_py(name, user, channel, shared)
     files = {"build.py": build_py}
     if linux_gcc_versions or osx_clang_versions or linux_clang_versions:
         files.update(get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_versions,
                                 osx_clang_versions, upload_url))
+
+    if gitlab_gcc_versions or gitlab_clang_versions:
+        files.update(get_gitlab(name, version, user, channel, gitlab_gcc_versions, gitlab_clang_versions,
+                                upload_url))
+
     if visual_versions:
         files.update(get_appveyor(name, version, user, channel, visual_versions, upload_url))
 

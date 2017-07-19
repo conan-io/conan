@@ -173,6 +173,7 @@ class MyLib(ConanFile):
         for settings_line in ('', 'settings="arch"', 'settings="compiler"'):
             client = TestClient()
             client.save({"conanfile.py": conanfile % settings_line})
+            client.run("install -g txt")
             client.run("build", ignore_error=True)
             self.assertIn("You must specify compiler, compiler.version and arch in "
                           "your settings to use a CMake generator", client.user_io.out,)
@@ -198,7 +199,13 @@ class MyLib(ConanFile):
         """
         client = TestClient()
         client.save({"conanfile.py": conanfile % "True"})
+        client.run("build", ignore_error=True)
+
+        self.assertIn("Execute 'conan install -g txt' first", client.user_io.out)
+
+        client.run("install -g txt")
         client.run("build")
 
         client.save({"conanfile.py": conanfile % "False"}, clean_first=True)
+        client.run("install -g txt")
         client.run("build")

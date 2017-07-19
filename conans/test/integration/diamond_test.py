@@ -1,4 +1,6 @@
 import unittest
+
+from conans.client.generators.text import TXTGenerator
 from conans.test.utils.tools import TestServer, TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
@@ -39,7 +41,7 @@ class DiamondTest(unittest.TestCase):
         self.assertIn("set(CONAN_LIBS helloHello3 helloHello1 helloHello2 helloHello0",
                       cmakebuildinfo)
         self.assertIn("set(CONAN_DEPENDENCIES Hello3 Hello1 Hello2 Hello0)", cmakebuildinfo)
-        deps_cpp_info = DepsCppInfo.loads(content)
+        deps_cpp_info, _ = TXTGenerator.loads(content)
         self.assertEqual(len(deps_cpp_info.include_paths), 4)
         for dep in ("Hello3", "Hello2", "Hello1", "Hello0"):
             self.assertEqual(len(deps_cpp_info[dep].include_paths), 1)

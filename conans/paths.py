@@ -8,6 +8,7 @@ from conans.errors import ConanException
 
 
 EXPORT_FOLDER = "export"
+EXPORT_SRC_FOLDER = "export_source"
 SRC_FOLDER = "source"
 BUILD_FOLDER = "build"
 PACKAGES_FOLDER = "package"
@@ -38,6 +39,8 @@ EXPORT_SOURCES_DIR = ".c_src"
 CONAN_LINK = ".conan_link"
 
 RUN_LOG_NAME = "conan_run.log"
+
+DEFAULT_PROFILE_NAME = "default"
 
 
 def conan_expand_user(path):
@@ -168,6 +171,11 @@ class SimplePaths(object):
     def export(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self.conan(conan_reference), EXPORT_FOLDER))
+
+    def export_sources(self, conan_reference, short_paths=False):
+        assert isinstance(conan_reference, ConanFileReference)
+        p = normpath(join(self.conan(conan_reference), EXPORT_SRC_FOLDER))
+        return self._shortener(p, short_paths)
 
     def source(self, conan_reference, short_paths=False):
         assert isinstance(conan_reference, ConanFileReference)

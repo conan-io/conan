@@ -22,7 +22,8 @@ from conans.client.runner import ConanRunner
 from conans.errors import ConanException
 from conans.model.version import Version
 # noinspection PyUnresolvedReferences
-from conans.util.files import _generic_algorithm_sum, load, save, sha256sum, sha1sum, md5sum, md5
+from conans.util.files import _generic_algorithm_sum, load, save, sha256sum, \
+    sha1sum, md5sum, md5, touch, relative_dirs, rmdir, mkdir
 from conans.util.log import logger
 
 # Default values
@@ -205,14 +206,12 @@ def cpu_count():
 
 def human_size(size_bytes):
     """
-    format a size in bytes into a 'human' file size, e.g. bytes, KB, MB, GB, TB, PB
-    Note that bytes/KB will be reported in whole numbers but MB and above will have
-    greater precision.  e.g. 1 byte, 43 bytes, 443 KB, 4.3 MB, 4.43 GB, etc
+    format a size in bytes into a 'human' file size, e.g. B, KB, MB, GB, TB, PB
+    Note that bytes will be reported in whole numbers but KB and above will have
+    greater precision.  e.g. 43 B, 443 KB, 4.3 MB, 4.43 GB, etc
     """
-    if size_bytes == 1:
-        return "1 byte"
 
-    suffixes_table = [('bytes', 0), ('KB', 0), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
+    suffixes_table = [('B', 0), ('KB', 1), ('MB', 1), ('GB', 2), ('TB', 2), ('PB', 2)]
 
     num = float(size_bytes)
     for suffix, precision in suffixes_table:
@@ -225,7 +224,7 @@ def human_size(size_bytes):
     else:
         formatted_size = str(round(num, ndigits=precision))
 
-    return "%s %s" % (formatted_size, suffix)
+    return "%s%s" % (formatted_size, suffix)
 
 
 def unzip(filename, destination=".", keep_permissions=False):
@@ -483,7 +482,7 @@ class OSInfo(object):
     def with_yum(self):
         return self.is_linux and self.linux_distro in \
                                  ("centos", "redhat", "fedora", "pidora", "scientific",
-                                  "xenserver", "amazon", "oracle")
+                                  "xenserver", "amazon", "oracle", "rhel")
 
     @staticmethod
     def get_win_os_version():
@@ -620,6 +619,8 @@ class SystemPackageTool(object):
             return YumTool()
         elif os_info.is_macos:
             return BrewTool()
+        elif os_info.is_freebsd:
+            return PkgTool()
         else:
             return NullTool()
 
@@ -664,7 +665,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew")
+        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg")
 
     def installed(self, package_name):
         return False
@@ -703,6 +704,18 @@ class BrewTool(object):
 
     def installed(self, package_name):
         exit_code = self._runner('test -n "$(brew ls --versions %s)"' % package_name, None)
+        return exit_code == 0
+
+
+class PkgTool(object):
+    def update(self):
+        _run(self._runner, "%spkg update" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%spkg install -y %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner("pkg info %s" % package_name, None)
         return exit_code == 0
 
 

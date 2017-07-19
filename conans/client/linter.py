@@ -85,7 +85,7 @@ def _normal_linter(conanfile_path):
 
     output_json = _runner(args)
 
-    dynamic_fields = "source_folder", "build_folder", "info_build"
+    dynamic_fields = "source_folder", "build_folder", "info_build", "build_requires"
 
     def _accept_message(msg):
         symbol = msg.get("symbol")
@@ -95,6 +95,8 @@ def _normal_linter(conanfile_path):
                 if field in text:
                     return False
         if symbol == "not-callable" and "self.copy is not callable" == text:
+            return False
+        if symbol in ("bare-except", "broad-except"):  # No exception type(s) specified
             return False
         return True
 

@@ -29,6 +29,14 @@ def _build_type_str(build_type):
     return ""
 
 
+def cmake_user_info_vars(deps_user_info):
+    lines = []
+    for dep, the_vars in deps_user_info.items():
+        for name, value in the_vars.vars.items():
+            lines.append('set(CONAN_USER_%s_%s "%s")' % (dep.upper(), name, value))
+    return "\n".join(lines)
+
+
 def cmake_dependency_vars(name, deps, build_type=""):
     build_type = _build_type_str(build_type)
     return _cmake_single_dep_vars.format(dep=name.upper(), deps=deps, build_type=build_type)
@@ -348,7 +356,9 @@ macro(conan_global_flags)
 
     add_compile_options(${CONAN_DEFINES}
                         "$<$<CONFIG:Debug>:${CONAN_DEFINES_DEBUG}>"
-                        "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>")
+                        "$<$<CONFIG:Release>:${CONAN_DEFINES_RELEASE}>"
+                        "$<$<CONFIG:RelWithDebInfo>:${CONAN_DEFINES_RELEASE}>"
+                        "$<$<CONFIG:MinSizeRel>:${CONAN_DEFINES_RELEASE}>")
 
     conan_set_flags("")
     conan_set_flags("_RELEASE")

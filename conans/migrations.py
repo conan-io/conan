@@ -1,7 +1,8 @@
-from conans.util.files import load, save
-from conans.model.version import Version
-from conans.errors import ConanException
 import os
+
+from conans.errors import ConanException
+from conans.model.version import Version
+from conans.util.files import load, save
 
 CONAN_VERSION = "version.txt"
 

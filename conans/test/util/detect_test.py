@@ -8,7 +8,8 @@ class DetectTest(unittest.TestCase):
 
     def detect_test(self):
         output = TestBufferConanOutput()
-        detect_defaults_settings(output)
-        self.assertIn("It seems to be the first time you've ran conan", output)
+        result = detect_defaults_settings(output)
         if platform.system() == "Linux":
-            self.assertIn("Found gcc", output)
+            for (name, value) in result:
+                if name == "compiler":
+                    self.assertEquals(value, "gcc")

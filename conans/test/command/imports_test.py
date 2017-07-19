@@ -123,6 +123,12 @@ class ConanLib(ConanFile):
         self.assertIn("file2.txt", os.listdir(self.client.current_folder))
         self._check_manifest()
 
+    def install_manifest_without_install_test(self):
+        self.client.save({"conanfile.txt": test1}, clean_first=True)
+        tmp_folder = temp_folder()
+        self.client.run('imports -d "%s"' % tmp_folder, ignore_error=True)
+        self.assertIn("Execute 'conan install -g txt' first", self.client.user_io.out)
+
     def install_dest_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
         self.client.run("install --no-imports -g txt")

@@ -49,7 +49,7 @@ class DefaultNameConan(ConanFile):
         # Should recognize the hello package
         # Will Fail because Hello0/0.0 and Hello1/1.1 has not built packages
         # and by default no packages are built
-        error = client.run("test", ignore_error=True)
+        error = client.run("test_package", ignore_error=True)
         self.assertTrue(error)
         self.assertIn('Try to build it from sources with "--build Hello0"', client.user_io.out)
 
@@ -57,7 +57,7 @@ class DefaultNameConan(ConanFile):
         client.run("install Hello0/0.0@lasote/stable --build Hello0")
 
         # Still missing Hello1/1.1
-        error = client.run("test", ignore_error=True)
+        error = client.run("test_package", ignore_error=True)
         self.assertTrue(error)
         self.assertIn('Try to build it from sources with "--build Hello1"', client.user_io.out)
 
@@ -65,13 +65,13 @@ class DefaultNameConan(ConanFile):
         client.run("install Hello1/1.1@lasote/stable --build Hello1")
 
         # Now Hello2 should be built and not fail
-        client.run("test")
+        client.run("test_package")
         self.assertNotIn("Can't find a 'Hello2/2.2@lasote/stable' package", client.user_io.out)
         self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
                       client.user_io.out)
 
         # Now package is generated but should be built again
-        client.run("test")
+        client.run("test_package")
         self.assertIn('Hello2/2.2@lasote/stable: WARN: Forced build from source',
                       client.user_io.out)
 
@@ -117,12 +117,12 @@ class MyPackage(ConanFile):
         # Install, it will build automatically if missing (without the --build missing option)
         client.run("install Hello0/1.0@lasote/stable -g txt")
         self.assertIn("Building", client.user_io.out)
-        self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
+        self.assertIn("Generator txt created conanbuildinfo.txt", client.user_io.out)
 
-        # Try to do it again, now we have the package, so not build is done
+        # Try to do it again, now we have the package, so no build is done
         client.run("install Hello0/1.0@lasote/stable -g txt")
         self.assertNotIn("Building", client.user_io.out)
-        self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
+        self.assertIn("Generator txt created conanbuildinfo.txt", client.user_io.out)
 
         # Try now to upload all packages, should not crash because of the "missing" build policy
         client.run("upload Hello0/1.0@lasote/stable --all", ignore_error=False)
@@ -137,14 +137,14 @@ class MyPackage(ConanFile):
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
                       client.user_io.out)
         self.assertIn("Building", client.user_io.out)
-        self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
+        self.assertIn("Generator txt created conanbuildinfo.txt", client.user_io.out)
 
         # Try to do it again, now we have the package, but we build again
         client.run("install Hello0/1.0@lasote/stable -g txt")
         self.assertIn("Building", client.user_io.out)
         self.assertIn("Detected build_policy 'always', trying to remove source folder",
                       client.user_io.out)
-        self.assertIn("Generated txt created conanbuildinfo.txt", client.user_io.out)
+        self.assertIn("Generator txt created conanbuildinfo.txt", client.user_io.out)
 
         # Try now to upload all packages, should crash because of the "always" build policy
         client.run("upload Hello0/1.0@lasote/stable --all", ignore_error=True)

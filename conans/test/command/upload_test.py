@@ -87,7 +87,7 @@ class UploadTest(unittest.TestCase):
         package_folder = os.path.join(packages_folder, pkg_id)
         save(os.path.join(package_folder, "added.txt"), "")
         os.remove(os.path.join(package_folder, "include/helloHello0.h"))
-        error = client.run("upload Hello0/1.2.1@frodo/stable --all", ignore_error=True)
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --check", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("WARN: Mismatched checksum 'added.txt'", client.user_io.out)
         self.assertIn("WARN: Mismatched checksum 'include/helloHello0.h'", client.user_io.out)

@@ -4,7 +4,7 @@ import unittest
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE, CONANINFO
+from conans.paths import CONANFILE, CONANINFO, CONANENV
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
@@ -31,8 +31,63 @@ class MyTest(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("test_package -e MYVAR=MYVALUE", ignore_error=True)
+        client.run("test_package -e MYVAR=MYVALUE")
         self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
+
+    def generator_env_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+    def package_info(self):
+        self.env_info.MY_VAR = "MY_VALUE"
+        self.env_info.OTHER_VAR.append("OTHER_VALUE")
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/testing")
+        test_conanfile = """from conans import ConanFile
+import os
+class MyTest(ConanFile):
+    name = "Test"
+    version = "0.1"
+    requires = "Pkg/0.1@lasote/testing"
+    def package_info(self):
+        self.env_info.OTHER_VAR.extend(["OTHER_VALUE2", "OTHER_VALUE3"])
+"""
+        client.save({"conanfile.py": test_conanfile})
+        client.run("export lasote/testing")
+        test_conanfile = """from conans import ConanFile
+import os
+class MyTest(ConanFile):
+    requires = "Test/0.1@lasote/testing"
+"""
+        client.save({"conanfile.py": test_conanfile})
+        client.run("install --build=missing -g env -e OTHER_VAR=[COMMAND_LINE_VALUE] -e WHAT=EVER")
+        contents = load(os.path.join(client.current_folder, CONANENV))
+        result = """[MY_VAR]
+MY_VALUE
+[OTHER_VAR]
+OTHER_VALUE2
+OTHER_VALUE3
+OTHER_VALUE
+
+[Pkg:MY_VAR]
+MY_VALUE
+[Pkg:OTHER_VAR]
+OTHER_VALUE
+
+[Test:OTHER_VAR]
+OTHER_VALUE2
+OTHER_VALUE3
+"""
+        self.assertEqual(contents.splitlines(), result.splitlines())
+        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+        env_section = """[env]
+    MY_VAR=MY_VALUE
+    OTHER_VAR=[COMMAND_LINE_VALUE,OTHER_VALUE2,OTHER_VALUE3,OTHER_VALUE]
+    WHAT=EVER"""
+        self.assertIn("\n".join(env_section.splitlines()), "\n".join(conaninfo.splitlines()))
 
     def test_run_env(self):
         client = TestClient()
@@ -198,11 +253,12 @@ class HelloConan(ConanFile):
     def package_info(self):
         self.env_info.var1="good value"
         self.env_info.var2.append("value3")
+        self.env_info.CPPFLAGS.append("MYCPPFLAG=1")
     '''
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
         client.run("export lasote/stable")
-        client.run("install Hello2/0.1@lasote/stable --build -g virtualenv")
+        client.run("install Hello2/0.1@lasote/stable --build -g virtualenv -e CPPFLAGS=[OtherFlag=2]")
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate.%s" % ext)))
@@ -218,6 +274,7 @@ class HelloConan(ConanFile):
             self.assertIn('var2=value3;value2;%var2%', activate_contents)
         else:
             self.assertIn('var2="value3":"value2":$var2', activate_contents)
+            self.assertIn('CPPFLAGS="OtherFlag=2 MYCPPFLAG=1 $CPPFLAGS"', activate_contents)
         self.assertIn("Another value", activate_contents)
         if platform.system() == "Windows":
             self.assertIn("PATH=/dir", activate_contents)

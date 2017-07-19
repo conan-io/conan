@@ -92,3 +92,9 @@ cacert.pem
 
 #Pyinstaller generated binaries
 /pyinstaller
+
+# Run tests in docker in current dir
+.bash_history
+.conan_server/
+.sudo_as_admin_successful
+

@@ -1,19 +1,18 @@
 import hashlib
 import os
 import sys
+from collections import defaultdict, OrderedDict
 
 import requests
-from collections import defaultdict, OrderedDict
 
 import conans
 from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
-from conans.client.loader import load_consumer_conanfile
+from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
-from conans.client.output import ConanOutput
-from conans.client.printer import Printer
+from conans.client.output import ConanOutput, ScopedOutput
 from conans.client.profile_loader import read_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
@@ -36,7 +35,7 @@ from conans.util.env_reader import get_env
 from conans.util.files import rmdir, save_files, exception_message_safe
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
-
+from conans.client.loader_parse import load_conanfile_class
 
 default_manifest_folder = '.conan_manifests'
 
@@ -145,7 +144,7 @@ class ConanAPIV1(object):
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False, cwd=None,
             visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-            shared=None, upload_url=None, gitignore=None):
+            shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
         from conans.client.new import get_files
         cwd = prepare_cwd(cwd)
         files = get_files(name, header=header, pure_c=pure_c, test=test,
@@ -154,44 +153,46 @@ class ConanAPIV1(object):
                           linux_gcc_versions=linux_gcc_versions,
                           linux_clang_versions=linux_clang_versions,
                           osx_clang_versions=osx_clang_versions, shared=shared,
-                          upload_url=upload_url, gitignore=gitignore)
+                          upload_url=upload_url, gitignore=gitignore,
+                          gitlab_gcc_versions=gitlab_gcc_versions,
+                          gitlab_clang_versions=gitlab_clang_versions)
 
         save_files(cwd, files)
         for f in sorted(files):
             self._user_io.out.success("File saved: %s" % f)
 
     @api_method
-    def test_package(self, path=None, profile_name=None, settings=None, options=None, env=None, scope=None,
-                     test_folder=None, not_export=False, build=None, keep_source=False,
+    def test_package(self, profile_name=None, settings=None, options=None, env=None,
+                     scope=None, test_folder=None, not_export=False, build=None, keep_source=False,
                      verify=default_manifest_folder, manifests=default_manifest_folder,
                      manifests_interactive=default_manifest_folder,
-                     remote=None, update=False, cwd=None):
+                     remote=None, update=False, cwd=None, user=None, channel=None, name=None,
+                     version=None):
         settings = settings or []
         options = options or []
         env = env or []
         cwd = prepare_cwd(cwd)
 
-        root_folder = os.path.normpath(os.path.join(cwd, path))
-        if test_folder:
-            test_folder_name = test_folder
-            test_folder = os.path.join(root_folder, test_folder_name)
-            test_conanfile = os.path.join(test_folder, "conanfile.py")
-            if not os.path.exists(test_conanfile):
-                raise ConanException("test folder '%s' not available, "
-                                     "or it doesn't have a conanfile.py" % test_folder)
+        if name and version:
+            package_name = name
+            package_version = version
         else:
-            for name in ["test_package", "test"]:
-                test_folder_name = name
-                test_folder = os.path.join(root_folder, test_folder_name)
-                test_conanfile = os.path.join(test_folder, "conanfile.py")
-                if os.path.exists(test_conanfile):
-                    break
-            else:
-                raise ConanException("test folder 'test_package' not available, "
-                                     "or it doesn't have a conanfile.py")
+            conanfile_path = os.path.join(cwd, "conanfile.py")
+            conanfile = load_conanfile_class(conanfile_path)
+            package_name = getattr(conanfile, "name", None)
+            package_version = getattr(conanfile, "version", None)
+        if not package_name or not package_version:
+            raise ConanException("conanfile.py doesn't declare package name or version")
 
-        options = options or []
-        settings = settings or []
+        test_folders = [test_folder] if test_folder else ["test_package", "test"]
+        for test_folder_name in test_folders:
+            test_folder = os.path.join(cwd, test_folder_name)
+            test_conanfile_path = os.path.join(test_folder, "conanfile.py")
+            if os.path.exists(test_conanfile_path):
+                break
+        else:
+            raise ConanException("test folder '%s' not available, "
+                                 "or it doesn't have a conanfile.py" % test_folder_name)
 
         sha = hashlib.sha1("".join(options + settings).encode()).hexdigest()
         build_folder = os.path.join(test_folder, "build", sha)
@@ -200,33 +201,43 @@ class ConanAPIV1(object):
 
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
-        conanfile = load_consumer_conanfile(test_conanfile, "",
-                                            self._client_cache.settings, self._runner,
-                                            self._user_io.out)
+
+        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        test_conanfile = loader.load_conan(test_conanfile_path, self._user_io.out, consumer=True)
+
         try:
-            # convert to list from ItemViews required for python3
-            if hasattr(conanfile, "requirements"):
-                conanfile.requirements()
-            reqs = list(conanfile.requires.items())
-            first_dep = reqs[0][1].conan_reference
-        except Exception:
-            raise ConanException("Unable to retrieve first requirement of test conanfile.py")
+            if hasattr(test_conanfile, "requirements"):
+                test_conanfile.requirements()
+        except Exception as e:
+            raise ConanException("Error in test_package/conanfile.py requirements(). %s" % str(e))
+
+        requirement = test_conanfile.requires.get(package_name)
+        if requirement:
+            if requirement.conan_reference.version != package_version:
+                raise ConanException("package version is '%s', but test_package/conanfile "
+                                     "is requiring version '%s'\n"
+                                     "You can remove this requirement and use "
+                                     "'conan test_package user/channel' instead"
+                                     % (package_version, requirement.conan_reference.version))
+            user = user or requirement.conan_reference.user
+            channel = channel or requirement.conan_reference.channel
+
+        if not user or not channel:
+            raise ConanException("Please specify user and channel")
+        conanfile_reference = ConanFileReference(package_name, package_version, user, channel)
 
         # Forcing an export!
         if not not_export:
             self._user_io.out.info("Exporting package recipe")
-            user_channel = "%s/%s" % (first_dep.user, first_dep.channel)
-            self._manager.export(user_channel, root_folder, keep_source=keep_source)
+            self._manager.export(user, channel, cwd, keep_source=keep_source)
 
-        lib_to_test = first_dep.name
-        # Get False or a list of patterns to check
-        if build is None and lib_to_test:  # Not specified, force build the tested library
-            build = [lib_to_test]
+        if build is None:  # Not specified, force build the tested library
+            build = [package_name]
 
-        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive,
-                                               root_folder, cwd)
+        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
-        self._manager.install(reference=test_folder,
+        self._manager.install(inject_require=conanfile_reference,
+                              reference=test_folder,
                               current_path=build_folder,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
@@ -239,12 +250,87 @@ class ConanAPIV1(object):
                               )
 
         test_conanfile = os.path.join(test_folder, CONANFILE)
-        self._manager.build(test_conanfile, test_folder, build_folder, test=True)
+        self._manager.build(test_conanfile, test_folder, build_folder, package_folder=None,
+                            test=str(conanfile_reference))
 
-    # Alias to test
     @api_method
-    def test(self, *args):
-        self.test_package(*args)
+    def create(self, profile_name=None, settings=None,
+               options=None, env=None, scope=None, test_folder=None, not_export=False, build=None,
+               keep_source=False, verify=default_manifest_folder,
+               manifests=default_manifest_folder, manifests_interactive=default_manifest_folder,
+               remote=None, update=False, cwd=None,
+               user=None, channel=None, name=None, version=None):
+
+        settings = settings or []
+        options = options or []
+        env = env or []
+        cwd = prepare_cwd(cwd)
+
+        if not name or not version:
+            conanfile_path = os.path.join(cwd, "conanfile.py")
+            conanfile = load_conanfile_class(conanfile_path)
+            try:
+                name, version = conanfile.name, conanfile.version
+            except:
+                raise ConanException("conanfile.py doesn't declare package name or version")
+
+        reference = ConanFileReference(name, version, user, channel)
+        scoped_output = ScopedOutput(str(reference), self._user_io.out)
+        # Forcing an export!
+        if not not_export:
+            scoped_output.highlight("Exporting package recipe")
+            self._manager.export(user, channel, cwd, keep_source=keep_source, name=name,
+                                 version=version)
+
+        if build is None:  # Not specified, force build the tested library
+            build = [name]
+
+        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
+        manifest_folder, manifest_interactive, manifest_verify = manifests
+        profile = profile_from_args(profile_name, settings, options, env, scope,
+                                    cwd, self._client_cache.profiles_path)
+        self._manager.install(reference=reference,
+                              current_path=cwd,
+                              manifest_folder=manifest_folder,
+                              manifest_verify=manifest_verify,
+                              manifest_interactive=manifest_interactive,
+                              remote=remote,
+                              profile=profile,
+                              build_modes=build,
+                              update=update
+                              )
+
+        test_folders = [test_folder] if test_folder else ["test_package", "test"]
+        for test_folder_name in test_folders:
+            test_folder = os.path.join(cwd, test_folder_name)
+            test_conanfile_path = os.path.join(test_folder, "conanfile.py")
+            if os.path.exists(test_conanfile_path):
+                break
+        else:
+            self._user_io.out.warn("test package folder not available, or it doesn't have "
+                                   "a conanfile.py\nIt is recommended to set a 'test_package' "
+                                   "while creating packages")
+            return
+
+        scoped_output.highlight("Testing with 'test_package'")
+        sha = hashlib.sha1("".join(options + settings).encode()).hexdigest()
+        build_folder = os.path.join(test_folder, "build", sha)
+        rmdir(build_folder)
+
+        test_conanfile = os.path.join(test_folder, CONANFILE)
+        self._manager.install(inject_require=reference,
+                              reference=test_folder,
+                              current_path=build_folder,
+                              manifest_folder=manifest_folder,
+                              manifest_verify=manifest_verify,
+                              manifest_interactive=manifest_interactive,
+                              remote=remote,
+                              profile=profile,
+                              update=update,
+                              generators=["txt"]
+                              )
+        self._manager.build(test_conanfile, test_folder, build_folder, package_folder=None,
+                            test=str(reference))
 
     @api_method
     def package_files(self, reference, package_folder=None, profile_name=None,
@@ -283,9 +369,9 @@ class ConanAPIV1(object):
                                      "e.g., MyPackage/1.2@user/channel")
             self._manager.download(ref, package, remote=remote)
         else:  # Classic install, package chosen with settings and options
-            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd,
-                                                   self._client_cache.profiles_path)
+            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
             manifest_folder, manifest_interactive, manifest_verify = manifests
+
             profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                         self._client_cache.profiles_path)
 
@@ -365,7 +451,7 @@ class ConanAPIV1(object):
         return deps_graph, graph_updates_info, project_reference
 
     @api_method
-    def build(self, path="", source_folder=None, filename=None, cwd=None):
+    def build(self, path="", source_folder=None, package_folder=None, filename=None, cwd=None):
 
         current_path = prepare_cwd(cwd)
         if path:
@@ -378,10 +464,13 @@ class ConanAPIV1(object):
         if not os.path.isabs(source_folder):
             source_folder = os.path.normpath(os.path.join(current_path, source_folder))
 
+        if package_folder and not os.path.isabs(package_folder):
+            package_folder = os.path.normpath(os.path.join(current_path, package_folder))
+
         if filename and filename.endswith(".txt"):
             raise ConanException("A conanfile.py is needed to call 'conan build'")
         conanfile_path = os.path.join(root_path, filename or CONANFILE)
-        self._manager.build(conanfile_path, source_folder, build_folder)
+        self._manager.build(conanfile_path, source_folder, build_folder, package_folder)
 
     @api_method
     def package(self, reference="", package=None, build_folder=None, source_folder=None, cwd=None):
@@ -424,16 +513,17 @@ class ConanAPIV1(object):
             self._manager.imports(current_path, reference, filename, dest)
 
     @api_method
-    def export(self, user, path=None, keep_source=False, filename=None, cwd=None):
+    def export(self, user, channel, path=None, keep_source=False, filename=None, cwd=None):
         cwd = prepare_cwd(cwd)
         current_path = os.path.abspath(path or cwd)
-        self._manager.export(user, current_path, keep_source, filename=filename)
+        self._manager.export(user, channel, current_path, keep_source, filename=filename)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
-               remote=None):
+               remote=None, outdated=False):
         self._manager.remove(pattern, package_ids_filter=packages, build_ids=builds,
-                             src=src, force=force, remote=remote, packages_query=query)
+                             src=src, force=force, remote=remote, packages_query=query,
+                             outdated=outdated)
 
     @api_method
     def copy(self, reference="", user_channel="", force=False, all=False, package=None):
@@ -460,30 +550,28 @@ class ConanAPIV1(object):
         return refs
 
     @api_method
-    def search_packages(self, reference, query=None, remote=None):
-        ret = self._manager.search_packages(reference, remote, packages_query=query)
+    def search_packages(self, reference, query=None, remote=None, outdated=False):
+        ret = self._manager.search_packages(reference, remote, packages_query=query,
+                                            outdated=outdated)
         return ret
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all=False, force=False, confirm=False,
-               retry=2, retry_wait=5,
-               skip_upload=False):
+               retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         if package and not is_a_reference(pattern):
             raise ConanException("-p parameter only allowed with a valid recipe reference, "
                                  "not with a pattern")
 
-        self._manager.upload(pattern, package,
-                             remote, all_packages=all,
-                             force=force, confirm=confirm, retry=retry,
-                             retry_wait=retry_wait, skip_upload=skip_upload)
+        self._manager.upload(pattern, package, remote, all_packages=all, force=force,
+                             confirm=confirm, retry=retry, retry_wait=retry_wait,
+                             skip_upload=skip_upload, integrity_check=integrity_check)
 
     @api_method
     def remote_list(self):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        for r in registry.remotes:
-            self._user_io.out.info("%s: %s [Verify SSL: %s]" % (r.name, r.url, r.verify_ssl))
+        return registry.remotes
 
     @api_method
     def remote_add(self, remote, url, verify_ssl=True, insert=None):
@@ -503,8 +591,7 @@ class ConanAPIV1(object):
     @api_method
     def remote_list_ref(self):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        for ref, remote in registry.refs.items():
-            self._user_io.out.info("%s: %s" % (ref, remote))
+        return registry.refs
 
     @api_method
     def remote_add_ref(self, reference, remote):
@@ -522,19 +609,30 @@ class ConanAPIV1(object):
         return registry.update_ref(reference, remote)
 
     @api_method
-    def profile(self, subcommand, profile=None, cwd=None):
-        cwd = prepare_cwd(cwd)
-        if subcommand == "list":
-            folder = self._client_cache.profiles_path
-            if os.path.exists(folder):
-                profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-                for p in sorted(profiles):
-                    self._user_io.out.info(p)
-            else:
-                self._user_io.out.info("No profiles defined")
-        elif subcommand == "show":
-            p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
-            Printer(self._user_io.out).print_profile(profile, p)
+    def profile_list(self):
+        folder = self._client_cache.profiles_path
+        if os.path.exists(folder):
+            return [name for name in os.listdir(folder) if not os.path.isdir(name)]
+        else:
+            self._user_io.out.info("No profiles defined")
+            return []
+
+    @api_method
+    def read_profile(self, profile=None):
+        p, _ = read_profile(profile, os.getcwd(), self._client_cache.profiles_path)
+        return p
+
+    @api_method
+    def get_path(self, reference, package_id=None, path=None, remote=None):
+        reference = ConanFileReference.loads(str(reference))
+        return self._manager.get_path(reference, package_id, path, remote)
+
+    @api_method
+    def export_alias(self, reference, target_reference):
+        reference = ConanFileReference.loads(str(reference))
+        target_reference = ConanFileReference.loads(str(target_reference))
+        return self._manager.export_alias(reference, target_reference)
+
 
 
 Conan = ConanAPIV1
@@ -553,7 +651,7 @@ def _check_query_parameter_and_get_reference(query, pattern):
     return reference
 
 
-def _parse_manifests_arguments(verify, manifests, manifests_interactive, reference, current_path):
+def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
     if manifests and manifests_interactive:
         raise ConanException("Do not specify both manifests and "
                              "manifests-interactive arguments")
@@ -563,10 +661,7 @@ def _parse_manifests_arguments(verify, manifests, manifests_interactive, referen
     manifest_folder = verify or manifests or manifests_interactive
     if manifest_folder:
         if not os.path.isabs(manifest_folder):
-            if isinstance(reference, ConanFileReference):
-                manifest_folder = os.path.join(current_path, manifest_folder)
-            else:
-                manifest_folder = os.path.join(reference, manifest_folder)
+            manifest_folder = os.path.join(cwd, manifest_folder)
         manifest_verify = verify is not None
         manifest_interactive = manifests_interactive is not None
     else:
