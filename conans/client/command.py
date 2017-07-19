@@ -125,6 +125,8 @@ class Command(object):
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
+        parser.add_argument('--test-only', '-t', default=False, action='store_true',
+                            help='Just run the test, without exporting or building the package')
         parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
 
         _add_manifests_arguments(parser)
@@ -136,6 +138,11 @@ class Command(object):
             user, channel = args.user_channel.split("/")
         except:
             user, channel = None, None
+
+        if args.test_only:
+            args.build = ["never"]
+            args.not_export = True
+            args.keep_source = True
 
         return self._conan.test_package(args.profile, args.settings, args.options,
                                         args.env, args.scope, args.test_folder, args.not_export,

@@ -310,7 +310,7 @@ class ConanManager(object):
 
         # Write generators
         tmp = list(conanfile.generators)  # Add the command line specified generators
-        tmp.extend(generators)
+        tmp.extend([g for g in generators if g not in tmp])
         conanfile.generators = tmp
         write_generators(conanfile, current_path, output)
 

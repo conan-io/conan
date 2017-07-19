@@ -12,7 +12,7 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigP
 from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
-from conans.client.output import ConanOutput, Color, ScopedOutput
+from conans.client.output import ConanOutput, ScopedOutput
 from conans.client.profile_loader import read_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
