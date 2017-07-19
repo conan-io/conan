@@ -116,8 +116,9 @@ class Command(object):
 
         parser = argparse.ArgumentParser(description=self.test_package.__doc__,
                                          prog="conan test_package")
-        parser.add_argument("user_channel", nargs='?', default="", help='user and channel, '
-                            'e.g. myuser/stable')
+        parser.add_argument("reference", nargs="?",
+                            help='a full package reference Pkg/version@user/channel, '
+                            'or just the user/channel if package and version are defined in recipe')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile before test execution')
         parser.add_argument("-tf", "--test_folder",
@@ -125,6 +126,8 @@ class Command(object):
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
+        parser.add_argument('--test-only', '-t', default=False, action='store_true',
+                            help='Just run the test, without exporting or building the package')
         parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
 
         _add_manifests_arguments(parser)
@@ -133,15 +136,27 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            user, channel = args.user_channel.split("/")
+            name_version, user_channel = args.reference.split("@")
+            name, version = name_version.split("/")
+            user, channel = user_channel.split("/")
         except:
-            user, channel = None, None
+            name, version = None, None
+            try:
+                user, channel = args.reference.split("/")
+            except:
+                user, channel = None, None
+
+        if args.test_only:
+            args.build = ["never"]
+            args.not_export = True
+            args.keep_source = True
 
         return self._conan.test_package(args.profile, args.settings, args.options,
                                         args.env, args.scope, args.test_folder, args.not_export,
                                         args.build, args.keep_source, args.verify, args.manifests,
                                         args.manifests_interactive, args.remote, args.update,
-                                        cwd=args.cwd, user=user, channel=channel)
+                                        cwd=args.cwd, user=user, channel=channel, name=name,
+                                        version=version)
 
     def create(self, *args):
         """ Export, build package and test it with a consumer project.
@@ -508,6 +523,8 @@ class Command(object):
                                                                 'has to be a package recipe '
                                                                 'reference: MyPackage/1.2'
                                                                 '@user/channel')
+        parser.add_argument("--outdated", "-o", help="Remove only outdated from recipe packages",
+                            default=False, action="store_true")
         args = parser.parse_args(*args)
         reference = self._check_query_parameter_and_get_reference(args.pattern, args.query)
 
@@ -517,8 +534,9 @@ class Command(object):
         if args.builds is not None and args.query:
             self._raise_exception_printing("'-q' and '-b' parameters can't be used at the same time")
 
-        return self._conan.remove(pattern=reference or args.pattern, query=args.query, packages=args.packages, builds=args.builds,
-                                  src=args.src, force=args.force, remote=args.remote)
+        return self._conan.remove(pattern=reference or args.pattern, query=args.query,
+                                  packages=args.packages, builds=args.builds, src=args.src,
+                                  force=args.force, remote=args.remote, outdated=args.outdated)
 
     def copy(self, *args):
         """ Copy conan recipes and packages to another user/channel.
@@ -585,6 +603,8 @@ class Command(object):
                                                                 'has to be a package recipe '
                                                                 'reference: MyPackage/1.2'
                                                                 '@user/channel')
+        parser.add_argument('-o', '--outdated', default=False, action='store_true',
+                            help='Show only outdated from recipe packages')
         args = parser.parse_args(*args)
 
         try:
@@ -593,7 +613,8 @@ class Command(object):
             reference = None
 
         if reference:
-            ret = self._conan.search_packages(reference, query=args.query, remote=args.remote)
+            ret = self._conan.search_packages(reference, query=args.query, remote=args.remote,
+                                              outdated=args.outdated)
             ordered_packages, reference, recipe_hash, packages_query = ret
             self._outputer.print_search_packages(ordered_packages, reference, recipe_hash,
                                                  packages_query, args.table)

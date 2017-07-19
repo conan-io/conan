@@ -41,7 +41,6 @@ _save_generator("virtualrunenv", VirtualRunEnvGenerator)
 def write_generators(conanfile, path, output):
     """ produces auxiliary files, required to build a project or a package.
     """
-
     for generator_name in conanfile.generators:
         if generator_name not in registered_generators:
             output.warn("Invalid generator '%s'. Available types: %s" %

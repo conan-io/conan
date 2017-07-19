@@ -12,7 +12,7 @@ from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigP
 from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
-from conans.client.output import ConanOutput, Color, ScopedOutput
+from conans.client.output import ConanOutput, ScopedOutput
 from conans.client.profile_loader import read_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
@@ -166,16 +166,21 @@ class ConanAPIV1(object):
                      scope=None, test_folder=None, not_export=False, build=None, keep_source=False,
                      verify=default_manifest_folder, manifests=default_manifest_folder,
                      manifests_interactive=default_manifest_folder,
-                     remote=None, update=False, cwd=None, user=None, channel=None):
+                     remote=None, update=False, cwd=None, user=None, channel=None, name=None,
+                     version=None):
         settings = settings or []
         options = options or []
         env = env or []
         cwd = prepare_cwd(cwd)
 
-        conanfile_path = os.path.join(cwd, "conanfile.py")
-        conanfile = load_conanfile_class(conanfile_path)
-        package_name = getattr(conanfile, "name", None)
-        package_version = getattr(conanfile, "version", None)
+        if name and version:
+            package_name = name
+            package_version = version
+        else:
+            conanfile_path = os.path.join(cwd, "conanfile.py")
+            conanfile = load_conanfile_class(conanfile_path)
+            package_name = getattr(conanfile, "name", None)
+            package_version = getattr(conanfile, "version", None)
         if not package_name or not package_version:
             raise ConanException("conanfile.py doesn't declare package name or version")
 
@@ -515,9 +520,10 @@ class ConanAPIV1(object):
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
-               remote=None):
+               remote=None, outdated=False):
         self._manager.remove(pattern, package_ids_filter=packages, build_ids=builds,
-                             src=src, force=force, remote=remote, packages_query=query)
+                             src=src, force=force, remote=remote, packages_query=query,
+                             outdated=outdated)
 
     @api_method
     def copy(self, reference="", user_channel="", force=False, all=False, package=None):
@@ -544,8 +550,9 @@ class ConanAPIV1(object):
         return refs
 
     @api_method
-    def search_packages(self, reference, query=None, remote=None):
-        ret = self._manager.search_packages(reference, remote, packages_query=query)
+    def search_packages(self, reference, query=None, remote=None, outdated=False):
+        ret = self._manager.search_packages(reference, remote, packages_query=query,
+                                            outdated=outdated)
         return ret
 
     @api_method

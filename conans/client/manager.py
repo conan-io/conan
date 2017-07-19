@@ -35,6 +35,7 @@ from conans.model.manifest import FileTreeManifest
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.build_requires import BuildRequires
 from conans.client.linter import conan_linter
+from conans.search.search import filter_outdated
 
 
 class ConanManager(object):
@@ -310,7 +311,7 @@ class ConanManager(object):
 
         # Write generators
         tmp = list(conanfile.generators)  # Add the command line specified generators
-        tmp.extend(generators)
+        tmp.extend([g for g in generators if g not in tmp])
         conanfile.generators = tmp
         write_generators(conanfile, current_path, output)
 
@@ -513,7 +514,7 @@ class ConanManager(object):
         references = self._get_search_adapter(remote).search(pattern, ignorecase)
         return references
 
-    def search_packages(self, reference=None, remote=None, packages_query=None):
+    def search_packages(self, reference=None, remote=None, packages_query=None, outdated=False):
         """ Return the single information saved in conan.vars about all the packages
             or the packages which match with a pattern
 
@@ -535,6 +536,8 @@ class ConanManager(object):
                 recipe_hash = self._client_cache.load_manifest(reference).summary_hash
             except IOError:  # It could not exist in local
                 recipe_hash = None
+        if outdated and recipe_hash:
+            ordered_packages = filter_outdated(ordered_packages, recipe_hash)
 
         return ordered_packages, reference, recipe_hash, packages_query
 
@@ -563,7 +566,7 @@ class ConanManager(object):
         copier.copy(reference, package_ids, username, channel, force)
 
     def remove(self, pattern, src=False, build_ids=None, package_ids_filter=None, force=False,
-               remote=None, packages_query=None):
+               remote=None, packages_query=None, outdated=False):
         """ Remove conans and/or packages
         @param pattern: string to match packages
         @param src: Remove src folder
@@ -576,7 +579,8 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
         remover = ConanRemover(self._client_cache, self._search_manager, self._user_io,
                                remote_proxy)
-        remover.remove(pattern, src, build_ids, package_ids_filter, force=force, packages_query=packages_query)
+        remover.remove(pattern, src, build_ids, package_ids_filter, force=force,
+                       packages_query=packages_query, outdated=outdated)
 
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)

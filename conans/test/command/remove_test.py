@@ -14,6 +14,34 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.test_files import temp_folder
 
 
+class RemoveOutdatedTest(unittest.TestCase):
+    def remove_outdated_test(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    name = "Test"
+    version = "0.1"
+    settings = "os"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/testing")
+        client.run("install Test/0.1@lasote/testing --build -s os=Windows")
+        client.save({"conanfile.py": "# comment\n%s" % conanfile})
+        client.run("export lasote/testing")
+        client.run("install Test/0.1@lasote/testing --build -s os=Linux")
+        client.run("upload * --all --confirm")
+        for remote in ("", "-r=default"):
+            client.run("search Test/0.1@lasote/testing %s" % remote)
+            self.assertIn("os: Windows", client.user_io.out)
+            self.assertIn("os: Linux", client.user_io.out)
+            client.run("remove Test/0.1@lasote/testing -p --outdated -f %s" % remote)
+            client.run("search Test/0.1@lasote/testing  %s" % remote)
+            self.assertNotIn("os: Windows", client.user_io.out)
+            self.assertIn("os: Linux", client.user_io.out)
+
+
 conaninfo = '''
 [settings]
     arch=x64
@@ -283,7 +311,11 @@ class RemoveTest(unittest.TestCase):
 
     def query_remove_locally_test(self):
         self.client.run("remove hello/1.4.10@fenix/testing -q='compiler.version=4.4' -f")
-        self.assertIn("No packages matching the query", self.client.user_io.out)
+        self.assertIn("No matching packages to remove", self.client.user_io.out)
+        self.assert_folders({"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            {"H1": [1, 2], "H2": [1, 2], "B": [1, 2], "O": [1, 2]},
+                            {"H1": True, "H2": True, "B": True, "O": True})
 
         self.client.run('remove Hello/1.4.10@fenix/testing -q="compiler.version=8.1" -f')
         self.assertNotIn("No packages matching the query", self.client.user_io.out)
