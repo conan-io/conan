@@ -116,8 +116,9 @@ class Command(object):
 
         parser = argparse.ArgumentParser(description=self.test_package.__doc__,
                                          prog="conan test_package")
-        parser.add_argument("user_channel", nargs='?', default="", help='user and channel, '
-                            'e.g. myuser/stable')
+        parser.add_argument("reference", nargs="?",
+                            help='a full package reference Pkg/version@user/channel, '
+                            'or just the user/channel if package and version are defined in recipe')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile before test execution')
         parser.add_argument("-tf", "--test_folder",
@@ -135,9 +136,15 @@ class Command(object):
         args = parser.parse_args(*args)
 
         try:
-            user, channel = args.user_channel.split("/")
+            name_version, user_channel = args.reference.split("@")
+            name, version = name_version.split("/")
+            user, channel = user_channel.split("/")
         except:
-            user, channel = None, None
+            name, version = None, None
+            try:
+                user, channel = args.reference.split("/")
+            except:
+                user, channel = None, None
 
         if args.test_only:
             args.build = ["never"]
@@ -148,7 +155,8 @@ class Command(object):
                                         args.env, args.scope, args.test_folder, args.not_export,
                                         args.build, args.keep_source, args.verify, args.manifests,
                                         args.manifests_interactive, args.remote, args.update,
-                                        cwd=args.cwd, user=user, channel=channel)
+                                        cwd=args.cwd, user=user, channel=channel, name=name,
+                                        version=version)
 
     def create(self, *args):
         """ Export, build package and test it with a consumer project.
