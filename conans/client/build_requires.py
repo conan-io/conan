@@ -1,8 +1,10 @@
-from conans.client.printer import Printer
+import copy
 import fnmatch
+from collections import OrderedDict
+
+from conans.client.printer import Printer
 from conans.errors import conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
-from collections import OrderedDict
 
 
 def _apply_build_requires(deps_graph, conanfile):
@@ -50,9 +52,11 @@ class BuildRequires(object):
         self._graph_builder = graph_builder
         self._output = output
         self._registry = registry
-        self._profile_build_requires = profile_build_requires
+        # Do not alter the original
+        self._profile_build_requires = copy.copy(profile_build_requires)
 
-    def _get_recipe_build_requires(self, conanfile):
+    @staticmethod
+    def _get_recipe_build_requires(conanfile):
         conanfile.build_requires = _RecipeBuildRequires(conanfile)
         if hasattr(conanfile, "build_requirements"):
             with conanfile_exception_formatter(str(conanfile), "build_requirements"):
