@@ -126,4 +126,8 @@ def migrate_c_src_export_source(client_cache, out):
         c_src = os.path.join(package_folder, "export/.c_src")
         if os.path.exists(c_src):
             out.warn("Migration: Removing package with old export_sources layout: %s" % package)
-            shutil.rmtree(package_folder)
+            try:
+                shutil.rmtree(package_folder)
+            except Exception:
+                out.warn("Migration: Can't remove the '%s' directory, "
+                         "remove it manually" % package_folder)

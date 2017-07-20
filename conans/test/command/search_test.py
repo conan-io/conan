@@ -178,6 +178,11 @@ class SearchTest(unittest.TestCase):
         self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
         self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
 
+    def search_html_table_with_no_reference_test(self):
+        self.client.run("search Hello* --table=table.html", ignore_error=True)
+        self.assertIn("ERROR: '--table' argument can only be used with a reference in the 'pattern'"
+                      " argument", self.client.user_io.out)
+
     def recipe_pattern_search_test(self):
         self.client.run("search Hello*")
         self.assertEquals("Existing package recipes:\n\n"
