@@ -596,7 +596,8 @@ class Command(object):
         parser.add_argument('--raw', default=False, action='store_true',
                             help='Print just the list of recipes')
         parser.add_argument('--table',
-                            help='Outputs html file with a table of binaries')
+                            help='Outputs html file with a table of binaries. Only valid if '
+                                 '"pattern" is a package recipe reference')
         parser.add_argument('-q', '--query', default=None, help='Packages query: "os=Windows AND '
                                                                 '(arch=x86 OR compiler=gcc)".'
                                                                 ' The "pattern" parameter '
@@ -619,6 +620,10 @@ class Command(object):
             self._outputer.print_search_packages(ordered_packages, reference, recipe_hash,
                                                  packages_query, args.table)
         else:
+            if args.table:
+                self._raise_exception_printing("'--table' argument can only be used with a "
+                                               "reference in the 'pattern' argument")
+
             refs = self._conan.search_recipes(args.pattern, remote=args.remote,
                                               case_sensitive=args.case_sensitive)
             self._check_query_parameter_and_get_reference(args.pattern, args.query)
