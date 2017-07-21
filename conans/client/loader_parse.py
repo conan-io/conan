@@ -66,7 +66,7 @@ def _parse_file(conan_file_path):
     filename = os.path.splitext(os.path.basename(conan_file_path))[0]
 
     try:
-        current_dir = os.path.dirname(conan_file_path) or "."
+        current_dir = os.path.dirname(conan_file_path)
         sys.path.append(current_dir)
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
