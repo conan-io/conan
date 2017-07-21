@@ -120,28 +120,149 @@ _target_template = """
                                                                   $<$<CONFIG:RelWithDebInfo>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
                                                                   $<$<CONFIG:MinSizeRel>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
                                                                   $<$<CONFIG:Debug>:${{CONAN_C_FLAGS_{uname}_DEBUG_LIST}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG_LIST}}>)
- """
+"""
+
+
+_target_macros = """
+macro (_conan_generate_target_name output_var package config_prefix)
+    string(TOUPPER ${package} _conan_gtn_upackage)
+    if (DEFINED ${config_prefix}_PACKAGE_${_conan_gtn_upackage}_TARGET)
+        set(${output_var} ${${config_prefix}_PACKAGE_${_conan_gtn_upackage}_TARGET})
+    else ()
+        set(${output_var} ${${config_prefix}_PREFIX}${package})
+    endif ()
+endmacro ()
+
+
+# Syntax:
+#   _conan_parse_target_name(<prefix> <package> <target> [OPTIONAL])
+macro (_conan_parse_target_name prefix)
+    # We take <package> and <target> as optional parameters, so we can provide
+    # a more useful error message to the user if they forget one of them.
+    if (NOT ${ARGC} EQUAL 3 AND NOT ${ARGC} EQUAL 4)
+        message(FATAL_ERROR "Invalid parameters specified to NAME: Key-value pair expected")
+    endif ()
+
+    set(_conan_ptn_package "${ARGV1}")
+    set(_conan_ptn_target "${ARGV2}")
+
+    set(_conan_ptn_optional FALSE)
+    if (${ARGC} EQUAL 4)
+        if (NOT "${ARGV3}" STREQUAL OPTIONAL)
+            message(FATAL_ERROR "Unexpected argument '${ARGV3}': Expecting OPTIONAL")
+        endif ()
+        set(_conan_ptn_optional TRUE)
+    endif ()
+
+    string(TOUPPER ${_conan_ptn_package} _conan_ptn_upackage)
+    set(${prefix}_PACKAGE_${_conan_ptn_upackage}_TARGET   ${_conan_ptn_target})
+    set(${prefix}_PACKAGE_${_conan_ptn_upackage}_OPTIONAL ${_conan_ptn_optional})
+
+    # We add all packages for which a name was specified to a list.
+    # This is then used in conan_define_targets() to provide an error message
+    # if the user defined a name for a package that is not provided by conan.
+    # See _conan_check_target_config().
+    list(APPEND ${prefix}_CONFIGURED_PACKAGES ${_conan_ptn_package})
+endmacro ()
+
+
+macro (_conan_parse_define_targets_args prefix)
+    set(_conan_pdt_args ${ARGN})       # Required for use with list() as ARGN is no variable
+    set(${prefix}_CONFIGURED_PACKAGES) # See _conan_parse_target_name()
+
+    # The first optional parameter may indicate the target name prefix
+    if ("${ARGV1}" STREQUAL PREFIX)
+        if (${ARGC} LESS 3)
+            message(FATAL_ERROR "Invalid argument count: PREFIX specified without value")
+        endif ()
+        set(${prefix}_PREFIX "${ARGV2}")
+        list(REMOVE_AT _conan_pdt_args 0 1)
+    elseif ("${ARGV1}" STREQUAL NO_PREFIX)
+        set(${prefix}_PREFIX)
+        list(REMOVE_AT _conan_pdt_args 0)
+    else ()
+        set(${prefix}_PREFIX CONAN_PKG::) # Retain former behavior as default
+    endif ()
+
+    # All remaining parameters define target names for individual packages
+    set(_conan_pdt_name_args)
+    foreach (arg ${_conan_pdt_args})
+        if (arg STREQUAL NAME)
+            if (_conan_pdt_name_args)
+                _conan_parse_target_name(${prefix} ${_conan_pdt_name_args})
+                set(_conan_pdt_name_args)
+            endif ()
+        else ()
+            list(APPEND _conan_pdt_name_args "${arg}")
+        endif ()
+    endforeach ()
+
+    # We still have to parse the final line as there was no following NAME tag
+    # to trigger the parsing
+    if (_conan_pdt_name_args)
+        _conan_parse_target_name(${prefix} ${_conan_pdt_name_args})
+    endif ()
+endmacro ()
+
+
+# Syntax:
+#   _conan_check_target_config(<config_prefix> <dependencies>)
+macro (_conan_check_target_config config_prefix)
+    set(_conan_ctc_dependencies ${ARGN})
+    foreach (package ${${config_prefix}_CONFIGURED_PACKAGES})
+        list(FIND _conan_ctc_dependencies ${package} _conan_ctc_index)
+        if (_conan_ctc_index EQUAL -1)
+            string(TOUPPER ${package} _conan_ctc_upackage)
+            if (NOT ${config_prefix}_PACKAGE_${_conan_ctc_upackage}_OPTIONAL)
+                message(WARNING "Conan: Target name specified for non-optional package ${package}, "
+                    "which is not a dependency of this project")
+            endif ()
+        endif ()
+    endforeach ()
+endmacro ()
+
+"""
 
 
 def generate_targets_section(dependencies):
     section = []
     section.append("\n###  Definition of macros and functions ###\n")
-    section.append('macro(conan_define_targets)\n'
+    section.append(_target_macros)
+    section.append('# Syntax:\n'
+                   '#   conan_define_targets(\n'
+                   '#       [PREFIX <prefix> | NO_PREFIX]\n'
+                   '#       [NAME <package> <target> [OPTIONAL] ]...)\n'
+                   'macro(conan_define_targets)\n'
                    '    if(${CMAKE_VERSION} VERSION_LESS "3.1.2")\n'
                    '        message(FATAL_ERROR "TARGETS not supported by your CMake version!")\n'
                    '    endif()  # CMAKE > 3.x\n'
+                   '\n'
                    '    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CONAN_CMD_CXX_FLAGS}")\n'
                    '    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${CONAN_CMD_C_FLAGS}")\n'
-                   '    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_CMD_SHARED_LINKER_FLAGS}")\n')
+                   '    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CONAN_CMD_SHARED_LINKER_FLAGS}")\n'
+                   '\n'
+                   '    _conan_parse_define_targets_args(_conan_target_config ${ARGN})\n')
 
+    # We create the target names beforehand, so we can reference them in the
+    # dependencies of other targets.
+    section.append('    set(CONAN_DEPENDENCIES %s)\n' % ' '.join([name for name, _ in dependencies]))
+    section.append('    set(CONAN_TARGETS)\n'
+                   '    foreach (package ${CONAN_DEPENDENCIES})\n'
+                   '        string(TOUPPER ${package} _conan_define_targets_upackage)\n'
+                   '        _conan_generate_target_name(_conan_target_config_${_conan_define_targets_upackage}_TARGET\n'
+                   '            ${package} _conan_target_config)\n'
+                   '        list(APPEND CONAN_TARGETS ${_conan_target_config_${_conan_define_targets_upackage}_TARGET})\n'
+                   '    endforeach ()\n'
+                   '\n'
+                   '    _conan_check_target_config(_conan_target_config ${CONAN_DEPENDENCIES})\n')
+
+    # Now, define the actual targets
     for dep_name, dep_info in dependencies:
-        use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
+        use_deps = ["${_conan_target_config_%s_TARGET}" % d.upper() for d in dep_info.public_deps]
         deps = "" if not use_deps else " ".join(use_deps)
-        section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
-                                               uname=dep_name.upper()))
+        section.append(_target_template.format(name="${_conan_target_config_%s_TARGET}" % dep_name.upper(), \
+                                               deps=deps, uname=dep_name.upper()))
 
-    all_targets = " ".join(["CONAN_PKG::%s" % name for name, _ in dependencies])
-    section.append('    set(CONAN_TARGETS %s)\n' % all_targets)
     section.append('endmacro()\n')
     return section
 
@@ -384,18 +505,27 @@ endmacro()
 cmake_macros = """
 macro(conan_basic_setup)
     if(CONAN_EXPORTED)
-        message(STATUS "Conan: called by CMake conan helper")
+        message(STATUS "Conan: Called by CMake conan helper")
     endif()
+    
     conan_check_compiler()
     conan_output_dirs_setup()
     conan_set_find_library_paths()
-    if(NOT "${ARGV0}" STREQUAL "TARGETS")
-        message(STATUS "Conan: Using cmake global configuration")
-        conan_global_flags()
+    
+    if(${ARGC} GREATER 0 AND "${ARGV0}" STREQUAL "TARGETS")
+        message(STATUS "Conan: Using CMake targets configuration")
+        set(_conan_basic_setup_args ${ARGN})
+        list(REMOVE_AT _conan_basic_setup_args 0)
+        conan_define_targets(${_conan_basic_setup_args})
     else()
-        message(STATUS "Conan: Using cmake targets configuration")
-        conan_define_targets()
+        message(STATUS "Conan: Using CMake global configuration")
+        if (NOT ${ARGC} EQUAL 0)
+            message(WARNING "Arguments to conan_basic_setup() are ignored in global configuration mode. "
+                "Did you forget TARGETS?")
+        endif ()
+        conan_global_flags()
     endif()
+    
     conan_set_rpath()
     conan_set_vs_runtime()
     conan_set_libcxx()
@@ -477,15 +607,24 @@ macro(conan_basic_setup)
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
     endif()
-    conan_check_compiler()
+    
+    conan_check_compiler()    
     # conan_output_dirs_setup()
-    if(NOT "${ARGV0}" STREQUAL "TARGETS")
-        message(STATUS "Conan: Using cmake global configuration")
-        conan_global_flags()
+    
+    if(${ARGC} GREATER 0 AND "${ARGV0}" STREQUAL "TARGETS")
+        message(STATUS "Conan: Using CMake targets configuration")
+        set(_conan_basic_setup_args ${ARGN})
+        list(REMOVE_AT _conan_basic_setup_args 0)
+        conan_define_targets(${_conan_basic_setup_args})
     else()
-        message(STATUS "Conan: Using cmake targets configuration")
-        conan_define_targets()
+        message(STATUS "Conan: Using CMake global configuration")
+        if (NOT ${ARGC} EQUAL 0)
+            message(WARNING "Arguments to conan_basic_setup() are ignored in global configuration mode. "
+                "Did you forget TARGETS?")
+        endif ()
+        conan_global_flags()
     endif()
+    
     conan_set_rpath()
     conan_set_vs_runtime()
     conan_set_libcxx()
