@@ -66,7 +66,7 @@ def _parse_file(conan_file_path):
     filename = os.path.splitext(os.path.basename(conan_file_path))[0]
 
     try:
-        current_dir = os.path.dirname(conan_file_path)
+        current_dir = os.path.dirname(conan_file_path) or "."
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
             loaded = imp.load_source(filename, conan_file_path)
