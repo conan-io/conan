@@ -105,11 +105,11 @@ class DiamondTest(unittest.TestCase):
         client.run("%s . --build missing" % install)
         if use_cmake:
             if cmake_targets:
-                self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
-                self.assertNotIn("Conan: Using cmake global configuration", client.user_io.out)
+                self.assertIn("Conan: Using CMake targets configuration", client.user_io.out)
+                self.assertNotIn("Conan: Using CMake global configuration", client.user_io.out)
             else:
-                self.assertIn("Conan: Using cmake global configuration", client.user_io.out)
-                self.assertNotIn("Conan: Using cmake targets configuration", client.user_io.out)
+                self.assertIn("Conan: Using CMake global configuration", client.user_io.out)
+                self.assertNotIn("Conan: Using CMake targets configuration", client.user_io.out)
         client.run("build .")
         self._check_individual_deps(client)
 

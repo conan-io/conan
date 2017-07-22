@@ -249,18 +249,18 @@ def generate_targets_section(dependencies):
     section.append('    set(CONAN_TARGETS)\n'
                    '    foreach (package ${CONAN_DEPENDENCIES})\n'
                    '        string(TOUPPER ${package} _conan_define_targets_upackage)\n'
-                   '        _conan_generate_target_name(_conan_target_config_${_conan_define_targets_upackage}_TARGET\n'
+                   '        _conan_generate_target_name(CONAN_${_conan_define_targets_upackage}_TARGET\n'
                    '            ${package} _conan_target_config)\n'
-                   '        list(APPEND CONAN_TARGETS ${_conan_target_config_${_conan_define_targets_upackage}_TARGET})\n'
+                   '        list(APPEND CONAN_TARGETS ${CONAN_${_conan_define_targets_upackage}_TARGET})\n'
                    '    endforeach ()\n'
                    '\n'
                    '    _conan_check_target_config(_conan_target_config ${CONAN_DEPENDENCIES})\n')
 
     # Now, define the actual targets
     for dep_name, dep_info in dependencies:
-        use_deps = ["${_conan_target_config_%s_TARGET}" % d.upper() for d in dep_info.public_deps]
+        use_deps = ["${CONAN_%s_TARGET}" % d.upper() for d in dep_info.public_deps]
         deps = "" if not use_deps else " ".join(use_deps)
-        section.append(_target_template.format(name="${_conan_target_config_%s_TARGET}" % dep_name.upper(), \
+        section.append(_target_template.format(name="${CONAN_%s_TARGET}" % dep_name.upper(), \
                                                deps=deps, uname=dep_name.upper()))
 
     section.append('endmacro()\n')
