@@ -89,6 +89,55 @@ OTHER_VALUE3
     WHAT=EVER"""
         self.assertIn("\n".join(env_section.splitlines()), "\n".join(conaninfo.splitlines()))
 
+    def env_path_order_test(self):
+        client = TestClient()
+        with tools.environment_append({"SOME_VAR": ["INITIAL VALUE"]}):
+            conanfile = """from conans import ConanFile
+import os
+class MyPkg(ConanFile):
+    def build(self):
+        self.output.info("PKG VARS: %s" % os.getenv("SOME_VAR"))
+    def package_info(self):
+        self.env_info.SOME_VAR.append("OTHER_VALUE")
+"""
+            client.save({"conanfile.py": conanfile})
+            client.run("create Pkg/0.1@lasote/testing")
+            self.assertIn("Pkg/0.1@lasote/testing: PKG VARS: INITIAL VALUE", client.out)
+
+            conanfile = """from conans import ConanFile
+import os
+class MyTest(ConanFile):
+    requires = "Pkg/0.1@lasote/testing"
+    def build(self):
+        self.output.info("TEST VARS: %s" % os.getenv("SOME_VAR"))
+    def package_info(self):
+        self.env_info.SOME_VAR.extend(["OTHER_VALUE2", "OTHER_VALUE3"])
+"""
+            client.save({"conanfile.py": conanfile})
+            client.run("create Test/0.1@lasote/testing")
+            # FIXME: Note that these values are os.pathsep (; or :)
+            self.assertIn("Test/0.1@lasote/testing: TEST VARS: OTHER_VALUE%sINITIAL VALUE"
+                          % os.pathsep,
+                          client.out)
+            conanfile = """from conans import ConanFile
+import os
+class MyTest(ConanFile):
+    requires = "Test/0.1@lasote/testing"
+    def build(self):
+        self.output.info("PROJECT VARS: %s" % os.getenv("SOME_VAR"))
+"""
+            client.save({"conanfile.py": conanfile})
+            client.run("create project/0.1@lasote/testing")
+            self.assertIn("project/0.1@lasote/testing: PROJECT VARS: " +
+                          os.pathsep.join(["OTHER_VALUE2", "OTHER_VALUE3",
+                                           "OTHER_VALUE", "INITIAL VALUE"]),
+                          client.out)
+            client.run("create project/0.1@lasote/testing -e SOME_VAR=[WHAT]")
+            self.assertIn("project/0.1@lasote/testing: PROJECT VARS: " +
+                          os.pathsep.join(["WHAT", "OTHER_VALUE2", "OTHER_VALUE3",
+                                           "OTHER_VALUE", "INITIAL VALUE"]),
+                          client.out)
+
     def test_run_env(self):
         client = TestClient()
         conanfile = '''
