@@ -132,6 +132,9 @@ class Downloader(object):
                 if not file_path:
                     ret += response.content
                 else:
+                    total_length = len(response.content)
+                    progress = human_readable_progress(total_length, total_length)
+                    print_progress(self.output, 50, progress)
                     save(file_path, response.content, append=True)
             else:
                 dl = 0
