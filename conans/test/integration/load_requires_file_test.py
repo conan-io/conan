@@ -3,7 +3,7 @@ import unittest
 from conans.test.utils.tools import TestClient
 
 
-class LoadRequiremensTextFileTest(unittest.TestCase):
+class LoadRequirementsTextFileTest(unittest.TestCase):
 
     def load_reqs_from_text_file_test(self):
         client = TestClient()
