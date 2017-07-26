@@ -89,7 +89,8 @@ class ConanManager(object):
         export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
                          filename)
 
-    def package_files(self, reference, package_folder, profile, force):
+    def package_files(self, reference, source_folder, build_folder, package_folder, profile,
+                      force):
         """ Bundle pre-existing binaries
         @param reference: ConanFileReference
         """
@@ -112,22 +113,28 @@ class ConanManager(object):
         # one, the first of the first level, always existing
         nodes = deps_graph.direct_requires()
         _, conanfile = nodes[0]
-        packages_folder = self._client_cache.packages(reference)
+        cache_packages_folder = self._client_cache.packages(reference)
         pkg_id = conanfile.info.package_id()
         self._user_io.out.info("Packaging to %s" % pkg_id)
-        dest_package_folder = os.path.join(packages_folder, pkg_id)
+        dest_package_folder = os.path.join(cache_packages_folder, pkg_id)
         if os.path.exists(dest_package_folder):
             if force:
                 shutil.rmtree(dest_package_folder)
             else:
                 raise ConanException("Package already exists. Please use --force, -f to overwrite it")
-        shutil.copytree(package_folder, dest_package_folder, symlinks=True)
+
         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
         conanfile.info.recipe_hash = recipe_hash
-        save(os.path.join(dest_package_folder, CONANINFO), conanfile.info.dumps())
-        # Create the digest for the package
-        digest = FileTreeManifest.create(dest_package_folder)
-        save(os.path.join(dest_package_folder, CONAN_MANIFEST), str(digest))
+        if source_folder or build_folder:
+            package_output = ScopedOutput(str(reference), self._user_io.out)
+            packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
+                                    package_output, local=True)
+        else:  # we are specifying a final package
+            shutil.copytree(package_folder, dest_package_folder, symlinks=True)
+            save(os.path.join(dest_package_folder, CONANINFO), conanfile.info.dumps())
+            # Create the digest for the package
+            digest = FileTreeManifest.create(dest_package_folder)
+            save(os.path.join(dest_package_folder, CONAN_MANIFEST), str(digest))
 
     def download(self, reference, package_ids, remote=None):
         """ Download conanfile and specified packages to local repository
@@ -385,7 +392,7 @@ class ConanManager(object):
                                             self._client_cache.settings,
                                             self._runner, output)
         packager.create_package(conanfile, source_folder, build_folder, package_folder, output,
-                                local=True)
+                                local=True, copy_info=True)
 
     def package(self, reference, package_id):
         # Package paths
@@ -433,7 +440,7 @@ class ConanManager(object):
                 source_folder = build_folder
             with environment_append(conanfile.env):
                 packager.create_package(conanfile, source_folder, build_folder, package_folder,
-                                        output)
+                                        output, copy_info=True)
 
     def build(self, conanfile_path, source_folder, build_folder, package_folder, test=False):
         """ Call to build() method saved on the conanfile.py

@@ -207,6 +207,10 @@ class Command(object):
                             help='package recipe reference e.g., MyPackage/1.2@user/channel')
         parser.add_argument("--package_folder", "-pf",
                             help='Get binaries from this path, relative to current or absolute')
+        parser.add_argument("--source_folder", "-sf",
+                            help='Get artifacts from this path, relative to current or absolute')
+        parser.add_argument("--build_folder", "-bf",
+                            help='Get artifacts from this path, relative to current or absolute')
         parser.add_argument("--profile", "-pr",
                             help='Profile for this package')
         parser.add_argument("--options", "-o",
@@ -220,6 +224,8 @@ class Command(object):
 
         args = parser.parse_args(*args)
         return self._conan.package_files(reference=args.reference,
+                                         source_folder=args.source_folder,
+                                         build_folder=args.build_folder,
                                          package_folder=args.package_folder,
                                          profile_name=args.profile, force=args.force,
                                          settings=args.settings, options=args.options)

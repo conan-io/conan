@@ -333,18 +333,25 @@ class ConanAPIV1(object):
                             test=str(reference))
 
     @api_method
-    def package_files(self, reference, package_folder=None, profile_name=None,
-                      force=False, settings=None, options=None, cwd=None):
+    def package_files(self, reference, source_folder=None, build_folder=None, package_folder=None,
+                      profile_name=None, force=False, settings=None, options=None, cwd=None):
 
         cwd = prepare_cwd(cwd)
 
         reference = ConanFileReference.loads(reference)
+        profile = profile_from_args(profile_name, settings, options, env=None, scope=None, cwd=cwd,
+                                    default_folder=self._client_cache.profiles_path)
         package_folder = package_folder or cwd
+        if not source_folder and build_folder:
+            source_folder = build_folder
         if not os.path.isabs(package_folder):
             package_folder = os.path.join(cwd, package_folder)
-        profile = profile_from_args(profile_name, settings, options, env=None,
-                                    scope=None, cwd=cwd, default_folder=self._client_cache.profiles_path)
-        self._manager.package_files(reference=reference, package_folder=package_folder,
+        if source_folder and not os.path.isabs(source_folder):
+            source_folder = os.path.normpath(os.path.join(cwd, source_folder))
+        if build_folder and not os.path.isabs(build_folder):
+            build_folder = os.path.normpath(os.path.join(cwd, build_folder))
+        self._manager.package_files(reference=reference, source_folder=source_folder,
+                                    build_folder=build_folder, package_folder=package_folder,
                                     profile=profile, force=force)
 
     @api_method
