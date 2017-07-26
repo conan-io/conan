@@ -282,12 +282,14 @@ class ConanManager(object):
         if inject_require:
             output = ScopedOutput("%s test package" % str(inject_require), self._user_io.out)
             output.info("Installing dependencies")
-        elif not isinstance(reference, ConanFileReference):
-            output = ScopedOutput("PROJECT", self._user_io.out)
-            Printer(self._user_io.out).print_graph(deps_graph, registry)
         else:
-            output = ScopedOutput(str(reference), self._user_io.out)
-            output.highlight("Installing package")
+            if not isinstance(reference, ConanFileReference):
+                output = ScopedOutput("PROJECT", self._user_io.out)
+                output.highlight("Installing %s" % reference)
+            else:
+                output = ScopedOutput(str(reference), self._user_io.out)
+                output.highlight("Installing package")
+            Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         try:
             if loader._settings.os and detected_os() != loader._settings.os:
@@ -357,6 +359,8 @@ class ConanManager(object):
                 conan_file_path = os.path.join(reference, CONANFILE)
                 if not os.path.exists(conan_file_path):
                     conan_file_path = os.path.join(reference, CONANFILE_TXT)
+            elif not os.path.isabs(conan_file_path):
+                conan_file_path = os.path.abspath(os.path.join(reference, conan_file_path))
             reference = None
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
