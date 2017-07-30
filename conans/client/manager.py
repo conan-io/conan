@@ -29,7 +29,7 @@ from conans.errors import NotFoundException, ConanException, conanfile_exception
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST
 from conans.tools import environment_append
-from conans.util.files import save,  rmdir, normalize, mkdir
+from conans.util.files import save,  rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.model.manifest import FileTreeManifest
 from conans.client.loader_parse import load_conanfile_class
@@ -259,6 +259,17 @@ class ConanManager(object):
         @param generators: List of generators from command line
         @param no_imports: Install specified packages but avoid running imports
         """
+
+        try:
+            conan_project = load(os.path.join(current_path, "conan-project.txt"))
+        except IOError:
+            conan_project = {}
+        else:
+            conan_project = [line.strip() for line in conan_project.splitlines() if line.strip()]
+            conan_project = [line.split(":") for line in conan_project]
+            conan_project = [(k.strip(), v.strip()) for k, v in conan_project]
+            conan_project = dict(conan_project)
+
         generators = generators or []
         manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
                                            client_cache=self._client_cache,
@@ -302,13 +313,13 @@ class ConanManager(object):
         build_requires = BuildRequires(loader, graph_builder, registry, output,
                                        profile.build_requires)
         installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
-                                   build_requires)
+                                   build_requires, )
 
         # Apply build_requires to consumer conanfile
         if not isinstance(reference, ConanFileReference):
             build_requires.install("", conanfile, installer)
 
-        installer.install(deps_graph, current_path)
+        installer.install(deps_graph, current_path, conan_project)
         build_mode.report_matches()
 
         # Write generators

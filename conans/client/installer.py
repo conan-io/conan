@@ -20,13 +20,18 @@ from conans.tools import environment_append
 from conans.util.tracer import log_package_built
 
 
-def _init_package_info(deps_graph, paths, current_path):
+def _init_package_info(deps_graph, paths, current_path, conan_project):
     for node in deps_graph.nodes:
         conan_ref, conan_file = node
         if conan_ref:
             package_id = conan_file.info.package_id()
-            package_reference = PackageReference(conan_ref, package_id)
-            package_folder = paths.package(package_reference, conan_file.short_paths)
+            folder_project = conan_project.get(conan_ref.name)
+            if folder_project:
+                package_folder = folder_project
+            else:
+                package_id = conan_file.info.package_id()
+                package_reference = PackageReference(conan_ref, package_id)
+                package_folder = paths.package(package_reference, conan_file.short_paths)
             conan_file.package_folder = package_folder
             conan_file.cpp_info = CppInfo(package_folder)
         else:
@@ -120,11 +125,12 @@ class ConanInstaller(object):
         self._build_mode = build_mode
         self._built_packages = set()  # To avoid re-building twice the same package reference
 
-    def install(self, deps_graph, current_path):
+    def install(self, deps_graph, current_path, conan_project=None):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
+        conan_project = conan_project or {}
         t1 = time.time()
-        _init_package_info(deps_graph, self._client_cache, current_path)
+        _init_package_info(deps_graph, self._client_cache, current_path, conan_project)
         # order by levels and propagate exports as download imports
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s" % (time.time() - t1))
