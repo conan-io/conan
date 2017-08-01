@@ -1,0 +1,12 @@
+version: '3'
+services:
+    server:
+        build: .
+        image: conan_server:latest
+        container_name: conan_server
+        volumes:
+            - ./config:/root/.conan_server:rw
+        ports:
+            - '9300:9300'
+        restart: unless-stopped
+
