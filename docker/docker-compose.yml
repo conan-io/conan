@@ -1,7 +1,6 @@
 version: '3'
 services:
     server:
-        build: .
         image: conan_server:latest
         container_name: conan_server
         volumes:
