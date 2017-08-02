@@ -2,20 +2,19 @@ FROM python:3.6.1-alpine3.6
 
 ENV CONAN_VERSION=0.25.1
 
-RUN apk add —no-cache git
+ADD https://github.com/conan-io/conan/archive/${CONAN_VERSION}.zip /
 
-RUN cd / \
-    && git clone https://github.com/conan-io/conan.git \
-    && cd conan \
-    && git checkout $CONAN_VERSION \
+RUN unzip ${CONAN_VERSION} \
+    && rm ${CONAN_VERSION}.zip \
+    && cd conan-${CONAN_VERSION} \
     && pip3 install -r conans/requirements.txt \
     && pip3 install -r conans/requirements_server.txt \
     && pip3 install gunicorn
 
 EXPOSE 9300
 
-VOLUME /root/.conan_server
+WORKDIR /conan-${CONAN_VERSION}
 
-WORKDIR /conan
+COPY entrypoint.sh .
 
-ENTRYPOINT gunicorn -b 0.0.0.0:9300 -w 4 -t 300 conans.server.server_launcher:app
+CMD /conan-${CONAN_VERSION}/entrypoint.sh
