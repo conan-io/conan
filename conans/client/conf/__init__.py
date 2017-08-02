@@ -22,7 +22,8 @@ os:
         version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3"]
     FreeBSD:
     SunOS:
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64]
+    Web:
+arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, asmjs, webasm]
 compiler:
     sun-cc:
        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -42,6 +43,8 @@ compiler:
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1"]
         libcxx: [libstdc++, libc++]
+    emscripten:
+        version: ["1.37.14", "1.37.15", "1.37.16", "1.37.17", "1.37.18"]
 
 build_type: [None, Debug, Release]
 """
