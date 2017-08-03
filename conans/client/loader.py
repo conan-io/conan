@@ -74,7 +74,7 @@ class ConanFileLoader(object):
         assert settings is None or isinstance(settings, Settings)
         # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
-        self._user_options = profile.options
+        self._user_options = profile.options.copy()
         self._scopes = profile.scopes
 
         self._package_settings = profile.package_settings_values
