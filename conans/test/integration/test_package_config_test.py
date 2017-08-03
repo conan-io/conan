@@ -22,6 +22,21 @@ class test_packageConan(ConanFile):
         self.output.info("shared (test): %s" % (self.options.shared))
 """
 
+
+create_conanfile = """from conans import ConanFile
+
+class test_packageConan(ConanFile):
+    options = {"shared": [True, False]}
+    default_options = "shared=False"
+
+    def build(self):
+        self.output.info("shared (build): %s" % (self.options["conan_package"].shared))
+
+    def test(self):
+        self.output.info("shared (test): %s" % (self.options["conan_package"].shared))
+"""
+
+
 conanfile = """from conans import ConanFile
 
 class PkgConan(ConanFile):
@@ -80,12 +95,8 @@ class TestPackageConfigTest(unittest.TestCase):
     def create_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
-                     "test_package/conanfile.py": test_conanfile})
-        client.run("create lasote/stable -o conan_package:shared=True -o conan_test_package:shared=True")
-        self.assertIn("PROJECT: shared (configure): True",
-                      client.out)
-        self.assertIn("PROJECT: shared (requirements): True",
-                      client.out)
+                     "test_package/conanfile.py": create_conanfile})
+        client.run("create lasote/stable -o conan_package:shared=True")
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): True",
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): True",
@@ -97,10 +108,6 @@ class TestPackageConfigTest(unittest.TestCase):
         self.assertNotIn("False", client.out)
 
         client.run("create lasote/stable -o conan_test_package:shared=False")
-        self.assertIn("PROJECT: shared (configure): False",
-                      client.out)
-        self.assertIn("PROJECT: shared (requirements): False",
-                      client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): False",
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): False",
