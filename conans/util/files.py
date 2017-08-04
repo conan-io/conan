@@ -9,6 +9,13 @@ import re
 import six
 from conans.util.log import logger
 import tarfile
+import stat
+
+
+def make_read_only(path):
+    for root, _, files in os.walk(path):
+        for f in files:
+            os.chmod(os.path.join(root, f), stat.S_IREAD)
 
 
 def decode_text(text):
