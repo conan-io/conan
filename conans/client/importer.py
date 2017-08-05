@@ -105,6 +105,9 @@ class _FileImporter(object):
             file_copier = FileCopier(matching_path, final_dst_path)
             files = file_copier(pattern, src=src, links=True, ignore_case=ignore_case,
                                 excludes=excludes)
+            for f in files:
+                import stat
+                os.chmod(f, stat.S_IWRITE)
             self.copied_files.update(files)
 
     def _get_folders(self, pattern):

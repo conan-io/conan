@@ -7,7 +7,7 @@ import shutil
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
-from conans.util.files import save, rmdir, mkdir
+from conans.util.files import save, rmdir, mkdir, make_read_only
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import ConanException, conanfile_exception_formatter, ConanExceptionInUserConanfileMethod
@@ -236,6 +236,7 @@ class ConanInstaller(object):
                 log_file = log_file if os.path.exists(log_file) else None
                 log_package_built(package_ref, duration, log_file)
                 self._built_packages.add((conan_ref, package_id))
+                make_read_only(package_folder)
             else:
                 # Get the package, we have a not outdated remote package
                 if conan_ref:
@@ -331,6 +332,7 @@ class ConanInstaller(object):
 
         if self._remote_proxy.get_package(package_reference, short_paths=conan_file.short_paths):
             self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
+            make_read_only(package_folder)
             return True
 
         self._raise_package_not_found_error(conan_ref, conan_file)
