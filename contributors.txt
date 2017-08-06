@@ -1,7 +1,7 @@
 Contributors
 -------------
 
-This is the list of contributors to this project source code, in alphabetical order. 
+This is the list of contributors to this project source code, in alphabetical order.
 Many thanks to all of them!
 
 - Bocanegra Algarra, Raul (raul.bocanegra.algarra@gmail.com)
@@ -17,5 +17,5 @@ Many thanks to all of them!
 - Lee, Jeongseok (jslee02@gmail.com, @jslee02)
 - Márki, Róbert (gsmiko@gmail.com, @robertmrk)
 - Ray, Chris (chris@xaltotun.com)
-- Sechet, Olivier (osechet@gmail.com)
 - Ries, Uilian (uilianries@gmail.com, @uilianries)
+- Sechet, Olivier (osechet@gmail.com)
