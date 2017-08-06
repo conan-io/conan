@@ -12,6 +12,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
+    description = "<Description of {package_name} here>"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -49,7 +50,7 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     settings = "os", "compiler", "build_type", "arch"
-    description = "Package for {package_name}"
+    description = "<Description of {package_name} here>"
     url = "None"
     license = "None"
 
@@ -65,7 +66,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
-    description = "Description of {package_name}"
+    description = "<Description of {package_name} here>"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -98,6 +99,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
+    description = "<Description of {package_name} here>"
     # No settings/options are necessary, this is header only
 
     def source(self):
