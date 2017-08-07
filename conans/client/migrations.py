@@ -3,7 +3,7 @@ import shutil
 
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
 from conans.errors import ConanException
-from conans.migrations import Migrator
+from conans.migrations import Migrator, CONAN_VERSION
 from conans.util.files import load, save
 from conans.model.version import Version
 
@@ -81,8 +81,9 @@ build_type: [None, Debug, Release]
         if old_version < Version("0.20"):
             if os.path.exists(os.path.join(self.client_cache.conan_folder, CONAN_CONF)):
                 raise ConanException("Migration: Your Conan version was too old, "
-                                     "please, remove the %s file manually, Conan will generate "
-                                     "a new one." % CONAN_CONF)
+                                     "please, remove '%s' and '%s' files in '%s' directory "
+                                     "manually, Conan will generate new ones." %
+                                     (CONAN_CONF, CONAN_VERSION, self.client_cache.conan_folder))
 
         if old_version < Version("0.25"):
             from conans.paths import DEFAULT_PROFILE_NAME
