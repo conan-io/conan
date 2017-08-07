@@ -118,7 +118,6 @@ def relative_dirs(path):
 
 
 def _change_permissions(func, path, exc_info):
-    import stat
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR)
         func(path)

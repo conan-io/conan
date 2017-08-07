@@ -119,4 +119,5 @@ class SynchronizeTest(unittest.TestCase):
         pack_path = self.client.paths.package(package_reference)
         digest_path = self.client.client_cache.digestfile_package(package_reference)
         expected_manifest = FileTreeManifest.create(os.path.dirname(digest_path))
+        os.chmod(os.path.join(pack_path, CONAN_MANIFEST), 0o777)
         save(os.path.join(pack_path, CONAN_MANIFEST), str(expected_manifest))

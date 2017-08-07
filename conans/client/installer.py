@@ -18,6 +18,7 @@ from conans.client.output import ScopedOutput
 from conans.client.source import config_source
 from conans.tools import environment_append
 from conans.util.tracer import log_package_built
+from conans.util.env_reader import get_env
 
 
 def _init_package_info(deps_graph, paths, current_path):
@@ -236,7 +237,8 @@ class ConanInstaller(object):
                 log_file = log_file if os.path.exists(log_file) else None
                 log_package_built(package_ref, duration, log_file)
                 self._built_packages.add((conan_ref, package_id))
-                make_read_only(package_folder)
+                if get_env("CONAN_READ_ONLY_CACHE", False):
+                    make_read_only(package_folder)
             else:
                 # Get the package, we have a not outdated remote package
                 if conan_ref:
@@ -332,7 +334,8 @@ class ConanInstaller(object):
 
         if self._remote_proxy.get_package(package_reference, short_paths=conan_file.short_paths):
             self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
-            make_read_only(package_folder)
+            if get_env("CONAN_READ_ONLY_CACHE", False):
+                make_read_only(package_folder)
             return True
 
         self._raise_package_not_found_error(conan_ref, conan_file)

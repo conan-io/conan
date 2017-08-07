@@ -118,7 +118,7 @@ class ConanManager(object):
         dest_package_folder = os.path.join(packages_folder, pkg_id)
         if os.path.exists(dest_package_folder):
             if force:
-                shutil.rmtree(dest_package_folder)
+                rmdir(dest_package_folder)
             else:
                 raise ConanException("Package already exists. Please use --force, -f to overwrite it")
         shutil.copytree(package_folder, dest_package_folder, symlinks=True)

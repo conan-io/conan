@@ -86,6 +86,7 @@ class UploadTest(unittest.TestCase):
         pkg_id = os.listdir(packages_folder)[0]
         package_folder = os.path.join(packages_folder, pkg_id)
         save(os.path.join(package_folder, "added.txt"), "")
+        os.chmod(os.path.join(package_folder, "include/helloHello0.h"), 0o777)
         os.remove(os.path.join(package_folder, "include/helloHello0.h"))
         error = client.run("upload Hello0/1.2.1@frodo/stable --all --check", ignore_error=True)
         self.assertTrue(error)
