@@ -26,10 +26,18 @@ from conans.util.files import save
 class RunnerMock(object):
     def __init__(self, return_ok=True):
         self.command_called = None
+        self.output = """
+        ----Running------
+        > {command}
+        -----------------
+        """
+        self.output = one
         self.return_ok = return_ok
 
     def __call__(self, command, output):  # @UnusedVariable
         self.command_called = command
+        self.output = self.output.format(command=command)
+        self.output = self.output + "a_package" if not self.return_ok
         return 0 if self.return_ok else 1
 
 
@@ -235,6 +243,31 @@ class HelloConan(ConanFile):
         self.assertEquals(runner.command_called, "pkg install -y a_package")
         spt.install("a_package", force=False)
         self.assertEquals(runner.command_called, "pkg info a_package")
+
+        os_info.is_solaris = True
+        os_info.is_freebsd = False
+
+        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt.update()
+        self.assertEquals(runner.command_called, "pkgutil --catalog")
+        spt.install("a_package", force=True)
+        self.assertEquals(runner.command_called, "pkgutil --install --yes a_package")
+        spt.install("a_package", force=False)
+        self.assertEquals(runner.command_called, "pkutil --list a_package")
+        spt.install("a_package", force=False)
+        self.assertEquals(runner.output, """
+        ----Running------
+        > pkutil --list a_package
+        -----------------
+        """)
+        runner = RunnerMock(return_ok=False)
+        spt.install("a_package", force=False)
+        self.assertEquals(runner.output, """
+        ----Running------
+        > pkutil --list a_package
+        -----------------
+        a_package
+        """)
 
         del os.environ["CONAN_SYSREQUIRES_SUDO"]
 
