@@ -10,7 +10,6 @@ import re
 import subprocess
 import sys
 
-import io
 
 from contextlib import contextmanager
 
@@ -611,7 +610,7 @@ class SystemPackageTool(object):
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info)
         self._tool._sudo_str = "sudo " if self._sudo else ""
-        self._tool._runner = runner or ConanRunner(print_commands_to_output=True)
+        self._tool._runner = runner or ConanRunner()
 
     def _create_tool(self, os_info):
         if os_info.with_apt:
@@ -623,7 +622,7 @@ class SystemPackageTool(object):
         elif os_info.is_freebsd:
             return PkgTool()
         elif os_info.is_solaris:
-            return PkgutilTool()
+            return PkgUtilTool()
         else:
             return NullTool()
 
@@ -722,7 +721,7 @@ class PkgTool(object):
         return exit_code == 0
 
 
-class PkgutilTool(object):
+class PkgUtilTool(object):
     def update(self):
         _run(self._runner, "%spkgutil --catalog" % self._sudo_str)
 
@@ -730,10 +729,9 @@ class PkgutilTool(object):
         _run(self._runner, "%spkgutil --install --yes %s" % (self._sudo_str, package_name))
 
     def installed(self, package_name):
-        with io.StringIO() as buf:
-            self._runner(u'pkgutil --list %s' % package_name, buf)
-            exit_code = 1 if len(buf.getvalue().splitlines()) <= 4 else 0
+        exit_code = self._runner('test -n "$(pkgutil --list %s)"' % package_name, None)
         return exit_code == 0
+
 
 def _run(runner, command):
     _global_output.info("Running: %s" % command)
