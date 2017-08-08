@@ -729,7 +729,7 @@ class PkgUtilTool(object):
         _run(self._runner, "%spkgutil --install --yes %s" % (self._sudo_str, package_name))
 
     def installed(self, package_name):
-        exit_code = self._runner('test -n "$(pkgutil --list %s)"' % package_name, None)
+        exit_code = self._runner('test -n "`pkgutil --list %s`"' % package_name, None)
         return exit_code == 0
 
 
