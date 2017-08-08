@@ -38,7 +38,7 @@ updown_secret: {updown_secret}
 # writeable by default_user and default_user2. Rest of packages are not writtable by anything
 # except the author.
 #
-#   "opencv/2.3.4@lasote/testing": default_user, default_user2
+#   opencv/2.3.4@lasote/testing: default_user, default_user2
 #
 
 [read_permissions]
