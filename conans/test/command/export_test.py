@@ -70,6 +70,28 @@ class TestConan(ConanFile):
         content = load(os.path.join(export_path, "file.txt"))
         self.assertEqual("Hello World!", content)
 
+    def test_code_several_sibling(self):
+        # if provided a path with slash, it will use as a export base
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports_sources = "../test/src/*", "../cpp/*", "../include/*"
+"""
+        files = {"recipe/conanfile.py": conanfile,
+                 "test/src/file.txt": "Hello World!",
+                 "cpp/file.cpp": "Hello World!",
+                 "include/file.h": "Hello World!"}
+        client.save(files)
+        client.current_folder = os.path.join(client.current_folder, "recipe")
+        client.run("export lasote/stable")
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export_sources(conan_ref)
+        self.assertEqual(sorted(['file.txt', 'file.cpp', 'file.h']),
+                         sorted(os.listdir(export_path)))
+
     def test_conanfile_case(self):
         if platform.system() != "Windows":
             return

@@ -64,10 +64,12 @@ class FileCopier(object):
         # Check for ../ patterns and allow them
         if pattern.startswith(".."):
             rel_dir = os.path.abspath(os.path.join(self._base_src, pattern))
-            self._base_src = os.path.dirname(rel_dir)
+            base_src = os.path.dirname(rel_dir)
             pattern = os.path.basename(rel_dir)
+        else:
+            base_src = self._base_src
 
-        src = os.path.join(self._base_src, src)
+        src = os.path.join(base_src, src)
         dst = os.path.join(self._base_dst, dst)
 
         files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
