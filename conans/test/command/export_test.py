@@ -1,12 +1,14 @@
 import unittest
 import os
-from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_DIR
+from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.util.files import save, load
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.tools import TestClient
 import platform
+import stat
+from conans.errors import ConanException
 
 
 class ExportSettingsTest(unittest.TestCase):
@@ -27,6 +29,60 @@ class TestConan(ConanFile):
         client.run("install Hello/1.2@lasote/stable -s os=Windows", ignore_error=True)
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
+
+    def test_export_read_only(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "file1.txt"
+    exports_sources = "file2.txt"
+"""
+        ref = ConanFileReference.loads("Hello/1.2@lasote/stable")
+        export_path = client.client_cache.export(ref)
+        export_src_path = client.client_cache.export_sources(ref)
+
+        files = {CONANFILE: conanfile,
+                 "file1.txt": "",
+                 "file2.txt": ""}
+        client.save(files)
+        os.chmod(os.path.join(client.current_folder, "file1.txt"), stat.S_IREAD)
+        os.chmod(os.path.join(client.current_folder, "file2.txt"), stat.S_IREAD)
+
+        client.run("export lasote/stable")
+        self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
+        self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
+        with self.assertRaises(IOError):
+            save(os.path.join(export_path, "file1.txt"), "")
+        with self.assertRaises(IOError):
+            save(os.path.join(export_src_path, "file2.txt"), "")
+        self.assertIn("WARN: Conanfile doesn't have 'license'", client.user_io.out)
+        files = {CONANFILE: conanfile,
+                 "file1.txt": "file1",
+                 "file2.txt": "file2"}
+        os.chmod(os.path.join(client.current_folder, "file1.txt"), stat.S_IWRITE)
+        os.chmod(os.path.join(client.current_folder, "file2.txt"), stat.S_IWRITE)
+        client.save(files)
+        client.run("export lasote/stable")
+
+        self.assertEqual(load(os.path.join(export_path, "file1.txt")), "file1")
+        self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "file2")
+        client.run("install Hello/1.2@lasote/stable --build=missing")
+        self.assertIn("Hello/1.2@lasote/stable: Generating the package", client.out)
+
+        files = {CONANFILE: conanfile,
+                 "file1.txt": "",
+                 "file2.txt": ""}
+        client.save(files)
+        os.chmod(os.path.join(client.current_folder, "file1.txt"), stat.S_IREAD)
+        os.chmod(os.path.join(client.current_folder, "file2.txt"), stat.S_IREAD)
+        client.run("export lasote/stable")
+        self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
+        self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
+        client.run("install Hello/1.2@lasote/stable --build=Hello")
+        self.assertIn("Hello/1.2@lasote/stable: Generating the package", client.out)
 
     def test_code_parent(self):
         """ when referencing the parent, the relative folder "sibling" will be kept
