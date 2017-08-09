@@ -375,6 +375,35 @@ build_type: [ Release]
 
         self.assertNotIn("BUILD_SHARED_LIBS", cmake.definitions)
 
+    def test_verbose(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.arch = "x86"
+        settings.os = "Windows"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        self.assertNotIn("CMAKE_VERBOSE_MAKEFILE", cmake.definitions)
+
+        cmake.verbose = True
+        self.assertEquals(cmake.definitions["CMAKE_VERBOSE_MAKEFILE"], "ON")
+
+        cmake.verbose = False
+        self.assertEquals(cmake.definitions["CMAKE_VERBOSE_MAKEFILE"], "OFF")
+
+        cmake.definitions["CMAKE_VERBOSE_MAKEFILE"] = True
+        self.assertTrue(cmake.verbose)
+
+        cmake.definitions["CMAKE_VERBOSE_MAKEFILE"] = False
+        self.assertFalse(cmake.verbose)
+
+        del cmake.definitions["CMAKE_VERBOSE_MAKEFILE"]
+        self.assertFalse(cmake.verbose)
+
     @staticmethod
     def scape(args):
         pattern = "%s" if sys.platform == "win32" else r"'%s'"

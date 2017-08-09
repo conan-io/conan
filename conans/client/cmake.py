@@ -12,6 +12,7 @@ from conans.util.files import mkdir
 from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
+from conans.util.config_parser import get_bool_from_text
 
 # Deprecated in 0.22
 deprecated_conanfile_param_message = '''
@@ -359,6 +360,17 @@ class CMake(object):
             target = "RUN_TESTS" if self._compiler == "Visual Studio" else "test"
         self._build_new(args=args, build_dir=build_dir, target=target)
 
+    @property
+    def verbose(self):
+        try:
+            verbose = self.definitions["CMAKE_VERBOSE_MAKEFILE"]
+            return get_bool_from_text(str(verbose))
+        except:
+            return False
+
+    @verbose.setter
+    def verbose(self, value):
+        self.definitions["CMAKE_VERBOSE_MAKEFILE"] = "ON" if value else "OFF"
 
 def _defs_to_string(defs):
     return " ".join(['-D{0}="{1}"'.format(k, v) for k, v in defs.items()])
