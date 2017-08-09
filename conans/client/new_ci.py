@@ -52,7 +52,7 @@ build_py = """from conan.packager import ConanMultiPackager
 
 
 if __name__ == "__main__":
-    builder = ConanMultiPackager(username="{user}", channel="{channel}")
+    builder = ConanMultiPackager()
     builder.add_common_builds({shared})
     builder.run()
 """
@@ -158,9 +158,10 @@ clang-{version}:
     <<: *build-template
 """
 
+
 def get_build_py(name, user, channel, shared):
     shared = 'shared_option_name="{}:shared"'.format(name) if shared else ""
-    return build_py.format(name=name, user=user, channel=channel, shared=shared)
+    return build_py.format(name=name, shared=shared)
 
 
 def get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_versions, osx_clang_versions, upload_url):
