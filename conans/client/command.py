@@ -60,7 +60,8 @@ class Command(object):
         And optionally, 'test_package' package testing files.
         """
         parser = argparse.ArgumentParser(description=self.new.__doc__, prog="conan new")
-        parser.add_argument("name", help='Package name, e.g.: Poco/1.7.3@user/testing')
+        parser.add_argument("name", help='Package name, e.g.: "Poco/1.7.3" or complete reference'
+                                         ' for CI scripts: "Poco/1.7.3@conan/stable"')
         parser.add_argument("-t", "--test", action='store_true', default=False,
                             help='Create test_package skeleton to test package')
         parser.add_argument("-i", "--header", action='store_true', default=False,
