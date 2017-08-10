@@ -15,7 +15,8 @@ import stat
 def make_read_only(path):
     for root, _, files in os.walk(path):
         for f in files:
-            os.chmod(os.path.join(root, f), stat.S_IREAD)
+            mode = os.stat(f).st_mode
+            os.chmod(os.path.join(root, f), mode & ~ stat.S_IWRITE)
 
 
 def decode_text(text):

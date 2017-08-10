@@ -67,7 +67,8 @@ def run_imports(conanfile, dest_folder, output):
             file_dict[f] = md5sum(abs_path)
         if get_env("CONAN_READ_ONLY_CACHE", False):
             for f in copied_files:
-                os.chmod(f, stat.S_IWRITE)
+                mode = os.stat(f).st_mode
+                os.chmod(f, mode | stat.S_IWRITE)
         manifest = FileTreeManifest(date, file_dict)
         save(os.path.join(dest_folder, IMPORTS_MANIFESTS), str(manifest))
     return copied_files

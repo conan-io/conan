@@ -8,8 +8,8 @@ from conans.model.ref import ConanFileReference, PackageReference
 class ReadOnlyTest(unittest.TestCase):
 
     def setUp(self):
-        test_server = TestServer()
-        client = TestClient(servers={"default": test_server},
+        self.test_server = TestServer()
+        client = TestClient(servers={"default": self.test_server},
                             users={"default": [("lasote", "mypass")]})
         client.run("--version")
         conf_path = client.client_cache.conan_conf_path
@@ -47,3 +47,16 @@ class MyPkg(ConanFile):
         self.client.run("remove Pkg* -f")
         self.client.run("install Pkg/0.1@lasote/channel")
         self.basic_test()
+
+    def upload_change_test(self):
+        self.client.run("upload * --all --confirm")
+        client = TestClient(servers={"default": self.test_server},
+                            users={"default": [("lasote", "mypass")]})
+        client.run("install Pkg/0.1@lasote/channel")
+        ref = PackageReference(ConanFileReference.loads("Pkg/0.1@lasote/channel"),
+                               "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        path = os.path.join(client.client_cache.package(ref), "myheader.h")
+        with self.assertRaises(IOError):
+            save(path, "Bye World")
+        os.chmod(path, 0o777)
+        save(path, "Bye World")
