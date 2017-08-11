@@ -584,9 +584,9 @@ class ConanAPIV1(object):
         return registry.remove(remote)
 
     @api_method
-    def remote_update(self, remote, url, verify_ssl=True):
+    def remote_update(self, remote, url, verify_ssl=True, insert=None):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        return registry.update(remote, url, verify_ssl)
+        return registry.update(remote, url, verify_ssl, insert)
 
     @api_method
     def remote_list_ref(self):
