@@ -33,7 +33,7 @@ class ProfileTest(unittest.TestCase):
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
         self.assertIn("    os: Windows", client.user_io.out)
-        self.assertIn("    MyOption: 32", client.user_io.out)
+        self.assertIn("    MyOption=32", client.user_io.out)
         client.run("profile show profile2")
         self.assertIn("    test=True", client.user_io.out)
         client.run("profile show profile3")
