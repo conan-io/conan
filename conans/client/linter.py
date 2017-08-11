@@ -85,7 +85,7 @@ def _normal_linter(conanfile_path):
 
     output_json = _runner(args)
 
-    dynamic_fields = "source_folder", "build_folder", "info_build", "build_requires"
+    dynamic_fields = "source_folder", "build_folder", "info_build", "build_requires", "info"
 
     def _accept_message(msg):
         symbol = msg.get("symbol")

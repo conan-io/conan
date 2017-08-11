@@ -69,13 +69,18 @@ from conans import ConanFile
 class TestConan(ConanFile):
     name = "Hello"
     version = "1.2"
+
     def build(self):
         self.output.info(self.source_folder)
         self.output.info(self.package_folder)
         self.output.info(self.build_folder)
         self.output.info(self.conanfile_directory)
+
     def package(self):
         self.copy("*")
+
+    def package_id(self):
+        self.info.header_only()
 
     def build_id(self):
         self.output.info(str(self.info_build))
@@ -111,7 +116,6 @@ class BaseConan(ConanFile):
         client.save({CONANFILE: conanfile_base})
         client.run("export conan/stable")
         self.assertNotIn("Linter", client.user_io.out)
-
 
     def test_warning_as_errors(self):
         client = TestClient()
