@@ -858,11 +858,12 @@ class Command(object):
                 self._show_help()
                 return False
             method(args[0][1:])
-        except (KeyboardInterrupt, SystemExit) as exc:
+        except KeyboardInterrupt as exc:
             logger.error(exc)
             errors = True
-        except ExitWithCode as exc:
-            self._user_io.out.error("Exiting with user error code: %d" % exc.code)
+        except SystemExit as exc:
+            logger.error(exc)
+            self._user_io.out.error("Exiting with code: %d" % exc.code)
             errors = exc.code
         except ConanException as exc:
             errors = True
