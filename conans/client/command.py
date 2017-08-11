@@ -8,7 +8,7 @@ from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 
-from conans.errors import ConanException
+from conans.errors import ConanException, ExitWithCode
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.util.config_parser import get_bool_from_text
@@ -861,6 +861,9 @@ class Command(object):
         except (KeyboardInterrupt, SystemExit) as exc:
             logger.error(exc)
             errors = True
+        except ExitWithCode as exc:
+            self._user_io.out.error("Exiting with user error code: %d" % exc.code)
+            errors = exc.code
         except ConanException as exc:
             errors = True
             msg = exception_message_safe(exc)

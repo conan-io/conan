@@ -21,6 +21,8 @@ def conanfile_exception_formatter(conanfile_name, func_name):
     """
     try:
         yield
+    except ExitWithCode:
+        raise
     except Exception as exc:
         msg = _format_conanfile_exception(conanfile_name, func_name, exc)
         raise ConanExceptionInUserConanfileMethod(msg)
@@ -53,6 +55,13 @@ class ConanException(Exception):
          Generic conans exception
     """
     pass
+
+
+class ExitWithCode(ConanException):
+
+    def __init__(self, code):
+        self.code = code
+        super(ExitWithCode, self).__init__(code)
 
 
 class InvalidNameException(ConanException):
