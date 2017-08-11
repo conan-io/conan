@@ -186,8 +186,7 @@ class RemoteRegistry(object):
                     insert_index = int(insert)
                 except:
                     raise ConanException("insert argument must be an integer")
-                if remote_name in remotes:  # It's an update
-                    del remotes[remote_name]
+                remotes.pop(remote_name, None)  # Remove if exists (update)
                 remotes_list = list(remotes.items())
                 remotes_list.insert(insert_index, (remote_name, (remote, verify_ssl)))
                 remotes = OrderedDict(remotes_list)
