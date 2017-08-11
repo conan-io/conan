@@ -610,6 +610,10 @@ class Command(object):
 
         try:
             reference = ConanFileReference.loads(args.pattern)
+            if "*" in reference:
+                # Fixes a version with only a wilcard (valid reference) but not real reference
+                # e.j: conan search lib/*@lasote/stable
+                reference = None
         except:
             reference = None
 
