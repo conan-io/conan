@@ -754,9 +754,9 @@ class Command(object):
         parser_update.add_argument('item', help='key="value to set", e.j: settings.compiler=gcc')
         parser_update.add_argument('profile',  help='name of the profile')
 
-        parser_update = subparsers.add_parser('remove', help='Remove a profile key')
-        parser_update.add_argument('item', help='key", e.j: settings.compiler')
-        parser_update.add_argument('profile',  help='name of the profile')
+        parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
+        parser_remove.add_argument('item', help='key", e.j: settings.compiler')
+        parser_remove.add_argument('profile',  help='name of the profile')
 
         args = parser.parse_args(*args)
 

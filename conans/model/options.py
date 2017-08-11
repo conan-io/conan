@@ -191,9 +191,9 @@ class OptionsValues(object):
     def pop(self, item):
         return self._reqs_options.pop(item, None)
 
-    def remove(self, name, package):
+    def remove(self, name, package=None):
         if package:
-            del self._reqs_options[package]
+            self._reqs_options[package].remove(name)
         else:
             self._package_values.remove(name)
 

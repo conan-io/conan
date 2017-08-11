@@ -59,6 +59,9 @@ class ProfileTest(unittest.TestCase):
         client.run("profile update options.Package:MyOption=23 ./MyProfile")
         self.assertIn("Package:MyOption=23", load(pr_path))
 
+        client.run("profile update options.Package:OtherOption=23 ./MyProfile")
+        self.assertIn("Package:OtherOption=23", load(pr_path))
+
         client.run("profile update scopes.Package:OneScope=True ./MyProfile")
         self.assertIn("[scopes]\nPackage:OneScope=True", load(pr_path))
 
@@ -82,6 +85,7 @@ class ProfileTest(unittest.TestCase):
 
         client.run("profile remove options.Package:MyOption ./MyProfile")
         self.assertNotIn("Package:MyOption", load(pr_path))
+        self.assertIn("Package:OtherOption", load(pr_path))
 
         client.run("profile remove scopes.Package:OneScope ./MyProfile")
         self.assertNotIn("OneScope", load(pr_path))
