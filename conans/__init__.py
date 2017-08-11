@@ -9,7 +9,6 @@ from conans.client.configure_environment import ConfigureEnvironment
 from conans.client.configure_build_environment import (AutoToolsBuildEnvironment, VisualStudioBuildEnvironment)
 from conans.client.run_environment import RunEnvironment
 from conans.util.files import load
-from conans.errors import ExitWithCode
 import os
 
 # complex_search: With ORs and not filtering by not restricted settings

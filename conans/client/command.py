@@ -8,7 +8,7 @@ from conans.client.conan_api import (Conan, default_manifest_folder)
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.output import Color
 
-from conans.errors import ConanException, ExitWithCode
+from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.util.config_parser import get_bool_from_text
