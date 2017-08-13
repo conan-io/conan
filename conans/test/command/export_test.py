@@ -48,8 +48,10 @@ class TestConan(ConanFile):
                  "file1.txt": "",
                  "file2.txt": ""}
         client.save(files)
-        os.chmod(os.path.join(client.current_folder, "file1.txt"), stat.S_IREAD)
-        os.chmod(os.path.join(client.current_folder, "file2.txt"), stat.S_IREAD)
+        mode1 = os.stat(os.path.join(client.current_folder, "file1.txt")).st_mode
+        mode2 = os.stat(os.path.join(client.current_folder, "file2.txt")).st_mode
+        os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 &~ stat.S_IWRITE)
+        os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 &~ stat.S_IWRITE)
 
         client.run("export lasote/stable")
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
@@ -62,8 +64,8 @@ class TestConan(ConanFile):
         files = {CONANFILE: conanfile,
                  "file1.txt": "file1",
                  "file2.txt": "file2"}
-        os.chmod(os.path.join(client.current_folder, "file1.txt"), stat.S_IWRITE)
-        os.chmod(os.path.join(client.current_folder, "file2.txt"), stat.S_IWRITE)
+        os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 | stat.S_IWRITE)
+        os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 | stat.S_IWRITE)
         client.save(files)
         client.run("export lasote/stable")
 
@@ -76,8 +78,8 @@ class TestConan(ConanFile):
                  "file1.txt": "",
                  "file2.txt": ""}
         client.save(files)
-        os.chmod(os.path.join(client.current_folder, "file1.txt"), stat.S_IREAD)
-        os.chmod(os.path.join(client.current_folder, "file2.txt"), stat.S_IREAD)
+        os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 &~ stat.S_IWRITE)
+        os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 &~ stat.S_IWRITE)
         client.run("export lasote/stable")
         self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
         self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
