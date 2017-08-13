@@ -687,7 +687,7 @@ class AptTool(object):
 
 class YumTool(object):
     def update(self):
-        _run(self._runner, "%syum check-update" % self._sudo_str)
+        _run(self._runner, "%syum check-update" % self._sudo_str, accepted_returns=[0, 100])
 
     def install(self, package_name):
         _run(self._runner, "%syum install -y %s" % (self._sudo_str, package_name))
@@ -733,7 +733,8 @@ class PkgUtilTool(object):
         return exit_code == 0
 
 
-def _run(runner, command):
+def _run(runner, command, accepted_returns=None):
+    accepted_returns = accepted_returns or [0, ]
     _global_output.info("Running: %s" % command)
-    if runner(command, True) != 0:
+    if runner(command, True) not in accepted_returns:
         raise ConanException("Command '%s' failed" % command)

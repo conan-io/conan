@@ -110,6 +110,9 @@ class EnvValues(object):
                 else:
                     self._data[package][name].append(value)
 
+    def remove(self, name, package=None):
+        del self._data[package][name]
+
     def update(self, env_obj):
         """accepts other EnvValues object or DepsEnvInfo
            it prioritize the values that are already at self._data
