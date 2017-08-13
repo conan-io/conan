@@ -236,6 +236,15 @@ class HelloConan(ConanFile):
         spt.install("a_package", force=False)
         self.assertEquals(runner.command_called, "pkg info a_package")
 
+        os_info.is_solaris = True
+        os_info.is_freebsd = False
+
+        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt.update()
+        self.assertEquals(runner.command_called, "pkgutil --catalog")
+        spt.install("a_package", force=True)
+        self.assertEquals(runner.command_called, "pkgutil --install --yes a_package")
+
         del os.environ["CONAN_SYSREQUIRES_SUDO"]
 
     def system_package_tool_try_multiple_test(self):

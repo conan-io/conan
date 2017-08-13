@@ -621,6 +621,8 @@ class SystemPackageTool(object):
             return BrewTool()
         elif os_info.is_freebsd:
             return PkgTool()
+        elif os_info.is_solaris:
+            return PkgUtilTool()
         else:
             return NullTool()
 
@@ -665,7 +667,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg")
+        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
         return False
@@ -716,6 +718,18 @@ class PkgTool(object):
 
     def installed(self, package_name):
         exit_code = self._runner("pkg info %s" % package_name, None)
+        return exit_code == 0
+
+
+class PkgUtilTool(object):
+    def update(self):
+        _run(self._runner, "%spkgutil --catalog" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%spkgutil --install --yes %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner('test -n "`pkgutil --list %s`"' % package_name, None)
         return exit_code == 0
 
 
