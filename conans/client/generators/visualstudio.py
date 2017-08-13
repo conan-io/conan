@@ -10,7 +10,7 @@ class VisualStudioGenerator(Generator):
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Label="Conan-RootDirs">{item_properties}
   </PropertyGroup>
-  <PropertyGroup label="ConanVariables">
+  <PropertyGroup Label="ConanVariables">
     <ConanBinaryDirectories>{bin_dirs}</ConanBinaryDirectories>
     <ConanResourceDirectories>{res_dirs}</ConanResourceDirectories>
   </PropertyGroup>
