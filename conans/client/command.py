@@ -288,7 +288,7 @@ class Command(object):
             try:
                 key, value = args.item.split("=", 1)
             except:
-                self._raise_exception_printing("Please specify key=value")
+                raise ConanException("Please specify key=value")
             return self._conan.config_set(key, value)
         elif args.subcommand == "get":
             return self._conan.config_get(args.item)
@@ -368,10 +368,10 @@ class Command(object):
             if args.only == ["None"]:
                 only = []
             if only and args.paths and (set(only) - set(path_only_options)):
-                self._raise_exception_printing("Invalid --only value '%s' with --path specified, allowed values: [%s]."
+                raise ConanException("Invalid --only value '%s' with --path specified, allowed values: [%s]."
                                                % (only, str_path_only_options))
             elif only and not args.paths and (set(only) - set(info_only_options)):
-                self._raise_exception_printing("Invalid --only value '%s', allowed values: [%s].\n"
+                raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
                                                "Use --only=None to show only the references." %
                                                (only, str_only_options))
 
@@ -507,10 +507,12 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.remove.__doc__, prog="conan remove")
         parser.add_argument('pattern', help='Pattern name, e.g., openssl/*')
         parser.add_argument('-p', '--packages',
-                            help='By default, remove all the packages or select one, specifying the package ID',
+                            help='By default, remove all the packages or select one, '
+                                 'specifying the package ID',
                             nargs="*", action=Extender)
         parser.add_argument('-b', '--builds',
-                            help='By default, remove all the build folders or select one, specifying the package ID',
+                            help='By default, remove all the build folders or select one, '
+                                 'specifying the package ID',
                             nargs="*", action=Extender)
 
         parser.add_argument('-s', '--src', default=False, action="store_true",
@@ -530,10 +532,10 @@ class Command(object):
         reference = self._check_query_parameter_and_get_reference(args.pattern, args.query)
 
         if args.packages is not None and args.query:
-            self._raise_exception_printing("'-q' and '-p' parameters can't be used at the same time")
+            raise ConanException("'-q' and '-p' parameters can't be used at the same time")
 
         if args.builds is not None and args.query:
-            self._raise_exception_printing("'-q' and '-b' parameters can't be used at the same time")
+            raise ConanException("'-q' and '-b' parameters can't be used at the same time")
 
         return self._conan.remove(pattern=reference or args.pattern, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
@@ -626,8 +628,8 @@ class Command(object):
                                                  packages_query, args.table)
         else:
             if args.table:
-                self._raise_exception_printing("'--table' argument can only be used with a "
-                                               "reference in the 'pattern' argument")
+                raise ConanException("'--table' argument can only be used with a "
+                                     "reference in the 'pattern' argument")
 
             refs = self._conan.search_recipes(args.pattern, remote=args.remote,
                                               case_sensitive=args.case_sensitive)
@@ -709,10 +711,8 @@ class Command(object):
 
         reference = args.reference if hasattr(args, 'reference') else None
 
-        try:
-            verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
-        except ConanException as exc:
-            self._raise_exception_printing(str(exc))
+        verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
+
 
         remote = args.remote if hasattr(args, 'remote') else None
         url = args.url if hasattr(args, 'url') else None
@@ -751,6 +751,21 @@ class Command(object):
                                                          ' Can be a path (relative or absolute) to'
                                                          ' a profile file in  any location.')
         parser_show.add_argument('profile',  help='name of the profile')
+
+        parser_new = subparsers.add_parser('new', help='Creates a new empty profile')
+        parser_new.add_argument('profile',  help='name of the profile')
+        parser_new.add_argument("--detect", action='store_true',
+                                default=False,
+                                help='Autodetect settings and fill [settings] section')
+
+        parser_update = subparsers.add_parser('update', help='Update a profile')
+        parser_update.add_argument('item', help='key="value to set", e.j: settings.compiler=gcc')
+        parser_update.add_argument('profile',  help='name of the profile')
+
+        parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
+        parser_remove.add_argument('item', help='key", e.j: settings.compiler')
+        parser_remove.add_argument('profile',  help='name of the profile')
+
         args = parser.parse_args(*args)
 
         profile = args.profile if hasattr(args, 'profile') else None
@@ -761,6 +776,16 @@ class Command(object):
         elif args.subcommand == "show":
             profile_text = self._conan.read_profile(profile)
             self._outputer.print_profile(profile, profile_text)
+        elif args.subcommand == "new":
+            self._conan.create_profile(profile, args.detect)
+        elif args.subcommand == "update":
+            try:
+                key, value = args.item.split("=", 1)
+            except:
+                raise ConanException("Please specify key=value")
+            self._conan.update_profile(profile, key, value)
+        elif args.subcommand == "remove":
+            self._conan.delete_profile_key(profile, args.item)
 
         return
 
@@ -833,12 +858,8 @@ class Command(object):
                 if query is not None:
                     msg = "-q parameter only allowed with a valid recipe reference as search pattern. e.j conan search " \
                           "MyPackage/1.2@user/channel -q \"os=Windows\""
-                    self._raise_exception_printing(msg)
+                    raise ConanException(msg)
         return reference
-
-    def _raise_exception_printing(self, msg):
-        self._user_io.out.error(msg)
-        raise ConanException(msg)
 
     def run(self, *args):
         """HIDDEN: entry point for executing commands, dispatcher to class
