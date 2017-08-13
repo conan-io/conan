@@ -952,7 +952,11 @@ def main(args):
     """ main entry point of the conan application, using a Command to
     parse parameters
     """
-    conan_api = Conan.factory()
+    try:
+        conan_api = Conan.factory()
+    except ConanException:  # Error migrating
+        sys.exit(-1)
+
     outputer = CommandOutputer(conan_api._user_io, conan_api._client_cache)
     command = Command(conan_api, conan_api._client_cache, conan_api._user_io, outputer)
     current_dir = os.getcwd()
