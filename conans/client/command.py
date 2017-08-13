@@ -688,6 +688,9 @@ class Command(object):
         parser_upd.add_argument('url',  help='url')
         parser_upd.add_argument('verify_ssl',  help='Verify SSL certificated. Default True',
                                 default="True", nargs="?")
+        parser_upd.add_argument("-i", "--insert", nargs="?", const=0, type=int,
+                                help="insert remote at specific index")
+
         subparsers.add_parser('list_ref',
                               help='list the package recipes and its associated remotes')
         parser_padd = subparsers.add_parser('add_ref',
@@ -721,7 +724,7 @@ class Command(object):
         elif args.subcommand == "remove":
             return self._conan.remote_remove(remote)
         elif args.subcommand == "update":
-            return self._conan.remote_update(remote, url, verify_ssl)
+            return self._conan.remote_update(remote, url, verify_ssl, args.insert)
         elif args.subcommand == "list_ref":
             refs = self._conan.remote_list_ref()
             self._outputer.remote_ref_list(refs)
