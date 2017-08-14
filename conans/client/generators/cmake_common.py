@@ -51,6 +51,15 @@ def cmake_package_info(name, version):
     return _cmake_package_info.format(name=name, version=version)
 
 
+def cmake_settings_info(settings):
+    settings_info = ""
+    for item in settings.items():
+        key, value = item
+        name = "CONAN_SETTINGS_%s" % key.upper().replace(".", "_")
+        settings_info += "set({key} \"{value}\")\n".format(key=name, value=value)
+    return settings_info
+
+
 def cmake_dependencies(dependencies, build_type=""):
     build_type = _build_type_str(build_type)
     dependencies = " ".join(dependencies)

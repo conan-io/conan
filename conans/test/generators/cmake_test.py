@@ -8,6 +8,8 @@ from conans.model.conan_file import ConanFile
 from conans.client.generators.cmake import CMakeGenerator
 from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
+from conans.client.conf import default_settings_yml
+
 
 
 class CMakeGeneratorTest(unittest.TestCase):
@@ -125,3 +127,33 @@ endmacro()""", macro)
         set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE})
     endif()
 endmacro()""", macro)
+
+    def name_and_version_are_generated_test(self):
+        conanfile = ConanFile(None, None, Settings({}), None)
+        conanfile.name = "MyPkg"
+        conanfile.version = "1.1.0"
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        cmake_lines = content.splitlines()
+        self.assertIn('set(CONAN_PACKAGE_NAME MyPkg)', cmake_lines)
+        self.assertIn('set(CONAN_PACKAGE_VERSION 1.1.0)', cmake_lines)
+
+    def settings_are_generated_tests(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.compiler.runtime = "MD"
+        settings.arch = "x86"
+        settings.build_type = "Debug"
+        conanfile = ConanFile(None, None, Settings({}), None)
+        conanfile.settings = settings
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        cmake_lines = content.splitlines()
+        self.assertIn('set(CONAN_SETTINGS_BUILD_TYPE "Debug")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_ARCH "x86")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_COMPILER "Visual Studio")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_COMPILER_VERSION "12")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_COMPILER_RUNTIME "MD")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_OS "Windows")', cmake_lines)
