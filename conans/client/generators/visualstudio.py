@@ -10,8 +10,9 @@ class VisualStudioGenerator(Generator):
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Label="Conan-RootDirs">{item_properties}
   </PropertyGroup>
-  <PropertyGroup>
-    <ExecutablePath>{bin_dirs}$(ExecutablePath)</ExecutablePath>
+  <PropertyGroup Label="ConanVariables">
+    <ConanBinaryDirectories>{bin_dirs}</ConanBinaryDirectories>
+    <ConanResourceDirectories>{res_dirs}</ConanResourceDirectories>
   </PropertyGroup>
   <PropertyGroup>
     <LocalDebuggerEnvironment>PATH=%PATH%;{bin_dirs}</LocalDebuggerEnvironment>
@@ -56,6 +57,7 @@ class VisualStudioGenerator(Generator):
         fields = {
             'item_properties': per_item_props,
             'bin_dirs': "".join("%s;" % p for p in self._deps_build_info.bin_paths).replace("\\", "/"),
+            'res_dirs': "".join("%s;" % p for p in self._deps_build_info.res_paths).replace("\\", "/"),
             'include_dirs': "".join("%s;" % p for p in self._deps_build_info.include_paths).replace("\\", "/"),
             'lib_dirs': "".join("%s;" % p for p in self._deps_build_info.lib_paths).replace("\\", "/"),
             'libs': "".join(['%s.lib;' % lib if not lib.endswith(".lib")
