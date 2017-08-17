@@ -270,9 +270,8 @@ class ConanAPIV1(object):
         if not name or not version:
             conanfile_path = os.path.join(cwd, "conanfile.py")
             conanfile = load_conanfile_class(conanfile_path)
-            try:
-                name, version = conanfile.name, conanfile.version
-            except:
+            name, version = conanfile.name, conanfile.version
+            if not name or not version:
                 raise ConanException("conanfile.py doesn't declare package name or version")
 
         reference = ConanFileReference(name, version, user, channel)
@@ -514,10 +513,12 @@ class ConanAPIV1(object):
             self._manager.imports(current_path, reference, filename, dest)
 
     @api_method
-    def export(self, user, channel, path=None, keep_source=False, filename=None, cwd=None):
+    def export(self, user, channel, path=None, keep_source=False, filename=None, cwd=None,
+               name=None, version=None):
         cwd = prepare_cwd(cwd)
         current_path = os.path.abspath(path or cwd)
-        self._manager.export(user, channel, current_path, keep_source, filename=filename)
+        self._manager.export(user, channel, current_path, keep_source, filename=filename, name=name,
+                             version=version)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,

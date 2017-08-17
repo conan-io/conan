@@ -34,6 +34,15 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
+        # Create with only user will raise an error because of no name/version
+        error = client.run("create lasote/testing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("conanfile.py doesn't declare package name or version", client.out)
+        # Same with only user, (default testing)
+        error = client.run("create lasote", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("conanfile.py doesn't declare package name or version", client.out)
+
     def test_error_create_name_version(self):
         client = TestClient()
         conanfile = """
@@ -58,7 +67,12 @@ class MyPkg(ConanFile):
     name = "Pkg"
     version = "0.1"
 """})
-        client.run("create lasote/testing")
+        client.run("create lasote/channel")
+        self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
+        client.run("search")
+        self.assertIn("Pkg/0.1@lasote/channel", client.out)
+
+        client.run("create lasote")  # testing default
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
