@@ -98,6 +98,8 @@ set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
                                         deps=deps, build_type=_build_type_str(build_type))
 
 _target_template = """
+    if(NOT TARGET {name})
+
     conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
                                   CONAN_FULLPATH_LIBS_{uname})
     conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
@@ -129,6 +131,8 @@ _target_template = """
                                                                   $<$<CONFIG:RelWithDebInfo>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
                                                                   $<$<CONFIG:MinSizeRel>:${{CONAN_C_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_CXX_FLAGS_{uname}_RELEASE_LIST}}>
                                                                   $<$<CONFIG:Debug>:${{CONAN_C_FLAGS_{uname}_DEBUG_LIST}}  ${{CONAN_CXX_FLAGS_{uname}_DEBUG_LIST}}>)
+
+    endif()
  """
 
 
