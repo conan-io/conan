@@ -79,9 +79,10 @@ class ExporterTest(unittest.TestCase):
 
         shutil.copytree(reg_folder, build_folder)
 
-        loader = ConanFileLoader(None, Settings(), Profile())
-        conanfile = loader.load_conan(conanfile_path, None)
         output = ScopedOutput("", TestBufferConanOutput())
+        loader = ConanFileLoader(None, Settings(), Profile(), output)
+        conanfile = loader.load_conan(conanfile_path, None)
+
         create_package(conanfile, build_folder, build_folder, package_folder, output)
 
         # test build folder

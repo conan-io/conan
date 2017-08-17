@@ -103,7 +103,7 @@ class ConanManager(object):
                                   manifest_manager=None)
 
         loader = ConanFileLoader(self._runner, self._client_cache.settings,
-                                 self._profile_with_defaults(profile))
+                                 self._profile_with_defaults(profile), self._user_io.out)
         conanfile = loader.load_virtual([reference], current_path)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
@@ -185,7 +185,8 @@ class ConanManager(object):
         return graph_builder
 
     def _get_deps_graph(self, reference, profile, filename, current_path, remote_proxy):
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, self._profile_with_defaults(profile))
+        loader = ConanFileLoader(self._runner, self._client_cache.settings,
+                                 self._profile_with_defaults(profile), self._user_io.out)
         conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
@@ -267,7 +268,8 @@ class ConanManager(object):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=update, check_updates=False, manifest_manager=manifest_manager)
 
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, self._profile_with_defaults(profile))
+        loader = ConanFileLoader(self._runner, self._client_cache.settings,
+                                 self._profile_with_defaults(profile), self._user_io.out)
         conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
         if inject_require:
             self._inject_require(conanfile, inject_require)

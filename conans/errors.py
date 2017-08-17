@@ -55,6 +55,11 @@ class ConanException(Exception):
     pass
 
 
+class InvalidConanSettingField(ConanException):
+    """Access to a non declared in settings.yml setting"""
+    pass
+
+
 class InvalidNameException(ConanException):
     pass
 

@@ -151,7 +151,7 @@ class VersionRangesTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
+        self.loader = ConanFileLoader(None, Settings.loads(""), Profile(), self.output)
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
         self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)

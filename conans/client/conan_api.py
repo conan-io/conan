@@ -203,7 +203,7 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
 
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile, self._user_io.out)
         test_conanfile = loader.load_conan(test_conanfile_path, self._user_io.out, consumer=True)
 
         try:

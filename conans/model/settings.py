@@ -1,4 +1,4 @@
-from conans.errors import ConanException
+from conans.errors import ConanException, InvalidConanSettingField
 import yaml
 from conans.model.values import Values
 
@@ -6,7 +6,8 @@ from conans.model.values import Values
 def bad_value_msg(name, value, value_range):
     tip = ""
     if "settings" in name:
-        tip = '\nRead "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-invalid-setting"'
+        tip = '\nRead "http://docs.conan.io/en/latest/faq/troubleshooting.html' \
+              '#error-invalid-setting"'
 
     return ("Invalid setting '%s' is not a valid '%s' value.\nPossible values are %s%s"
             % (value, name, value_range, tip))
@@ -14,13 +15,13 @@ def bad_value_msg(name, value, value_range):
 
 def undefined_field(name, field, fields=None, value=None):
     value_str = " for '%s'" % value if value else ""
-    result = ["'%s.%s' doesn't exist%s" % (name, field, value_str)]
-    result.append("'%s' possible configurations are %s" % (name, fields or "none"))
-    return "\n".join(result)
+    result = ["'%s.%s' doesn't exist%s" % (name, field, value_str),
+              "'%s' possible configurations are %s" % (name, fields or "none")]
+    return InvalidConanSettingField("\n".join(result))
 
 
 def undefined_value(name):
-    return "'%s' value not defined" % name
+    return ConanException("'%s' value not defined" % name)
 
 
 class SettingsItem(object):
@@ -100,9 +101,9 @@ class SettingsItem(object):
 
     def _get_child(self, item):
         if not isinstance(self._definition, dict):
-            raise ConanException(undefined_field(self._name, item, None, self._value))
+            raise undefined_field(self._name, item, None, self._value)
         if self._value is None:
-            raise ConanException(undefined_value(self._name))
+            raise undefined_value(self._name)
         return self._definition[self._value]
 
     def __getattr__(self, item):
@@ -157,7 +158,7 @@ class SettingsItem(object):
 
     def validate(self):
         if self._value is None and "None" not in self._definition:
-            raise ConanException(undefined_value(self._name))
+            raise undefined_value(self._name)
 
         if isinstance(self._definition, dict):
             self._definition[self._value].validate()
@@ -215,8 +216,7 @@ class Settings(object):
 
     def _check_field(self, field):
         if field not in self._data:
-            raise ConanException(undefined_field(self._name, field, self.fields,
-                                                 self._parent_value))
+            raise undefined_field(self._name, field, self.fields, self._parent_value)
 
     def __getattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
@@ -310,7 +310,7 @@ class Settings(object):
         # Sanity check for input constraint wrong fields
         for field in constraint_def:
             if field not in self._data:
-                raise ConanException(undefined_field(self._name, field, self.fields))
+                raise undefined_field(self._name, field, self.fields)
 
         # remove settings not defined in the constraint
         self.remove(fields_to_remove)

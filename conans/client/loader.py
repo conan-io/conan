@@ -3,6 +3,7 @@ import os
 from conans.client.generators.text import TXTGenerator
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
 from conans.client.profile_loader import read_conaninfo_profile
+from conans.client.settings_preprocessor import preprocess
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
 from conans.model.options import OptionsValues
@@ -49,7 +50,7 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
     if not profile:
         raise ConanException("Execute 'conan install -g txt' first.")
 
-    loader = ConanFileLoader(runner, settings, profile)
+    loader = ConanFileLoader(runner, settings, profile, output)
     if conanfile_path.endswith(".py"):
         consumer = not reference
         conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
@@ -61,7 +62,7 @@ def load_consumer_conanfile(conanfile_path, current_path, settings, runner, outp
 
 
 class ConanFileLoader(object):
-    def __init__(self, runner, settings, profile):
+    def __init__(self, runner, settings, profile, output):
         """
         @param settings: Settings object, to assign to ConanFile at load time
         @param options: OptionsValues, necessary so the base conanfile loads the options
@@ -70,8 +71,11 @@ class ConanFileLoader(object):
         @param cached_env_values: EnvValues object
         """
         self._runner = runner
+
+        assert isinstance(settings, Settings)
         settings.values = profile.settings_values
-        assert settings is None or isinstance(settings, Settings)
+        preprocess(settings, output)
+
         # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
         self._user_options = profile.options.copy()
@@ -80,7 +84,7 @@ class ConanFileLoader(object):
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
 
-    def load_conan(self, conanfile_path, output, consumer=False, reference=None):
+    def load_conan(self, conanfile_path, scoped_output, consumer=False, reference=None):
         """ loads a ConanFile object from the given file
         """
         result = load_conanfile_class(conanfile_path)
@@ -101,7 +105,7 @@ class ConanFileLoader(object):
                 user, channel = None, None
 
             # Instance the conanfile
-            result = result(output, self._runner, tmp_settings,
+            result = result(scoped_output, self._runner, tmp_settings,
                             os.path.dirname(conanfile_path), user, channel)
 
             # Assign environment
@@ -120,18 +124,18 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conan_txt(self, conan_txt_path, output):
+    def load_conan_txt(self, conan_txt_path, scoped_output):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
         contents = load(conan_txt_path)
         path = os.path.dirname(conan_txt_path)
 
-        conanfile = self._parse_conan_txt(contents, path, output)
+        conanfile = self._parse_conan_txt(contents, path, scoped_output)
         return conanfile
 
-    def _parse_conan_txt(self, contents, path, output):
-        conanfile = ConanFile(output, self._runner, Settings(), path)
+    def _parse_conan_txt(self, contents, path, scoped_output):
+        conanfile = ConanFile(scoped_output, self._runner, Settings(), path)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
