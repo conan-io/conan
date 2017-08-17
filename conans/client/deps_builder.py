@@ -360,8 +360,11 @@ class DepsGraphBuilder(object):
                                            previous_node.conan_ref, previous_node.conan_ref))
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
-                self._load_deps(previous_node, new_reqs, dep_graph, public_deps, conanref,
-                                new_options, new_loop_ancestors)
+                # self._load_deps(previous_node, new_reqs, dep_graph, public_deps, conanref,
+                #                new_options, new_loop_ancestors)
+                node_conanref, node_conanfile = previous_node
+                self._config_node(node_conanfile, node_conanref, new_reqs, conanref, new_options)
+                self._resolve_deps(node_conanref, node_conanfile)
 
     def _config_node(self, conanfile, conanref, down_reqs, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual
