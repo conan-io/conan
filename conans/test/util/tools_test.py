@@ -125,7 +125,7 @@ class HelloConan(ConanFile):
         runner = RunnerMock(return_ok=False)
         spt = SystemPackageTool(runner=runner)
         platforms = {"Linux": "sudo apt-get update", "Darwin": "brew update", "Windows": "choco outdated"}
-        if platform.system() in platforms.keys():
+        if platform.system() in platforms:
             msg = "Command '%s' failed" % platforms[platform.system()]
             with self.assertRaisesRegexp(ConanException, msg):
                 spt.update()
