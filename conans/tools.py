@@ -623,6 +623,8 @@ class SystemPackageTool(object):
             return PkgTool()
         elif os_info.is_solaris:
             return PkgUtilTool()
+        elif os_info.is_windows:
+            return ChocolateyTool()
         else:
             return NullTool()
 
@@ -730,6 +732,17 @@ class PkgUtilTool(object):
 
     def installed(self, package_name):
         exit_code = self._runner('test -n "`pkgutil --list %s`"' % package_name, None)
+        return exit_code == 0
+
+class ChocolateyTool(object):
+    def update(self):
+        _run(self._runner, "choco outdated")
+
+    def install(self, package_name):
+        _run(self._runner, "choco install --yes %s" % package_name)
+
+    def installed(self, package_name):
+        exit_code = self._runner('choco search --local-only --exact %s | findstr /c:"1 packages installed."' % package_name, None)
         return exit_code == 0
 
 
