@@ -41,7 +41,8 @@ class MyPkg(ConanFile):
         # Same with only user, (default testing)
         error = client.run("create lasote", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("conanfile.py doesn't declare package name or version", client.out)
+        self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
+                      client.out)
 
     def test_error_create_name_version(self):
         client = TestClient()
@@ -72,10 +73,10 @@ class MyPkg(ConanFile):
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
-        client.run("create lasote")  # testing default
-        self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
-        client.run("search")
-        self.assertIn("Pkg/0.1@lasote/testing", client.out)
+        error = client.run("create lasote", ignore_error=True)  # testing default
+        self.assertTrue(error)
+        self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
+                      client.out)
 
     def create_test_package_test(self):
         client = TestClient()

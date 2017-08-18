@@ -8,7 +8,6 @@ from conans.model.manifest import FileTreeManifest
 from conans.test.utils.tools import TestClient
 import platform
 import stat
-from conans.errors import ConanException
 
 
 class ExportSettingsTest(unittest.TestCase):
@@ -29,6 +28,42 @@ class TestConan(ConanFile):
         client.run("install Hello/1.2@lasote/stable -s os=Windows", ignore_error=True)
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
+
+    def export_without_full_reference_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    pass
+"""})
+        error = client.run("export lasote/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("conanfile didn't specify name", client.out)
+
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name="Lib"
+"""})
+        error = client.run("export lasote/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("conanfile didn't specify version", client.out)
+
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    pass
+"""})
+        client.run("export lib/1.0@lasote/channel")
+        self.assertIn("lib/1.0@lasote/channel: A new conanfile.py version was exported",
+                      client.out)
+
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name="Lib"
+    version="1.0"
+"""})
+        error = client.run("export lasote", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
+                      client.out)
 
     def test_export_read_only(self):
         client = TestClient()

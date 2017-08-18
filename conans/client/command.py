@@ -168,8 +168,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.create.__doc__,
                                          prog="conan create")
         parser.add_argument("reference", help='a full package reference Pkg/version@user/channel, '
-                            'or just the user/channel if package and version are defined in recipe.'
-                            'Also accepts specify only the username, "testing" channel by default.')
+                            'or just the user/channel if package and version are defined in recipe')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
         parser.add_argument("-tf", "--test_folder",
@@ -478,8 +477,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
         parser.add_argument("reference", help='a full package reference Pkg/version@user/channel, '
-                            'or just the user/channel if package and version are defined in recipe.'
-                            'Also accepts specify only the username, "testing" channel by default.')
+                            'or just the user/channel if package and version are defined in recipe')
         parser.add_argument('--path', '-p', default=None,
                             help='Optional. Folder with a %s. Default current directory.'
                             % CONANFILE)
@@ -901,21 +899,20 @@ class Command(object):
 
 def get_reference_fields(arg_reference):
     """
-    :param arg_reference: String with a complete reference, or only user/channel, or only user
-                          (channel testing became default)
+    :param arg_reference: String with a complete reference, or only user/channel
     :return: name, version, user and channel, in a tuple
     """
     try:
-       name_version, user_channel = arg_reference.split("@")
-       name, version = name_version.split("/")
-       user, channel = user_channel.split("/")
-    except:
-       name, version = None, None
-       try:
+        name_version, user_channel = arg_reference.split("@")
+        name, version = name_version.split("/")
+        user, channel = user_channel.split("/")
+    except ValueError:
+        name, version = None, None
+        try:
             user, channel = arg_reference.split("/")
-       except:
-            user = arg_reference
-            channel = "testing"
+        except:
+            raise ConanException("Invalid parameter '%s', specify the full reference or "
+                                 "user/channel" % arg_reference)
 
     return name, version, user, channel
 
