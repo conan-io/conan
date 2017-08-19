@@ -183,13 +183,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-        try:
-            name_version, user_channel = args.reference.split("@")
-            name, version = name_version.split("/")
-            user, channel = user_channel.split("/")
-        except:
-            name, version = None, None
-            user, channel = args.reference.split("/")
+        name, version, user, channel = get_reference_fields(args.reference)
 
         return self._conan.create(args.profile, args.settings, args.options,
                                   args.env, args.scope, args.test_folder, args.not_export,
@@ -482,8 +476,8 @@ class Command(object):
         Also, from the local cache, it can be uploaded to any remote with the "upload" command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
-        parser.add_argument("user_channel", help='user_name[/channel]. By default, channel is '
-                                                 '"testing", e.g., phil or phil/stable')
+        parser.add_argument("reference", help='a full package reference Pkg/version@user/channel, '
+                            'or just the user/channel if package and version are defined in recipe')
         parser.add_argument('--path', '-p', default=None,
                             help='Optional. Folder with a %s. Default current directory.'
                             % CONANFILE)
@@ -492,12 +486,11 @@ class Command(object):
                                  'Use for testing purposes only')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         args = parser.parse_args(*args)
-        try:
-            user, channel = args.user_channel.split("/")
-        except:
-            user, channel = args.user_channel, "testing"
+        name, version, user, channel = get_reference_fields(args.reference)
+
         return self._conan.export(user=user, channel=channel, path=args.path,
-                                  keep_source=args.keep_source, filename=args.file)
+                                  keep_source=args.keep_source, filename=args.file,
+                                  name=name, version=version)
 
     def remove(self, *args):
         """Remove any package recipe or binary matching a pattern.
@@ -902,6 +895,26 @@ class Command(object):
             self._user_io.out.error(msg)
 
         return errors
+
+
+def get_reference_fields(arg_reference):
+    """
+    :param arg_reference: String with a complete reference, or only user/channel
+    :return: name, version, user and channel, in a tuple
+    """
+    try:
+        name_version, user_channel = arg_reference.split("@")
+        name, version = name_version.split("/")
+        user, channel = user_channel.split("/")
+    except ValueError:
+        name, version = None, None
+        try:
+            user, channel = arg_reference.split("/")
+        except:
+            raise ConanException("Invalid parameter '%s', specify the full reference or "
+                                 "user/channel" % arg_reference)
+
+    return name, version, user, channel
 
 
 def _add_manifests_arguments(parser):
