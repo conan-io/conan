@@ -16,7 +16,6 @@ from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
 from conans.model.values import Values
 from conans.test.utils.test_files import temp_folder
-from conans.model.scope import Scopes
 from conans.model.profile import Profile
 
 
@@ -128,7 +127,7 @@ class ConanRequirementsTest(unittest.TestCase):
 
     def setUp(self):
         self.output = TestBufferConanOutput()
-        self.loader = ConanFileLoader(None, Settings.loads(""), Profile(), self.output)
+        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
                                         MockRequireResolver())
@@ -1499,7 +1498,7 @@ class CoreSettingsTest(unittest.TestCase):
         full_settings.values = Values.loads(settings)
         profile = Profile()
         profile.options = OptionsValues.loads(options)
-        loader = ConanFileLoader(None, full_settings, profile, self.output)
+        loader = ConanFileLoader(None, full_settings, profile)
         retriever = Retriever(loader, self.output)
         builder = DepsGraphBuilder(retriever, self.output, loader, MockRequireResolver())
         root_conan = retriever.root(content)
@@ -1782,7 +1781,7 @@ class ChatConan(ConanFile):
         profile.options = OptionsValues.loads("Say:myoption_say=123\n"
                                               "Hello:myoption_hello=True\n"
                                               "myoption_chat=on")
-        loader = ConanFileLoader(None, Settings.loads(""), profile, self.output)
+        loader = ConanFileLoader(None, Settings.loads(""), profile)
         retriever = Retriever(loader, output)
         builder = DepsGraphBuilder(retriever, output, loader, MockRequireResolver())
         retriever.conan(say_ref, say_content)

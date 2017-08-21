@@ -3,12 +3,10 @@ import os
 from conans.util.files import save, load
 from conans.client.loader import ConanFileLoader
 from conans.model.settings import Settings
-from conans.model.options import OptionsValues
 from conans.test.utils.test_files import temp_folder
-from conans.model.scope import Scopes
 from conans import tools
 from nose_parameterized.parameterized import parameterized
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient
 from conans.model.profile import Profile
 
 
@@ -120,7 +118,7 @@ class ConanfileToolsTest(unittest.TestCase):
         return tmp_dir, file_path, text_file
 
     def _build_and_check(self, tmp_dir, file_path, text_file, msg):
-        loader = ConanFileLoader(None, Settings(), Profile(), TestBufferConanOutput())
+        loader = ConanFileLoader(None, Settings(), Profile())
         ret = loader.load_conan(file_path, None)
         curdir = os.path.abspath(os.curdir)
         os.chdir(tmp_dir)
