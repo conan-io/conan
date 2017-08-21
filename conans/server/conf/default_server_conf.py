@@ -31,8 +31,11 @@ updown_secret: {updown_secret}
 [write_permissions]
 
 #
-# name,version,user,channel: user1, user2, user3
-# The rules are applied in order. If a rule applies to a conan, system wont look further.
+# name/version@user/channel: user1, user2, user3
+#
+# The rules are applied in order. 
+# If a rule matches your package, then the server wont look further.
+# Place your more restrictive rules first.
 #
 # Example: All versions of opencv package from lasote user in testing channel is only
 # writeable by default_user and default_user2. Rest of packages are not writtable by anything
@@ -44,7 +47,7 @@ updown_secret: {updown_secret}
 [read_permissions]
 
 #
-# name,version,user,channel: user1, user2, user3
+# name/version@user/channel: user1, user2, user3
 # The rules are applied in order. If a rule applies to a conan, system wont look further.
 #
 # Example: All versions of opencv package from lasote user in testing channel is only
