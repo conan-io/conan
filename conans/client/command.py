@@ -136,16 +136,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-        try:
-            name_version, user_channel = args.reference.split("@")
-            name, version = name_version.split("/")
-            user, channel = user_channel.split("/")
-        except:
-            name, version = None, None
-            try:
-                user, channel = args.reference.split("/")
-            except:
-                user, channel = None, None
+        name, version, user, channel = get_reference_fields(args.reference)
 
         if args.test_only:
             args.build = ["never"]
@@ -902,6 +893,10 @@ def get_reference_fields(arg_reference):
     :param arg_reference: String with a complete reference, or only user/channel
     :return: name, version, user and channel, in a tuple
     """
+
+    if not arg_reference:
+        return None, None, None, None
+
     try:
         name_version, user_channel = arg_reference.split("@")
         name, version = name_version.split("/")
