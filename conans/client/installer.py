@@ -208,9 +208,10 @@ class ConanInstaller(object):
                 output = ScopedOutput(str(conan_ref), self._out)
                 package_ref = PackageReference(conan_ref, package_id)
                 package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
+                forced_build = self._build_mode.forced(conan_ref, conan_file)
                 if conan_file.build_policy_missing:
                     output.info("Building package from source as defined by build_policy='missing'")
-                elif self._build_mode.forced(conan_ref, conan_file):
+                elif forced_build:
                     output.warn('Forced build from source')
 
                 self._build_requires.install(conan_ref, conan_file, self)
@@ -222,7 +223,7 @@ class ConanInstaller(object):
                 self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
                 # Call the conanfile's build method
                 build_folder = self._build_conanfile(conan_ref, conan_file, package_ref,
-                                                     package_folder, output)
+                                                     package_folder, output, forced_build)
 
                 # Call the conanfile's package method
                 self._package_conanfile(conan_ref, conan_file, package_ref, build_folder,
@@ -335,13 +336,14 @@ class ConanInstaller(object):
 
         self._raise_package_not_found_error(conan_ref, conan_file)
 
-    def _build_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output):
+    def _build_conanfile(self, conan_ref, conan_file, package_reference, package_folder, output,
+                         forced_build):
         """Calls the conanfile's build method"""
         new_id = build_id(conan_file)
         if new_id:
             package_reference = PackageReference(package_reference.conan, new_id)
         build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
-        if os.path.exists(build_folder) and hasattr(conan_file, "build_id"):
+        if not forced_build and os.path.exists(build_folder) and hasattr(conan_file, "build_id"):
             return build_folder
         # build_id is not caching the build folder, so actually rebuild the package
         src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)

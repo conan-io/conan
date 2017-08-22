@@ -100,3 +100,39 @@ class ConanLib(ConanFile):
         client.run("test_package lasote/stable")
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
+
+    def test_package_with_build_id(self):
+
+        test_conanfile = '''
+from conans import ConanFile
+
+class TestConanLib(ConanFile):
+    requires = "other/0.2@user2/channel2"
+    def test(self):
+        pass
+'''
+        client = TestClient()
+        other_conanfile = """
+from conans import ConanFile
+class ConanLib(ConanFile):
+    name = "other"
+    version = "0.2"
+    options = {"shared": [True, False]}
+    default_options = "shared=False"
+
+    def build_id(self):
+        self.info_build.options.shared = "Any"
+
+    def build(self):
+        self.output.warn("BUILDING!!")
+
+"""
+        client.save({CONANFILE: other_conanfile,
+                     "test_package/conanfile.py": test_conanfile})
+
+        client.run("test_package")
+        self.assertIn("BUILDING!!", client.user_io.out)
+
+        # Build is forced, so build is executed even though the build_id is the same
+        client.run("test_package")
+        self.assertIn("BUILDING!!", client.user_io.out)
