@@ -55,6 +55,22 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB1_myvar "myvalue")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
+    
+    def variables_cmake_multi_user_vars_escape_test(self):
+        #set_trace()
+        settings_mock = namedtuple("Settings", "build_type, constraint")
+        conanfile = ConanFile(None, None, settings_mock("Release", lambda x: x), None)
+        conanfile.deps_user_info["FOO"].myvar = 'my"value"'
+        conanfile.deps_user_info["FOO"].myvar2 = 'my${value}'
+        conanfile.deps_user_info["FOO"].myvar3 = 'my\\value'
+        generator = CMakeMultiGenerator(conanfile)
+        content = generator.content["conanbuildinfo_multi.cmake"]
+        cmake_lines = content.splitlines()
+        self.assertIn(r'set(CONAN_USER_FOO_myvar "my\"value\"")', cmake_lines)
+        self.assertIn(r'set(CONAN_USER_FOO_myvar2 "my\${value}")', cmake_lines)
+        self.assertIn(r'set(CONAN_USER_FOO_myvar3 "my\\value")', cmake_lines)
+        
+
 
     def multi_flag_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
