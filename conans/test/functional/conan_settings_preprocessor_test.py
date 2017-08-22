@@ -15,6 +15,10 @@ from conans import ConanFile
 class HelloConan(ConanFile):
     name = "Hello0"
     version = "0.1"
+    settings = "os", "compiler", "build_type"
+
+    def configure(self):
+        self.output.warn("Runtime: %s" % self.settings.get_safe("compiler.runtime"))
 
         '''
 
@@ -29,11 +33,9 @@ class HelloConan(ConanFile):
         self.assertNotIn(default_profile, "compiler.runtime")
         self.client.run("install Hello0/0.1@lasote/channel --build missing")
         if platform.system() == "Windows":
-            self.assertIn("Setting 'compiler.runtime' not declared, automatically "
-                          "adjusted to 'MD'", self.client.user_io.out)
+            self.assertIn("Runtime: MD", self.client.user_io.out)
             self.client.run("install Hello0/0.1@lasote/channel --build missing -s build_type=Debug")
-            self.assertIn("Setting 'compiler.runtime' not declared, automatically "
-                          "adjusted to 'MDd'", self.client.user_io.out)
+            self.assertIn("Runtime: MDd", self.client.user_io.out)
 
     def test_runtime_not_present_ok(self):
         # Generate the settings.yml
