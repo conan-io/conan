@@ -36,6 +36,7 @@ from conans.util.files import rmdir, save_files, exception_message_safe, save
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
+from conans.client import settings_preprocessor
 
 default_manifest_folder = '.conan_manifests'
 
@@ -129,7 +130,7 @@ class ConanAPIV1(object):
 
             # Settings preprocessor
             conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
-                          conans.client.settings_preprocessor)
+                          settings_preprocessor)
 
         return conan
 
