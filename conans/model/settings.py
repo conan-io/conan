@@ -1,4 +1,4 @@
-from conans.errors import ConanException, InvalidConanSettingField
+from conans.errors import ConanException
 import yaml
 from conans.model.values import Values
 
@@ -17,7 +17,7 @@ def undefined_field(name, field, fields=None, value=None):
     value_str = " for '%s'" % value if value else ""
     result = ["'%s.%s' doesn't exist%s" % (name, field, value_str),
               "'%s' possible configurations are %s" % (name, fields or "none")]
-    return InvalidConanSettingField("\n".join(result))
+    return ConanException("\n".join(result))
 
 
 def undefined_value(name):

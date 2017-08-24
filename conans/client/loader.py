@@ -31,7 +31,7 @@ class ConanFileLoader(object):
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
 
-    def load_conan(self, conanfile_path, scoped_output, consumer=False, reference=None):
+    def load_conan(self, conanfile_path, output, consumer=False, reference=None):
         """ loads a ConanFile object from the given file
         """
         result = load_conanfile_class(conanfile_path)
@@ -52,7 +52,7 @@ class ConanFileLoader(object):
                 user, channel = None, None
 
             # Instance the conanfile
-            result = result(scoped_output, self._runner, tmp_settings,
+            result = result(output, self._runner, tmp_settings,
                             os.path.dirname(conanfile_path), user, channel)
 
             # Assign environment
@@ -71,18 +71,18 @@ class ConanFileLoader(object):
         except Exception as e:  # re-raise with file name
             raise ConanException("%s: %s" % (conanfile_path, str(e)))
 
-    def load_conan_txt(self, conan_txt_path, scoped_output):
+    def load_conan_txt(self, conan_txt_path, output):
         if not os.path.exists(conan_txt_path):
             raise NotFoundException("Conanfile not found!")
 
         contents = load(conan_txt_path)
         path = os.path.dirname(conan_txt_path)
 
-        conanfile = self._parse_conan_txt(contents, path, scoped_output)
+        conanfile = self._parse_conan_txt(contents, path, output)
         return conanfile
 
-    def _parse_conan_txt(self, contents, path, scoped_output):
-        conanfile = ConanFile(scoped_output, self._runner, Settings(), path)
+    def _parse_conan_txt(self, contents, path, output):
+        conanfile = ConanFile(output, self._runner, Settings(), path)
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.

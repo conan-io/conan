@@ -1,4 +1,3 @@
-from conans.errors import InvalidConanSettingField
 
 
 def preprocess(settings, output):
@@ -13,6 +12,6 @@ def fill_runtime(settings, output):
                                                   else "MD"
                 output.info("Setting 'compiler.runtime' not declared, automatically "
                             "adjusted to '%s'" % settings.compiler.runtime)
-    except InvalidConanSettingField:  # If the settings structure doesn't match these general
+    except Exception:  # If the settings structure doesn't match these general
         # asumptions, like unexistant runtime
         pass
