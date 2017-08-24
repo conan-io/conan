@@ -59,8 +59,6 @@ os=$OTHERVAR
 os=thing""")
 
 
-
-
 conanfile_scope_env = """
 import platform
 from conans import ConanFile
@@ -148,6 +146,11 @@ class ProfileTest(unittest.TestCase):
     def test_empty_env(self):
         tmp = temp_folder()
         profile, _ = self._get_profile(tmp, "")
+        self.assertTrue(isinstance(profile.env_values, EnvValues))
+
+    def test_empty_env_settings(self):
+        tmp = temp_folder()
+        profile, _ = self._get_profile(tmp, "[settings]")
         self.assertTrue(isinstance(profile.env_values, EnvValues))
 
     def profile_loads_win_test(self):
@@ -425,11 +428,6 @@ class ProfileTest(unittest.TestCase):
         abs_profile_path = os.path.join(folder, "Myprofile.txt")
         save(abs_profile_path, txt)
         return read_profile(abs_profile_path, None, None)
-
-    def test_empty_env(self):
-        tmp = temp_folder()
-        profile, _ = self._get_profile(tmp, "[settings]")
-        self.assertTrue(isinstance(profile.env_values, EnvValues))
 
     def test_package_test(self):
         test_conanfile = '''from conans.model.conan_file import ConanFile
