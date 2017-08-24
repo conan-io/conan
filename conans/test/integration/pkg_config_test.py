@@ -74,6 +74,7 @@ Cflags: -I${includedir}
         liba_conanfile = """
 import os
 from conans import ConanFile, tools
+from shutil import copyfile
 
 class LibAConan(ConanFile):
     name = "libA"
@@ -83,12 +84,10 @@ class LibAConan(ConanFile):
     requires = "libB/1.0@conan/stable"
 
     def build(self):
-        from conans.client.file_copier import FileCopier
         lib_b_path = self.deps_cpp_info["libB"].rootpath
-        file_copier = FileCopier(lib_b_path, ".")
-        pcs = file_copier("*.pc")
-        for pcfile in pcs:
-            tools.replace_prefix_in_pc_file(pcfile, lib_b_path)
+        copyfile(os.path.join(lib_b_path, "libB.pc"), "libB.pc")
+        # Patch copied file with the libB path
+        tools.replace_prefix_in_pc_file("libB.pc", lib_b_path)
 
         with tools.environment_append({"PKG_CONFIG_PATH": os.getcwd()}):
            self.run('g++ main.cpp $(pkg-config libB --libs --cflags) -o main')
