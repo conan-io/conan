@@ -183,8 +183,20 @@ def vcvars_command(settings):
                                  % (existing_version, compiler_version))
     else:
         env_var = "vs%s0comntools" % compiler_version
+
+        vs_path = None
+        if env_var == 'vs150comntools' and not env_var in os.environ:
+            try:
+                program_files = os.environ.get("ProgramFiles(x86)", os.environ["ProgramFiles"])
+                vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
+                vs_root = subprocess.check_output([vswhere_path, "-version", "[15.0, 16.0)", "-latest", "-property", "installationPath"]).decode(sys.stdout.encoding).strip()
+            except:
+                pass
+            else:
+                vs_path = os.path.join(vs_root, "Common7", "Tools", "")
+
         try:
-            vs_path = os.environ[env_var]
+            vs_path = vs_path or os.environ[env_var]
         except KeyError:
             raise ConanException("VS '%s' variable not defined. Please install VS or define "
                                  "the variable (VS2017)" % env_var)
