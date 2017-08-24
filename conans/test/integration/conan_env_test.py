@@ -1,6 +1,7 @@
 import os
 import platform
 import unittest
+import subprocess
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
@@ -12,6 +13,91 @@ from conans import tools
 
 
 class ConanEnvTest(unittest.TestCase):
+
+    def shared_in_current_directory_test(self):
+        conanfile = """
+from conans import ConanFile, CMake, tools
+
+
+class LibConan(ConanFile):
+    name = "lib"
+    version = "1.0"
+    settings = "os", "compiler", "build_type", "arch"
+    options = {"shared": [True, False]}
+    default_options = "shared=True"
+    generators = "cmake"
+    exports_sources = "*"
+
+    def build(self):
+        cmake = CMake(self)
+        self.run('cmake %s' % cmake.command_line)
+        self.run("cmake --build . %s" % cmake.build_config)
+
+    def package(self):
+        self.copy("*.h", dst="include", src="hello")
+        self.copy("*.lib", dst="lib", keep_path=False)
+        self.copy("*.dll", dst="bin", keep_path=False)
+        self.copy("*.so", dst="lib", keep_path=False)
+        self.copy("*.dylib", dst="lib", keep_path=False)
+        self.copy("*main*", dst="bin", keep_path=False)
+
+"""
+        cmakelists =  """
+project(mytest)
+
+SET(CMAKE_SKIP_RPATH 1)
+ADD_LIBRARY(hello SHARED hello.c)
+ADD_EXECUTABLE(main main.c)
+TARGET_LINK_LIBRARIES(main hello)
+"""
+
+        client = TestClient()
+        files = {CONANFILE: conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "hello.c": '#include "hello.h"\nvoid hello(){\nreturn;}',
+                 "hello.h": "void hello();",
+                 "main.c": '#include "hello.h"\nint main(){\nhello();\nreturn 0;\n}'}
+
+        client.save(files)
+        client.run("export conan/stable")
+        client.run("install lib/1.0@conan/stable -o lib:shared=True --build missing")
+        client.save({"conanfile.txt": '''
+[requires]
+lib/1.0@conan/stable
+[generators]
+virtualrunenv
+[imports]
+bin, * -> ./bin
+lib, * -> ./bin
+'''}, clean_first=True)
+
+        client.run("install .")
+        print(os.path.join(client.current_folder))
+        # Break possible rpaths built in the exe with absolute paths
+        os.rename(os.path.join(client.current_folder, "bin"),
+                  os.path.join(client.current_folder, "bin2"))
+
+        with tools.chdir(os.path.join(client.current_folder, "bin2")):
+            ext_main = "exe" if platform.system() == "Windows" else ""
+            if platform.system() == "Darwin" or platform.system() == "Windows":
+                self.assertEqual(os.system("./main%s" % ext_main), 0)
+
+            # If we move the shared library it won't work, at least we use the virtualrunenv
+            os.mkdir(os.path.join(client.current_folder, "bin2", "subdir"))
+            name = {"Darwin": "libhello.dylib",
+                    "Windows": "hello.dll"}.get(platform.system(), "hello.so")
+
+            os.rename(os.path.join(client.current_folder, "bin2", name),
+                      os.path.join(client.current_folder, "bin2", "subdir", name))
+
+            self.assertNotEqual(os.system("./main%s" % ext_main), 0)
+
+            if platform.system() != "Windows":
+                command = "bash -c 'source ../activate_run.sh && ./main'"
+            else:
+                command = "../activate_run.bat && ./main"
+
+            self.assertEqual(os.system(command), 0)
 
     def test_package_env_working(self):
         client = TestClient()
