@@ -229,6 +229,6 @@ class HelloConan(ConanFile):
             self.assertIn("Hello Release Hello1", client.user_io.out)
             self.assertIn("Hello Release Hello0", client.user_io.out)
             if cmake_file == cmake_targets:
-                self.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
+                self.assertIn("Conan: Using CMake targets configuration", client.user_io.out)
             else:
-                self.assertIn("Conan: Using cmake global configuration", client.user_io.out)
+                self.assertIn("Conan: Using CMake global configuration", client.user_io.out)
