@@ -9,10 +9,12 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
 from conans import tools
+from nose.plugins.attrib import attr
 
 
 class ConanEnvTest(unittest.TestCase):
 
+    @attr('slow')
     def shared_in_current_directory_test(self):
         conanfile = """
 from conans import ConanFile, CMake, tools
@@ -43,6 +45,8 @@ class LibConan(ConanFile):
 """
         cmakelists =  """
 project(mytest)
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
 
 SET(CMAKE_SKIP_RPATH 1)
 ADD_LIBRARY(hello SHARED hello.c)
@@ -85,14 +89,13 @@ lib, * -> ./bin
         os.rename(os.path.join(client.current_folder, "bin"),
                   os.path.join(client.current_folder, "bin2"))
 
-        print(os.path.join(client.current_folder, "bin2"))
-
         with tools.chdir(os.path.join(client.current_folder, "bin2")):
-            ext_main = "exe" if platform.system() == "Windows" else ""
-            if platform.system() == "Darwin" or platform.system() == "Windows":
-                self.assertEqual(os.system("./main%s" % ext_main), 0)
+            if platform.system() == "Windows":
+                self.assertEqual(os.system("main.exe"), 0)
+            elif platform.system() == "Darwin":
+                self.assertEqual(os.system("./main"), 0)
             else:
-                self.assertNotEqual(os.system("./main%s" % ext_main), 0)
+                self.assertNotEqual(os.system("./main"), 0)
 
             # If we move the shared library it won't work, at least we use the virtualrunenv
             os.mkdir(os.path.join(client.current_folder, "bin2", "subdir"))
@@ -102,12 +105,18 @@ lib, * -> ./bin
             os.rename(os.path.join(client.current_folder, "bin2", name),
                       os.path.join(client.current_folder, "bin2", "subdir", name))
 
-            self.assertNotEqual(os.system("./main%s" % ext_main), 0)
+            if platform.system() == "Windows":
+                self.assertNotEqual(os.system("main.exe"), 0)
+            elif platform.system() == "Darwin":
+                self.assertNotEqual(os.system("./main"), 0)
+            else:
+                self.assertNotEqual(os.system("./main"), 0)
 
+            # Will use the shared from the local cache
             if platform.system() != "Windows":
                 command = "bash -c 'source ../activate_run.sh && ./main'"
             else:
-                command = "../activate_run.bat && ./main"
+                command = "cd .. && activate_run.bat && cd bin2 && main.exe"
 
             self.assertEqual(os.system(command), 0)
 
