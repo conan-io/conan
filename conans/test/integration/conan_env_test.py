@@ -123,13 +123,13 @@ virtualrunenv
 
         self.assertIn("PATH", activate_contents)
         self.assertIn("LD_LIBRARY_PATH", activate_contents)
-        self.assertIn("DYLIB_LIBRARY_PATH", activate_contents)
+        self.assertIn("DYLD_LIBRARY_PATH", activate_contents)
 
         for line in activate_contents.splitlines():
             if " PATH=" in line:
                 self.assertIn("bin2", line)
                 self.assertNotIn("lib2", line)
-            if " DYLIB_LIBRARY_PATH=" in line:
+            if " DYLD_LIBRARY_PATH=" in line:
                 self.assertNotIn("bin2", line)
                 self.assertIn("lib2", line)
             if " LD_LIBRARY_PATH=" in line:
