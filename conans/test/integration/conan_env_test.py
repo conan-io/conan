@@ -1,7 +1,6 @@
 import os
 import platform
 import unittest
-import subprocess
 
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
@@ -51,11 +50,21 @@ ADD_EXECUTABLE(main main.c)
 TARGET_LINK_LIBRARIES(main hello)
 """
 
+        hello_h = """#pragma once
+#ifdef WIN32
+  #define HELLO_EXPORT __declspec(dllexport)
+#else
+  #define HELLO_EXPORT
+#endif
+
+HELLO_EXPORT void hello();
+"""
+
         client = TestClient()
         files = {CONANFILE: conanfile,
                  "CMakeLists.txt": cmakelists,
                  "hello.c": '#include "hello.h"\nvoid hello(){\nreturn;}',
-                 "hello.h": "void hello();",
+                 "hello.h": hello_h,
                  "main.c": '#include "hello.h"\nint main(){\nhello();\nreturn 0;\n}'}
 
         client.save(files)
@@ -72,20 +81,23 @@ lib, * -> ./bin
 '''}, clean_first=True)
 
         client.run("install .")
-        print(os.path.join(client.current_folder))
         # Break possible rpaths built in the exe with absolute paths
         os.rename(os.path.join(client.current_folder, "bin"),
                   os.path.join(client.current_folder, "bin2"))
+
+        print(os.path.join(client.current_folder, "bin2"))
 
         with tools.chdir(os.path.join(client.current_folder, "bin2")):
             ext_main = "exe" if platform.system() == "Windows" else ""
             if platform.system() == "Darwin" or platform.system() == "Windows":
                 self.assertEqual(os.system("./main%s" % ext_main), 0)
+            else:
+                self.assertNotEqual(os.system("./main%s" % ext_main), 0)
 
             # If we move the shared library it won't work, at least we use the virtualrunenv
             os.mkdir(os.path.join(client.current_folder, "bin2", "subdir"))
             name = {"Darwin": "libhello.dylib",
-                    "Windows": "hello.dll"}.get(platform.system(), "hello.so")
+                    "Windows": "hello.dll"}.get(platform.system(), "libhello.so")
 
             os.rename(os.path.join(client.current_folder, "bin2", name),
                       os.path.join(client.current_folder, "bin2", "subdir", name))
