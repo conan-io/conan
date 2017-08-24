@@ -2,7 +2,7 @@
 point, which could be both a user conanfile or an installed one
 """
 from conans.model.requires import Requirements
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
 from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.info import ConanInfo
 from conans.errors import ConanException, conanfile_exception_formatter, ConanExceptionInUserConanfileMethod
@@ -156,7 +156,7 @@ class DepsGraph(object):
         return result
 
     def public_closure(self, node):
-        closure = OrderedDict()
+        closure = {}
         current = self._neighbors[node]
         while current:
             new_current = set()
