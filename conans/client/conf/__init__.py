@@ -231,10 +231,15 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def storage_path(self):
-        store_path = os.path.expanduser(self.storage.get("path", "data"))
+        # First try to get from the CONAN_STORAGE_PATH, then from the conf,
+        # finally "data" directory will be applied
+        store_path = get_env("CONAN_STORAGE_PATH", None) or \
+                      os.path.expanduser(self.storage.get("path", "data"))
         if os.path.isabs(store_path):
             return store_path
         else:
+            # Any relative directory specified will be relative to the user home,
+            # even the default data
             return os.path.join(get_conan_user_home(), store_path)
 
     @property
