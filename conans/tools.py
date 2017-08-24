@@ -203,7 +203,7 @@ def vcvars_command(settings):
         if env_var != "vs150comntools":
             command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
         else:
-            command = ('call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
+            command = ('set "VSCMD_START_DIR=%%CD%%" && call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
     return command
 
 
