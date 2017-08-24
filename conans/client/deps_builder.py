@@ -382,6 +382,9 @@ class DepsGraphBuilder(object):
                                     new_options, new_loop_ancestors)
 
     def _recurse(self, closure, new_reqs, new_options):
+        """ For a given closure, if some requirements or options coming from downstream
+        is incompatible with the current closure, then it is necessary to recurse
+        then, incompatibilities will be raised as usually"""
         for req in new_reqs.values():
             n = closure.get(req.conan_reference.name)
             if n and n.conan_ref != req.conan_reference:
