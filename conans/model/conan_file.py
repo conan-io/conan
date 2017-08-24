@@ -159,7 +159,7 @@ class ConanFile(object):
             return []
         lib_folder = os.path.join(self.package_folder, folder)
         if not os.path.exists(lib_folder):
-            self.output.warn("Package folder doesn't exist, can't collect libraries")
+            self.output.warn("Lib folder doesn't exist, can't collect libraries")
             return []
         files = os.listdir(lib_folder)
         result = []

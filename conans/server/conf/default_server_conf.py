@@ -28,11 +28,11 @@ updown_secret: {updown_secret}
 #
 # custom_authenticator: my_authenticator
 
-[write_permissions]
-
+# name/version@user/channel: user1, user2, user3
 #
-# name,version,user,channel: user1, user2, user3
-# The rules are applied in order. If a rule applies to a conan, system wont look further.
+# The rules are applied in order. 
+# If a rule matches your package, then the server wont look further.
+# Place your more restrictive rules first.
 #
 # Example: All versions of opencv package from lasote user in testing channel is only
 # writeable by default_user and default_user2. Rest of packages are not writtable by anything
@@ -40,11 +40,9 @@ updown_secret: {updown_secret}
 #
 #   opencv/2.3.4@lasote/testing: default_user, default_user2
 #
+[write_permissions]
 
-[read_permissions]
-
-#
-# name,version,user,channel: user1, user2, user3
+# name/version@user/channel: user1, user2, user3
 # The rules are applied in order. If a rule applies to a conan, system wont look further.
 #
 # Example: All versions of opencv package from lasote user in testing channel is only
@@ -54,10 +52,12 @@ updown_secret: {updown_secret}
 #   *:*@*/*: *
 #
 # By default all users can read all blocks
+#
+[read_permissions]
 */*@*/*: *
-
 
 [users]
 #default_user: defaultpass
 demo: demo
+
 """

@@ -621,6 +621,10 @@ class SystemPackageTool(object):
             return BrewTool()
         elif os_info.is_freebsd:
             return PkgTool()
+        elif os_info.is_solaris:
+            return PkgUtilTool()
+        elif os_info.is_windows:
+            return ChocolateyTool()
         else:
             return NullTool()
 
@@ -665,7 +669,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg")
+        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
         return False
@@ -685,7 +689,7 @@ class AptTool(object):
 
 class YumTool(object):
     def update(self):
-        _run(self._runner, "%syum check-update" % self._sudo_str)
+        _run(self._runner, "%syum check-update" % self._sudo_str, accepted_returns=[0, 100])
 
     def install(self, package_name):
         _run(self._runner, "%syum install -y %s" % (self._sudo_str, package_name))
@@ -719,7 +723,31 @@ class PkgTool(object):
         return exit_code == 0
 
 
-def _run(runner, command):
+class PkgUtilTool(object):
+    def update(self):
+        _run(self._runner, "%spkgutil --catalog" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%spkgutil --install --yes %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner('test -n "`pkgutil --list %s`"' % package_name, None)
+        return exit_code == 0
+
+class ChocolateyTool(object):
+    def update(self):
+        _run(self._runner, "choco outdated")
+
+    def install(self, package_name):
+        _run(self._runner, "choco install --yes %s" % package_name)
+
+    def installed(self, package_name):
+        exit_code = self._runner('choco search --local-only --exact %s | findstr /c:"1 packages installed."' % package_name, None)
+        return exit_code == 0
+
+
+def _run(runner, command, accepted_returns=None):
+    accepted_returns = accepted_returns or [0, ]
     _global_output.info("Running: %s" % command)
-    if runner(command, True) != 0:
+    if runner(command, True) not in accepted_returns:
         raise ConanException("Command '%s' failed" % command)

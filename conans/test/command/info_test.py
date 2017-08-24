@@ -181,7 +181,7 @@ class MyTest(ConanFile):
 
 """
         self.client.save({"subfolder/conanfile.py": conanfile})
-        self.client.run("export --path ./subfolder lasote")
+        self.client.run("export --path ./subfolder lasote/testing")
 
         self.client.run("info --cwd ./subfolder")
         self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)

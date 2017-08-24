@@ -8,6 +8,8 @@ from conans.model.conan_file import ConanFile
 from conans.client.generators.cmake import CMakeGenerator
 from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
+from conans.client.conf import default_settings_yml
+
 
 
 class CMakeGeneratorTest(unittest.TestCase):
@@ -53,6 +55,22 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB1_myvar "myvalue")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
+    
+    def variables_cmake_multi_user_vars_escape_test(self):
+        #set_trace()
+        settings_mock = namedtuple("Settings", "build_type, constraint")
+        conanfile = ConanFile(None, None, settings_mock("Release", lambda x: x), None)
+        conanfile.deps_user_info["FOO"].myvar = 'my"value"'
+        conanfile.deps_user_info["FOO"].myvar2 = 'my${value}'
+        conanfile.deps_user_info["FOO"].myvar3 = 'my\\value'
+        generator = CMakeMultiGenerator(conanfile)
+        content = generator.content["conanbuildinfo_multi.cmake"]
+        cmake_lines = content.splitlines()
+        self.assertIn(r'set(CONAN_USER_FOO_myvar "my\"value\"")', cmake_lines)
+        self.assertIn(r'set(CONAN_USER_FOO_myvar2 "my\${value}")', cmake_lines)
+        self.assertIn(r'set(CONAN_USER_FOO_myvar3 "my\\value")', cmake_lines)
+        
+
 
     def multi_flag_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
@@ -125,3 +143,33 @@ endmacro()""", macro)
         set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ${CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE})
     endif()
 endmacro()""", macro)
+
+    def name_and_version_are_generated_test(self):
+        conanfile = ConanFile(None, None, Settings({}), None)
+        conanfile.name = "MyPkg"
+        conanfile.version = "1.1.0"
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        cmake_lines = content.splitlines()
+        self.assertIn('set(CONAN_PACKAGE_NAME MyPkg)', cmake_lines)
+        self.assertIn('set(CONAN_PACKAGE_VERSION 1.1.0)', cmake_lines)
+
+    def settings_are_generated_tests(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.compiler.runtime = "MD"
+        settings.arch = "x86"
+        settings.build_type = "Debug"
+        conanfile = ConanFile(None, None, Settings({}), None)
+        conanfile.settings = settings
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        cmake_lines = content.splitlines()
+        self.assertIn('set(CONAN_SETTINGS_BUILD_TYPE "Debug")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_ARCH "x86")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_COMPILER "Visual Studio")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_COMPILER_VERSION "12")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_COMPILER_RUNTIME "MD")', cmake_lines)
+        self.assertIn('set(CONAN_SETTINGS_OS "Windows")', cmake_lines)
