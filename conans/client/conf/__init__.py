@@ -76,8 +76,8 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 
 
 [storage]
-# This is the default path, but you can write your own. It must be an absolute path, a
-# path begining with "~" (relative to user home) or relative to CONAN_USER_HOME
+# This is the default path, but you can write your own. It must be an absolute path or a
+# path begining with "~" (relative to CONAN_USER_HOME, not to system user home)
 path = ~/.conan/data
 
 [proxies]
@@ -231,16 +231,27 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def storage_path(self):
-        # First try to get from the CONAN_STORAGE_PATH, then from the conf,
-        # finally "data" directory will be applied
-        store_path = get_env("CONAN_STORAGE_PATH", None) or \
-                      os.path.expanduser(self.storage.get("path", "data"))
-        if os.path.isabs(store_path):
-            return store_path
-        else:
-            # Any relative directory specified will be relative to the user home,
-            # even the default data
-            return os.path.join(get_conan_user_home(), store_path)
+        try:
+            conan_user_home = os.getenv("CONAN_USER_HOME")
+            if conan_user_home:
+                storage = self.storage["path"]
+                # The ~ in the storage means relative to conan user home, too late to change
+                # this mess
+                if storage[:2] == "~/":
+                    storage = storage[2:]
+                result = os.path.join(conan_user_home, storage)
+            else:
+                result = conan_expand_user(self.storage["path"])
+                if not os.path.isabs(result):
+                    raise ConanException("Specify an absolute path in the 'path' variable of "
+                                         "the conan.conf file")
+        except KeyError:
+            result = None
+        result = conan_expand_user(get_env('CONAN_STORAGE_PATH', result))
+
+        if not os.path.isabs(result):
+            raise ConanException("Specify an absolute path in the CONAN_STORAGE_PATH variable")
+        return result
 
     @property
     def proxies(self):
