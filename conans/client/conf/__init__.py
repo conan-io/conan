@@ -77,7 +77,8 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 
 [storage]
 # This is the default path, but you can write your own. It must be an absolute path or a
-# path begining with "~" (relative to CONAN_USER_HOME, not to system user home)
+# path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
+# with "~/", will be relative to the conan user home, not to the system user home)
 path = ~/.conan/data
 
 [proxies]
@@ -231,28 +232,30 @@ class ConanClientConfigParser(ConfigParser, object):
 
     @property
     def storage_path(self):
-        try:
-            conan_user_home = os.getenv("CONAN_USER_HOME")
-            if conan_user_home:
-                storage = self.storage["path"]
-                # The ~ in the storage means relative to conan user home, too late to change
-                # this mess
-                if storage[:2] == "~/":
-                    storage = storage[2:]
-                result = os.path.join(conan_user_home, storage)
-            else:
-                result = conan_expand_user(self.storage["path"])
-                if not os.path.isabs(result):
-                    raise ConanException("Specify an absolute path in the 'path' variable of "
-                                         "the conan.conf file")
-        except KeyError:
-            result = None
+        # Try with CONAN_STORAGE_PATH
+        result = get_env('CONAN_STORAGE_PATH', None)
 
-        result = conan_expand_user(get_env('CONAN_STORAGE_PATH', result))
+        # Try with conan.conf "path"
+        if not result:
+            try:
+                env_conan_user_home = os.getenv("CONAN_USER_HOME")
+                # if env var is declared, any specified path will be relative to CONAN_USER_HOME
+                # even with the ~/
+                if env_conan_user_home:
+                    storage = self.storage["path"]
+                    if storage[:2] == "~/":
+                        storage = storage[2:]
+                    result = os.path.join(env_conan_user_home, storage)
+                else:
+                    result = self.storage["path"]
+            except KeyError:
+                pass
 
-        if result and not os.path.isabs(result):
-            raise ConanException("Specify an absolute path in the CONAN_STORAGE_PATH variable")
-
+        # expand the result and check if absolute
+        if result:
+            result = conan_expand_user(result)
+            if not os.path.isabs(result):
+                raise ConanException("Conan storage path has to be an absolute path")
         return result
 
     @property
