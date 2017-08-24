@@ -165,6 +165,17 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         command += " /target:%s" % ";".join(targets)
     return command
 
+def vs_installation_path(version):
+    if not hasattr(vs_installation_path, "_cached"):
+        vs_installation_path._cached = dict()
+    if not version in vs_installation_path._cached.keys():
+        version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
+        program_files = os.environ.get("ProgramFiles(x86)", os.environ["ProgramFiles"])
+        vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
+        vs_installation_path._cached[version] = subprocess.check_output([vswhere_path, "-version", version_range,
+            "-latest", "-property", "installationPath"]).decode(sys.stdout.encoding).strip()
+    return vs_installation_path._cached[version];
+
 
 def vcvars_command(settings):
     arch_setting = settings.get_safe("arch")
@@ -187,9 +198,7 @@ def vcvars_command(settings):
         vs_path = None
         if env_var == 'vs150comntools' and not env_var in os.environ:
             try:
-                program_files = os.environ.get("ProgramFiles(x86)", os.environ["ProgramFiles"])
-                vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
-                vs_root = subprocess.check_output([vswhere_path, "-version", "[15.0, 16.0)", "-latest", "-property", "installationPath"]).decode(sys.stdout.encoding).strip()
+                vs_root = vs_installation_path(compiler_version)
             except:
                 pass
             else:
