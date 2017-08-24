@@ -27,7 +27,7 @@ class MyTest(ConanFile):
 """
         for requires in ("''", "[]", "()", "None"):
             save(conanfile_path, conanfile.format(requires))
-            result = loader.load_conan(conanfile_path, scoped_output=None, consumer=True)
+            result = loader.load_conan(conanfile_path, output=None, consumer=True)
             result.requirements()
             self.assertEqual("MyPkg/0.1@user/channel", str(result.requires))
 
