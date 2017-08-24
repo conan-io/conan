@@ -247,10 +247,12 @@ class ConanClientConfigParser(ConfigParser, object):
                                          "the conan.conf file")
         except KeyError:
             result = None
+
         result = conan_expand_user(get_env('CONAN_STORAGE_PATH', result))
 
-        if not os.path.isabs(result):
+        if result and not os.path.isabs(result):
             raise ConanException("Specify an absolute path in the CONAN_STORAGE_PATH variable")
+
         return result
 
     @property
