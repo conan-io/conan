@@ -77,7 +77,7 @@ class ConanManager(object):
     def _get_settings(self, profile):
         self._client_cache.settings.values = self._profile_with_defaults(profile).settings_values
         # Settings preprocessor
-        self._settings_preprocessor.preprocess(self._client_cache.settings, self._user_io.out)
+        self._settings_preprocessor.preprocess(self._client_cache.settings)
         return self._client_cache.settings
 
     def _profile_with_defaults(self, profile):
