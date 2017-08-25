@@ -3,7 +3,7 @@
 import os
 from conans.util.files import save
 import logging
-from conans.paths import conan_expand_user
+from conans.paths import conan_expand_user, get_conan_user_home
 
 # Capture SSL warnings as pointed out here:
 # https://urllib3.readthedocs.org/en/latest/security.html#insecureplatformwarning
@@ -5720,7 +5720,6 @@ lBlGGSW4gNfL1IYoakRwJiNiqZ+Gb7+6kHDSVneFeO/qJakXzlByjAA6quPbYzSf
 # Workaround to avoid pyinstaller statics hell.
 # request (at the end because openssl) needs a file with
 # certs, it can't be injected. Damned coupled code.
-dir_path = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
-file_path = os.path.join(dir_path, ".conan", "cacert.pem")
+file_path = os.path.join(get_conan_user_home(), ".conan", "cacert.pem")
 if not os.path.exists(file_path):
     save(file_path, cacert)

@@ -112,13 +112,14 @@ class ConanManager(object):
         # one, the first of the first level, always existing
         nodes = deps_graph.direct_requires()
         _, conanfile = nodes[0]
-        packages_folder = self._client_cache.packages(reference)
         pkg_id = conanfile.info.package_id()
         self._user_io.out.info("Packaging to %s" % pkg_id)
-        dest_package_folder = os.path.join(packages_folder, pkg_id)
+        pkg_reference = PackageReference(reference, pkg_id)
+        dest_package_folder = self._client_cache.package(pkg_reference,
+                                                         short_paths=conanfile.short_paths)
         if os.path.exists(dest_package_folder):
             if force:
-                shutil.rmtree(dest_package_folder)
+                rmdir(dest_package_folder)
             else:
                 raise ConanException("Package already exists. Please use --force, -f to overwrite it")
         shutil.copytree(package_folder, dest_package_folder, symlinks=True)

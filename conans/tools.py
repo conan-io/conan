@@ -165,6 +165,26 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         command += " /target:%s" % ";".join(targets)
     return command
 
+def vs_installation_path(version):
+    if not hasattr(vs_installation_path, "_cached"):
+        vs_installation_path._cached = dict()
+    if not version in vs_installation_path._cached:
+        version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
+        program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
+        if not program_files:
+            return None
+        vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
+        if not os.path.isfile(vswhere_path):
+            return None
+        try:
+            vs_installation_path._cached[version] = subprocess.check_output([vswhere_path, "-version", version_range,
+                "-latest", "-property", "installationPath"]).decode(sys.stdout.encoding).strip()
+        except ValueError:
+            return None
+        except subprocess.CalledProcessError:
+            return None
+    return vs_installation_path._cached[version]
+
 
 def vs_installation_path(version):
     if not hasattr(vs_installation_path, "_cached"):
@@ -661,8 +681,6 @@ class SystemPackageTool(object):
             return PkgTool()
         elif os_info.is_solaris:
             return PkgUtilTool()
-        elif os_info.is_windows:
-            return ChocolateyTool()
         else:
             return NullTool()
 
