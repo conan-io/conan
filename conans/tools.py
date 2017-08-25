@@ -216,9 +216,12 @@ def vcvars_command(settings):
             raise ConanException("VS '%s' variable not defined. Please install VS or define "
                                  "the variable (VS2017)" % env_var)
         if env_var != "vs150comntools":
-            command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
+            vs_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
+            command = ('call "%s" %s' % (vs_path, param))
         else:
-            command = ('set "VSCMD_START_DIR=%%CD%%" && call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
+            vs_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
+            command = ('set "VSCMD_START_DIR=%%CD%%" && call "%s" %s' % (vs_path, param))
+            
     return command
 
 
@@ -650,8 +653,6 @@ class SystemPackageTool(object):
             return PkgTool()
         elif os_info.is_solaris:
             return PkgUtilTool()
-        elif os_info.is_windows:
-            return ChocolateyTool()
         else:
             return NullTool()
 

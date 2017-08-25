@@ -30,7 +30,7 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, is_a_reference
 from conans.model.scope import Scopes
 from conans.model.version import Version
-from conans.paths import CONANFILE, conan_expand_user
+from conans.paths import CONANFILE, get_conan_user_home
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, save_files, exception_message_safe, save
@@ -109,10 +109,8 @@ class ConanAPIV1(object):
         out = ConanOutput(sys.stdout, color)
         user_io = UserIO(out=out)
 
-        user_folder = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
-
         try:
-            client_cache = migrate_and_get_client_cache(user_folder, out)
+            client_cache = migrate_and_get_client_cache(get_conan_user_home(), out)
         except Exception as e:
             out.error(str(e))
             raise
