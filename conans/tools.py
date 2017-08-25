@@ -165,24 +165,30 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         command += " /target:%s" % ";".join(targets)
     return command
 
+
 def vs_installation_path(version):
     if not hasattr(vs_installation_path, "_cached"):
         vs_installation_path._cached = dict()
-    if not version in vs_installation_path._cached:
-        version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
+
+    if version not in vs_installation_path._cached:
+        vs_path = None
         program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
-        if not program_files:
-            return None
-        vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
-        if not os.path.isfile(vswhere_path):
-            return None
-        try:
-            vs_installation_path._cached[version] = subprocess.check_output([vswhere_path, "-version", version_range,
-                "-latest", "-property", "installationPath"]).decode(sys.stdout.encoding).strip()
-        except ValueError:
-            return None
-        except subprocess.CalledProcessError:
-            return None
+        if program_files:
+            vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
+                                        "vswhere.exe")
+            if os.path.isfile(vswhere_path):
+                version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
+                try:
+                    output = subprocess.check_output([vswhere_path, "-version", version_range,
+                                                      "-latest", "-property", "installationPath"])
+                    vs_path = output.decode(sys.stdout.encoding).strip()
+                    _global_output.info("vswhere detected VS %s in %s" % (version, vs_path))
+                except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
+                    _global_output.error("vswhere error: %s" % str(e))
+
+        # Remember to cache result
+        vs_installation_path._cached[version] = vs_path
+
     return vs_installation_path._cached[version]
 
 
@@ -204,21 +210,26 @@ def vcvars_command(settings):
     else:
         env_var = "vs%s0comntools" % compiler_version
 
-        vs_path = None
-        if env_var == 'vs150comntools' and not env_var in os.environ:
-            vs_root = vs_installation_path(compiler_version)
-            if vs_root:
-                vs_path = os.path.join(vs_root, "Common7", "Tools", "")
-
-        try:
-            vs_path = vs_path or os.environ[env_var]
-        except KeyError:
-            raise ConanException("VS '%s' variable not defined. Please install VS or define "
-                                 "the variable (VS2017)" % env_var)
-        if env_var != "vs150comntools":
-            command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
+        if env_var == 'vs150comntools':
+            vs_path = os.getenv(env_var)
+            if not vs_path:  # Try to locate with vswhere
+                vs_root = vs_installation_path("15")
+                if vs_root:
+                    vs_path = os.path.join(vs_root, "Common7", "Tools")
+                else:
+                    raise ConanException("VS2017 '%s' variable not defined, "
+                                         "and vswhere didn't find it" % env_var)
+            vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
+            command = ('set "VSCMD_START_DIR=%%CD%%" && '
+                       'call "%s" %s' % (vcvars_path, param))
         else:
-            command = ('set "VSCMD_START_DIR=%%CD%%" && call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
+            try:
+                vs_path = os.environ[env_var]
+            except KeyError:
+                raise ConanException("VS '%s' variable not defined. Please install VS" % env_var)
+            vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
+            command = ('call "%s" %s' % (vcvars_path, param))
+
     return command
 
 
