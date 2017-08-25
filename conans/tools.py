@@ -181,7 +181,7 @@ def vs_installation_path(version):
                 try:
                     output = subprocess.check_output([vswhere_path, "-version", version_range,
                                                       "-latest", "-property", "installationPath"])
-                    vs_path = output.decode(sys.stdout.encoding).strip()
+                    vs_path = output.decode().strip()
                     _global_output.info("vswhere detected VS %s in %s" % (version, vs_path))
                 except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
                     _global_output.error("vswhere error: %s" % str(e))
