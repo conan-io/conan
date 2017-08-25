@@ -170,10 +170,19 @@ def vs_installation_path(version):
         vs_installation_path._cached = dict()
     if not version in vs_installation_path._cached:
         version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
-        program_files = os.environ.get("ProgramFiles(x86)", os.environ["ProgramFiles"])
+        program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
+        if not program_files:
+            return None
         vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
-        vs_installation_path._cached[version] = subprocess.check_output([vswhere_path, "-version", version_range,
-            "-latest", "-property", "installationPath"]).decode(sys.stdout.encoding).strip()
+        if not os.path.isfile(vswhere_path):
+            return None
+        try:
+            vs_installation_path._cached[version] = subprocess.check_output([vswhere_path, "-version", version_range,
+                "-latest", "-property", "installationPath"]).decode(sys.stdout.encoding).strip()
+        except ValueError:
+            return None
+        except subprocess.CalledProcessError:
+            return None
     return vs_installation_path._cached[version]
 
 
@@ -197,11 +206,8 @@ def vcvars_command(settings):
 
         vs_path = None
         if env_var == 'vs150comntools' and not env_var in os.environ:
-            try:
-                vs_root = vs_installation_path(compiler_version)
-            except:
-                pass
-            else:
+            vs_root = vs_installation_path(compiler_version)
+            if vs_root:
                 vs_path = os.path.join(vs_root, "Common7", "Tools", "")
 
         try:
