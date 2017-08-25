@@ -623,8 +623,6 @@ class SystemPackageTool(object):
             return PkgTool()
         elif os_info.is_solaris:
             return PkgUtilTool()
-        elif os_info.is_windows:
-            return ChocolateyTool()
         else:
             return NullTool()
 
