@@ -174,7 +174,7 @@ def vs_installation_path(version):
         vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
         vs_installation_path._cached[version] = subprocess.check_output([vswhere_path, "-version", version_range,
             "-latest", "-property", "installationPath"]).decode(sys.stdout.encoding).strip()
-    return vs_installation_path._cached[version];
+    return vs_installation_path._cached[version]
 
 
 def vcvars_command(settings):
