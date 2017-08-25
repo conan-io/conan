@@ -109,6 +109,8 @@ lib, * -> ./bin
                 self.assertEqual(os.system("./main"), 0)
             else:
                 self.assertNotEqual(os.system("./main"), 0)
+                self.assertEqual(os.system("LD_LIBRARY_PATH=$(pwd) ./main"), 0)
+                self.assertEqual(os.system("LD_LIBRARY_PATH=. ./main"), 0)
 
             # If we move the shared library it won't work, at least we use the virtualrunenv
             os.mkdir(os.path.join(client.current_folder, "bin2", "subdir"))
@@ -123,7 +125,7 @@ lib, * -> ./bin
             elif platform.system() == "Darwin":
                 self.assertNotEqual(os.system("./main"), 0)
             else:
-                self.assertNotEqual(os.system("./main"), 0)
+                self.assertNotEqual(os.system("LD_LIBRARY_PATH=$(pwd) ./main"), 0)
 
             # Will use the shared from the local cache
             if platform.system() != "Windows":
