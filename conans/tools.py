@@ -168,7 +168,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
 def vs_installation_path(version):
     if not hasattr(vs_installation_path, "_cached"):
         vs_installation_path._cached = dict()
-    if not version in vs_installation_path._cached.keys():
+    if not version in vs_installation_path._cached:
         version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
         program_files = os.environ.get("ProgramFiles(x86)", os.environ["ProgramFiles"])
         vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
