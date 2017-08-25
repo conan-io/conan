@@ -16,6 +16,19 @@ class ConanEnvTest(unittest.TestCase):
 
     @attr('slow')
     def shared_in_current_directory_test(self):
+        """
+        - There is a package building a shared library
+        - There is a consumer project importing the shared library (and the executable)
+        - The consumer tries to execute the imported shared library and executable in the same
+          directory, and it fails in Linux, but works on OSX and WIndows.
+        - Then I move the shared library to a different directory, and it fails,
+          I'm making sure that there is no harcoded rpaths messing.
+        - Finally I use the virtualrunenvironment that declares de LD_LIBRARY_PATH,
+          PATH and DYLD_LIBRARY_PATH to run the executable, and.. magic!
+          it's running agains the shared in the local cache.
+        """
+
+
         conanfile = """
 from conans import ConanFile, CMake, tools
 
