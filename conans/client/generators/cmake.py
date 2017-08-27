@@ -44,9 +44,7 @@ class CMakeGenerator(Generator):
 
     @property
     def content(self):
-        sections = ["if (CMAKE_VERSION VERSION_LESS 3.0)\n"
-                    "    include(CMakeParseArguments)\n"
-                    "endif()"]
+        sections = ["include(CMakeParseArguments)"]
 
         # Per requirement variables
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
