@@ -22,15 +22,14 @@ set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
 
 """
 
+
 def _cmake_string_representation(value):
     """Escapes the specified string for use in a CMake command surrounded with double quotes
        :param value the string to escape"""
     return '"{0}"'.format(value.replace('\\', '\\\\')
                                .replace('$', '\\$')
                                .replace('"', '\\"'))
-                            
-    
-    
+
 
 def _build_type_str(build_type):
     if build_type:
@@ -401,13 +400,17 @@ endmacro()
 
 cmake_macros = """
 macro(conan_basic_setup)
+    set(options TARGETS NO_OUTPUT_DIRS)
+    cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
     endif()
     conan_check_compiler()
-    conan_output_dirs_setup()
+    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_output_dirs_setup()
+    endif()
     conan_set_find_library_paths()
-    if(NOT "${ARGV0}" STREQUAL "TARGETS")
+    if(NOT ARGUMENTS_TARGETS)
         message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
     else()
@@ -492,12 +495,14 @@ else()
 endif()
 
 macro(conan_basic_setup)
+    set(options TARGETS)
+    cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
     endif()
     conan_check_compiler()
     # conan_output_dirs_setup()
-    if(NOT "${ARGV0}" STREQUAL "TARGETS")
+    if(NOT ARGUMENTS_TARGETS)
         message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
     else()
