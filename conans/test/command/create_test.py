@@ -112,7 +112,8 @@ class MyPkg(ConanFile):
         for r in self.requires.values():
             self.output.info("build() Requires: %s" % str(r.conan_reference))
         import os
-        self.output.info("build() cpp_info: %s" % self.deps_cpp_info.deps)
+        for dep in self.deps_cpp_info.deps:
+            self.output.info("build() cpp_info dep: %s" % dep)
         self.output.info("build() cpp_info: %s"
                          % os.path.basename(self.deps_cpp_info["Pkg"].includedirs[0]))
         self.output.info("build() cpp_info: %s"
@@ -130,8 +131,12 @@ class MyPkg(ConanFile):
                       "Requires: Other/1.0@user/channel", client.out)
         self.assertIn("Pkg/0.1@lasote/testing test package: build() "
                       "Requires: Dep/0.1@user/channel", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() "
-                      "cpp_info: [u'Other', u'Pkg', u'Dep']", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Other",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Dep",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Pkg",
+                      client.out)
 
     def create_with_tests_and_build_requires_test(self):
         client = TestClient()
