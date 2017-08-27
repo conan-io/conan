@@ -1,8 +1,4 @@
 import os
-import re
-from conans.errors import ConanException
-from conans.util.log import logger
-import traceback
 from collections import OrderedDict
 
 
