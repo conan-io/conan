@@ -376,6 +376,17 @@ def replace_in_file(file_path, search, replace):
         handle.write(content)
 
 
+def replace_prefix_in_pc_file(pc_file, new_prefix):
+    content = load(pc_file)
+    lines = []
+    for line in content.splitlines():
+        if line.startswith("prefix="):
+            lines.append('prefix=%s' % new_prefix)
+        else:
+            lines.append(line)
+    save(pc_file, "\n".join(lines))
+
+
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
     real_signature = _generic_algorithm_sum(file_path, algorithm_name)
     if real_signature != signature:
