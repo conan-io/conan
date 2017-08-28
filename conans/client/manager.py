@@ -38,6 +38,7 @@ from conans.client.loader_parse import load_conanfile_class
 from conans.client.build_requires import BuildRequires
 from conans.client.linter import conan_linter
 from conans.search.search import filter_outdated
+from conans.model.info import ConanInfo
 
 
 class ConanManager(object):
@@ -479,6 +480,13 @@ class ConanManager(object):
                                  "Create a '%s' and move manually the "
                                  "requirements and generators from '%s' file"
                                  % (CONANFILE, CONANFILE, CONANFILE_TXT))
+
+        if test:
+            try:
+                conan_file.requires.add(test)
+            except ConanException:
+                pass
+
         try:
             os.chdir(build_folder)
             conan_file._conanfile_directory = source_folder

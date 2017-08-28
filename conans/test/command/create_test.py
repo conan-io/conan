@@ -1,7 +1,5 @@
-from conans.test.utils import tools
 from conans.test.utils.tools import TestClient
 import unittest
-import os
 
 
 class CreateTest(unittest.TestCase):
@@ -92,6 +90,51 @@ class MyTest(ConanFile):
         client.run("create lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("Pkg/0.1@lasote/testing test package: TESTING!!!", client.out)
+
+    def create_test_package_requires(self):
+        client = TestClient()
+        dep_conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    pass
+    """
+        client.save({"conanfile.py": dep_conanfile})
+        client.run("create Dep/0.1@user/channel")
+        client.run("create Other/1.0@user/channel")
+
+        conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    requires = "Dep/0.1@user/channel"
+    """
+        test_conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    requires = "Other/1.0@user/channel"
+    def build(self):
+        for r in self.requires.values():
+            self.output.info("build() Requires: %s" % str(r.conan_reference))
+        import os
+        for dep in self.deps_cpp_info.deps:
+            self.output.info("build() cpp_info dep: %s" % dep)
+        self.output.info("build() cpp_info: %s"
+                         % os.path.basename(self.deps_cpp_info["Pkg"].includedirs[0]))
+        self.output.info("build() cpp_info: %s"
+                         % os.path.basename(self.deps_cpp_info["Dep"].includedirs[0]))
+    def test(self):
+        pass
+        """
+        client.save({"conanfile.py": conanfile,
+                     "test_package/conanfile.py": test_conanfile})
+        client.run("create Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info: include", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing test package: build() "
+                      "Requires: Other/1.0@user/channel", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing test package: build() "
+                      "Requires: Pkg/0.1@lasote/testing", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Other",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Dep",
+                      client.out)
+        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Pkg",
+                      client.out)
 
     def create_with_tests_and_build_requires_test(self):
         client = TestClient()
