@@ -27,25 +27,36 @@ def conanfile_exception_formatter(conanfile_name, func_name):
 
 
 def _format_conanfile_exception(scope, method, exception):
+    """
+    It will iterate the traceback lines, when it finds that the source code is inside the users
+    conanfile it "start recording" the messages, when the trace exits the conanfile we return
+    the traces.
+    """
     import sys
     import traceback
-    msg = "%s: Error in %s() method" % (scope, method)
     try:
+        conanfile_reached = 0  # To know if the trace has reached the code from the conanfile
+        content_lines = ["%s: Error in %s() method" % (scope, method)]
         tb = sys.exc_info()[2]
-        index = -1
+        index = 0
+
         while True:  # If out of index will raise and will be captured later
-            filepath, line, name, contents = traceback.extract_tb(tb, 40)[index]  # 40 levels of nested functions max, get the latest
-            if not "conanfile.py" in filepath: # Avoid show trace from internal conan source code
-                index -= 1
+            # 40 levels of nested functions max, get the latest
+            filepath, line, name, contents = traceback.extract_tb(tb, 40)[index]
+            if not "conanfile.py" in filepath:  # Avoid show trace from internal conan source code
+                if conanfile_reached:  # The traceback now is into the conan code
+                    break
             else:
-                break
-        if name != method:
-            msg += ", while calling '%s'" % name
-        msg += ", line %d\n\t%s" % (line, contents) if line else "\n\t%s" % contents
+                msg = "%sIn '%s'" % (" " * conanfile_reached, name)
+                msg += " (line %d): %s" % (line, contents) if line else "\n\t%s" % contents
+                content_lines.append(msg)
+                conanfile_reached += 1
+            index += 1
     except:
         pass
-    msg += "\n\t%s: %s" % (exception.__class__.__name__, str(exception))
-    return msg
+    ret = "\n".join(content_lines)
+    ret += "\n\n%s: %s" % (exception.__class__.__name__, str(exception))
+    return ret
 
 
 class ConanException(Exception):
