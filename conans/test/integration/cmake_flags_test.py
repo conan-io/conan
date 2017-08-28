@@ -201,7 +201,8 @@ class MyLib(ConanFile):
         client.save({"conanfile.py": conanfile % "True"})
         client.run("build", ignore_error=True)
 
-        self.assertIn("Execute 'conan install -g txt' first", client.user_io.out)
+        self.assertIn("self.deps_cpp_info not defined. If you need it for a local command run "
+                      "'conan install -g txt'", client.user_io.out)
 
         client.run("install -g txt")
         client.run("build")

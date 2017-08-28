@@ -3,9 +3,7 @@ import os
 from conans.util.files import save, load
 from conans.client.loader import ConanFileLoader
 from conans.model.settings import Settings
-from conans.model.options import OptionsValues
 from conans.test.utils.test_files import temp_folder
-from conans.model.scope import Scopes
 from conans import tools
 from nose_parameterized.parameterized import parameterized
 from conans.test.utils.tools import TestClient

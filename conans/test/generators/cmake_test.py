@@ -11,7 +11,6 @@ from conans.model.ref import ConanFileReference
 from conans.client.conf import default_settings_yml
 
 
-
 class CMakeGeneratorTest(unittest.TestCase):
 
     def _extract_macro(self, name, text):
@@ -56,6 +55,19 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_USER_LIB1_myvar2 "myvalue2")', cmake_lines)
         self.assertIn('set(CONAN_USER_LIB2_MYVAR2 "myvalue4")', cmake_lines)
 
+    def variables_cmake_multi_user_vars_escape_test(self):
+        settings_mock = namedtuple("Settings", "build_type, constraint")
+        conanfile = ConanFile(None, None, settings_mock("Release", lambda x: x), None)
+        conanfile.deps_user_info["FOO"].myvar = 'my"value"'
+        conanfile.deps_user_info["FOO"].myvar2 = 'my${value}'
+        conanfile.deps_user_info["FOO"].myvar3 = 'my\\value'
+        generator = CMakeMultiGenerator(conanfile)
+        content = generator.content["conanbuildinfo_multi.cmake"]
+        cmake_lines = content.splitlines()
+        self.assertIn(r'set(CONAN_USER_FOO_myvar "my\"value\"")', cmake_lines)
+        self.assertIn(r'set(CONAN_USER_FOO_myvar2 "my\${value}")', cmake_lines)
+        self.assertIn(r'set(CONAN_USER_FOO_myvar3 "my\\value")', cmake_lines)
+
     def multi_flag_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
@@ -85,25 +97,17 @@ class CMakeGeneratorTest(unittest.TestCase):
         # extract the conan_basic_setup macro
         macro = self._extract_macro("conan_basic_setup", aux_cmake_test_setup)
         self.assertEqual("""macro(conan_basic_setup)
+    set(options TARGETS NO_OUTPUT_DIRS)
+    cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
     endif()
     conan_check_compiler()
-    conan_output_dirs_setup()
+    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_output_dirs_setup()
+    endif()
     conan_set_find_library_paths()
-
-    set(use_targets FALSE)
-    set(skip_rpaths FALSE)
-    foreach(arg ${ARGN})
-        if(${arg} STREQUAL "TARGETS")
-            set(use_targets TRUE)
-        elseif(${arg} STREQUAL "SKIP_RPATH")
-            set(skip_rpaths TRUE)
-        endif()
-    endforeach()
-
-
-    if(NOT use_targets)
+    if(NOT ARGUMENTS_TARGETS)
         message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
     else()

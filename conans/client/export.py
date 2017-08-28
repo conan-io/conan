@@ -4,7 +4,7 @@ to the local store, as an initial step before building or uploading to remotes
 
 import shutil
 import os
-from conans.util.files import save, load, rmdir, mkdir
+from conans.util.files import save, load, rmdir
 from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
@@ -61,16 +61,16 @@ def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_so
                     output, filename)
 
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)
-    save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
     if previous_digest and previous_digest == digest:
-        digest = previous_digest
         output.info("The stored package has not changed")
         modified_recipe = False
+        digest = previous_digest  # Use the old one, keep old timestamp
     else:
         output.success('A new %s version was exported' % CONANFILE)
         output.info('Folder: %s' % destination_folder)
         modified_recipe = True
+    save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
     source = paths.source(conan_ref, conanfile.short_paths)
     dirty = os.path.join(source, DIRTY_FILE)

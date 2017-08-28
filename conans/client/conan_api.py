@@ -10,7 +10,6 @@ from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.detect import detect_defaults_settings
-from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
@@ -30,13 +29,14 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, is_a_reference
 from conans.model.scope import Scopes
 from conans.model.version import Version
-from conans.paths import CONANFILE, conan_expand_user
+from conans.paths import CONANFILE, get_conan_user_home
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, save_files, exception_message_safe, save
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
+from conans.client import settings_preprocessor
 
 default_manifest_folder = '.conan_manifests'
 
@@ -109,10 +109,8 @@ class ConanAPIV1(object):
         out = ConanOutput(sys.stdout, color)
         user_io = UserIO(out=out)
 
-        user_folder = os.getenv("CONAN_USER_HOME", conan_expand_user("~"))
-
         try:
-            client_cache = migrate_and_get_client_cache(user_folder, out)
+            client_cache = migrate_and_get_client_cache(get_conan_user_home(), out)
         except Exception as e:
             out.error(str(e))
             raise
@@ -127,17 +125,22 @@ class ConanAPIV1(object):
             # Get a search manager
             search_adapter = DiskSearchAdapter()
             search_manager = DiskSearchManager(client_cache, search_adapter)
-            conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager)
+
+            # Settings preprocessor
+            conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
+                          settings_preprocessor)
 
         return conan
 
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager):
+    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
+                 settings_preprocessor):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
-        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
+        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
+                                     settings_preprocessor)
         # Patch the tools module with a good requester and user_io
         tools._global_requester = get_basic_requester(self._client_cache)
         tools._global_output = self._user_io.out
@@ -203,7 +206,7 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
 
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        loader = self._manager.get_loader(profile)
         test_conanfile = loader.load_conan(test_conanfile_path, self._user_io.out, consumer=True)
 
         try:
@@ -270,9 +273,8 @@ class ConanAPIV1(object):
         if not name or not version:
             conanfile_path = os.path.join(cwd, "conanfile.py")
             conanfile = load_conanfile_class(conanfile_path)
-            try:
-                name, version = conanfile.name, conanfile.version
-            except:
+            name, version = conanfile.name, conanfile.version
+            if not name or not version:
                 raise ConanException("conanfile.py doesn't declare package name or version")
 
         reference = ConanFileReference(name, version, user, channel)
@@ -334,18 +336,25 @@ class ConanAPIV1(object):
                             test=str(reference))
 
     @api_method
-    def package_files(self, reference, package_folder=None, profile_name=None,
-                      force=False, settings=None, options=None, cwd=None):
+    def package_files(self, reference, source_folder=None, build_folder=None, package_folder=None,
+                      profile_name=None, force=False, settings=None, options=None, cwd=None):
 
         cwd = prepare_cwd(cwd)
 
         reference = ConanFileReference.loads(reference)
+        profile = profile_from_args(profile_name, settings, options, env=None, scope=None, cwd=cwd,
+                                    default_folder=self._client_cache.profiles_path)
         package_folder = package_folder or cwd
+        if not source_folder and build_folder:
+            source_folder = build_folder
         if not os.path.isabs(package_folder):
             package_folder = os.path.join(cwd, package_folder)
-        profile = profile_from_args(profile_name, settings, options, env=None,
-                                    scope=None, cwd=cwd, default_folder=self._client_cache.profiles_path)
-        self._manager.package_files(reference=reference, package_folder=package_folder,
+        if source_folder and not os.path.isabs(source_folder):
+            source_folder = os.path.normpath(os.path.join(cwd, source_folder))
+        if build_folder and not os.path.isabs(build_folder):
+            build_folder = os.path.normpath(os.path.join(cwd, build_folder))
+        self._manager.package_files(reference=reference, source_folder=source_folder,
+                                    build_folder=build_folder, package_folder=package_folder,
                                     profile=profile, force=force)
 
     @api_method
@@ -514,10 +523,12 @@ class ConanAPIV1(object):
             self._manager.imports(current_path, reference, filename, dest)
 
     @api_method
-    def export(self, user, channel, path=None, keep_source=False, filename=None, cwd=None):
+    def export(self, user, channel, path=None, keep_source=False, filename=None, cwd=None,
+               name=None, version=None):
         cwd = prepare_cwd(cwd)
         current_path = os.path.abspath(path or cwd)
-        self._manager.export(user, channel, current_path, keep_source, filename=filename)
+        self._manager.export(user, channel, current_path, keep_source, filename=filename, name=name,
+                             version=version)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,
