@@ -48,7 +48,7 @@ def input_credentials_if_unauthorized(func):
             else:
                 # Token expired or not valid, so clean the token and repeat the call
                 # (will be anonymous call but exporting who is calling)
-                logger.info("Token expired or not valid, cleaning the saved token and retying")
+                logger.info("Token expired or not valid, cleaning the saved token and retrying")
                 self._store_login((self.user, None))
                 self._rest_client.token = None
                 # Set custom headers of mac_digest and username
