@@ -63,7 +63,6 @@ def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_so
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)
 
     if previous_digest and previous_digest == digest:
-        digest = previous_digest
         output.info("The stored package has not changed")
         modified_recipe = False
         digest = previous_digest  # Use the old one, keep old timestamp
