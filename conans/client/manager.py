@@ -464,15 +464,10 @@ class ConanManager(object):
                                  % (CONANFILE, CONANFILE, CONANFILE_TXT))
 
         if test:
-            conan_info_path = os.path.join(build_folder, CONANINFO)
-            if not os.path.exists(conan_info_path):
-                raise ConanException("conaninfo.txt should exist in test_package build folder")
-            existing_info = ConanInfo.load_file(conan_info_path)
-            existing_requires = [r.conan_reference.name for r in conan_file.requires.values()]
-            for package_reference in existing_info.full_requires:
-                ref = package_reference.conan
-                if ref.name not in existing_requires:
-                    conan_file.requires.add(str(ref))
+            try:
+                conan_file.requires.add(test)
+            except ConanException:
+                pass
 
         try:
             os.chdir(build_folder)

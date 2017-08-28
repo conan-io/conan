@@ -128,9 +128,7 @@ class MyPkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing test package: build() "
                       "Requires: Other/1.0@user/channel", client.out)
         self.assertIn("Pkg/0.1@lasote/testing test package: build() "
-                      "Requires: Other/1.0@user/channel", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() "
-                      "Requires: Dep/0.1@user/channel", client.out)
+                      "Requires: Pkg/0.1@lasote/testing", client.out)
         self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Other",
                       client.out)
         self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Dep",
