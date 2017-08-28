@@ -16,7 +16,6 @@ from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
 from conans.model.values import Values
 from conans.test.utils.test_files import temp_folder
-from conans.model.scope import Scopes
 from conans.model.profile import Profile
 
 

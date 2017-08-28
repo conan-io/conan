@@ -85,7 +85,7 @@ class SayConan(ConanFile):
 
         self.client.save({CONANFILE: content})
         self.client.run("install --build missing", ignore_error=True)
-        self.assertIn(undefined_value("settings.os"), str(self.client.user_io.out))
+        self.assertIn(str(undefined_value("settings.os")), str(self.client.user_io.out))
 
     def invalid_settings_test2(self):
         # MISSING A DEFAULT VALUE BECAUSE ITS RESTRICTED TO OTHER, SO ITS REQUIRED

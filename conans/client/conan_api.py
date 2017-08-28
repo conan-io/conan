@@ -10,7 +10,6 @@ from conans import __version__ as CLIENT_VERSION, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.detect import detect_defaults_settings
-from conans.client.loader import ConanFileLoader
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
@@ -37,6 +36,7 @@ from conans.util.files import rmdir, save_files, exception_message_safe, save
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
+from conans.client import settings_preprocessor
 
 default_manifest_folder = '.conan_manifests'
 
@@ -125,17 +125,22 @@ class ConanAPIV1(object):
             # Get a search manager
             search_adapter = DiskSearchAdapter()
             search_manager = DiskSearchManager(client_cache, search_adapter)
-            conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager)
+
+            # Settings preprocessor
+            conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
+                          settings_preprocessor)
 
         return conan
 
-    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager):
+    def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
+                 settings_preprocessor):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
-        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager)
+        self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
+                                     settings_preprocessor)
         # Patch the tools module with a good requester and user_io
         tools._global_requester = get_basic_requester(self._client_cache)
         tools._global_output = self._user_io.out
@@ -201,7 +206,7 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
 
-        loader = ConanFileLoader(self._runner, self._client_cache.settings, profile)
+        loader = self._manager.get_loader(profile)
         test_conanfile = loader.load_conan(test_conanfile_path, self._user_io.out, consumer=True)
 
         try:
