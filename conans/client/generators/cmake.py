@@ -44,7 +44,7 @@ class CMakeGenerator(Generator):
 
     @property
     def content(self):
-        sections = []
+        sections = ["include(CMakeParseArguments)"]
 
         # Per requirement variables
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
