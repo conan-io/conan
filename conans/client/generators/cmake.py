@@ -2,7 +2,7 @@ from conans.model import Generator
 from conans.paths import BUILD_INFO_CMAKE
 from conans.client.generators.cmake_common import cmake_dependency_vars,\
     cmake_macros, generate_targets_section, cmake_dependencies, cmake_package_info,\
-    cmake_global_vars, cmake_user_info_vars
+    cmake_global_vars, cmake_user_info_vars, cmake_settings_info
 
 
 class DepsCppCmake(object):
@@ -61,6 +61,7 @@ class CMakeGenerator(Generator):
         sections.append("\n### Definition of global aggregated variables ###\n")
         sections.append(cmake_package_info(name=self.conanfile.name,
                                            version=self.conanfile.version))
+        sections.append(cmake_settings_info(self.conanfile.settings))
         all_flags = cmake_dependencies(dependencies=self.deps_build_info.deps)
         sections.append(all_flags)
         deps = DepsCppCmake(self.deps_build_info)

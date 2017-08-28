@@ -169,9 +169,7 @@ def _detect_compiler_version(result, output):
     else:
         result.append(("compiler", compiler))
         result.append(("compiler.version", version))
-        if compiler == "Visual Studio":
-            result.append(("compiler.runtime", "MD"))
-        elif compiler == "apple-clang":
+        if compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))

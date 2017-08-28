@@ -16,7 +16,8 @@ from conans.util.files import load, mkdir
 class ProfileParser(object):
 
     def __init__(self, text):
-        self.vars = OrderedDict() # Order matters, if user declares F=1 and then FOO=12, and in profile MYVAR=$FOO, it will
+        self.vars = OrderedDict()  # Order matters, if user declares F=1 and then FOO=12,
+        # and in profile MYVAR=$FOO, it will
         self.includes = []
         self.profile_text = ""
 
@@ -82,6 +83,19 @@ def read_conaninfo_profile(current_path):
     return profile
 
 
+def get_profile_path(profile_name, default_folder, cwd):
+    if os.path.isabs(profile_name):
+        profile_path = profile_name
+    elif cwd and (os.path.exists(os.path.join(cwd, profile_name)) or profile_name.startswith(".")):
+        # relative path name
+        profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+    else:
+        if not os.path.exists(default_folder):
+            mkdir(default_folder)
+        profile_path = os.path.join(default_folder, profile_name)
+    return profile_path
+
+
 def read_profile(profile_name, cwd, default_folder):
     """ Will look for "profile_name" in disk if profile_name is absolute path,
     in current folder if path is relative or in the default folder otherwise.
@@ -90,21 +104,11 @@ def read_profile(profile_name, cwd, default_folder):
     if not profile_name:
         return None, None
 
-    if os.path.isabs(profile_name):
-        profile_path = profile_name
-        folder = os.path.dirname(profile_name)
-    elif cwd and os.path.exists(os.path.join(cwd, profile_name)):  # relative path name
-        profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-        folder = os.path.dirname(profile_path)
-    else:
-        if not os.path.exists(default_folder):
-            mkdir(default_folder)
-        profile_path = os.path.join(default_folder, profile_name)
-        folder = default_folder
-
+    profile_path = get_profile_path(profile_name, default_folder, cwd)
     try:
         text = load(profile_path)
     except IOError:
+        folder = os.path.dirname(profile_path)
         if os.path.exists(folder):
             profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
         else:
@@ -129,7 +133,8 @@ def _load_profile(text, profile_path, default_folder):
         cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
         profile_parser = ProfileParser(text)
         inherited_vars = profile_parser.vars
-        # Iterate the includes and call recursive to get the profile and variables from parent profiles
+        # Iterate the includes and call recursive to get the profile and variables
+        # from parent profiles
         for include in profile_parser.includes:
             # Recursion !!
             profile, declared_vars = read_profile(include, cwd, default_folder)
@@ -138,14 +143,16 @@ def _load_profile(text, profile_path, default_folder):
 
         # Apply the automatic PROFILE_DIR variable
         if cwd:
-            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd)  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
+            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd)
+            # Allows PYTHONPATH=$PROFILE_DIR/pythontools
 
         # Replace the variables from parents in the current profile
         profile_parser.apply_vars(inherited_vars)
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
+                           allowed_fields=["build_requires", "settings", "env",
+                                           "scopes", "options"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
@@ -160,10 +167,22 @@ def _load_profile(text, profile_path, default_folder):
         raise ConanException("Error parsing the profile text file: %s" % str(exc))
 
 
+def _load_single_build_require(profile, line):
+
+    tokens = line.split(":", 1)
+    if len(tokens) == 1:
+        pattern, req_list = "*", line
+    else:
+        pattern, req_list = tokens
+    req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
+    profile.build_requires.setdefault(pattern, []).extend(req_list)
+
+
 def _apply_inner_profile(doc, base_profile):
     """
 
-    :param doc: ConfigParser object from the current profile (excluding includes and vars, and with values already replaced)
+    :param doc: ConfigParser object from the current profile (excluding includes and vars,
+    and with values already replaced)
     :param base_profile: Profile inherited, it's used as a base profile to modify it.
     :return: None
     """
@@ -194,13 +213,7 @@ def _apply_inner_profile(doc, base_profile):
     if doc.build_requires:
         # FIXME CHECKS OF DUPLICATED?
         for req in doc.build_requires.splitlines():
-            tokens = req.split(":", 1)
-            if len(tokens) == 1:
-                pattern, req_list = "*", req
-            else:
-                pattern, req_list = tokens
-            req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
-            base_profile.build_requires.setdefault(pattern, []).extend(req_list)
+            _load_single_build_require(base_profile, req)
 
     if doc.scopes:
         base_profile.update_scopes(Scopes.from_list(doc.scopes.splitlines()))

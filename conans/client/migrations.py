@@ -3,7 +3,7 @@ import shutil
 
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
 from conans.errors import ConanException
-from conans.migrations import Migrator
+from conans.migrations import Migrator, CONAN_VERSION
 from conans.util.files import load, save
 from conans.model.version import Version
 
@@ -79,22 +79,30 @@ build_type: [None, Debug, Release]
             self._update_settings_yml(old_settings)
 
         if old_version < Version("0.20"):
-            if os.path.exists(os.path.join(self.client_cache.conan_folder, CONAN_CONF)):
-                raise ConanException("Migration: Your Conan version was too old, "
-                                     "please, remove the %s file manually, Conan will generate "
-                                     "a new one." % CONAN_CONF)
+            conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
+            if conf_path:
+                backup_path = conf_path + ".backup"
+                save(backup_path, load(conf_path))
+                os.unlink(conf_path)
+                os.unlink(os.path.join(self.client_cache.conan_folder, CONAN_VERSION))
+                self.out.warn("*" * 40)
+                self.out.warn("Migration: Your Conan version was too old.")
+                self.out.warn("Your old conan.conf file has been backup'd to: %s" % backup_path)
+                self.out.warn("*" * 40)
 
         if old_version < Version("0.25"):
             from conans.paths import DEFAULT_PROFILE_NAME
-            self.out.warn("Migration: Moving default settings from %s file to %s"
-                          % (CONAN_CONF, DEFAULT_PROFILE_NAME))
-            conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
             default_profile_path = os.path.join(self.client_cache.conan_folder, PROFILES_FOLDER,
                                                 DEFAULT_PROFILE_NAME)
-            migrate_to_default_profile(conf_path, default_profile_path)
+            if not os.path.exists(default_profile_path):
+                self.out.warn("Migration: Moving default settings from %s file to %s"
+                              % (CONAN_CONF, DEFAULT_PROFILE_NAME))
+                conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
 
-            self.out.warn("Migration: export_source cache new layout")
-            migrate_c_src_export_source(self.client_cache, self.out)
+                migrate_to_default_profile(conf_path, default_profile_path)
+
+                self.out.warn("Migration: export_source cache new layout")
+                migrate_c_src_export_source(self.client_cache, self.out)
 
 
 def migrate_to_default_profile(conf_path, default_profile_path):

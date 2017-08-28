@@ -165,6 +165,26 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         command += " /target:%s" % ";".join(targets)
     return command
 
+def vs_installation_path(version):
+    if not hasattr(vs_installation_path, "_cached"):
+        vs_installation_path._cached = dict()
+    if not version in vs_installation_path._cached:
+        version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
+        program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
+        if not program_files:
+            return None
+        vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer", "vswhere.exe")
+        if not os.path.isfile(vswhere_path):
+            return None
+        try:
+            vs_installation_path._cached[version] = subprocess.check_output([vswhere_path, "-version", version_range,
+                "-latest", "-property", "installationPath"]).decode(sys.stdout.encoding).strip()
+        except ValueError:
+            return None
+        except subprocess.CalledProcessError:
+            return None
+    return vs_installation_path._cached[version]
+
 
 def vcvars_command(settings):
     arch_setting = settings.get_safe("arch")
@@ -183,15 +203,25 @@ def vcvars_command(settings):
                                  % (existing_version, compiler_version))
     else:
         env_var = "vs%s0comntools" % compiler_version
+
+        vs_path = None
+        if env_var == 'vs150comntools' and not env_var in os.environ:
+            vs_root = vs_installation_path(compiler_version)
+            if vs_root:
+                vs_path = os.path.join(vs_root, "Common7", "Tools", "")
+
         try:
-            vs_path = os.environ[env_var]
+            vs_path = vs_path or os.environ[env_var]
         except KeyError:
             raise ConanException("VS '%s' variable not defined. Please install VS or define "
                                  "the variable (VS2017)" % env_var)
         if env_var != "vs150comntools":
-            command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
+            vs_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
+            command = ('call "%s" %s' % (vs_path, param))
         else:
-            command = ('call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
+            vs_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
+            command = ('set "VSCMD_START_DIR=%%CD%%" && call "%s" %s' % (vs_path, param))
+            
     return command
 
 
@@ -621,6 +651,8 @@ class SystemPackageTool(object):
             return BrewTool()
         elif os_info.is_freebsd:
             return PkgTool()
+        elif os_info.is_solaris:
+            return PkgUtilTool()
         else:
             return NullTool()
 
@@ -665,7 +697,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg")
+        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
         return False
@@ -685,7 +717,7 @@ class AptTool(object):
 
 class YumTool(object):
     def update(self):
-        _run(self._runner, "%syum check-update" % self._sudo_str)
+        _run(self._runner, "%syum check-update" % self._sudo_str, accepted_returns=[0, 100])
 
     def install(self, package_name):
         _run(self._runner, "%syum install -y %s" % (self._sudo_str, package_name))
@@ -719,7 +751,31 @@ class PkgTool(object):
         return exit_code == 0
 
 
-def _run(runner, command):
+class PkgUtilTool(object):
+    def update(self):
+        _run(self._runner, "%spkgutil --catalog" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%spkgutil --install --yes %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner('test -n "`pkgutil --list %s`"' % package_name, None)
+        return exit_code == 0
+
+class ChocolateyTool(object):
+    def update(self):
+        _run(self._runner, "choco outdated")
+
+    def install(self, package_name):
+        _run(self._runner, "choco install --yes %s" % package_name)
+
+    def installed(self, package_name):
+        exit_code = self._runner('choco search --local-only --exact %s | findstr /c:"1 packages installed."' % package_name, None)
+        return exit_code == 0
+
+
+def _run(runner, command, accepted_returns=None):
+    accepted_returns = accepted_returns or [0, ]
     _global_output.info("Running: %s" % command)
-    if runner(command, True) != 0:
+    if runner(command, True) not in accepted_returns:
         raise ConanException("Command '%s' failed" % command)

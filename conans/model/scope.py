@@ -83,6 +83,11 @@ class Scopes(defaultdict):
         for name, scopes in other.items():
             self[name].update(scopes)
 
+    def remove(self, name, package=None):
+        if package is None:
+            package = _root
+        del self[package][name]
+
     @staticmethod
     def loads(text):
         return Scopes.from_list([s.strip() for s in text.splitlines()])

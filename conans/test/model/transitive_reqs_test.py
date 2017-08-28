@@ -16,7 +16,6 @@ from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
 from conans.model.values import Values
 from conans.test.utils.test_files import temp_folder
-from conans.model.scope import Scopes
 from conans.model.profile import Profile
 
 
@@ -1654,7 +1653,7 @@ class SayConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
-                                    ['Android', 'FreeBSD', 'Macos', 'SunOS', "Windows", "iOS"]),
+                                    ['Android', 'Arduino', 'FreeBSD', 'Macos', 'SunOS', "Windows", "iOS"]),
                       str(cm.exception))
 
     def test_config_remove2(self):
