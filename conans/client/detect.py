@@ -81,7 +81,8 @@ def _visual_compiler(output, version):
         return _visual_compiler_cygwin(output, version)
 
     if version == "15":
-        path = vs_installation_path("15")
+        vs_path = os.getenv('vs150comntools')
+        path = vs_path or vs_installation_path("15")
         if path:
             compiler = "Visual Studio"
             output.success("Found %s %s" % (compiler, "15"))
