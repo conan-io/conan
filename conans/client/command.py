@@ -185,7 +185,11 @@ class Command(object):
 
     def package_files(self, *args):
         """Creates a package binary from given precompiled artifacts in user folder, skipping
-           the package recipe build() and package() methods
+           the package recipe build() method. If source_folder or build_folder is specified,
+           then it will call the package() method to extract the artifacts. If source_folder
+           nor build_folder is not specified, then it will run an exact copy of the package,
+           as they are layout in the given folder, without running or even requiring to define a
+           package() method.
         """
         parser = argparse.ArgumentParser(description=self.package_files.__doc__,
                                          prog="conan package_files")
@@ -193,6 +197,14 @@ class Command(object):
                             help='package recipe reference e.g., MyPackage/1.2@user/channel')
         parser.add_argument("--package_folder", "-pf",
                             help='Get binaries from this path, relative to current or absolute')
+        parser.add_argument("--source_folder", "-sf",
+                            help='Get artifacts from this path, relative to current or absolute.'
+                            ' If specified, artifacts will be extracted/copied calling the '
+                            'package() method')
+        parser.add_argument("--build_folder", "-bf",
+                            help='Get artifacts from this path, relative to current or absolute'
+                            ' If specified, artifacts will be extracted/copied calling the '
+                            'package() method')
         parser.add_argument("--profile", "-pr",
                             help='Profile for this package')
         parser.add_argument("--options", "-o",
@@ -206,6 +218,8 @@ class Command(object):
 
         args = parser.parse_args(*args)
         return self._conan.package_files(reference=args.reference,
+                                         source_folder=args.source_folder,
+                                         build_folder=args.build_folder,
                                          package_folder=args.package_folder,
                                          profile_name=args.profile, force=args.force,
                                          settings=args.settings, options=args.options)
