@@ -432,7 +432,7 @@ class Command(object):
         parser.add_argument("--source_folder", "-sf", help="local folder containing the sources")
 
         args = parser.parse_args(*args)
-        return self._conan.package(reference=args.reference, package=args.package_id,
+        return self._conan.package(reference=args.reference, package_id=args.package_id,
                                    build_folder=args.build_folder,
                                    source_folder=args.source_folder)
 

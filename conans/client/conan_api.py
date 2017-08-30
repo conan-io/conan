@@ -483,7 +483,8 @@ class ConanAPIV1(object):
         self._manager.build(conanfile_path, source_folder, build_folder, package_folder)
 
     @api_method
-    def package(self, reference="", package=None, build_folder=None, source_folder=None, cwd=None):
+    def package(self, reference="", package_id=None, build_folder=None, source_folder=None,
+                cwd=None):
         try:
             ref = ConanFileReference.loads(reference)
         except:
@@ -492,7 +493,8 @@ class ConanAPIV1(object):
             ref = None
 
         if ref:  # cache packaging
-            self._manager.package(ref, package)
+            # TODO: other args are unused. Either raise, or split API in two methods
+            self._manager.package(ref, package_id)
         else:  # local packaging
             current_path = prepare_cwd(cwd)
             recipe_folder = reference
