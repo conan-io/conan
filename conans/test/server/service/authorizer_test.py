@@ -136,6 +136,19 @@ class AuthorizerTest(unittest.TestCase):
         self.assertRaises(ForbiddenException,
                           authorizer.check_write_package, "pepe", self.package_reference2)
 
+
+        # Only authenticated users can read openssl
+        read_perms = [(str(self.openssl_ref), "?"), ("*/*@*/*", "*")]
+
+        authorizer = BasicAuthorizer(read_perms, write_perms)
+
+        # Authenticated user can read conans
+        authorizer.check_read_conan("pepe", self.openssl_ref)
+
+        # Anonymous user can not
+        self.assertRaises(ForbiddenException,
+                          authorizer.check_read_package, None, self.openssl_ref)
+
     def users_test(self):
         """Check that lists of user names are parsed correctly"""
 
