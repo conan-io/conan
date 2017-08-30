@@ -1,6 +1,6 @@
 import unittest
 from conans.server.service.authorize import BasicAuthorizer
-from conans.errors import ForbiddenException, InternalErrorException
+from conans.errors import ForbiddenException, InternalErrorException, AuthenticationException
 from conans.model.ref import ConanFileReference, PackageReference
 
 
@@ -135,19 +135,47 @@ class AuthorizerTest(unittest.TestCase):
         # Pepe can't write other package
         self.assertRaises(ForbiddenException,
                           authorizer.check_write_package, "pepe", self.package_reference2)
-
-
+        
+    def authenticated_user_wildcard_permissions_test(self):
+        """Check that authenciated user wildcard permissions logic is ok"""
         # Only authenticated users can read openssl
         read_perms = [(str(self.openssl_ref), "?"), ("*/*@*/*", "*")]
+        # Authenticated users can write any
+        write_perms = [("*/*@*/*", "?")]
 
         authorizer = BasicAuthorizer(read_perms, write_perms)
 
-        # Authenticated user can read conans
+        # READ PERMISSIONS
+
+        # Authenticated user can read conan
         authorizer.check_read_conan("pepe", self.openssl_ref)
 
-        # Anonymous user can not
-        self.assertRaises(ForbiddenException,
-                          authorizer.check_read_package, None, self.openssl_ref)
+        # Authenticated user can read package
+        authorizer.check_read_package("pepe", self.package_reference)
+
+        # Anonymous user can not read conan, they must authenticate
+        self.assertRaises(AuthenticationException,
+                          authorizer.check_read_conan, None, self.openssl_ref)
+
+        # Anonymous user can not read package, they must authenticate
+        self.assertRaises(AuthenticationException,
+                          authorizer.check_read_package, None, self.package_reference)
+
+        # WRITE PERMISSIONS
+
+        # Authenticated user can write conan
+        authorizer.check_write_conan("pepe", self.openssl_ref)
+
+        # Authenticated user can write package
+        authorizer.check_write_package("pepe", self.package_reference)
+
+        # Anonymous user can not write conan, they must authenticate
+        self.assertRaises(AuthenticationException,
+                          authorizer.check_write_conan, None, self.openssl_ref)
+
+        # Anonymous user can not write package, they must authenticate
+        self.assertRaises(AuthenticationException,
+                          authorizer.check_write_package, None, self.package_reference)
 
     def users_test(self):
         """Check that lists of user names are parsed correctly"""
