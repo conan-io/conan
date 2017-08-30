@@ -422,7 +422,7 @@ class Command(object):
         parser.add_argument("reference", help='package recipe reference '
                             'e.g. MyPkg/0.1@user/channel, or local path to the build folder'
                             ' (relative or absolute)')
-        parser.add_argument("package", nargs="?", default="",
+        parser.add_argument("package_id", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3'
                                  ' This optional parameter is only used for the local conan '
@@ -432,7 +432,8 @@ class Command(object):
         parser.add_argument("--source_folder", "-sf", help="local folder containing the sources")
 
         args = parser.parse_args(*args)
-        return self._conan.package(reference=args.reference, package=args.package, build_folder=args.build_folder,
+        return self._conan.package(reference=args.reference, package=args.package_id,
+                                   build_folder=args.build_folder,
                                    source_folder=args.source_folder)
 
     def source(self, *args):
