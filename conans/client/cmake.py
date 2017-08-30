@@ -231,12 +231,16 @@ class CMake(object):
             return {"CONAN_LINK_RUNTIME": "/%s" % self._runtime}
         return {}
 
+    @staticmethod
+    def _get_build_config(build_type):
+        return "--config %s" % build_type
+
     @property
     def build_config(self):
         """ cmake --build tool have a --config option for Multi-configuration IDEs
         """
         if self._build_type and self.is_multi_configuration:
-            return "--config %s" % self._build_type
+            return self._get_build_config(self._build_type)
         return ""
 
     def _get_cmake_definitions(self):
@@ -317,15 +321,15 @@ class CMake(object):
         else:
             self._conanfile.run(command)
 
-    def _build_old(self, conanfile, args=None, build_dir=None, target=None):
+    def _build_old(self, conanfile, args=None, build_dir=None, target=None, build_type=None):
         """Deprecated in 0.22"""
         if not isinstance(conanfile, ConanFile):
             raise ConanException(deprecated_conanfile_param_message)
         self._conanfile = conanfile
         self._conanfile.output.warn(deprecated_conanfile_param_message)
-        return self._build_new(args=args, build_dir=build_dir, target=target)
+        return self._build_new(args=args, build_dir=build_dir, target=target, build_type=build_type)
 
-    def _build_new(self, args=None, build_dir=None, target=None):
+    def _build_new(self, args=None, build_dir=None, target=None, build_type=None):
         if isinstance(args, ConanFile):
             raise ConanException(deprecated_conanfile_param_message)
         args = args or []
@@ -341,24 +345,24 @@ class CMake(object):
 
         arg_list = _join_arguments([
             args_to_string([build_dir]),
-            self.build_config,
+            self._get_build_config(build_type) if build_type else self.build_config,
             args_to_string(args)
         ])
         command = "cmake --build %s" % arg_list
         self._conanfile.run(command)
 
-    def install(self, args=None, build_dir=None):
+    def install(self, args=None, build_dir=None, build_type=None):
         if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
             raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
                                  "Make sure 'package_folder' is defined")
-        self._build_new(args=args, build_dir=build_dir, target="install")
+        self._build_new(args=args, build_dir=build_dir, target="install", build_type=build_type)
 
-    def test(self, args=None, build_dir=None, target=None):
+    def test(self, args=None, build_dir=None, target=None, build_type=None):
         if isinstance(args, ConanFile):
             raise ConanException(deprecated_conanfile_param_message)
         if not target:
             target = "RUN_TESTS" if self._compiler == "Visual Studio" else "test"
-        self._build_new(args=args, build_dir=build_dir, target=target)
+        self._build_new(args=args, build_dir=build_dir, target=target, build_type=build_type)
 
     @property
     def verbose(self):
