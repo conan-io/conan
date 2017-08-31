@@ -271,6 +271,7 @@ class ConanClientConfigParser(ConfigParser, object):
             # If there is proxies section, but empty, it will try to use system proxy
             if not proxies:
                 return urllib.getproxies()
-            return dict(proxies)
+            result = {k: (None if v == "None" else v) for k, v in proxies}
+            return result
         except:
             return None
