@@ -886,8 +886,9 @@ class Command(object):
             logger.error(exc)
             errors = True
         except SystemExit as exc:
-            logger.error(exc)
-            self._user_io.out.error("Exiting with code: %d" % exc.code)
+            if exc.code != 0:
+                logger.error(exc)
+                self._user_io.out.error("Exiting with code: %d" % exc.code)
             errors = exc.code
         except ConanException as exc:
             errors = True
