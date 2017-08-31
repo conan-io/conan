@@ -169,6 +169,27 @@ class InfoTest(unittest.TestCase):
         self.assertIn("Invalid --only value", self.client.user_io.out)
         self.assertIn("with --path specified, allowed values:", self.client.user_io.out)
 
+    def test_cwd(self):
+        self.client = TestClient()
+        conanfile = """from conans import ConanFile
+from conans.util.files import load, save
+
+class MyTest(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+    settings = "build_type"
+
+"""
+        self.client.save({"subfolder/conanfile.py": conanfile})
+        self.client.run("export --path ./subfolder lasote/testing")
+
+        self.client.run("info --cwd ./subfolder")
+        self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)
+
+        self.client.run("info --cwd ./subfolder --build_order Pkg/0.1@lasote/testing --json=jsonfile.txt")
+        path = os.path.join(self.client.current_folder, "subfolder", "jsonfile.txt")
+        self.assertTrue(os.path.exists(path))
+
     def reuse_test(self):
         self.client = TestClient()
         self._create("Hello0", "0.1")
@@ -262,6 +283,13 @@ class InfoTest(unittest.TestCase):
         self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
         self.assertEqual("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]\n",
                          self.client.user_io.out)
+
+        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json=file.json")
+        self.assertEqual('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}',
+                         load(os.path.join(self.client.current_folder, "file.json")))
+
+        self.client.run("info Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable --json")
+        self.assertIn('{"groups": [["Hello0/0.1@lasote/stable"], ["Hello1/0.1@lasote/stable"]]}', self.client.user_io.out)
 
     def diamond_build_order_test(self):
         self.client = TestClient()

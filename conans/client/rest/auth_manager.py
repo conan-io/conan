@@ -1,4 +1,4 @@
-'''
+"""
 Collaborate with RestApiClient to make remote anonymous and authenticated calls.
 Uses user_io to request user's login and password and obtain a token for calling authenticated
 methods if receives AuthenticationException from RestApiClient.
@@ -10,8 +10,7 @@ Flow:
     if receives AuthenticationException (not open method) will ask user for login and password
     and will invoke RestApiClient.get_token() (with LOGIN_RETRIES retries) and retry to call
     get_conan with the new token.
-'''
-
+"""
 
 from conans.errors import AuthenticationException, ForbiddenException,\
     ConanException
@@ -48,6 +47,7 @@ def input_credentials_if_unauthorized(func):
             else:
                 # Token expired or not valid, so clean the token and repeat the call
                 # (will be anonymous call but exporting who is calling)
+                logger.info("Token expired or not valid, cleaning the saved token and retrying")
                 self._store_login((self.user, None))
                 self._rest_client.token = None
                 # Set custom headers of mac_digest and username
@@ -170,6 +170,10 @@ class ConanApiAuthManager(object):
     @input_credentials_if_unauthorized
     def remove_packages(self, conan_reference, package_ids):
         return self._rest_client.remove_packages(conan_reference, package_ids)
+
+    @input_credentials_if_unauthorized
+    def get_path(self, conan_reference, path, package_id):
+        return self._rest_client.get_path(conan_reference, path, package_id)
 
     def authenticate(self, user, password):
         remote_url = self._remote.url

@@ -3,7 +3,7 @@ point, which could be both a user conanfile or an installed one
 """
 from conans.model.requires import Requirements
 from collections import namedtuple
-from conans.model.ref import PackageReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.model.info import ConanInfo
 from conans.errors import ConanException, conanfile_exception_formatter, ConanExceptionInUserConanfileMethod
 from conans.client.output import ScopedOutput
@@ -19,7 +19,7 @@ class Node(namedtuple("Node", "conan_ref conanfile")):
     conanfile: the loaded conanfile object withs its values
     """
     def __repr__(self):
-        return "%s => %s" % (repr(self.conan_ref), repr(self.conanfile)[:100].replace("\n", " "))
+        return repr(self.conanfile)
 
     def __cmp__(self, other):
         if other is None:
@@ -113,7 +113,9 @@ class DepsGraph(object):
 
                 # Make sure not duplicated
                 indirect_reqs.difference_update(direct_reqs)
-                # There might be options that are not upstream
+                # There might be options that are not upstream, backup them, might be
+                # for build-requires
+                conanfile.build_requires_options = conanfile.options.values
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
                 non_devs = self.non_dev_nodes(node)
@@ -152,6 +154,20 @@ class DepsGraph(object):
 
         result = [n for n in flat if n in closure]
         return result
+
+    def public_closure(self, node):
+        closure = {}
+        current = self._neighbors[node]
+        while current:
+            new_current = set()
+            for n in current:
+                closure[n.conan_ref.name] = n
+                new_neighs = self.public_neighbors(n)
+                to_add = set(new_neighs).difference(current)
+                new_current.update(to_add)
+            current = new_current
+
+        return closure
 
     def _inverse_closure(self, references):
         closure = set()
@@ -277,7 +293,6 @@ class DepsGraphBuilder(object):
                 for conan_reference, _ in deps_graph.nodes}
 
     def load(self, conanfile):
-
         dep_graph = DepsGraph()
         # compute the conanfile entry point for this dependency graph
         root_node = Node(None, conanfile)
@@ -338,8 +353,8 @@ class DepsGraphBuilder(object):
                                      % "->".join(str(r) for r in loop_ancestors))
             new_loop_ancestors = loop_ancestors[:]  # Copy for propagating
             new_loop_ancestors.append(require.conan_reference)
-            previous_node = public_deps.get(name)
-            if require.private or not previous_node:  # new node, must be added and expanded
+            previous = public_deps.get(name)
+            if require.private or not previous:  # new node, must be added and expanded
                 # TODO: if we could detect that current node has an available package
                 # we could not download the private dep. See installer _compute_private_nodes
                 # maybe we could move these functionality to here and build only the graph
@@ -349,6 +364,7 @@ class DepsGraphBuilder(object):
                 self._load_deps(new_node, new_reqs, dep_graph, public_deps, conanref,
                                 new_options, new_loop_ancestors)
             else:  # a public node already exist with this name
+                previous_node, closure = previous
                 if previous_node.conan_ref != require.conan_reference:
                     self._output.werror("Conflict in %s\n"
                                         "    Requirement %s conflicts with already defined %s\n"
@@ -358,8 +374,29 @@ class DepsGraphBuilder(object):
                                            previous_node.conan_ref, previous_node.conan_ref))
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
-                self._load_deps(previous_node, new_reqs, dep_graph, public_deps, conanref,
-                                new_options, new_loop_ancestors)
+                if closure is None:
+                    closure = dep_graph.public_closure(node)
+                    public_deps[name] = previous_node, closure
+                if self._recurse(closure, new_reqs, new_options):
+                    self._load_deps(previous_node, new_reqs, dep_graph, public_deps, conanref,
+                                    new_options, new_loop_ancestors)
+
+    def _recurse(self, closure, new_reqs, new_options):
+        """ For a given closure, if some requirements or options coming from downstream
+        is incompatible with the current closure, then it is necessary to recurse
+        then, incompatibilities will be raised as usually"""
+        for req in new_reqs.values():
+            n = closure.get(req.conan_reference.name)
+            if n and n.conan_ref != req.conan_reference:
+                return True
+        for pkg_name, options_values in new_options.items():
+            n = closure.get(pkg_name)
+            if n:
+                options = n.conanfile.options
+                for option, value in options_values.items():
+                    if getattr(options, option) != value:
+                        return True
+        return False
 
     def _config_node(self, conanfile, conanref, down_reqs, down_ref, down_options):
         """ update settings and option in the current ConanFile, computing actual
@@ -424,9 +461,14 @@ class DepsGraphBuilder(object):
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
                                                 reference=requirement.conan_reference)
 
+        if getattr(dep_conanfile, "alias", None):
+            requirement.conan_reference = ConanFileReference.loads(dep_conanfile.alias)
+            return self._create_new_node(current_node, dep_graph, requirement, public_deps,
+                                         name_req)
+
         new_node = Node(requirement.conan_reference, dep_conanfile)
         dep_graph.add_node(new_node)
         dep_graph.add_edge(current_node, new_node)
         if not requirement.private:
-            public_deps[name_req] = new_node
+            public_deps[name_req] = new_node, None
         return new_node

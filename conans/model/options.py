@@ -95,6 +95,9 @@ class PackageOptionValues(object):
         assert isinstance(other, PackageOptionValues)
         self._dict.update(other._dict)
 
+    def remove(self, option_name):
+        del self._dict[option_name]
+
     def propagate_upstream(self, down_package_values, down_ref, own_ref, output, package_name):
         if not down_package_values:
             return
@@ -139,7 +142,6 @@ class OptionsValues(object):
     def __init__(self, values=None):
         self._package_values = PackageOptionValues()
         self._reqs_options = {}  # {name("Boost": PackageOptionValues}
-
         if not values:
             return
 
@@ -177,6 +179,9 @@ class OptionsValues(object):
         if package_values:
             self._package_values.update(package_values)
 
+    def clear_unscoped_options(self):
+        self._package_values.clear()
+
     def __getitem__(self, item):
         return self._reqs_options.setdefault(item, PackageOptionValues())
 
@@ -185,6 +190,12 @@ class OptionsValues(object):
 
     def pop(self, item):
         return self._reqs_options.pop(item, None)
+
+    def remove(self, name, package=None):
+        if package:
+            self._reqs_options[package].remove(name)
+        else:
+            self._package_values.remove(name)
 
     def __repr__(self):
         return self.dumps()

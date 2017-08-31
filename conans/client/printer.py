@@ -157,8 +157,8 @@ class Printer(object):
             if isinstance(ref, ConanFileReference) and show("required"):  # Excludes
                 self._out.writeln("    Required by:", Color.BRIGHT_GREEN)
                 for d in dependants:
-                    ref = repr(d.conan_ref) if d.conan_ref else project_reference
-                    self._out.writeln("        %s" % ref, Color.BRIGHT_YELLOW)
+                    ref = d.conan_ref if d.conan_ref else project_reference
+                    self._out.writeln("        %s" % str(ref), Color.BRIGHT_YELLOW)
 
             if show("requires"):
                 depends = deps_graph.neighbors(node)
@@ -167,19 +167,22 @@ class Printer(object):
                     for d in depends:
                         self._out.writeln("        %s" % repr(d.conan_ref), Color.BRIGHT_YELLOW)
 
-    def print_search_recipes(self, references, pattern):
+    def print_search_recipes(self, references, pattern, raw):
         """ Print all the exported conans information
         param pattern: wildcards, e.g., "opencv/*"
         """
-        if not references:
+        if not references and not raw:
             warn_msg = "There are no packages"
             pattern_msg = " matching the %s pattern" % pattern
             self._out.info(warn_msg + pattern_msg if pattern else warn_msg)
             return
 
-        self._out.info("Existing package recipes:\n")
-        for conan_ref in sorted(references):
-            self._print_colored_line(str(conan_ref), indent=0)
+        if not raw:
+            self._out.info("Existing package recipes:\n")
+            for conan_ref in sorted(references):
+                self._print_colored_line(str(conan_ref), indent=0)
+        else:
+            self._out.writeln("\n".join([str(ref) for ref in references]))
 
     def print_search_packages(self, packages_props, reference, recipe_hash, packages_query):
         if not packages_props:
@@ -217,6 +220,11 @@ class Printer(object):
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings.items())
+
+        self._print_profile_section("options", profile.options.as_list(), separator="=")
+        self._print_profile_section("build_requires", [(key, ", ".join(str(val) for val in values))
+                                                       for key, values in
+                                                       profile.build_requires.items()])
 
         envs = []
         for package, env_vars in profile.env_values.data.items():

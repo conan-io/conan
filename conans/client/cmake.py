@@ -1,3 +1,6 @@
+import os
+import platform
+
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -8,9 +11,8 @@ from conans.util.env_reader import get_env
 from conans.util.files import mkdir
 from conans.tools import cpu_count, args_to_string
 from conans import tools
-import os
-import platform
 from conans.util.log import logger
+from conans.util.config_parser import get_bool_from_text
 
 # Deprecated in 0.22
 deprecated_conanfile_param_message = '''
@@ -36,13 +38,13 @@ def _get_env_cmake_system_name():
 
 class CMake(object):
 
-    def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True, parallel=True):
+    def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True,
+                 parallel=True):
         """
-
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
         :param generator: Generator name to use or none to autodetect
-        :param cmake_system_name: False to not use CMAKE_SYSTEM_NAME variable, True for auto-detect or directly a string
-               with the system name
+        :param cmake_system_name: False to not use CMAKE_SYSTEM_NAME variable,
+               True for auto-detect or directly a string with the system name
         :param parallel: Try to build with multiple cores if available
         """
         if isinstance(settings_or_conanfile, Settings):
@@ -109,7 +111,8 @@ class CMake(object):
                         '12': '12 2013',
                         '14': '14 2015',
                         '15': '15 2017'}
-            base = "Visual Studio %s" % _visuals.get(self._compiler_version, "UnknownVersion %s" % self._compiler_version)
+            base = "Visual Studio %s" % _visuals.get(self._compiler_version,
+                                                     "UnknownVersion %s" % self._compiler_version)
             if self._arch == "x86_64":
                 return base + " Win64"
             elif "arm" in self._arch:
@@ -133,6 +136,12 @@ class CMake(object):
     def _cmake_cross_build_defines(self, the_os, os_ver):
         ret = OrderedDict()
         os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", os_ver)
+        toolchain_file = get_env("CONAN_CMAKE_TOOLCHAIN_FILE", "")
+
+        if toolchain_file != "":
+            logger.info("Setting Cross build toolchain file: %s" % toolchain_file)
+            ret["CMAKE_TOOLCHAIN_FILE"] = toolchain_file
+            return ret
 
         if self._cmake_system_name is False:
             return ret
@@ -140,7 +149,7 @@ class CMake(object):
         if self._cmake_system_name is not True:  # String not empty
             ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
-        else:  # self._cmake_system_name is True, so detect if we are cross building and the system name and version
+        else:  # detect if we are cross building and the system name and version
             platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
             if (platform_os != the_os) or os_ver:  # We are cross building
                 if the_os:
@@ -167,8 +176,8 @@ class CMake(object):
                 sysroot_path = os.getenv("CONAN_CMAKE_FIND_ROOT_PATH", None)
 
             if sysroot_path:
-                # Needs to be set here, can't be managed in the cmake generator, CMake needs to know about
-                # the sysroot before any other thing
+                # Needs to be set here, can't be managed in the cmake generator, CMake needs
+                # to know about the sysroot before any other thing
                 ret["CMAKE_SYSROOT"] = sysroot_path.replace("\\", "/")
 
             # Adjust Android stuff
@@ -183,7 +192,8 @@ class CMake(object):
                 if arch_abi_settings:
                     ret["CMAKE_ANDROID_ARCH_ABI"] = arch_abi_settings
 
-        logger.info("Setting Cross build flags: %s" % ", ".join(["%s=%s" % (k, v) for k, v in ret.items()]))
+        logger.info("Setting Cross build flags: %s"
+                    % ", ".join(["%s=%s" % (k, v) for k, v in ret.items()]))
         return ret
 
     @property
@@ -263,6 +273,13 @@ class CMake(object):
         except:
             pass
 
+        # Install to package folder
+        try:
+            if self._conanfile.package_folder:
+                ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
+        except:
+            pass
+
         if self._os == "Windows" and self._compiler == "Visual Studio":
             if self.parallel:
                 cpus = tools.cpu_count()
@@ -330,6 +347,12 @@ class CMake(object):
         command = "cmake --build %s" % arg_list
         self._conanfile.run(command)
 
+    def install(self, args=None, build_dir=None):
+        if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
+            raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
+                                 "Make sure 'package_folder' is defined")
+        self._build_new(args=args, build_dir=build_dir, target="install")
+
     def test(self, args=None, build_dir=None, target=None):
         if isinstance(args, ConanFile):
             raise ConanException(deprecated_conanfile_param_message)
@@ -337,6 +360,17 @@ class CMake(object):
             target = "RUN_TESTS" if self._compiler == "Visual Studio" else "test"
         self._build_new(args=args, build_dir=build_dir, target=target)
 
+    @property
+    def verbose(self):
+        try:
+            verbose = self.definitions["CMAKE_VERBOSE_MAKEFILE"]
+            return get_bool_from_text(str(verbose))
+        except:
+            return False
+
+    @verbose.setter
+    def verbose(self, value):
+        self.definitions["CMAKE_VERBOSE_MAKEFILE"] = "ON" if value else "OFF"
 
 def _defs_to_string(defs):
     return " ".join(['-D{0}="{1}"'.format(k, v) for k, v in defs.items()])

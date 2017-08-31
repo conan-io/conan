@@ -189,7 +189,10 @@ class BasicAuthorizer(Authorizer):
                 return True  # Ok, applies and match username
             else:
                 if username:
-                    raise ForbiddenException("Permission denied")
+                    if authorized_users[0] == "?":
+                        return True #Ok, applies and match any authenticated username
+                    else:
+                        raise ForbiddenException("Permission denied")
                 else:
                     raise AuthenticationException()
 

@@ -6,12 +6,11 @@ import six
 from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
-from conans.paths import DIRTY_FILE, EXPORT_SOURCES_DIR, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME,\
-    CONANFILE
+from conans.paths import DIRTY_FILE, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE
 from conans.util.files import rmdir, save
 
 
-def _merge_directories(src, dst):
+def merge_directories(src, dst):
     for src_dir, _, files in os.walk(src):
         dst_dir = os.path.join(dst, os.path.relpath(src_dir, src))
         if not os.path.exists(dst_dir):
@@ -19,10 +18,10 @@ def _merge_directories(src, dst):
         for file_ in files:
             src_file = os.path.join(src_dir, file_)
             dst_file = os.path.join(dst_dir, file_)
-            shutil.move(src_file, dst_file)
+            shutil.copy2(src_file, dst_file)
 
 
-def config_source(export_folder, src_folder, conan_file, output, force=False):
+def config_source(export_folder, export_source_folder, src_folder, conan_file, output, force=False):
     """ creates src folder and retrieve, calling source() from conanfile
     the necessary source code
     """
@@ -56,11 +55,7 @@ def config_source(export_folder, src_folder, conan_file, output, force=False):
         output.info('Configuring sources in %s' % src_folder)
         shutil.copytree(export_folder, src_folder, symlinks=True)
         # Now move the export-sources to the right location
-        source_sources_folder = os.path.join(src_folder, EXPORT_SOURCES_DIR)
-        if os.path.exists(source_sources_folder):
-            _merge_directories(source_sources_folder, src_folder)
-            # finally remove copied folder
-            shutil.rmtree(source_sources_folder)
+        merge_directories(export_source_folder, src_folder)
         for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c", CONANFILE+"o"):
             try:
                 os.remove(os.path.join(src_folder, f))

@@ -46,6 +46,7 @@ class ConanOutput(object):
         self._color = color
         self.werror_active = False
 
+    @property
     def is_terminal(self):
         return hasattr(self._stream, "isatty") and self._stream.isatty()
 
@@ -74,6 +75,9 @@ class ConanOutput(object):
 
     def info(self, data):
         self.writeln(data, Color.BRIGHT_CYAN)
+
+    def highlight(self, data):
+        self.writeln(data, Color.BRIGHT_MAGENTA)
 
     def success(self, data):
         self.writeln(data, Color.BRIGHT_GREEN)

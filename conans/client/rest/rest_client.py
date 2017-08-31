@@ -9,7 +9,7 @@ from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
@@ -187,8 +187,11 @@ class RestApiClient(object):
         if ignore_deleted_file and ignore_deleted_file in deleted:
             deleted.remove(ignore_deleted_file)
 
+        if not new and not deleted and modified == ["conanmanifest.txt"]:
+            return False
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
+
         if files_to_upload:
             # Get the upload urls
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
@@ -198,6 +201,8 @@ class RestApiClient(object):
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
+
+        return files_to_upload or deleted
 
     def upload_package(self, package_reference, the_files, retry, retry_wait):
         """
@@ -213,6 +218,8 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
+        if not new and not deleted and modified == ["conanmanifest.txt"]:
+            return False
 
         files_to_upload = {filename: the_files[filename] for filename in new + modified}
         if files_to_upload:        # Obtain upload urls
@@ -226,13 +233,11 @@ class RestApiClient(object):
             self._output.rewrite_line("Requesting upload permissions...Done!")
             self._output.writeln("")
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
-        else:
-            self._output.rewrite_line("Package is up to date.")
-            self._output.writeln("")
         if deleted:
             self._remove_package_files(package_reference, deleted)
 
         logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
+        return files_to_upload or deleted
 
     @handle_return_deserializer()
     def authenticate(self, user, password):
@@ -486,3 +491,45 @@ class RestApiClient(object):
                                  % ", ".join(failed))
         else:
             logger.debug("\nAll uploaded! Total time: %s\n" % str(time.time() - t1))
+
+    def get_path(self, conan_reference, package_id, path):
+        """Gets a file content or a directory list"""
+
+        if not package_id:
+            url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
+        else:
+            url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
+                                                              "/".join(conan_reference),
+                                                              package_id)
+        try:
+            urls = self._get_json(url)
+        except NotFoundException:
+            if package_id:
+                raise NotFoundException("Package %s:%s not found" % (conan_reference, package_id))
+            else:
+                raise NotFoundException("Recipe %s not found" % str(conan_reference))
+
+        def is_dir(the_path):
+            if the_path == ".":
+                return True
+            for the_file in urls.keys():
+                if the_path == the_file:
+                    return False
+                elif the_file.startswith(the_path):
+                    return True
+            raise NotFoundException("The specified path doesn't exist")
+
+        if is_dir(path):
+            ret = []
+            for the_file in urls.keys():
+                if path == "." or the_file.startswith(path):
+                    tmp = the_file[len(path)-1:].split("/", 1)[0]
+                    if tmp not in ret:
+                        ret.append(tmp)
+            return sorted(ret)
+        else:
+            downloader = Downloader(self.requester, None, self.verify_ssl)
+            auth, _ = self._file_server_capabilities(urls[path])
+            content = downloader.download(urls[path], auth=auth)
+
+            return decode_text(content)

@@ -3,9 +3,7 @@ import os
 from conans.util.files import save, load
 from conans.client.loader import ConanFileLoader
 from conans.model.settings import Settings
-from conans.model.options import OptionsValues
 from conans.test.utils.test_files import temp_folder
-from conans.model.scope import Scopes
 from conans import tools
 from nose_parameterized.parameterized import parameterized
 from conans.test.utils.tools import TestClient
@@ -103,10 +101,13 @@ class ConanfileToolsTest(unittest.TestCase):
 '''
         client = TestClient()
         client.save({"conanfile.py": file_content})
+        client.run("install -g txt")
         error = client.run("build", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("patch: error: no patch data found!", client.user_io.out)
-        self.assertIn("ERROR: Failed to parse patch: string", client.user_io.out)
+        self.assertIn("ERROR: test/1.9.10@PROJECT: Error in build() method, line 12",
+                      client.user_io.out)
+        self.assertIn("Failed to parse patch: string", client.user_io.out)
 
     def _save_files(self, file_content):
         tmp_dir = temp_folder()

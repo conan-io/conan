@@ -8,6 +8,7 @@ from conans.errors import ConanException
 
 
 EXPORT_FOLDER = "export"
+EXPORT_SRC_FOLDER = "export_source"
 SRC_FOLDER = "source"
 BUILD_FOLDER = "build"
 PACKAGES_FOLDER = "package"
@@ -39,6 +40,8 @@ CONAN_LINK = ".conan_link"
 
 RUN_LOG_NAME = "conan_run.log"
 
+DEFAULT_PROFILE_NAME = "default"
+
 
 def conan_expand_user(path):
     """ wrapper to the original expanduser function, to workaround python returning
@@ -66,10 +69,18 @@ def conan_expand_user(path):
     return os.path.expanduser(path)
 
 
+def get_conan_user_home():
+    tmp = conan_expand_user(os.getenv("CONAN_USER_HOME", "~"))
+    if not os.path.isabs(tmp):
+        raise Exception("Invalid CONAN_USER_HOME value '%s', "
+                        "please specify an absolute or path starting with ~/ "
+                        "(relative to user home)" % tmp)
+    return os.path.abspath(tmp)
+
+
 if platform.system() == "Windows":
     def _rm_conandir(path):
-        ''' removal of a directory that might contain a link to a short path
-        '''
+        """removal of a directory that might contain a link to a short path"""
         link = os.path.join(path, CONAN_LINK)
         if os.path.exists(link):
             short_path = load(link)
@@ -168,6 +179,11 @@ class SimplePaths(object):
     def export(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self.conan(conan_reference), EXPORT_FOLDER))
+
+    def export_sources(self, conan_reference, short_paths=False):
+        assert isinstance(conan_reference, ConanFileReference)
+        p = normpath(join(self.conan(conan_reference), EXPORT_SRC_FOLDER))
+        return self._shortener(p, short_paths)
 
     def source(self, conan_reference, short_paths=False):
         assert isinstance(conan_reference, ConanFileReference)

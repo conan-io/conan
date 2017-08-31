@@ -1,10 +1,10 @@
-from conans.errors import ConanException
 import re
-from conans.model.ref import ConanName, ConanFileReference
+from conans.errors import ConanException
+from conans.model.ref import ConanFileReference
+from conans.client.new_ci import ci_get_files
 
 
 conanfile = """from conans import ConanFile, CMake, tools
-import os
 
 
 class {package_name}Conan(ConanFile):
@@ -12,6 +12,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
+    description = "<Description of {package_name} here>"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -28,8 +29,7 @@ conan_basic_setup()''')
 
     def build(self):
         cmake = CMake(self)
-        shared = "-DBUILD_SHARED_LIBS=ON" if self.options.shared else ""
-        self.run('cmake hello %s %s' % (cmake.command_line, shared))
+        self.run('cmake hello %s' % cmake.command_line)
         self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
@@ -37,6 +37,7 @@ conan_basic_setup()''')
         self.copy("*hello.lib", dst="lib", keep_path=False)
         self.copy("*.dll", dst="bin", keep_path=False)
         self.copy("*.so", dst="lib", keep_path=False)
+        self.copy("*.dylib", dst="lib", keep_path=False)
         self.copy("*.a", dst="lib", keep_path=False)
 
     def package_info(self):
@@ -49,7 +50,7 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     settings = "os", "compiler", "build_type", "arch"
-    description = "Package for {package_name}"
+    description = "<Description of {package_name} here>"
     url = "None"
     license = "None"
 
@@ -65,7 +66,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
-    description = "Description of {package_name}"
+    description = "<Description of {package_name} here>"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -98,6 +99,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
+    description = "<Description of {package_name} here>"
     # No settings/options are necessary, this is header only
 
     def source(self):
@@ -116,14 +118,8 @@ class {package_name}Conan(ConanFile):
 test_conanfile = """from conans import ConanFile, CMake
 import os
 
-
-channel = os.getenv("CONAN_CHANNEL", "{channel}")
-username = os.getenv("CONAN_USERNAME", "{user}")
-
-
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    requires = "{name}/{version}@%s/%s" % (username, channel)
     generators = "cmake"
 
     def build(self):
@@ -135,6 +131,7 @@ class {package_name}TestConan(ConanFile):
     def imports(self):
         self.copy("*.dll", dst="bin", src="bin")
         self.copy("*.dylib*", dst="bin", src="lib")
+        self.copy('*.so*', dst='bin', src='lib')
 
     def test(self):
         os.chdir("bin")
@@ -194,19 +191,19 @@ cmake_minimum_required(VERSION 2.8)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/bin)
-
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-
 add_library(hello hello.cpp)
 """
 
+gitignore_template = """
+*.pyc
+test_package/build
 
-def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False):
+"""
+
+
+def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
+              visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
+              shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -225,11 +222,11 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
     ConanFileReference(name, version, user, channel)
 
     if header and exports_sources:
-        raise ConanException("--header and --sources are incompatible options")
+        raise ConanException("'header' and 'sources' are incompatible options")
     if pure_c and (header or exports_sources):
-        raise ConanException("--pure_c is incompatible with --header and --sources")
+        raise ConanException("'pure_c' is incompatible with 'header' and 'sources'")
     if bare and (header or exports_sources):
-        raise ConanException("--bare is incompatible with --header and --sources")
+        raise ConanException("'bare' is incompatible with 'header' and 'sources'")
 
     if header:
         files = {"conanfile.py": conanfile_header.format(name=name, version=version,
@@ -257,4 +254,11 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
         files["test_package/CMakeLists.txt"] = test_cmake
         files["test_package/example.cpp"] = test_main
 
+    if gitignore:
+        files[".gitignore"] = gitignore_template
+
+    files.update(ci_get_files(name, version, user, channel, visual_versions,
+                              linux_gcc_versions, linux_clang_versions,
+                              osx_clang_versions, shared, upload_url,
+                              gitlab_gcc_versions, gitlab_clang_versions))
     return files

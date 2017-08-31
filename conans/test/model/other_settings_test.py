@@ -69,9 +69,10 @@ class SayConan(ConanFile):
 
     def invalid_settings_test(self):
         '''Test wrong values and wrong constraints'''
-        default_conf = load(self.client.paths.conan_conf_path)
+        self.client.client_cache.default_profile
+        default_conf = load(self.client.paths.default_profile_path)
         new_conf = default_conf.replace("os=", "# os=")
-        save(self.client.paths.conan_conf_path, new_conf)
+        save(self.client.paths.default_profile_path, new_conf)
         # MISSING VALUE FOR A SETTING
         content = """
 from conans import ConanFile
@@ -84,7 +85,7 @@ class SayConan(ConanFile):
 
         self.client.save({CONANFILE: content})
         self.client.run("install --build missing", ignore_error=True)
-        self.assertIn(undefined_value("settings.os"), str(self.client.user_io.out))
+        self.assertIn(str(undefined_value("settings.os")), str(self.client.user_io.out))
 
     def invalid_settings_test2(self):
         # MISSING A DEFAULT VALUE BECAUSE ITS RESTRICTED TO OTHER, SO ITS REQUIRED
@@ -147,7 +148,7 @@ class SayConan(ConanFile):
         self.client.save({CONANFILE: content})
         self.client.run("install -s os=ChromeOS --build missing", ignore_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
-                                    ['Android', 'FreeBSD', 'Linux', 'Macos', 'SunOS', 'Windows', 'iOS']),
+                                    ['Android', 'Arduino', 'FreeBSD', 'Linux', 'Macos', 'SunOS', 'Windows', 'iOS']),
                       str(self.client.user_io.out))
 
         # Now add new settings to config and try again

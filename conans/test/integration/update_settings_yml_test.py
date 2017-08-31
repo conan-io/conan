@@ -48,22 +48,14 @@ compiler:
 """
         files = {"conanfile.py": file_content}
         client = TestClient()
-        save(client.paths.settings_path, prev_settings)
-        conf = load(client.paths.conan_conf_path)
-        conf = conf.replace("build_type=Release", "")
-        self.assertNotIn("build_type", conf)
-        save(client.paths.conan_conf_path, conf)
-
-        settings = Settings.loads(default_settings_yml)
-        client.paths.conan_config.settings_defaults(settings)
-        self.assertNotIn("build_type", settings.values.dumps())
         client.save(files)
         client.run("export lasote/testing")
-        self.assertNotIn("build_type", load(client.paths.settings_path))
-        self.assertNotIn("build_type", load(client.paths.conan_conf_path))
-        settings = Settings.loads(default_settings_yml)
-        client.paths.conan_config.settings_defaults(settings)
-        self.assertNotIn("build_type", settings.values.dumps())
+        save(client.paths.settings_path, prev_settings)
+        client.client_cache.default_profile  # Generate the default
+        conf = load(client.client_cache.default_profile_path)
+        conf = conf.replace("build_type=Release", "")
+        self.assertNotIn("build_type", conf)
+        save(client.client_cache.default_profile_path, conf)
 
         client.run("install test/1.9@lasote/testing --build -s arch=x86_64 -s compiler=gcc "
                    "-s compiler.version=4.9 -s os=Windows -s compiler.libcxx=libstdc++")

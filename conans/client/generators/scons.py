@@ -1,5 +1,6 @@
 from conans.model import Generator
 
+
 class SConsGenerator(Generator):
     @property
     def filename(self):

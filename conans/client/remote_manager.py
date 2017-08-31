@@ -9,13 +9,14 @@ from requests.exceptions import ConnectionError
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
 from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
-    rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR
+    rm_conandir, EXPORT_SOURCES_TGZ_NAME
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch
 from conans.util.log import logger
 from conans.util.tracer import log_package_upload, log_recipe_upload,\
     log_recipe_download, log_package_download, log_recipe_sources_download, log_uncompressed_file, log_compressed_files
+from conans.client.source import merge_directories
 
 
 class RemoteManager(object):
@@ -33,10 +34,12 @@ class RemoteManager(object):
         t1 = time.time()
         export_folder = self._client_cache.export(conan_reference)
         files, symlinks = gather_files(export_folder)
-
         if CONANFILE not in files or CONAN_MANIFEST not in files:
             raise ConanException("Cannot upload corrupted recipe '%s'" % str(conan_reference))
-        the_files = compress_recipe_files(files, symlinks, export_folder, self._output)
+        export_src_folder = self._client_cache.export_sources(conan_reference, short_paths=None)
+        src_files, src_symlinks = gather_files(export_src_folder)
+        the_files = _compress_recipe_files(files, symlinks, src_files, src_symlinks, export_folder,
+                                           self._output)
         if skip_upload:
             return None
 
@@ -44,31 +47,21 @@ class RemoteManager(object):
                                 retry, retry_wait, ignore_deleted_file)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files, remote)
-        msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
-        # FIXME: server dependent
-        if remote.url == "https://server.conan.io":
-            msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
+        if ret:
+            msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
+            # FIXME: server dependent
+            if remote.url == "https://server.conan.io":
+                msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
+            else:
+                msg += ": %s" % remote.url
         else:
-            msg += ": %s" % remote.url
+            msg = "Recipe is up to date, upload skipped"
         self._output.info(msg)
         return ret
 
-    def upload_package(self, package_reference, remote, retry, retry_wait, skip_upload=False):
-        """Will upload the package to the first remote"""
-        t1 = time.time()
-        # existing package, will use short paths if defined
-        package_folder = self._client_cache.package(package_reference, short_paths=None)
-        # Get all the files in that directory
-        files, symlinks = gather_files(package_folder)
-
-        self._output.rewrite_line("Checking package integrity...")
-        if CONANINFO not in files or CONAN_MANIFEST not in files:
-            logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
-            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
-
-        logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
-
+    def _package_integrity_check(self, package_reference, files, package_folder):
         # If package has been modified remove tgz to regenerate it
+        self._output.rewrite_line("Checking package integrity...")
         read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
 
         if read_manifest != expected_manifest:
@@ -91,19 +84,41 @@ class RemoteManager(object):
         else:
             self._output.rewrite_line("Package integrity OK!")
         self._output.writeln("")
-        logger.debug("====> Time remote_manager check package integrity : %f" % (time.time() - t1))
+
+    def upload_package(self, package_reference, remote, retry, retry_wait, skip_upload=False,
+                       integrity_check=False):
+        """Will upload the package to the first remote"""
+        t1 = time.time()
+        # existing package, will use short paths if defined
+        package_folder = self._client_cache.package(package_reference, short_paths=None)
+        # Get all the files in that directory
+        files, symlinks = gather_files(package_folder)
+
+        if CONANINFO not in files or CONAN_MANIFEST not in files:
+            logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
+            raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
+
+        logger.debug("====> Time remote_manager build_files_set : %f" % (time.time() - t1))
+
+        if integrity_check:
+            self._package_integrity_check(package_reference, files, package_folder)
+            logger.debug("====> Time remote_manager check package integrity : %f"
+                         % (time.time() - t1))
+
         the_files = compress_package_files(files, symlinks, package_folder, self._output)
-        if not skip_upload:
-
-            tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
-                                    retry, retry_wait)
-
-            duration = time.time() - t1
-            log_package_upload(package_reference, duration, the_files, remote)
-            logger.debug("====> Time remote_manager upload_package: %f" % duration)
-            return tmp
-        else:
+        if skip_upload:
             return None
+
+        tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
+                                retry, retry_wait)
+        duration = time.time() - t1
+        log_package_upload(package_reference, duration, the_files, remote)
+        logger.debug("====> Time remote_manager upload_package: %f" % duration)
+        if not tmp:
+            self._output.rewrite_line("Package is up to date, upload skipped")
+            self._output.writeln("")
+
+        return tmp
 
     def get_conan_digest(self, conan_reference, remote):
         """
@@ -157,7 +172,7 @@ class RemoteManager(object):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
-    def get_recipe_sources(self, conan_reference, export_folder, remote):
+    def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
         t1 = time.time()
 
         def filter_function(urls):
@@ -173,13 +188,16 @@ class RemoteManager(object):
         duration = time.time() - t1
         log_recipe_sources_download(conan_reference, duration, remote, zipped_files)
 
-        sources_folder = os.path.join(export_folder, EXPORT_SOURCES_DIR)
         if not zipped_files:
-            mkdir(sources_folder)  # create the folder even if no source files
+            mkdir(export_sources_folder)  # create the folder even if no source files
             return
 
-        unzip_and_get_files(zipped_files, export_folder, EXPORT_SOURCES_TGZ_NAME)
-        for dirname, _, filenames in os.walk(sources_folder):
+        unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME)
+        c_src_path = os.path.join(export_sources_folder, ".c_src")
+        if os.path.exists(c_src_path):
+            merge_directories(c_src_path, export_sources_folder)
+            shutil.rmtree(c_src_path)
+        for dirname, _, filenames in os.walk(export_sources_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
@@ -222,6 +240,9 @@ class RemoteManager(object):
         """
         return self._call_remote(remote, "remove_packages", conan_ref, remove_ids)
 
+    def get_path(self, conan_ref, package_id, path, remote):
+        return self._call_remote(remote, "get_path", conan_ref, package_id, path)
+
     def authenticate(self, remote, name, password):
         return self._call_remote(remote, 'authenticate', name, password)
 
@@ -239,7 +260,7 @@ class RemoteManager(object):
             raise ConanException(exc)
 
 
-def compress_recipe_files(files, symlinks, dest_folder, output):
+def _compress_recipe_files(files, symlinks, src_files, src_symlinks, dest_folder, output):
     # This is the minimum recipe
     result = {CONANFILE: files.pop(CONANFILE),
               CONAN_MANIFEST: files.pop(CONAN_MANIFEST)}
@@ -247,23 +268,17 @@ def compress_recipe_files(files, symlinks, dest_folder, output):
     export_tgz_path = files.pop(EXPORT_TGZ_NAME, None)
     sources_tgz_path = files.pop(EXPORT_SOURCES_TGZ_NAME, None)
 
-    def add_tgz(tgz_name, tgz_path, msg):
+    def add_tgz(tgz_name, tgz_path, tgz_files, tgz_symlinks, msg):
         if tgz_path:
             result[tgz_name] = tgz_path
-        else:
-            if tgz_name == EXPORT_TGZ_NAME:
-                tgz_files = {f: path for f, path in files.items()
-                             if not f.startswith(EXPORT_SOURCES_DIR)}
-            else:
-                tgz_files = {f: path for f, path in files.items()
-                             if f.startswith(EXPORT_SOURCES_DIR)}
-            if tgz_files:
-                output.rewrite_line(msg)
-                tgz_path = compress_files(tgz_files, symlinks, tgz_name, dest_folder)
-                result[tgz_name] = tgz_path
+        elif tgz_files:
+            output.rewrite_line(msg)
+            tgz_path = compress_files(tgz_files, tgz_symlinks, tgz_name, dest_folder)
+            result[tgz_name] = tgz_path
 
-    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, "Compressing recipe...")
-    add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, "Compressing recipe sources...")
+    add_tgz(EXPORT_TGZ_NAME, export_tgz_path, files, symlinks, "Compressing recipe...")
+    add_tgz(EXPORT_SOURCES_TGZ_NAME, sources_tgz_path, src_files, src_symlinks,
+            "Compressing recipe sources...")
 
     return result
 
@@ -286,6 +301,7 @@ def compress_files(files, symlinks, name, dest_dir):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
+    is_export_sources = (name == EXPORT_SOURCES_TGZ_NAME)
     with open(tgz_path, "wb") as tgz_handle:
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
@@ -297,6 +313,8 @@ def compress_files(files, symlinks, name, dest_dir):
             tgz.addfile(tarinfo=info)
 
         for filename, abs_path in files.items():
+            if is_export_sources:  # temporary backwards compat TGZ creation
+                filename = ".c_src/%s" % filename
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
             info.mode = os.stat(abs_path).st_mode
