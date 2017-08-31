@@ -483,20 +483,28 @@ class ConanAPIV1(object):
         self._manager.build(conanfile_path, source_folder, build_folder, package_folder)
 
     @api_method
-    def package(self, reference="", package=None, build_folder=None, source_folder=None, cwd=None):
-
-        current_path = prepare_cwd(cwd)
+    def package(self, reference="", package_id=None, build_folder=None, source_folder=None,
+                cwd=None):
         try:
-            self._manager.package(ConanFileReference.loads(reference), package)
+            ref = ConanFileReference.loads(reference)
         except:
             if "@" in reference:
                 raise
+            ref = None
+
+        if ref:  # cache packaging
+            # TODO: other args are unused. Either raise, or split API in two methods
+            self._manager.package(ref, package_id)
+        else:  # local packaging
+            current_path = prepare_cwd(cwd)
             recipe_folder = reference
             if not os.path.isabs(recipe_folder):
-                recipe_folder = os.path.normpath(os.path.join(current_path, recipe_folder))
-            build_folder = build_folder or current_path
+                recipe_folder = os.path.join(current_path, recipe_folder)
+            recipe_folder = os.path.normpath(recipe_folder)
+            build_folder = build_folder or recipe_folder
             if not os.path.isabs(build_folder):
-                build_folder = os.path.normpath(os.path.join(current_path, build_folder))
+                build_folder = os.path.join(current_path, build_folder)
+            build_folder = os.path.normpath(build_folder)
             package_folder = current_path
             source_folder = source_folder or recipe_folder
             self._manager.local_package(package_folder, recipe_folder, build_folder, source_folder)

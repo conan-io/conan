@@ -436,7 +436,7 @@ class ConanManager(object):
             packages = [PackageReference(reference, packid)
                         for packid in self._client_cache.conan_builds(reference)]
             if not packages:
-                raise NotFoundException("%s: Package recipe has not been built locally\n"
+                raise NotFoundException("%s: Package has not been built in local cache\n"
                                         "Please read the 'conan package' command help\n"
                                         "Use 'conan install' or 'conan test_package' to build and "
                                         "create binaries" % str(reference))
