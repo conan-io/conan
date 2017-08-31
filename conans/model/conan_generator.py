@@ -11,6 +11,7 @@ class Generator(object):
         self._build_info = conanfile.cpp_info
         self._deps_env_info = conanfile.deps_env_info
         self._env_info = conanfile.env_info
+        self._deps_user_info = conanfile.deps_user_info
 
     @property
     def deps_build_info(self):
@@ -23,10 +24,18 @@ class Generator(object):
     @property
     def deps_env_info(self):
         return self._deps_env_info
-
+    
+    @property
+    def deps_user_info(self):
+        return self._deps_user_info
+    
     @property
     def env_info(self):
         return self._env_info
+
+    @property
+    def settings(self):
+        return self.conanfile.settings
 
     @abstractproperty
     def content(self):

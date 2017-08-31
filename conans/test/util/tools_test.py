@@ -19,7 +19,8 @@ from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.visual_project_files import get_vs_project_files
-from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool
+from conans.test.utils.context_manager import which
+from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool
 from conans.util.files import save
 
 
@@ -88,8 +89,8 @@ class HelloConan(ConanFile):
         assert(tools._global_output != None)
         """
         client.save({"conanfile.py": conanfile})
+        client.run("install -g txt")
         client.run("build")
-
 
         # Not test the real commmand get_command if it's setting the module global vars
         tools._global_requester = None
@@ -124,10 +125,14 @@ class HelloConan(ConanFile):
     def system_package_tool_fail_when_not_0_returned_test(self):
         runner = RunnerMock(return_ok=False)
         spt = SystemPackageTool(runner=runner)
-        if platform.system() == "Linux" or platform.system() == "Darwin":
-            msg = "Command 'sudo apt-get update' failed" if platform.system() == "Linux" \
-                else "Command 'brew update' failed"
+        platforms = {"Linux": "sudo apt-get update", "Darwin": "brew update"}
+        if platform.system() in platforms:
+            msg = "Command '%s' failed" % platforms[platform.system()]
             with self.assertRaisesRegexp(ConanException, msg):
+                spt.update()
+        elif platform.system() == "Windows" and which("choco.exe"):
+            spt = SystemPackageTool(runner=runner, tool=ChocolateyTool())
+            with self.assertRaisesRegexp(ConanException, "Command 'choco outdated' failed"):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
@@ -186,6 +191,30 @@ class HelloConan(ConanFile):
         spt.install("a_package", force=True)
         self.assertEquals(runner.command_called, "brew install a_package")
 
+        os_info.is_freebsd = True
+        os_info.is_macos = False
+
+        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt.update()
+        self.assertEquals(runner.command_called, "sudo pkg update")
+        spt.install("a_package", force=True)
+        self.assertEquals(runner.command_called, "sudo pkg install -y a_package")
+        spt.install("a_package", force=False)
+        self.assertEquals(runner.command_called, "pkg info a_package")
+
+        # Chocolatey is an optional package manager on Windows
+        if platform.system() == "Windows" and which("choco.exe"):
+            os_info.is_freebsd = False
+            os_info.is_windows = True
+
+            spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
+            spt.update()
+            self.assertEquals(runner.command_called, "choco outdated")
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "choco install --yes a_package")
+            spt.install("a_package", force=False)
+            self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+
         os.environ["CONAN_SYSREQUIRES_SUDO"] = "False"
 
         os_info = OSInfo()
@@ -213,6 +242,39 @@ class HelloConan(ConanFile):
         self.assertEquals(runner.command_called, "brew update")
         spt.install("a_package", force=True)
         self.assertEquals(runner.command_called, "brew install a_package")
+
+        os_info.is_freebsd = True
+        os_info.is_macos = False
+
+        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt.update()
+        self.assertEquals(runner.command_called, "pkg update")
+        spt.install("a_package", force=True)
+        self.assertEquals(runner.command_called, "pkg install -y a_package")
+        spt.install("a_package", force=False)
+        self.assertEquals(runner.command_called, "pkg info a_package")
+
+        os_info.is_solaris = True
+        os_info.is_freebsd = False
+
+        spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt.update()
+        self.assertEquals(runner.command_called, "pkgutil --catalog")
+        spt.install("a_package", force=True)
+        self.assertEquals(runner.command_called, "pkgutil --install --yes a_package")
+
+        # Chocolatey is an optional package manager on Windows
+        if platform.system() == "Windows" and which("choco.exe"):
+            os_info.is_solaris = False
+            os_info.is_windows = True
+
+            spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
+            spt.update()
+            self.assertEquals(runner.command_called, "choco outdated")
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "choco install --yes a_package")
+            spt.install("a_package", force=False)
+            self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
         del os.environ["CONAN_SYSREQUIRES_SUDO"]
 
@@ -245,11 +307,18 @@ class HelloConan(ConanFile):
         self.assertEquals(7, runner.calls)
 
     def system_package_tool_installed_test(self):
-        if platform.system() != "Linux" and platform.system() != "Macos":
+        if platform.system() != "Linux" and platform.system() != "Macos" and platform.system() != "Windows":
+            return
+        if platform.system() == "Windows" and not which("choco.exe"):
             return
         spt = SystemPackageTool()
-        # Git should be installed on development/testing machines
-        self.assertTrue(spt._tool.installed("git"))
+        expected_package = "git"
+        if platform.system() == "Windows" and which("choco.exe"):
+            spt = SystemPackageTool(tool=ChocolateyTool())
+            # Git is not installed by default on Chocolatey
+            expected_package = "chocolatey"
+        # The expected should be installed on development/testing machines
+        self.assertTrue(spt._tool.installed(expected_package))
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 

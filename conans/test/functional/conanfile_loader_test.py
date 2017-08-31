@@ -11,9 +11,30 @@ from conans.test.utils.test_files import temp_folder
 from conans.model.profile import Profile
 from collections import OrderedDict
 from mock.mock import call
+from conans.client.loader_parse import load_conanfile_class
 
 
 class ConanLoaderTest(unittest.TestCase):
+
+    def inherit_short_paths_test(self):
+        loader = ConanFileLoader(None, Settings(), Profile())
+        tmp_dir = temp_folder()
+        conanfile_path = os.path.join(tmp_dir, "conanfile.py")
+        conanfile = """from base_recipe import BasePackage
+class Pkg(BasePackage):
+    pass
+"""
+        base_recipe = """from conans import ConanFile
+class BasePackage(ConanFile):
+    short_paths = True
+"""
+        save(conanfile_path, conanfile)
+        save(os.path.join(tmp_dir, "base_recipe.py"), base_recipe)
+        conan_file = load_conanfile_class(conanfile_path)
+        self.assertEqual(conan_file.short_paths, True)
+
+        result = loader.load_conan(conanfile_path, output=None, consumer=True)
+        self.assertEqual(result.short_paths, True)
 
     def requires_init_test(self):
         loader = ConanFileLoader(None, Settings(), Profile())

@@ -4,14 +4,12 @@ from conans.paths import CONANFILE
 import os
 from conans.client.deps_builder import DepsGraphBuilder
 from conans.model.ref import ConanFileReference
-from conans.model.options import OptionsValues
 from conans.client.loader import ConanFileLoader
 from conans.util.files import save, list_folder_subdirs
 from conans.model.settings import Settings
 from conans.model.requires import Requirements
 from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
-from conans.model.scope import Scopes
 from conans.client.require_resolver import RequireResolver, satisfying
 import re
 from nose_parameterized import parameterized
@@ -222,7 +220,7 @@ class SayConan(ConanFile):
                            ])
     def transitive_test(self, version_range, solution, override, valid):
         hello_text = hello_content % ">0.1, <1"
-        hello_ref = ConanFileReference.loads("Hello/1.0@memsharded/testing")
+        hello_ref = ConanFileReference.loads("Hello/1.2@memsharded/testing")
         self.retriever.conan(hello_ref, hello_text)
 
         chat_content = """
@@ -231,7 +229,7 @@ from conans import ConanFile
 class ChatConan(ConanFile):
     name = "Chat"
     version = "2.3"
-    requires = "Hello/1.0@memsharded/testing", %s
+    requires = "Hello/1.2@memsharded/testing", %s
 """
 
         deps_graph = self.root(chat_content % version_range)

@@ -1,14 +1,13 @@
 import os
-from conans.errors import ConanException
-import logging
-from conans.util.env_reader import get_env
-from conans.util.files import save, load
-from six.moves.configparser import ConfigParser, NoSectionError
-from conans.model.values import Values
 import urllib
-from conans.paths import conan_expand_user
-from collections import OrderedDict
+
+from six.moves.configparser import ConfigParser, NoSectionError
+
+from conans.errors import ConanException
 from conans.model.env_info import unquote
+from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME, get_conan_user_home
+from conans.util.env_reader import get_env
+from conans.util.files import load
 
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
@@ -23,14 +22,16 @@ os:
         version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3"]
     FreeBSD:
     SunOS:
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64]
+    Arduino:
+        board: ANY
+arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr]
 compiler:
     sun-cc:
-       version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
-       threads: [None, posix]
-       libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
+        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
+        threads: [None, posix]
+        libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
-        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3", "7.1"]
+        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3", "6.4", "7.1", "7.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -47,8 +48,7 @@ compiler:
 build_type: [None, Debug, Release]
 """
 
-# Keep for the migration (could be removed in ~0.22 and directly appended to default_client_conf)
-new_default_confs_from_env = '''
+default_client_conf = """
 [log]
 run_to_output = True        # environment CONAN_LOG_RUN_TO_OUTPUT
 run_to_file = False         # environment CONAN_LOG_RUN_TO_FILE
@@ -57,13 +57,16 @@ level = 50                  # environment CONAN_LOGGING_LEVEL
 print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 
 [general]
+default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
+# pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
+# cmake_toolchain_file                # environment CONAN_CMAKE_TOOLCHAIN_FILE
 # cmake_system_name                   # environment CONAN_CMAKE_SYSTEM_NAME
 # cmake_system_version                # environment CONAN_CMAKE_SYSTEM_VERSION
 # cmake_system_processor              # environment CONAN_CMAKE_SYSTEM_PROCESSOR
@@ -73,10 +76,12 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # cmake_find_root_path_mode_include   # environment CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE
 
 # cpu_count = 1             # environment CONAN_CPU_COUNT
-'''
 
-default_client_conf = '''[storage]
-# This is the default path, but you can write your own
+
+[storage]
+# This is the default path, but you can write your own. It must be an absolute path or a
+# path beginning with "~" (if the environment var CONAN_USER_HOME is specified, this directory, even
+# with "~/", will be relative to the conan user home, not to the system user home)
 path = ~/.conan/data
 
 [proxies]
@@ -87,11 +92,11 @@ path = ~/.conan/data
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
 
-%s
 
-[settings_defaults]
+# Default settings now declared in the default profile
 
-''' % new_default_confs_from_env
+
+""" % DEFAULT_PROFILE_NAME
 
 
 class ConanClientConfigParser(ConfigParser, object):
@@ -119,6 +124,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
                # http://www.vtk.org/Wiki/CMake_Cross_Compiling
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
+               "CONAN_CMAKE_TOOLCHAIN_FILE": self._env_c("general.cmake_toolchain_file", "CONAN_CMAKE_TOOLCHAIN_FILE", None),
                "CONAN_CMAKE_SYSTEM_NAME": self._env_c("general.cmake_system_name", "CONAN_CMAKE_SYSTEM_NAME", None),
                "CONAN_CMAKE_SYSTEM_VERSION": self._env_c("general.cmake_system_version", "CONAN_CMAKE_SYSTEM_VERSION", None),
                "CONAN_CMAKE_SYSTEM_PROCESSOR": self._env_c("general.cmake_system_processor",
@@ -217,23 +223,42 @@ class ConanClientConfigParser(ConfigParser, object):
             raise ConanException("Invalid configuration, missing %s" % varname)
 
     @property
+    def default_profile(self):
+        try:
+            return self.get_item("general.default_profile")
+        except ConanException:
+            return DEFAULT_PROFILE_NAME
+
+    @property
     def storage(self):
         return dict(self.get_conf("storage"))
 
     @property
     def storage_path(self):
-        try:
-            conan_user_home = os.getenv("CONAN_USER_HOME")
-            if conan_user_home:
-                storage = self.storage["path"]
-                if storage[:2] == "~/":
-                    storage = storage[2:]
-                result = os.path.join(conan_user_home, storage)
-            else:
-                result = conan_expand_user(self.storage["path"])
-        except KeyError:
-            result = None
-        result = get_env('CONAN_STORAGE_PATH', result)
+        # Try with CONAN_STORAGE_PATH
+        result = get_env('CONAN_STORAGE_PATH', None)
+
+        # Try with conan.conf "path"
+        if not result:
+            try:
+                env_conan_user_home = os.getenv("CONAN_USER_HOME")
+                # if env var is declared, any specified path will be relative to CONAN_USER_HOME
+                # even with the ~/
+                if env_conan_user_home:
+                    storage = self.storage["path"]
+                    if storage[:2] == "~/":
+                        storage = storage[2:]
+                    result = os.path.join(env_conan_user_home, storage)
+                else:
+                    result = self.storage["path"]
+            except KeyError:
+                pass
+
+        # expand the result and check if absolute
+        if result:
+            result = conan_expand_user(result)
+            if not os.path.isabs(result):
+                raise ConanException("Conan storage path has to be an absolute path")
         return result
 
     @property
@@ -249,42 +274,3 @@ class ConanClientConfigParser(ConfigParser, object):
             return result
         except:
             return None
-
-    def settings_defaults(self, settings):
-        default_settings = self.get_conf("settings_defaults")
-        values = Values.from_list(default_settings)
-        settings.values = values
-        mixed_settings = _mix_settings_with_env(default_settings)
-        values = Values.from_list(mixed_settings)
-        settings.values = values
-
-
-def _mix_settings_with_env(settings):
-    """Reads CONAN_ENV_XXXX variables from environment
-    and if it's defined uses these value instead of the default
-    from conf file. If you specify a compiler with ENV variable you
-    need to specify all the subsettings, the file defaulted will be
-    ignored"""
-
-    def get_env_value(name):
-        env_name = "CONAN_ENV_%s" % name.upper().replace(".", "_")
-        return os.getenv(env_name, None)
-
-    def get_setting_name(env_name):
-        return env_name[10:].lower().replace("_", ".")
-
-    ret = OrderedDict()
-    for name, value in settings:
-        if get_env_value(name):
-            ret[name] = get_env_value(name)
-        else:
-            # being a subsetting, if parent exist in env discard this, because
-            # env doesn't define this setting. EX: env=>Visual Studio but
-            # env doesn't define compiler.libcxx
-            if "." not in name or not get_env_value(name.split(".")[0]):
-                ret[name] = value
-    # Now read if there are more env variables
-    for env, value in sorted(os.environ.items()):
-        if env.startswith("CONAN_ENV_") and get_setting_name(env) not in ret:
-            ret[get_setting_name(env)] = value
-    return list(ret.items())

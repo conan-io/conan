@@ -16,14 +16,14 @@ class MockedBooleanUserIO(UserIO):
         self.answer = answer
         UserIO.__init__(self, ins, out)
 
-    def request_boolean(self, msg, default_option=None):
+    def request_boolean(self, msg, default_option=None):  # @UnusedVariable
         self.out.info(msg)
         return self.answer
 
 
 class PackageCopierTest(unittest.TestCase):
 
-    def testCopier(self):
+    def test_copy(self):
         output = TestBufferConanOutput()
         userio = MockedBooleanUserIO(True, out=output)
         paths = SimplePaths(temp_folder())
@@ -117,10 +117,10 @@ class PackageCopierTest(unittest.TestCase):
         origin_reg = paths.export(ref)
         mkdir(origin_reg)
         save(os.path.join(origin_reg, "conanfile.py"), content)
+        mkdir(paths.export_sources(ref))
 
     def _create_package(self, ref, package_id, paths, content="default_content"):
         package1_ref = PackageReference(ref, package_id)
         package1_dir = paths.package(package1_ref)
         mkdir(package1_dir)
         save(os.path.join(package1_dir, "package.lib"), content)
-

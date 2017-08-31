@@ -49,10 +49,10 @@ class BasicBuildTest(unittest.TestCase):
         if platform.system() == "SunOS":
             return  # If is using sun-cc the gcc generator doesn't work
         for pure_c in (False, True):
-            for cmd, lang, static in [("install", 0, True),
-                                      ("install -o language=1", 1, True),
-                                      ("install -o language=1 -o static=False", 1, False),
-                                      ("install -o static=False", 0, False)]:
+            for cmd, lang, static in [("install -g txt", 0, True),
+                                      ("install -o language=1 -g txt", 1, True),
+                                      ("install -o language=1 -o static=False -g txt", 1, False),
+                                      ("install -o static=False -g txt", 0, False)]:
                 self._build(cmd, static, pure_c, use_cmake=False, lang=lang)
 
     def build_mingw_test(self):

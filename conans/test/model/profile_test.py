@@ -12,26 +12,46 @@ from conans.util.files import save
 
 class ProfileTest(unittest.TestCase):
 
-
     def profile_settings_update_test(self):
         prof = '''[settings]
 os=Windows
 '''
         new_profile, _ = _load_profile(prof, None, None)
 
-        new_profile.update_settings([("OTHER", "2")])
+        new_profile.update_settings(OrderedDict([("OTHER", "2")]))
         self.assertEquals(new_profile.settings, OrderedDict([("os", "Windows"), ("OTHER", "2")]))
 
-        new_profile.update_settings([("compiler", "2"), ("compiler.version", "3")])
+        new_profile.update_settings(OrderedDict([("compiler", "2"), ("compiler.version", "3")]))
         self.assertEquals(new_profile.settings,
                           OrderedDict([("os", "Windows"), ("OTHER", "2"),
                                        ("compiler", "2"), ("compiler.version", "3")]))
+
+    def profile_subsettings_update_test(self):
+        prof = '''[settings]
+os=Windows
+compiler=Visual Studio
+compiler.runtime=MT
+'''
+        new_profile, _ = _load_profile(prof, None, None)
+        new_profile.update_settings(OrderedDict([("compiler", "gcc")]))
+        self.assertEquals(dict(new_profile.settings), {"compiler": "gcc", "os": "Windows"})
+
+        new_profile, _ = _load_profile(prof, None, None)
+        new_profile.update_settings(OrderedDict([("compiler", "Visual Studio"),
+                                                 ("compiler.subsetting", "3"),
+                                                 ("other", "value")]))
+
+        self.assertEquals(dict(new_profile.settings), {"compiler": "Visual Studio",
+                                                       "os": "Windows",
+                                                       "compiler.runtime": "MT",
+                                                       "compiler.subsetting": "3",
+                                                       "other": "value"})
 
     def package_settings_update_test(self):
         prof = '''[settings]
 MyPackage:os=Windows
 '''
-        np , _ = _load_profile(prof, None, None)
+        np, _ = _load_profile(prof, None, None)
 
         np.update_package_settings({"MyPackage": [("OTHER", "2")]})
         self.assertEquals(np.package_settings_values,
@@ -76,7 +96,7 @@ zlib:compiler=gcc
         profile.scopes["p1"]["conaning"] = "True"
         profile.scopes["p2"]["testing"] = "True"
 
-        profile.update_settings({"compiler.version": "14"})
+        profile.update_settings(OrderedDict([("compiler.version", "14")]))
 
         self.assertEqual('[build_requires]\n[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
                          '[options]\n[scopes]\np1:conaning=True\np2:testing=True\n'

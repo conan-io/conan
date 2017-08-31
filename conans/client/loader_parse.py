@@ -10,6 +10,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.conan_generator import Generator
 from conans.util.config_parser import ConfigParser
 from conans.util.files import rmdir
+from conans.tools import chdir
 
 
 def load_conanfile_class(conanfile_path):
@@ -29,7 +30,7 @@ def _parse_module(conanfile_module, filename):
     """
     result = None
     for name, attr in conanfile_module.__dict__.items():
-        if "_" in name:
+        if name[0] == "_":
             continue
         if (inspect.isclass(attr) and issubclass(attr, ConanFile) and attr != ConanFile and
                 attr.__dict__["__module__"] == filename):
@@ -68,7 +69,8 @@ def _parse_file(conan_file_path):
         current_dir = os.path.dirname(conan_file_path)
         sys.path.append(current_dir)
         old_modules = list(sys.modules.keys())
-        loaded = imp.load_source(filename, conan_file_path)
+        with chdir(current_dir):
+            loaded = imp.load_source(filename, conan_file_path)
         # Put all imported files under a new package name
         module_id = uuid.uuid1()
         added_modules = set(sys.modules).difference(old_modules)

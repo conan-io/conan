@@ -221,6 +221,11 @@ class Printer(object):
         self._out.info("Configuration for profile %s:\n" % name)
         self._print_profile_section("settings", profile.settings.items())
 
+        self._print_profile_section("options", profile.options.as_list(), separator="=")
+        self._print_profile_section("build_requires", [(key, ", ".join(str(val) for val in values))
+                                                       for key, values in
+                                                       profile.build_requires.items()])
+
         envs = []
         for package, env_vars in profile.env_values.data.items():
             for name, value in env_vars.items():

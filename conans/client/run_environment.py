@@ -20,7 +20,7 @@ class RunEnvironment(object):
             lib_paths.extend(self.conanfile.deps_cpp_info[dep].lib_paths)
             bin_paths.extend(self.conanfile.deps_cpp_info[dep].bin_paths)
 
-        ret = {"DYLIB_LIBRARY_PATH": lib_paths,
+        ret = {"DYLD_LIBRARY_PATH": lib_paths,
                "LD_LIBRARY_PATH": lib_paths,
                "PATH": bin_paths}
 

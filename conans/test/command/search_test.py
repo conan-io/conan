@@ -5,6 +5,7 @@ import os
 from conans.model.manifest import FileTreeManifest
 import shutil
 from conans import COMPLEX_SEARCH_CAPABILITY
+from conans.util.files import load
 
 
 conan_vars1 = '''
@@ -163,12 +164,29 @@ class SearchTest(unittest.TestCase):
                           "NodeInfo/1.0.2@fenix/stable\n"
                           "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
-    def search_raw(self):
+        self.client.run("search Hello/*@fenix/testing")
+        self.assertIn("Hello/1.4.10@fenix/testing\n"
+                      "Hello/1.4.11@fenix/testing\n"
+                      "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
+
+    def search_raw_test(self):
         self.client.run("search Hello* --raw")
         self.assertEquals("Hello/1.4.10@fenix/testing\n"
                           "Hello/1.4.11@fenix/testing\n"
                           "Hello/1.4.12@fenix/testing\n"
                           "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
+
+    def search_html_table_test(self):
+        self.client.run("search Hello/1.4.10/fenix/testing --table=table.html")
+        html = load(os.path.join(self.client.current_folder, "table.html"))
+        self.assertIn("<h1>Hello/1.4.10@fenix/testing</h1>", html)
+        self.assertIn("<td>Linux gcc 4.5 (libstdc++11)</td>", html)
+        self.assertIn("<td>Windows Visual Studio 8.1</td>", html)
+
+    def search_html_table_with_no_reference_test(self):
+        self.client.run("search Hello* --table=table.html", ignore_error=True)
+        self.assertIn("ERROR: '--table' argument can only be used with a reference in the 'pattern'"
+                      " argument", self.client.user_io.out)
 
     def recipe_pattern_search_test(self):
         self.client.run("search Hello*")
@@ -400,3 +418,30 @@ class SearchTest(unittest.TestCase):
         client = TestClient()
         client.run("search nonexist/1.0@lasote/stable")
         self.assertIn("There are no packages", self.client.user_io.out)
+
+
+class SearchOutdatedTest(unittest.TestCase):
+    def search_outdated_test(self):
+        test_server = TestServer(users={"lasote": "password"})  # exported users and passwords
+        servers = {"default": test_server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "password")]})
+        conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    name = "Test"
+    version = "0.1"
+    settings = "os"
+    """
+        client.save({"conanfile.py": conanfile})
+        client.run("export lasote/testing")
+        client.run("install Test/0.1@lasote/testing --build -s os=Windows")
+        client.save({"conanfile.py": "# comment\n%s" % conanfile})
+        client.run("export lasote/testing")
+        client.run("install Test/0.1@lasote/testing --build -s os=Linux")
+        client.run("upload * --all --confirm")
+        for remote in ("", "-r=default"):
+            client.run("search Test/0.1@lasote/testing %s" % remote)
+            self.assertIn("os: Windows", client.user_io.out)
+            self.assertIn("os: Linux", client.user_io.out)
+            client.run("search Test/0.1@lasote/testing  %s --outdated" % remote)
+            self.assertIn("os: Windows", client.user_io.out)
+            self.assertNotIn("os: Linux", client.user_io.out)

@@ -5,7 +5,6 @@ from conans.client.new_ci import ci_get_files
 
 
 conanfile = """from conans import ConanFile, CMake, tools
-import os
 
 
 class {package_name}Conan(ConanFile):
@@ -13,6 +12,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
+    description = "<Description of {package_name} here>"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -29,8 +29,7 @@ conan_basic_setup()''')
 
     def build(self):
         cmake = CMake(self)
-        shared = "-DBUILD_SHARED_LIBS=ON" if self.options.shared else ""
-        self.run('cmake hello %s %s' % (cmake.command_line, shared))
+        self.run('cmake hello %s' % cmake.command_line)
         self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
@@ -51,7 +50,7 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     settings = "os", "compiler", "build_type", "arch"
-    description = "Package for {package_name}"
+    description = "<Description of {package_name} here>"
     url = "None"
     license = "None"
 
@@ -67,7 +66,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
-    description = "Description of {package_name}"
+    description = "<Description of {package_name} here>"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -100,6 +99,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
+    description = "<Description of {package_name} here>"
     # No settings/options are necessary, this is header only
 
     def source(self):
@@ -118,14 +118,8 @@ class {package_name}Conan(ConanFile):
 test_conanfile = """from conans import ConanFile, CMake
 import os
 
-
-channel = os.getenv("CONAN_CHANNEL", "{channel}")
-username = os.getenv("CONAN_USERNAME", "{user}")
-
-
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    requires = "{name}/{version}@%s/%s" % (username, channel)
     generators = "cmake"
 
     def build(self):
@@ -137,6 +131,7 @@ class {package_name}TestConan(ConanFile):
     def imports(self):
         self.copy("*.dll", dst="bin", src="bin")
         self.copy("*.dylib*", dst="bin", src="lib")
+        self.copy('*.so*', dst='bin', src='lib')
 
     def test(self):
         os.chdir("bin")
@@ -196,14 +191,6 @@ cmake_minimum_required(VERSION 2.8)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/bin)
-
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-
 add_library(hello hello.cpp)
 """
 
@@ -216,7 +203,7 @@ test_package/build
 
 def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
               visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-              shared=None, upload_url=None, gitignore=None):
+              shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -271,5 +258,7 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
         files[".gitignore"] = gitignore_template
 
     files.update(ci_get_files(name, version, user, channel, visual_versions,
-                              linux_gcc_versions, linux_clang_versions, osx_clang_versions, shared, upload_url))
+                              linux_gcc_versions, linux_clang_versions,
+                              osx_clang_versions, shared, upload_url,
+                              gitlab_gcc_versions, gitlab_clang_versions))
     return files

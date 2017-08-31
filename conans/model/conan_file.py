@@ -5,6 +5,8 @@ from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to c
 from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
+
+from conans.model.user_info import UserDepsInfo
 from conans.paths import RUN_LOG_NAME
 
 
@@ -108,6 +110,10 @@ class ConanFile(object):
         self.env_info = None  # Will be initialized at processing time
         self.deps_env_info = DepsEnvInfo()
 
+        # user declared variables
+        self.user_info = None
+        self.deps_user_info = UserDepsInfo()  # Keys are the package names, and the values a dict with the vars
+
         self.copy = None  # initialized at runtime
 
         # an output stream (writeln, info, warn error)
@@ -153,7 +159,7 @@ class ConanFile(object):
             return []
         lib_folder = os.path.join(self.package_folder, folder)
         if not os.path.exists(lib_folder):
-            self.output.warn("Package folder doesn't exist, can't collect libraries")
+            self.output.warn("Lib folder doesn't exist, can't collect libraries")
             return []
         files = os.listdir(lib_folder)
         result = []
@@ -257,4 +263,3 @@ class ConanFile(object):
             return "%s/%s@PROJECT" % (self.name, self.version)
         else:
             return "PROJECT"
-

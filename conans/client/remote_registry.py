@@ -167,13 +167,14 @@ class RemoteRegistry(object):
             refs = {k: v for k, v in refs.items() if v != remote_name}
             self._save(remotes, refs)
 
-    def update(self, remote_name, remote, verify_ssl=True):
+    def update(self, remote_name, remote, verify_ssl=True, insert=None):
         def exists_function(remotes):
             if remote_name not in remotes:
                 raise ConanException("Remote '%s' not found in remotes" % remote_name)
-        self._add_update(remote_name, remote, verify_ssl, exists_function)
+        self._add_update(remote_name, remote, verify_ssl, exists_function, insert)
 
     def _add_update(self, remote_name, remote, verify_ssl, exists_function, insert=None):
+
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
             exists_function(remotes)
@@ -185,6 +186,7 @@ class RemoteRegistry(object):
                     insert_index = int(insert)
                 except:
                     raise ConanException("insert argument must be an integer")
+                remotes.pop(remote_name, None)  # Remove if exists (update)
                 remotes_list = list(remotes.items())
                 remotes_list.insert(insert_index, (remote_name, (remote, verify_ssl)))
                 remotes = OrderedDict(remotes_list)

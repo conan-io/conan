@@ -63,6 +63,17 @@ class SearchManagerABC(object):
         pass
 
 
+def filter_outdated(packages_infos, recipe_hash):
+    result = {}
+    for package_id, info in packages_infos.items():
+        try:  # Existing package_info of old package might not have recipe_hash
+            if info["recipe_hash"] != recipe_hash:
+                result[package_id] = info
+        except KeyError:
+            pass
+    return result
+
+
 def filter_packages(query, package_infos):
     if query is None:
         return package_infos
@@ -71,8 +82,8 @@ def filter_packages(query, package_infos):
             raise ConanException("'!' character is not allowed")
         if " not " in query or query.startswith("not "):
             raise ConanException("'not' operator is not allowed")
-        result = {}
         postfix = infix_to_postfix(query) if query else []
+        result = {}
         for package_id, info in package_infos.items():
             if evaluate_postfix_with_info(postfix, info):
                 result[package_id] = info
@@ -150,7 +161,6 @@ class DiskSearchManager(SearchManagerABC):
                                settings: {os: Windows}}}
         param conan_ref: ConanFileReference object
         """
-
         infos = self._get_local_infos_min(reference)
         return filter_packages(query, infos)
 
@@ -172,7 +182,7 @@ class DiskSearchManager(SearchManagerABC):
                 result[package_id] = conan_vars_info
 
             except Exception as exc:
-                logger.error("Package %s has not ConanInfo file" % str(package_reference))
+                logger.error("Package %s has no ConanInfo file" % str(package_reference))
                 if str(exc):
                     logger.error(str(exc))
 

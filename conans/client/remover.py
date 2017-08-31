@@ -5,6 +5,7 @@ from conans.util.log import logger
 from conans.model.ref import PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
 from conans.model.ref import ConanFileReference
+from conans.search.search import filter_outdated
 
 
 class DiskRemover(object):
@@ -34,6 +35,8 @@ class DiskRemover(object):
         self.remove_src(conan_ref)
         self.remove_builds(conan_ref)
         self.remove_packages(conan_ref)
+        self._remove(self._paths.export(conan_ref), conan_ref, "export folder")
+        self._remove(self._paths.export_sources(conan_ref), conan_ref, "export_source folder")
         self._remove(self._paths.conan(conan_ref), conan_ref)
 
     def remove_src(self, conan_ref):
@@ -75,7 +78,27 @@ class ConanRemover(object):
         self._client_cache = client_cache
         self._search_manager = search_manager
 
-    def remove(self, pattern, src=None, build_ids=None, package_ids_filter=None, force=False, packages_query=None):
+    def _remote_remove(self, reference, package_ids):
+        if package_ids is None:
+            self._remote_proxy.remove(reference)
+        else:
+            self._remote_proxy.remove_packages(reference, package_ids)
+
+    def _local_remove(self, reference, src, build_ids, package_ids):
+        remover = DiskRemover(self._client_cache)
+        if src:
+            remover.remove_src(reference)
+        if build_ids is not None:
+            remover.remove_builds(reference, build_ids)
+        if package_ids is not None:
+            remover.remove_packages(reference, package_ids)
+        if not src and build_ids is None and package_ids is None:
+            remover.remove(reference)
+            registry = self._remote_proxy.registry
+            registry.remove_ref(reference, quiet=True)
+
+    def remove(self, pattern, src=None, build_ids=None, package_ids_filter=None, force=False,
+               packages_query=None, outdated=False):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
         @param pattern: it could be OpenCV* or OpenCV or a ConanFileReference
@@ -89,57 +112,44 @@ class ConanRemover(object):
         if has_remote and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
-        conan_refs, package_ids = self._select_packages_to_remove(package_ids_filter, has_remote,
-                                                                  packages_query, pattern)
-
-        if not conan_refs:
-            if packages_query:
-                self._user_io.out.warn("No packages matching the query: %s" % packages_query)
-            else:
-                self._user_io.out.warn("No package recipe reference matches with '%s' pattern" % str(pattern))
+        searcher = self._remote_proxy if has_remote else self._search_manager
+        references = searcher.search(pattern)
+        if not references:
+            self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
             return
 
         deleted_refs = []
-        for conan_ref in conan_refs:
-            assert(isinstance(conan_ref, ConanFileReference))
-            if self._ask_permission(conan_ref, src, build_ids, package_ids, force):
-                if has_remote:
-                    if package_ids is None:
-                        self._remote_proxy.remove(conan_ref)
+        for reference in references:
+            assert isinstance(reference, ConanFileReference)
+            package_ids = package_ids_filter
+            if packages_query or outdated:
+                # search packages
+                packages = searcher.search_packages(reference, packages_query)
+                if outdated:
+                    if has_remote:
+                        recipe_hash = self._remote_proxy.get_conan_digest(reference).summary_hash
                     else:
-                        self._remote_proxy.remove_packages(conan_ref, package_ids)
+                        recipe_hash = self._client_cache.load_manifest(reference).summary_hash
+                    packages = filter_outdated(packages, recipe_hash)
+                if package_ids_filter:
+                    package_ids = [p for p in packages if p in package_ids_filter]
                 else:
-                    deleted_refs.append(conan_ref)
-                    remover = DiskRemover(self._client_cache)
-                    if src:
-                        remover.remove_src(conan_ref)
-                    if build_ids is not None:
-                        remover.remove_builds(conan_ref, build_ids)
-                    if package_ids is not None:
-                        remover.remove_packages(conan_ref, package_ids)
-                    if not src and build_ids is None and package_ids is None:
-                        remover.remove(conan_ref)
-                        registry = self._remote_proxy.registry
-                        registry.remove_ref(conan_ref, quiet=True)
+                    package_ids = list(packages.keys())
+                if not package_ids:
+                    self._user_io.out.warn("No matching packages to remove for %s"
+                                           % str(reference))
+                    continue
+
+            if self._ask_permission(reference, src, build_ids, package_ids, force):
+                deleted_refs.append(reference)
+                if has_remote:
+                    self._remote_remove(reference, package_ids)
+                else:
+                    deleted_refs.append(reference)
+                    self._local_remove(reference, src, build_ids, package_ids)
 
         if not has_remote:
             self._client_cache.delete_empty_dirs(deleted_refs)
-
-    def _select_packages_to_remove(self, package_ids, has_remote, packages_query, pattern):
-        if has_remote:
-            if not packages_query:
-                conan_refs = self._remote_proxy.search(pattern)
-            else:
-                package_ids = list(self._remote_proxy.search_packages(pattern, packages_query).keys())
-                conan_refs = [pattern] if package_ids else None
-        else:
-            if not packages_query:
-                conan_refs = self._search_manager.search(pattern)
-            else:
-                package_ids = list(self._search_manager.search_packages(pattern, packages_query).keys())
-                conan_refs = [pattern] if package_ids else None
-
-        return conan_refs, package_ids
 
     def _ask_permission(self, conan_ref, src, build_ids, package_ids_filter, force):
         def stringlist(alist):

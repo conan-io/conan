@@ -1,9 +1,10 @@
+import os
+import platform
 import re
 from subprocess import Popen, PIPE, STDOUT
-import platform
-from conans.client.output import Color
+
 from conans.model.version import Version
-import os
+from conans.tools import vs_installation_path
 
 
 def _execute(command):
@@ -54,10 +55,42 @@ def _clang_compiler(output, compiler_exe="clang"):
         return None
 
 
+def _visual_compiler_cygwin(output, version):
+    if os.path.isfile("/proc/registry/HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/Windows/CurrentVersion/ProgramFilesDir (x86)"):
+        is_64bits = True
+    else:
+        is_64bits = False
+
+    if is_64bits:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\VisualStudio\SxS\VC7'
+    else:
+        key_name = r'HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\VisualStudio\SxS\VC7'
+
+    if not os.path.isfile("/proc/registry/" + key_name.replace('\\', '/') + "/" + version):
+        return None
+
+    installed_version = Version(version).major(fill=False)
+    compiler = "Visual Studio"
+    output.success("CYGWIN: Found %s %s" % (compiler, installed_version))
+    return compiler, installed_version
+
+
 def _visual_compiler(output, version):
     'version have to be 8.0, or 9.0 or... anything .0'
-    from six.moves import winreg
+    if platform.system().startswith("CYGWIN"):
+        return _visual_compiler_cygwin(output, version)
 
+    if version == "15":
+        vs_path = os.getenv('vs150comntools')
+        path = vs_path or vs_installation_path("15")
+        if path:
+            compiler = "Visual Studio"
+            output.success("Found %s %s" % (compiler, "15"))
+            return compiler, "15"
+        return None
+
+    version = "%s.0" % version
+    from six.moves import winreg  # @UnresolvedImport
     try:
         hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
                               r"SOFTWARE\Microsoft\Windows\CurrentVersion")
@@ -76,6 +109,7 @@ def _visual_compiler(output, version):
     try:
         key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, key_name)
         winreg.QueryValueEx(key, version)
+
         installed_version = Version(version).major(fill=False)
         compiler = "Visual Studio"
         output.success("Found %s %s" % (compiler, installed_version))
@@ -86,7 +120,7 @@ def _visual_compiler(output, version):
 
 def _visual_compiler_last(output):
     last_version = None
-    for version in ["8.0", "9.0", "10.0", "11.0", "12.0", "14.0"]:
+    for version in ["8", "9", "10", "11", "12", "14", "15"]:
         vs = _visual_compiler(output, version)
         last_version = vs or last_version
     return last_version
@@ -120,14 +154,14 @@ def _get_default_compiler(output):
         output.error("Not able to automatically detect '%s' version" % command)
         return None
 
-    if platform.system() == "Windows":
+    if detected_os() == "Windows":
         vs = _visual_compiler_last(output)
     gcc = _gcc_compiler(output)
     clang = _clang_compiler(output)
     if platform.system() == "SunOS":
         sun_cc = _sun_cc_compiler(output)
 
-    if platform.system() == "Windows":
+    if detected_os() == "Windows":
         return vs or gcc or clang
     elif platform.system() == "Darwin":
         return clang or gcc
@@ -147,9 +181,7 @@ def _detect_compiler_version(result, output):
     else:
         result.append(("compiler", compiler))
         result.append(("compiler.version", version))
-        if compiler == "Visual Studio":
-            result.append(("compiler.runtime", "MD"))
-        elif compiler == "apple-clang":
+        if compiler == "apple-clang":
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
@@ -166,9 +198,12 @@ def _detect_compiler_version(result, output):
 
 
 def detected_os():
-    systems = {'Darwin': 'Macos'}
-    detected_os = systems.get(platform.system(), platform.system())
-    return detected_os
+    result = platform.system()
+    if result == "Darwin":
+        return "Macos"
+    if result.startswith("CYGWIN"):
+        return "Windows"
+    return result
 
 
 def _detect_os_arch(result, output):
@@ -193,19 +228,11 @@ def _detect_os_arch(result, output):
 
 
 def detect_defaults_settings(output):
-    """ try to deduce current machine values without any
-    constraints at all
+    """ try to deduce current machine values without any constraints at all
     """
-    output.writeln("\nIt seems to be the first time you've ran conan", Color.BRIGHT_YELLOW)
-    output.writeln("Auto detecting your dev setup to initialize conan.conf", Color.BRIGHT_YELLOW)
-
     result = []
     _detect_os_arch(result, output)
     _detect_compiler_version(result, output)
     result.append(("build_type", "Release"))
 
-    output.writeln("Default conan.conf settings", Color.BRIGHT_YELLOW)
-    output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in result]), Color.BRIGHT_YELLOW)
-    output.writeln("*** You can change them in ~/.conan/conan.conf ***", Color.BRIGHT_MAGENTA)
-    output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n", Color.BRIGHT_MAGENTA)
     return result
