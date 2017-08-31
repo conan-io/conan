@@ -263,6 +263,9 @@ class MockedUserIO(UserIO):
 
     def get_username(self, remote_name):
         """Overridable for testing purpose"""
+        username_env = self._get_env_username(remote_name)
+        if username_env:
+            return username_env
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         if len(sub_dict) - 1 < index:
@@ -272,6 +275,10 @@ class MockedUserIO(UserIO):
 
     def get_password(self, remote_name):
         """Overridable for testing purpose"""
+        password_env = self._get_env_password(remote_name)
+        if password_env:
+            return password_env
+
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         tmp = sub_dict[index][1]

@@ -1,4 +1,6 @@
 import unittest
+
+from conans import tools
 from conans.test.utils.tools import TestServer, TestClient
 from conans.paths import CONANFILE
 from conans.util.files import save
@@ -43,6 +45,40 @@ class AuthorizeTest(unittest.TestCase):
 
         # Check that login failed two times before ok
         self.assertEquals(self.conan.user_io.login_index["default"], 3)
+
+    def auth_with_env_test(self):
+
+        def _upload_with_credentials(credentials):
+            cli = TestClient(servers=self.servers, users={})
+            save(os.path.join(cli.current_folder, CONANFILE), conan_content)
+            cli.run("export lasote/testing")
+            with tools.environment_append(credentials):
+                cli.run("upload %s" % str(self.conan_reference))
+            return cli
+
+        # Try with remote name in credentials
+        client = _upload_with_credentials({"CONAN_PASSWORD_DEFAULT": "pepepass",
+                                           "CONAN_LOGIN_USERNAME_DEFAULT": "pepe"})
+        self.assertIn("Got username 'pepe' from environment", client.user_io.out)
+        self.assertIn("Got password '******' from environment", client.user_io.out)
+
+        # Try with generic password and login
+        client = _upload_with_credentials({"CONAN_PASSWORD": "pepepass",
+                                           "CONAN_LOGIN_USERNAME_DEFAULT": "pepe"})
+        self.assertIn("Got username 'pepe' from environment", client.user_io.out)
+        self.assertIn("Got password '******' from environment", client.user_io.out)
+
+        # Try with generic password and generic login
+        client = _upload_with_credentials({"CONAN_PASSWORD": "pepepass",
+                                           "CONAN_LOGIN_USERNAME": "pepe"})
+        self.assertIn("Got username 'pepe' from environment", client.user_io.out)
+        self.assertIn("Got password '******' from environment", client.user_io.out)
+
+        # Bad pass raise
+        with self.assertRaises(Exception):
+            client = _upload_with_credentials({"CONAN_PASSWORD": "bad",
+                                               "CONAN_LOGIN_USERNAME": "pepe"})
+            self.assertIn("Too many failed login attempts, bye!", client.user_io.out)
 
     def max_retries_test(self):
         """Bad login 3 times"""
