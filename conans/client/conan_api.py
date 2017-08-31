@@ -44,6 +44,10 @@ default_manifest_folder = '.conan_manifests'
 def get_basic_requester(client_cache):
     requester = requests.Session()
     requester.proxies = client_cache.conan_config.proxies
+    # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
+    no_proxy = requester.proxies.pop("no_proxy", None)
+    if no_proxy:
+        os.environ["NO_PROXY"] = no_proxy
     return requester
 
 
