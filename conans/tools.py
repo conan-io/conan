@@ -166,6 +166,32 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     return command
 
 
+def vs_installation_path(version):
+    if not hasattr(vs_installation_path, "_cached"):
+        vs_installation_path._cached = dict()
+
+    if version not in vs_installation_path._cached:
+        vs_path = None
+        program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
+        if program_files:
+            vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
+                                        "vswhere.exe")
+            if os.path.isfile(vswhere_path):
+                version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
+                try:
+                    output = subprocess.check_output([vswhere_path, "-version", version_range,
+                                                      "-legacy", "-property", "installationPath"])
+                    vs_path = output.decode().strip()
+                    _global_output.info("vswhere detected VS %s in %s" % (version, vs_path))
+                except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
+                    _global_output.error("vswhere error: %s" % str(e))
+
+        # Remember to cache result
+        vs_installation_path._cached[version] = vs_path
+
+    return vs_installation_path._cached[version]
+
+
 def vcvars_command(settings):
     arch_setting = settings.get_safe("arch")
     compiler_version = settings.get_safe("compiler.version")
@@ -183,15 +209,27 @@ def vcvars_command(settings):
                                  % (existing_version, compiler_version))
     else:
         env_var = "vs%s0comntools" % compiler_version
-        try:
-            vs_path = os.environ[env_var]
-        except KeyError:
-            raise ConanException("VS '%s' variable not defined. Please install VS or define "
-                                 "the variable (VS2017)" % env_var)
-        if env_var != "vs150comntools":
-            command = ('call "%s../../VC/vcvarsall.bat" %s' % (vs_path, param))
+
+        if env_var == 'vs150comntools':
+            vs_path = os.getenv(env_var)
+            if not vs_path:  # Try to locate with vswhere
+                vs_root = vs_installation_path("15")
+                if vs_root:
+                    vs_path = os.path.join(vs_root, "Common7", "Tools")
+                else:
+                    raise ConanException("VS2017 '%s' variable not defined, "
+                                         "and vswhere didn't find it" % env_var)
+            vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
+            command = ('set "VSCMD_START_DIR=%%CD%%" && '
+                       'call "%s" %s' % (vcvars_path, param))
         else:
-            command = ('call "%s../../VC/Auxiliary/Build/vcvarsall.bat" %s' % (vs_path, param))
+            try:
+                vs_path = os.environ[env_var]
+            except KeyError:
+                raise ConanException("VS '%s' variable not defined. Please install VS" % env_var)
+            vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
+            command = ('call "%s" %s' % (vcvars_path, param))
+
     return command
 
 
@@ -336,6 +374,17 @@ def replace_in_file(file_path, search, replace):
     content = content.encode("utf-8")
     with open(file_path, "wb") as handle:
         handle.write(content)
+
+
+def replace_prefix_in_pc_file(pc_file, new_prefix):
+    content = load(pc_file)
+    lines = []
+    for line in content.splitlines():
+        if line.startswith("prefix="):
+            lines.append('prefix=%s' % new_prefix)
+        else:
+            lines.append(line)
+    save(pc_file, "\n".join(lines))
 
 
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
@@ -621,6 +670,8 @@ class SystemPackageTool(object):
             return BrewTool()
         elif os_info.is_freebsd:
             return PkgTool()
+        elif os_info.is_solaris:
+            return PkgUtilTool()
         else:
             return NullTool()
 
@@ -665,7 +716,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg")
+        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
         return False
@@ -685,7 +736,7 @@ class AptTool(object):
 
 class YumTool(object):
     def update(self):
-        _run(self._runner, "%syum check-update" % self._sudo_str)
+        _run(self._runner, "%syum check-update" % self._sudo_str, accepted_returns=[0, 100])
 
     def install(self, package_name):
         _run(self._runner, "%syum install -y %s" % (self._sudo_str, package_name))
@@ -719,7 +770,31 @@ class PkgTool(object):
         return exit_code == 0
 
 
-def _run(runner, command):
+class PkgUtilTool(object):
+    def update(self):
+        _run(self._runner, "%spkgutil --catalog" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%spkgutil --install --yes %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner('test -n "`pkgutil --list %s`"' % package_name, None)
+        return exit_code == 0
+
+class ChocolateyTool(object):
+    def update(self):
+        _run(self._runner, "choco outdated")
+
+    def install(self, package_name):
+        _run(self._runner, "choco install --yes %s" % package_name)
+
+    def installed(self, package_name):
+        exit_code = self._runner('choco search --local-only --exact %s | findstr /c:"1 packages installed."' % package_name, None)
+        return exit_code == 0
+
+
+def _run(runner, command, accepted_returns=None):
+    accepted_returns = accepted_returns or [0, ]
     _global_output.info("Running: %s" % command)
-    if runner(command, True) != 0:
+    if runner(command, True) not in accepted_returns:
         raise ConanException("Command '%s' failed" % command)

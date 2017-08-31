@@ -1,12 +1,13 @@
 import unittest
 import os
-from conans.paths import CONANFILE, CONAN_MANIFEST, EXPORT_SOURCES_DIR
+from conans.paths import CONANFILE, CONAN_MANIFEST
 from conans.util.files import save, load
 from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.tools import TestClient
 import platform
+import stat
 
 
 class ExportSettingsTest(unittest.TestCase):
@@ -27,6 +28,98 @@ class TestConan(ConanFile):
         client.run("install Hello/1.2@lasote/stable -s os=Windows", ignore_error=True)
         self.assertIn("'Windows' is not a valid 'settings.os' value", client.user_io.out)
         self.assertIn("Possible values are ['Linux']", client.user_io.out)
+
+    def export_without_full_reference_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    pass
+"""})
+        error = client.run("export lasote/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("conanfile didn't specify name", client.out)
+
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name="Lib"
+"""})
+        error = client.run("export lasote/channel", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("conanfile didn't specify version", client.out)
+
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    pass
+"""})
+        client.run("export lib/1.0@lasote/channel")
+        self.assertIn("lib/1.0@lasote/channel: A new conanfile.py version was exported",
+                      client.out)
+
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name="Lib"
+    version="1.0"
+"""})
+        error = client.run("export lasote", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
+                      client.out)
+
+    def test_export_read_only(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports = "file1.txt"
+    exports_sources = "file2.txt"
+"""
+        ref = ConanFileReference.loads("Hello/1.2@lasote/stable")
+        export_path = client.client_cache.export(ref)
+        export_src_path = client.client_cache.export_sources(ref)
+
+        files = {CONANFILE: conanfile,
+                 "file1.txt": "",
+                 "file2.txt": ""}
+        client.save(files)
+        mode1 = os.stat(os.path.join(client.current_folder, "file1.txt")).st_mode
+        mode2 = os.stat(os.path.join(client.current_folder, "file2.txt")).st_mode
+        os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 &~ stat.S_IWRITE)
+        os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 &~ stat.S_IWRITE)
+
+        client.run("export lasote/stable")
+        self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
+        self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
+        with self.assertRaises(IOError):
+            save(os.path.join(export_path, "file1.txt"), "")
+        with self.assertRaises(IOError):
+            save(os.path.join(export_src_path, "file2.txt"), "")
+        self.assertIn("WARN: Conanfile doesn't have 'license'", client.user_io.out)
+        files = {CONANFILE: conanfile,
+                 "file1.txt": "file1",
+                 "file2.txt": "file2"}
+        os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 | stat.S_IWRITE)
+        os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 | stat.S_IWRITE)
+        client.save(files)
+        client.run("export lasote/stable")
+
+        self.assertEqual(load(os.path.join(export_path, "file1.txt")), "file1")
+        self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "file2")
+        client.run("install Hello/1.2@lasote/stable --build=missing")
+        self.assertIn("Hello/1.2@lasote/stable: Generating the package", client.out)
+
+        files = {CONANFILE: conanfile,
+                 "file1.txt": "",
+                 "file2.txt": ""}
+        client.save(files)
+        os.chmod(os.path.join(client.current_folder, "file1.txt"), mode1 &~ stat.S_IWRITE)
+        os.chmod(os.path.join(client.current_folder, "file2.txt"), mode2 &~ stat.S_IWRITE)
+        client.run("export lasote/stable")
+        self.assertEqual(load(os.path.join(export_path, "file1.txt")), "")
+        self.assertEqual(load(os.path.join(export_src_path, "file2.txt")), "")
+        client.run("install Hello/1.2@lasote/stable --build=Hello")
+        self.assertIn("Hello/1.2@lasote/stable: Generating the package", client.out)
 
     def test_code_parent(self):
         """ when referencing the parent, the relative folder "sibling" will be kept
@@ -69,6 +162,28 @@ class TestConan(ConanFile):
         export_path = client.paths.export(conan_ref)
         content = load(os.path.join(export_path, "file.txt"))
         self.assertEqual("Hello World!", content)
+
+    def test_code_several_sibling(self):
+        # if provided a path with slash, it will use as a export base
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    exports_sources = "../test/src/*", "../cpp/*", "../include/*"
+"""
+        files = {"recipe/conanfile.py": conanfile,
+                 "test/src/file.txt": "Hello World!",
+                 "cpp/file.cpp": "Hello World!",
+                 "include/file.h": "Hello World!"}
+        client.save(files)
+        client.current_folder = os.path.join(client.current_folder, "recipe")
+        client.run("export lasote/stable")
+        conan_ref = ConanFileReference("Hello", "1.2", "lasote", "stable")
+        export_path = client.paths.export_sources(conan_ref)
+        self.assertEqual(sorted(['file.txt', 'file.cpp', 'file.h']),
+                         sorted(os.listdir(export_path)))
 
     def test_conanfile_case(self):
         if platform.system() != "Windows":

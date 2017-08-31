@@ -4,7 +4,7 @@ to the local store, as an initial step before building or uploading to remotes
 
 import shutil
 import os
-from conans.util.files import save, load, rmdir, mkdir
+from conans.util.files import save, load, rmdir
 from conans.paths import CONAN_MANIFEST, CONANFILE, DIRTY_FILE
 from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
@@ -55,22 +55,22 @@ def load_export_conanfile(conanfile_path, output, name, version):
 
 def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source, filename):
     destination_folder = paths.export(conan_ref)
-    previous_digest = _init_export_folder(destination_folder)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
+    previous_digest = _init_export_folder(destination_folder, exports_source_folder)
     _execute_export(conanfile, origin_folder, destination_folder, exports_source_folder,
                     output, filename)
 
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)
-    save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
     if previous_digest and previous_digest == digest:
-        digest = previous_digest
         output.info("The stored package has not changed")
         modified_recipe = False
+        digest = previous_digest  # Use the old one, keep old timestamp
     else:
         output.success('A new %s version was exported' % CONANFILE)
         output.info('Folder: %s' % destination_folder)
         modified_recipe = True
+    save(os.path.join(destination_folder, CONAN_MANIFEST), str(digest))
 
     source = paths.source(conan_ref, conanfile.short_paths)
     dirty = os.path.join(source, DIRTY_FILE)
@@ -94,7 +94,7 @@ def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_so
             save(os.path.join(source, DIRTY_FILE), "")
 
 
-def _init_export_folder(destination_folder):
+def _init_export_folder(destination_folder, destination_src_folder):
     previous_digest = None
     try:
         if os.path.exists(destination_folder):
@@ -106,6 +106,12 @@ def _init_export_folder(destination_folder):
         os.makedirs(destination_folder)
     except Exception as e:
         raise ConanException("Unable to create folder %s\n%s" % (destination_folder, str(e)))
+    try:
+        if os.path.exists(destination_src_folder):
+            rmdir(destination_src_folder)
+        os.makedirs(destination_src_folder)
+    except Exception as e:
+        raise ConanException("Unable to create folder %s\n%s" % (destination_src_folder, str(e)))
     return previous_digest
 
 
@@ -133,8 +139,6 @@ def _execute_export(conanfile, origin_folder, destination_folder, destination_so
     copier = FileCopier(origin_folder, destination_folder)
     for pattern in included_exports:
         copier(pattern, links=True, excludes=excluded_exports)
-    # create directory for sources, and import them
-    mkdir(destination_source_folder)
     copier = FileCopier(origin_folder, destination_source_folder)
     for pattern in included_sources:
         copier(pattern, links=True, excludes=excluded_sources)

@@ -3,6 +3,8 @@ import shutil
 import sys
 import tempfile
 import unittest
+import platform
+
 from collections import namedtuple
 
 from conans import tools
@@ -11,9 +13,6 @@ from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
 from conans.client.cmake import CMake
 from conans.tools import cpu_count
-
-import platform
-
 from conans.util.files import save
 
 
@@ -36,7 +35,8 @@ class CMakeTest(unittest.TestCase):
         def check(text, build_config, generator=None):
             os = str(settings.os)
             for cmake_system_name in (True, False):
-                cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" " % {"Macos": "Darwin"}.get(os, os)
+                cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" "
+                         % {"Macos": "Darwin"}.get(os, os)
                          if (platform.system() != os and cmake_system_name) else "")
                 cmake = CMake(conan_file, generator=generator, cmake_system_name=cmake_system_name)
                 new_text = text.replace("-DCONAN_EXPORTED", "%s-DCONAN_EXPORTED" % cross)
@@ -178,7 +178,8 @@ build_type: [ Release]
             self.assertEquals(cmake.definitions["CMAKE_SYSROOT"], "/path/to/sysroot")
 
     def test_deprecated_behaviour(self):
-        """"Remove when deprecate the old settings parameter to CMake and conanfile to configure/build/test"""
+        """"Remove when deprecate the old settings parameter to CMake and
+        conanfile to configure/build/test"""
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
         settings.compiler = "Visual Studio"
@@ -203,7 +204,8 @@ build_type: [ Release]
         cmake.build(conan_file)
         self.assertEqual('cmake --build %s' % dot_dir, conan_file.command)
         cmake.test()
-        self.assertEqual('cmake --build %s %s' % (dot_dir, CMakeTest.scape('--target RUN_TESTS')), conan_file.command)
+        self.assertEqual('cmake --build %s %s' % (dot_dir, CMakeTest.scape('--target RUN_TESTS')),
+                         conan_file.command)
 
     def convenient_functions_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -374,6 +376,35 @@ build_type: [ Release]
         cmake = CMake(conan_file)
 
         self.assertNotIn("BUILD_SHARED_LIBS", cmake.definitions)
+
+    def test_verbose(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.arch = "x86"
+        settings.os = "Windows"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        self.assertNotIn("CMAKE_VERBOSE_MAKEFILE", cmake.definitions)
+
+        cmake.verbose = True
+        self.assertEquals(cmake.definitions["CMAKE_VERBOSE_MAKEFILE"], "ON")
+
+        cmake.verbose = False
+        self.assertEquals(cmake.definitions["CMAKE_VERBOSE_MAKEFILE"], "OFF")
+
+        cmake.definitions["CMAKE_VERBOSE_MAKEFILE"] = True
+        self.assertTrue(cmake.verbose)
+
+        cmake.definitions["CMAKE_VERBOSE_MAKEFILE"] = False
+        self.assertFalse(cmake.verbose)
+
+        del cmake.definitions["CMAKE_VERBOSE_MAKEFILE"]
+        self.assertFalse(cmake.verbose)
 
     @staticmethod
     def scape(args):

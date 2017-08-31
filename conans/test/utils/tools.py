@@ -13,6 +13,7 @@ from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
+from conans.client import settings_preprocessor
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan
@@ -262,6 +263,9 @@ class MockedUserIO(UserIO):
 
     def get_username(self, remote_name):
         """Overridable for testing purpose"""
+        username_env = self._get_env_username(remote_name)
+        if username_env:
+            return username_env
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         if len(sub_dict) - 1 < index:
@@ -271,6 +275,10 @@ class MockedUserIO(UserIO):
 
     def get_password(self, remote_name):
         """Overridable for testing purpose"""
+        password_env = self._get_env_password(remote_name)
+        if password_env:
+            return password_env
+
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         tmp = sub_dict[index][1]
@@ -392,7 +400,8 @@ class TestClient(object):
             tuple if required
         """
         self.init_dynamic_vars(user_io)
-        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
+        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
+                      self.search_manager, settings_preprocessor)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)
