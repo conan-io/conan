@@ -35,7 +35,7 @@ def _format_conanfile_exception(scope, method, exception):
         index = -1
         while True:  # If out of index will raise and will be captured later
             filepath, line, name, contents = traceback.extract_tb(tb, 40)[index]  # 40 levels of nested functions max, get the latest
-            if not "conanfile.py" in filepath: # Avoid show trace from internal conan source code
+            if "conanfile.py" not in filepath:  # Avoid show trace from internal conan source code
                 index -= 1
             else:
                 break
@@ -70,8 +70,8 @@ class ConanOutdatedClient(ConanException):
 class ConanExceptionInUserConanfileMethod(ConanException):
     pass
 
-# Remote exceptions #
 
+# Remote exceptions #
 class InternalErrorException(ConanException):
     """
          Generic 500 error

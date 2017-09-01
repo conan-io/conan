@@ -87,7 +87,8 @@ class HelloConan(ConanFile):
 
         # Remote search, dir list
         self.client.run('get Hello0/0.1@lasote/channel . -r default --raw')
-        self.assertIn("conan_export.tgz\nconan_sources.tgz\nconanfile.py\nconanmanifest.txt", self.client.user_io.out)
+        self.assertIn("conan_export.tgz\nconan_sources.tgz\nconanfile.py\nconanmanifest.txt",
+                      self.client.user_io.out)
 
         # Remote search, conanfile print
         self.client.run('get Hello0/0.1@lasote/channel -r default --raw')
@@ -95,12 +96,15 @@ class HelloConan(ConanFile):
 
         # List package dir
         self.client.run('get Hello0/0.1@lasote/channel "." -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --raw -r default')
-        self.assertEquals("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n", self.client.user_io.out)
+        self.assertEquals("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n",
+                          self.client.user_io.out)
 
     def test_not_found(self):
         self.client.run('get Hello0/0.1@lasote/channel "." -r default', ignore_error=True)
         self.assertIn("Recipe Hello0/0.1@lasote/channel not found", self.client.user_io.out)
 
-        self.client.run('get Hello0/0.1@lasote/channel "." -r default -p 123123123123123', ignore_error=True)
-        self.assertIn("Package Hello0/0.1@lasote/channel:123123123123123 not found", self.client.user_io.out)
-
+        error = self.client.run('get Hello0/0.1@lasote/channel "." -r default -p 123123123123123',
+                                ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Package Hello0/0.1@lasote/channel:123123123123123 not found",
+                      self.client.user_io.out)
