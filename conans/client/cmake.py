@@ -65,10 +65,10 @@ class CMake(object):
         self._compiler = self._settings.get_safe("compiler")
         self._compiler_version = self._settings.get_safe("compiler.version")
         self._arch = self._settings.get_safe("arch")
-        self.build_type = build_type or self._settings.get_safe("build_type")
         self._op_system_version = self._settings.get_safe("os.version")
         self._libcxx = self._settings.get_safe("compiler.libcxx")
         self._runtime = self._settings.get_safe("compiler.runtime")
+        self._build_type = self._settings.get_safe("build_type")
 
         self.generator = generator or self._generator()
         self.build_dir = None
@@ -77,6 +77,9 @@ class CMake(object):
             self._cmake_system_name = cmake_system_name
         self.parallel = parallel
         self.definitions = self._get_cmake_definitions()
+        if build_type and build_type != self._build_type:
+            # Call the setter to warn and update the definitions if needed
+            self.build_type = build_type
 
     @property
     def build_type(self):
@@ -87,9 +90,10 @@ class CMake(object):
         settings_build_type = self._settings.get_safe("build_type")
         if build_type != settings_build_type:
             self._conanfile.output.warn(
-                'Set CMake build type "%s" is different than package settins build type "%s"' \
+                'Set CMake build type "%s" is different than the settings build_type "%s"'
                 % (build_type, settings_build_type))
         self._build_type = build_type
+        self.definitions.update(self._build_type_definition())
 
     @property
     def flags(self):
