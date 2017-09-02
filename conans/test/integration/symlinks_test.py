@@ -102,7 +102,8 @@ class TestConan(ConanFile):
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
         self._check(client, ref, build=False)
-    def export_test(self):
+
+    def export_and_copy_test(self):
         if platform.system() == "Windows":
             return
 
@@ -120,12 +121,17 @@ class TestConan(ConanFile):
 
         client.run("export lasote/stable")
         client.run("install --build -f=conanfile.txt")
+        client.run("copy Hello/0.1@lasote/stable team/testing")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
         package_ref = PackageReference(conan_ref,
                                        "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        team_package_ref = PackageReference(team_ref,
+                                            "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
         for folder in [client.paths.export(conan_ref), client.paths.source(conan_ref),
-                       client.paths.build(package_ref), client.paths.package(package_ref)]:
+                       client.paths.build(package_ref), client.paths.package(package_ref),
+                       client.paths.export(team_ref), client.paths.package(team_package_ref)]:
             exported_lib = os.path.join(folder, lib_name)
             exported_link = os.path.join(folder, link_name)
             self.assertEqual(os.readlink(exported_link), lib_name)
