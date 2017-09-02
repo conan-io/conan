@@ -196,7 +196,7 @@ class RemoteManager(object):
         c_src_path = os.path.join(export_sources_folder, ".c_src")
         if os.path.exists(c_src_path):
             merge_directories(c_src_path, export_sources_folder)
-            shutil.rmtree(c_src_path)
+            rmdir(c_src_path)
         for dirname, _, filenames in os.walk(export_sources_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
