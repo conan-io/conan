@@ -1,7 +1,7 @@
 import os
-import urllib
 
 from six.moves.configparser import ConfigParser, NoSectionError
+from six.moves import urllib
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
@@ -270,7 +270,7 @@ class ConanClientConfigParser(ConfigParser, object):
             proxies = self.get_conf("proxies")
             # If there is proxies section, but empty, it will try to use system proxy
             if not proxies:
-                return urllib.getproxies()
+                return urllib.request.getproxies()
             result = {k: (None if v == "None" else v) for k, v in proxies}
             return result
         except:
