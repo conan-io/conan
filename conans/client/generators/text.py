@@ -65,7 +65,7 @@ class TXTGenerator(Generator):
 
     @staticmethod
     def _loads_cpp_info(text):
-        pattern = re.compile("^\[([a-zA-Z0-9_:-]+)\]([^\[]+)", re.MULTILINE)
+        pattern = re.compile("^\[([a-zA-Z0-9_:-^.]+)\]([^\[]+)", re.MULTILINE)
         result = DepsCppInfo()
 
         try:
