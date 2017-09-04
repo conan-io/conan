@@ -10,6 +10,7 @@ from .qmake import QmakeGenerator
 from .qbs import QbsGenerator
 from .scons import SConsGenerator
 from .visualstudio import VisualStudioGenerator
+from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
@@ -30,6 +31,7 @@ _save_generator("qmake", QmakeGenerator)
 _save_generator("qbs", QbsGenerator)
 _save_generator("scons", SConsGenerator)
 _save_generator("visual_studio", VisualStudioGenerator)
+_save_generator("visual_studio_legacy", VisualStudioLegacyGenerator)
 _save_generator("xcode", XCodeGenerator)
 _save_generator("ycm", YouCompleteMeGenerator)
 _save_generator("virtualenv", VirtualEnvGenerator)
