@@ -1,8 +1,5 @@
 import unittest
 
-from conans.client.profile_loader import _load_profile
-from conans.model.env_info import EnvValues
-
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import save, load

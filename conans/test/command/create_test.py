@@ -164,7 +164,7 @@ class MyLib(ConanFile):
 [build_requires]
 BuildRequire/0.1@conan/stable
 ''',
-"test_package/conanfile.py": """from conans import ConanFile
+                    "test_package/conanfile.py": """from conans import ConanFile
 import os
 
 class MyTest(ConanFile):
