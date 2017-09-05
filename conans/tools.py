@@ -292,7 +292,10 @@ def unzip(filename, destination=".", keep_permissions=False):
 
     with zipfile.ZipFile(filename, "r") as z:
         uncompress_size = sum((file_.file_size for file_ in z.infolist()))
-        _global_output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
+        if uncompress_size > 100000:
+            _global_output.info("Unzipping %s, this can take a while" % human_size(uncompress_size))
+        else:
+            _global_output.info("Unzipping %s" % human_size(uncompress_size))
         extracted_size = 0
         if platform.system() == "Windows":
             for file_ in z.infolist():

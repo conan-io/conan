@@ -268,7 +268,7 @@ class Command(object):
                                    filename=args.file, cwd=args.cwd)
 
     def config(self, *args):
-        """Manages conan.conf information
+        """Manages conan configuration information
         """
         parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
 
@@ -276,11 +276,13 @@ class Command(object):
         rm_subparser = subparsers.add_parser('rm', help='rm an existing config element')
         set_subparser = subparsers.add_parser('set', help='set/add value')
         get_subparser = subparsers.add_parser('get', help='get the value of existing element')
+        install_subparser = subparsers.add_parser('install',
+                                                  help='install a full configuration from a zip file, local or remote')
 
         rm_subparser.add_argument("item", help="item to remove")
         get_subparser.add_argument("item", nargs="?", help="item to print")
         set_subparser.add_argument("item", help="key=value to set")
-
+        install_subparser.add_argument("item", help="configuration file to use")
         args = parser.parse_args(*args)
 
         if args.subcommand == "set":
@@ -293,6 +295,8 @@ class Command(object):
             return self._conan.config_get(args.item)
         elif args.subcommand == "rm":
             return self._conan.config_rm(args.item)
+        elif args.subcommand == "install":
+            return self._conan.config_install(args.item)
 
     def info(self, *args):
         """Prints information about a package recipe's dependency graph.
