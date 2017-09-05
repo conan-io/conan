@@ -26,14 +26,14 @@ class PackageCopier(object):
                                                                % str(dest_ref)):
                 return
             rmdir(export_dest)
-        shutil.copytree(export_origin, export_dest)
+        shutil.copytree(export_origin, export_dest, symlinks=True)
         self._user_io.out.info("Copied %s to %s" % (str(reference), str(dest_ref)))
 
         export_sources_origin = self._paths.export_sources(reference, self._short_paths)
         export_sources_dest = self._paths.export_sources(dest_ref, self._short_paths)
         if os.path.exists(export_sources_dest):
             rmdir(export_sources_dest)
-        shutil.copytree(export_sources_origin, export_sources_dest)
+        shutil.copytree(export_sources_origin, export_sources_dest, symlinks=True)
         self._user_io.out.info("Copied sources %s to %s" % (str(reference), str(dest_ref)))
 
         # Copy packages
@@ -48,5 +48,5 @@ class PackageCopier(object):
                                                                    % str(package_id)):
                     continue
                 rmdir(package_path_dest)
-            shutil.copytree(package_path_origin, package_path_dest)
+            shutil.copytree(package_path_origin, package_path_dest, symlinks=True)
             self._user_io.out.info("Copied %s to %s" % (str(package_id), str(dest_ref)))
