@@ -282,7 +282,7 @@ class Command(object):
         rm_subparser.add_argument("item", help="item to remove")
         get_subparser.add_argument("item", nargs="?", help="item to print")
         set_subparser.add_argument("item", help="key=value to set")
-        install_subparser.add_argument("item", help="configuration file to use")
+        install_subparser.add_argument("item", nargs="?", help="configuration file to use")
         args = parser.parse_args(*args)
 
         if args.subcommand == "set":

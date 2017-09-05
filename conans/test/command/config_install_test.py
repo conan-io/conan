@@ -9,6 +9,7 @@ from conans.client.remote_registry import RemoteRegistry, Remote
 from mock import patch
 from conans.client.rest.uploader_downloader import Downloader
 from conans import tools
+from conans.client.conf import ConanClientConfigParser
 
 
 win_profile = """[settings]
@@ -32,6 +33,26 @@ settings_yml = """os:
     Windows:
     Linux:
 arch: [x86, x86_64]
+"""
+
+conan_conf = """
+[log]
+run_to_output = False       # environment CONAN_LOG_RUN_TO_OUTPUT
+level = 10                  # environment CONAN_LOGGING_LEVEL
+
+[general]
+compression_level = 6                 # environment CONAN_COMPRESSION_LEVEL
+cpu_count = 1             # environment CONAN_CPU_COUNT
+
+[proxies]
+# Empty section will try to use system proxies.
+# If don't want proxy at all, remove section [proxies]
+# As documented in http://docs.python-requests.org/en/latest/user/advanced/#proxies
+http = http://user:pass@10.10.1.10:3128/
+no_proxy = mylocalhost
+https = None
+# http = http://10.10.1.10:3128
+# https = http://10.10.1.10:1080
 """
 
 
@@ -62,7 +83,8 @@ Other/1.2@user/channel conan-center
         save_files(folder, {"settings.yml": settings_yml,
                             "remotes.txt": remotes,
                             "profiles/linux": linux_profile,
-                            "profiles/windows": win_profile})
+                            "profiles/windows": win_profile,
+                            "config/conan.conf": conan_conf})
         return folder
 
     def _create_zip(self, zippath=None):
@@ -71,7 +93,7 @@ Other/1.2@user/channel conan-center
         zipdir(folder, zippath)
         return zippath
 
-    def _check(self):
+    def _check(self, install_path):
         settings_path = self.client.client_cache.settings_path
         self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         registry_path = self.client.client_cache.registry
@@ -87,13 +109,24 @@ Other/1.2@user/channel conan-center
                          linux_profile.splitlines())
         self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "windows")).splitlines(),
                          win_profile.splitlines())
+        conan_conf = ConanClientConfigParser(self.client.client_cache.conan_conf_path)
+        self.assertEqual(conan_conf.get_item("log.run_to_output"), "False")
+        self.assertEqual(conan_conf.get_item("log.run_to_file"), "False")
+        self.assertEqual(conan_conf.get_item("log.level"), "10")
+        self.assertEqual(conan_conf.get_item("general.compression_level"), "6")
+        self.assertEqual(conan_conf.get_item("general.sysrequires_sudo"), "True")
+        self.assertEqual(conan_conf.get_item("general.cpu_count"), "1")
+        self.assertEqual(conan_conf.get_item("general.config_install"), install_path)
+        self.assertEqual(conan_conf.get_item("proxies.no_proxy"), "mylocalhost")
+        self.assertEqual(conan_conf.get_item("proxies.https"), "None")
+        self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
 
     def install_file_test(self):
         """ should install from a file in current dir
         """
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
-        self._check()
+        self._check(zippath)
 
     def install_url_test(self):
         """ should install from a URL
@@ -104,11 +137,11 @@ Other/1.2@user/channel conan-center
 
         with patch.object(Downloader, 'download', new=my_download):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
-            self._check()
+            self._check("http://myfakeurl.com/myconf.zip")
 
             # repeat the process to check
             self.client.run("config install http://myfakeurl.com/myconf.zip")
-            self._check()
+            self._check("http://myfakeurl.com/myconf.zip")
 
     def install_repo_test(self):
         """ should install from a git repo
@@ -123,14 +156,19 @@ Other/1.2@user/channel conan-center
             self.client.runner('git commit -m "mymsg"')
 
         self.client.run('config install "%s/.git"' % folder)
-        self._check()
+        self._check("%s/.git" % folder)
 
     def reinstall_test(self):
         """ should use configured URL in conan.conf
         """
-        # self.client.run("config install")
+        zippath = self._create_zip()
+        self.client.run('config set general.config_install="%s"' % zippath)
+        self.client.run("config install")
+        self._check(zippath)
 
-    def install_package_test(self):
-        """ installing from conan package
+    def reinstall_error_test(self):
+        """ should use configured URL in conan.conf
         """
-        # self.client.run("config install MyConfig/1.0@user/channel")
+        error = self.client.run("config install", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Called config install without arguments", self.client.out)
