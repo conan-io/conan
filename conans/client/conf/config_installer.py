@@ -66,12 +66,17 @@ def _process_folder(folder, client_cache, output):
                 output.info("Defining remotes")
                 registry_path = client_cache.registry
                 _handle_remotes(registry_path, os.path.join(root, f), output)
+            else:
+                output.info("Copying file %s to %s" % (f, client_cache.conan_folder))
+                shutil.copy(os.path.join(root, f), client_cache.conan_folder)
         for d in dirs:
             if d == "profiles":
                 output.info("Installing profiles")
                 profiles_path = client_cache.profiles_path
                 _handle_profiles(os.path.join(root, d), profiles_path, output)
                 dirs.remove("profiles")
+            if d == ".git":
+                dirs.remove(".git")
 
 
 def _process_download(item, client_cache, output, tmp_folder):

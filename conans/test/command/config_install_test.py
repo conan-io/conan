@@ -84,7 +84,8 @@ Other/1.2@user/channel conan-center
                             "remotes.txt": remotes,
                             "profiles/linux": linux_profile,
                             "profiles/windows": win_profile,
-                            "config/conan.conf": conan_conf})
+                            "config/conan.conf": conan_conf,
+                            "pylintrc": "#Custom pylint"})
         return folder
 
     def _create_zip(self, zippath=None):
@@ -120,6 +121,8 @@ Other/1.2@user/channel conan-center
         self.assertEqual(conan_conf.get_item("proxies.no_proxy"), "mylocalhost")
         self.assertEqual(conan_conf.get_item("proxies.https"), "None")
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
+        self.assertEqual("#Custom pylint",
+                         load(os.path.join(self.client.client_cache.conan_folder, "pylintrc")))
 
     def install_file_test(self):
         """ should install from a file in current dir
