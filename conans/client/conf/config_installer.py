@@ -104,5 +104,6 @@ def configuration_install(item, client_cache, output, runner):
         else:
             raise ConanException("I don't know how to process %s" % item)
     finally:
-        client_cache.conan_config.set_item("general.config_install", item)
+        if item:
+            client_cache.conan_config.set_item("general.config_install", item)
         rmdir(tmp_folder)
