@@ -95,7 +95,7 @@ class HelloConan(ConanFile):
         # Not test the real commmand get_command if it's setting the module global vars
         tools._global_requester = None
         tools._global_output = None
-        tmp = tempfile.mkdtemp()
+        tmp = temp_folder()
         conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
         os.mkdir(os.path.join(tmp, ".conan"))
         save(os.path.join(tmp, ".conan", CONAN_CONF), conf)

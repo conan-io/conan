@@ -8,6 +8,7 @@ from conans.util.files import load, save_files, save
 from conans.client.remote_registry import RemoteRegistry, Remote
 from mock import patch
 from conans.client.rest.uploader_downloader import Downloader
+from conans import tools
 
 
 win_profile = """[settings]
@@ -56,19 +57,23 @@ Other/1.2@user/channel conan-center
         save(os.path.join(self.client.client_cache.profiles_path, "default"), "#default profile empty")
         save(os.path.join(self.client.client_cache.profiles_path, "linux"), "#empty linux profile")
 
-    def _create_zip(self, zippath=None):
-        folder = temp_folder()
+    def _create_profile_folder(self, folder=None):
+        folder = folder or temp_folder(path_with_spaces=False)
         save_files(folder, {"settings.yml": settings_yml,
                             "remotes.txt": remotes,
                             "profiles/linux": linux_profile,
                             "profiles/windows": win_profile})
+        return folder
+
+    def _create_zip(self, zippath=None):
+        folder = self._create_profile_folder()
         zippath = zippath or os.path.join(folder, "myconfig.zip")
         zipdir(folder, zippath)
         return zippath
 
     def _check(self):
         settings_path = self.client.client_cache.settings_path
-        self.assertEqual(load(settings_path), settings_yml)
+        self.assertEqual(load(settings_path).splitlines(), settings_yml.splitlines())
         registry_path = self.client.client_cache.registry
         registry = RemoteRegistry(registry_path, TestBufferConanOutput())
         self.assertEqual(registry.remotes,
@@ -78,10 +83,10 @@ Other/1.2@user/channel conan-center
         self.assertEqual(registry.refs, {"MyPkg/0.1@user/channel": "my-repo-2"})
         self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
                          sorted(["default", "linux", "windows"]))
-        self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")),
-                         linux_profile)
-        self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "windows")),
-                         win_profile)
+        self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),
+                         linux_profile.splitlines())
+        self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "windows")).splitlines(),
+                         win_profile.splitlines())
 
     def install_file_test(self):
         """ should install from a file in current dir
@@ -104,6 +109,21 @@ Other/1.2@user/channel conan-center
             # repeat the process to check
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check()
+
+    def install_repo_test(self):
+        """ should install from a git repo
+        """
+
+        folder = self._create_profile_folder()
+        with tools.chdir(folder):
+            self.client.runner('git init .')
+            self.client.runner('git add .')
+            self.client.runner('git config user.name myname')
+            self.client.runner('git config user.email myname@mycompany.com')
+            self.client.runner('git commit -m "mymsg"')
+
+        self.client.run('config install "%s/.git"' % folder)
+        self._check()
 
     def reinstall_test(self):
         """ should use configured URL in conan.conf

@@ -1,10 +1,10 @@
 import os
-import tempfile
 from conans.tools import unzip
 import shutil
-from conans.util.files import rmdir, load
+from conans.util.files import rmdir, load, mkdir
 from conans.client.remote_registry import RemoteRegistry, Remote
 from conans import tools
+from conans.errors import ConanException
 
 
 def _handle_remotes(registry_path, remote_file, output):
@@ -32,12 +32,21 @@ def _handle_profiles(source_folder, target_folder, output):
             shutil.copy(os.path.join(root, f), os.path.join(target_folder, profile))
 
 
-def _process_zip_file(zippath, client_cache, output):
-    t = tempfile.mkdtemp()
-    # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
-    t = os.path.realpath(t)
-    unzip(zippath, t)
-    for root, dirs, files in os.walk(t):
+def _process_git_repo(repo_url, client_cache, output, runner, tmp_folder):
+    output.info("Trying to clone repo  %s" % repo_url)
+
+    with tools.chdir(tmp_folder):
+        runner('git clone "%s"' % repo_url)
+    _process_folder(tmp_folder, client_cache, output)
+
+
+def _process_zip_file(zippath, client_cache, output, tmp_folder):
+    unzip(zippath, tmp_folder)
+    _process_folder(tmp_folder, client_cache, output)
+
+
+def _process_folder(folder, client_cache, output):
+    for root, dirs, files in os.walk(folder):
         for f in files:
             if f == "settings.yml":
                 output.info("Installing settings.yml")
@@ -54,23 +63,28 @@ def _process_zip_file(zippath, client_cache, output):
                 _handle_profiles(os.path.join(root, d), profiles_path, output)
                 dirs.remove("profiles")
 
-    rmdir(t)
 
-
-def _process_download(item, client_cache, output):
+def _process_download(item, client_cache, output, tmp_folder):
     output.info("Trying to download  %s" % item)
-    t = tempfile.mkdtemp()
-    zippath = os.path.join(t, "config.zip")
+    zippath = os.path.join(tmp_folder, "config.zip")
     tools.download(item, zippath, out=output)
-    _process_zip_file(zippath, client_cache, output)
-    rmdir(t)
+    _process_zip_file(zippath, client_cache, output, tmp_folder)
 
 
-def configuration_install(item, client_cache, output):
-    if os.path.exists(item):
-        # is a local file
-        _process_zip_file(item, client_cache, output)
-        return
-
-    if item.startswith("http"):
-        _process_download(item, client_cache, output)
+def configuration_install(item, client_cache, output, runner):
+    tmp_folder = os.path.join(client_cache.conan_folder, "tmp_config_install")
+    # necessary for Mac OSX, where the temp folders in /var/ are symlinks to /private/var/
+    tmp_folder = os.path.realpath(tmp_folder)
+    mkdir(tmp_folder)
+    try:
+        if item.endswith(".git"):
+            _process_git_repo(item, client_cache, output, runner, tmp_folder)
+        elif os.path.exists(item):
+            # is a local file
+            _process_zip_file(item, client_cache, output, tmp_folder)
+        elif item.startswith("http"):
+            _process_download(item, client_cache, output, tmp_folder)
+        else:
+            raise ConanException("I don't know how to process %s" % item)
+    finally:
+        rmdir(tmp_folder)
