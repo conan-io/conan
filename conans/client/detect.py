@@ -212,7 +212,8 @@ def _detect_os_arch(result, output):
                      'i86pc': 'x86',
                      'amd64': 'x86_64',
                      'aarch64': 'armv8',
-                     'sun4v': 'sparc'}
+                     'sun4v': 'sparc',
+                     '00f768d14c00': 'ppc64'}
 
     result.append(("os", detected_os()))
     arch = architectures.get(platform.machine().lower(), platform.machine().lower())
