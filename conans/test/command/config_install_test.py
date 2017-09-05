@@ -10,6 +10,7 @@ from mock import patch
 from conans.client.rest.uploader_downloader import Downloader
 from conans import tools
 from conans.client.conf import ConanClientConfigParser
+import shutil
 
 
 win_profile = """[settings]
@@ -130,6 +131,15 @@ Other/1.2@user/channel conan-center
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
         self._check(zippath)
+
+    def test_without_profile_folder(self):
+        shutil.rmtree(self.client.client_cache.profiles_path)
+        zippath = self._create_zip()
+        self.client.run('config install "%s"' % zippath)
+        self.assertEqual(sorted(os.listdir(self.client.client_cache.profiles_path)),
+                         sorted(["linux", "windows"]))
+        self.assertEqual(load(os.path.join(self.client.client_cache.profiles_path, "linux")).splitlines(),
+                         linux_profile.splitlines())
 
     def install_url_test(self):
         """ should install from a URL

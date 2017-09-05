@@ -22,6 +22,7 @@ def _handle_remotes(registry_path, remote_file, output):
 
 
 def _handle_profiles(source_folder, target_folder, output):
+    mkdir(target_folder)
     for root, _, files in os.walk(source_folder):
         relative_path = os.path.relpath(root, source_folder)
         if relative_path == ".":
@@ -36,12 +37,14 @@ def _process_git_repo(repo_url, client_cache, output, runner, tmp_folder):
     output.info("Trying to clone repo  %s" % repo_url)
 
     with tools.chdir(tmp_folder):
-        runner('git clone "%s"' % repo_url)
+        runner('git clone "%s" config' % repo_url, output=output)
+    tmp_folder = os.path.join(tmp_folder, "config")
     _process_folder(tmp_folder, client_cache, output)
 
 
 def _process_zip_file(zippath, client_cache, output, tmp_folder):
     unzip(zippath, tmp_folder)
+    os.unlink(zippath)
     _process_folder(tmp_folder, client_cache, output)
 
 
@@ -74,9 +77,8 @@ def _process_folder(folder, client_cache, output):
                 output.info("Installing profiles")
                 profiles_path = client_cache.profiles_path
                 _handle_profiles(os.path.join(root, d), profiles_path, output)
-                dirs.remove("profiles")
-            if d == ".git":
-                dirs.remove(".git")
+                break
+        dirs[:] = [d for d in dirs if d not in ("profiles", ".git")]
 
 
 def _process_download(item, client_cache, output, tmp_folder):
