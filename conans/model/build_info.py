@@ -28,30 +28,30 @@ class _CppInfo(object):
         self.rootpath = ""
         self.sysroot = None
 
+    def filter_paths(self, paths):
+        abs_paths = [os.path.join(self.rootpath, p)
+                if not os.path.isabs(p) else p for p in paths]
+        return [p for p in abs_paths if os.path.isdir(p) and os.listdir(p)]
+
     @property
     def include_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.includedirs]
+        return self.filter_paths(self.includedirs)
 
     @property
     def lib_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.libdirs]
+        return self.filter_paths(self.libdirs)
 
     @property
     def bin_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.bindirs]
+        return self.filter_paths(self.bindirs)
 
     @property
     def build_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.builddirs]
+        return self.filter_paths(self.builddirs)
 
     @property
     def res_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.resdirs]
+        return self.filter_paths(self.resdirs)
 
 
 class CppInfo(_CppInfo):
