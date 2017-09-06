@@ -143,6 +143,14 @@ class ConanProxy(object):
 
         if os.path.exists(conanfile_path):
             log_recipe_got_from_local_cache(conan_reference)
+
+            # If we have more than one defined remote and for some reason we do not know where
+            #  this ref came from, we should search in the remotes again for this recipe so we
+            #  can properly find it later.  Otherwise we assume the first remote in the list.
+            #  (Which may be wrong.)
+            if len(self._registry.remotes) > 1 and not self._registry.get_ref(conan_reference):
+                self._retrieve_recipe(conan_reference, output)
+
             if self._check_updates:
                 ret = self.update_available(conan_reference)
                 if ret != 0:  # Found and not equal
