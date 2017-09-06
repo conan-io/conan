@@ -95,6 +95,31 @@ class MyConan(ConanFile):
         self.assertFalse(os.path.exists(os.path.join(package_path, "include", "file.h")))
         self.assertFalse(os.path.exists(os.path.join(package_path, "lib", "file1.a")))
 
+    def package_options_test(self):
+        """Use 'conan package' command to repackage a generated package (without build it)"""
+        client = TestClient()
+        conanfile_template = """
+from conans import ConanFile
+
+class MyConan(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    options = {"shared": [True, False]}
+    default_options = "shared=True"
+    exports = '*'
+
+    def package(self):
+        self.output.info("Packaging with shared=%s" % self.options.shared)
+"""
+
+        client.save({CONANFILE: conanfile_template})
+        client.run("create lasote/stable -o MyLib:shared=False")
+        self.assertIn("Packaging with shared=False", client.out)
+        client.run("package MyLib/0.1@lasote/stable")
+        self.assertIn("Packaging with shared=False", client.out)
+        self.assertIn("MyLib/0.1@lasote/stable: "
+                      "Re-packaging 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
+
 
 class PackageLocalCommandTest(unittest.TestCase):
 
