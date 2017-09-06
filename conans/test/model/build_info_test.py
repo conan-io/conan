@@ -21,13 +21,15 @@ mylib_path
 otherlib_path
 [includedirs_My.Component.Lib]
 my_component_lib
+[includedirs_My-Component-Tool]
+my-component-tool
         """
         deps_info, _ = TXTGenerator.loads(text)
         self.assertEqual(deps_info.includedirs, ['C:/Whenever'])
         self.assertEqual(deps_info["Boost"].includedirs, ['F:/ChildrenPath'])
         self.assertEqual(deps_info["My_Lib"].includedirs, ['mylib_path'])
         self.assertEqual(deps_info["My_Other_Lib"].includedirs, ['otherlib_path'])
-        self.assertEqual(deps_info["My.Component.Lib"].includedirs, ['my_component_lib'])
+        self.assertEqual(deps_info["My-Component-Tool"].includedirs, ['my-component-tool'])
 
     def help_test(self):
         deps_env_info = DepsEnvInfo()
