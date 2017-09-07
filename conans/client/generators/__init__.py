@@ -23,6 +23,7 @@ def _save_generator(name, klass):
     if name not in registered_generators:
         registered_generators.add(name, klass)
 
+
 _save_generator("txt", TXTGenerator)
 _save_generator("gcc", GCCGenerator)
 _save_generator("cmake", CMakeGenerator)
