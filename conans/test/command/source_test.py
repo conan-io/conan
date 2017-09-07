@@ -60,6 +60,5 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile.replace("err", "")})
         client.run("source .")
         self.assertIn("PROJECT: Configuring sources in", client.user_io.out)
-        self.assertIn("PROJECT: WARN: Your previous source command failed", client.user_io.out)
         self.assertIn("PROJECT: Running source!", client.user_io.out)
         self.assertEqual("Hello World", load(os.path.join(client.current_folder, "file1.txt")))

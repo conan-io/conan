@@ -5,9 +5,9 @@ from conans.util.files import load
 from conans.model.ref import PackageReference, ConanFileReference
 from nose_parameterized.parameterized import parameterized
 
-
 conanfile = """from conans import ConanFile
 from conans.util.files import save
+import os
 
 class MyTest(ConanFile):
     name = "Pkg"
@@ -20,6 +20,7 @@ class MyTest(ConanFile):
 
     def build(self):
         self.output.info("Building my code!")
+        self.output.info(os.getcwd())
         save("debug/file1.txt", "Debug file1")
         save("release/file1.txt", "Release file1")
 
@@ -56,7 +57,6 @@ class MyTest(ConanFile):
 
 
 class BuildIdTest(unittest.TestCase):
-
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
         ref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
@@ -85,7 +85,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("Packaging Debug!", client.user_io.out)
         self._check_conaninfo(client)
 
-    @parameterized.expand([(True, ), (False,)])
+    @parameterized.expand([(True,), (False,)])
     def basic_test(self, python_consumer):
         client = TestClient()
 
@@ -175,7 +175,7 @@ class BuildIdTest(unittest.TestCase):
         packages = client.client_cache.conan_packages(ref)
         self.assertEqual(2, len(packages))
 
-    @parameterized.expand([(True, ), (False,)])
+    @parameterized.expand([(True,), (False,)])
     def info_test(self, python_consumer):
         client = TestClient()
         client.save({"conanfile.py": conanfile})

@@ -347,11 +347,12 @@ class ConanInstaller(object):
         src_folder = self._client_cache.source(conan_ref, conan_file.short_paths)
         export_folder = self._client_cache.export(conan_ref)
         export_source_folder = self._client_cache.export_sources(conan_ref, conan_file.short_paths)
+        dirty_file_path = self._client_cache.dirty_sources_file(conan_ref)
 
         self._handle_system_requirements(conan_ref, package_reference, conan_file, output)
         with environment_append(conan_file.env):
             self._build_package(export_folder, export_source_folder, src_folder, build_folder,
-                                package_folder, conan_file, output)
+                                package_folder, dirty_file_path, conan_file, output)
         return build_folder
 
     def _package_conanfile(self, conan_ref, conan_file, package_reference, build_folder,
@@ -424,7 +425,7 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
             raise ConanException("Error in system requirements")
 
     def _build_package(self, export_folder, export_source_folder, src_folder, build_folder,
-                       package_folder, conan_file, output):
+                       package_folder, dirty_file_path, conan_file, output):
         """ builds the package, creating the corresponding build folder if necessary
         and copying there the contents from the src folder. The code is duplicated
         in every build, as some configure processes actually change the source
@@ -439,7 +440,8 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
                                  "Close any app using it, and retry" % str(e))
 
         output.info('Building your package in %s' % build_folder)
-        config_source(export_folder, export_source_folder, src_folder, conan_file, output)
+        config_source(export_folder, export_source_folder, src_folder, dirty_file_path,
+                      conan_file, output)
         output.info('Copying sources to build folder')
 
         def check_max_path_len(src, files):
