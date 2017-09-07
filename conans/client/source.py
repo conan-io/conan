@@ -6,7 +6,7 @@ import six
 from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
-from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE
+from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, save
 
 
@@ -56,7 +56,8 @@ def config_source(export_folder, export_source_folder, src_folder, dirty_file_pa
         shutil.copytree(export_folder, src_folder, symlinks=True)
         # Now move the export-sources to the right location
         merge_directories(export_source_folder, src_folder)
-        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c", CONANFILE+"o"):
+        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
+                  CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
             try:
                 os.remove(os.path.join(src_folder, f))
             except OSError:
