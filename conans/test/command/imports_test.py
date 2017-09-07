@@ -127,7 +127,7 @@ class ConanLib(ConanFile):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
         tmp_folder = temp_folder()
         self.client.run('imports -d "%s"' % tmp_folder, ignore_error=True)
-        self.assertIn("Execute 'conan install -g txt' first", self.client.user_io.out)
+        self.assertIn("You can generate it using 'conan install -g txt'", self.client.user_io.out)
 
     def install_dest_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)

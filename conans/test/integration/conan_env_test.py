@@ -9,9 +9,131 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
 from conans import tools
+from nose.plugins.attrib import attr
 
 
 class ConanEnvTest(unittest.TestCase):
+
+    @attr('slow')
+    def shared_in_current_directory_test(self):
+        """
+        - There is a package building a shared library
+        - There is a consumer project importing the shared library (and the executable)
+        - The consumer tries to execute the imported shared library and executable in the same
+          directory, and it fails in Linux, but works on OSX and WIndows.
+        - Then I move the shared library to a different directory, and it fails,
+          I'm making sure that there is no harcoded rpaths messing.
+        - Finally I use the virtualrunenvironment that declares de LD_LIBRARY_PATH,
+          PATH and DYLD_LIBRARY_PATH to run the executable, and.. magic!
+          it's running agains the shared in the local cache.
+        """
+
+
+        conanfile = """
+from conans import ConanFile, CMake, tools
+
+
+class LibConan(ConanFile):
+    name = "lib"
+    version = "1.0"
+    settings = "os", "compiler", "build_type", "arch"
+    options = {"shared": [True, False]}
+    default_options = "shared=True"
+    generators = "cmake"
+    exports_sources = "*"
+
+    def build(self):
+        cmake = CMake(self)
+        self.run('cmake %s' % cmake.command_line)
+        self.run("cmake --build . %s" % cmake.build_config)
+
+    def package(self):
+        self.copy("*.h", dst="include", src="hello")
+        self.copy("*.lib", dst="lib", keep_path=False)
+        self.copy("*.dll", dst="bin", keep_path=False)
+        self.copy("*.so", dst="lib", keep_path=False)
+        self.copy("*.dylib", dst="lib", keep_path=False)
+        self.copy("*main*", dst="bin", keep_path=False)
+
+"""
+        cmakelists =  """
+project(mytest)
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+
+SET(CMAKE_SKIP_RPATH 1)
+ADD_LIBRARY(hello SHARED hello.c)
+ADD_EXECUTABLE(main main.c)
+TARGET_LINK_LIBRARIES(main hello)
+"""
+
+        hello_h = """#pragma once
+#ifdef WIN32
+  #define HELLO_EXPORT __declspec(dllexport)
+#else
+  #define HELLO_EXPORT
+#endif
+
+HELLO_EXPORT void hello();
+"""
+
+        client = TestClient()
+        files = {CONANFILE: conanfile,
+                 "CMakeLists.txt": cmakelists,
+                 "hello.c": '#include "hello.h"\nvoid hello(){\nreturn;}',
+                 "hello.h": hello_h,
+                 "main.c": '#include "hello.h"\nint main(){\nhello();\nreturn 0;\n}'}
+
+        client.save(files)
+        client.run("export conan/stable")
+        client.run("install lib/1.0@conan/stable -o lib:shared=True --build missing")
+        client.save({"conanfile.txt": '''
+[requires]
+lib/1.0@conan/stable
+[generators]
+virtualrunenv
+[imports]
+bin, * -> ./bin
+lib, * -> ./bin
+'''}, clean_first=True)
+
+        client.run("install .")
+        # Break possible rpaths built in the exe with absolute paths
+        os.rename(os.path.join(client.current_folder, "bin"),
+                  os.path.join(client.current_folder, "bin2"))
+
+        with tools.chdir(os.path.join(client.current_folder, "bin2")):
+            if platform.system() == "Windows":
+                self.assertEqual(os.system("main.exe"), 0)
+            elif platform.system() == "Darwin":
+                self.assertEqual(os.system("./main"), 0)
+            else:
+                self.assertNotEqual(os.system("./main"), 0)
+                self.assertEqual(os.system("LD_LIBRARY_PATH=$(pwd) ./main"), 0)
+                self.assertEqual(os.system("LD_LIBRARY_PATH=. ./main"), 0)
+
+            # If we move the shared library it won't work, at least we use the virtualrunenv
+            os.mkdir(os.path.join(client.current_folder, "bin2", "subdir"))
+            name = {"Darwin": "libhello.dylib",
+                    "Windows": "hello.dll"}.get(platform.system(), "libhello.so")
+
+            os.rename(os.path.join(client.current_folder, "bin2", name),
+                      os.path.join(client.current_folder, "bin2", "subdir", name))
+
+            if platform.system() == "Windows":
+                self.assertNotEqual(os.system("main.exe"), 0)
+            elif platform.system() == "Darwin":
+                self.assertNotEqual(os.system("./main"), 0)
+            else:
+                self.assertNotEqual(os.system("LD_LIBRARY_PATH=$(pwd) ./main"), 0)
+
+            # Will use the shared from the local cache
+            if platform.system() != "Windows":
+                command = "bash -c 'source ../activate_run.sh && ./main'"
+            else:
+                command = "cd .. && activate_run.bat && cd bin2 && main.exe"
+
+            self.assertEqual(os.system(command), 0)
 
     def test_package_env_working(self):
         client = TestClient()
@@ -89,6 +211,55 @@ OTHER_VALUE3
     WHAT=EVER"""
         self.assertIn("\n".join(env_section.splitlines()), "\n".join(conaninfo.splitlines()))
 
+    def env_path_order_test(self):
+        client = TestClient()
+        with tools.environment_append({"SOME_VAR": ["INITIAL VALUE"]}):
+            conanfile = """from conans import ConanFile
+import os
+class MyPkg(ConanFile):
+    def build(self):
+        self.output.info("PKG VARS: %s" % os.getenv("SOME_VAR"))
+    def package_info(self):
+        self.env_info.SOME_VAR.append("OTHER_VALUE")
+"""
+            client.save({"conanfile.py": conanfile})
+            client.run("create Pkg/0.1@lasote/testing")
+            self.assertIn("Pkg/0.1@lasote/testing: PKG VARS: INITIAL VALUE", client.out)
+
+            conanfile = """from conans import ConanFile
+import os
+class MyTest(ConanFile):
+    requires = "Pkg/0.1@lasote/testing"
+    def build(self):
+        self.output.info("TEST VARS: %s" % os.getenv("SOME_VAR"))
+    def package_info(self):
+        self.env_info.SOME_VAR.extend(["OTHER_VALUE2", "OTHER_VALUE3"])
+"""
+            client.save({"conanfile.py": conanfile})
+            client.run("create Test/0.1@lasote/testing")
+            # FIXME: Note that these values are os.pathsep (; or :)
+            self.assertIn("Test/0.1@lasote/testing: TEST VARS: OTHER_VALUE%sINITIAL VALUE"
+                          % os.pathsep,
+                          client.out)
+            conanfile = """from conans import ConanFile
+import os
+class MyTest(ConanFile):
+    requires = "Test/0.1@lasote/testing"
+    def build(self):
+        self.output.info("PROJECT VARS: %s" % os.getenv("SOME_VAR"))
+"""
+            client.save({"conanfile.py": conanfile})
+            client.run("create project/0.1@lasote/testing")
+            self.assertIn("project/0.1@lasote/testing: PROJECT VARS: " +
+                          os.pathsep.join(["OTHER_VALUE2", "OTHER_VALUE3",
+                                           "OTHER_VALUE", "INITIAL VALUE"]),
+                          client.out)
+            client.run("create project/0.1@lasote/testing -e SOME_VAR=[WHAT]")
+            self.assertIn("project/0.1@lasote/testing: PROJECT VARS: " +
+                          os.pathsep.join(["WHAT", "OTHER_VALUE2", "OTHER_VALUE3",
+                                           "OTHER_VALUE", "INITIAL VALUE"]),
+                          client.out)
+
     def test_run_env(self):
         client = TestClient()
         conanfile = '''
@@ -127,13 +298,13 @@ virtualrunenv
 
         self.assertIn("PATH", activate_contents)
         self.assertIn("LD_LIBRARY_PATH", activate_contents)
-        self.assertIn("DYLIB_LIBRARY_PATH", activate_contents)
+        self.assertIn("DYLD_LIBRARY_PATH", activate_contents)
 
         for line in activate_contents.splitlines():
             if " PATH=" in line:
                 self.assertIn("bin2", line)
                 self.assertNotIn("lib2", line)
-            if " DYLIB_LIBRARY_PATH=" in line:
+            if " DYLD_LIBRARY_PATH=" in line:
                 self.assertNotIn("bin2", line)
                 self.assertIn("lib2", line)
             if " LD_LIBRARY_PATH=" in line:

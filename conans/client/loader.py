@@ -1,63 +1,14 @@
 import os
 
-from conans.client.generators.text import TXTGenerator
+
 from conans.client.loader_parse import ConanFileTextLoader, load_conanfile_class
-from conans.client.profile_loader import read_conaninfo_profile
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
 from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
-from conans.paths import BUILD_INFO
 from conans.util.files import load
-
-
-def _load_deps_cpp_info(current_path, conanfile, required):
-
-    def get_forbidden_access_object(field_name):
-        class InfoObjectNotDefined(object):
-            def __getitem__(self, item):
-                raise ConanException("self.%s not defined. If you need it for a "
-                                     "local command run 'conan install -g txt'" % field_name)
-            __getattr__ = __getitem__
-
-        return InfoObjectNotDefined()
-
-    if not current_path:
-        return
-    info_file_path = os.path.join(current_path, BUILD_INFO)
-    try:
-        deps_cpp_info, deps_user_info = TXTGenerator.loads(load(info_file_path))
-        conanfile.deps_cpp_info = deps_cpp_info
-        conanfile.deps_user_info = deps_user_info
-    except IOError:
-        if required:
-            raise ConanException("%s file not found in %s\nIt is required for this command\n"
-                                 "You can generate it using 'conan install -g txt'"
-                                 % (BUILD_INFO, current_path))
-        conanfile.deps_cpp_info = get_forbidden_access_object("deps_cpp_info")
-        conanfile.deps_user_info = get_forbidden_access_object("deps_user_info")
-    except ConanException:
-        raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
-
-
-def load_consumer_conanfile(conanfile_path, current_path, settings, runner, output,
-                            default_profile=None, reference=None, deps_cpp_info_required=False):
-
-    profile = read_conaninfo_profile(current_path) or default_profile
-    if not profile:
-        raise ConanException("Execute 'conan install -g txt' first.")
-
-    loader = ConanFileLoader(runner, settings, profile)
-    if conanfile_path.endswith(".py"):
-        consumer = not reference
-        conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
-    else:
-        conanfile = loader.load_conan_txt(conanfile_path, output)
-    if deps_cpp_info_required is not None:
-        _load_deps_cpp_info(current_path, conanfile, required=deps_cpp_info_required)
-    return conanfile
 
 
 class ConanFileLoader(object):
@@ -70,8 +21,8 @@ class ConanFileLoader(object):
         @param cached_env_values: EnvValues object
         """
         self._runner = runner
-        settings.values = profile.settings_values
-        assert settings is None or isinstance(settings, Settings)
+
+        assert isinstance(settings, Settings)
         # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
         self._user_options = profile.options.copy()

@@ -375,7 +375,7 @@ class ConanInstaller(object):
         else:
             source_folder = build_folder
         with environment_append(conan_file.env):
-            create_package(conan_file, source_folder, build_folder, package_folder, output, False)
+            create_package(conan_file, source_folder, build_folder, package_folder, output)
             self._remote_proxy.handle_package_manifest(package_reference, installed=True)
 
     def _raise_package_not_found_error(self, conan_ref, conan_file):

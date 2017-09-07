@@ -39,13 +39,14 @@ def _get_env_cmake_system_name():
 class CMake(object):
 
     def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True,
-                 parallel=True):
+                 parallel=True, build_type=None):
         """
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
         :param generator: Generator name to use or none to autodetect
         :param cmake_system_name: False to not use CMAKE_SYSTEM_NAME variable,
                True for auto-detect or directly a string with the system name
         :param parallel: Try to build with multiple cores if available
+        :param build_type: Overrides default build type comming from settings
         """
         if isinstance(settings_or_conanfile, Settings):
             self._settings = settings_or_conanfile
@@ -64,10 +65,10 @@ class CMake(object):
         self._compiler = self._settings.get_safe("compiler")
         self._compiler_version = self._settings.get_safe("compiler.version")
         self._arch = self._settings.get_safe("arch")
-        self._build_type = self._settings.get_safe("build_type")
         self._op_system_version = self._settings.get_safe("os.version")
         self._libcxx = self._settings.get_safe("compiler.libcxx")
         self._runtime = self._settings.get_safe("compiler.runtime")
+        self._build_type = self._settings.get_safe("build_type")
 
         self.generator = generator or self._generator()
         self.build_dir = None
@@ -76,6 +77,23 @@ class CMake(object):
             self._cmake_system_name = cmake_system_name
         self.parallel = parallel
         self.definitions = self._get_cmake_definitions()
+        if build_type and build_type != self._build_type:
+            # Call the setter to warn and update the definitions if needed
+            self.build_type = build_type
+
+    @property
+    def build_type(self):
+        return self._build_type
+
+    @build_type.setter
+    def build_type(self, build_type):
+        settings_build_type = self._settings.get_safe("build_type")
+        if build_type != settings_build_type:
+            self._conanfile.output.warn(
+                'Set CMake build type "%s" is different than the settings build_type "%s"'
+                % (build_type, settings_build_type))
+        self._build_type = build_type
+        self.definitions.update(self._build_type_definition())
 
     @property
     def flags(self):
@@ -213,10 +231,6 @@ class CMake(object):
             '-Wno-dev'
         ])
 
-    @property
-    def build_type(self):
-        return self._defs_to_string(self._build_type_definition())
-
     def _build_type_definition(self):
         if self._build_type and not self.is_multi_configuration:
             return {'CMAKE_BUILD_TYPE': self._build_type}
@@ -224,7 +238,7 @@ class CMake(object):
 
     @property
     def runtime(self):
-        return self._defs_to_string(self._runtime_definition())
+        return _defs_to_string(self._runtime_definition())
 
     def _runtime_definition(self):
         if self._runtime:

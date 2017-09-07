@@ -69,10 +69,18 @@ def conan_expand_user(path):
     return os.path.expanduser(path)
 
 
+def get_conan_user_home():
+    tmp = conan_expand_user(os.getenv("CONAN_USER_HOME", "~"))
+    if not os.path.isabs(tmp):
+        raise Exception("Invalid CONAN_USER_HOME value '%s', "
+                        "please specify an absolute or path starting with ~/ "
+                        "(relative to user home)" % tmp)
+    return os.path.abspath(tmp)
+
+
 if platform.system() == "Windows":
     def _rm_conandir(path):
-        ''' removal of a directory that might contain a link to a short path
-        '''
+        """removal of a directory that might contain a link to a short path"""
         link = os.path.join(path, CONAN_LINK)
         if os.path.exists(link):
             short_path = load(link)

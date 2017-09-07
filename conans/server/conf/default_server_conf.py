@@ -45,10 +45,15 @@ updown_secret: {updown_secret}
 # name/version@user/channel: user1, user2, user3
 # The rules are applied in order. If a rule applies to a conan, system wont look further.
 #
-# Example: All versions of opencv package from lasote user in testing channel is only
-# readable by default_user and default_user2. Rest of packages are world readable
+# Example: 
+#  All versions of opencv package from lasote user in testing channel are only
+#    readable by default_user and default_user2. 
+#  All versions of internal package from any user/channel are only readable by
+#    authenticated users. 
+#  Rest of packages are world readable.
 #
-#   opencv/1.2.3@lasote/testing: default_user default_user2
+#   opencv/*@lasote/testing: default_user default_user2
+#   internal/*@*/*: ?
 #   *:*@*/*: *
 #
 # By default all users can read all blocks

@@ -112,6 +112,6 @@ class _FileImporter(object):
         each dependency
         """
         if not pattern:
-            return {pkg: deps.rootpath for pkg, deps in self._conanfile.deps_cpp_info.dependencies}
-        return {pkg: deps.rootpath for pkg, deps in self._conanfile.deps_cpp_info.dependencies
+            return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies}
+        return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
                 if fnmatch.fnmatch(pkg, pattern)}
