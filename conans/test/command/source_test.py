@@ -36,6 +36,27 @@ class ConanLib(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Running source!", client.user_io.out)
 
+    def source_local_cwd_test(self):
+        conanfile = '''
+import os
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def source(self):
+        self.output.info("Running source!")
+        self.output.info("cwd=>%s" % os.getcwd())
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        subdir = os.path.join(client.current_folder, "subdir")
+        os.mkdir(subdir)
+        client.run("source .. --cwd subdir")
+        self.assertIn("PROJECT: Configuring sources", client.user_io.out)
+        self.assertIn("PROJECT: cwd=>%s" % subdir, client.user_io.out)
+
     def local_source_test(self):
         conanfile = '''
 from conans import ConanFile

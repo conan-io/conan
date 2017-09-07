@@ -451,9 +451,10 @@ class Command(object):
                                  " folder, then the execution and retrieval of the source code."
                                  " Otherwise, if the code has already been retrieved, it will"
                                  " do nothing.")
+        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
 
         args = parser.parse_args(*args)
-        return self._conan.source(args.reference, args.force)
+        return self._conan.source(args.reference, args.force, cwd=args.cwd)
 
     def imports(self, *args):
         """ Execute the 'imports' stage of a conanfile.txt or a conanfile.py.

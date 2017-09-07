@@ -85,18 +85,19 @@ def config_source(export_folder, export_source_folder, src_folder, conan_file, o
 
 
 def config_source_local(current_path, conan_file, output):
-    output.info('Configuring sources in %s' % current_path)
-    dirty = os.path.join(current_path, DIRTY_FILE)
-    if os.path.exists(dirty):
-        output.warn("Your previous source command failed")
+    with tools.chdir(current_path):
+        output.info('Configuring sources in %s' % current_path)
+        dirty = os.path.join(current_path, DIRTY_FILE)
+        if os.path.exists(dirty):
+            output.warn("Your previous source command failed")
 
-    save(dirty, "")  # Creation of DIRTY flag
-    try:
-        with conanfile_exception_formatter(str(conan_file), "source"):
-            with tools.environment_append(conan_file.env):
-                conan_file.source()
-            os.remove(dirty)  # Everything went well, remove DIRTY flag
-    except ConanExceptionInUserConanfileMethod:
-        raise
-    except Exception as e:
-        raise ConanException(e)
+        save(dirty, "")  # Creation of DIRTY flag
+        try:
+            with conanfile_exception_formatter(str(conan_file), "source"):
+                with tools.environment_append(conan_file.env):
+                    conan_file.source()
+                os.remove(dirty)  # Everything went well, remove DIRTY flag
+        except ConanExceptionInUserConanfileMethod:
+            raise
+        except Exception as e:
+            raise ConanException(e)
