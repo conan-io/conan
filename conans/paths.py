@@ -24,7 +24,6 @@ BUILD_INFO_CMAKE = 'conanbuildinfo.cmake'
 BUILD_INFO_QMAKE = 'conanbuildinfo.pri'
 BUILD_INFO_QBS = 'conanbuildinfo.qbs'
 BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
-BUILD_INFO_VISUAL_STUDIO_LEGACY = 'conanbuildinfo.vsprops'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
 BUILD_INFO_YCM = '.ycm_extra_conf.py'
 CONANINFO = "conaninfo.txt"

@@ -1,31 +1,30 @@
 from conans.model import Generator
-from conans.paths import BUILD_INFO_VISUAL_STUDIO_LEGACY
 
 
 class VisualStudioLegacyGenerator(Generator):
     template = '''<?xml version="1.0" encoding="Windows-1252"?>
 <VisualStudioPropertySheet
-	ProjectType="Visual C++"
-	Version="8.00"
-	Name="conanbuildinfo"
-	>
-	<Tool
-		Name="VCCLCompilerTool"
+    ProjectType="Visual C++"
+    Version="8.00"
+    Name="conanbuildinfo"
+    >
+    <Tool
+        Name="VCCLCompilerTool"
         AdditionalOptions="{compiler_flags}"
-		AdditionalIncludeDirectories="{include_dirs}"
+        AdditionalIncludeDirectories="{include_dirs}"
         PreprocessorDefinitions="{definitions}"
-	/>
-	<Tool
-		Name="VCLinkerTool"
+    />
+    <Tool
+        Name="VCLinkerTool"
         AdditionalOptions="{linker_flags}"
-		AdditionalDependencies="{libs}"
+        AdditionalDependencies="{libs}"
         AdditionalLibraryDirectories="{lib_dirs}"
-	/>
+    />
 </VisualStudioPropertySheet>'''
 
     @property
     def filename(self):
-        return BUILD_INFO_VISUAL_STUDIO_LEGACY
+        return 'conanbuildinfo.vsprops'
 
     @property
     def content(self):
