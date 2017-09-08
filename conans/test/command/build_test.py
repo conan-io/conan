@@ -80,6 +80,35 @@ class AConan(ConanFile):
         self.assertIn("Project: HELLO INCLUDE PATHS: %s/include"
                       % package_folder, client.user_io.out)
 
+    def build_dots_names_test(self):
+        """ Try to reuse variables loaded from txt generator => deps_cpp_info
+        """
+        client = TestClient()
+        conanfile_dep = """
+from conans import ConanFile
+
+class AConan(ConanFile):
+    pass
+"""
+        client.save({CONANFILE: conanfile_dep})
+        client.run("create Hello.Pkg/0.1@lasote/testing")
+        client.run("create Hello-Tools/0.1@lasote/testing")
+        conanfile_scope_env = """
+from conans import ConanFile
+
+class AConan(ConanFile):
+    requires = "Hello.Pkg/0.1@lasote/testing", "Hello-Tools/0.1@lasote/testing"
+
+    def build(self):
+        self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello.Pkg"].rootpath)
+        self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello-Tools"].rootpath)
+"""
+        client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
+        client.run("install --build=missing -g txt")
+        client.run("build")
+        self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
+        self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
+
     def build_cmake_install_test(self):
         client = TestClient()
         conanfile = """
@@ -109,3 +138,20 @@ cmake_minimum_required(VERSION 2.8.12)
         client.run("build -pf=mypkg")
         header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
         self.assertEqual(header, "my header h!!")
+
+    def build_options_test(self):
+        client = TestClient()
+        conanfile_template = """
+from conans import ConanFile
+class MyConan(ConanFile):
+    options = {"shared": [True, False]}
+    default_options = "shared=True"
+
+    def build(self):
+        self.output.info("Building with shared=%s" % self.options.shared)
+"""
+
+        client.save({CONANFILE: conanfile_template})
+        client.run("install -o shared=False")
+        client.run("build")
+        self.assertIn("Building with shared=False", client.out)
