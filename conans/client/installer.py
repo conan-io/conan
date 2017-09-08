@@ -442,27 +442,16 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
         config_source(export_folder, export_source_folder, src_folder, conan_file, output)
         output.info('Copying sources to build folder')
 
-        def check_max_path_len(src, files):
-            if platform.system() != "Windows":
-                return []
-            filtered_files = []
-            for the_file in files:
-                source_path = os.path.join(src, the_file)
-                # Without storage path, just relative
-                rel_path = os.path.relpath(source_path, src_folder)
-                dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
-                # it is NOT that "/" is counted as "\\" so it counts double
-                # seems a bug in python, overflows paths near the limit of 260,
-                if len(dest_path) >= 249:
-                    filtered_files.append(the_file)
-                    output.warn("Filename too long, file excluded: %s" % dest_path)
-            return filtered_files
-
         if getattr(conan_file, 'no_copy_source', False):
             mkdir(build_folder)
             conan_file.source_folder = src_folder
         else:
-            shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
+            if platform.system() == "Windows" and os.getenv("CONAN_USER_HOME_SHORT") != "None":
+                from conans.util.windows import ignore_long_path_files
+                ignore = ignore_long_path_files(src_folder, build_folder, output)
+            else:
+                ignore = None
+            shutil.copytree(src_folder, build_folder, symlinks=True, ignore=ignore)
             logger.debug("Copied to %s" % build_folder)
             logger.debug("Files copied %s" % os.listdir(build_folder))
             conan_file.source_folder = build_folder
