@@ -10,13 +10,14 @@ class SourceTest(unittest.TestCase):
     def basic_source_test(self):
         conanfile = '''
 from conans import ConanFile
+import os
 
 class ConanLib(ConanFile):
     name = "Hello"
     version = "0.1"
 
     def source(self):
-        self.assertEquals(os.listdir("."), []) # Not conanfile copied, clean source
+        assert(os.listdir(".") == []) # Not conanfile copied, clean source
         self.output.info("Running source!")
 '''
         client = TestClient()
