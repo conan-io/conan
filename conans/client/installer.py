@@ -49,6 +49,17 @@ def build_id(conan_file):
     return None
 
 
+class _ConanPackageBuilder(object):
+    """Builds and packages a single conan_file"""
+
+    def __init__(self, conan_file, client_cache, output):
+        pass
+
+    def
+
+
+
+
 class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
@@ -162,10 +173,10 @@ class ConanInstaller(object):
 
                 self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
                 # Call the conanfile's build method
-                self._build_conanfile(conan_file, package_ref, output)
+                build_folder = self._build_conanfile(conan_file, package_ref, output)
 
                 # Call the conanfile's package method
-                self._package_conanfile(conan_file, package_ref, output)
+                self._package_conanfile(conan_file, package_ref, build_folder, output)
 
                 # Call the info method
                 self._package_info_conanfile(conan_file)
@@ -274,27 +285,33 @@ class ConanInstaller(object):
 
         self._raise_package_not_found_error(conan_file, package_reference.conan)
 
+    def _get_build_folder(self, conan_file, package_reference):
+        """Gets the build folder taking into account that it can be reused because of the
+        build_id"""
+        new_id = build_id(conan_file)
+        conan_ref = package_reference.conan
+        new_reference = PackageReference(conan_ref, new_id) if new_id else package_reference
+        return self._client_cache.build(new_reference, conan_file.short_paths)
+
     def _build_conanfile(self, conan_file, package_reference, output):
         """Calls the conanfile's build method"""
-
-        new_id = build_id(conan_file)
-        if new_id:
-            package_reference = PackageReference(package_reference.conan, new_id)
-        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
+        build_folder = self._get_build_folder(conan_file, package_reference)
         if not os.path.exists(build_folder) or not hasattr(conan_file, "build_id"):
             # build_id is not caching the build folder, so actually rebuild the package
             self._handle_system_requirements(conan_file, package_reference, output)
             with environment_append(conan_file.env):
-                self._build_package(conan_file, package_reference, output)
+                self._build_package(conan_file, package_reference, build_folder, output)
 
-    def _package_conanfile(self, conan_file, package_reference, output):
-        """Generate the info txt files and calls the conanfile package method"""
+        return build_folder
+
+    def _package_conanfile(self, conan_file, package_reference, build_folder, output):
+        """Generate the info txt files and calls the conanfile package method.
+        Receives que build_folder because it can change if build_id() method exists"""
 
         # FIXME: Is weak to assign here the recipe_hash
         manifest = self._client_cache.load_manifest(package_reference.conan)
         conan_file.info.recipe_hash = manifest.summary_hash
 
-        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
         # Creating ***info.txt files
         save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
         output.info("Generated %s" % CONANINFO)
@@ -359,14 +376,13 @@ Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-p
             output.error("while executing system_requirements(): %s" % str(e))
             raise ConanException("Error in system requirements")
 
-    def _build_package(self, conan_file, package_reference, output):
+    def _build_package(self, conan_file, package_reference, build_folder, output):
         """ builds the package, creating the corresponding build folder if necessary
         and copying there the contents from the src folder. The code is duplicated
         in every build, as some configure processes actually change the source
-        code
+        code. Receives the build_folder because it can change if the method build_id() exists
         """
 
-        build_folder = self._client_cache.build(package_reference, conan_file.short_paths)
         package_folder = self._client_cache.package(package_reference, conan_file.short_paths)
         src_folder = self._client_cache.source(package_reference.conan, conan_file.short_paths)
         export_folder = self._client_cache.export(package_reference.conan)
