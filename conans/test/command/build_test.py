@@ -138,3 +138,20 @@ cmake_minimum_required(VERSION 2.8.12)
         client.run("build -pf=mypkg")
         header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
         self.assertEqual(header, "my header h!!")
+
+    def build_options_test(self):
+        client = TestClient()
+        conanfile_template = """
+from conans import ConanFile
+class MyConan(ConanFile):
+    options = {"shared": [True, False]}
+    default_options = "shared=True"
+
+    def build(self):
+        self.output.info("Building with shared=%s" % self.options.shared)
+"""
+
+        client.save({CONANFILE: conanfile_template})
+        client.run("install -o shared=False")
+        client.run("build")
+        self.assertIn("Building with shared=False", client.out)

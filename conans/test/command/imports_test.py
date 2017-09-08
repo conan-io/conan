@@ -203,3 +203,20 @@ class ConanLib(ConanFile):
         self.client.run("imports -f conanfile.txt")
         self.assertIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertIn("file2.txt", os.listdir(self.client.current_folder))
+
+    def imports_options_test(self):
+        client = TestClient()
+        conanfile_template = """
+from conans import ConanFile
+class MyConan(ConanFile):
+    options = {"shared": [True, False]}
+    default_options = "shared=True"
+
+    def imports(self):
+        self.output.info("Importing with shared=%s" % self.options.shared)
+"""
+
+        client.save({"conanfile.py": conanfile_template})
+        client.run("install -o shared=False")
+        client.run("imports")
+        self.assertIn("Importing with shared=False", client.out)

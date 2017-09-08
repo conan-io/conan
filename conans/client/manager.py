@@ -62,7 +62,7 @@ class ConanManager(object):
         profile = read_conaninfo_profile(current_path) or self._client_cache.default_profile
         loader = self.get_loader(profile)
         if conanfile_path.endswith(".py"):
-            consumer = not reference
+            consumer = True
             conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
