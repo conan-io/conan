@@ -368,8 +368,14 @@ def download(url, filename, verify=True, out=None, retry=2, retry_wait=5):
 #     save(filename, content)
 
 
-def replace_in_file(file_path, search, replace):
+def replace_in_file(file_path, search, replace, strict=True):
     content = load(file_path)
+    if -1 == content.find(search):
+        message = "replace_in_file didn't find pattern '%s' in '%s' file." % (search, file_path)
+        if strict:
+            raise ConanException(message)
+        else:
+            _global_output.warn(message)
     content = content.replace(search, replace)
     content = content.encode("utf-8")
     with open(file_path, "wb") as handle:
