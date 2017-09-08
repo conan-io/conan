@@ -14,7 +14,7 @@ from conans.client.export import export_conanfile, load_export_conanfile
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
 from conans.client.importer import run_imports, undo_imports
-from conans.client.installer import ConanInstaller
+from conans.client.installer import ConanInstaller, call_system_requirements
 from conans.client.loader import ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import ScopedOutput, Color
@@ -419,7 +419,7 @@ class ConanManager(object):
             output.info("Generated %s" % CONANINFO)
             if not no_imports:
                 run_imports(conanfile, current_path, output)
-            installer.call_system_requirements(conanfile, output)
+            call_system_requirements(conanfile, output)
 
         if manifest_manager:
             manifest_manager.print_log()

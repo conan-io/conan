@@ -50,14 +50,211 @@ def build_id(conan_file):
 
 
 class _ConanPackageBuilder(object):
-    """Builds and packages a single conan_file"""
+    """Builds and packages a single conan_file binary package"""
 
-    def __init__(self, conan_file, client_cache, output):
-        pass
+    def __init__(self, conan_file, package_reference, client_cache, output):
+        self._client_cache = client_cache
+        self._conan_file = conan_file
+        self._out = output
+        self._package_reference = package_reference
+        self._conan_ref = self._package_reference.conan
+        self._build_folder = None
 
-    def
+    def build(self):
+        """Calls the conanfile's build method"""
+        if not os.path.exists(self.build_folder) or not hasattr(self._conan_file, "build_id"):
+            # build_id is not caching the build folder, so actually rebuild the package
+            _handle_system_requirements(self._conan_file, self._package_reference,
+                                        self._client_cache, self._out)
+            with environment_append(self._conan_file.env):
+                self._build_package()
+
+    def package(self):
+        """Generate the info txt files and calls the conanfile package method.
+        Receives que build_folder because it can change if build_id() method exists"""
+
+        # FIXME: Is weak to assign here the recipe_hash
+        manifest = self._client_cache.load_manifest(self._conan_ref)
+        self._conan_file.info.recipe_hash = manifest.summary_hash
+
+        # Creating ***info.txt files
+        save(os.path.join(self.build_folder, CONANINFO), self._conan_file.info.dumps())
+        self._out.info("Generated %s" % CONANINFO)
+        save(os.path.join(self.build_folder, BUILD_INFO), TXTGenerator(self._conan_file).content)
+        self._out.info("Generated %s" % BUILD_INFO)
+
+        os.chdir(self.build_folder)
+
+        if getattr(self._conan_file, 'no_copy_source', False):
+            source_folder = self._client_cache.source(self._conan_ref,
+                                                      self._conan_file.short_paths)
+        else:
+            source_folder = self.build_folder
+        with environment_append(self._conan_file.env):
+            package_folder = self._client_cache.package(self._package_reference,
+                                                        self._conan_file.short_paths)
+            create_package(self._conan_file, source_folder, self.build_folder, package_folder,
+                           self._out)
+
+    def _build_package(self):
+        """ builds the package, creating the corresponding build folder if necessary
+        and copying there the contents from the src folder. The code is duplicated
+        in every build, as some configure processes actually change the source
+        code. Receives the build_folder because it can change if the method build_id() exists
+        """
+
+        package_folder = self._client_cache.package(self._package_reference,
+                                                    self._conan_file.short_paths)
+        src_folder = self._client_cache.source(self._conan_ref, self._conan_file.short_paths)
+        export_folder = self._client_cache.export(self._conan_ref)
+        export_source_folder = self._client_cache.export_sources(self._conan_ref,
+                                                                 self._conan_file.short_paths)
+        dirty_file_path = self._client_cache.dirty_sources_file(self._conan_ref)
+
+        try:
+            rmdir(self.build_folder)
+            rmdir(package_folder)
+        except Exception as e:
+            raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
+                                 "Close any app using it, and retry" % str(e))
+
+        self._out.info('Building your package in %s' % self.build_folder)
+        config_source(export_folder, export_source_folder, src_folder, dirty_file_path,
+                      self._conan_file, self._out)
+        self._out.info('Copying sources to build folder')
+
+        def check_max_path_len(src, files):
+            if platform.system() != "Windows":
+                return []
+            filtered_files = []
+            for the_file in files:
+                source_path = os.path.join(src, the_file)
+                # Without storage path, just relative
+                rel_path = os.path.relpath(source_path, src_folder)
+                dest_path = os.path.normpath(os.path.join(self.build_folder, rel_path))
+                # it is NOT that "/" is counted as "\\" so it counts double
+                # seems a bug in python, overflows paths near the limit of 260,
+                if len(dest_path) >= 249:
+                    filtered_files.append(the_file)
+                    self._out.warn("Filename too long, file excluded: %s" % dest_path)
+            return filtered_files
+
+        if getattr(self._conan_file, 'no_copy_source', False):
+            mkdir(self.build_folder)
+            self._conan_file.source_folder = src_folder
+        else:
+            shutil.copytree(src_folder, self.build_folder, symlinks=True, ignore=check_max_path_len)
+            logger.debug("Copied to %s" % self.build_folder)
+            logger.debug("Files copied %s" % os.listdir(self.build_folder))
+            self._conan_file.source_folder = self.build_folder
+
+        os.chdir(self.build_folder)
+        self._conan_file.build_folder = self.build_folder
+        self._conan_file._conanfile_directory = self.build_folder
+        # Read generators from conanfile and generate the needed files
+        logger.debug("Writing generators")
+        write_generators(self._conan_file, self.build_folder, self._out)
+        logger.debug("Files copied after generators %s" % os.listdir(self.build_folder))
+
+        # Build step might need DLLs, binaries as protoc to generate source files
+        # So execute imports() before build, storing the list of copied_files
+        from conans.client.importer import run_imports
+        copied_files = run_imports(self._conan_file, self.build_folder, self._out)
+
+        try:
+            # This is necessary because it is different for user projects
+            # than for packages
+            logger.debug("Call conanfile.build() with files in build folder: %s"
+                         % os.listdir(self.build_folder))
+            self._out.highlight("Calling build()")
+            with conanfile_exception_formatter(str(self._conan_file), "build"):
+                self._conan_file.build()
+
+            self._out.success("Package '%s' built" % self._conan_file.info.package_id())
+            self._out.info("Build folder %s" % self.build_folder)
+        except Exception as exc:
+            os.chdir(src_folder)
+            self._out.writeln("")
+            self._out.error("Package '%s' build failed" % self._conan_file.info.package_id())
+            self._out.warn("Build folder %s" % self.build_folder)
+            if isinstance(exc, ConanExceptionInUserConanfileMethod):
+                raise exc
+            raise ConanException(exc)
+
+        finally:
+            self._conan_file._conanfile_directory = export_folder
+            # Now remove all files that were imported with imports()
+            for f in copied_files:
+                try:
+                    if f.startswith(self.build_folder):
+                        os.remove(f)
+                except Exception:
+                    self._out.warn("Unable to remove imported file from build: %s" % f)
+
+    @property
+    def build_folder(self):
+        if not self._build_folder:
+            new_id = build_id(self._conan_file)
+            new_ref = PackageReference(self._conan_ref, new_id) if new_id else self._package_reference
+            self._build_folder = self._client_cache.build(new_ref, self._conan_file.short_paths)
+        return self._build_folder
 
 
+def _raise_package_not_found_error(conan_file, conan_ref, out):
+    settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
+    options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
+
+    out.warn('''Can't find a '%s' package for the specified options and settings:
+- Settings: %s
+- Options: %s
+''' % (conan_ref, settings_text, options_text))
+
+    raise ConanException('''Missing prebuilt package for '%s'
+Try to build it from sources with "--build %s"
+Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
+''' % (conan_ref, conan_ref.name))
+
+
+def _handle_system_requirements(conan_file, package_reference, client_cache, out):
+    """ check first the system_reqs/system_requirements.txt existence, if not existing
+    check package/sha1/
+
+    Used after remote package retrieving and before package building
+    """
+    if "system_requirements" not in type(conan_file).__dict__:
+        return
+
+    system_reqs_path = client_cache.system_reqs(package_reference.conan)
+    system_reqs_package_path = client_cache.system_reqs_package(package_reference)
+    if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
+        return
+
+    ret = call_system_requirements(conan_file, out)
+
+    try:
+        ret = str(ret or "")
+    except:
+        out.warn("System requirements didn't return a string")
+        ret = ""
+    if getattr(conan_file, "global_system_requirements", None):
+        save(system_reqs_path, ret)
+    else:
+        save(system_reqs_package_path, ret)
+
+
+def call_system_requirements(conanfile, output):
+    try:
+        return conanfile.system_requirements()
+    except Exception as e:
+        output.error("while executing system_requirements(): %s" % str(e))
+        raise ConanException("Error in system requirements")
+
+
+def call_package_info(conanfile):
+    # Once the node is build, execute package info, so it has access to the
+    # package folder and artifacts
+    with conanfile_exception_formatter(str(conanfile), "package_info"):
+        conanfile.package_info()
 
 
 class ConanInstaller(object):
@@ -158,7 +355,7 @@ class ConanInstaller(object):
             if build_needed and (conan_ref, package_id) not in self._built_packages:
                 build_allowed = self._build_mode.allowed(conan_file, conan_ref)
                 if not build_allowed:
-                    self._raise_package_not_found_error(conan_file, conan_ref)
+                    _raise_package_not_found_error(conan_file, conan_ref, output)
 
                 if conan_file.build_policy_missing:
                     output.info("Building package from source as defined by build_policy='missing'")
@@ -172,28 +369,50 @@ class ConanInstaller(object):
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
                 self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
-                # Call the conanfile's build method
-                build_folder = self._build_conanfile(conan_file, package_ref, output)
+                builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)
+                builder.build()
+                builder.package()
 
-                # Call the conanfile's package method
-                self._package_conanfile(conan_file, package_ref, build_folder, output)
+                self._remote_proxy.handle_package_manifest(package_ref, installed=True)
 
                 # Call the info method
-                self._package_info_conanfile(conan_file)
+                call_package_info(conan_file)
+
                 # Log build
                 self._log_built_package(conan_file, package_ref, time.time() - t1)
                 self._built_packages.add((conan_ref, package_id))
             else:
                 # Get the package, we have a not outdated remote package
                 if conan_ref:
-                    self._get_package(conan_file, package_ref, output)
+                    self.get_remote_package(conan_file, package_ref, output)
 
                 # Assign to the node the propagated info
                 # (conan_ref could be None if user project, but of course assign the info
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
                 # Call the info method
-                self._package_info_conanfile(conan_file)
+                call_package_info(conan_file)
+
+    def get_remote_package(self, conan_file, package_reference, output):
+        """Get remote package. It won't check if it's outdated"""
+        # Compute conan_file package from local (already compiled) or from remote
+
+        package_folder = self._client_cache.package(package_reference,
+                                                    conan_file.short_paths)
+
+        # If already exists do not dirt the output, the common situation
+        # is that package is already installed and OK. If don't, the proxy
+        # will print some other message about it
+        if not os.path.exists(package_folder):
+            self._out.info("Retrieving package %s" % package_reference.package_id)
+
+        if self._remote_proxy.get_package(package_reference,
+                                          short_paths=conan_file.short_paths):
+            _handle_system_requirements(conan_file, package_reference,
+                                        self._client_cache, output)
+            return True
+
+        _raise_package_not_found_error(conan_file, package_reference.conan, output)
 
     def _log_built_package(self, conan_file, package_ref, duration):
         build_folder = self._client_cache.build(package_ref, conan_file.short_paths)
@@ -220,7 +439,8 @@ class ConanInstaller(object):
         subtree_libnames = [ref.name for (ref, _) in node_order]
         for package_name, env_vars in conan_file._env_values.data.items():
             for name, value in env_vars.items():
-                if not package_name or package_name in subtree_libnames or package_name == conan_file.name:
+                if not package_name or package_name in subtree_libnames or \
+                   package_name == conan_file.name:
                     conan_file.info.env_values.add(name, value, package_name)
 
     def _get_nodes(self, nodes_by_level, skip_nodes):
@@ -253,9 +473,10 @@ class ConanInstaller(object):
                         if self._build_mode.forced(conan_file, conan_ref):
                             build_node = True
                         else:
-                            build_node = not self._remote_proxy.package_available(package_reference,
-                                                                                  conan_file.short_paths,
-                                                                                  check_outdated)
+                            available = self._remote_proxy.package_available(package_reference,
+                                                                             conan_file.short_paths,
+                                                                             check_outdated)
+                            build_node = not available
 
                 nodes_to_build.append((conan_ref, package_id, conan_file, build_node))
 
@@ -266,212 +487,3 @@ class ConanInstaller(object):
             self._build_mode.check_matches(to_build)
 
         return nodes_to_build
-
-    def _get_package(self, conan_file, package_reference, output):
-        """Get remote package. It won't check if it's outdated"""
-        # Compute conan_file package from local (already compiled) or from remote
-
-        package_folder = self._client_cache.package(package_reference, conan_file.short_paths)
-
-        # If already exists do not dirt the output, the common situation
-        # is that package is already installed and OK. If don't, the proxy
-        # will print some other message about it
-        if not os.path.exists(package_folder):
-            output.info("Retrieving package %s" % package_reference.package_id)
-
-        if self._remote_proxy.get_package(package_reference, short_paths=conan_file.short_paths):
-            self._handle_system_requirements(conan_file, package_reference, output)
-            return True
-
-        self._raise_package_not_found_error(conan_file, package_reference.conan)
-
-    def _get_build_folder(self, conan_file, package_reference):
-        """Gets the build folder taking into account that it can be reused because of the
-        build_id"""
-        new_id = build_id(conan_file)
-        conan_ref = package_reference.conan
-        new_reference = PackageReference(conan_ref, new_id) if new_id else package_reference
-        return self._client_cache.build(new_reference, conan_file.short_paths)
-
-    def _build_conanfile(self, conan_file, package_reference, output):
-        """Calls the conanfile's build method"""
-        build_folder = self._get_build_folder(conan_file, package_reference)
-        if not os.path.exists(build_folder) or not hasattr(conan_file, "build_id"):
-            # build_id is not caching the build folder, so actually rebuild the package
-            self._handle_system_requirements(conan_file, package_reference, output)
-            with environment_append(conan_file.env):
-                self._build_package(conan_file, package_reference, build_folder, output)
-
-        return build_folder
-
-    def _package_conanfile(self, conan_file, package_reference, build_folder, output):
-        """Generate the info txt files and calls the conanfile package method.
-        Receives que build_folder because it can change if build_id() method exists"""
-
-        # FIXME: Is weak to assign here the recipe_hash
-        manifest = self._client_cache.load_manifest(package_reference.conan)
-        conan_file.info.recipe_hash = manifest.summary_hash
-
-        # Creating ***info.txt files
-        save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
-        output.info("Generated %s" % CONANINFO)
-        save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
-        output.info("Generated %s" % BUILD_INFO)
-
-        os.chdir(build_folder)
-
-        if getattr(conan_file, 'no_copy_source', False):
-            source_folder = self._client_cache.source(package_reference.conan,
-                                                      conan_file.short_paths)
-        else:
-            source_folder = build_folder
-        with environment_append(conan_file.env):
-            package_folder = self._client_cache.package(package_reference, conan_file.short_paths)
-            create_package(conan_file, source_folder, build_folder, package_folder, output)
-            self._remote_proxy.handle_package_manifest(package_reference, installed=True)
-
-    def _raise_package_not_found_error(self, conan_file, conan_ref):
-        settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
-        options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
-
-        self._out.warn('''Can't find a '%s' package for the specified options and settings:
-- Settings: %s
-- Options: %s
-''' % (conan_ref, settings_text, options_text))
-
-        raise ConanException('''Missing prebuilt package for '%s'
-Try to build it from sources with "--build %s"
-Or read "http://docs.conan.io/en/latest/faq/troubleshooting.html#error-missing-prebuilt-package"
-''' % (conan_ref, conan_ref.name))
-
-    def _handle_system_requirements(self, conan_file, package_reference, output):
-        """ check first the system_reqs/system_requirements.txt existence, if not existing
-        check package/sha1/
-        """
-        if "system_requirements" not in type(conan_file).__dict__:
-            return
-
-        system_reqs_path = self._client_cache.system_reqs(package_reference.conan)
-        system_reqs_package_path = self._client_cache.system_reqs_package(package_reference)
-        if os.path.exists(system_reqs_path) or os.path.exists(system_reqs_package_path):
-            return
-
-        ret = self.call_system_requirements(conan_file, output)
-
-        try:
-            ret = str(ret or "")
-        except:
-            output.warn("System requirements didn't return a string")
-            ret = ""
-        if getattr(conan_file, "global_system_requirements", None):
-            save(system_reqs_path, ret)
-        else:
-            save(system_reqs_package_path, ret)
-
-    @staticmethod
-    def call_system_requirements(conan_file, output):
-        try:
-            return conan_file.system_requirements()
-        except Exception as e:
-            output.error("while executing system_requirements(): %s" % str(e))
-            raise ConanException("Error in system requirements")
-
-    def _build_package(self, conan_file, package_reference, build_folder, output):
-        """ builds the package, creating the corresponding build folder if necessary
-        and copying there the contents from the src folder. The code is duplicated
-        in every build, as some configure processes actually change the source
-        code. Receives the build_folder because it can change if the method build_id() exists
-        """
-
-        package_folder = self._client_cache.package(package_reference, conan_file.short_paths)
-        src_folder = self._client_cache.source(package_reference.conan, conan_file.short_paths)
-        export_folder = self._client_cache.export(package_reference.conan)
-        export_source_folder = self._client_cache.export_sources(package_reference.conan, conan_file.short_paths)
-        dirty_file_path = self._client_cache.dirty_sources_file(package_reference.conan)
-
-        try:
-            rmdir(build_folder)
-            rmdir(package_folder)
-        except Exception as e:
-            raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % str(e))
-
-        output.info('Building your package in %s' % build_folder)
-        config_source(export_folder, export_source_folder, src_folder, dirty_file_path,
-                      conan_file, output)
-        output.info('Copying sources to build folder')
-
-        def check_max_path_len(src, files):
-            if platform.system() != "Windows":
-                return []
-            filtered_files = []
-            for the_file in files:
-                source_path = os.path.join(src, the_file)
-                # Without storage path, just relative
-                rel_path = os.path.relpath(source_path, src_folder)
-                dest_path = os.path.normpath(os.path.join(build_folder, rel_path))
-                # it is NOT that "/" is counted as "\\" so it counts double
-                # seems a bug in python, overflows paths near the limit of 260,
-                if len(dest_path) >= 249:
-                    filtered_files.append(the_file)
-                    output.warn("Filename too long, file excluded: %s" % dest_path)
-            return filtered_files
-
-        if getattr(conan_file, 'no_copy_source', False):
-            mkdir(build_folder)
-            conan_file.source_folder = src_folder
-        else:
-            shutil.copytree(src_folder, build_folder, symlinks=True, ignore=check_max_path_len)
-            logger.debug("Copied to %s" % build_folder)
-            logger.debug("Files copied %s" % os.listdir(build_folder))
-            conan_file.source_folder = build_folder
-
-        os.chdir(build_folder)
-        conan_file.build_folder = build_folder
-        conan_file._conanfile_directory = build_folder
-        # Read generators from conanfile and generate the needed files
-        logger.debug("Writing generators")
-        write_generators(conan_file, build_folder, output)
-        logger.debug("Files copied after generators %s" % os.listdir(build_folder))
-
-        # Build step might need DLLs, binaries as protoc to generate source files
-        # So execute imports() before build, storing the list of copied_files
-        from conans.client.importer import run_imports
-        copied_files = run_imports(conan_file, build_folder, output)
-
-        try:
-            # This is necessary because it is different for user projects
-            # than for packages
-            logger.debug("Call conanfile.build() with files in build folder: %s"
-                         % os.listdir(build_folder))
-            output.highlight("Calling build()")
-            with conanfile_exception_formatter(str(conan_file), "build"):
-                conan_file.build()
-
-            output.success("Package '%s' built" % conan_file.info.package_id())
-            output.info("Build folder %s" % build_folder)
-        except Exception as exc:
-            os.chdir(src_folder)
-            self._out.writeln("")
-            output.error("Package '%s' build failed" % conan_file.info.package_id())
-            output.warn("Build folder %s" % build_folder)
-            if isinstance(exc, ConanExceptionInUserConanfileMethod):
-                raise exc
-            raise ConanException(exc)
-
-        finally:
-            conan_file._conanfile_directory = export_folder
-            # Now remove all files that were imported with imports()
-            for f in copied_files:
-                try:
-                    if f.startswith(build_folder):
-                        os.remove(f)
-                except Exception:
-                    self._out.warn("Unable to remove imported file from build: %s" % f)
-
-    @staticmethod
-    def _package_info_conanfile(conan_file):
-        # Once the node is build, execute package info, so it has access to the
-        # package folder and artifacts
-        with conanfile_exception_formatter(str(conan_file), "package_info"):
-            conan_file.package_info()
