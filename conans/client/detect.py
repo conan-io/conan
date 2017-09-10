@@ -120,7 +120,7 @@ def _visual_compiler(output, version):
 
 def _visual_compiler_last(output):
     last_version = None
-    for version in ["8", "9", "10", "11", "12", "14", "15"]:
+    for version in ["8", "9", "10", "11", "12", "14"]:
         vs = _visual_compiler(output, version)
         last_version = vs or last_version
     return last_version
