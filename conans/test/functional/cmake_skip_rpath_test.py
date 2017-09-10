@@ -1,5 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient
+from conans.util.log import logger
 
 
 conanfile_py = """
@@ -20,8 +21,8 @@ set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS SKIP_RPATH)
+#include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+#conan_basic_setup(TARGETS SKIP_RPATH)
 
 IF(APPLE AND CMAKE_SKIP_RPATH)
     MESSAGE(FATAL_ERROR "RPath was not skipped")
@@ -39,7 +40,11 @@ class CMakeSkipRpathTest(unittest.TestCase):
                      "CMakeLists.txt": cmake}, clean_first=True)
 
         client.run('install -g cmake --build')
+        logger.debug("FINISHED FIRST INSTALL  ")
+        client.runner("cmake --version")
         client.runner("cmake .", cwd=client.current_folder)
+        logger.debug(client.out)
+        logger.debug("FINISHED cmake configuration")
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.user_io.out)
         self.assertIn("Build files have been written", client.user_io.out)
 
