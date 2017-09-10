@@ -6,7 +6,7 @@ mkdir C:\projects\deps
 cd C:\projects\deps
 appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
 7z x cmake.zip -oC:\projects\deps > nul
-move C:\projects\deps\cmake-* C:\projects\deps\cmake # Move to a version-agnostic directory
+move C:\projects\deps\cmake-* C:\projects\deps\cmake
 set PATH=C:\projects\deps\cmake\bin;%PATH%
 cmake --version
 
