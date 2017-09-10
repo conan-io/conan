@@ -3,12 +3,14 @@ if not exist "C:\mingw64" 7z x x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc
 
 set CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.0-win64-x64.zip"
 mkdir C:\projects\deps
+PUSHD %1
 cd C:\projects\deps
 appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
 7z x cmake.zip -oC:\projects\deps > nul
 move C:\projects\deps\cmake-* C:\projects\deps\cmake
 set PATH=C:\projects\deps\cmake\bin;%PATH%
 cmake --version
+POPD
 
 SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw64\\bin;%PATH%
 SET PYTHONPATH=%PYTHONPATH%;%CD%
