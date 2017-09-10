@@ -6,3 +6,10 @@ SET CONAN_LOGGING_LEVEL=10
 %PYTHON%/Scripts/pip.exe install -r conans/requirements.txt
 %PYTHON%/Scripts/pip.exe install -r conans/requirements_dev.txt
 %PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt
+
+set CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.0-win64-x64.zip"
+appveyor DownloadFile %CMAKE_URL% -FileName cmake.zip
+7z x cmake.zip -oC:\projects\deps > nul
+move C:\projects\deps\cmake-* C:\projects\deps\cmake # Move to a version-agnostic directory
+set PATH=C:\projects\deps\cmake\bin;%PATH%
+cmake --version
