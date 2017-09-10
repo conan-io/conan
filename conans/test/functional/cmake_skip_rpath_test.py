@@ -43,7 +43,7 @@ class CMakeSkipRpathTest(unittest.TestCase):
         logger.debug("FINISHED FIRST INSTALL")
         client.runner("cmake .", cwd=client.current_folder)
         logger.debug(client.out)
-        logger.debug("FINISHED cmake config")
+        logger.debug("FINISHED cmake configuration")
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.user_io.out)
         self.assertIn("Build files have been written", client.user_io.out)
 
