@@ -21,8 +21,8 @@ set(CMAKE_CXX_ABI_COMPILED 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS SKIP_RPATH)
+#include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+#conan_basic_setup(TARGETS SKIP_RPATH)
 
 IF(APPLE AND CMAKE_SKIP_RPATH)
     MESSAGE(FATAL_ERROR "RPath was not skipped")
