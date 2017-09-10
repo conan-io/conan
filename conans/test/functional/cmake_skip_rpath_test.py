@@ -41,6 +41,7 @@ class CMakeSkipRpathTest(unittest.TestCase):
 
         client.run('install -g cmake --build')
         logger.debug("FINISHED FIRST INSTALL  ")
+        client.runner("cmake --version")
         client.runner("cmake .", cwd=client.current_folder)
         logger.debug(client.out)
         logger.debug("FINISHED cmake configuration")
