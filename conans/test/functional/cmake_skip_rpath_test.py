@@ -1,5 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient
+from conans.util.log import logger
 
 
 conanfile_py = """
@@ -39,7 +40,10 @@ class CMakeSkipRpathTest(unittest.TestCase):
                      "CMakeLists.txt": cmake}, clean_first=True)
 
         client.run('install -g cmake --build')
+        logger.debug("FINISHED FIRST INSTALL")
         client.runner("cmake .", cwd=client.current_folder)
+        logger.debug(client.out)
+        logger.debug("FINISHED cmake config")
         self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.user_io.out)
         self.assertIn("Build files have been written", client.user_io.out)
 
