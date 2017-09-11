@@ -87,11 +87,12 @@ def config_source(export_folder, export_source_folder, src_folder, dirty_file_pa
 
 def config_source_local(current_path, conan_file, output):
     output.info('Configuring sources in %s' % current_path)
-    try:
-        with conanfile_exception_formatter(str(conan_file), "source"):
-            with tools.environment_append(conan_file.env):
-                conan_file.source()
-    except ConanExceptionInUserConanfileMethod:
-        raise
-    except Exception as e:
-        raise ConanException(e)
+    with tools.chdir(current_path):
+        try:
+            with conanfile_exception_formatter(str(conan_file), "source"):
+                with tools.environment_append(conan_file.env):
+                    conan_file.source()
+        except ConanExceptionInUserConanfileMethod:
+            raise
+        except Exception as e:
+            raise ConanException(e)
