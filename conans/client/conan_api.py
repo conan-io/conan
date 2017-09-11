@@ -526,7 +526,6 @@ class ConanAPIV1(object):
                 current_path = reference
             self._manager.imports_undo(current_path)
         else:
-            cwd = prepare_cwd(cwd)
             current_path, reference = _get_reference(reference, cwd)
             self._manager.imports(current_path, reference, filename, dest)
 

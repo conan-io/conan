@@ -368,11 +368,11 @@ class Command(object):
                 only = []
             if only and args.paths and (set(only) - set(path_only_options)):
                 raise ConanException("Invalid --only value '%s' with --path specified, allowed values: [%s]."
-                                               % (only, str_path_only_options))
+                                     % (only, str_path_only_options))
             elif only and not args.paths and (set(only) - set(info_only_options)):
                 raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
-                                               "Use --only=None to show only the references." %
-                                               (only, str_only_options))
+                                     "Use --only=None to show only the references."
+                                     % (only, str_only_options))
 
             if args.graph:
                 self._outputer.info_graph(args.graph, deps_graph, project_reference, args.cwd)
@@ -451,9 +451,10 @@ class Command(object):
                                  " folder, then the execution and retrieval of the source code."
                                  " Otherwise, if the code has already been retrieved, it will"
                                  " do nothing.")
+        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
 
         args = parser.parse_args(*args)
-        return self._conan.source(args.reference, args.force)
+        return self._conan.source(args.reference, args.force, cwd=args.cwd)
 
     def imports(self, *args):
         """ Execute the 'imports' stage of a conanfile.txt or a conanfile.py.
@@ -711,7 +712,6 @@ class Command(object):
         reference = args.reference if hasattr(args, 'reference') else None
 
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
-
 
         remote = args.remote if hasattr(args, 'remote') else None
         url = args.url if hasattr(args, 'url') else None

@@ -3,24 +3,24 @@ from conans.paths import BUILD_INFO_QBS
 
 
 class DepsCppQbs(object):
-    def __init__(self, deps_cpp_info):
+    def __init__(self, cpp_info):
         delimiter = ",\n                "
         self.include_paths = delimiter.join('"%s"' % p.replace("\\", "/")
-                                            for p in deps_cpp_info.include_paths)
+                                            for p in cpp_info.include_paths)
         self.lib_paths = delimiter.join('"%s"' % p.replace("\\", "/")
-                                        for p in deps_cpp_info.lib_paths)
-        self.libs = delimiter.join('"%s"' % l for l in deps_cpp_info.libs)
-        self.defines = delimiter.join('"%s"' % d for d in deps_cpp_info.defines)
+                                        for p in cpp_info.lib_paths)
+        self.libs = delimiter.join('"%s"' % l for l in cpp_info.libs)
+        self.defines = delimiter.join('"%s"' % d for d in cpp_info.defines)
         self.cppflags = delimiter.join('"%s"' % d
-                                       for d in deps_cpp_info.cppflags)
-        self.cflags = delimiter.join('"%s"' % d for d in deps_cpp_info.cflags)
+                                       for d in cpp_info.cppflags)
+        self.cflags = delimiter.join('"%s"' % d for d in cpp_info.cflags)
         self.sharedlinkflags = delimiter.join('"%s"' % d
-                                              for d in deps_cpp_info.sharedlinkflags)
+                                              for d in cpp_info.sharedlinkflags)
         self.sharedlinkflags += delimiter.join('"%s"' % d
-                                               for d in deps_cpp_info.exelinkflags)
+                                               for d in cpp_info.exelinkflags)
         self.bin_paths = delimiter.join('"%s"' % p.replace("\\", "/")
-                                        for p in deps_cpp_info.bin_paths)
-        self.rootpath = '%s' % deps_cpp_info.rootpath.replace("\\", "/")
+                                        for p in cpp_info.bin_paths)
+        self.rootpath = '%s' % cpp_info.rootpath.replace("\\", "/")
 
 
 class QbsGenerator(Generator):

@@ -21,10 +21,15 @@ class AConan(ConanFile):
 
 conanfile_dep = """
 from conans import ConanFile
+from conans.tools import mkdir
+import os
 
 class AConan(ConanFile):
     name = "Hello"
     version = "0.1"
+
+    def package(self):
+        mkdir(os.path.join(self.package_folder, "include"))
 """
 
 
