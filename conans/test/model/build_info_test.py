@@ -6,6 +6,7 @@ from collections import namedtuple, defaultdict
 from conans.model.env_info import DepsEnvInfo
 from conans.test.utils.test_files import temp_folder
 import platform
+from conans.util.files import mkdir
 
 
 class BuildInfoTest(unittest.TestCase):
@@ -102,13 +103,22 @@ my_component_lib
 
     def cpp_info_test(self):
         folder = temp_folder()
+        mkdir(os.path.join(folder, "include"))
+        mkdir(os.path.join(folder, "lib"))
+        mkdir(os.path.join(folder, "local_bindir"))
+        abs_folder = temp_folder()
+        abs_include = os.path.join(abs_folder, "usr/include")
+        abs_lib = os.path.join(abs_folder, "usr/lib")
+        abs_bin = os.path.join(abs_folder, "usr/bin")
+        mkdir(abs_include)
+        mkdir(abs_lib)
+        mkdir(abs_bin)
         info = CppInfo(folder)
-        info.includedirs.append("/usr/include")
-        info.libdirs.append("/usr/lib")
-        bin_abs_dir = "C:/usr/bin" if platform.system() == "Windows" else "/tmp"
-        info.bindirs.append(bin_abs_dir)
+        info.includedirs.append(abs_include)
+        info.libdirs.append(abs_lib)
+        info.bindirs.append(abs_bin)
         info.bindirs.append("local_bindir")
-        self.assertEqual(info.include_paths, [os.path.join(folder, "include"), "/usr/include"])
-        self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), "/usr/lib"])
-        self.assertEqual(info.bin_paths, [os.path.join(folder, "bin"), bin_abs_dir,
+        self.assertEqual(info.include_paths, [os.path.join(folder, "include"), abs_include])
+        self.assertEqual(info.lib_paths, [os.path.join(folder, "lib"), abs_lib])
+        self.assertEqual(info.bin_paths, [abs_bin,
                                           os.path.join(folder, "local_bindir")])
