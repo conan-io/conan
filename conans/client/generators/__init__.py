@@ -1,6 +1,5 @@
-from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
+from .virtualrunenv import VirtualRunEnvGenerator
 from conans.errors import ConanException
-from conans.model import registered_generators
 from conans.util.files import save, normalize
 from os.path import join
 from .text import TXTGenerator
@@ -19,26 +18,87 @@ from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 
 
-def _save_generator(name, klass):
-    if name not in registered_generators:
-        registered_generators.add(name, klass)
+from abc import ABCMeta, abstractproperty
 
 
-_save_generator("txt", TXTGenerator)
-_save_generator("gcc", GCCGenerator)
-_save_generator("cmake", CMakeGenerator)
-_save_generator("cmake_multi", CMakeMultiGenerator)
-_save_generator("qmake", QmakeGenerator)
-_save_generator("qbs", QbsGenerator)
-_save_generator("scons", SConsGenerator)
-_save_generator("visual_studio", VisualStudioGenerator)
-_save_generator("visual_studio_legacy", VisualStudioLegacyGenerator)
-_save_generator("xcode", XCodeGenerator)
-_save_generator("ycm", YouCompleteMeGenerator)
-_save_generator("virtualenv", VirtualEnvGenerator)
-_save_generator("env", ConanEnvGenerator)
-_save_generator("virtualbuildenv", VirtualBuildEnvGenerator)
-_save_generator("virtualrunenv", VirtualRunEnvGenerator)
+class Generator(object):
+    __metaclass__ = ABCMeta
+
+    def __init__(self, conanfile):
+        self.conanfile = conanfile
+        self._deps_build_info = conanfile.deps_cpp_info
+        self._build_info = conanfile.cpp_info
+        self._deps_env_info = conanfile.deps_env_info
+        self._env_info = conanfile.env_info
+        self._deps_user_info = conanfile.deps_user_info
+
+    @property
+    def deps_build_info(self):
+        return self._deps_build_info
+
+    @property
+    def build_info(self):
+        return self._build_info
+
+    @property
+    def deps_env_info(self):
+        return self._deps_env_info
+
+    @property
+    def deps_user_info(self):
+        return self._deps_user_info
+
+    @property
+    def env_info(self):
+        return self._env_info
+
+    @property
+    def settings(self):
+        return self.conanfile.settings
+
+    @abstractproperty
+    def content(self):
+        raise NotImplementedError()
+
+    @abstractproperty
+    def filename(self):
+        raise NotImplementedError()
+
+
+class GeneratorManager(object):
+    def __init__(self):
+        self._generators = {}
+
+    def add(self, name, generator_class):
+        if name not in self._generators:
+            self._generators[name] = generator_class
+
+    @property
+    def available(self):
+        return list(self._generators.keys())
+
+    def __getitem__(self, key):
+        return self._generators[key]
+
+
+registered_generators = GeneratorManager()
+
+
+registered_generators.add("txt", TXTGenerator)
+registered_generators.add("gcc", GCCGenerator)
+registered_generators.add("cmake", CMakeGenerator)
+registered_generators.add("cmake_multi", CMakeMultiGenerator)
+registered_generators.add("qmake", QmakeGenerator)
+registered_generators.add("qbs", QbsGenerator)
+registered_generators.add("scons", SConsGenerator)
+registered_generators.add("visual_studio", VisualStudioGenerator)
+registered_generators.add("visual_studio_legacy", VisualStudioLegacyGenerator)
+registered_generators.add("xcode", XCodeGenerator)
+registered_generators.add("ycm", YouCompleteMeGenerator)
+registered_generators.add("virtualenv", VirtualEnvGenerator)
+registered_generators.add("env", ConanEnvGenerator)
+registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
+registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
 
 
 def write_generators(conanfile, path, output):

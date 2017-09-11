@@ -4,13 +4,12 @@ import os
 import sys
 import uuid
 
-from conans.client.generators import _save_generator
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
-from conans.model.conan_generator import Generator
 from conans.util.config_parser import ConfigParser
 from conans.util.files import rmdir
 from conans.tools import chdir
+from conans.client.generators import Generator, registered_generators
 
 
 def load_conanfile_class(conanfile_path):
@@ -40,7 +39,7 @@ def _parse_module(conanfile_module, filename):
                 raise ConanException("More than 1 conanfile in the file")
         if (inspect.isclass(attr) and issubclass(attr, Generator) and attr != Generator and
                 attr.__dict__["__module__"] == filename):
-                _save_generator(attr.__name__, attr)
+                registered_generators.add(attr.__name__, attr)
 
     if result is None:
         raise ConanException("No subclass of ConanFile")
