@@ -1,4 +1,4 @@
-Contributors
+﻿Contributors
 -------------
 
 This is the list of contributors to this project source code, in alphabetical order.
@@ -20,3 +20,4 @@ Many thanks to all of them!
 - Ray, Chris (chris@xaltotun.com)
 - Ries, Uilian (uilianries@gmail.com, @uilianries)
 - Sechet, Olivier (osechet@gmail.com)
+- Sturm, Fabian (f@rtfs.org, @sturmf)
