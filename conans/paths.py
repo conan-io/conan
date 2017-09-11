@@ -36,7 +36,7 @@ BUILD_INFO_YCM = '.ycm_extra_conf.py'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
-DIRTY_FILE = ".conan_dirty"
+SOURCE_DIRTY_FILE = ".conan_source_dirty"
 PUT_HEADERS = "artifacts.properties"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
@@ -104,6 +104,10 @@ class SimplePaths(object):
         """
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self._store_folder, "/".join(conan_reference)))
+
+    def dirty_sources_file(self, conan_reference):
+        assert isinstance(conan_reference, ConanFileReference)
+        return normpath(join(self.conan(conan_reference), SOURCE_DIRTY_FILE))
 
     def export(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)

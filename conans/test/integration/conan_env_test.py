@@ -264,6 +264,8 @@ class MyTest(ConanFile):
         client = TestClient()
         conanfile = '''
 from conans import ConanFile
+from conans.tools import mkdir
+import os
 
 class HelloConan(ConanFile):
     name = "Hello"
@@ -271,6 +273,8 @@ class HelloConan(ConanFile):
     build_policy = "missing"
 
     def package_info(self):
+        mkdir(os.path.join(self.package_folder, "bin2"))
+        mkdir(os.path.join(self.package_folder, "lib2"))
         self.cpp_info.bindirs.append("bin2")
         self.cpp_info.libdirs.append("lib2")
 

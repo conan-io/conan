@@ -27,31 +27,46 @@ class _CppInfo(object):
         self.exelinkflags = []  # linker flags
         self.rootpath = ""
         self.sysroot = None
+        self._include_paths = None
+        self._lib_paths = None
+        self._bin_paths = None
+        self._build_paths = None
+        self._res_paths = None
+
+    def _filter_paths(self, paths):
+        abs_paths = [os.path.join(self.rootpath, p)
+                     if not os.path.isabs(p) else p for p in paths]
+        return [p for p in abs_paths if os.path.isdir(p)]
 
     @property
     def include_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.includedirs]
+        if self._include_paths is None:
+            self._include_paths = self._filter_paths(self.includedirs)
+        return self._include_paths
 
     @property
     def lib_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.libdirs]
+        if self._lib_paths is None:
+            self._lib_paths = self._filter_paths(self.libdirs)
+        return self._lib_paths
 
     @property
     def bin_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.bindirs]
+        if self._bin_paths is None:
+            self._bin_paths = self._filter_paths(self.bindirs)
+        return self._bin_paths
 
     @property
     def build_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.builddirs]
+        if self._build_paths is None:
+            self._build_paths = self._filter_paths(self.builddirs)
+        return self._build_paths
 
     @property
     def res_paths(self):
-        return [os.path.join(self.rootpath, p)
-                if not os.path.isabs(p) else p for p in self.resdirs]
+        if self._res_paths is None:
+            self._res_paths = self._filter_paths(self.resdirs)
+        return self._res_paths
 
 
 class CppInfo(_CppInfo):
