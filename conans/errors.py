@@ -8,7 +8,6 @@
     see return_plugin.py
 
 """
-import os
 from contextlib import contextmanager
 
 from conans.util.env_reader import get_env

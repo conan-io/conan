@@ -5,7 +5,7 @@ from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
-from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME, get_conan_user_home
+from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
@@ -60,7 +60,7 @@ print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
-verbose_traceback = False            # environment CONAN_VERBOSE_TRACEBACK
+# verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
