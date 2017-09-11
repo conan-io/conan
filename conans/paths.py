@@ -8,7 +8,7 @@ from conans.util.files import rmdir
 if platform.system() == "Windows":
     from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
 else:
-    def path_shortener(x):
+    def path_shortener(x, _):
         return x
     conan_expand_user = os.path.expanduser
     rm_conandir = rmdir
