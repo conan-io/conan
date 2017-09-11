@@ -9,7 +9,8 @@ from conans.model.conan_file import ConanFile
 from conans.util.config_parser import ConfigParser
 from conans.util.files import rmdir
 from conans.tools import chdir
-from conans.client.generators import Generator, registered_generators
+from conans.client.generators import registered_generators
+from conans.model import Generator
 
 
 def load_conanfile_class(conanfile_path):

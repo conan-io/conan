@@ -1,6 +1,6 @@
 import os
 import platform
-from conans.client.generators import Generator
+from conans.model import Generator
 
 
 class VirtualEnvGenerator(Generator):

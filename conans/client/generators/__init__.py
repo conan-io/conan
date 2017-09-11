@@ -1,7 +1,9 @@
-from .virtualrunenv import VirtualRunEnvGenerator
+from os.path import join
+
 from conans.errors import ConanException
 from conans.util.files import save, normalize
-from os.path import join
+
+from .virtualrunenv import VirtualRunEnvGenerator
 from .text import TXTGenerator
 from .gcc import GCCGenerator
 from .cmake import CMakeGenerator
@@ -18,54 +20,7 @@ from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 
 
-from abc import ABCMeta, abstractproperty
-
-
-class Generator(object):
-    __metaclass__ = ABCMeta
-
-    def __init__(self, conanfile):
-        self.conanfile = conanfile
-        self._deps_build_info = conanfile.deps_cpp_info
-        self._build_info = conanfile.cpp_info
-        self._deps_env_info = conanfile.deps_env_info
-        self._env_info = conanfile.env_info
-        self._deps_user_info = conanfile.deps_user_info
-
-    @property
-    def deps_build_info(self):
-        return self._deps_build_info
-
-    @property
-    def build_info(self):
-        return self._build_info
-
-    @property
-    def deps_env_info(self):
-        return self._deps_env_info
-
-    @property
-    def deps_user_info(self):
-        return self._deps_user_info
-
-    @property
-    def env_info(self):
-        return self._env_info
-
-    @property
-    def settings(self):
-        return self.conanfile.settings
-
-    @abstractproperty
-    def content(self):
-        raise NotImplementedError()
-
-    @abstractproperty
-    def filename(self):
-        raise NotImplementedError()
-
-
-class GeneratorManager(object):
+class _GeneratorManager(object):
     def __init__(self):
         self._generators = {}
 
@@ -77,11 +32,14 @@ class GeneratorManager(object):
     def available(self):
         return list(self._generators.keys())
 
+    def __contains__(self, name):
+        return name in self._generators
+
     def __getitem__(self, key):
         return self._generators[key]
 
 
-registered_generators = GeneratorManager()
+registered_generators = _GeneratorManager()
 
 
 registered_generators.add("txt", TXTGenerator)
