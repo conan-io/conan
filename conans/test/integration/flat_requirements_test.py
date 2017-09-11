@@ -15,6 +15,14 @@ class FlatRequirementsTest(unittest.TestCase):
         self.conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         self.files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.conan = TestClient()
+        package = """def package(self):
+        import os
+        os.mkdir(os.path.join(self.package_folder, "include"))
+        os.mkdir(os.path.join(self.package_folder, "lib"))
+        os.mkdir(os.path.join(self.package_folder, "bin"))
+"""
+        self.files["conanfile.py"] = self.files["conanfile.py"].replace("def package(self):",
+                                                                        package)
         self.conan.save(self.files)
         self.conan.run("export lasote/stable")
 
