@@ -1,10 +1,11 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
-from conans.util.files import load
-from conans.model.ref import PackageReference, ConanFileReference
+import unittest
+
 from nose_parameterized.parameterized import parameterized
 
+from conans.model.ref import PackageReference, ConanFileReference
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 conanfile = """from conans import ConanFile
 from conans.util.files import save
@@ -56,7 +57,6 @@ class MyTest(ConanFile):
 
 
 class BuildIdTest(unittest.TestCase):
-
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
         ref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
