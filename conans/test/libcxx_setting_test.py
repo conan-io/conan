@@ -19,7 +19,7 @@ class ConanFileToolsTest(ConanFile):
         self.output.warn("Building...")
         cmake = CMake(self)
         self.output.warn(cmake.command_line)
-        self.run('cmake . %s' % command)
+        self.run('cmake . %s' % cmake.command_line)
         self.run("cmake --build . %s" %  cmake.build_config)
 
     def package(self):
