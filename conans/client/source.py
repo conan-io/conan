@@ -7,7 +7,7 @@ from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
-from conans.util.files import rmdir, save
+from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty
 
 
 def merge_directories(src, dst):
@@ -21,7 +21,7 @@ def merge_directories(src, dst):
             shutil.copy2(src_file, dst_file)
 
 
-def config_source(export_folder, export_source_folder, src_folder, dirty_file_path,
+def config_source(export_folder, export_source_folder, src_folder,
                   conan_file, output, force=False):
     """ creates src folder and retrieve, calling source() from conanfile
     the necessary source code
@@ -32,7 +32,7 @@ def config_source(export_folder, export_source_folder, src_folder, dirty_file_pa
         try:
             rmdir(src_folder)
         except BaseException as e_rm:
-            save(dirty_file_path, "")  # Creation of DIRTY flag
+            set_dirty(src_folder)
             msg = str(e_rm)
             if six.PY2:
                 msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1
@@ -44,7 +44,7 @@ def config_source(export_folder, export_source_folder, src_folder, dirty_file_pa
     if force:
         output.warn("Forced removal of source folder")
         remove_source()
-    elif os.path.exists(dirty_file_path):
+    elif is_dirty(src_folder):
         output.warn("Trying to remove dirty source folder")
         remove_source()
     elif conan_file.build_policy_always:
@@ -67,13 +67,13 @@ def config_source(export_folder, export_source_folder, src_folder, dirty_file_pa
         except OSError:
             pass
 
-        save(dirty_file_path, "")  # Creation of DIRTY flag
+        set_dirty(src_folder)
         os.chdir(src_folder)
         try:
             with tools.environment_append(conan_file.env):
                 with conanfile_exception_formatter(str(conan_file), "source"):
                     conan_file.source()
-            os.remove(dirty_file_path)  # Everything went well, remove DIRTY flag
+            clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
         except Exception as e:
             os.chdir(export_folder)
             # in case source() fails (user error, typically), remove the src_folder
