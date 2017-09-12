@@ -8,7 +8,7 @@ from conans.util.files import load, save
 class ConanSettingsPreprocessorTest(unittest.TestCase):
 
     def setUp(self):
-        self.client = TestClient(default_profile=False)
+        self.client = TestClient()
         self.conanfile = '''
 from conans import ConanFile
 
