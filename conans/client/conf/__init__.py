@@ -5,7 +5,7 @@ from six.moves.configparser import ConfigParser, NoSectionError
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
-from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME, get_conan_user_home
+from conans.paths import conan_expand_user, DEFAULT_PROFILE_NAME
 from conans.util.env_reader import get_env
 from conans.util.files import load
 
@@ -60,9 +60,11 @@ print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
+# verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
+
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
@@ -123,6 +125,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_RECIPE_LINTER": self._env_c("general.recipe_linter", "CONAN_RECIPE_LINTER", "True"),
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
                "CONAN_USER_HOME_SHORT": self._env_c("general.user_home_short", "CONAN_USER_HOME_SHORT", None),
+               "CONAN_VERBOSE_TRACEBACK": self._env_c("general.verbose_traceback", "CONAN_VERBOSE_TRACEBACK", None),
                # http://www.vtk.org/Wiki/CMake_Cross_Compiling
                "CONAN_CMAKE_GENERATOR": self._env_c("general.cmake_generator", "CONAN_CMAKE_GENERATOR", None),
                "CONAN_CMAKE_TOOLCHAIN_FILE": self._env_c("general.cmake_toolchain_file", "CONAN_CMAKE_TOOLCHAIN_FILE", None),
