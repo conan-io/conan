@@ -1,7 +1,6 @@
 import os
 import shutil
 import sys
-import tempfile
 import unittest
 import platform
 
@@ -15,11 +14,12 @@ from conans.client.cmake import CMake
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.tools import cpu_count
 from conans.util.files import save
+from conans.test.utils.test_files import temp_folder
 
 
 class CMakeTest(unittest.TestCase):
     def setUp(self):
-        self.tempdir = tempfile.mkdtemp()
+        self.tempdir = temp_folder(path_with_spaces=False)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)

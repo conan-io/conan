@@ -415,6 +415,11 @@ class ConanAPIV1(object):
         config_parser.rm_item(item)
 
     @api_method
+    def config_install(self, item):
+        from conans.client.conf.config_installer import configuration_install
+        return configuration_install(item, self._client_cache, self._user_io.out, self._runner)
+
+    @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None, scope=None, profile_name=None,
                          filename=None, remote=None, build_order=None, check_updates=None, cwd=None):
 
