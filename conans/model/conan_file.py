@@ -130,6 +130,9 @@ class ConanFile(object):
         self._user = user
         self._channel = channel
 
+        # Are we in local cache? Suggest a better name
+        self.in_local_cache = False
+
     @property
     def env(self):
         simple, multiple = self._env_values.env_dicts(self.name)
