@@ -168,8 +168,8 @@ class ConanAPIV1(object):
     @api_method
     def test_package(self, profile_name=None, settings=None, options=None, env=None,
                      scope=None, test_folder=None, not_export=False, build=None, keep_source=False,
-                     verify=default_manifest_folder, manifests=default_manifest_folder,
-                     manifests_interactive=default_manifest_folder,
+                     verify=None, manifests=None,
+                     manifests_interactive=None,
                      remote=None, update=False, cwd=None, user=None, channel=None, name=None,
                      version=None):
         settings = settings or []
@@ -260,8 +260,8 @@ class ConanAPIV1(object):
     @api_method
     def create(self, profile_name=None, settings=None,
                options=None, env=None, scope=None, test_folder=None, not_export=False, build=None,
-               keep_source=False, verify=default_manifest_folder,
-               manifests=default_manifest_folder, manifests_interactive=default_manifest_folder,
+               keep_source=False, verify=None,
+               manifests=None, manifests_interactive=None,
                remote=None, update=False, cwd=None,
                user=None, channel=None, name=None, version=None):
 
@@ -359,8 +359,8 @@ class ConanAPIV1(object):
 
     @api_method
     def install(self, reference="", package=None, settings=None, options=None, env=None, scope=None, all=False,
-                remote=None, werror=False, verify=default_manifest_folder, manifests=default_manifest_folder,
-                manifests_interactive=default_manifest_folder, build=None, profile_name=None,
+                remote=None, werror=False, verify=None, manifests=None,
+                manifests_interactive=None, build=None, profile_name=None,
                 update=False, generator=None, no_imports=False, filename=None, cwd=None):
 
         self._user_io.out.werror_active = werror
@@ -763,6 +763,8 @@ def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
     manifest_folder = verify or manifests or manifests_interactive
     if manifest_folder:
         if not os.path.isabs(manifest_folder):
+            if not cwd:
+                raise ConanException("'cwd' should be defined if the manifest folder is relative.")
             manifest_folder = os.path.join(cwd, manifest_folder)
         manifest_verify = verify is not None
         manifest_interactive = manifests_interactive is not None
