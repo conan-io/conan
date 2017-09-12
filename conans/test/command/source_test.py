@@ -10,12 +10,14 @@ class SourceTest(unittest.TestCase):
     def basic_source_test(self):
         conanfile = '''
 from conans import ConanFile
+import os
 
 class ConanLib(ConanFile):
     name = "Hello"
     version = "0.1"
 
     def source(self):
+        assert(os.listdir(".") == []) # Not conanfile copied, clean source
         self.output.info("Running source!")
 '''
         client = TestClient()
@@ -35,6 +37,27 @@ class ConanLib(ConanFile):
         self.assertIn("WARN: Forced removal of source folder", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Running source!", client.user_io.out)
+
+    def source_local_cwd_test(self):
+        conanfile = '''
+import os
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def source(self):
+        self.output.info("Running source!")
+        self.output.info("cwd=>%s" % os.getcwd())
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        subdir = os.path.join(client.current_folder, "subdir")
+        os.mkdir(subdir)
+        client.run("source .. --cwd subdir")
+        self.assertIn("PROJECT: Configuring sources", client.user_io.out)
+        self.assertIn("PROJECT: cwd=>%s" % subdir, client.user_io.out)
 
     def local_source_test(self):
         conanfile = '''
@@ -60,6 +83,5 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile.replace("err", "")})
         client.run("source .")
         self.assertIn("PROJECT: Configuring sources in", client.user_io.out)
-        self.assertIn("PROJECT: WARN: Your previous source command failed", client.user_io.out)
         self.assertIn("PROJECT: Running source!", client.user_io.out)
         self.assertEqual("Hello World", load(os.path.join(client.current_folder, "file1.txt")))

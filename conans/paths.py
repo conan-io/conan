@@ -1,10 +1,17 @@
 import os
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import load, save, rmdir
 from os.path import join, normpath
 import platform
-import tempfile
 from conans.errors import ConanException
+from conans.util.files import rmdir
+
+if platform.system() == "Windows":
+    from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
+else:
+    def path_shortener(x, _):
+        return x
+    conan_expand_user = os.path.expanduser
+    rm_conandir = rmdir
 
 
 EXPORT_FOLDER = "export"
@@ -29,44 +36,18 @@ BUILD_INFO_YCM = '.ycm_extra_conf.py'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"
-DIRTY_FILE = ".conan_dirty"
+SOURCE_DIRTY_FILE = ".conan_source_dirty"
 PUT_HEADERS = "artifacts.properties"
 
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
 EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
 EXPORT_SOURCES_DIR = ".c_src"
-CONAN_LINK = ".conan_link"
+
 
 RUN_LOG_NAME = "conan_run.log"
 
 DEFAULT_PROFILE_NAME = "default"
-
-
-def conan_expand_user(path):
-    """ wrapper to the original expanduser function, to workaround python returning
-    verbatim %USERPROFILE% when some other app (git for windows) sets HOME envvar
-    """
-    if platform.system() == "Windows":
-        # In win these variables should exist and point to user directory, which
-        # must exist. Using context to avoid permanent modification of os.environ
-        old_env = dict(os.environ)
-        try:
-            home = os.environ.get("HOME")
-            # Problematic cases of wrong HOME variable
-            # - HOME = %USERPROFILE% verbatim, as messed by some other tools
-            # - MSYS console, that defines a different user home in /c/mingw/msys/users/xxx
-            # In these cases, it is safe to remove it and rely on USERPROFILE directly
-            if home and (not os.path.exists(home) or
-                         (os.getenv("MSYSTEM") and os.getenv("USERPROFILE"))):
-                del os.environ["HOME"]
-            result = os.path.expanduser(path)
-        finally:
-            os.environ.clear()
-            os.environ.update(old_env)
-        return result
-
-    return os.path.expanduser(path)
 
 
 def get_conan_user_home():
@@ -76,19 +57,6 @@ def get_conan_user_home():
                         "please specify an absolute or path starting with ~/ "
                         "(relative to user home)" % tmp)
     return os.path.abspath(tmp)
-
-
-if platform.system() == "Windows":
-    def _rm_conandir(path):
-        """removal of a directory that might contain a link to a short path"""
-        link = os.path.join(path, CONAN_LINK)
-        if os.path.exists(link):
-            short_path = load(link)
-            rmdir(os.path.dirname(short_path))
-        rmdir(path)
-    rm_conandir = _rm_conandir
-else:
-    rm_conandir = rmdir
 
 
 def is_case_insensitive_os():
@@ -119,41 +87,6 @@ else:
         pass
 
 
-def _shortener(path, short_paths):
-    """ short_paths is 4-state:
-    False: Never shorten the path
-    True: Always shorten the path, create link if not existing
-    None: Use shorten path only if already exists, not create
-    Other: Integrity check. Consumer knows it should be short, but it isn't
-    """
-    if short_paths is False:
-        return path
-    link = os.path.join(path, CONAN_LINK)
-    if os.path.exists(link):
-        return load(link)
-    elif short_paths is None:
-        return path
-    elif short_paths is not True:
-        raise ConanException("This path should be short, but it isn't: %s\n"
-                             "Try to remove these packages and re-build them" % path)
-
-    short_home = os.getenv("CONAN_USER_HOME_SHORT")
-    if not short_home:
-        drive = os.path.splitdrive(path)[0]
-        short_home = drive + "/.conan"
-    try:
-        os.makedirs(short_home)
-    except:
-        pass
-    redirect = tempfile.mkdtemp(dir=short_home, prefix="")
-    # This "1" is the way to have a non-existing directory, so commands like
-    # shutil.copytree() to it, works. It can be removed without compromising the
-    # temp folder generator and conan-links consistency
-    redirect = os.path.join(redirect, "1")
-    save(link, redirect)
-    return redirect
-
-
 class SimplePaths(object):
     """
     Generate Conan paths. Handles the conan domain path logic. NO DISK ACCESS, just
@@ -161,10 +94,6 @@ class SimplePaths(object):
     """
     def __init__(self, store_folder):
         self._store_folder = store_folder
-        if platform.system() == "Windows":
-            self._shortener = _shortener
-        else:
-            self._shortener = lambda x, _: x
 
     @property
     def store(self):
@@ -176,6 +105,10 @@ class SimplePaths(object):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self._store_folder, "/".join(conan_reference)))
 
+    def dirty_sources_file(self, conan_reference):
+        assert isinstance(conan_reference, ConanFileReference)
+        return normpath(join(self.conan(conan_reference), SOURCE_DIRTY_FILE))
+
     def export(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
         return normpath(join(self.conan(conan_reference), EXPORT_FOLDER))
@@ -183,12 +116,12 @@ class SimplePaths(object):
     def export_sources(self, conan_reference, short_paths=False):
         assert isinstance(conan_reference, ConanFileReference)
         p = normpath(join(self.conan(conan_reference), EXPORT_SRC_FOLDER))
-        return self._shortener(p, short_paths)
+        return path_shortener(p, short_paths)
 
     def source(self, conan_reference, short_paths=False):
         assert isinstance(conan_reference, ConanFileReference)
         p = normpath(join(self.conan(conan_reference), SRC_FOLDER))
-        return self._shortener(p, short_paths)
+        return path_shortener(p, short_paths)
 
     def conanfile(self, conan_reference):
         export = self.export(conan_reference)
@@ -212,7 +145,7 @@ class SimplePaths(object):
         assert isinstance(package_reference, PackageReference)
         p = normpath(join(self.conan(package_reference.conan), BUILD_FOLDER,
                           package_reference.package_id))
-        return self._shortener(p, short_paths)
+        return path_shortener(p, short_paths)
 
     def system_reqs(self, conan_reference):
         assert isinstance(conan_reference, ConanFileReference)
@@ -231,4 +164,4 @@ class SimplePaths(object):
         assert isinstance(package_reference, PackageReference)
         p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                           package_reference.package_id))
-        return self._shortener(p, short_paths)
+        return path_shortener(p, short_paths)

@@ -92,6 +92,7 @@ class GoCompleteTest(unittest.TestCase):
                  'reverse_test.go': reverse_test,
                  'reverse.txt': reverse,
                  'hello/helloreverse.txt': reverse}
+        files_without_conanfile = set(files.keys()) - set(["conanfile.py"])
         self.client.save(files)
         self.client.run("export lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
@@ -99,7 +100,7 @@ class GoCompleteTest(unittest.TestCase):
         package_ids = self.client.paths.conan_packages(conan_reference)
         self.assertEquals(len(package_ids), 1)
         package_ref = PackageReference(conan_reference, package_ids[0])
-        self._assert_package_exists(package_ref, self.client.paths, list(files.keys()))
+        self._assert_package_exists(package_ref, self.client.paths, files_without_conanfile)
 
         # Upload conans
         self.client.run("upload %s" % str(conan_reference))
@@ -113,7 +114,7 @@ class GoCompleteTest(unittest.TestCase):
         self.client.run("upload %s -p %s" % (str(conan_reference), str(package_ids[0])))
 
         # Check library on server
-        self._assert_package_exists_in_server(package_ref, server_paths, list(files.keys()))
+        self._assert_package_exists_in_server(package_ref, server_paths, files_without_conanfile)
 
         # Now from other "computer" install the uploaded conans with same options (nothing)
         other_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
@@ -122,7 +123,7 @@ class GoCompleteTest(unittest.TestCase):
         build_path = other_conan.paths.build(package_ref)
         self.assertFalse(os.path.exists(build_path))
         # Lib should exist
-        self._assert_package_exists(package_ref, other_conan.paths, list(files.keys()))
+        self._assert_package_exists(package_ref, other_conan.paths, files_without_conanfile)
 
         reuse_conan = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = {'conanfile.py': reuse_conanfile,

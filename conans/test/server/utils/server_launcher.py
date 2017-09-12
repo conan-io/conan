@@ -119,6 +119,7 @@ class TestServerLauncher(object):
         if os.path.exists(self.storage_folder):
             shutil.rmtree(self.storage_folder)
 
+
 if __name__ == "__main__":
     server = TestServerLauncher()
     server.start(daemon=False)
