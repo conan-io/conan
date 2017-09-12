@@ -130,6 +130,7 @@ int main(){{
 @attr("slow")
 class CMakeMultiTest(unittest.TestCase):
 
+    @attr("mingw")
     def cmake_multi_find_test(self):
         if platform.system() not in ["Windows", "Linux"]:
             return
