@@ -4,7 +4,6 @@ from conans.server.service.service import FileUploadDownloadService
 import os
 from unicodedata import normalize
 import six
-from conans.errors import NotFoundException
 
 
 class FileUploadDownloadController(Controller):
@@ -35,7 +34,6 @@ class FileUploadDownloadController(Controller):
             abs_path = os.path.abspath(os.path.join(storage_path, os.path.normpath(filepath)))
             # Body is a stringIO (generator)
             service.put_file(file_saver, abs_path, token, request.content_length)
-            return
 
 
 class ConanFileUpload(FileUpload):
