@@ -8,7 +8,7 @@ class Requirement(object):
     """ A reference to a package plus some attributes of how to
     depend on that package
     """
-    def __init__(self, conan_reference, private=False, override=False, build=False, mode=None):
+    def __init__(self, conan_reference, private=False, override=False):
         """
         param override: True means that this is not an actual requirement, but something to
                         be passed upstream and override possible existing values
@@ -17,8 +17,6 @@ class Requirement(object):
         self.range_reference = conan_reference
         self.override = override
         self.private = private
-        self.build = build
-        self.mode = mode
 
     @property
     def version_range(self):
@@ -56,19 +54,16 @@ class Requirements(OrderedDict):
         super(Requirements, self).__init__()
         for v in args:
             if isinstance(v, tuple):
-                override = private = build = False
-                mode = None
+                override = private = False
                 ref = v[0]
                 for elem in v[1:]:
                     if elem == "override":
                         override = True
                     elif elem == "private":
                         private = True
-                    elif elem == "build":
-                        build = True
                     else:
                         raise ConanException("Unknown requirement config %s" % elem)
-                self.add(ref, private=private, override=override, build=build, mode=mode)
+                self.add(ref, private=private, override=override)
             else:
                 self.add(v)
 
@@ -85,7 +80,7 @@ class Requirements(OrderedDict):
     def iteritems(self):  # FIXME: Just a trick to not change default testing conanfile for py3
         return self.items()
 
-    def add(self, reference, private=False, override=False, build=False, mode=None):
+    def add(self, reference, private=False, override=False):
         """ to define requirements by the user in text, prior to any propagation
         """
         assert isinstance(reference, six.string_types)
@@ -93,7 +88,7 @@ class Requirements(OrderedDict):
         conan_reference = ConanFileReference.loads(reference)
         name = conan_reference.name
 
-        new_requirement = Requirement(conan_reference, private, override, build, mode)
+        new_requirement = Requirement(conan_reference, private, override)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
             raise ConanException("Duplicated requirement %s != %s"
@@ -118,7 +113,7 @@ class Requirements(OrderedDict):
         if own_ref:
             new_reqs.pop(own_ref.name, None)
         for name, req in self.items():
-            if req.private:  # DLR: or req.dev:
+            if req.private:
                 continue
             if name in down_reqs:
                 other_req = down_reqs[name]
@@ -133,8 +128,8 @@ class Requirements(OrderedDict):
             new_reqs[name] = req
         return new_reqs
 
-    def __call__(self, conan_reference, private=False, override=False, build=False, mode=None):
-        self.add(conan_reference, private, override, build, mode)
+    def __call__(self, conan_reference, private=False, override=False):
+        self.add(conan_reference, private, override)
 
     def __repr__(self):
         result = []
