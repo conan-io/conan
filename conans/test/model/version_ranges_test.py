@@ -17,6 +17,17 @@ from conans.model.profile import Profile
 
 
 class BasicMaxVersionTest(unittest.TestCase):
+    def prereleases_versions_test(self):
+        output = TestBufferConanOutput()
+        result = satisfying(["1.1.1", "1.1.11", "1.1.21", "1.1.111"], "", output)
+        self.assertEqual(result, "1.1.111")
+        # prereleases are ordered
+        result = satisfying(["1.1.1-1", "1.1.1-11", "1.1.1-111", "1.1.1-21"], "", output)
+        self.assertEqual(result, "1.1.1-111")
+        # a glitch in the semver library, in theory the result might be 1.1.1
+        result = satisfying(["1.1.1", "1.1.1-11", "1.1.1-111", "1.1.1-21"], "", output)
+        self.assertEqual(result, "1.1.1-111")
+
     def basic_test(self):
         output = TestBufferConanOutput()
         result = satisfying(["1.1", "1.2", "1.3", "2.1"], "", output)
