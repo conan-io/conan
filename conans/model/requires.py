@@ -8,20 +8,17 @@ class Requirement(object):
     """ A reference to a package plus some attributes of how to
     depend on that package
     """
-    def __init__(self, conan_reference, private=False, override=False, dev=False):
+    def __init__(self, conan_reference, private=False, override=False, build=False, mode=None):
         """
         param override: True means that this is not an actual requirement, but something to
                         be passed upstream and override possible existing values
-        param private: True means that this requirement will be somewhat embedded (like
-                       a static lib linked into a shared lib), so it is not required to link
-        param dev: True means that this requirement is only needed at dev time, e.g. only
-                    needed for building or testing, but not affects the package hash at all
         """
         self.conan_reference = conan_reference
         self.range_reference = conan_reference
-        self.private = private
         self.override = override
-        self.dev = dev
+        self.private = private
+        self.build = build
+        self.mode = mode
 
     @property
     def version_range(self):
@@ -45,8 +42,7 @@ class Requirement(object):
     def __eq__(self, other):
         return (self.override == other.override and
                 self.conan_reference == other.conan_reference and
-                self.private == other.private and
-                self.dev == other.dev)
+                self.private == other.private)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -58,37 +54,23 @@ class Requirements(OrderedDict):
 
     def __init__(self, *args):
         super(Requirements, self).__init__()
-        self.allow_dev = False
         for v in args:
             if isinstance(v, tuple):
-                override = private = dev = False
+                override = private = build = False
+                mode = None
                 ref = v[0]
                 for elem in v[1:]:
                     if elem == "override":
                         override = True
                     elif elem == "private":
                         private = True
+                    elif elem == "build":
+                        build = True
                     else:
                         raise ConanException("Unknown requirement config %s" % elem)
-                self.add(ref, private=private, override=override, dev=dev)
+                self.add(ref, private=private, override=override, build=build, mode=mode)
             else:
                 self.add(v)
-
-    def add_dev(self, *args):
-        for v in args:
-            if isinstance(v, tuple):
-                override = private = False
-                ref = v[0]
-                for elem in v[1:]:
-                    if elem == "override":
-                        override = True
-                    elif elem == "private":
-                        private = True
-                    else:
-                        raise ConanException("Unknown requirement config %s" % elem)
-                self.add(ref, private=private, override=override, dev=True)
-            else:
-                self.add(v, dev=True)
 
     def copy(self):
         """ We need a custom copy as the normal one requires __init__ to be
@@ -103,17 +85,15 @@ class Requirements(OrderedDict):
     def iteritems(self):  # FIXME: Just a trick to not change default testing conanfile for py3
         return self.items()
 
-    def add(self, reference, private=False, override=False, dev=False):
+    def add(self, reference, private=False, override=False, build=False, mode=None):
         """ to define requirements by the user in text, prior to any propagation
         """
         assert isinstance(reference, six.string_types)
-        if dev and not self.allow_dev:
-            return
 
         conan_reference = ConanFileReference.loads(reference)
         name = conan_reference.name
 
-        new_requirement = Requirement(conan_reference, private, override, dev)
+        new_requirement = Requirement(conan_reference, private, override, build, mode)
         old_requirement = self.get(name)
         if old_requirement and old_requirement != new_requirement:
             raise ConanException("Duplicated requirement %s != %s"
@@ -138,7 +118,7 @@ class Requirements(OrderedDict):
         if own_ref:
             new_reqs.pop(own_ref.name, None)
         for name, req in self.items():
-            if req.private or req.dev:
+            if req.private:  # DLR: or req.dev:
                 continue
             if name in down_reqs:
                 other_req = down_reqs[name]
@@ -153,8 +133,8 @@ class Requirements(OrderedDict):
             new_reqs[name] = req
         return new_reqs
 
-    def __call__(self, conan_reference, private=False, override=False, dev=False):
-        self.add(conan_reference, private, override, dev)
+    def __call__(self, conan_reference, private=False, override=False, build=False, mode=None):
+        self.add(conan_reference, private, override, build, mode)
 
     def __repr__(self):
         result = []

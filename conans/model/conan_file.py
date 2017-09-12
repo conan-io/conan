@@ -178,16 +178,6 @@ class ConanFile(object):
     @scope.setter
     def scope(self, value):
         self._scope = value
-        if value.dev:
-            self.requires.allow_dev = True
-            try:
-                if hasattr(self, "dev_requires"):
-                    if isinstance(self.dev_requires, tuple):
-                        self.requires.add_dev(*self.dev_requires)
-                    else:
-                        self.requires.add_dev(self.dev_requires, )
-            except Exception as e:
-                raise ConanException("Error while initializing dev_requirements. %s" % str(e))
 
     @property
     def conanfile_directory(self):
