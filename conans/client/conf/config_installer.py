@@ -1,24 +1,16 @@
 import os
 from conans.tools import unzip
 import shutil
-from conans.util.files import rmdir, load, mkdir
-from conans.client.remote_registry import RemoteRegistry, Remote
+from conans.util.files import rmdir, mkdir
+from conans.client.remote_registry import RemoteRegistry
 from conans import tools
 from conans.errors import ConanException
 
 
 def _handle_remotes(registry_path, remote_file, output):
     registry = RemoteRegistry(registry_path, output)
-
-    # Parse the remotes info
-    new_remotes = []
-    lines = [line.strip() for line in load(remote_file).splitlines() if line.strip()]
-    for line in lines:
-        name, url, ssl = line.split()
-        output.info("    Defining remote %s" % name)
-        new_remotes.append(Remote(name, url, ssl))
-
-    registry.define_remotes(new_remotes)
+    new_registry = RemoteRegistry(remote_file, output)
+    registry.define_remotes(new_registry.remotes)
 
 
 def _handle_profiles(source_folder, target_folder, output):
