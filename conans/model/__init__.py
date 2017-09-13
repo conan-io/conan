@@ -1,3 +1,1 @@
-from .conan_generator import GeneratorManager, Generator
-
-registered_generators = GeneratorManager()
+from .conan_generator import Generator
