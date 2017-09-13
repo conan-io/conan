@@ -29,6 +29,9 @@ class VisualStudioGenerator(Generator):
       <AdditionalDependencies>{libs}%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>{linker_flags} %(AdditionalOptions)</AdditionalOptions>
     </Link>
+    <Midl>
+      <AdditionalIncludeDirectories>{include_dirs}%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </Midl>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>'''
