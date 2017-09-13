@@ -1,5 +1,4 @@
 from conans.errors import ConanException
-from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference
 from conans.model.scope import Scopes
@@ -263,7 +262,6 @@ class ConanInfo(object):
         result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
         result._non_devs_requirements = non_devs_requirements  # Can be None
-        result.env_values = EnvValues()
         return result
 
     @staticmethod
@@ -282,7 +280,6 @@ class ConanInfo(object):
 
         # TODO: Missing handling paring of requires, but not necessary now
         result.scope = Scopes.loads(parser.scope)
-        result.env_values = EnvValues.loads(parser.env)
         return result
 
     def dumps(self):
@@ -308,8 +305,6 @@ class ConanInfo(object):
         if self.scope:
             result.append(indent(self.scope.dumps()))
         result.append("\n[recipe_hash]\n%s" % indent(self.recipe_hash))
-        result.append("\n[env]")
-        result.append(indent(self.env_values.dumps()))
 
         return '\n'.join(result) + "\n"
 

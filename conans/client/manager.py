@@ -127,7 +127,7 @@ class ConanManager(object):
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
         if deps_cpp_info_required is not None:
-            _load_deps_cpp_info(current_path, conanfile, required=deps_cpp_info_required)
+            _load_deps_info(current_path, conanfile, required=deps_cpp_info_required)
         return conanfile
 
     def get_loader(self, profile):
@@ -710,7 +710,7 @@ class AliasConanfile(ConanFile):
         save(os.path.join(export_path, CONAN_MANIFEST), str(digest))
 
 
-def _load_deps_cpp_info(current_path, conanfile, required):
+def _load_deps_info(current_path, conanfile, required):
 
     def get_forbidden_access_object(field_name):
         class InfoObjectNotDefined(object):
@@ -725,9 +725,14 @@ def _load_deps_cpp_info(current_path, conanfile, required):
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
-        deps_cpp_info, deps_user_info = TXTGenerator.loads(load(info_file_path))
+        deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(load(info_file_path))
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
+        conanfile.deps_env_info = deps_env_info
+
+        # Update the env_values with the inherited from dependencies
+        conanfile._env_values.update(deps_env_info)
+
     except IOError:
         if required:
             raise ConanException("%s file not found in %s\nIt is required for this command\n"

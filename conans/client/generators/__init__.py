@@ -14,7 +14,6 @@ from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
-from .env import ConanEnvGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 
@@ -36,7 +35,6 @@ _save_generator("visual_studio_legacy", VisualStudioLegacyGenerator)
 _save_generator("xcode", XCodeGenerator)
 _save_generator("ycm", YouCompleteMeGenerator)
 _save_generator("virtualenv", VirtualEnvGenerator)
-_save_generator("env", ConanEnvGenerator)
 _save_generator("virtualbuildenv", VirtualBuildEnvGenerator)
 _save_generator("virtualrunenv", VirtualRunEnvGenerator)
 

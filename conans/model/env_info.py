@@ -208,7 +208,7 @@ class DepsEnvInfo(EnvInfo):
 
     def dumps(self):
         result = []
-
+!!! SE USA PARA ENV GENERATOR, QUE LE HACEMOS? UNIFICAMOS FORMATO? PARA QUE QUEREMOS EL GENERATOR??
         for var, values in sorted(self.vars.items()):
             result.append("[%s]" % var)
             if isinstance(values, list):

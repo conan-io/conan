@@ -143,3 +143,33 @@ cmake_minimum_required(VERSION 2.8.12)
         client.run("build -pf=mypkg")
         header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
         self.assertEqual(header, "my header h!!")
+
+    def build_with_deps_env_info_test(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile, CMake
+
+class AConan(ConanFile):
+    name = "lib"
+    version = "1.0"
+    
+    def package_info(self):
+        self.env_info.MYVAR = "23"
+    
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("export lasote/stable")
+
+        conanfile = """
+from conans import ConanFile
+
+class AConan(ConanFile):
+    requires = "lib/1.0@lasote/stable"
+    
+    def build(self):
+        assert(self.deps_env_info["lib"].MYVAR == 23)
+    
+"""
+        client.save({CONANFILE: conanfile}, clean_first=True)
+        client.run("install . --build missing")
+        client.run("build .")
