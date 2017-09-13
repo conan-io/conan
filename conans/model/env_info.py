@@ -1,5 +1,5 @@
 import copy
-import os
+import re
 from collections import OrderedDict, defaultdict
 
 from conans.errors import ConanException
@@ -23,6 +23,11 @@ class EnvValues(object):
 
     def __init__(self):
         self._data = defaultdict(dict)
+
+    def copy(self):
+        ret = EnvValues()
+        ret._data = copy.deepcopy(self._data)
+        return ret
 
     @staticmethod
     def load_value(the_value):
@@ -185,8 +190,6 @@ class EnvInfo(object):
         attr = self._values_.get(name)
         if not attr:
             self._values_[name] = []
-        elif not isinstance(attr, list):
-            self._values_[name] = [attr]
         return self._values_[name]
 
     def __setattr__(self, name, value):
@@ -206,28 +209,6 @@ class DepsEnvInfo(EnvInfo):
         super(DepsEnvInfo, self).__init__()
         self._dependencies_ = OrderedDict()
 
-    def dumps(self):
-        result = []
-!!! SE USA PARA ENV GENERATOR, QUE LE HACEMOS? UNIFICAMOS FORMATO? PARA QUE QUEREMOS EL GENERATOR??
-        for var, values in sorted(self.vars.items()):
-            result.append("[%s]" % var)
-            if isinstance(values, list):
-                result.extend(values)
-            else:
-                result.append(values)
-        result.append("")
-
-        for name, env_info in sorted(self._dependencies_.items()):
-            for var, values in sorted(env_info.vars.items()):
-                result.append("[%s:%s]" % (name, var))
-                if isinstance(values, list):
-                    result.extend(values)
-                else:
-                    result.append(values)
-            result.append("")
-
-        return os.linesep.join(result)
-
     @property
     def dependencies(self):
         return self._dependencies_.items()
@@ -245,7 +226,7 @@ class DepsEnvInfo(EnvInfo):
         def merge_lists(seq1, seq2):
             return [s for s in seq1 if s not in seq2] + seq2
 
-        # With vars if its setted the keep the setted value
+        # With vars if its set the keep the set value
         for varname, value in dep_env_info.vars.items():
             if varname not in self.vars:
                 self.vars[varname] = value
@@ -262,4 +243,42 @@ class DepsEnvInfo(EnvInfo):
         for pkg_name, env_info in dep_env_info.dependencies:
             self.update(env_info, pkg_name)
 
+    @staticmethod
+    def loads(text):
+        ret = DepsEnvInfo()
+        lib_name = None
+        env_info = None
+        for line in text.splitlines():
+            if not lib_name and not line.startswith("[ENV_"):
+                raise ConanException("Error, invalid file format reading env info variables")
+            elif line.startswith("[ENV_"):
+                if env_info:
+                    ret.update(env_info, lib_name)
+                lib_name = line[5:-1]
+                env_info = EnvInfo()
+            else:
+                var_name, value = line.split("=", 1)
+                if value[0] == "[" and value[-1] == "]":
+                    # Take all the items between quotes
+                    values = re.findall('"([^"]*)"', value[1:-1])
+                    for val in values:
+                        getattr(env_info, var_name).append(val)
+                else:
+                    setattr(env_info, var_name, value)  # peel quotes
+        if env_info:
+            ret.update(env_info, lib_name)
 
+        return ret
+
+    def dumps(self):
+        sections = []
+        for name, env_info in self._dependencies_.items():
+            sections.append("[ENV_%s]" % name)
+            for var, values in sorted(env_info.vars.items()):
+                tmp = "%s=" % var
+                if isinstance(values, list):
+                    tmp += "[%s]" % ",".join(['"%s"' % val for val in values])
+                else:
+                    tmp += '%s' % values
+                sections.append(tmp)
+        return "\n".join(sections)

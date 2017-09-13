@@ -2,9 +2,10 @@ import os
 import platform
 import unittest
 
+from conans.client.generators.text import TXTGenerator
 from conans.model.info import ConanInfo
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE, CONANINFO, CONANENV
+from conans.paths import CONANFILE, CONANINFO, CONANENV, BUILD_INFO
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
@@ -155,61 +156,6 @@ class MyTest(ConanFile):
                      "test_package/conanfile.py": test_conanfile})
         client.run("test_package -e MYVAR=MYVALUE")
         self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
-
-    def generator_env_test(self):
-        client = TestClient()
-        conanfile = """from conans import ConanFile
-class MyPkg(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-    def package_info(self):
-        self.env_info.MY_VAR = "MY_VALUE"
-        self.env_info.OTHER_VAR.append("OTHER_VALUE")
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("export lasote/testing")
-        test_conanfile = """from conans import ConanFile
-import os
-class MyTest(ConanFile):
-    name = "Test"
-    version = "0.1"
-    requires = "Pkg/0.1@lasote/testing"
-    def package_info(self):
-        self.env_info.OTHER_VAR.extend(["OTHER_VALUE2", "OTHER_VALUE3"])
-"""
-        client.save({"conanfile.py": test_conanfile})
-        client.run("export lasote/testing")
-        test_conanfile = """from conans import ConanFile
-import os
-class MyTest(ConanFile):
-    requires = "Test/0.1@lasote/testing"
-"""
-        client.save({"conanfile.py": test_conanfile})
-        client.run("install --build=missing -g env -e OTHER_VAR=[COMMAND_LINE_VALUE] -e WHAT=EVER")
-        contents = load(os.path.join(client.current_folder, CONANENV))
-        result = """[MY_VAR]
-MY_VALUE
-[OTHER_VAR]
-OTHER_VALUE2
-OTHER_VALUE3
-OTHER_VALUE
-
-[Pkg:MY_VAR]
-MY_VALUE
-[Pkg:OTHER_VAR]
-OTHER_VALUE
-
-[Test:OTHER_VAR]
-OTHER_VALUE2
-OTHER_VALUE3
-"""
-        self.assertEqual(contents.splitlines(), result.splitlines())
-        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-        env_section = """[env]
-    MY_VAR=MY_VALUE
-    OTHER_VAR=[COMMAND_LINE_VALUE,OTHER_VALUE2,OTHER_VALUE3,OTHER_VALUE]
-    WHAT=EVER"""
-        self.assertIn("\n".join(env_section.splitlines()), "\n".join(conaninfo.splitlines()))
 
     def env_path_order_test(self):
         client = TestClient()
@@ -433,7 +379,8 @@ class HelloConan(ConanFile):
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
         client.run("export lasote/stable")
-        client.run("install Hello2/0.1@lasote/stable --build -g virtualenv -e CPPFLAGS=[OtherFlag=2]")
+        client.run("install Hello2/0.1@lasote/stable --build "
+                   "-g virtualenv -e CPPFLAGS=[OtherFlag=2]")
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate.%s" % ext)))
@@ -658,40 +605,45 @@ class Hello2Conan(ConanFile):
                    "-e LIB_B2:NEWVAR=VALUE -e VAR3=[newappend]")
 
         info = load_conaninfo("A")
-        self.assertEquals(info.env_values.env_dicts("LIB_A"), ({"VAR3": "override", "GLOBAL": "99"}, {}))
-        self.assertEquals(info.env_values.env_dicts(""), ({'GLOBAL': '99'}, {'VAR3': ['newappend']}))
+        self.assertEquals(info.env_values.env_dicts("LIB_A"),
+                          ({"VAR3": "override", "GLOBAL": "99"}, {}))
+        self.assertEquals(info.env_values.env_dicts(""),
+                          ({'GLOBAL': '99'}, {'VAR3': ['newappend']}))
 
         info = load_conaninfo("B")
         self.assertEquals(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': "override"},
-                                                               {'VAR2': ['23'], 'VAR1': ['900']}))
+                                                               {}))
 
         self.assertEquals(info.env_values.env_dicts("LIB_B"), ({'GLOBAL': '99', "VAR2": "222"},
-                                                               {'VAR3': ['newappend', '-23'], 'VAR1': ["900"]}))
+                                                               {'VAR3': ['newappend']}))
 
         info = load_conaninfo("B2")
         self.assertEquals(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': 'override'},
-                                                               {'VAR2': ['23'], 'VAR1': ['900']}))
+                                                               {}))
 
         self.assertEquals(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
-                                                                {'VAR2': ['23'], 'VAR1': ['900'],
-                                                                 'VAR3': ['newappend', '-23']}))
+                                                                {'VAR3': ['newappend']}))
 
         info = load_conaninfo("C")
         self.assertEquals(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
-                                                                {'VAR3': ['newappend', '-23'],
-                                                                 'VAR1': ['800', '800_2', '900'],
-                                                                 'VAR2': ['24', '24_2', '23']}))
+                                                                {'VAR3': ['newappend']}))
         self.assertEquals(info.env_values.env_dicts("LIB_C"), ({'GLOBAL': '99'},
-                                                               {'VAR2': ['24', '24_2', '23'],
-                                                                'VAR1': ['800', '800_2', '900'],
-                                                                'VAR3': ['newappend', "-23"]}))
+                                                               {'VAR3': ['newappend']}))
 
         # Now check the info for the project
         info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
         self.assertEquals(info.env_values.env_dicts("PROJECT"), ({'GLOBAL': '99'},
-                                                                 {'VAR2': ['24', '24_2', '23'],
-                                                                  'VAR1': ['700', '800', '800_2', '900'],
-                                                                  'VAR3': ['newappend', 'bestvalue']}))
+                                                                 {'VAR3': ['newappend']}))
+
+        _, _, buildinfo = TXTGenerator.loads(load(os.path.join(client.current_folder, BUILD_INFO)))
+        print(buildinfo)
+        self.assertEquals(buildinfo["LIB_A"].VAR1, ["900"])
+
+
+    # Uno que si no es lista, en deps_cpp_info no sea lista, y viceversa
+    # Uno aplicando profile, que el deps info y el conaninfo este bien
+    #
+
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """

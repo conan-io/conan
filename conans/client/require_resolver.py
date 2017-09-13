@@ -1,6 +1,5 @@
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
-import re
 
 
 def satisfying(list_versions, versionexpr, output):
@@ -24,7 +23,6 @@ def satisfying(list_versions, versionexpr, output):
 
 
 class RequireResolver(object):
-    expr_pattern = re.compile("")
 
     def __init__(self, output, local_search, remote_search):
         self._output = output

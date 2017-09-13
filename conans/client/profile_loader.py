@@ -79,6 +79,7 @@ def read_conaninfo_profile(current_path):
     profile.settings = OrderedDict(existing_info.full_settings.as_list())
     profile.options = existing_info.full_options
     profile.scopes = existing_info.scope
+    profile.env_values = existing_info.env_values
     return profile
 
 

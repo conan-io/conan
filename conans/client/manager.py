@@ -117,7 +117,7 @@ class ConanManager(object):
         self._settings_preprocessor = settings_preprocessor
 
     def load_consumer_conanfile(self, conanfile_path, current_path, output, reference=None,
-                                deps_cpp_info_required=False):
+                                deps_info_required=False):
 
         profile = read_conaninfo_profile(current_path) or self._client_cache.default_profile
         loader = self.get_loader(profile)
@@ -126,8 +126,8 @@ class ConanManager(object):
             conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
-        if deps_cpp_info_required is not None:
-            _load_deps_info(current_path, conanfile, required=deps_cpp_info_required)
+        if deps_info_required is not None:
+            _load_deps_info(current_path, conanfile, required=deps_info_required)
         return conanfile
 
     def get_loader(self, profile):
@@ -429,14 +429,14 @@ class ConanManager(object):
             output = ScopedOutput("PROJECT", self._user_io.out)
             conanfile_path = os.path.join(reference, CONANFILE)
             conanfile = self.load_consumer_conanfile(conanfile_path, current_path,
-                                                     output, deps_cpp_info_required=None)
+                                                     output, deps_info_required=True)  # Need env
             config_source_local(current_path, conanfile, output)
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = self.load_consumer_conanfile(conanfile_path, current_path,
                                                      output, reference=reference,
-                                                     deps_cpp_info_required=None)
+                                                     deps_info_required=False)
             dirty_file_path = self._client_cache.dirty_sources_file(reference)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
@@ -462,7 +462,7 @@ class ConanManager(object):
 
         conanfile = self.load_consumer_conanfile(conan_file_path, current_path,
                                                  output, reference=reference,
-                                                 deps_cpp_info_required=True)
+                                                 deps_info_required=True)
 
         if dest_folder:
             if not os.path.isabs(dest_folder):
@@ -729,10 +729,6 @@ def _load_deps_info(current_path, conanfile, required):
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
         conanfile.deps_env_info = deps_env_info
-
-        # Update the env_values with the inherited from dependencies
-        conanfile._env_values.update(deps_env_info)
-
     except IOError:
         if required:
             raise ConanException("%s file not found in %s\nIt is required for this command\n"

@@ -12,6 +12,7 @@ class PerformanceTest(unittest.TestCase):
     def large_project_test(self):
         client = TestClient()
         num = 250
+        use_additional_infos = True
         deep = True  # True for N ... -> 3 -> 2 -> 1 -> 0, False for N -> 0, 3-> 0, 2->0, 1->0
         for i in range(num):
             if i == 0:
@@ -19,11 +20,13 @@ class PerformanceTest(unittest.TestCase):
             else:
                 if not deep:
                     files = cpp_hello_conan_files("Hello%d" % i, "0.1",
-                                                  ["Hello0/0.1@lasote/stable"], build=False)
+                                                  ["Hello0/0.1@lasote/stable"], build=False,
+                                                  use_additional_infos=use_additional_infos)
                 else:
                     files = cpp_hello_conan_files("Hello%d" % i, "0.1",
                                                   ["Hello%s/0.1@lasote/stable" % (i-1)],
-                                                  build=False)
+                                                  build=False,
+                                                  use_additional_infos=use_additional_infos)
 
             client.save(files, clean_first=True)
             client.run("export lasote/stable")
@@ -31,11 +34,12 @@ class PerformanceTest(unittest.TestCase):
         # Now lets depend on it
         if deep:
             files = cpp_hello_conan_files("HelloFinal", "0.1",
-                                          ["Hello%s/0.1@lasote/stable" % (num - 1)], build=False)
+                                          ["Hello%s/0.1@lasote/stable" % (num - 1)], build=False,
+                                          use_additional_infos=use_additional_infos)
         else:
             files = cpp_hello_conan_files("HelloFinal", "0.1",
                                           ["Hello%s/0.1@lasote/stable" % (i) for i in range(num)],
-                                          build=False)
+                                          build=False, use_additional_infos=use_additional_infos)
 
         client.save(files, clean_first=True)
         t1 = time.time()

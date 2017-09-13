@@ -1,6 +1,6 @@
 from conans.test.utils.tools import TestClient
 import unittest
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, BUILD_INFO
 from conans.model.ref import PackageReference
 import os
 from conans.util.files import load
@@ -44,10 +44,8 @@ class ConanBuildTest(unittest.TestCase):
         client.run("export lasote/testing")
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         client.run("install --build=missing")
-        error = client.run("build", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("ERROR: PROJECT: Error in build() method, line 9", client.user_io.out)
-        self.assertIn("self.deps_cpp_info not defined", client.user_io.out)
+        client.run("build")  # We do not need to specify -g txt anymore
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, BUILD_INFO)))
 
         conanfile_user_info = """
 from conans import ConanFile
@@ -57,14 +55,12 @@ class AConan(ConanFile):
     generators = "cmake"
 
     def build(self):
-        self.deps_user_info.VAR
+        self.deps_user_info
+        self.deps_env_info
 """
         client.save({CONANFILE: conanfile_user_info}, clean_first=True)
         client.run("install --build=missing")
-        error = client.run("build", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("ERROR: PROJECT: Error in build() method, line 9", client.user_io.out)
-        self.assertIn("self.deps_user_info not defined", client.user_io.out)
+        client.run("build")
 
     def build_test(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info
@@ -167,7 +163,7 @@ class AConan(ConanFile):
     requires = "lib/1.0@lasote/stable"
     
     def build(self):
-        assert(self.deps_env_info["lib"].MYVAR == 23)
+        assert(self.deps_env_info["lib"].MYVAR == "23")
     
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
