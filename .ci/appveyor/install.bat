@@ -14,7 +14,7 @@ cd %ORIGINAL_DIR%
 
 SET PATH=%PYTHON%;%PYTHON%\\Scripts;C:\\mingw64\\bin;%PATH%
 SET PYTHONPATH=%PYTHONPATH%;%CD%
-SET CONAN_LOGGING_LEVEL=50
+SET CONAN_LOGGING_LEVEL=10
 %PYTHON%/Scripts/pip.exe install -r conans/requirements.txt
 %PYTHON%/Scripts/pip.exe install -r conans/requirements_dev.txt
 %PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt
