@@ -10,4 +10,4 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     pyenv activate conan
 fi
 
-nosetests --with-coverage conans.test --verbosity=2 --processes=2 --process-timeout=1000
+nosetests --with-coverage conans.test --verbosity=2 --processes=4 --process-timeout=1000

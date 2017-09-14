@@ -1,1 +1,1 @@
-nosetests --with-coverage --verbosity=2 conans.test --processes=2 --process-timeout=1000
+nosetests --with-coverage --verbosity=2 conans.test --processes=4 --process-timeout=1000
