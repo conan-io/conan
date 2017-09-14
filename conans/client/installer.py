@@ -109,7 +109,6 @@ class _ConanPackageBuilder(object):
         export_folder = self._client_cache.export(self._conan_ref)
         export_source_folder = self._client_cache.export_sources(self._conan_ref,
                                                                  self._conan_file.short_paths)
-        dirty_file_path = self._client_cache.dirty_sources_file(self._conan_ref)
 
         try:
             rmdir(self.build_folder)
@@ -119,7 +118,7 @@ class _ConanPackageBuilder(object):
                                  "Close any app using it, and retry" % str(e))
 
         self._out.info('Building your package in %s' % self.build_folder)
-        config_source(export_folder, export_source_folder, src_folder, dirty_file_path,
+        config_source(export_folder, export_source_folder, src_folder,
                       self._conan_file, self._out)
         self._out.info('Copying sources to build folder')
 

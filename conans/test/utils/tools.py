@@ -35,8 +35,7 @@ from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USE
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.util.env_reader import get_env
-from conans.util.files import save_files, load, save
+from conans.util.files import save_files, save
 from conans.util.log import logger
 
 
@@ -295,7 +294,7 @@ class TestClient(object):
     def __init__(self, base_folder=None, current_folder=None,
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
-                 requester_class=None, runner=None, path_with_spaces=True):
+                 requester_class=None, runner=None, path_with_spaces=True, default_profile=True):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -334,6 +333,13 @@ class TestClient(object):
 
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+        # Enforcing VS 2015, even if VS2017 is auto detected
+        if default_profile:
+            profile = self.client_cache.default_profile
+            if profile.settings.get("compiler.version") == "15":
+                profile.settings["compiler.version"] = "14"
+                save(self.client_cache.default_profile_path, profile.dumps())
 
     @property
     def paths(self):

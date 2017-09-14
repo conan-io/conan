@@ -10,12 +10,12 @@ from conans.util.files import load
 class ProfileTest(unittest.TestCase):
 
     def empty_test(self):
-        client = TestClient()
+        client = TestClient(default_profile=False)
         client.run("profile list")
         self.assertIn("No profiles defined", client.user_io.out)
 
     def list_test(self):
-        client = TestClient()
+        client = TestClient(default_profile=False)
         create_profile(client.client_cache.profiles_path, "profile3")
         create_profile(client.client_cache.profiles_path, "profile1")
         create_profile(client.client_cache.profiles_path, "profile2")
@@ -24,7 +24,7 @@ class ProfileTest(unittest.TestCase):
                          list(str(client.user_io.out).splitlines()))
 
     def show_test(self):
-        client = TestClient()
+        client = TestClient(default_profile=False)
         create_profile(client.client_cache.profiles_path, "profile1", settings={"os": "Windows"},
                        options=[("MyOption", "32")])
         create_profile(client.client_cache.profiles_path, "profile2", scopes={"test": True})
