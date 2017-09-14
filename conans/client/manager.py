@@ -436,7 +436,7 @@ class ConanManager(object):
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = self.load_consumer_conanfile(conanfile_path, current_path,
                                                      output, reference=reference,
-                                                     deps_cpp_info_required=None)
+                                                     deps_info_required=None)
 
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
