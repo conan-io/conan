@@ -4,8 +4,8 @@ import traceback
 from conans.errors import ConanException
 from conans.model import Generator
 from conans.model.build_info import DepsCppInfo, CppInfo
-from conans.model.env_info import DepsEnvInfo, EnvInfo
-from conans.model.user_info import UserDepsInfo
+from conans.model.env_info import DepsEnvInfo
+from conans.model.user_info import DepsUserInfo
 from conans.paths import BUILD_INFO
 from conans.util.log import logger
 
@@ -50,10 +50,10 @@ class TXTGenerator(Generator):
                 deps_env_info_txt = ""
         else:
             if env_defines_index != -1:
-                deps_cpp_info_txt = text
+                deps_cpp_info_txt = text[:env_defines_index]
                 deps_env_info_txt = text[env_defines_index:]
             else:
-                deps_cpp_info_txt = text[:env_defines_index]
+                deps_cpp_info_txt = text
                 deps_env_info_txt = ""
 
             user_info_txt = ""
@@ -65,9 +65,11 @@ class TXTGenerator(Generator):
 
     @staticmethod
     def _loads_deps_user_info(text):
-        ret = UserDepsInfo()
+        ret = DepsUserInfo()
         lib_name = None
         for line in text.splitlines():
+            if not line:
+                continue
             if not lib_name and not line.startswith("[USER_"):
                 raise ConanException("Error, invalid file format reading user info variables")
             elif line.startswith("[USER_"):

@@ -37,7 +37,7 @@ class ConanBuildTest(unittest.TestCase):
 
     def build_error_test(self):
         """ If not using -g txt generator, and build() requires self.deps_cpp_info,
-        or self.deps_user_info it will fail
+        or self.deps_user_info it wont fail because now it's automatic
         """
         client = TestClient()
         client.save({CONANFILE: conanfile_dep})
@@ -70,7 +70,7 @@ class AConan(ConanFile):
         client.run("export lasote/testing")
 
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install --build=missing -g txt")
+        client.run("install --build=missing")
 
         client.run("build")
         ref = PackageReference.loads("Hello/0.1@lasote/testing:"
@@ -105,7 +105,7 @@ class AConan(ConanFile):
         self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello-Tools"].rootpath)
 """
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install --build=missing -g txt")
+        client.run("install --build=missing")
         client.run("build")
         self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
         self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)

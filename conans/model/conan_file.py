@@ -8,7 +8,7 @@ from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
 
-from conans.model.user_info import UserDepsInfo
+from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 
 
@@ -115,7 +115,7 @@ class ConanFile(object):
         # user declared variables
         self.user_info = None
         # Keys are the package names, and the values a dict with the vars
-        self.deps_user_info = UserDepsInfo()
+        self.deps_user_info = DepsUserInfo()
 
         self.copy = None  # initialized at runtime
 

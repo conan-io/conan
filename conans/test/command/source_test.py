@@ -55,6 +55,7 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile})
         subdir = os.path.join(client.current_folder, "subdir")
         os.mkdir(subdir)
+        client.run("install .. --cwd subdir")
         client.run("source .. --cwd subdir")
         self.assertIn("PROJECT: Configuring sources", client.user_io.out)
         self.assertIn("PROJECT: cwd=>%s" % subdir, client.user_io.out)

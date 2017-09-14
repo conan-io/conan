@@ -716,7 +716,7 @@ def _load_deps_info(current_path, conanfile, required):
         class InfoObjectNotDefined(object):
             def __getitem__(self, item):
                 raise ConanException("self.%s not defined. If you need it for a "
-                                     "local command run 'conan install -g txt'" % field_name)
+                                     "local command run 'conan install'" % field_name)
             __getattr__ = __getitem__
 
         return InfoObjectNotDefined()
@@ -732,7 +732,7 @@ def _load_deps_info(current_path, conanfile, required):
     except IOError:
         if required:
             raise ConanException("%s file not found in %s\nIt is required for this command\n"
-                                 "You can generate it using 'conan install -g txt'"
+                                 "You can generate it using 'conan install'"
                                  % (BUILD_INFO, current_path))
         conanfile.deps_cpp_info = get_forbidden_access_object("deps_cpp_info")
         conanfile.deps_user_info = get_forbidden_access_object("deps_user_info")

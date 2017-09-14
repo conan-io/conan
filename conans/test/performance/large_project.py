@@ -12,7 +12,8 @@ class PerformanceTest(unittest.TestCase):
     def large_project_test(self):
         client = TestClient()
         num = 250
-        use_additional_infos = True
+        use_additional_infos = 20
+
         deep = True  # True for N ... -> 3 -> 2 -> 1 -> 0, False for N -> 0, 3-> 0, 2->0, 1->0
         for i in range(num):
             if i == 0:

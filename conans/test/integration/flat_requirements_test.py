@@ -2,7 +2,7 @@ import unittest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import (CONANFILE_TXT, BUILD_INFO_CMAKE, BUILD_INFO_GCC, CONANINFO,
-                          BUILD_INFO_VISUAL_STUDIO, BUILD_INFO_XCODE)
+                          BUILD_INFO_VISUAL_STUDIO, BUILD_INFO_XCODE, BUILD_INFO)
 from conans.util.files import save, load
 import os
 from conans.test.utils.tools import TestClient
@@ -43,7 +43,8 @@ xcode
         # Install requirements
         self.conan.run('install --build missing')
         self.assertEqual(sorted([CONANFILE_TXT, BUILD_INFO_GCC, BUILD_INFO_CMAKE,
-                                 BUILD_INFO_VISUAL_STUDIO, BUILD_INFO_XCODE, CONANINFO]),
+                                 BUILD_INFO_VISUAL_STUDIO, BUILD_INFO,
+                                 BUILD_INFO_XCODE, CONANINFO]),
                          sorted(os.listdir(tmp_dir)))
 
         cmake = load(os.path.join(tmp_dir, BUILD_INFO_CMAKE))
