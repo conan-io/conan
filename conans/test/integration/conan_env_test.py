@@ -640,10 +640,6 @@ class Hello2Conan(ConanFile):
         self.assertEquals(buildinfo["LIB_A"].VAR1, ["900"])
 
 
-    # Uno que si no es lista, en deps_cpp_info no sea lista, y viceversa
-    # Uno aplicando profile, que el deps info y el conaninfo este bien
-    #
-
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """
