@@ -13,8 +13,6 @@ def satisfying(list_versions, versionexpr, output):
     for v in list_versions:
         try:
             ver = SemVer(v, loose=True)
-            if not ver.prerelease:  # Hack to allow version "2.1" match expr "<=2.1"
-                ver.prerelease = [0]
             candidates[ver] = v
         except (ValueError, AttributeError):
             output.warn("Version '%s' is not semver, cannot be compared with a range" % str(v))
