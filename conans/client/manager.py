@@ -437,11 +437,10 @@ class ConanManager(object):
             conanfile = self.load_consumer_conanfile(conanfile_path, current_path,
                                                      output, reference=reference,
                                                      deps_cpp_info_required=None)
-            dirty_file_path = self._client_cache.dirty_sources_file(reference)
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             export_src_folder = self._client_cache.export_sources(reference, conanfile.short_paths)
-            config_source(export_folder, export_src_folder, src_folder, dirty_file_path, conanfile, output, force)
+            config_source(export_folder, export_src_folder, src_folder, conanfile, output, force)
 
     def imports_undo(self, current_path):
         undo_imports(current_path, self._user_io.out)
