@@ -636,10 +636,7 @@ class Hello2Conan(ConanFile):
                                                                  {'VAR3': ['newappend']}))
 
         _, _, buildinfo = TXTGenerator.loads(load(os.path.join(client.current_folder, BUILD_INFO)))
-        print(buildinfo)
         self.assertEquals(buildinfo["LIB_A"].VAR1, ["900"])
-
-
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """

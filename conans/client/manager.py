@@ -435,8 +435,7 @@ class ConanManager(object):
             output = ScopedOutput(str(reference), self._user_io.out)
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = self.load_consumer_conanfile(conanfile_path, current_path,
-                                                     output, reference=reference,
-                                                     deps_info_required=None)
+                                                     output, reference=reference)
 
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
