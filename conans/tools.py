@@ -25,4 +25,4 @@ def set_global_instances(the_output, the_requester):
     _net._global_requester = the_requester
 
 
-set_global_instances(requests, ConanOutput(sys.stdout))
+set_global_instances(ConanOutput(sys.stdout), requests)

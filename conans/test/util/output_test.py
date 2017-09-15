@@ -67,10 +67,11 @@ class PkgConan(ConanFile):
         try:
             import requests
             import conans
+
             conans.tools.set_global_instances(ConanOutput(new_out), requests)
             tools.unzip(zip_path, output_dir)
         finally:
-            sys.stdout = old_out
+            conans.tools.set_global_instances(ConanOutput(old_out), requests)
 
         output = new_out.getvalue()
         self.assertRegexpMatches(output, "Unzipping [\d]+B")
