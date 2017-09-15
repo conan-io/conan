@@ -65,7 +65,9 @@ class PkgConan(ConanFile):
         new_out = StringIO()
         old_out = sys.stdout
         try:
-            tools._global_output = ConanOutput(new_out)
+            import requests
+            import conans
+            conans.tools.set_global_instances(ConanOutput(new_out), requests)
             tools.unzip(zip_path, output_dir)
         finally:
             sys.stdout = old_out
