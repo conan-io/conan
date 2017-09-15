@@ -4,7 +4,7 @@ import unittest
 
 from conans.client.generators.text import TXTGenerator
 from conans.model.info import ConanInfo
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANENV, BUILD_INFO
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
@@ -582,6 +582,94 @@ class Hello2Conan(ConanFile):
         self.assertInSep("VAR1=>700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertInSep("VAR3=>bestvalue*", client.user_io.out)
+
+
+    def check_conaninfo_completion_test(self):
+        """
+        consumer -> B -> C
+                      -> D (conditional)
+
+        The overwritten environment variables caused by the consumer have to be reflected in B's conaninfo.txt
+        """
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class LibConan(ConanFile):
+    name = "libC"
+    version = "1.0"
+    
+    def package_info(self):
+        self.env_info.MYVAR = "ValueByLibC"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export foo/bar")
+
+        conanfile = """
+from conans import ConanFile
+class LibConan(ConanFile):
+    name = "libD"
+    version = "1.0"
+    
+    def package_info(self):
+        self.env_info.MYVAR = "ValueByLibD"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export foo/bar")
+
+        conanfile = """
+import os
+from conans import ConanFile
+class LibConan(ConanFile):
+    name = "libB"
+    version = "1.0"
+    
+    def requirements(self):
+        if os.environ.get("DEP", None) == "C":
+            self.requires.add("libC/1.0@foo/bar")
+        else:
+            self.requires.add("libD/1.0@foo/bar")
+    
+    def build_info(self):
+        self.output.warn("Value of MYVAR: %s" % os.environ["MYVAR"])
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export foo/bar")
+
+        refb = PackageReference.loads("libB/1.0@foo/bar:5fecb9aaf431791c8c06ab146f3451823f982bb8")
+
+        # With no overrides, B takes dependency D and the value should be ValueByLibD
+        client.run("install libB/1.0@foo/bar --build")
+        self.assertTrue("Value of MYVAR: ValueByLibD")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n\n"))  # Not user input env
+
+        # B takes dependency C and the value should be ValueByLibC
+        client.run("install libB/1.0@foo/bar --build -e DEP=C")
+        self.assertTrue("Value of MYVAR: ValueByLibC")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n\n"))  # Not user input env
+
+        # Consumer overrides MYVAR, so his conaninfo should have it
+        client.run("install libB/1.0@foo/bar --build -e MYVAR=ValueByConsumer")
+        self.assertTrue("Value of MYVAR: ValueByConsumer")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n    MYVAR=ValueByConsumer\n"))
+
+        # Consumer overrides MYVAR, so his conaninfo should have it, but not the libC, because
+        # is not a dependency
+        client.run("install libB/1.0@foo/bar --build -e libB:MYVAR=ValueByConsumer "
+                   "-e libC:MYVAR=OtherValue")
+        self.assertTrue("Value of MYVAR: ValueByConsumer")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n    libB:MYVAR=ValueByConsumer\n"))
+
+        # Consumer overrides MYVAR, so his conaninfo should have it, both libB and libD
+        client.run("install libB/1.0@foo/bar --build -e libB:MYVAR=ValueByConsumer "
+                   "-e libD:MYVAR=OtherValue")
+        self.assertTrue("Value of MYVAR: ValueByConsumer")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n    libB:MYVAR=ValueByConsumer\n"
+                                           "    libD:MYVAR=OtherValue\n"))  # Not user input env
 
     def test_conaninfo_filtered(self):
         client = TestClient()
