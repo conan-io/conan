@@ -117,7 +117,10 @@ class TestServerLauncher(object):
 
     def clean(self):
         if os.path.exists(self.storage_folder):
-            shutil.rmtree(self.storage_folder)
+            try:
+                shutil.rmtree(self.storage_folder)
+            except:
+                print("Can't clean the test server data, probably a server process is still opened")
 
 
 if __name__ == "__main__":
