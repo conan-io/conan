@@ -158,21 +158,9 @@ class ConanFile(object):
         return self._user
 
     def collect_libs(self, folder="lib"):
-        if not self.package_folder:
-            return []
-        lib_folder = os.path.join(self.package_folder, folder)
-        if not os.path.exists(lib_folder):
-            self.output.warn("Lib folder doesn't exist, can't collect libraries")
-            return []
-        files = os.listdir(lib_folder)
-        result = []
-        for f in files:
-            name, ext = os.path.splitext(f)
-            if ext in (".so", ".lib", ".a", ".dylib"):
-                if ext != ".lib" and name.startswith("lib"):
-                    name = name[3:]
-                result.append(name)
-        return result
+        self.output.warn("Use 'self.collect_libs' is deprecated, "
+                         "use tools.collect_libs(self) instead")
+        return tools.collect_libs(self, folder=folder)
 
     @property
     def scope(self):
