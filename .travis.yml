@@ -2,7 +2,9 @@ language: python
 python:
     - 2.7
     - 3.4
+    if: branch =~ (^release.*)|(^master)
     - 3.5
+    if: branch =~ (^release.*)|(^master)
     - 3.6
 os: linux
 sudo: required
@@ -14,6 +16,7 @@ matrix:
           os: osx
           osx_image: xcode8.3
           env: PYVER=py27
+          if: branch =~ (^release.*)|(^master)
         
         - language: generic
           os: osx
