@@ -1,6 +1,7 @@
 os: linux
 sudo: required
 dist: trusty
+language: python
 
 matrix:
     include:
@@ -10,14 +11,10 @@ matrix:
         - python: 3.5
           if: branch =~ (^release.*)|(^master)
         - python: 3.6
-        - language: generic
-          os: osx
-          osx_image: xcode8.3
+        - os: osx
           env: PYVER=py27
           if: branch =~ (^release.*)|(^master)
-        - language: generic
-          os: osx
-          osx_image: xcode8.3
+        - os: osx
           env: PYVER=py36
 
 # command to install dependencies
