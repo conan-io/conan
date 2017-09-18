@@ -22,6 +22,7 @@ install:
   - ./.ci/travis/install.sh
 before_script:
   - export PYTHONPATH=$PYTHONPATH:$(pwd)
+
 # command to run tests
 script: 
   - ulimit -n 2048 # Error with py3 and OSX, max file descriptors
