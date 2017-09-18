@@ -1,7 +1,6 @@
 import os
 import shutil
 import sys
-import tempfile
 import unittest
 import platform
 
@@ -12,16 +11,60 @@ from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
 from conans.client.cmake import CMake
+from conans.test.utils.tools import TestBufferConanOutput
 from conans.tools import cpu_count
 from conans.util.files import save
+from conans.test.utils.test_files import temp_folder
 
 
 class CMakeTest(unittest.TestCase):
     def setUp(self):
-        self.tempdir = tempfile.mkdtemp()
+        self.tempdir = temp_folder(path_with_spaces=False)
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
+
+    def build_type_ovewrite_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Linux"
+        settings.compiler = "gcc"
+        settings.compiler.version = "6.3"
+        settings.arch = "x86"
+        settings.build_type = "Release"
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+        cmake.build_type = "Debug"
+        self.assertIn('WARN: Set CMake build type "Debug" is different than the '
+                      'settings build_type "Release"', conan_file.output)
+        self.assertEquals(cmake.build_type, "Debug")
+        self.assertIn('-DCMAKE_BUILD_TYPE="Debug"', cmake.command_line)
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+        self.assertNotIn('WARN: Set CMake build type ', conan_file.output)
+        self.assertEquals(cmake.build_type, "Release")
+
+        # Now with visual, (multiconfig)
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.build_type = "Release"
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+        cmake.build_type = "Debug"
+        self.assertIn('WARN: Set CMake build type "Debug" is different than the '
+                      'settings build_type "Release"', conan_file.output)
+        self.assertEquals(cmake.build_type, "Debug")
+        self.assertNotIn('-DCMAKE_BUILD_TYPE="Debug"', cmake.command_line)
+        self.assertIn("--config Debug", cmake.build_config)
+        cmake = CMake(conan_file)
+        cmake.build_type = "Release"
+        self.assertIn("--config Release", cmake.build_config)
 
     def loads_default_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -420,7 +463,7 @@ class ConanFileMock(ConanFile):
         self.source_folder = self.build_folder = "."
         self.settings = None
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
-        self.output = namedtuple("output", "warn")(lambda x: x)
+        self.output = TestBufferConanOutput()
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
 

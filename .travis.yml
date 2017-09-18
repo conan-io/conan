@@ -1,23 +1,20 @@
-language: python
-python:
-    - 2.7
-    - 3.4
-    - 3.5
-    - 3.6
 os: linux
 sudo: required
 dist: trusty
+language: python
 
 matrix:
     include:
-        - language: generic
-          os: osx
-          osx_image: xcode8.3
+        - python: 2.7
+        - python: 3.4
+          if: branch =~ (^release.*)|(^master)
+        - python: 3.5
+          if: branch =~ (^release.*)|(^master)
+        - python: 3.6
+        - os: osx
           env: PYVER=py27
-        
-        - language: generic
-          os: osx
-          osx_image: xcode8.3
+          if: branch =~ (^release.*)|(^master)
+        - os: osx
           env: PYVER=py36
 
 # command to install dependencies

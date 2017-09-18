@@ -14,6 +14,9 @@ class CommandOutputer(object):
         self.user_io = user_io
         self.client_cache = client_cache
 
+    def writeln(self, value):
+        self.user_io.out.writeln(value)
+
     def print_profile(self, profile, profile_text):
         Printer(self.user_io.out).print_profile(profile, profile_text)
 

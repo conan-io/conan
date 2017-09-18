@@ -168,8 +168,8 @@ class ConanAPIV1(object):
     @api_method
     def test_package(self, profile_name=None, settings=None, options=None, env=None,
                      scope=None, test_folder=None, not_export=False, build=None, keep_source=False,
-                     verify=default_manifest_folder, manifests=default_manifest_folder,
-                     manifests_interactive=default_manifest_folder,
+                     verify=None, manifests=None,
+                     manifests_interactive=None,
                      remote=None, update=False, cwd=None, user=None, channel=None, name=None,
                      version=None):
         settings = settings or []
@@ -260,8 +260,8 @@ class ConanAPIV1(object):
     @api_method
     def create(self, profile_name=None, settings=None,
                options=None, env=None, scope=None, test_folder=None, not_export=False, build=None,
-               keep_source=False, verify=default_manifest_folder,
-               manifests=default_manifest_folder, manifests_interactive=default_manifest_folder,
+               keep_source=False, verify=None,
+               manifests=None, manifests_interactive=None,
                remote=None, update=False, cwd=None,
                user=None, channel=None, name=None, version=None):
 
@@ -359,8 +359,8 @@ class ConanAPIV1(object):
 
     @api_method
     def install(self, reference="", package=None, settings=None, options=None, env=None, scope=None, all=False,
-                remote=None, werror=False, verify=default_manifest_folder, manifests=default_manifest_folder,
-                manifests_interactive=default_manifest_folder, build=None, profile_name=None,
+                remote=None, werror=False, verify=None, manifests=None,
+                manifests_interactive=None, build=None, profile_name=None,
                 update=False, generator=None, no_imports=False, filename=None, cwd=None):
 
         self._user_io.out.werror_active = werror
@@ -413,6 +413,11 @@ class ConanAPIV1(object):
     def config_rm(self, item):
         config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
         config_parser.rm_item(item)
+
+    @api_method
+    def config_install(self, item):
+        from conans.client.conf.config_installer import configuration_install
+        return configuration_install(item, self._client_cache, self._user_io.out, self._runner)
 
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None, scope=None, profile_name=None,
@@ -526,7 +531,6 @@ class ConanAPIV1(object):
                 current_path = reference
             self._manager.imports_undo(current_path)
         else:
-            cwd = prepare_cwd(cwd)
             current_path, reference = _get_reference(reference, cwd)
             self._manager.imports(current_path, reference, filename, dest)
 
@@ -687,6 +691,26 @@ class ConanAPIV1(object):
         save(profile_path, contents)
 
     @api_method
+    def get_profile_key(self, profile_name, key):
+        first_key, rest_key = self._get_profile_keys(key)
+        profile, _ = read_profile(profile_name, os.getcwd(), self._client_cache.profiles_path)
+        try:
+            if first_key == "settings":
+                return profile.settings[rest_key]
+            elif first_key == "options":
+                return dict(profile.options.as_list())[rest_key]
+            elif first_key == "env":
+                package = None
+                var = rest_key
+                if ":" in rest_key:
+                    package, var = rest_key.split(":")
+                return profile.env_values.data[package][var]
+            elif first_key == "build_requires":
+                raise ConanException("List the profile manually to see the build_requires")
+        except KeyError:
+            raise ConanException("Key not found: '%s'" % key)
+
+    @api_method
     def delete_profile_key(self, profile_name, key):
         first_key, rest_key = self._get_profile_keys(key)
         profile, _ = read_profile(profile_name, os.getcwd(), self._client_cache.profiles_path)
@@ -759,6 +783,8 @@ def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
     manifest_folder = verify or manifests or manifests_interactive
     if manifest_folder:
         if not os.path.isabs(manifest_folder):
+            if not cwd:
+                raise ConanException("'cwd' should be defined if the manifest folder is relative.")
             manifest_folder = os.path.join(cwd, manifest_folder)
         manifest_verify = verify is not None
         manifest_interactive = manifests_interactive is not None

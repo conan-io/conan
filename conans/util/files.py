@@ -10,6 +10,23 @@ import six
 from conans.util.log import logger
 import tarfile
 
+_DIRTY_FOLDER = ".dirty"
+
+
+def set_dirty(folder):
+    dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    save(dirty_file, "")
+
+
+def clean_dirty(folder):
+    dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    os.remove(dirty_file)
+
+
+def is_dirty(folder):
+    dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    return os.path.exists(dirty_file)
+
 
 def decode_text(text):
     decoders = ["utf-8", "Windows-1252"]

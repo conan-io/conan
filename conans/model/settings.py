@@ -40,6 +40,9 @@ class SettingsItem(object):
             # list or tuple of possible values
             self._definition = sorted(str(v) for v in definition)
 
+    def __contains__(self, value):
+        return value in (self._value or "")
+
     def copy(self):
         """ deepcopy, recursive
         """

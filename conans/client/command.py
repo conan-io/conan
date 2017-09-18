@@ -268,7 +268,7 @@ class Command(object):
                                    filename=args.file, cwd=args.cwd)
 
     def config(self, *args):
-        """Manages conan.conf information
+        """Manages conan configuration information
         """
         parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
 
@@ -276,11 +276,13 @@ class Command(object):
         rm_subparser = subparsers.add_parser('rm', help='rm an existing config element')
         set_subparser = subparsers.add_parser('set', help='set/add value')
         get_subparser = subparsers.add_parser('get', help='get the value of existing element')
+        install_subparser = subparsers.add_parser('install',
+                                                  help='install a full configuration from a zip file, local or remote')
 
         rm_subparser.add_argument("item", help="item to remove")
         get_subparser.add_argument("item", nargs="?", help="item to print")
         set_subparser.add_argument("item", help="key=value to set")
-
+        install_subparser.add_argument("item", nargs="?", help="configuration file to use")
         args = parser.parse_args(*args)
 
         if args.subcommand == "set":
@@ -293,6 +295,8 @@ class Command(object):
             return self._conan.config_get(args.item)
         elif args.subcommand == "rm":
             return self._conan.config_rm(args.item)
+        elif args.subcommand == "install":
+            return self._conan.config_install(args.item)
 
     def info(self, *args):
         """Prints information about a package recipe's dependency graph.
@@ -368,11 +372,11 @@ class Command(object):
                 only = []
             if only and args.paths and (set(only) - set(path_only_options)):
                 raise ConanException("Invalid --only value '%s' with --path specified, allowed values: [%s]."
-                                               % (only, str_path_only_options))
+                                     % (only, str_path_only_options))
             elif only and not args.paths and (set(only) - set(info_only_options)):
                 raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
-                                               "Use --only=None to show only the references." %
-                                               (only, str_only_options))
+                                     "Use --only=None to show only the references."
+                                     % (only, str_only_options))
 
             if args.graph:
                 self._outputer.info_graph(args.graph, deps_graph, project_reference, args.cwd)
@@ -451,9 +455,10 @@ class Command(object):
                                  " folder, then the execution and retrieval of the source code."
                                  " Otherwise, if the code has already been retrieved, it will"
                                  " do nothing.")
+        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
 
         args = parser.parse_args(*args)
-        return self._conan.source(args.reference, args.force)
+        return self._conan.source(args.reference, args.force, cwd=args.cwd)
 
     def imports(self, *args):
         """ Execute the 'imports' stage of a conanfile.txt or a conanfile.py.
@@ -712,7 +717,6 @@ class Command(object):
 
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
 
-
         remote = args.remote if hasattr(args, 'remote') else None
         url = args.url if hasattr(args, 'url') else None
 
@@ -761,6 +765,10 @@ class Command(object):
         parser_update.add_argument('item', help='key="value to set", e.j: settings.compiler=gcc')
         parser_update.add_argument('profile',  help='name of the profile')
 
+        parser_get = subparsers.add_parser('get', help='Get a profile key')
+        parser_get.add_argument('item', help='key="value to get", e.j: settings.compiler')
+        parser_get.add_argument('profile',  help='name of the profile')
+
         parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
         parser_remove.add_argument('item', help='key", e.j: settings.compiler')
         parser_remove.add_argument('profile',  help='name of the profile')
@@ -783,6 +791,9 @@ class Command(object):
             except:
                 raise ConanException("Please specify key=value")
             self._conan.update_profile(profile, key, value)
+        elif args.subcommand == "get":
+            key = args.item
+            self._outputer.writeln(self._conan.get_profile_key(profile, key))
         elif args.subcommand == "remove":
             self._conan.delete_profile_key(profile, args.item)
 

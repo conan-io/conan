@@ -18,6 +18,11 @@ class SettingsTest(unittest.TestCase):
                 "os": ["Windows", "Linux"]}
         self.sut = Settings(data)
 
+    def test_in_contains(self):
+        self.sut.compiler = "Visual Studio"
+        self.assertTrue("Visual" in self.sut.compiler)
+        self.assertFalse("Visual" not in self.sut.compiler)
+
     def test_os_split(self):
         settings = Settings.loads("""os:
     Windows:

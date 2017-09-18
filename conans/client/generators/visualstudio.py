@@ -29,6 +29,9 @@ class VisualStudioGenerator(Generator):
       <AdditionalDependencies>{libs}%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>{linker_flags} %(AdditionalOptions)</AdditionalOptions>
     </Link>
+    <Midl>
+      <AdditionalIncludeDirectories>{include_dirs}%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </Midl>
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>'''
@@ -38,9 +41,9 @@ class VisualStudioGenerator(Generator):
 
     def _format_items(self):
         sections = []
-        for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
+        for dep_name, cpp_info in self.deps_build_info.dependencies:
             fields = {
-                'root_dir': dep_cpp_info.rootpath,
+                'root_dir': cpp_info.rootpath,
                 'name': dep_name.replace(".", "-")
             }
             section = self.item_template.format(**fields)

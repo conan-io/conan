@@ -16,6 +16,7 @@ qmake
 scons
 txt
 visual_studio
+visual_studio_legacy
 xcode
 ycm
     '''
@@ -26,7 +27,8 @@ ycm
         self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
-                                 'conanbuildinfo.xcconfig', '.ycm_extra_conf.py']),
+                                 'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
+                                 '.ycm_extra_conf.py']),
                          sorted(os.listdir(client.current_folder)))
 
     def test_qmake(self):

@@ -10,12 +10,12 @@ from conans.util.files import load
 class ProfileTest(unittest.TestCase):
 
     def empty_test(self):
-        client = TestClient()
+        client = TestClient(default_profile=False)
         client.run("profile list")
         self.assertIn("No profiles defined", client.user_io.out)
 
     def list_test(self):
-        client = TestClient()
+        client = TestClient(default_profile=False)
         create_profile(client.client_cache.profiles_path, "profile3")
         create_profile(client.client_cache.profiles_path, "profile1")
         create_profile(client.client_cache.profiles_path, "profile2")
@@ -24,7 +24,7 @@ class ProfileTest(unittest.TestCase):
                          list(str(client.user_io.out).splitlines()))
 
     def show_test(self):
-        client = TestClient()
+        client = TestClient(default_profile=False)
         create_profile(client.client_cache.profiles_path, "profile1", settings={"os": "Windows"},
                        options=[("MyOption", "32")])
         create_profile(client.client_cache.profiles_path, "profile2", scopes={"test": True})
@@ -41,7 +41,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("    CXX=/path/tomy/g++_build", client.user_io.out)
         self.assertIn("    package:VAR=value", client.user_io.out)
 
-    def profile_update_test(self):
+    def profile_update_and_get_test(self):
         client = TestClient()
         client.run("profile new ./MyProfile --detect")
         pr_path = os.path.join(client.current_folder, "MyProfile")
@@ -50,17 +50,32 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("os=FakeOS", load(pr_path))
         self.assertNotIn("os=Linux", load(pr_path))
 
+        client.run("profile get settings.os ./MyProfile")
+        self.assertEquals(client.out, "FakeOS\n")
+
         client.run("profile update settings.compiler.version=88 ./MyProfile")
         self.assertIn("compiler.version=88", load(pr_path))
+
+        client.run("profile get settings.compiler.version ./MyProfile")
+        self.assertEquals(client.out, "88\n")
 
         client.run("profile update options.MyOption=23 ./MyProfile")
         self.assertIn("[options]\nMyOption=23", load(pr_path))
 
+        client.run("profile get options.MyOption ./MyProfile")
+        self.assertEquals(client.out, "23\n")
+
         client.run("profile update options.Package:MyOption=23 ./MyProfile")
         self.assertIn("Package:MyOption=23", load(pr_path))
 
+        client.run("profile get options.Package:MyOption ./MyProfile")
+        self.assertEquals(client.out, "23\n")
+
         client.run("profile update options.Package:OtherOption=23 ./MyProfile")
         self.assertIn("Package:OtherOption=23", load(pr_path))
+
+        client.run("profile get options.Package:OtherOption ./MyProfile")
+        self.assertEquals(client.out, "23\n")
 
         client.run("profile update scopes.Package:OneScope=True ./MyProfile")
         self.assertIn("[scopes]\nPackage:OneScope=True", load(pr_path))
@@ -71,6 +86,9 @@ class ProfileTest(unittest.TestCase):
 
         client.run("profile update env.OneMyEnv=MYVALUe ./MyProfile")
         self.assertIn("[env]\nOneMyEnv=MYVALUe", load(pr_path))
+
+        client.run("profile get env.OneMyEnv ./MyProfile")
+        self.assertEquals(client.out, "MYVALUe\n")
 
         # Now try the remove
 

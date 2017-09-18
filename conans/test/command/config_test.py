@@ -1,10 +1,7 @@
-from conans.test.utils.tools import TestClient
 import unittest
-from conans.util.files import save, load
-from conans.client.conf import default_client_conf
-from conans import tools
-from conans.test.utils.test_files import temp_folder
-import os
+
+from conans.util.files import load
+from conans.test.utils.tools import TestClient
 
 
 class ConfigTest(unittest.TestCase):

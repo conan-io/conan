@@ -1,6 +1,5 @@
 import os
 import platform
-
 from conans.model import Generator
 
 
