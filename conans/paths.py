@@ -41,8 +41,8 @@ PUT_HEADERS = "artifacts.properties"
 PACKAGE_TGZ_NAME = "conan_package.tgz"
 EXPORT_TGZ_NAME = "conan_export.tgz"
 EXPORT_SOURCES_TGZ_NAME = "conan_sources.tgz"
-EXPORT_SOURCES_DIR = ".c_src"
-
+EXPORT_SOURCES_DIR_OLD = ".c_src"
+EXPORT_SOURCES_DIR = "exports_sources"
 
 RUN_LOG_NAME = "conan_run.log"
 
