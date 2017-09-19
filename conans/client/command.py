@@ -895,8 +895,6 @@ class Command(object):
                 self._user_io.out.error("Exiting with code: %d" % exc.code)
             errors = exc.code
         except ConanException as exc:
-            import traceback
-            print(traceback.format_exc())
             errors = True
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
