@@ -43,7 +43,13 @@ default_manifest_folder = '.conan_manifests'
 
 def get_basic_requester(client_cache):
     requester = requests.Session()
-    requester.proxies = client_cache.conan_config.proxies
+    proxies = client_cache.conan_config.proxies
+    if proxies:
+        # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
+        no_proxy = proxies.pop("no_proxy", None)
+        if no_proxy:
+            os.environ["NO_PROXY"] = no_proxy
+        requester.proxies = proxies
     return requester
 
 
@@ -689,6 +695,26 @@ class ConanAPIV1(object):
         contents = profile.dumps()
         profile_path = get_profile_path(profile_name, self._client_cache.profiles_path, os.getcwd())
         save(profile_path, contents)
+
+    @api_method
+    def get_profile_key(self, profile_name, key):
+        first_key, rest_key = self._get_profile_keys(key)
+        profile, _ = read_profile(profile_name, os.getcwd(), self._client_cache.profiles_path)
+        try:
+            if first_key == "settings":
+                return profile.settings[rest_key]
+            elif first_key == "options":
+                return dict(profile.options.as_list())[rest_key]
+            elif first_key == "env":
+                package = None
+                var = rest_key
+                if ":" in rest_key:
+                    package, var = rest_key.split(":")
+                return profile.env_values.data[package][var]
+            elif first_key == "build_requires":
+                raise ConanException("List the profile manually to see the build_requires")
+        except KeyError:
+            raise ConanException("Key not found: '%s'" % key)
 
     @api_method
     def delete_profile_key(self, profile_name, key):
