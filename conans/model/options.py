@@ -254,17 +254,12 @@ class OptionsValues(object):
             result.append((name.strip(), value.strip()))
         return OptionsValues(result)
 
-    def sha(self, non_dev_requirements):
+    @property
+    def sha(self):
         result = []
         result.append(self._package_values.sha)
-        if non_dev_requirements is None:  # Not filtering
-            for key in sorted(list(self._reqs_options.keys())):
-                result.append(self._reqs_options[key].sha)
-        else:
-            for key in sorted(list(self._reqs_options.keys())):
-                non_dev = key in non_dev_requirements
-                if non_dev:
-                    result.append(self._reqs_options[key].sha)
+        for key in sorted(list(self._reqs_options.keys())):
+            result.append(self._reqs_options[key].sha)
         return sha1('\n'.join(result).encode())
 
     def serialize(self):
