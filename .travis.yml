@@ -11,10 +11,14 @@ matrix:
         - python: 3.5
           if: branch =~ (^release.*)|(^master)
         - python: 3.6
-        - os: osx
+        - language: generic
+          os: osx
+          osx_image: xcode8.3
           env: PYVER=py27
           if: branch =~ (^release.*)|(^master)
-        - os: osx
+        - language: generic
+          os: osx
+          osx_image: xcode8.3
           env: PYVER=py36
 
 # command to install dependencies
