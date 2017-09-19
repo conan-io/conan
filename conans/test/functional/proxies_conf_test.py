@@ -15,7 +15,7 @@ class ProxiesConfTest(unittest.TestCase):
         os.environ.update(self.old_env)
 
     def test_requester(self):
-        client = TestClient()
+        client = TestClient(default_profile=False)
         conf = """
 [proxies]
 https=None
