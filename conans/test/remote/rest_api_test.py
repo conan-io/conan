@@ -3,8 +3,6 @@ from conans.client.rest.rest_client import RestApiClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.test_files import hello_source_files
 from conans.paths import CONANFILE, CONAN_MANIFEST, CONANINFO
-import sys
-from conans.client.output import ConanOutput, Color
 from conans.model.info import ConanInfo
 from conans.test.server.utils.server_launcher import TestServerLauncher
 import requests
@@ -16,6 +14,7 @@ import os
 from conans.util.files import md5, save
 from conans.model.manifest import FileTreeManifest
 from nose.plugins.attrib import attr
+from conans.test.utils.tools import TestBufferConanOutput
 
 
 @attr('slow')
@@ -34,8 +33,8 @@ class RestApiTest(unittest.TestCase):
                                             plugins=[plugin])
             cls.server.start()
 
-            cls.api = RestApiClient(ConanOutput(sys.stdout, Color), requester=requests)
-            cls.api.remote_url = "http://localhost:%s" % str(cls.server.port)
+            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests)
+            cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
 
             # Authenticate user
             token = cls.api.authenticate("private_user", "private_pass")

@@ -365,6 +365,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     if not config:
         conanfile = conanfile.replace("config(", "config2(")
     if collect_libs:
-        conanfile = conanfile.replace('["hello%s"]' % name, "self.collect_libs()")
+        conanfile = "from conans import tools\n" + conanfile.replace('["hello%s"]' % name,
+                                                                     "tools.collect_libs(self)")
     base_files[CONANFILE] = conanfile
     return base_files

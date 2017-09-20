@@ -118,13 +118,10 @@ class DepsGraph(object):
                 conanfile.build_requires_options = conanfile.options.values
                 conanfile.options.clear_unused(indirect_reqs.union(direct_reqs))
 
-                non_devs = self.non_dev_nodes(node)
-
                 conanfile.info = ConanInfo.create(conanfile.settings.values,
                                                   conanfile.options.values,
                                                   direct_reqs,
-                                                  indirect_reqs,
-                                                  non_devs)
+                                                  indirect_reqs)
 
                 # Once we are done, call package_id() to narrow and change possible values
                 if hasattr(conanfile, "conan_info"):
@@ -247,28 +244,6 @@ class DepsGraph(object):
         result = []
         for node in private_nodes:
             result.append(node)
-        return result
-
-    def non_dev_nodes(self, root):
-        if not root.conanfile.scope.dev:
-            # Optimization. This allow not to check it for most packages, which dev=False
-            return None
-        open_nodes = set([root])
-        result = set()
-        expanded = set()
-        while open_nodes:
-            new_open_nodes = set()
-            for node in open_nodes:
-                neighbors = self._neighbors[node]
-                requires = node.conanfile.requires
-                for n in neighbors:
-                    requirement = requires[n.conan_ref.name]
-                    if not requirement.dev and n not in expanded:
-                        result.add(n.conan_ref.name)
-                        new_open_nodes.add(n)
-                        expanded.add(n)
-
-            open_nodes = new_open_nodes
         return result
 
 

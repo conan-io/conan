@@ -66,6 +66,7 @@ class ConanFileLoader(object):
                 result.scope = self._scopes.package_scope()
             else:
                 result.scope = self._scopes.package_scope(result.name)
+                result.in_local_cache = True
 
             return result
         except Exception as e:  # re-raise with file name

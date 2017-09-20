@@ -8,8 +8,8 @@ from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
-from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
-    rm_conandir, EXPORT_SOURCES_TGZ_NAME
+from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
+    rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch
@@ -193,7 +193,7 @@ class RemoteManager(object):
             return
 
         unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME)
-        c_src_path = os.path.join(export_sources_folder, ".c_src")
+        c_src_path = os.path.join(export_sources_folder, EXPORT_SOURCES_DIR_OLD)
         if os.path.exists(c_src_path):
             merge_directories(c_src_path, export_sources_folder)
             rmdir(c_src_path)
@@ -301,7 +301,6 @@ def compress_files(files, symlinks, name, dest_dir):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    is_export_sources = (name == EXPORT_SOURCES_TGZ_NAME)
     with open(tgz_path, "wb") as tgz_handle:
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
@@ -313,8 +312,6 @@ def compress_files(files, symlinks, name, dest_dir):
             tgz.addfile(tarinfo=info)
 
         for filename, abs_path in files.items():
-            if is_export_sources:  # temporary backwards compat TGZ creation
-                filename = ".c_src/%s" % filename
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
             info.mode = os.stat(abs_path).st_mode

@@ -196,6 +196,39 @@ class PathLengthLimitTest(unittest.TestCase):
             self.assertFalse(os.path.exists(link_build))
             self.assertFalse(os.path.exists(link_package))
 
+    def basic_disabled_test(self):
+        client = TestClient()
+        base = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    short_paths = True
+'''
+        files = {"conanfile.py": base}
+        client.save(files)
+        client.client_cache.conan_config.set_item("general.user_home_short", "None")
+
+        client.run("create lib/0.1@user/channel")
+        package_ref = PackageReference.loads("lib/0.1@user/channel:"
+                                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        client.run("search")
+        self.assertIn("lib/0.1@user/channel", client.user_io.out)
+        client.run("search lib/0.1@user/channel")
+        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
+
+        conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
+        source_folder = client.client_cache.source(conan_ref)
+        link_source = os.path.join(source_folder, ".conan_link")
+        self.assertFalse(os.path.exists(link_source))
+
+        build_folder = client.client_cache.build(package_ref)
+        link_build = os.path.join(build_folder, ".conan_link")
+        self.assertFalse(os.path.exists(link_build))
+
+        package_folder = client.client_cache.package(package_ref)
+        link_package = os.path.join(package_folder, ".conan_link")
+        self.assertFalse(os.path.exists(link_package))
+
     def failure_test(self):
 
         base = '''

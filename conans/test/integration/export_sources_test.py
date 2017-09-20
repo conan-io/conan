@@ -85,11 +85,11 @@ class ExportsSourcesTest(unittest.TestCase):
     def _check_source_folder(self, mode):
         """ Source folder MUST be always the same
         """
-        expected_sources = ['conanfile.py', 'conanmanifest.txt', "hello.h"]
+        expected_sources = ["hello.h"]
         if mode == "both":
             expected_sources.append("data.txt")
         if mode == "nested" or mode == "overlap":
-            expected_sources = ['conanfile.py', 'conanmanifest.txt', "src/hello.h", "src/data.txt"]
+            expected_sources = ["src/hello.h", "src/data.txt"]
         expected_sources = sorted(expected_sources)
         self.assertEqual(scan_folder(self.source_folder), expected_sources)
 

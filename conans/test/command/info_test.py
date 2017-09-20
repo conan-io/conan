@@ -294,15 +294,11 @@ class MyTest(ConanFile):
     def diamond_build_order_test(self):
         self.client = TestClient()
         self._create("LibA", "0.1")
-        self._create("Dev1", "0.1")
-        self._create("LibE", "0.1", deps_dev=["Dev1/0.1@lasote/stable"])
+        self._create("LibE", "0.1")
         self._create("LibF", "0.1")
-        self._create("LibG", "0.1")
-        self._create("Dev2", "0.1", deps=["LibG/0.1@lasote/stable"])
 
         self._create("LibB", "0.1", ["LibA/0.1@lasote/stable", "LibE/0.1@lasote/stable"])
-        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"],
-                     deps_dev=["Dev2/0.1@lasote/stable"])
+        self._create("LibC", "0.1", ["LibA/0.1@lasote/stable", "LibF/0.1@lasote/stable"])
 
         self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
                      export=False)
@@ -321,22 +317,15 @@ class MyTest(ConanFile):
                       self.client.user_io.out)
         self.client.run("info -bo=Dev1/0.1@lasote/stable")
         self.assertEqual("\n", self.client.user_io.out)
-        self.client.run("info --scope=LibE:dev=True -bo=Dev1/0.1@lasote/stable")
-        self.assertIn("[Dev1/0.1@lasote/stable], [LibE/0.1@lasote/stable], "
-                      "[LibB/0.1@lasote/stable]", self.client.user_io.out)
         self.client.run("info -bo=LibG/0.1@lasote/stable")
         self.assertEqual("\n", self.client.user_io.out)
-        self.client.run("info --scope=LibC:dev=True -bo=LibG/0.1@lasote/stable")
-        self.assertIn("[LibG/0.1@lasote/stable], [Dev2/0.1@lasote/stable], "
-                      "[LibC/0.1@lasote/stable]", self.client.user_io.out)
 
         self.client.run("info --build_order=ALL")
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "
                       "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
 
-        self.client.run("info --build_order=ALL --scope=ALL:dev=True")
-        self.assertIn("[Dev1/0.1@lasote/stable, LibG/0.1@lasote/stable], "
-                      "[Dev2/0.1@lasote/stable, LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, "
+        self.client.run("info --build_order=ALL")
+        self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, "
                       "LibF/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
