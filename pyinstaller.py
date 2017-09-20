@@ -9,8 +9,9 @@ from distutils import dir_util
 def _install_pyintaller(pyinstaller_path):
     # try to install pyinstaller if not installed
     if not os.path.exists(pyinstaller_path):
-        subprocess.call('git clone https://github.com/pyinstaller/pyinstaller.git',
-                        cwd=os.path.curdir, shell=True)
+        os.mkdir(pyinstaller_path)
+        subprocess.call('git clone https://github.com/pyinstaller/pyinstaller.git .',
+                         cwd=pyinstaller_path, shell=True)
         subprocess.call('git checkout v3.2.1', cwd=pyinstaller_path, shell=True)
 
 
@@ -25,7 +26,7 @@ def _run_bin(pyinstaller_path):
 
 
 def pyinstall(source_folder):
-    pyinstaller_path = os.path.join(os.path.curdir, 'pyinstaller')
+    pyinstaller_path = os.path.join(os.getcwd(), 'pyinstaller')
     _install_pyintaller(pyinstaller_path)
 
     for folder in ("conan", "conan_server", "conan_build_info"):
@@ -38,6 +39,8 @@ def pyinstall(source_folder):
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
     conan_build_info_path = os.path.join(source_folder, "conans/build_info/command.py")
     hidden = "--hidden-import=glob"
+    if platform.system() != "Windows":
+        hidden += " --hidden-import=setuptools.msvc"
     subprocess.call('python pyinstaller.py -y -p %s --console %s %s'
                     % (source_folder, conan_path, hidden),
                     cwd=pyinstaller_path, shell=True)
