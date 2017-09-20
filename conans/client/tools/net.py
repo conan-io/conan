@@ -17,9 +17,9 @@ def get(url, md5='', sha1='', sha256=''):
 
     if md5:
         check_md5(filename, md5)
-    elif sha1:
+    if sha1:
         check_sha1(filename, sha1)
-    elif sha256:
+    if sha256:
         check_sha256(filename, sha256)
 
     unzip(filename)
