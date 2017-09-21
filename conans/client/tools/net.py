@@ -3,17 +3,25 @@ import sys
 import os
 from conans.client.output import ConanOutput
 from conans.client.rest.uploader_downloader import Downloader
-from conans.client.tools.files import unzip
+from conans.client.tools.files import unzip, check_md5, check_sha1, check_sha256
 from conans.errors import ConanException
 
 _global_requester = None
 
 
-def get(url):
-    """ high level downloader + unziper + delete temporary zip
+def get(url, md5='', sha1='', sha256=''):
+    """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
     filename = os.path.basename(url)
     download(url, filename)
+
+    if md5:
+        check_md5(filename, md5)
+    if sha1:
+        check_sha1(filename, sha1)
+    if sha256:
+        check_sha256(filename, sha256)
+
     unzip(filename)
     os.unlink(filename)
 
