@@ -9,6 +9,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     brew install pyenv-virtualenv
     brew install pkg-config
     brew install ninja
+    brew install meson
 
     if which pyenv > /dev/null; then
         eval "$(pyenv init -)"
@@ -45,10 +46,13 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
 else
     sudo apt-get update
     sudo apt-get install gcc-multilib g++-multilib ninja-build
+    # Will fail if no python3 available
+    pip3 install meson || true
 fi
 
 pip install -r conans/requirements_dev.txt
 pip install -r conans/requirements_server.txt
 pip install -r conans/requirements.txt
 
-pip3 install -r conans/requirements_dev_pip3.txt
+
+

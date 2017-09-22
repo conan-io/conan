@@ -2,6 +2,8 @@ import os
 import platform
 import unittest
 
+import six
+
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
@@ -53,6 +55,10 @@ int main(){
         mkdir(os.path.join(client.current_folder, "build"))
         client.current_folder = os.path.join(client.current_folder, "build")
         client.run("install .. --build")
+
+        if six.PY2:  # Meson only available
+            return
+
         client.run("build .. --source_folder ..")
         if platform.system() == "Windows":
             command = "demo"
@@ -65,7 +71,7 @@ int main(){
     def _export(self, client, libname, depsname):
         files = cpp_hello_conan_files(libname, "0.1",
                                       ["%s/0.1@conan/stable" % name for name in depsname],
-                                      build=True, pure_c=True)
+                                      build=six.PY3, pure_c=True)
         client.save(files, clean_first=True)
         files[CONANFILE] = files[CONANFILE].replace('generators = "cmake", "gcc"', "")
         client.run("export conan/stable")

@@ -1,5 +1,7 @@
 import unittest
 
+import six
+
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
@@ -12,6 +14,7 @@ from nose.plugins.attrib import attr
 class PkgGeneratorTest(unittest.TestCase):
 
     def variables_setup_test(self):
+
         conanfile = ConanFile(None, None, Settings({}), None)
 
         ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
