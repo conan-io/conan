@@ -32,7 +32,7 @@ class PkgGeneratorTest(unittest.TestCase):
         generator = PkgConfigGenerator(conanfile)
         files = generator.content
 
-        self.assertEquals(["MyPkg2.pc", "MyPkg.pc"], files.keys())
+        self.assertEquals(["MyPkg2.pc", "MyPkg.pc"], list(files.keys()))
 
         self.assertEquals(files["MyPkg2.pc"], """prefix=dummy_root_folder2
 libdir=${prefix}/lib
