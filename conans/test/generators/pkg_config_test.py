@@ -1,75 +1,58 @@
-import os
-import platform
 import unittest
 
-from conans.paths import CONANFILE
-from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.tools import TestClient
-from conans.util.files import mkdir
+from conans.client.generators.pkg_config import PkgConfigGenerator
+from conans.model.settings import Settings
+from conans.model.conan_file import ConanFile
+from conans.model.build_info import CppInfo
+from conans.model.ref import ConanFileReference
 
 
-class PkgConfigGeneratorTest(unittest.TestCase):
+class PkgGeneratorTest(unittest.TestCase):
 
-    def test_base(self):
+    def variables_setup_test(self):
+        conanfile = ConanFile(None, None, Settings({}), None)
 
-        client = TestClient(path_with_spaces=False)
-        self._export(client, "LIB_C", [])
-        self._export(client, "LIB_B", ["LIB_C"])
-        self._export(client, "LIB_B2", [])
-        self._export(client, "LIB_A", ["LIB_B", "LIB_B2"])
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.defines = ["MYDEFINE1"]
+        cpp_info.cflags.append("-Flag1=23")
+        cpp_info.version = "1.3"
+        cpp_info.description = "My cool description"
 
-        consumer = """
-from conans import ConanFile, tools, Meson
-import os
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        ref = ConanFileReference.loads("MyPkg2/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder2")
+        cpp_info.defines = ["MYDEFINE2"]
+        cpp_info.version = "2.3"
+        cpp_info.exelinkflags = ["-exelinkflag"]
+        cpp_info.sharedlinkflags = ["-sharedlinkflag"]
+        cpp_info.cppflags = ["-cppflag"]
+        cpp_info.public_deps = ["MyPkg"]
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        generator = PkgConfigGenerator(conanfile)
+        files = generator.content
 
-class ConanFileToolsTest(ConanFile):
-    generators = "pkg_config"
-    requires = "LIB_A/0.1@conan/stable"
-    settings = "os", "compiler", "build_type"
+        self.assertEquals(["MyPkg2.pc", "MyPkg.pc"], files.keys())
 
-    def build(self):
-        meson = Meson(self)
-        meson.configure()
-        meson.build()
-        
-"""
-        meson_build = """
-project('conan_hello', 'c')
-liba = dependency('LIB_A', version : '>=0')
-executable('demo', 'main.c', dependencies: [liba])
-"""
+        self.assertEquals(files["MyPkg2.pc"], """prefix=dummy_root_folder2
+libdir=${prefix}/lib
+includedir=${prefix}/include
 
-        main_c = """
-#include "helloLIB_A.h"
+Name: MyPkg2
+Description: Conan package: MyPkg2
+Version: 2.3
+Libs: -L${libdir} -sharedlinkflag -exelinkflag
+Cflags: -I${includedir} -cppflag -DMYDEFINE2
+Requires: MyPkg
+""")
 
-int main(){
-  helloLIB_A();
-}
-"""
+        self.assertEquals(files["MyPkg.pc"], """prefix=dummy_root_folder1
+libdir=${prefix}/lib
+includedir=${prefix}/include
 
-        client.save({CONANFILE: consumer,
-                     "meson.build": meson_build,
-                     "main.c": main_c}, clean_first=True)
-        mkdir(os.path.join(client.current_folder, "build"))
-        client.current_folder = os.path.join(client.current_folder, "build")
-        client.run("install .. --build")
-        client.run("build .. --source_folder ..")
-        if platform.system() == "Windows":
-            command = "demo"
-        else:
-            command = './demo'
-        client.runner(command, cwd=os.path.join(client.current_folder))
-        self.assertIn('''
-Hello LIB_A
-Hello LIB_B
-Hello LIB_C
-Hello LIB_B2
-''', client.out)
-
-    def _export(self, client, libname, depsname):
-        files = cpp_hello_conan_files(libname, "0.1",
-                                      ["%s/0.1@conan/stable" % name for name in depsname],
-                                      build=True, pure_c=True)
-        client.save(files, clean_first=True)
-        files[CONANFILE] = files[CONANFILE].replace('generators = "cmake", "gcc"', "")
-        client.run("export conan/stable")
+Name: MyPkg
+Description: My cool description
+Version: 1.3
+Libs: -L${libdir}
+Cflags: -I${includedir} -Flag1=23 -DMYDEFINE1
+""")

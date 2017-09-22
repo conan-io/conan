@@ -11,11 +11,15 @@ includedir=${prefix}/include
 Name: my-project
 Description: Some brief but informative description
 Version: 1.2.3
-Libs: -L${libdir} -lmy-project-1
+Libs: -L${libdir} -lmy-project-1 -linkerflag
 Cflags: -I${includedir}/my-project-1
 Requires: glib-2.0 >= 2.40 gio-2.0 >= 2.42 nice >= 0.1.6
 Requires.private: gthread-2.0 >= 2.40
 """
+
+
+def concat_if_not_empty(groups):
+    return " ".join([param for group in groups for param in group if param and param.strip()])
 
 
 def single_pc_file_contents(name, cpp_info):
@@ -35,17 +39,17 @@ def single_pc_file_contents(name, cpp_info):
     description = cpp_info.description or "Conan package: %s" % name
     lines.append("Description: %s" % description)
     lines.append("Version: %s" % cpp_info.version)
+    libdirs_flags = ["-L${%s}" % name for name in libdir_vars]
+    libnames_flags = ["-l%s " % name for name in cpp_info.libs]
+    shared_flags = cpp_info.sharedlinkflags + cpp_info.exelinkflags
+    lines.append("Libs: %s" % concat_if_not_empty([libdirs_flags, libnames_flags, shared_flags]))
+    include_dirs_flags = ["-I${%s}" % name for name in include_dir_vars]
 
-    libdirs_flags = " ".join(["-L${%s} " % name for name in libdir_vars])
-    libnames_flags = " ".join(["-l%s " % name for name in cpp_info.libs])
-    lines.append("Libs: %s %s" % (libdirs_flags, libnames_flags))
-
-    include_dirs_flags = " ".join(["-I${%s}" % name for name in include_dir_vars])
-    lines.append("Cflags: %s %s %s %s %s" % (include_dirs_flags,
-                                             " ".join(cpp_info.cppflags),
-                                             " ".join(cpp_info.cflags),
-                                             " ".join(cpp_info.sharedlinkflags),
-                                             " ".join(cpp_info.exelinkflags)))
+    lines.append("Cflags: %s" % concat_if_not_empty(
+                                 [include_dirs_flags,
+                                  cpp_info.cppflags,
+                                  cpp_info.cflags,
+                                  ["-D%s" % d for d in cpp_info.defines]]))
 
     if cpp_info.public_deps:
         public_deps = " ".join(cpp_info.public_deps)
