@@ -1,13 +1,14 @@
-import unittest
-from conans.test.utils.tools import TestClient
 import os
-from conans.util.files import load
-from conans.model.ref import PackageReference, ConanFileReference
+import unittest
+
 from nose_parameterized.parameterized import parameterized
 
+from conans.model.ref import PackageReference, ConanFileReference
+from conans.test.utils.tools import TestClient
+from conans.util.files import load
 
 conanfile = """from conans import ConanFile
-from conans.util.files import load, save
+from conans.util.files import save
 
 class MyTest(ConanFile):
     name = "Pkg"
@@ -56,7 +57,6 @@ class MyTest(ConanFile):
 
 
 class BuildIdTest(unittest.TestCase):
-
     def _check_conaninfo(self, client):
         # Check that conaninfo is correct
         ref_debug = PackageReference.loads("Pkg/0.1@user/channel:"
@@ -70,6 +70,20 @@ class BuildIdTest(unittest.TestCase):
         conaninfo = load(os.path.join(client.client_cache.package(ref_release), "conaninfo.txt"))
         self.assertIn("build_type=Release", conaninfo)
         self.assertNotIn("Debug", conaninfo)
+
+    def create_test(self):
+        """ Ensure that build_id() works when multiple create calls are made
+        """
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create user/channel")
+        self.assertIn("Pkg/0.1@user/channel: Calling build()", client.out)
+        self.assertIn("Building my code!", client.user_io.out)
+        self.assertIn("Packaging Release!", client.user_io.out)
+        client.run("create user/channel -s build_type=Debug")
+        self.assertNotIn("Pkg/0.1@user/channel: Calling build()", client.out)
+        self.assertIn("Packaging Debug!", client.user_io.out)
+        self._check_conaninfo(client)
 
     @parameterized.expand([(True, ), (False,)])
     def basic_test(self, python_consumer):

@@ -47,7 +47,7 @@ class FileUploadDownloadService(object):
             file_saver.save(os.path.dirname(abs_filepath))
 
         except (jwt.ExpiredSignature, jwt.DecodeError, AttributeError):
-            return NotFoundException("File not found")
+            raise NotFoundException("File not found")
 
     def _valid_path(self, filepath, encoded_path):
         if encoded_path == filepath:

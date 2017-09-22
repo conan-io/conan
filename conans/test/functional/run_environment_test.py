@@ -37,4 +37,4 @@ class RunEnvironmentTest(unittest.TestCase):
 
         self.assertEquals(be.vars,  {'PATH': ['path/bin'],
                                      'LD_LIBRARY_PATH': ['path/libs'],
-                                     'DYLIB_LIBRARY_PATH': ['path/libs']})
+                                     'DYLD_LIBRARY_PATH': ['path/libs']})

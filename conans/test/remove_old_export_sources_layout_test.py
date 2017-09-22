@@ -1,16 +1,17 @@
 import unittest
 import os
 
+from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.util.files import tar_extract
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference
 from conans.test.utils.test_files import temp_folder
 
 
-class KeepOldExportSourcesLayoutTest(unittest.TestCase):
+class DoNotKeepOldExportSourcesLayoutTest(unittest.TestCase):
 
     def test_basic(self):
-        """ check that we generate tgz with .c_src and we handle them properly
+        """ check that we do not generate anymore tgz with .c_src.
         also, they are not present any more in the cache layout, even if they come from a .c_src
         tgz server file
         """
@@ -35,11 +36,10 @@ class MyPkg(ConanFile):
         folder = temp_folder()
         with open(sources_tgz, 'rb') as file_handler:
             tar_extract(file_handler, folder)
-        self.assertEqual(os.listdir(folder), [".c_src"])
+        self.assertEqual(os.listdir(folder), ["myfile.txt"])
         # Now install again
         client.run("install Pkg/0.1@lasote/testing --build=missing")
         export = client.client_cache.export(conan_reference)
-        self.assertNotIn(".c_src", os.listdir(export))
+        self.assertNotIn(EXPORT_SOURCES_DIR_OLD, os.listdir(export))
         export_sources = client.client_cache.export_sources(conan_reference)
         self.assertEqual(os.listdir(export_sources), ["myfile.txt"])
-        

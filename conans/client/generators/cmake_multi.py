@@ -65,7 +65,7 @@ class CMakeMultiGenerator(Generator):
 
     @property
     def _content_multi(self):
-        sections = []
+        sections = ["include(CMakeParseArguments)"]
 
         # USER DECLARED VARS
         sections.append("\n### Definition of user declared vars (user_info) ###\n")

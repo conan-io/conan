@@ -82,7 +82,7 @@ class Profile(object):
             # Example: new_settings declare a different "compiler", so invalidate the current "compiler.XXX"
             for name, value in new_settings.items():
                 if "." not in name:
-                    if name in self.settings and self.settings[name] != new_settings[name]:
+                    if name in self.settings and self.settings[name] != value:
                         for cur_name, _ in self.settings.items():
                             if cur_name.startswith(name):
                                 del res[cur_name]

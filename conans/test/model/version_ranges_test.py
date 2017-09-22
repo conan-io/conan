@@ -17,6 +17,16 @@ from conans.model.profile import Profile
 
 
 class BasicMaxVersionTest(unittest.TestCase):
+    def prereleases_versions_test(self):
+        output = TestBufferConanOutput()
+        result = satisfying(["1.1.1", "1.1.11", "1.1.21", "1.1.111"], "", output)
+        self.assertEqual(result, "1.1.111")
+        # prereleases are ordered
+        result = satisfying(["1.1.1-a.1", "1.1.1-a.11", "1.1.1-a.111", "1.1.1-a.21"], "~1.1.1-a", output)
+        self.assertEqual(result, "1.1.1-a.111")
+        result = satisfying(["1.1.1", "1.1.1-11", "1.1.1-111", "1.1.1-21"], "", output)
+        self.assertEqual(result, "1.1.1")
+
     def basic_test(self):
         output = TestBufferConanOutput()
         result = satisfying(["1.1", "1.2", "1.3", "2.1"], "", output)
@@ -42,7 +52,7 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["1.6.1"], ">1.5.0,<1.6.8", output)
         self.assertEqual(result, "1.6.1")
         result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "<=1.2", output)
-        self.assertEqual(result, "1.2")
+        self.assertEqual(result, "1.2.1")
         result = satisfying(["1.1.1", "1.1.2", "1.2", "1.2.1", "1.3", "2.1"], "<1.3", output)
         self.assertEqual(result, "1.2.1")
         result = satisfying(["1.a.1", "master", "X.2", "1.2.1", "1.3", "2.1"], "1.3", output)
@@ -56,9 +66,9 @@ class BasicMaxVersionTest(unittest.TestCase):
         result = satisfying(["1.3.0", "1.3.1"], "<1.3", output)
         self.assertEqual(result, None)
         result = satisfying(["1.3", "1.3.1"], "<=1.3", output)
-        self.assertEqual(result, "1.3")
+        self.assertEqual(result, "1.3.1")
         result = satisfying(["1.3.0", "1.3.1"], "<=1.3", output)
-        self.assertEqual(result, "1.3.0")
+        self.assertEqual(result, "1.3.1")
         # >2 means >=3.0.0-0
         result = satisfying(["2.1"], ">2", output)
         self.assertEqual(result, None)
@@ -213,9 +223,9 @@ class SayConan(ConanFile):
                            ('("Say/1.1@memsharded/testing", "override")', "1.1", True, False),
                            ('("Say/0.2@memsharded/testing", "override")', "0.2", True, True),
                            # ranges
-                           ('"Say/[<=1.2]@memsharded/testing"', "1.1.2", False, False),
+                           ('"Say/[<=1.2]@memsharded/testing"', "1.2.1", False, False),
                            ('"Say/[>=0.2,<=1.0]@memsharded/testing"', "0.3", False, True),
-                           ('("Say/[<=1.2]@memsharded/testing", "override")', "1.1.2", True, False),
+                           ('("Say/[<=1.2]@memsharded/testing", "override")', "1.2.1", True, False),
                            ('("Say/[>=0.2,<=1.0]@memsharded/testing", "override")', "0.3", True, True),
                            ])
     def transitive_test(self, version_range, solution, override, valid):

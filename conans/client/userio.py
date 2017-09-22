@@ -1,3 +1,4 @@
+import os
 import sys
 from conans.client.output import ConanOutput
 from conans.model.username import Username
@@ -40,11 +41,11 @@ class UserIO(object):
 
     def get_username(self, remote_name):
         """Overridable for testing purpose"""
-        return raw_input()
+        return self._get_env_username(remote_name) or raw_input()
 
     def get_password(self, remote_name):
         """Overridable for testing purpose"""
-        return getpass.getpass("")
+        return self._get_env_password(remote_name) or getpass.getpass("")
 
     def request_string(self, msg, default_value=None):
         """Request user to input a msg
@@ -77,4 +78,27 @@ class UserIO(object):
                 ret = False
             else:
                 self.out.error("%s is not a valid answer" % s)
+        return ret
+
+    def _get_env_password(self, remote_name):
+        """
+        Try CONAN_PASSWORD_REMOTE_NAME or CONAN_PASSWORD or return None
+        """
+        remote_name = remote_name.replace("-", "_").upper()
+        var_name = "CONAN_PASSWORD_%s" % remote_name
+        ret = os.getenv(var_name, None) or os.getenv("CONAN_PASSWORD", None)
+        if ret:
+            self.out.info("Got password '******' from environment")
+        return ret
+
+    def _get_env_username(self, remote_name):
+        """
+        Try CONAN_LOGIN_USERNAME_REMOTE_NAME or CONAN_LOGIN_USERNAME or return None
+        """
+        remote_name = remote_name.replace("-", "_").upper()
+        var_name = "CONAN_LOGIN_USERNAME_%s" % remote_name
+        ret = os.getenv(var_name, None) or os.getenv("CONAN_LOGIN_USERNAME", None)
+
+        if ret:
+            self.out.info("Got username '%s' from environment" % ret)
         return ret

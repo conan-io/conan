@@ -187,8 +187,11 @@ class RestApiClient(object):
         if ignore_deleted_file and ignore_deleted_file in deleted:
             deleted.remove(ignore_deleted_file)
 
+        if not new and not deleted and modified == ["conanmanifest.txt"]:
+            return False
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
+
         if files_to_upload:
             # Get the upload urls
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
@@ -198,6 +201,8 @@ class RestApiClient(object):
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
+
+        return files_to_upload or deleted
 
     def upload_package(self, package_reference, the_files, retry, retry_wait):
         """
@@ -213,6 +218,8 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
+        if not new and not deleted and modified == ["conanmanifest.txt"]:
+            return False
 
         files_to_upload = {filename: the_files[filename] for filename in new + modified}
         if files_to_upload:        # Obtain upload urls
@@ -226,13 +233,11 @@ class RestApiClient(object):
             self._output.rewrite_line("Requesting upload permissions...Done!")
             self._output.writeln("")
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
-        else:
-            self._output.rewrite_line("Package is up to date.")
-            self._output.writeln("")
         if deleted:
             self._remove_package_files(package_reference, deleted)
 
         logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
+        return files_to_upload or deleted
 
     @handle_return_deserializer()
     def authenticate(self, user, password):
