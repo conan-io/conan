@@ -62,8 +62,14 @@ class Meson(object):
             build_type
         ])
         command = 'meson "%s" "%s" %s' % (source_dir, self.build_dir, arg_list)
+        command = self._append_vs_if_needed(command)
         with tools.environment_append({"PKG_CONFIG_PATH": pc_paths}):
             self._conanfile.run(command)
+
+    def _append_vs_if_needed(self, command):
+        if self._compiler == "Visual Studio" and self.backend == "ninja":
+            command = "%s && %s" % (tools.vcvars_command(self._conanfile.settings), command)
+        return command
 
     def build(self, args=None, build_dir=None, targets=None):
         if self.backend != "ninja":
@@ -78,4 +84,5 @@ class Meson(object):
             args_to_string(targets)
         ])
         command = "ninja %s" % arg_list
+        command = self._append_vs_if_needed(command)
         self._conanfile.run(command)

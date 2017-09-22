@@ -23,7 +23,7 @@ def concat_if_not_empty(groups):
 
 
 def single_pc_file_contents(name, cpp_info):
-    lines = ['prefix=%s' % cpp_info.rootpath]
+    lines = ['prefix=%s' % cpp_info.rootpath.replace("\\", "/")]
     libdir_vars = []
     for i, libdir in enumerate(cpp_info.libdirs):
         varname = "libdir" if i == 0 else "libdir%d" % (i + 2)

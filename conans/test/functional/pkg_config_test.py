@@ -59,12 +59,8 @@ int main(){
         else:
             command = './demo'
         client.runner(command, cwd=os.path.join(client.current_folder))
-        self.assertIn('''
-Hello LIB_A
-Hello LIB_B
-Hello LIB_C
-Hello LIB_B2
-''', client.out)
+        self.assertEqual(['Hello LIB_A', 'Hello LIB_B', 'Hello LIB_C', 'Hello LIB_B2'],
+                         str(client.user_io.out).splitlines()[-4:])
 
     def _export(self, client, libname, depsname):
         files = cpp_hello_conan_files(libname, "0.1",
