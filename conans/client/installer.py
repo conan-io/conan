@@ -32,6 +32,9 @@ def _init_package_info(deps_graph, paths, current_path):
         else:
             conan_file.cpp_info = CppInfo(current_path)
 
+        conan_file.cpp_info.version = conan_file.version
+        conan_file.cpp_info.description = conan_file.description
+
         conan_file.env_info = EnvInfo()
         conan_file.user_info = UserInfo()
 

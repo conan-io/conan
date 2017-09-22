@@ -1,5 +1,6 @@
 from os.path import join
 
+from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException
 from conans.util.files import save, normalize
 
@@ -57,6 +58,7 @@ registered_generators.add("virtualenv", VirtualEnvGenerator)
 registered_generators.add("env", ConanEnvGenerator)
 registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
 registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
+registered_generators.add("pkg_config", PkgConfigGenerator)
 
 
 def write_generators(conanfile, path, output):

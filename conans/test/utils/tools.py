@@ -426,6 +426,7 @@ class TestClient(object):
 
         if not ignore_error and error:
             logger.error(self.user_io.out)
+            print(self.user_io.out)
             raise Exception("Command failed:\n%s" % command_line)
 
         self.all_output += str(self.user_io.out)
