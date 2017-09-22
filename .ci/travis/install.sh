@@ -45,7 +45,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     pyenv activate conan
 else
     sudo apt-get update
-    sudo apt-get install gcc-multilib g++-multilib ninja-build
+    sudo apt-get install gcc-multilib g++-multilib ninja-build --upgrade
     # Will fail if no python3 available
     pip3 install meson || true
 fi
