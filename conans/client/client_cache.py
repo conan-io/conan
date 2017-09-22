@@ -65,15 +65,11 @@ class ClientCache(SimplePaths):
 
     @property
     def conan_config(self):
-        def generate_default_config_file():
-            save(self.conan_conf_path, normalize(default_client_conf))
-
         if not self._conan_config:
             if not os.path.exists(self.conan_conf_path):
-                generate_default_config_file()
+                save(self.conan_conf_path, normalize(default_client_conf))
 
             self._conan_config = ConanClientConfigParser(self.conan_conf_path)
-
         return self._conan_config
 
     @property

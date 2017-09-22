@@ -2,6 +2,8 @@ import os
 import platform
 import unittest
 
+from nose.plugins.attrib import attr
+
 from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
@@ -63,6 +65,7 @@ int main(){
 
 class BuildEnvironmenTest(unittest.TestCase):
 
+    @attr("mingw")
     def test_gcc_and_environment(self):
         if platform.system() == "SunOS":
             return  # If is using sun-cc the gcc generator doesn't work

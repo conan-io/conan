@@ -1,4 +1,5 @@
 from conans.model import Generator
+from conans.model.build_info import CppInfo
 from conans.paths import BUILD_INFO_CMAKE
 from conans.client.generators.cmake_common import cmake_dependency_vars,\
     cmake_macros, generate_targets_section, cmake_dependencies, cmake_package_info,\
@@ -6,35 +7,34 @@ from conans.client.generators.cmake_common import cmake_dependency_vars,\
 
 
 class DepsCppCmake(object):
-    def __init__(self, deps_cpp_info):
-
+    def __init__(self, cpp_info):
         def multiline(field):
             return "\n\t\t\t".join('"%s"' % p.replace("\\", "/") for p in field)
 
-        self.include_paths = multiline(deps_cpp_info.include_paths)
-        self.lib_paths = multiline(deps_cpp_info.lib_paths)
-        self.res_paths = multiline(deps_cpp_info.res_paths)
-        self.bin_paths = multiline(deps_cpp_info.bin_paths)
-        self.build_paths = multiline(deps_cpp_info.build_paths)
+        self.include_paths = multiline(cpp_info.include_paths)
+        self.lib_paths = multiline(cpp_info.lib_paths)
+        self.res_paths = multiline(cpp_info.res_paths)
+        self.bin_paths = multiline(cpp_info.bin_paths)
+        self.build_paths = multiline(cpp_info.build_paths)
 
-        self.libs = " ".join(deps_cpp_info.libs)
-        self.defines = "\n\t\t\t".join("-D%s" % d for d in deps_cpp_info.defines)
-        self.compile_definitions = "\n\t\t\t".join(deps_cpp_info.defines)
+        self.libs = " ".join(cpp_info.libs)
+        self.defines = "\n\t\t\t".join("-D%s" % d for d in cpp_info.defines)
+        self.compile_definitions = "\n\t\t\t".join(cpp_info.defines)
 
-        self.cppflags = " ".join(deps_cpp_info.cppflags)
-        self.cflags = " ".join(deps_cpp_info.cflags)
-        self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
-        self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
+        self.cppflags = " ".join(cpp_info.cppflags)
+        self.cflags = " ".join(cpp_info.cflags)
+        self.sharedlinkflags = " ".join(cpp_info.sharedlinkflags)
+        self.exelinkflags = " ".join(cpp_info.exelinkflags)
 
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
         # Issue: #1251
-        self.cppflags_list = ";".join(deps_cpp_info.cppflags)
-        self.cflags_list = ";".join(deps_cpp_info.cflags)
-        self.sharedlinkflags_list = ";".join(deps_cpp_info.sharedlinkflags)
-        self.exelinkflags_list = ";".join(deps_cpp_info.exelinkflags)
+        self.cppflags_list = ";".join(cpp_info.cppflags)
+        self.cflags_list = ";".join(cpp_info.cflags)
+        self.sharedlinkflags_list = ";".join(cpp_info.sharedlinkflags)
+        self.exelinkflags_list = ";".join(cpp_info.exelinkflags)
 
-        self.rootpath = '"%s"' % deps_cpp_info.rootpath.replace("\\", "/")
+        self.rootpath = '"%s"' % cpp_info.rootpath.replace("\\", "/")
 
 
 class CMakeGenerator(Generator):
@@ -44,7 +44,7 @@ class CMakeGenerator(Generator):
 
     @property
     def content(self):
-        sections = []
+        sections = ["include(CMakeParseArguments)"]
 
         # Per requirement variables
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:

@@ -23,7 +23,6 @@ class CollectLibsTest(unittest.TestCase):
         self.assertEquals(len(package_ids), 1)
 
         # Reuse them
-        conan_reference = ConanFileReference.loads("Hello1/0.2@lasote/stable")
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"],
                                        collect_libs=True)
 

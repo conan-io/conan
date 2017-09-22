@@ -419,7 +419,7 @@ class CompileHelpersTest(unittest.TestCase):
 
             win_settings = MockSettings("Release", os="Windows", arch="x86",
                                         compiler_name="Visual Studio", libcxx=None,
-                                        version="12")
+                                        version="14")
             env = ConfigureEnvironment(MockConanfile(win_settings))
             command = "%s && SET" % env.command_line
             runner(command, output=output)

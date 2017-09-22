@@ -66,6 +66,6 @@ class InstallSubfolderTest(unittest.TestCase):
                                          (1, h01, h11, h00, h10)]:
             self.client.current_folder = os.path.join(current_folder, "lang%dbuild" % lang)
             self.client.run("build ..")
-            self.assertIn("compiler=Visual Studio", self.client.user_io.out)
-            self.assertIn("language=%d" % lang, self.client.user_io.out)
-            self.assertNotIn("language=%d" % (not lang), self.client.user_io.out)
+            self.assertIn("compiler=Visual Studio", self.client.out)
+            self.assertIn("language=%d" % lang, self.client.out)
+            self.assertNotIn("language=%d" % (not lang), self.client.out)

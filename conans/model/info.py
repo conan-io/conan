@@ -101,14 +101,12 @@ class RequirementInfo(object):
 
 
 class RequirementsInfo(object):
-    def __init__(self, requires, non_devs_requirements):
+    def __init__(self, requires):
         # {PackageReference: RequirementInfo}
-        self._non_devs_requirements = non_devs_requirements
         self._data = {r: RequirementInfo(str(r)) for r in requires}
 
     def copy(self):
-        return RequirementsInfo(self._data.keys(), self._non_devs_requirements.copy()
-                                if self._non_devs_requirements else None)
+        return RequirementsInfo(self._data.keys())
 
     def clear(self):
         self._data = {}
@@ -151,14 +149,8 @@ class RequirementsInfo(object):
         result = []
         # Remove requirements without a name, i.e. indirect transitive requirements
         data = {k: v for k, v in self._data.items() if v.name}
-        if self._non_devs_requirements is None:
-            for key in sorted(data):
-                result.append(data[key].sha)
-        else:
-            for key in sorted(data):
-                non_dev = key.conan.name in self._non_devs_requirements
-                if non_dev:
-                    result.append(data[key].sha)
+        for key in sorted(data):
+            result.append(data[key].sha)
         return sha1('\n'.join(result).encode())
 
     def dumps(self):
@@ -166,10 +158,6 @@ class RequirementsInfo(object):
         for ref in sorted(self._data):
             dumped = self._data[ref].dumps()
             if dumped:
-                dev = (self._non_devs_requirements is not None and
-                       ref.conan.name not in self._non_devs_requirements)
-                if dev:
-                    dumped += " DEV"
                 result.append(dumped)
         return "\n".join(result)
 
@@ -245,11 +233,10 @@ class ConanInfo(object):
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
-        result._non_devs_requirements = self._non_devs_requirements
         return result
 
     @staticmethod
-    def create(settings, options, requires, indirect_requires, non_devs_requirements):
+    def create(settings, options, requires, indirect_requires):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
@@ -257,12 +244,11 @@ class ConanInfo(object):
         result.options = options.copy()
         result.options.clear_indirect()
         result.full_requires = RequirementsList(requires)
-        result.requires = RequirementsInfo(requires, non_devs_requirements)
+        result.requires = RequirementsInfo(requires)
         result.scope = None
         result.requires.add(indirect_requires)
         result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
-        result._non_devs_requirements = non_devs_requirements  # Can be None
         result.env_values = EnvValues()
         return result
 
@@ -277,7 +263,7 @@ class ConanInfo(object):
         result.options = OptionsValues.loads(parser.options)
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = RequirementsList.loads(parser.full_requires)
-        result.requires = RequirementsInfo(result.full_requires, None)
+        result.requires = RequirementsInfo(result.full_requires)
         result.recipe_hash = parser.recipe_hash or None
 
         # TODO: Missing handling paring of requires, but not necessary now
@@ -344,7 +330,7 @@ class ConanInfo(object):
         # Only are valid requires for OPtions those Non-Dev who are still in requires
 
         self.options.filter_used(self.requires.pkg_names)
-        result.append(self.options.sha(self._non_devs_requirements))
+        result.append(self.options.sha)
         result.append(self.requires.sha)
         self._package_id = sha1('\n'.join(result).encode())
         return self._package_id

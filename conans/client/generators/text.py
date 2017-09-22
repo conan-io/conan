@@ -10,24 +10,24 @@ from conans.util.log import logger
 
 
 class DepsCppTXT(object):
-    def __init__(self, deps_cpp_info):
+    def __init__(self, cpp_info):
         self.include_paths = "\n".join(p.replace("\\", "/")
-                                       for p in deps_cpp_info.include_paths)
+                                       for p in cpp_info.include_paths)
         self.lib_paths = "\n".join(p.replace("\\", "/")
-                                   for p in deps_cpp_info.lib_paths)
+                                   for p in cpp_info.lib_paths)
         self.res_paths = "\n".join(p.replace("\\", "/")
-                                   for p in deps_cpp_info.res_paths)
+                                   for p in cpp_info.res_paths)
         self.build_paths = "\n".join(p.replace("\\", "/")
-                                     for p in deps_cpp_info.build_paths)
-        self.libs = "\n".join(deps_cpp_info.libs)
-        self.defines = "\n".join(deps_cpp_info.defines)
-        self.cppflags = "\n".join(deps_cpp_info.cppflags)
-        self.cflags = "\n".join(deps_cpp_info.cflags)
-        self.sharedlinkflags = "\n".join(deps_cpp_info.sharedlinkflags)
-        self.exelinkflags = "\n".join(deps_cpp_info.exelinkflags)
+                                     for p in cpp_info.build_paths)
+        self.libs = "\n".join(cpp_info.libs)
+        self.defines = "\n".join(cpp_info.defines)
+        self.cppflags = "\n".join(cpp_info.cppflags)
+        self.cflags = "\n".join(cpp_info.cflags)
+        self.sharedlinkflags = "\n".join(cpp_info.sharedlinkflags)
+        self.exelinkflags = "\n".join(cpp_info.exelinkflags)
         self.bin_paths = "\n".join(p.replace("\\", "/")
-                                   for p in deps_cpp_info.bin_paths)
-        self.rootpath = "%s" % deps_cpp_info.rootpath.replace("\\", "/")
+                                   for p in cpp_info.bin_paths)
+        self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
 
 
 class TXTGenerator(Generator):
@@ -65,7 +65,7 @@ class TXTGenerator(Generator):
 
     @staticmethod
     def _loads_cpp_info(text):
-        pattern = re.compile("^\[([a-zA-Z0-9_:-]+)\]([^\[]+)", re.MULTILINE)
+        pattern = re.compile(r"^\[([a-zA-Z0-9._:-]+)\]([^\[]+)", re.MULTILINE)
         result = DepsCppInfo()
 
         try:
