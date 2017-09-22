@@ -8,6 +8,7 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     brew outdated pyenv || brew upgrade pyenv
     brew install pyenv-virtualenv
     brew install pkg-config
+    brew install ninja
 
     if which pyenv > /dev/null; then
         eval "$(pyenv init -)"
@@ -43,9 +44,11 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     pyenv activate conan
 else
     sudo apt-get update
-    sudo apt-get install gcc-multilib g++-multilib
+    sudo apt-get install gcc-multilib g++-multilib ninja-build
 fi
 
 pip install -r conans/requirements_dev.txt
 pip install -r conans/requirements_server.txt
 pip install -r conans/requirements.txt
+
+pip3 install -r conans/requirements_dev_pip3.txt
