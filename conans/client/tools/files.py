@@ -209,7 +209,7 @@ def collect_libs(conanfile, folder="lib"):
         return []
     lib_folder = os.path.join(conanfile.package_folder, folder)
     if not os.path.exists(lib_folder):
-        conanfile.output.warn("Lib folder doesn't exist, can't collect libraries")
+        conanfile.output.warn("Lib folder doesn't exist, can't collect libraries: {0}".format(lib_folder))
         return []
     files = os.listdir(lib_folder)
     result = []
