@@ -18,6 +18,7 @@ from .virtualenv import VirtualEnvGenerator
 from .env import ConanEnvGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
+from .boostbuild import BoostBuildGenerator
 
 
 class _GeneratorManager(object):
@@ -57,6 +58,7 @@ registered_generators.add("virtualenv", VirtualEnvGenerator)
 registered_generators.add("env", ConanEnvGenerator)
 registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
 registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
+registered_generators.add("boost-build", BoostBuildGenerator)
 
 
 def write_generators(conanfile, path, output):
