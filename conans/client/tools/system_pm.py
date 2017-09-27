@@ -11,7 +11,7 @@ class SystemPackageTool(object):
     def __init__(self, runner=None, os_info=None, tool=None):
         env_sudo = os.environ.get("CONAN_SYSREQUIRES_SUDO", None)
         self._sudo = (env_sudo != "False" and env_sudo != "0")
-        if os.geteuid() == 0:
+        if env_sudo is None and os.name == 'posix' and os.geteuid() == 0:
             self._sudo = False
         os_info = os_info or OSInfo()
         self._is_up_to_date = False
