@@ -28,7 +28,7 @@ os:
     SunOS:
     Arduino:
         board: ANY
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr]
+arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
