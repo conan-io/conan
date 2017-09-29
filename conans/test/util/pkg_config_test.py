@@ -36,14 +36,14 @@ class PkgConfigTest(unittest.TestCase):
         with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
             pkg_config = PkgConfig("libastral")
 
-            self.assertEquals(pkg_config.cflags, ['-D_USE_LIBASTRAL', '-I/usr/local/include/libastral'])
-            self.assertEquals(pkg_config.cflags_only_I, ['-I/usr/local/include/libastral'])
-            self.assertEquals(pkg_config.cflags_only_other, ['-D_USE_LIBASTRAL'])
+            self.assertEquals(frozenset(pkg_config.cflags), frozenset(['-D_USE_LIBASTRAL', '-I/usr/local/include/libastral']))
+            self.assertEquals(frozenset(pkg_config.cflags_only_I), frozenset(['-I/usr/local/include/libastral']))
+            self.assertEquals(frozenset(pkg_config.cflags_only_other), frozenset(['-D_USE_LIBASTRAL']))
 
-            self.assertEquals(pkg_config.libs, ['-L/usr/local/lib/libastral', '-lastral', '-Wl,--whole-archive'])
-            self.assertEquals(pkg_config.libs_only_L, ['-L/usr/local/lib/libastral'])
-            self.assertEquals(pkg_config.libs_only_l, ['-lastral'])
-            self.assertEquals(pkg_config.libs_only_other, ['-Wl,--whole-archive'])
+            self.assertEquals(frozenset(pkg_config.libs), frozenset(['-L/usr/local/lib/libastral', '-lastral', '-Wl,--whole-archive']))
+            self.assertEquals(frozenset(pkg_config.libs_only_L), frozenset(['-L/usr/local/lib/libastral']))
+            self.assertEquals(frozenset(pkg_config.libs_only_l), frozenset(['-lastral',]))
+            self.assertEquals(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
 
             self.assertEquals(pkg_config.variables['prefix'], '/usr/local')
         os.unlink(filename)
