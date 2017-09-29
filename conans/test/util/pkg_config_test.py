@@ -1,0 +1,49 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import unittest
+import platform
+import os
+from nose.plugins.attrib import attr
+from conans.tools import PkgConfig, environment_append
+from conans.test.utils.test_files import temp_folder
+
+libastral_pc = """
+PC FILE EXAMPLE:
+
+prefix=/usr/local
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libastral
+Description: Interface library for Astral data flows
+Version: 6.6.6
+Libs: -L${libdir}/libastral -lastral -Wl,--whole-archive
+Cflags: -I${includedir}/libastral -D_USE_LIBASTRAL
+"""
+
+
+@attr("unix")
+class PkgConfigTest(unittest.TestCase):
+    def test_pc(self):
+        if platform.system() == "Windows":
+            return
+        tmp_dir = temp_folder()
+        filename = os.path.join(tmp_dir, 'libastral.pc')
+        with open(filename, 'w') as f:
+            f.write(libastral_pc)
+        with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
+            pkg_config = PkgConfig("libastral")
+
+            self.assertEquals(pkg_config.cflags, ['-D_USE_LIBASTRAL', '-I/usr/local/include/libastral'])
+            self.assertEquals(pkg_config.cflags_only_I, ['-I/usr/local/include/libastral'])
+            self.assertEquals(pkg_config.cflags_only_other, ['-D_USE_LIBASTRAL'])
+
+            self.assertEquals(pkg_config.libs, ['-L/usr/local/lib/libastral', '-lastral', '-Wl,--whole-archive'])
+            self.assertEquals(pkg_config.libs_only_L, ['-L/usr/local/lib/libastral'])
+            self.assertEquals(pkg_config.libs_only_l, ['-lastral'])
+            self.assertEquals(pkg_config.libs_only_other, ['-Wl,--whole-archive'])
+
+            self.assertEquals(pkg_config.variables['prefix'], '/usr/local')
+        os.unlink(filename)
