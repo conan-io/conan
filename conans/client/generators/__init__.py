@@ -11,6 +11,7 @@ from .qmake import QmakeGenerator
 from .qbs import QbsGenerator
 from .scons import SConsGenerator
 from .visualstudio import VisualStudioGenerator
+from .visualstudio_multi import VisualStudioMultiGenerator
 from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
@@ -50,6 +51,7 @@ registered_generators.add("qmake", QmakeGenerator)
 registered_generators.add("qbs", QbsGenerator)
 registered_generators.add("scons", SConsGenerator)
 registered_generators.add("visual_studio", VisualStudioGenerator)
+registered_generators.add("visual_studio_multi", VisualStudioMultiGenerator)
 registered_generators.add("visual_studio_legacy", VisualStudioLegacyGenerator)
 registered_generators.add("xcode", XCodeGenerator)
 registered_generators.add("ycm", YouCompleteMeGenerator)
