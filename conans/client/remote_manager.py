@@ -8,8 +8,8 @@ from requests.exceptions import ConnectionError
 
 from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.model.manifest import gather_files
-from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME,\
-    rm_conandir, EXPORT_SOURCES_TGZ_NAME
+from conans.paths import PACKAGE_TGZ_NAME, CONANINFO, CONAN_MANIFEST, CONANFILE, EXPORT_TGZ_NAME, \
+    rm_conandir, EXPORT_SOURCES_TGZ_NAME, EXPORT_SOURCES_DIR_OLD
 from conans.util.files import gzopen_without_timestamps
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch
@@ -47,17 +47,21 @@ class RemoteManager(object):
                                 retry, retry_wait, ignore_deleted_file)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files, remote)
-        msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
-        # FIXME: server dependent
-        if remote.url == "https://server.conan.io":
-            msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
+        if ret:
+            msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
+            # FIXME: server dependent
+            if remote.url == "https://server.conan.io":
+                msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
+            else:
+                msg += ": %s" % remote.url
         else:
-            msg += ": %s" % remote.url
+            msg = "Recipe is up to date, upload skipped"
         self._output.info(msg)
         return ret
 
     def _package_integrity_check(self, package_reference, files, package_folder):
         # If package has been modified remove tgz to regenerate it
+        self._output.rewrite_line("Checking package integrity...")
         read_manifest, expected_manifest = self._client_cache.package_manifests(package_reference)
 
         if read_manifest != expected_manifest:
@@ -90,7 +94,6 @@ class RemoteManager(object):
         # Get all the files in that directory
         files, symlinks = gather_files(package_folder)
 
-        self._output.rewrite_line("Checking package integrity...")
         if CONANINFO not in files or CONAN_MANIFEST not in files:
             logger.error("Missing info or manifest in uploading files: %s" % (str(files)))
             raise ConanException("Cannot upload corrupted package '%s'" % str(package_reference))
@@ -103,17 +106,19 @@ class RemoteManager(object):
                          % (time.time() - t1))
 
         the_files = compress_package_files(files, symlinks, package_folder, self._output)
-        if not skip_upload:
-
-            tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
-                                    retry, retry_wait)
-
-            duration = time.time() - t1
-            log_package_upload(package_reference, duration, the_files, remote)
-            logger.debug("====> Time remote_manager upload_package: %f" % duration)
-            return tmp
-        else:
+        if skip_upload:
             return None
+
+        tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
+                                retry, retry_wait)
+        duration = time.time() - t1
+        log_package_upload(package_reference, duration, the_files, remote)
+        logger.debug("====> Time remote_manager upload_package: %f" % duration)
+        if not tmp:
+            self._output.rewrite_line("Package is up to date, upload skipped")
+            self._output.writeln("")
+
+        return tmp
 
     def get_conan_digest(self, conan_reference, remote):
         """
@@ -188,10 +193,10 @@ class RemoteManager(object):
             return
 
         unzip_and_get_files(zipped_files, export_sources_folder, EXPORT_SOURCES_TGZ_NAME)
-        c_src_path = os.path.join(export_sources_folder, ".c_src")
+        c_src_path = os.path.join(export_sources_folder, EXPORT_SOURCES_DIR_OLD)
         if os.path.exists(c_src_path):
             merge_directories(c_src_path, export_sources_folder)
-            shutil.rmtree(c_src_path)
+            rmdir(c_src_path)
         for dirname, _, filenames in os.walk(export_sources_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
@@ -296,7 +301,6 @@ def compress_files(files, symlinks, name, dest_dir):
     t1 = time.time()
     # FIXME, better write to disk sequentially and not keep tgz contents in memory
     tgz_path = os.path.join(dest_dir, name)
-    is_export_sources = (name == EXPORT_SOURCES_TGZ_NAME)
     with open(tgz_path, "wb") as tgz_handle:
         # tgz_contents = BytesIO()
         tgz = gzopen_without_timestamps(name, mode="w", fileobj=tgz_handle)
@@ -308,8 +312,6 @@ def compress_files(files, symlinks, name, dest_dir):
             tgz.addfile(tarinfo=info)
 
         for filename, abs_path in files.items():
-            if is_export_sources:  # temporary backwards compat TGZ creation
-                filename = ".c_src/%s" % filename
             info = tarfile.TarInfo(name=filename)
             info.size = os.stat(abs_path).st_size
             info.mode = os.stat(abs_path).st_mode

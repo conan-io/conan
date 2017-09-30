@@ -92,7 +92,7 @@ class ConsumerFileTest(ConanFile):
         # again should do nothing
         self.client.run("install %s --build missing --manifests %s"
                         % (str(self.reference), folder))
-        self.assertNotIn("manifest", self.client.user_io.out)
+        self.assertNotIn("Installed manifest", self.client.user_io.out)
 
         # now verify
         self.client.run("install %s --build missing --verify %s" % (str(self.reference), folder))

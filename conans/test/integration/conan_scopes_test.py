@@ -33,7 +33,7 @@ class HelloConan(ConanFile):
     version = "0.1"
     def config(self):
         if self.scope.other:
-            self.requires("Hello/0.1@lasote/stable", dev=True)
+            self.requires("Hello/0.1@lasote/stable")
         '''
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
@@ -215,49 +215,3 @@ class HelloConan(ConanFile):
         self.assertIn("WARN: CONFIG_CONSUMER OTHER", client.user_io.out)
         self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
         self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
-
-    def conan_dev_requires_test(self):
-        client = TestClient()
-        conanfile = '''
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "Base"
-    version = "0.1"
-'''
-        files = {}
-        files["conanfile.py"] = conanfile
-        client.save(files)
-        client.run("export lasote/stable")
-        conanfile = '''
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    dev_requires = "Base/0.1@lasote/stable"
-    name = "Hello"
-    version = "0.1"
-'''
-        files = {}
-        files["conanfile.py"] = conanfile
-        client.save(files)
-        client.run("export lasote/stable")
-        conanfile = '''
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    dev_requires = "Hello/0.1@lasote/stable"
-        '''
-        files["conanfile.py"] = conanfile
-        client.save(files, clean_first=True)
-
-        client.run("install --build")
-        self.assertIn("Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-                      client.user_io.out)
-        self.assertNotIn("Base/0.1@lasote/stable", client.user_io.out)
-        client.run("install --build -sc dev=False")
-        self.assertNotIn("Hello/0.1@lasote/stable", client.user_io.out)
-        self.assertNotIn("Base/0.1@lasote/stable", client.user_io.out)
-        client.run("install --build -sc dev=True -sc Hello:dev=True")
-        self.assertIn("Hello/0.1@lasote/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
-                      client.user_io.out)
-        self.assertIn("Base/0.1@lasote/stable", client.user_io.out)

@@ -164,6 +164,11 @@ class SearchTest(unittest.TestCase):
                           "NodeInfo/1.0.2@fenix/stable\n"
                           "helloTest/1.4.10@fenix/stable\n", self.client.user_io.out)
 
+        self.client.run("search Hello/*@fenix/testing")
+        self.assertIn("Hello/1.4.10@fenix/testing\n"
+                      "Hello/1.4.11@fenix/testing\n"
+                      "Hello/1.4.12@fenix/testing\n", self.client.user_io.out)
+
     def search_raw_test(self):
         self.client.run("search Hello* --raw")
         self.assertEquals("Hello/1.4.10@fenix/testing\n"

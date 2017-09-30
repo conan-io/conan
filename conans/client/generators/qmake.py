@@ -3,26 +3,26 @@ from conans.paths import BUILD_INFO_QMAKE
 
 
 class DepsCppQmake(object):
-    def __init__(self, deps_cpp_info):
+    def __init__(self, cpp_info):
 
         def multiline(field):
             return " \\\n    ".join('"%s"' % p.replace("\\", "/") for p in field)
 
-        self.include_paths = multiline(deps_cpp_info.include_paths)
+        self.include_paths = multiline(cpp_info.include_paths)
         self.lib_paths = " \\\n    ".join('-L"%s"' % p.replace("\\", "/")
-                                          for p in deps_cpp_info.lib_paths)
-        self.bin_paths = multiline(deps_cpp_info.bin_paths)
-        self.res_paths = multiline(deps_cpp_info.res_paths)
-        self.build_paths = multiline(deps_cpp_info.build_paths)
+                                          for p in cpp_info.lib_paths)
+        self.bin_paths = multiline(cpp_info.bin_paths)
+        self.res_paths = multiline(cpp_info.res_paths)
+        self.build_paths = multiline(cpp_info.build_paths)
 
-        self.libs = " ".join('-l%s' % l for l in deps_cpp_info.libs)
-        self.defines = " \\\n    ".join('"%s"' % d for d in deps_cpp_info.defines)
-        self.cppflags = " ".join(deps_cpp_info.cppflags)
-        self.cflags = " ".join(deps_cpp_info.cflags)
-        self.sharedlinkflags = " ".join(deps_cpp_info.sharedlinkflags)
-        self.exelinkflags = " ".join(deps_cpp_info.exelinkflags)
+        self.libs = " ".join('-l%s' % l for l in cpp_info.libs)
+        self.defines = " \\\n    ".join('"%s"' % d for d in cpp_info.defines)
+        self.cppflags = " ".join(cpp_info.cppflags)
+        self.cflags = " ".join(cpp_info.cflags)
+        self.sharedlinkflags = " ".join(cpp_info.sharedlinkflags)
+        self.exelinkflags = " ".join(cpp_info.exelinkflags)
 
-        self.rootpath = '%s' % deps_cpp_info.rootpath.replace("\\", "/")
+        self.rootpath = '%s' % cpp_info.rootpath.replace("\\", "/")
 
 
 class QmakeGenerator(Generator):

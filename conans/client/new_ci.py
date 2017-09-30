@@ -52,7 +52,7 @@ build_py = """from conan.packager import ConanMultiPackager
 
 
 if __name__ == "__main__":
-    builder = ConanMultiPackager(username="{user}", channel="{channel}")
+    builder = ConanMultiPackager()
     builder.add_common_builds({shared})
     builder.run()
 """
@@ -158,9 +158,10 @@ clang-{version}:
     <<: *build-template
 """
 
+
 def get_build_py(name, user, channel, shared):
     shared = 'shared_option_name="{}:shared"'.format(name) if shared else ""
-    return build_py.format(name=name, user=user, channel=channel, shared=shared)
+    return build_py.format(name=name, shared=shared)
 
 
 def get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_versions, osx_clang_versions, upload_url):
@@ -189,6 +190,7 @@ def get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_ver
              ".travis/run.sh": travis_run}
     return files
 
+
 def get_appveyor(name, version, user, channel, visual_versions, upload_url):
     config = []
     visual_config = """        - APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio {image}
@@ -204,6 +206,7 @@ def get_appveyor(name, version, user, channel, visual_versions, upload_url):
                                              channel=channel, configs=configs, upload=upload)}
     return files
 
+
 def get_gitlab(name, version, user, channel, linux_gcc_versions, linux_clang_versions, upload_url):
     config = []
 
@@ -218,13 +221,14 @@ def get_gitlab(name, version, user, channel, linux_gcc_versions, linux_clang_ver
     configs = "".join(config)
     upload = ('CONAN_UPLOAD: "%s"\n' % upload_url) if upload_url else ""
     files = {".gitlab-ci.yml": gitlab.format(name=name, version=version, user=user, channel=channel,
-                                          configs=configs, upload=upload)}
+                                             configs=configs, upload=upload)}
     return files
+
 
 def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versions, linux_clang_versions,
                  osx_clang_versions, shared, upload_url, gitlab_gcc_versions, gitlab_clang_versions):
     if shared and not (visual_versions or linux_gcc_versions or linux_clang_versions or osx_clang_versions or
-            gitlab_gcc_versions or gitlab_clang_versions):
+                       gitlab_gcc_versions or gitlab_clang_versions):
         raise ConanException("Trying to specify 'shared' in CI, but no CI system specified")
     if not (visual_versions or linux_gcc_versions or linux_clang_versions or osx_clang_versions or
             gitlab_gcc_versions or gitlab_clang_versions):

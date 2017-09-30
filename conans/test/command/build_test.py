@@ -21,10 +21,15 @@ class AConan(ConanFile):
 
 conanfile_dep = """
 from conans import ConanFile
+from conans.tools import mkdir
+import os
 
 class AConan(ConanFile):
     name = "Hello"
     version = "0.1"
+
+    def package(self):
+        mkdir(os.path.join(self.package_folder, "include"))
 """
 
 
@@ -79,6 +84,35 @@ class AConan(ConanFile):
         self.assertIn("Project: HELLO ROOT PATH: %s" % package_folder, client.user_io.out)
         self.assertIn("Project: HELLO INCLUDE PATHS: %s/include"
                       % package_folder, client.user_io.out)
+
+    def build_dots_names_test(self):
+        """ Try to reuse variables loaded from txt generator => deps_cpp_info
+        """
+        client = TestClient()
+        conanfile_dep = """
+from conans import ConanFile
+
+class AConan(ConanFile):
+    pass
+"""
+        client.save({CONANFILE: conanfile_dep})
+        client.run("create Hello.Pkg/0.1@lasote/testing")
+        client.run("create Hello-Tools/0.1@lasote/testing")
+        conanfile_scope_env = """
+from conans import ConanFile
+
+class AConan(ConanFile):
+    requires = "Hello.Pkg/0.1@lasote/testing", "Hello-Tools/0.1@lasote/testing"
+
+    def build(self):
+        self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello.Pkg"].rootpath)
+        self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello-Tools"].rootpath)
+"""
+        client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
+        client.run("install --build=missing -g txt")
+        client.run("build")
+        self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
+        self.assertIn("Hello-Tools/0.1/lasote/testing", client.out)
 
     def build_cmake_install_test(self):
         client = TestClient()

@@ -12,6 +12,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
+    description = "<Description of {package_name} here>"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -49,7 +50,7 @@ class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
     settings = "os", "compiler", "build_type", "arch"
-    description = "Package for {package_name}"
+    description = "<Description of {package_name} here>"
     url = "None"
     license = "None"
 
@@ -65,7 +66,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
-    description = "Description of {package_name}"
+    description = "<Description of {package_name} here>"
     settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
@@ -98,6 +99,7 @@ class {package_name}Conan(ConanFile):
     version = "{version}"
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
+    description = "<Description of {package_name} here>"
     # No settings/options are necessary, this is header only
 
     def source(self):
@@ -129,6 +131,7 @@ class {package_name}TestConan(ConanFile):
     def imports(self):
         self.copy("*.dll", dst="bin", src="bin")
         self.copy("*.dylib*", dst="bin", src="lib")
+        self.copy('*.so*', dst='bin', src='lib')
 
     def test(self):
         os.chdir("bin")
@@ -187,14 +190,6 @@ cmake_minimum_required(VERSION 2.8)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_CURRENT_BINARY_DIR}/bin)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_CURRENT_BINARY_DIR}/bin)
-
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY})
 
 add_library(hello hello.cpp)
 """

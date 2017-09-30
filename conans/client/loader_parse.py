@@ -4,13 +4,13 @@ import os
 import sys
 import uuid
 
-from conans.client.generators import _save_generator
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
-from conans.model.conan_generator import Generator
 from conans.util.config_parser import ConfigParser
 from conans.util.files import rmdir
 from conans.tools import chdir
+from conans.client.generators import registered_generators
+from conans.model import Generator
 
 
 def load_conanfile_class(conanfile_path):
@@ -40,7 +40,7 @@ def _parse_module(conanfile_module, filename):
                 raise ConanException("More than 1 conanfile in the file")
         if (inspect.isclass(attr) and issubclass(attr, Generator) and attr != Generator and
                 attr.__dict__["__module__"] == filename):
-                _save_generator(attr.__name__, attr)
+            registered_generators.add(attr.__name__, attr)
 
     if result is None:
         raise ConanException("No subclass of ConanFile")
@@ -77,10 +77,14 @@ def _parse_file(conan_file_path):
         for added in added_modules:
             module = sys.modules[added]
             if module:
-                folder = os.path.dirname(module.__file__)
-                if folder.startswith(current_dir):
-                    module = sys.modules.pop(added)
-                    sys.modules["%s.%s" % (module_id, added)] = module
+                try:
+                    folder = os.path.dirname(module.__file__)
+                except AttributeError:  # some module doesn't have __file__
+                    pass
+                else:
+                    if folder.startswith(current_dir):
+                        module = sys.modules.pop(added)
+                        sys.modules["%s.%s" % (module_id, added)] = module
     except Exception:
         import traceback
         trace = traceback.format_exc().split('\n')
