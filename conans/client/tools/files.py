@@ -221,3 +221,12 @@ def collect_libs(conanfile, folder="lib"):
                 name = name[3:]
             result.append(name)
     return result
+
+
+def which(filename):
+    """ same affect as posix which command or shutil.which from python3 """
+    for path in os.environ["PATH"].split(os.pathsep):
+        fullname = os.path.join(path, filename)
+        if os.path.exists(fullname) and os.access(fullname, os.X_OK):
+            return os.path.join(path, filename)
+    return None
