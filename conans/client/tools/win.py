@@ -102,6 +102,9 @@ def vcvars_command(settings):
                 else:
                     raise ConanException("VS2017 '%s' variable not defined, "
                                          "and vswhere didn't find it" % env_var)
+            if not os.path.isdir(vs_path):
+                _global_output.warn('VS variable %s points to the non-existing path "%s",'
+                    'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
             command = ('set "VSCMD_START_DIR=%%CD%%" && '
                        'call "%s" %s' % (vcvars_path, param))
@@ -110,6 +113,9 @@ def vcvars_command(settings):
                 vs_path = os.environ[env_var]
             except KeyError:
                 raise ConanException("VS '%s' variable not defined. Please install VS" % env_var)
+            if not os.path.isdir(vs_path):
+                _global_output.warn('VS variable %s points to the non-existing path "%s",'
+                    'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
             command = ('call "%s" %s' % (vcvars_path, param))
 
