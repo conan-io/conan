@@ -5,23 +5,24 @@ import subprocess
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import unix_path
+from conans.client.tools.oss import cpu_count
 from conans.errors import ConanException
 
 _global_output = None
 
 
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None):
+                       arch=None, parallel=True):
     """ Do both: set the environment variables and call the .sln build
     """
     vcvars = vcvars_command(settings)
-    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch)
+    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch, parallel)
     command = "%s && %s" % (vcvars, build)
     return command
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None):
+                      arch=None, parallel=True):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -43,6 +44,9 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         command += '"x64"' if arch == "x86_64" else '"x86"'
     elif "ARM" in arch.upper():
         command += ' /p:Platform="ARM"'
+
+    if parallel:
+        command += ' /m:%s' % cpu_count()
 
     if targets:
         command += " /target:%s" % ";".join(targets)
