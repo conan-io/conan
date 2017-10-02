@@ -20,8 +20,10 @@ from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.visual_project_files import get_vs_project_files
 from conans.test.utils.context_manager import which
-from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool
+from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
+    set_global_instances
 from conans.util.files import save
+import requests
 
 
 class RunnerMock(object):
@@ -445,26 +447,26 @@ class HelloConan(ConanFile):
         client.save(files)
         client.run("export lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86_64")
-        self.assertTrue("Release|x64", client.user_io.out)
-        self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Release|x64", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
 
         # Try with x86
         client.save(files, clean_first=True)
         client.run("export lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86")
-        self.assertTrue("Release|x86", client.user_io.out)
-        self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Release|x86", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
 
         # Try with x86 debug
         client.save(files, clean_first=True)
         client.run("export lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
-        self.assertTrue("Debug|x86", client.user_io.out)
-        self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Debug|x86", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
 
     def download_retries_test(self):
         out = TestBufferConanOutput()
-
+        set_global_instances(out, requests)
         # Connection error
         with self.assertRaisesRegexp(ConanException, "HTTPConnectionPool"):
             tools.download("http://fakeurl3.es/nonexists",
