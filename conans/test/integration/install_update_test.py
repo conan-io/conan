@@ -5,6 +5,7 @@ import os
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load, save
 from time import sleep
+import time
 
 
 class InstallUpdateTest(unittest.TestCase):
@@ -38,7 +39,6 @@ class InstallUpdateTest(unittest.TestCase):
 
         initial_timestamps = timestamps()
 
-        import time
         time.sleep(1)
 
         # Change and rebuild package
@@ -92,3 +92,34 @@ class InstallUpdateTest(unittest.TestCase):
         package_path = client2.paths.package(PackageReference(ref, package_ids[0]))
         header = load(os.path.join(package_path, "include/helloHello0.h"))
         self.assertEqual(header, "//EMPTY!")
+
+    def remove_old_sources_test(self):
+        # https://github.com/conan-io/conan/issues/1841
+        test_server = TestServer()
+
+        def upload(header_content):
+            client = TestClient(servers={"default": test_server},
+                                users={"default": [("lasote", "mypass")]})
+            base = '''from conans import ConanFile
+class ConanLib(ConanFile):
+    exports_sources = "*"
+    def package(self):
+        self.copy("*")
+'''
+            client.save({"conanfile.py": base,
+                         "header.h": header_content})
+            client.run("create Pkg/0.1@lasote/channel")
+            client.run("upload * --confirm")
+            return client
+
+        client = upload("mycontent1")
+        time.sleep(1)
+        upload("mycontent2")
+
+        # What if we dont do this remove of the package: old pkg is used
+        client.run("remove Pkg/0.1@lasote/channel -p -f")
+        client.run("install Pkg/0.1@lasote/channel -u --build=missing")
+        conan_ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
+        pkg_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        header = os.path.join(client.client_cache.package(pkg_ref), "header.h")
+        self.assertEqual(load(header), "mycontent2")
