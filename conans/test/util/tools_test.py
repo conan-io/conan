@@ -1,6 +1,5 @@
 import os
 import platform
-import tempfile
 import unittest
 
 from collections import namedtuple
@@ -76,9 +75,6 @@ class ToolsTest(unittest.TestCase):
     def test_global_tools_overrided(self):
         client = TestClient()
 
-        tools._global_requester = None
-        tools._global_output = None
-
         conanfile = """
 from conans import ConanFile, tools
 
@@ -87,16 +83,14 @@ class HelloConan(ConanFile):
     version = "0.1"
 
     def build(self):
-        assert(tools._global_requester != None)
-        assert(tools._global_output != None)
+        assert(tools.net._global_requester != None)
+        assert(tools.files._global_output != None)
         """
         client.save({"conanfile.py": conanfile})
         client.run("install -g txt")
         client.run("build")
 
         # Not test the real commmand get_command if it's setting the module global vars
-        tools._global_requester = None
-        tools._global_output = None
         tmp = temp_folder()
         conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
         os.mkdir(os.path.join(tmp, ".conan"))
@@ -104,9 +98,8 @@ class HelloConan(ConanFile):
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
             conan_api = ConanAPIV1.factory()
         conan_api.remote_list()
-        self.assertEquals(tools._global_requester.proxies, {"http": "http://myproxy.com"})
-
-        self.assertIsNotNone(tools._global_output.warn)
+        self.assertEquals(tools.net._global_requester.proxies, {"http": "http://myproxy.com"})
+        self.assertIsNotNone(tools.files._global_output.warn)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):
