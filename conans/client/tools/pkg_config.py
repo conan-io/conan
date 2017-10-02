@@ -3,14 +3,11 @@
 
 import subprocess
 
-_global_output = None
-
-
-def cmd_output(command):
-    return subprocess.check_output(command).decode().strip()
-
 
 class PkgConfig(object):
+    @staticmethod
+    def _cmd_output(command):
+        return subprocess.check_output(command).decode().strip()
 
     def __init__(self, library, pkg_config_executable='pkg-config', static=False, msvc_syntax=False, variables=None):
         """
@@ -26,16 +23,8 @@ class PkgConfig(object):
         self.msvc_syntax = msvc_syntax
         self.define_variables = variables
 
-        variable_names = self._parse_output('print-variables').split()
         self._variables = dict()
-        for name in variable_names:
-            self.variables[name] = self._parse_output('variable=%s' % name)
-
         self.info = dict()
-        for option in ['cflags', 'cflags-only-I', 'cflags-only-other',
-                       'libs', 'libs-only-L', 'libs-only-l', 'libs-only-other',
-                       'print-provides', 'print-requires', 'print-requires-private']:
-            self.info[option] = self._parse_output(option).split()
 
     def _parse_output(self, option):
         command = [self.pkg_config_executable, '--' + option, self.library]
@@ -46,48 +35,57 @@ class PkgConfig(object):
         if self.define_variables:
             for name, value in self.define_variables:
                 command.append('--definevariable=%s=%s' % (name, value))
-        return cmd_output(command)
+        return self._cmd_output(command)
+
+    def _get_option(self, option):
+        if not option in self.info:
+            self.info[option] = self._parse_output(option).split()
+        return self.info[option]
 
     @property
     def cflags(self):
-        return self.info['cflags']
+        return self._get_option('cflags')
 
     @property
     def cflags_only_I(self):
-        return self.info['cflags-only-I']
+        return self._get_option('cflags-only-I')
 
     @property
     def cflags_only_other(self):
-        return self.info['cflags-only-other']
+        return self._get_option('cflags-only-other')
 
     @property
     def libs(self):
-        return self.info['libs']
+        return self._get_option('libs')
 
     @property
     def libs_only_L(self):
-        return self.info['libs-only-L']
+        return self._get_option('libs-only-L')
 
     @property
     def libs_only_l(self):
-        return self.info['libs-only-l']
+        return self._get_option('libs-only-l')
 
     @property
     def libs_only_other(self):
-        return self.info['libs-only-other']
+        return self._get_option('libs-only-other')
 
     @property
     def provides(self):
-        return self.info['print-provides']
+        return self._get_option('print-provides')
 
     @property
     def requires(self):
-        return self.info['print-requires']
+        return self._get_option('print-requires')
 
     @property
     def requires_private(self):
-        return self.info['print-requires-private']
+        return self._get_option('print-requires-private')
 
     @property
     def variables(self):
+        if not self._variables:
+            variable_names = self._parse_output('print-variables').split()
+            for name in variable_names:
+                self._variables[name] = self._parse_output('variable=%s' % name)
         return self._variables
