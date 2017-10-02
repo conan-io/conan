@@ -113,9 +113,14 @@ class _ConanPackageBuilder(object):
         try:
             rmdir(self.build_folder)
             rmdir(package_folder)
-        except Exception as e:
-            raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
-                                 "Close any app using it, and retry" % str(e))
+        except:
+            try:
+                time.sleep(1)
+                rmdir(self.build_folder)
+                rmdir(package_folder)
+            except Exception as e:
+                raise ConanException("%s\n\nCouldn't remove folder, might be busy or open\n"
+                                     "Close any app using it, and retry" % str(e))
 
         self._out.info('Building your package in %s' % self.build_folder)
         config_source(export_folder, export_source_folder, src_folder,
@@ -357,23 +362,27 @@ class ConanInstaller(object):
                 # Assign to node the propagated info
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
-                self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
-                builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)
-                builder.build()
-                builder.package()
+                with self._client_cache.conanfile_lock(conan_ref):
+                    self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
 
-                self._remote_proxy.handle_package_manifest(package_ref, installed=True)
+                with self._client_cache.package_lock(package_ref):
+                    builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)
+                    builder.build()
+                    builder.package()
 
-                # Call the info method
-                call_package_info(conan_file)
+                    self._remote_proxy.handle_package_manifest(package_ref, installed=True)
 
-                # Log build
-                self._log_built_package(conan_file, package_ref, time.time() - t1)
-                self._built_packages.add((conan_ref, package_id))
+                    # Call the info method
+                    call_package_info(conan_file)
+
+                    # Log build
+                    self._log_built_package(conan_file, package_ref, time.time() - t1)
+                    self._built_packages.add((conan_ref, package_id))
             else:
                 # Get the package, we have a not outdated remote package
                 if conan_ref:
-                    self.get_remote_package(conan_file, package_ref, output)
+                    with self._client_cache.package_lock(package_ref):
+                        self._get_remote_package(conan_file, package_ref, output)
 
                 # Assign to the node the propagated info
                 # (conan_ref could be None if user project, but of course assign the info
@@ -382,7 +391,7 @@ class ConanInstaller(object):
                 # Call the info method
                 call_package_info(conan_file)
 
-    def get_remote_package(self, conan_file, package_reference, output):
+    def _get_remote_package(self, conan_file, package_reference, output):
         """Get remote package. It won't check if it's outdated"""
         # Compute conan_file package from local (already compiled) or from remote
 

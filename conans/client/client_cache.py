@@ -14,6 +14,7 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
 from conans.util.files import save, load, normalize
+from conans.util.reader_writer import WriteLock
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -35,6 +36,13 @@ class ClientCache(SimplePaths):
         self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
         self._default_profile = None
         super(ClientCache, self).__init__(self._store_folder)
+
+    def conanfile_lock(self, conan_ref):
+        return WriteLock(os.path.join(self.conan_folder, ".locks", "#".join(conan_ref)))
+
+    def package_lock(self, package_ref):
+        return WriteLock(os.path.join(self.conan_folder, ".locks",
+                                      "%s#%s" % ("#".join(package_ref.conan), package_ref.package_id)))
 
     @property
     def put_headers_path(self):

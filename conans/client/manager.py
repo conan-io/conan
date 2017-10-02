@@ -174,8 +174,9 @@ class ConanManager(object):
                                  "You exported '%s' but already existing '%s'"
                                  % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
-        export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
-                         filename)
+        with self._client_cache.conanfile_lock(conan_ref):
+            export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
+                             filename)
 
     def package_files(self, reference, source_folder, build_folder, package_folder, profile,
                       force):

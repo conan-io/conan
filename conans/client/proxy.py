@@ -123,6 +123,11 @@ class ConanProxy(object):
                                                     current_remote)
 
     def get_recipe(self, conan_reference):
+        with self._client_cache.conanfile_lock(conan_reference):
+            result = self._get_recipe(conan_reference)
+        return result
+
+    def _get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
 
         def _refresh():
