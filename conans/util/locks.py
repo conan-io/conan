@@ -1,33 +1,29 @@
 import fasteners
 from conans.util.log import logger
+import time
+from conans.util.files import save, load
 
 
-class WriteLock(object):
+class SimpleLock(object):
     def __init__(self, folder):
         filename = folder + ".lock"
         self._filename = filename
         self._lock = fasteners.InterProcessLock(filename, logger=logger)
 
     def __enter__(self):
-        pass
-        print "locking ", self._filename
         self._lock.acquire()
-        print "Locked ", self._filename
 
     def __exit__(self, exc_type, exc_val, exc_tb):  # @UnusedVariable
-        pass
-        print "unlocking ", self._filename
         self._lock.release()
-        print "unlocked ", self._filename
 
-"""READ_BUSY_DELAY = 0.5
+
+READ_BUSY_DELAY = 0.5
 WRITE_BUSY_DELAY = 0.25
 
 
 class Lock(object):
 
     def __init__(self, folder):
-        self._folder = folder
         self._count_file = folder + ".count"
         self._count_lock_file = folder + ".count.lock"
 
@@ -69,4 +65,3 @@ class WriteLock(Lock):
     def __exit__(self, exc_type, exc_val, exc_tb):  # @UnusedVariable
         with fasteners.InterProcessLock(self._count_lock_file, logger=logger):
             save(self._count_file, "0")
-"""

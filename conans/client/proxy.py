@@ -123,7 +123,7 @@ class ConanProxy(object):
                                                     current_remote)
 
     def get_recipe(self, conan_reference):
-        with self._client_cache.conanfile_lock(conan_reference):
+        with self._client_cache.conanfile_write_lock(conan_reference):
             result = self._get_recipe(conan_reference)
         return result
 

@@ -1,6 +1,7 @@
 import os
 from collections import OrderedDict
 from genericpath import isdir
+import fasteners
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
 from conans.client.detect import detect_defaults_settings
@@ -14,7 +15,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
 from conans.util.files import save, load, normalize
-from conans.util.reader_writer import WriteLock
+from conans.util.locks import SimpleLock, ReadLock, WriteLock
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -37,12 +39,15 @@ class ClientCache(SimplePaths):
         self._default_profile = None
         super(ClientCache, self).__init__(self._store_folder)
 
-    def conanfile_lock(self, conan_ref):
+    def conanfile_read_lock(self, conan_ref):
+        return ReadLock(os.path.join(self.conan_folder, ".locks", "#".join(conan_ref)))
+
+    def conanfile_write_lock(self, conan_ref):
         return WriteLock(os.path.join(self.conan_folder, ".locks", "#".join(conan_ref)))
 
     def package_lock(self, package_ref):
-        return WriteLock(os.path.join(self.conan_folder, ".locks",
-                                      "%s#%s" % ("#".join(package_ref.conan), package_ref.package_id)))
+        return SimpleLock(os.path.join(self.conan_folder, ".locks",
+                                       "%s#%s" % ("#".join(package_ref.conan), package_ref.package_id)))
 
     @property
     def put_headers_path(self):
