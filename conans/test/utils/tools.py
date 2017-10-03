@@ -37,6 +37,7 @@ from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.util.files import save_files, save
 from conans.util.log import logger
+from conans.tools import set_global_instances
 
 
 class TestingResponse(object):
@@ -388,9 +389,7 @@ class TestClient(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
-        # Patch the globals in tools
-        tools._global_requester = requests
-        tools._global_output = self.user_io.out
+        set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
