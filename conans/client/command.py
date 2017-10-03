@@ -281,19 +281,20 @@ class Command(object):
                                        remote=args.remote, werror=args.werror,
                                        verify=args.verify, manifests=args.manifests,
                                        manifests_interactive=args.manifests_interactive,
-                                       build=args.build, profile_name=args.profile, update=args.update,
-                                       generator=args.generator, no_imports=args.no_imports,
-                                       filename=args.file, cwd=args.cwd)
-
-        return self._conan.install_reference(reference, settings=args.settings, options=args.options,
-                                             env=args.env, scope=args.scope,
-                                             remote=args.remote, werror=args.werror,
-                                             verify=args.verify, manifests=args.manifests,
-                                             manifests_interactive=args.manifests_interactive,
-                                             build=args.build, profile_name=args.profile,
-                                             update=args.update,
-                                             generator=args.generator,
-                                             cwd=args.cwd)
+                                       build=args.build, profile_name=args.profile,
+                                       update=args.update, generator=args.generator,
+                                       no_imports=args.no_imports, filename=args.file, cwd=args.cwd)
+        else:
+            return self._conan.install_reference(reference, settings=args.settings,
+                                                 options=args.options,
+                                                 env=args.env, scope=args.scope,
+                                                 remote=args.remote, werror=args.werror,
+                                                 verify=args.verify, manifests=args.manifests,
+                                                 manifests_interactive=args.manifests_interactive,
+                                                 build=args.build, profile_name=args.profile,
+                                                 update=args.update,
+                                                 generator=args.generator,
+                                                 cwd=args.cwd)
 
     def config(self, *args):
         """Manages conan configuration information
