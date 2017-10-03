@@ -19,34 +19,34 @@ class InstallSelectedPackagesTest(unittest.TestCase):
 
     def install_all_test(self):
         # Should retrieve the three packages
-        self.new_client.run("install Hello0/0.1@lasote/stable --all")
+        self.new_client.run("download Hello0/0.1@lasote/stable")
         p1 = os.path.join(self.new_client.paths.packages(self.ref))
         packages = os.listdir(p1)
         self.assertEquals(len(packages), 3)
 
     def install_some_reference_test(self):
         # Should retrieve the specified packages
-        self.new_client.run("install Hello0/0.1@lasote/stable -p %s" % self.package_ids[0])
+        self.new_client.run("download Hello0/0.1@lasote/stable -p %s" % self.package_ids[0])
         packages = os.listdir(self.new_client.paths.packages(self.ref))
         self.assertEquals(len(packages), 1)
         self.assertEquals(packages[0], self.package_ids[0])
 
-        self.new_client.run("install Hello0/0.1@lasote/stable -p %s -p %s" % (self.package_ids[0],
-                                                                              self.package_ids[1]))
+        self.new_client.run("download Hello0/0.1@lasote/stable -p %s -p %s" % (self.package_ids[0],
+                                                                               self.package_ids[1]))
         packages = os.listdir(self.new_client.paths.packages(self.ref))
         self.assertEquals(len(packages), 2)
 
     def download_recipe_twice_test(self):
         expected_conanfile_contents = self.files[CONANFILE]
-        self.new_client.run("install Hello0/0.1@lasote/stable --all")
+        self.new_client.run("download Hello0/0.1@lasote/stable")
         got_conanfile = load(os.path.join(self.new_client.paths.export(self.ref), CONANFILE))
         self.assertEquals(expected_conanfile_contents, got_conanfile)
 
-        self.new_client.run("install Hello0/0.1@lasote/stable --all")
+        self.new_client.run("download Hello0/0.1@lasote/stable")
         got_conanfile = load(os.path.join(self.new_client.paths.export(self.ref), CONANFILE))
         self.assertEquals(expected_conanfile_contents, got_conanfile)
 
-        self.new_client.run("install Hello0/0.1@lasote/stable --all")
+        self.new_client.run("download Hello0/0.1@lasote/stable")
         got_conanfile = load(os.path.join(self.new_client.paths.export(self.ref), CONANFILE))
         self.assertEquals(expected_conanfile_contents, got_conanfile)
 
@@ -54,15 +54,15 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         expected_header_contents = self.files["helloHello0.h"]
         package_folder = self.new_client.paths.package(PackageReference(self.ref, self.package_ids[0]))
 
-        self.new_client.run("install Hello0/0.1@lasote/stable --all")
+        self.new_client.run("download Hello0/0.1@lasote/stable")
         got_header = load(os.path.join(package_folder, "include", "helloHello0.h"))
         self.assertEquals(expected_header_contents, got_header)
 
-        self.new_client.run("install Hello0/0.1@lasote/stable --all")
+        self.new_client.run("download Hello0/0.1@lasote/stable")
         got_header = load(os.path.join(package_folder, "include", "helloHello0.h"))
         self.assertEquals(expected_header_contents, got_header)
 
-        self.new_client.run("install Hello0/0.1@lasote/stable --all")
+        self.new_client.run("download Hello0/0.1@lasote/stable")
         got_header = load(os.path.join(package_folder, "include", "helloHello0.h"))
         self.assertEquals(expected_header_contents, got_header)
 
@@ -72,7 +72,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         self.new_client.run("remove Hello* -f -r default")
 
         # Try to install all
-        self.new_client.run("install Hello0/0.1@lasote/stable --all", ignore_error=True)
+        self.new_client.run("download Hello0/0.1@lasote/stable", ignore_error=True)
         self.assertIn("'Hello0/0.1@lasote/stable' not found in remote", self.new_client.user_io.out)
 
         # Upload only the recipe
@@ -81,7 +81,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
         self.new_client.run("upload  Hello0/0.1@lasote/stable --all")
 
         # And try to download all
-        self.new_client.run("install Hello0/0.1@lasote/stable --all")
+        self.new_client.run("download Hello0/0.1@lasote/stable")
         self.assertIn("No remote binary packages found in remote", self.new_client.user_io.out)
 
     def _upload_some_packages(self, client):

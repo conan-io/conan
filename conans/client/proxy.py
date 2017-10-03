@@ -384,6 +384,7 @@ class ConanProxy(object):
         for package_id in package_ids:
             package_ref = PackageReference(reference, package_id)
             package_folder = self._client_cache.package(package_ref, short_paths=short_paths)
+            self._out.info("Downloading %s" % str(package_ref))
             self._retrieve_remote_package(package_ref, package_folder, output, remote)
 
     def _retrieve_remote_package(self, package_ref, package_folder, output, remote=None):

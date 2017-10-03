@@ -224,23 +224,38 @@ class Command(object):
                                          profile_name=args.profile, force=args.force,
                                          settings=args.settings, options=args.options)
 
-    def install(self, *args):
-        """Installs the requirements specified in a 'conanfile.py' or 'conanfile.txt'.
-           It can also be used to install a concrete recipe/package specified by the reference parameter.
-           If the recipe is not found in the local cache it will retrieve the recipe from a remote,
-           looking for it sequentially in the available configured remotes.
-           When the recipe has been downloaded it will try to download a binary package matching
-           the specified settings, only from the remote from which the recipe was retrieved.
-           If no binary package is found you can build the package from sources using the '--build' option.
-        """
-        parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
-        parser.add_argument("reference", nargs='?', default="",
-                            help='package recipe reference'
-                            'e.g., MyPackage/1.2@user/channel or ./my_project/')
+    def download(self, *args):
+        """Downloads a conan package to the local cache without using settings by specifying the
+        package ID to be installed. If only a reference is specified, it will download all packages
+        in the specified remote. If no remote is specified will search sequentially in the available
+        configured remotes."""
+
+        parser = argparse.ArgumentParser(description=self.download.__doc__, prog="conan download")
+        parser.add_argument("reference",
+                            help='package recipe reference e.g., MyPackage/1.2@user/channel')
         parser.add_argument("--package", "-p", nargs=1, action=Extender,
                             help='Force install specified package ID (ignore settings/options)')
-        parser.add_argument("--all", action='store_true', default=False,
-                            help='Install all packages from the specified package recipe')
+        parser.add_argument("-r", "--remote", help='look in the specified remote server')
+
+        args = parser.parse_args(*args)
+        reference = ConanFileReference.loads(args.reference)
+
+        return self._conan.download(reference=reference, package=args.package, remote=args.remote)
+
+    def install(self, *args):
+        """Installs the requirements specified in a 'conanfile.py' or 'conanfile.txt'.
+           If any requirement is not found in the local cache it will retrieve the recipe from a
+           remote, looking for it sequentially in the available configured remotes.
+           When the recipes have been downloaded it will try to download a binary package matching
+           the specified settings, only from the remote from which the recipe was retrieved.
+           If no binary package is found you can build the package from sources using the '--build'
+           option.
+           It can also be used to install a concrete recipe/package specifying a reference in the
+           "path" parameter.
+        """
+        parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
+        parser.add_argument("path", nargs='?', default="",
+                            help='path to conanfile.py. e.g., ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
@@ -257,15 +272,28 @@ class Command(object):
 
         args = parser.parse_args(*args)
 
-        return self._conan.install(reference=args.reference, package=args.package,
-                                   settings=args.settings, options=args.options,
-                                   env=args.env, scope=args.scope, all=args.all,
-                                   remote=args.remote, werror=args.werror,
-                                   verify=args.verify, manifests=args.manifests,
-                                   manifests_interactive=args.manifests_interactive,
-                                   build=args.build, profile_name=args.profile, update=args.update,
-                                   generator=args.generator, no_imports=args.no_imports,
-                                   filename=args.file, cwd=args.cwd)
+        try:
+            reference = ConanFileReference.loads(args.path)
+        except ConanException:
+            return self._conan.install(path=args.path,
+                                       settings=args.settings, options=args.options,
+                                       env=args.env, scope=args.scope,
+                                       remote=args.remote, werror=args.werror,
+                                       verify=args.verify, manifests=args.manifests,
+                                       manifests_interactive=args.manifests_interactive,
+                                       build=args.build, profile_name=args.profile, update=args.update,
+                                       generator=args.generator, no_imports=args.no_imports,
+                                       filename=args.file, cwd=args.cwd)
+
+        return self._conan.install_reference(reference, settings=args.settings, options=args.options,
+                                             env=args.env, scope=args.scope,
+                                             remote=args.remote, werror=args.werror,
+                                             verify=args.verify, manifests=args.manifests,
+                                             manifests_interactive=args.manifests_interactive,
+                                             build=args.build, profile_name=args.profile,
+                                             update=args.update,
+                                             generator=args.generator,
+                                             cwd=args.cwd)
 
     def config(self, *args):
         """Manages conan configuration information

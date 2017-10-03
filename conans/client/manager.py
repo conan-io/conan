@@ -241,6 +241,8 @@ class ConanManager(object):
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
         else:
+            self._user_io.out.info("Getting the complete package list "
+                                   "from '%s'..." % str(reference))
             packages_props = remote_proxy.search_packages(reference, None)
             if not packages_props:
                 output = ScopedOutput(str(reference), self._user_io.out)
