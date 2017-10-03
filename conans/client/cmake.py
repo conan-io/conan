@@ -171,7 +171,7 @@ class CMake(object):
             platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
             if (platform_os != the_os) or os_ver:  # We are cross building
                 if the_os:
-                    ret["CMAKE_SYSTEM_NAME"] = the_os
+                    ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS", "watchOS"] else the_os
                     if os_ver:
                         ret["CMAKE_SYSTEM_VERSION"] = os_ver
                 else:
