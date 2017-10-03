@@ -113,11 +113,15 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None, auth=None, retry=1, retry_wait=0):
+    def download(self, url, file_path=None, auth=None, retry=1, retry_wait=0, overwrite=False):
 
         if file_path and os.path.exists(file_path):
-            # Should not happen, better to raise, probably we had to remove the dest folder before
-            raise ConanException("Error, the file to download already exists: '%s'" % file_path)
+            if overwrite:
+                if self.output:
+                    self.output.warn("file '%s' already exists, overwriting" % file_path)
+            else:
+                # Should not happen, better to raise, probably we had to remove the dest folder before
+                raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
         t1 = time.time()
         ret = bytearray()

@@ -485,3 +485,16 @@ class HelloConan(ConanFile):
                        retry=3, retry_wait=0)
 
         self.assertTrue(os.path.exists(dest))
+
+        # overwrite = False
+        with self.assertRaises(ConanException):
+            tools.download("http://www.zlib.net/manual.html",
+                           dest, out=out,
+                           retry=3, retry_wait=0, overwrite=False)
+
+        # overwrite = True
+        tools.download("http://www.zlib.net/manual.html",
+                       dest, out=out,
+                       retry=3, retry_wait=0, overwrite=True)
+
+        self.assertTrue(os.path.exists(dest))
