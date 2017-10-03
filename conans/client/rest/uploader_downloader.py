@@ -113,7 +113,8 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None, auth=None, retry=1, retry_wait=0, overwrite=False):
+    def download(self, url, file_path=None, auth=None, retry=1, retry_wait=0, overwrite=False,
+                 headers=None):
 
         if file_path and os.path.exists(file_path):
             if overwrite:
@@ -125,7 +126,7 @@ class Downloader(object):
 
         t1 = time.time()
         ret = bytearray()
-        response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth)
+        response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth, headers)
         if not response.ok:  # Do not retry if not found or whatever controlled error
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
@@ -173,9 +174,10 @@ class Downloader(object):
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))
 
-    def _download_file(self, url, auth):
+    def _download_file(self, url, auth, headers):
         try:
-            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
+            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
+                                          headers=headers)
         except Exception as exc:
             raise ConanException("Error downloading file %s: '%s'" % (url, exception_message_safe(exc)))
 
