@@ -1,7 +1,7 @@
 from conans.errors import ConanException, ConanConnectionError
 from conans.util.log import logger
 import traceback
-from conans.util.files import save, sha1sum, exception_message_safe
+from conans.util.files import save, sha1sum, exception_message_safe, to_file_bytes, mkdir
 import os
 import time
 from conans.util.tracer import log_download
@@ -141,23 +141,38 @@ class Downloader(object):
                     print_progress(self.output, 50, progress)
                     save(file_path, response.content, append=True)
             else:
-                dl = 0
                 total_length = int(total_length)
-                last_progress = None
-                chunk_size = 1024 if not file_path else 1024 * 100
-                for data in response.iter_content(chunk_size=chunk_size):
-                    dl += len(data)
-                    if not file_path:
-                        ret.extend(data)
-                    else:
-                        save(file_path, data, append=True)
 
-                    units = progress_units(dl, total_length)
-                    progress = human_readable_progress(dl, total_length)
-                    if last_progress != units:  # Avoid screen refresh if nothing has change
-                        if self.output:
-                            print_progress(self.output, units, progress)
-                        last_progress = units
+                def download_chunks(file_handler=None, ret_buffer=None):
+                    """Write to a buffer or to a file handler"""
+                    chunk_size = 1024 if not file_path else 1024 * 100
+                    download_size = 0
+                    last_progress = None
+                    for data in response.iter_content(chunk_size=chunk_size):
+                        download_size += len(data)
+                        if ret_buffer is not None:
+                            ret_buffer.extend(data)
+                        if file_handler is not None:
+                            file_handler.write(to_file_bytes(data))
+
+                        units = progress_units(download_size, total_length)
+                        progress = human_readable_progress(download_size, total_length)
+                        if last_progress != units:  # Avoid screen refresh if nothing has change
+                            if self.output:
+                                print_progress(self.output, units, progress)
+                            last_progress = units
+                    return download_size
+
+                if file_path:
+                    mkdir(os.path.dirname(file_path))
+                    with open(file_path, 'ab') as handle:
+                        dl_size = download_chunks(file_handler=handle)
+                else:
+                    dl_size = download_chunks(ret_buffer=ret)
+
+                if dl_size != total_length:
+                    raise ConanException("Transfer interrupted before "
+                                         "complete: %s < %s" % (dl_size, total_length))
 
             duration = time.time() - t1
             log_download(url, duration)
