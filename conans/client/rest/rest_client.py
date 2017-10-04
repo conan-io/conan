@@ -252,7 +252,8 @@ class RestApiClient(object):
             raise AuthenticationException("Wrong user or password")
         # Cannot check content-type=text/html, conan server is doing it wrong
         if not ret.ok or "html>" in str(ret.content):
-            raise ConanException("Invalid server response, check remote URL and try again")
+            raise ConanException("%s\n\nInvalid server response, check remote URL and "
+                                 "try again" % str(ret.content))
         duration = time.time() - t1
         log_client_rest_api_call(url, "GET", duration, self.custom_headers)
         return ret
