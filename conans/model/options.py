@@ -2,6 +2,7 @@ from conans.util.sha import sha1
 from conans.errors import ConanException
 import yaml
 import six
+import fnmatch
 
 
 _falsey_options = ["false", "none", "0", "off", ""]
@@ -413,7 +414,7 @@ class PackageOptions(object):
             self._check_field(name)
             self._data[name].value = value
 
-    def propagate_upstream(self, package_values, down_ref, own_ref, output):
+    def propagate_upstream(self, package_values, down_ref, own_ref, output, ignore_unknown=False):
         if not package_values:
             return
 
@@ -430,8 +431,13 @@ class PackageOptions(object):
                               % (down_ref, own_ref, name, value, modified_value, modified_ref))
             else:
                 self._modified[name] = (value, down_ref)
-                self._check_field(name)
-                self._data[name].value = value
+
+                if ignore_unknown:
+                    if name in self._data:
+                        self._data[name].value = value
+                else:
+                    self._check_field(name)
+                    self._data[name].value = value
 
 
 class Options(object):
@@ -487,15 +493,26 @@ class Options(object):
         for k, v in v._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
+
     def propagate_upstream(self, down_package_values, down_ref, own_ref, output):
         """ used to propagate from downstream the options to the upper requirements
         """
         if not down_package_values:
             return
 
+        def _get_matching(package_values, name):
+            for i in package_values.keys():
+                if fnmatch.fnmatch(name, i):
+                    return package_values[i]
+            return None
+
         assert isinstance(down_package_values, dict)
         option_values = down_package_values.get(own_ref.name)
-        self._package_options.propagate_upstream(option_values, down_ref, own_ref, output)
+        self._package_options.propagate_upstream(option_values, down_ref, own_ref, output, ignore_unknown=False)
+        if not option_values:
+            option_values = _get_matching(down_package_values, own_ref.name)
+            self._package_options.propagate_upstream(option_values, down_ref, own_ref, output, ignore_unknown=True)
+
         for name, option_values in sorted(list(down_package_values.items())):
             if name != own_ref.name:
                 pkg_values = self._deps_package_values.setdefault(name, PackageOptionValues())
