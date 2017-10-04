@@ -1,6 +1,7 @@
 from conans.server.rest.controllers.controller import Controller
-from conans.errors import AuthenticationException, ForbiddenException
+from conans.errors import AuthenticationException
 from conans.server.service.user_service import UserService
+from bottle import response
 
 
 class UsersController(Controller):
@@ -20,6 +21,7 @@ class UsersController(Controller):
             token = user_service.authenticate(http_basic_credentials.user,
                                               http_basic_credentials.password)
 
+            response.content_type = 'text/plain'
             return token
 
         @app.route(self.route + '/check_credentials', method=["GET"])
@@ -28,4 +30,5 @@ class UsersController(Controller):
             is raised from Bottle plugin"""
             if not auth_user:
                 raise AuthenticationException("Logged user needed!")
+            response.content_type = 'text/plain'
             return auth_user
