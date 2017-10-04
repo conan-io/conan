@@ -16,7 +16,7 @@ from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestRequester
 from conans.test.utils.visual_project_files import get_vs_project_files
 from conans.test.utils.context_manager import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
@@ -493,3 +493,15 @@ class HelloConan(ConanFile):
                        retry=3, retry_wait=0, overwrite=True)
 
         self.assertTrue(os.path.exists(dest))
+
+        # Not authorized
+        with self.assertRaises(ConanException):
+            tools.download("https://httpbin.org/basic-auth/user/passwd", dest, overwrite=True)
+
+        # Authorized
+        tools.download("https://httpbin.org/basic-auth/user/passwd", dest, auth=("user", "passwd"),
+                       overwrite=True)
+
+        # Authorized using headers
+        tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
+                       headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
