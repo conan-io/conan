@@ -1,7 +1,7 @@
 import os
-import urllib
 
 from six.moves.configparser import ConfigParser, NoSectionError
+from six.moves import urllib
 
 from conans.errors import ConanException
 from conans.model.env_info import unquote
@@ -19,12 +19,16 @@ os:
     Android:
         api_level: ANY
     iOS:
-        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3"]
+        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0"]
+    watchOS:
+        version: ["4.0"]
+    tvOS:
+        version: ["11.0"]
     FreeBSD:
     SunOS:
     Arduino:
         board: ANY
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr]
+arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
 compiler:
     sun-cc:
         version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
@@ -39,7 +43,7 @@ compiler:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0"]
@@ -150,6 +154,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
 
                }
+
         # Filter None values
         return {name: value for name, value in ret.items() if value is not None}
 
@@ -273,7 +278,19 @@ class ConanClientConfigParser(ConfigParser, object):
             proxies = self.get_conf("proxies")
             # If there is proxies section, but empty, it will try to use system proxy
             if not proxies:
-                return urllib.getproxies()
-            return dict(proxies)
+                # We don't have evidences that this following line is necessary.
+                # If the proxies has been
+                # configured at system level, conan will use it, and shouldn't be necessary
+                # to return here the proxies read from the system.
+                # Furthermore, the urls excluded for use proxies at system level do not work in
+                # this case, then the only way is to remove the [proxies] section with
+                # conan config remote proxies, then this method will return None and the proxies
+                # dict passed to requests will be empty.
+                # We don't remove this line because we are afraid to break something, but maybe
+                # until now is working because no one is using system-wide proxies or those proxies
+                # rules don't contain excluded urls.c #1777
+                return urllib.request.getproxies()
+            result = {k: (None if v == "None" else v) for k, v in proxies}
+            return result
         except:
             return None

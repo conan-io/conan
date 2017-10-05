@@ -765,6 +765,10 @@ class Command(object):
         parser_update.add_argument('item', help='key="value to set", e.j: settings.compiler=gcc')
         parser_update.add_argument('profile',  help='name of the profile')
 
+        parser_get = subparsers.add_parser('get', help='Get a profile key')
+        parser_get.add_argument('item', help='key="value to get", e.j: settings.compiler')
+        parser_get.add_argument('profile',  help='name of the profile')
+
         parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
         parser_remove.add_argument('item', help='key", e.j: settings.compiler')
         parser_remove.add_argument('profile',  help='name of the profile')
@@ -787,6 +791,9 @@ class Command(object):
             except:
                 raise ConanException("Please specify key=value")
             self._conan.update_profile(profile, key, value)
+        elif args.subcommand == "get":
+            key = args.item
+            self._outputer.writeln(self._conan.get_profile_key(profile, key))
         elif args.subcommand == "remove":
             self._conan.delete_profile_key(profile, args.item)
 

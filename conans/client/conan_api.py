@@ -37,13 +37,20 @@ from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
 from conans.client import settings_preprocessor
+from conans.tools import set_global_instances
 
 default_manifest_folder = '.conan_manifests'
 
 
 def get_basic_requester(client_cache):
     requester = requests.Session()
-    requester.proxies = client_cache.conan_config.proxies
+    proxies = client_cache.conan_config.proxies
+    if proxies:
+        # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
+        no_proxy = proxies.pop("no_proxy", None)
+        if no_proxy:
+            os.environ["NO_PROXY"] = no_proxy
+        requester.proxies = proxies
     return requester
 
 
@@ -142,8 +149,7 @@ class ConanAPIV1(object):
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
                                      settings_preprocessor)
         # Patch the tools module with a good requester and user_io
-        tools._global_requester = get_basic_requester(self._client_cache)
-        tools._global_output = self._user_io.out
+        set_global_instances(self._user_io.out, get_basic_requester(self._client_cache))
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False, cwd=None,
@@ -692,6 +698,26 @@ class ConanAPIV1(object):
         contents = profile.dumps()
         profile_path = get_profile_path(profile_name, self._client_cache.profiles_path, os.getcwd())
         save(profile_path, contents)
+
+    @api_method
+    def get_profile_key(self, profile_name, key):
+        first_key, rest_key = self._get_profile_keys(key)
+        profile, _ = read_profile(profile_name, os.getcwd(), self._client_cache.profiles_path)
+        try:
+            if first_key == "settings":
+                return profile.settings[rest_key]
+            elif first_key == "options":
+                return dict(profile.options.as_list())[rest_key]
+            elif first_key == "env":
+                package = None
+                var = rest_key
+                if ":" in rest_key:
+                    package, var = rest_key.split(":")
+                return profile.env_values.data[package][var]
+            elif first_key == "build_requires":
+                raise ConanException("List the profile manually to see the build_requires")
+        except KeyError:
+            raise ConanException("Key not found: '%s'" % key)
 
     @api_method
     def delete_profile_key(self, profile_name, key):
