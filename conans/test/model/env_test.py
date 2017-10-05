@@ -80,7 +80,7 @@ class EnvInfoTest(unittest.TestCase):
 
     def assign_test(self):
         env = DepsEnvInfo()
-        env.foo = "var"
+        env.foo = ["var"]
         env.foo.append("var2")
         env.foo2 = "var3"
         env.foo2 = "var4"
@@ -90,7 +90,7 @@ class EnvInfoTest(unittest.TestCase):
 
     def update_test(self):
         env = DepsEnvInfo()
-        env.foo = "var"
+        env.foo = ["var"]
         env.foo.append("var2")
         env.foo2 = "var3"
         env.foo2 = "var4"

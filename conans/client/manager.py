@@ -117,7 +117,7 @@ class ConanManager(object):
         self._settings_preprocessor = settings_preprocessor
 
     def load_consumer_conanfile(self, conanfile_path, current_path, output, reference=None,
-                                deps_cpp_info_required=False):
+                                deps_info_required=False):
 
         profile = read_conaninfo_profile(current_path) or self._client_cache.default_profile
         loader = self.get_loader(profile)
@@ -126,8 +126,8 @@ class ConanManager(object):
             conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
-        if deps_cpp_info_required is not None:
-            _load_deps_cpp_info(current_path, conanfile, required=deps_cpp_info_required)
+        if deps_info_required is not None:
+            _load_deps_info(current_path, conanfile, required=deps_info_required)
         return conanfile
 
     def get_loader(self, profile):
@@ -357,7 +357,9 @@ class ConanManager(object):
         @param generators: List of generators from command line
         @param no_imports: Install specified packages but avoid running imports
         """
-        generators = generators or []
+        generators = set(generators) if generators else set()
+        generators.add("txt")  # Add txt generator by default
+
         manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
                                            client_cache=self._client_cache,
                                            verify=manifest_verify,
@@ -431,14 +433,14 @@ class ConanManager(object):
             output = ScopedOutput("PROJECT", self._user_io.out)
             conanfile_path = os.path.join(reference, CONANFILE)
             conanfile = self.load_consumer_conanfile(conanfile_path, current_path,
-                                                     output, deps_cpp_info_required=None)
+                                                     output, deps_info_required=True)  # Need env
             config_source_local(current_path, conanfile, output)
         else:
             output = ScopedOutput(str(reference), self._user_io.out)
             conanfile_path = self._client_cache.conanfile(reference)
             conanfile = self.load_consumer_conanfile(conanfile_path, current_path,
-                                                     output, reference=reference,
-                                                     deps_cpp_info_required=None)
+                                                     output, reference=reference)
+
             src_folder = self._client_cache.source(reference, conanfile.short_paths)
             export_folder = self._client_cache.export(reference)
             export_src_folder = self._client_cache.export_sources(reference, conanfile.short_paths)
@@ -463,7 +465,7 @@ class ConanManager(object):
 
         conanfile = self.load_consumer_conanfile(conan_file_path, current_path,
                                                  output, reference=reference,
-                                                 deps_cpp_info_required=True)
+                                                 deps_info_required=True)
 
         if dest_folder:
             if not os.path.isabs(dest_folder):
@@ -711,13 +713,13 @@ class AliasConanfile(ConanFile):
         save(os.path.join(export_path, CONAN_MANIFEST), str(digest))
 
 
-def _load_deps_cpp_info(current_path, conanfile, required):
+def _load_deps_info(current_path, conanfile, required):
 
     def get_forbidden_access_object(field_name):
         class InfoObjectNotDefined(object):
             def __getitem__(self, item):
                 raise ConanException("self.%s not defined. If you need it for a "
-                                     "local command run 'conan install -g txt'" % field_name)
+                                     "local command run 'conan install'" % field_name)
             __getattr__ = __getitem__
 
         return InfoObjectNotDefined()
@@ -726,13 +728,14 @@ def _load_deps_cpp_info(current_path, conanfile, required):
         return
     info_file_path = os.path.join(current_path, BUILD_INFO)
     try:
-        deps_cpp_info, deps_user_info = TXTGenerator.loads(load(info_file_path))
+        deps_cpp_info, deps_user_info, deps_env_info = TXTGenerator.loads(load(info_file_path))
         conanfile.deps_cpp_info = deps_cpp_info
         conanfile.deps_user_info = deps_user_info
+        conanfile.deps_env_info = deps_env_info
     except IOError:
         if required:
             raise ConanException("%s file not found in %s\nIt is required for this command\n"
-                                 "You can generate it using 'conan install -g txt'"
+                                 "You can generate it using 'conan install'"
                                  % (BUILD_INFO, current_path))
         conanfile.deps_cpp_info = get_forbidden_access_object("deps_cpp_info")
         conanfile.deps_user_info = get_forbidden_access_object("deps_user_info")

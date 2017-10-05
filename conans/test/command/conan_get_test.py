@@ -75,7 +75,6 @@ class HelloConan(ConanFile):
 [recipe_hash]
     dcb3ad84f4e46fb3da40dbbea0017094
 
-[env]
 """, self.client.user_io.out)
 
         # List package dir

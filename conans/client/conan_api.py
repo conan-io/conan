@@ -400,6 +400,7 @@ class ConanAPIV1(object):
         cwd = prepare_cwd(cwd)
         path = os.path.normpath(os.path.join(cwd, path))
 
+
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
 
