@@ -116,8 +116,8 @@ class ConanLib(ConanFile):
         time.sleep(1)
         upload("mycontent2")
 
-        # What if we dont do this remove of the package: old pkg is used
-        client.run("remove Pkg/0.1@lasote/channel -p -f")
+        # This is no longer necessary, as binary packages are removed when recipe is updated
+        # client.run("remove Pkg/0.1@lasote/channel -p -f")
         client.run("install Pkg/0.1@lasote/channel -u --build=missing")
         conan_ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")
         pkg_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
