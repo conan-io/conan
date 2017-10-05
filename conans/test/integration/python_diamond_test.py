@@ -35,7 +35,7 @@ class PythonDiamondTest(unittest.TestCase):
                       " ".join(str(self.client.user_io.out).splitlines()))
         self.assertNotIn("Project: Build stuff Hello3", self.client.user_io.out)
 
-        self.client.run("build")
+        self.client.run("build .")
         self.assertIn("Project: Build stuff Hello3", self.client.user_io.out)
 
         if platform.system() == "Windows":

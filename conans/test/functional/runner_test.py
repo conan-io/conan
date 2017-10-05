@@ -13,7 +13,7 @@ class RunnerTest(unittest.TestCase):
         self.assertFalse(os.path.exists(test_folder))
         client.save(files)
         client.run("install")
-        client.run("build")
+        client.run("build .")
         return client
 
     def basic_test(self):
@@ -119,7 +119,7 @@ class ConanFileToolsTest(ConanFile):
         self.assertFalse(os.path.exists(test_folder))
         client.save(files)
         client.run("install")
-        client.run("build")
+        client.run("build .")
         self.assertTrue(os.path.exists(test_folder))
 
     def cwd_error_test(self):
@@ -141,7 +141,7 @@ class ConanFileToolsTest(ConanFile):
         self.assertFalse(os.path.exists(test_folder))
         client.save(files)
         client.run("install")
-        error = client.run("build", ignore_error=True)
+        error = client.run("build .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Error while executing 'mkdir test_folder'", client.user_io.out)
         self.assertFalse(os.path.exists(test_folder))

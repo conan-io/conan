@@ -21,7 +21,7 @@ class BasicBuildTest(unittest.TestCase):
 
         client.save(files)
         client.run(cmd)
-        client.run('build')
+        client.run('build .')
         ld_path = ("LD_LIBRARY_PATH=`pwd`"
                    if not static and not platform.system() == "Windows" else "")
         command = os.sep.join([".", "bin", "say_hello"])

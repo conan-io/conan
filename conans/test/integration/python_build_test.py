@@ -74,7 +74,7 @@ class PythonBuildTest(unittest.TestCase):
         client.run("install .  -g txt")
         self.assertIn("Hello Bar", client.user_io.out)
         self.assertNotIn("Hello Foo", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertNotIn("Hello Bar", client.user_io.out)
         self.assertIn("Hello Foo", client.user_io.out)
 
@@ -235,7 +235,7 @@ class ToolsTest(ConanFile):
 """
         client.save({CONANFILE: reuse})
         client.run("install --build -e PYTHONPATH=['%s']" % external_dir)
-        client.run("build")
+        client.run("build .")
         info = ConanInfo.loads(load(os.path.join(client.current_folder, "conaninfo.txt")))
         pythonpath = info.env_values.env_dicts(None)[1]["PYTHONPATH"]
         self.assertEquals(os.path.normpath(pythonpath[0]), os.path.normpath(external_dir))

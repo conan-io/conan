@@ -32,7 +32,7 @@ from conans.model.version import Version
 from conans.paths import CONANFILE, get_conan_user_home
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, save_files, exception_message_safe, save
+from conans.util.files import rmdir, save_files, exception_message_safe, save, mkdir
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
@@ -472,25 +472,31 @@ class ConanAPIV1(object):
         return deps_graph, graph_updates_info, project_reference
 
     @api_method
-    def build(self, path="", source_folder=None, package_folder=None, filename=None, cwd=None):
+    def build(self, path, source_folder=None, package_folder=None, filename=None,
+              build_folder=None):
 
-        current_path = prepare_cwd(cwd)
-        if path:
-            root_path = os.path.abspath(path)
-        else:
-            root_path = current_path
+        conanfile_folder = os.path.abspath(path)
 
-        build_folder = current_path
-        source_folder = source_folder or root_path
-        if not os.path.isabs(source_folder):
-            source_folder = os.path.normpath(os.path.join(current_path, source_folder))
+        if build_folder and not os.path.isabs(build_folder):
+            build_folder = os.path.normpath(os.path.join(os.getcwd(), build_folder))
+
+        build_folder = build_folder or os.getcwd()
+
+        if source_folder and not os.path.isabs(source_folder):
+            source_folder = os.path.normpath(os.path.join(os.getcwd(), source_folder))
+
+        source_folder = source_folder or conanfile_folder
 
         if package_folder and not os.path.isabs(package_folder):
-            package_folder = os.path.normpath(os.path.join(current_path, package_folder))
+            package_folder = os.path.normpath(os.path.join(build_folder, package_folder))
+
+        package_folder = package_folder or os.path.join(build_folder, "package")
 
         if filename and filename.endswith(".txt"):
             raise ConanException("A conanfile.py is needed to call 'conan build'")
-        conanfile_path = os.path.join(root_path, filename or CONANFILE)
+
+        conanfile_path = os.path.join(conanfile_folder, filename or CONANFILE)
+
         self._manager.build(conanfile_path, source_folder, build_folder, package_folder)
 
     @api_method

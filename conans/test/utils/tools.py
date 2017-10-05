@@ -35,7 +35,7 @@ from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USE
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save_files, save
+from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
 from conans.tools import set_global_instances
 
@@ -406,7 +406,7 @@ class TestClient(object):
         """
         self.init_dynamic_vars(user_io)
         conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                      self.search_manager, settings_preprocessor)
+                       self.search_manager, settings_preprocessor)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)
@@ -425,6 +425,7 @@ class TestClient(object):
 
         if not ignore_error and error:
             logger.error(self.user_io.out)
+            print(self.user_io.out)
             raise Exception("Command failed:\n%s" % command_line)
 
         self.all_output += str(self.user_io.out)
@@ -438,3 +439,5 @@ class TestClient(object):
         if clean_first:
             shutil.rmtree(self.current_folder, ignore_errors=True)
         save_files(path, files)
+        if not files:
+            mkdir(self.current_folder)

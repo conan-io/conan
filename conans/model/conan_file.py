@@ -8,6 +8,7 @@ import os
 
 from conans.model.user_info import UserDepsInfo
 from conans.paths import RUN_LOG_NAME
+from conans.util.files import mkdir
 
 
 def create_options(conanfile):
