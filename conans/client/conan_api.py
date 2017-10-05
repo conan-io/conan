@@ -372,6 +372,9 @@ class ConanAPIV1(object):
         self._user_io.out.werror_active = werror
         cwd = prepare_cwd(cwd)
 
+        generator = set(generator) if generator else set()
+        generator.add("txt")  # Add txt generator by default
+
         try:
             ref = ConanFileReference.loads(reference)
         except:

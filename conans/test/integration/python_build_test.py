@@ -71,7 +71,7 @@ class PythonBuildTest(unittest.TestCase):
         client.run("export lasote/stable")
 
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("install .  -g txt")
+        client.run("install .")
         self.assertIn("Hello Bar", client.user_io.out)
         self.assertNotIn("Hello Foo", client.user_io.out)
         client.run("build")
@@ -150,7 +150,7 @@ class PythonBuildTest(unittest.TestCase):
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export lasote/stable")
-        client.run("install -g txt")
+        client.run("install")
         client.run("source Consumer/0.1@lasote/stable")
         self.assertIn("Hello Baz", client.user_io.out)
         self.assertNotIn("Hello Foo", client.user_io.out)
@@ -167,12 +167,10 @@ class PythonBuildTest(unittest.TestCase):
         client.run("install")
         # BUILD_INFO is created by default, remove it to check message
         os.remove(os.path.join(client.current_folder, BUILD_INFO))
-        client.run("source Consumer/0.1@lasote/stable")
-        self.assertNotIn("Consumer/0.1@lasote/stable: WARN: conanbuildinfo.txt file not found",
-                         client.user_io.out)
+        client.run("source Consumer/0.1@lasote/stable", ignore_error=True)
         # Output in py3 is different, uses single quote
         # Now it works automatically without the env generator file
-        self.assertNotIn("No module named mytest", str(client.user_io.out).replace("'", ""))
+        self.assertIn("No module named mytest", str(client.user_io.out).replace("'", ""))
 
     def pythonpath_env_injection_test(self):
 

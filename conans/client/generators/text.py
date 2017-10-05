@@ -4,7 +4,8 @@ import traceback
 from conans.errors import ConanException
 from conans.model import Generator
 from conans.model.build_info import DepsCppInfo, CppInfo
-from conans.model.user_info import UserDepsInfo
+from conans.model.env_info import DepsEnvInfo
+from conans.model.user_info import DepsUserInfo
 from conans.paths import BUILD_INFO
 from conans.util.log import logger
 
@@ -38,22 +39,37 @@ class TXTGenerator(Generator):
     @staticmethod
     def loads(text):
         user_defines_index = text.find("[USER_")
+        env_defines_index = text.find("[ENV_")
         if user_defines_index != -1:
             deps_cpp_info_txt = text[:user_defines_index]
-            user_info_txt = text[user_defines_index:]
+            if env_defines_index != -1:
+                user_info_txt = text[user_defines_index:env_defines_index]
+                deps_env_info_txt = text[env_defines_index:]
+            else:
+                user_info_txt = text[user_defines_index:]
+                deps_env_info_txt = ""
         else:
-            deps_cpp_info_txt = text
+            if env_defines_index != -1:
+                deps_cpp_info_txt = text[:env_defines_index]
+                deps_env_info_txt = text[env_defines_index:]
+            else:
+                deps_cpp_info_txt = text
+                deps_env_info_txt = ""
+
             user_info_txt = ""
 
         deps_cpp_info = TXTGenerator._loads_cpp_info(deps_cpp_info_txt)
-        user_info = TXTGenerator._loads_deps_user_info(user_info_txt)
-        return deps_cpp_info, user_info
+        deps_user_info = TXTGenerator._loads_deps_user_info(user_info_txt)
+        deps_env_info = DepsEnvInfo.loads(deps_env_info_txt)
+        return deps_cpp_info, deps_user_info, deps_env_info
 
     @staticmethod
     def _loads_deps_user_info(text):
-        ret = UserDepsInfo()
+        ret = DepsUserInfo()
         lib_name = None
         for line in text.splitlines():
+            if not line:
+                continue
             if not lib_name and not line.startswith("[USER_"):
                 raise ConanException("Error, invalid file format reading user info variables")
             elif line.startswith("[USER_"):
@@ -142,10 +158,13 @@ class TXTGenerator(Generator):
                 all_flags = template.format(dep=dep, deps=deps, config=":" + config)
                 sections.append(all_flags)
 
-        # Generate the user info variables as [LIB_A_USER_VAR]\n
+        # Generate the user info variables as [USER_{DEP_NAME}] and then the values with key=value
         for dep, the_vars in self._deps_user_info.items():
             sections.append("[USER_%s]" % dep)
             for name, value in sorted(the_vars.vars.items()):
                 sections.append("%s=%s" % (name, value))
+
+        # Generate the env info variables as [ENV_{DEP_NAME}] and then the values with key=value
+        sections.append(self._deps_env_info.dumps())
 
         return "\n".join(sections)
