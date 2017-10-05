@@ -68,7 +68,7 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
-
+# cache_no_locks = True
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
@@ -237,6 +237,13 @@ class ConanClientConfigParser(ConfigParser, object):
             return self.get_item("general.default_profile")
         except ConanException:
             return DEFAULT_PROFILE_NAME
+
+    @property
+    def cache_no_locks(self):
+        try:
+            return self.get_item("general.cache_no_locks")
+        except ConanException:
+            return False
 
     @property
     def storage(self):

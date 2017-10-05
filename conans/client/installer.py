@@ -58,8 +58,12 @@ class _ConanPackageBuilder(object):
         self._out = output
         self._package_reference = package_reference
         self._conan_ref = self._package_reference.conan
-        self._build_folder = None
         self._skip_build = False  # If build_id()
+
+        new_id = build_id(self._conan_file)
+        self.build_reference = PackageReference(self._conan_ref, new_id) if new_id else package_reference
+        self.build_folder = self._client_cache.build(self.build_reference,
+                                                     self._conan_file.short_paths)
 
     def prepare_build(self):
         if os.path.exists(self.build_folder) and hasattr(self._conan_file, "build_id"):
@@ -184,14 +188,6 @@ class _ConanPackageBuilder(object):
                         os.remove(f)
                 except OSError:
                     self._out.warn("Unable to remove imported file from build: %s" % f)
-
-    @property
-    def build_folder(self):
-        if not self._build_folder:
-            new_id = build_id(self._conan_file)
-            new_ref = PackageReference(self._conan_ref, new_id) if new_id else self._package_reference
-            self._build_folder = self._client_cache.build(new_ref, self._conan_file.short_paths)
-        return self._build_folder
 
 
 def _raise_package_not_found_error(conan_file, conan_ref, out):
@@ -368,7 +364,7 @@ class ConanInstaller(object):
                     builder.prepare_build()
 
                 with self._client_cache.conanfile_read_lock(conan_ref):
-                    with self._client_cache.package_lock(package_ref):
+                    with self._client_cache.package_lock(builder.build_reference):
                         builder.build()
                         builder.package()
 

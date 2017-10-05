@@ -4,10 +4,18 @@ import time
 from conans.util.files import save, load
 
 
+class NoLock(object):
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_val, exc_tb):  # @UnusedVariable
+        pass
+
+
 class SimpleLock(object):
-    def __init__(self, folder):
-        filename = folder + ".lock"
-        self._filename = filename
+
+    def __init__(self, filename):
         self._lock = fasteners.InterProcessLock(filename, logger=logger)
 
     def __enter__(self):
