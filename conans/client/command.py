@@ -396,18 +396,18 @@ class Command(object):
         parser.add_argument("path", help='path to a conanfile.py, e.g., conan build .')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--source_folder", "-sf",
-                            help="local folder containing the sources. Defaulted to conanfile's "
-                                 "directory. A relative path can be specified (relative to the "
-                                 "current dir)")
+                            help="local folder containing the sources. Defaulted to the directory of"
+                                 "the conanfile. A relative path can also be specified "
+                                 "(relative to the current directory)")
         parser.add_argument("--build_folder", "-bf",
                             help="build folder, working directory of the build process. Defaulted "
-                                 "to current directory. A relative path can be specified (relative "
-                                 "to the current dir)")
+                                 "to the current directory. A relative path can also be specified "
+                                 "(relative to the current directory)")
         parser.add_argument("--package_folder", "-pf",
                             help="folder to install the package (when the build system or build() "
-                                 "method does it). Defaulted to {build_folder}/package. "
-                                 "A relative path can be specified (relative to the build_folder "
-                                 "dir)")
+                                 "method does it). Defaulted to the '{build_folder}/package' folder"
+                                 ". A relative path can be specified (relative to the build_folder "
+                                 "directory)")
         args = parser.parse_args(*args)
         return self._conan.build(path=args.path, source_folder=args.source_folder,
                                  package_folder=args.package_folder, filename=args.file,
