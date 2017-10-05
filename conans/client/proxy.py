@@ -125,19 +125,6 @@ class ConanProxy(object):
     def get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
 
-        def _refresh():
-            export_path = self._client_cache.export(conan_reference)
-            rmdir(export_path)
-            # It might need to remove shortpath
-            rm_conandir(self._client_cache.source(conan_reference))
-            current_remote, _ = self._get_remote(conan_reference)
-            output.info("Retrieving from remote '%s'..." % current_remote.name)
-            self._remote_manager.get_recipe(conan_reference, export_path, current_remote)
-            if self._update:
-                output.info("Updated!")
-            else:
-                output.info("Installed!")
-
         # check if it is in disk
         conanfile_path = self._client_cache.conanfile(conan_reference)
 
@@ -159,10 +146,11 @@ class ConanProxy(object):
                                             % remote.name)
                             output.warn("Refused to install!")
                         else:
-                            if remote != ref_remote:
-                                # Delete packages, could be non coherent with new remote
-                                DiskRemover(self._client_cache).remove_packages(conan_reference)
-                            _refresh()
+                            export_path = self._client_cache.export(conan_reference)
+                            DiskRemover(self._client_cache).remove(conan_reference)
+                            output.info("Retrieving from remote '%s'..." % remote.name)
+                            self._remote_manager.get_recipe(conan_reference, export_path, remote)
+                            output.info("Updated!")
                     elif ret == -1:
                         if not self._update:
                             output.info("Current conanfile is newer "
