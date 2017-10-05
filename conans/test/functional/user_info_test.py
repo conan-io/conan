@@ -55,7 +55,7 @@ class MyConanfile(ConanFile):
     '''
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export lasote/stable")
-        client.run('install reuse/0.1@lasote/stable --build -g txt')
+        client.run('install reuse/0.1@lasote/stable --build')
 
         # Assert generator TXT
         txt_contents = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
@@ -65,6 +65,7 @@ class MyConanfile(ConanFile):
         self.assertIn("[USER_LIB_D]%svar1=2" % os.linesep, txt_contents)
 
         # Now try local command with a consumer
-        client.run('install . --build -g txt')
+        client.run('install . --build')
         client.run("build .")
+
 

@@ -26,6 +26,6 @@ class UserInfo(object):
         return self._values_
 
 
-class UserDepsInfo(defaultdict):
+class DepsUserInfo(defaultdict):
     def __init__(self):
-        super(UserDepsInfo, self).__init__(UserInfo)
+        super(DepsUserInfo, self).__init__(UserInfo)

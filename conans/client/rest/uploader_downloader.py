@@ -113,19 +113,24 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None, auth=None, retry=1, retry_wait=0, overwrite=False):
+    def download(self, url, file_path=None, auth=None, retry=1, retry_wait=0, overwrite=False,
+                 headers=None):
+
+        if file_path and not os.path.isabs(file_path):
+            file_path = os.path.abspath(file_path)
 
         if file_path and os.path.exists(file_path):
             if overwrite:
                 if self.output:
                     self.output.warn("file '%s' already exists, overwriting" % file_path)
             else:
-                # Should not happen, better to raise, probably we had to remove the dest folder before
+                # Should not happen, better to raise, probably we had to remove
+                # the dest folder before
                 raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
         t1 = time.time()
         ret = bytearray()
-        response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth)
+        response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth, headers)
         if not response.ok:  # Do not retry if not found or whatever controlled error
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
@@ -188,9 +193,10 @@ class Downloader(object):
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))
 
-    def _download_file(self, url, auth):
+    def _download_file(self, url, auth, headers):
         try:
-            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
+            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
+                                          headers=headers)
         except Exception as exc:
             raise ConanException("Error downloading file %s: '%s'" % (url, exception_message_safe(exc)))
 
