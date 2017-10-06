@@ -432,8 +432,9 @@ class ConanManager(object):
         :return:
         """
         output = ScopedOutput("PROJECT", self._user_io.out)
+        # only infos if exist
         conanfile = self.load_consumer_conanfile(conanfile_path, build_folder,
-                                                 output, deps_info_required=True)  # Need env
+                                                 output, deps_info_required=False)
         config_source_local(source_folder, conanfile, output)
 
     def imports_undo(self, current_path):

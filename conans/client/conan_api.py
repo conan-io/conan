@@ -529,17 +529,15 @@ class ConanAPIV1(object):
         source_folder = self._abs_relative_to(source_folder, os.getcwd()) or os.getcwd()
         build_folder = self._abs_relative_to(build_folder, os.getcwd()) or os.getcwd()
 
-        self._manager.source(path, source_folder, build_folder)
+        mkdir(source_folder)
 
-    @staticmethod
-    def _abs_relative_to(path, base_relative):
-        """Gets an absolute path from "path" parameter, prepending base_relative if not abs yet"""
-        if not path:
-             return None
-        if not os.path.isabs(path):
-             return os.path.normpath(os.path.join(base_relative, path))
-        else:
-             return path
+        conanfile_abs_path = self._get_conanfile_path(path, CONANFILE)
+        self._manager.source(conanfile_abs_path, source_folder, build_folder)
+
+        # PENDING TESTS:
+        #  src_folder, src_folder doesn't exist
+        #  no build_folder => OK, build_folder without the files CRASH
+        #  build_folder with files => vars are present in source
 
     @staticmethod
     def _abs_relative_to(path, base_relative):
@@ -550,6 +548,23 @@ class ConanAPIV1(object):
             return os.path.normpath(os.path.join(base_relative, path))
         else:
             return path
+
+    @staticmethod
+    def _get_conanfile_path(conanfile_folder, the_filename=None):
+        def raise_if_not_exists(some_path):
+            if not os.path.exists(some_path):
+                raise ConanException("Conanfile not found: %s" % some_path)
+
+        if the_filename:
+            conanfile_path = os.path.join(conanfile_folder, the_filename)
+            raise_if_not_exists(conanfile_path)
+        else:
+            conanfile_path = os.path.join(conanfile_folder, CONANFILE)
+            if not os.path.exists(conanfile_path):
+                conanfile_path = os.path.join(conanfile_folder, CONANFILE_TXT)
+                raise_if_not_exists(conanfile_path)
+        return conanfile_path
+
 
     @api_method
     def imports(self, path, dest=None, filename=None, build_folder=None):
@@ -565,23 +580,8 @@ class ConanAPIV1(object):
         build_folder = self._abs_relative_to(build_folder, os.getcwd()) or os.getcwd()
         dest = self._abs_relative_to(dest, os.getcwd()) or os.getcwd()
 
-        def get_conanfile_path(the_filename):  # Probably can be reused in other method?
-            def raise_if_not_exists(some_path):
-                if not os.path.exists(some_path):
-                    raise ConanException("Conanfile not found: %s" % some_path)
-
-            if the_filename:
-                conanfile_path = os.path.join(conanfile_folder, the_filename)
-                raise_if_not_exists(conanfile_path)
-            else:
-                conanfile_path = os.path.join(conanfile_folder, CONANFILE)
-                if not os.path.exists(conanfile_path):
-                    conanfile_path = os.path.join(conanfile_folder, CONANFILE_TXT)
-                    raise_if_not_exists(conanfile_path)
-            return conanfile_path
-
         mkdir(dest)
-        conanfile_abs_path = get_conanfile_path(filename)
+        conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)
         self._manager.imports(conanfile_abs_path, dest, build_folder)
 
     @api_method

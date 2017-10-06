@@ -446,9 +446,7 @@ class Command(object):
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("path", nargs="?",
-                            help='path to conanfile.py, e.g., conan build .',
-                            default="")
+        parser.add_argument("path", help='path to conanfile.py, e.g., conan source .')
 
         parser.add_argument("--source_folder", "-s", help='Destination directory.'
                                                           'Defaulted to current directory')
