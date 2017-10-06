@@ -85,23 +85,27 @@ def _generic_algorithm_sum(file_path, algorithm_name):
 
 
 def save(path, content, append=False):
-    '''
+    """
     Saves a file with given content
     Params:
         path: path to write file to
         load: contents to save in the file
-    '''
+    """
     try:
         os.makedirs(os.path.dirname(path))
     except:
         pass
 
+    mode = 'wb' if not append else 'ab'
+    with open(path, mode) as handle:
+        handle.write(to_file_bytes(content))
+
+
+def to_file_bytes(content):
     if six.PY3:
         if not isinstance(content, bytes):
             content = bytes(content, "utf-8")
-    mode = 'wb' if not append else 'ab'
-    with open(path, mode) as handle:
-        handle.write(content)
+    return content
 
 
 def save_files(path, files):

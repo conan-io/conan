@@ -1,3 +1,5 @@
+import copy
+
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
@@ -6,7 +8,7 @@ from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
 
-from conans.model.user_info import UserDepsInfo
+from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 
 
@@ -112,7 +114,8 @@ class ConanFile(object):
 
         # user declared variables
         self.user_info = None
-        self.deps_user_info = UserDepsInfo()  # Keys are the package names, and the values a dict with the vars
+        # Keys are the package names, and the values a dict with the vars
+        self.deps_user_info = DepsUserInfo()
 
         self.copy = None  # initialized at runtime
 
@@ -138,9 +141,16 @@ class ConanFile(object):
 
     @property
     def env(self):
-        simple, multiple = self._env_values.env_dicts(self.name)
-        simple.update(multiple)
-        return simple
+        """Apply the self.deps_env_info into a copy of self._env_values
+        (user specified from profiles or -e)"""
+        # Cannot be lazy cached, because it's called in configure node, and we still don't have
+        # the deps_env_info objects available
+        tmp_env_values = self._env_values.copy()
+        tmp_env_values.update(self.deps_env_info)
+
+        ret, multiple = tmp_env_values.env_dicts(self.name)
+        ret.update(multiple)
+        return ret
 
     @property
     def channel(self):

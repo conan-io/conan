@@ -69,8 +69,3 @@ class VersionCheckerRequester(object):
                           "Please, contact with your system administrator" \
                           " and upgrade the server." % server_version
                     raise ConanOutdatedClient(msg)
-                else:
-                    msg = "The conan remote version is outdated (v%s). " \
-                          "Please, contact with your system administrator and upgrade the " \
-                          "remote to avoid deprecation." % server_version
-                    logger.debug(msg)

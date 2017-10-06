@@ -51,7 +51,7 @@ class DevInSourceFlowTest(unittest.TestCase):
                      "file.h": "file_h_contents!"})
 
         client.current_folder = build_folder
-        client.run("install ../recipe -g txt")
+        client.run("install ../recipe")
         client.run("build ../recipe")
         client.current_folder = package_folder
         client.run("package ../recipe --build_folder=../build")
@@ -74,7 +74,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "file.h": "file_h_contents!"})
 
-        client.run("install . -g txt")
+        client.run("install .")
         client.run("build .")
         client.current_folder = package_folder
         client.run("package .. --build_folder=..")
@@ -100,7 +100,7 @@ class DevInSourceFlowTest(unittest.TestCase):
                      "file.h": "file_h_contents!"})
 
         client.current_folder = build_folder
-        client.run("install .. -g txt")
+        client.run("install ..")
         client.run("build ..")
         client.current_folder = package_folder
         client.run("package .. --build_folder=../build")
@@ -159,8 +159,9 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile_out})
 
         client.current_folder = build_folder
-        client.run("install ../recipe -g txt")
+        client.run("install ../recipe")
         client.current_folder = src_folder
+        client.run("install ../recipe")  # THIS IS NO GOOD! now the source have to found both the conanfile and the conanbuildinfo. TO DISCUSS!
         client.run("source ../recipe")
         client.current_folder = build_folder
         client.run("build ../recipe --source_folder=../src")
@@ -184,7 +185,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         mkdir(package_folder)
         client.save({"conanfile.py": conanfile_out})
 
-        client.run("install . -g txt")
+        client.run("install .")
         client.run("source .")
         client.run("build . ")
         client.current_folder = package_folder
@@ -210,7 +211,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile_out})
 
         client.current_folder = build_folder
-        client.run("install .. -g txt")
+        client.run("install ..")
         client.run("source ..")
         client.run("build .. --source_folder=.")
         client.current_folder = package_folder

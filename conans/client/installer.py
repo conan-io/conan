@@ -423,9 +423,6 @@ class ConanInstaller(object):
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
             conan_file.deps_user_info[n.conan_ref.name] = n.conanfile.user_info
 
-        # Update the env_values with the inherited from dependencies
-        conan_file._env_values.update(conan_file.deps_env_info)
-
         # Update the info but filtering the package values that not apply to the subtree
         # of this current node and its dependencies.
         subtree_libnames = [ref.name for (ref, _) in node_order]
