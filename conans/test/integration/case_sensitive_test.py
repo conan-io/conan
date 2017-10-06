@@ -74,10 +74,3 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("install Hello0/0.1@lasote/stable --build=missing")
         error = client.run("copy hello0/0.1@lasote/stable otheruser/testing", ignore_error=True)
         self._check(error, client)
-
-    def source_test(self):
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
-        error = client.run("source hello0/0.1@lasote/stable", ignore_error=True)
-        self._check(error, client)

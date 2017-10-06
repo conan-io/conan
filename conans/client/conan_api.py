@@ -524,10 +524,22 @@ class ConanAPIV1(object):
             self._manager.local_package(package_folder, recipe_folder, build_folder, source_folder)
 
     @api_method
-    def source(self, reference, force=False, cwd=None):
-        cwd = prepare_cwd(cwd)
-        current_path, reference = _get_reference(reference, cwd)
-        self._manager.source(current_path, reference, force)
+    def source(self, path, source_folder=None, build_folder=None):
+        path = self._abs_relative_to(path, os.getcwd())
+        source_folder = self._abs_relative_to(source_folder, os.getcwd()) or os.getcwd()
+        build_folder = self._abs_relative_to(build_folder, os.getcwd()) or os.getcwd()
+
+        self._manager.source(path, source_folder, build_folder)
+
+    @staticmethod
+    def _abs_relative_to(path, base_relative):
+        """Gets an absolute path from "path" parameter, prepending base_relative if not abs yet"""
+        if not path:
+             return None
+        if not os.path.isabs(path):
+             return os.path.normpath(os.path.join(base_relative, path))
+        else:
+             return path
 
     @api_method
     def imports(self, reference, undo=False, dest=None, filename=None, cwd=None):

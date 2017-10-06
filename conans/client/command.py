@@ -441,24 +441,26 @@ class Command(object):
                                    source_folder=args.source_folder)
 
     def source(self, *args):
-        """ Calls your conanfile.py 'source()' method to configure the source directory.
+        """ Calls your local conanfile.py 'source()' method to configure the source directory.
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("reference", nargs='?',
-                            default="",
-                            help="package recipe reference. e.g., MyPackage/1.2@user/channel "
-                                 "or ./my_project/")
-        parser.add_argument("-f", "--force", default=False,
-                            action="store_true",
-                            help="In the case of local cache, force the removal of the source"
-                                 " folder, then the execution and retrieval of the source code."
-                                 " Otherwise, if the code has already been retrieved, it will"
-                                 " do nothing.")
-        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
+        parser.add_argument("path", nargs="?",
+                            help='path to conanfile.py, e.g., conan build .',
+                            default="")
+
+        parser.add_argument("--source_folder", "-s", help='Destination directory.'
+                                                          'Defaulted to current directory')
+        parser.add_argument("--build_folder", "-bf",
+                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
+                            "files (from a previous conan install execution). Defaulted to the "
+                            "current directory. Optional, source method will run without the "
+                            "information retrieved from the conaninfo.txt and conanbuildinfo.txt, "
+                            "only required when using conditional source() based on settings, "
+                            "options, env_info and user_info ")
 
         args = parser.parse_args(*args)
-        return self._conan.source(args.reference, args.force, cwd=args.cwd)
+        return self._conan.source(args.path, args.source_folder, args.build_folder)
 
     def imports(self, *args):
         """ Execute the 'imports' stage of a conanfile.txt or a conanfile.py.

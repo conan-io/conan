@@ -25,7 +25,7 @@ from conans.client.proxy import ConanProxy
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.remover import ConanRemover
 from conans.client.require_resolver import RequireResolver
-from conans.client.source import config_source, config_source_local
+from conans.client.source import config_source_local
 from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
@@ -116,10 +116,10 @@ class ConanManager(object):
         self._search_manager = search_manager
         self._settings_preprocessor = settings_preprocessor
 
-    def load_consumer_conanfile(self, conanfile_path, current_path, output, reference=None,
+    def load_consumer_conanfile(self, conanfile_path, info_files_path, output, reference=None,
                                 deps_info_required=False):
 
-        profile = read_conaninfo_profile(current_path) or self._client_cache.default_profile
+        profile = read_conaninfo_profile(info_files_path) or self._client_cache.default_profile
         loader = self.get_loader(profile)
         if conanfile_path.endswith(".py"):
             consumer = not reference
@@ -127,7 +127,7 @@ class ConanManager(object):
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
         if deps_info_required is not None:
-            _load_deps_info(current_path, conanfile, required=deps_info_required)
+            _load_deps_info(info_files_path, conanfile, required=deps_info_required)
         return conanfile
 
     def get_loader(self, profile):
@@ -424,23 +424,17 @@ class ConanManager(object):
         if manifest_manager:
             manifest_manager.print_log()
 
-    def source(self, current_path, reference, force):
-        if not isinstance(reference, ConanFileReference):
-            output = ScopedOutput("PROJECT", self._user_io.out)
-            conanfile_path = os.path.join(reference, CONANFILE)
-            conanfile = self.load_consumer_conanfile(conanfile_path, current_path,
-                                                     output, deps_info_required=True)  # Need env
-            config_source_local(current_path, conanfile, output)
-        else:
-            output = ScopedOutput(str(reference), self._user_io.out)
-            conanfile_path = self._client_cache.conanfile(reference)
-            conanfile = self.load_consumer_conanfile(conanfile_path, current_path,
-                                                     output, reference=reference)
-
-            src_folder = self._client_cache.source(reference, conanfile.short_paths)
-            export_folder = self._client_cache.export(reference)
-            export_src_folder = self._client_cache.export_sources(reference, conanfile.short_paths)
-            config_source(export_folder, export_src_folder, src_folder, conanfile, output, force)
+    def source(self, conanfile_path, source_folder, build_folder):
+        """
+        :param conanfile_path: Absolute path to a conanfile
+        :param source_folder: Absolute path where to put the files
+        :param build_folder: Absolute path where to read the info files
+        :return:
+        """
+        output = ScopedOutput("PROJECT", self._user_io.out)
+        conanfile = self.load_consumer_conanfile(conanfile_path, build_folder,
+                                                 output, deps_info_required=True)  # Need env
+        config_source_local(source_folder, conanfile, output)
 
     def imports_undo(self, current_path):
         undo_imports(current_path, self._user_io.out)
