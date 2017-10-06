@@ -41,6 +41,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             conanfile.settings = settings
 
             generator = VisualStudioMultiGenerator(conanfile)
+            generator.output_path = ""
             content = generator.content
 
             self.assertEqual(2, len(content))
@@ -62,6 +63,7 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             conanfile.settings = settings
 
             generator = VisualStudioMultiGenerator(conanfile)
+            generator.output_path = ""
             content = generator.content
 
             self.assertEqual(2, len(content))
