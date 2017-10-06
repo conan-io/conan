@@ -1,6 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient, TestServer
-from conans.util.files import load, save
+from conans.util.files import save
 import os
 from conans.model.ref import ConanFileReference, PackageReference
 
@@ -12,10 +12,7 @@ class ReadOnlyTest(unittest.TestCase):
         client = TestClient(servers={"default": self.test_server},
                             users={"default": [("lasote", "mypass")]})
         client.run("--version")
-        conf_path = client.client_cache.conan_conf_path
-        conf = load(conf_path)
-        conf = conf.replace("# read_only_cache = True ", "read_only_cache = True ")
-        save(conf_path, conf)
+        client.run("config set general.read_only_cache=True")
         conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
     exports_sources = "*.h"
