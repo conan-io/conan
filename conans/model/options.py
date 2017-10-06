@@ -430,14 +430,14 @@ class PackageOptions(object):
                               "but it was already assigned to %s by %s"
                               % (down_ref, own_ref, name, value, modified_value, modified_ref))
             else:
-                self._modified[name] = (value, down_ref)
-
                 if ignore_unknown:
                     if name in self._data:
                         self._data[name].value = value
+                        self._modified[name] = (value, down_ref)
                 else:
                     self._check_field(name)
                     self._data[name].value = value
+                    self._modified[name] = (value, down_ref)
 
 
 class Options(object):
@@ -493,25 +493,20 @@ class Options(object):
         for k, v in v._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
-
     def propagate_upstream(self, down_package_values, down_ref, own_ref, output):
         """ used to propagate from downstream the options to the upper requirements
         """
         if not down_package_values:
             return
 
-        def _get_matching(package_values, name):
-            for i in package_values.keys():
-                if fnmatch.fnmatch(name, i):
-                    return package_values[i]
-            return None
-
         assert isinstance(down_package_values, dict)
         option_values = down_package_values.get(own_ref.name)
         self._package_options.propagate_upstream(option_values, down_ref, own_ref, output, ignore_unknown=False)
         if not option_values:
-            option_values = _get_matching(down_package_values, own_ref.name)
-            self._package_options.propagate_upstream(option_values, down_ref, own_ref, output, ignore_unknown=True)
+            for package_pattern, package_option_values in down_package_values.items():
+                if own_ref.name != package_pattern and fnmatch.fnmatch(own_ref.name, package_pattern):
+                    self._package_options.propagate_upstream(package_option_values, down_ref, own_ref, output,
+                                                             ignore_unknown=True)
 
         for name, option_values in sorted(list(down_package_values.items())):
             if name != own_ref.name:
