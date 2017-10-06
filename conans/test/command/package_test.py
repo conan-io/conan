@@ -213,7 +213,7 @@ class MyConan(ConanFile):
         origin_folder = client.current_folder
         client.run("install")
         client.run("source")
-        client.run("build")
+        client.run("build .")
         error = client.run("package .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Cannot 'conan package' to the build folder", client.user_io.out)

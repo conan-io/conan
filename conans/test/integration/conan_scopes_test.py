@@ -148,7 +148,7 @@ class HelloConan(ConanFile):
         self.assertNotIn("WARN: BUILD_CONSUMER DEV", client.user_io.out)
         self.assertNotIn("WARN: BUILD_CONSUMER OTHER", client.user_io.out)
 
-        client.run("build")
+        client.run("build .")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertIn("[scope]    dev=True    Hello:other=False",
                       "".join(conaninfo.splitlines()))

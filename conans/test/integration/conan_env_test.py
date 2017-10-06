@@ -437,26 +437,26 @@ class Hello2Conan(ConanFile):
         files["conanfile.py"] = reuse
         client.save(files)
         client.run("install . --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>99", client.user_io.out)
 
         # Now specify a different value in command Line, but conaninfo already exists
         # So you cannot override it from command line without deleting the conaninfo.TXTGenerator
         client.run("install . -e VAR1=100 --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>100", client.user_io.out)
 
         # Remove conaninfo
         os.remove(os.path.join(client.current_folder, CONANINFO))
         client.run("install . -e VAR1=100 --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>100", client.user_io.out)
 
         # Now from a profile
         os.remove(os.path.join(client.current_folder, CONANINFO))
         client.save({"myprofile": "[env]\nVAR1=102"}, clean_first=False)
         client.run("install . --profile ./myprofile --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>102", client.user_io.out)
 
     def test_complex_deps_propagation(self):
@@ -468,7 +468,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>800*", client.user_io.out)
         self.assertIn("VAR2=>24*", client.user_io.out)
         self.assertIn("VAR3=>22*", client.user_io.out)
@@ -488,7 +488,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900*" % {"sep": os.pathsep}, client.user_io.out)
         self.assertInSep("VAR2=>24:23*" % {"sep": os.pathsep}, client.user_io.out)
         self.assertInSep("VAR3=>45*", client.user_io.out)
@@ -500,7 +500,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900*", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertInSep("VAR3=>23*", client.user_io.out)
@@ -512,7 +512,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e VAR1=[override] -e VAR3=SIMPLE")
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>override:700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertIn("VAR3=>SIMPLE*", client.user_io.out)
@@ -526,7 +526,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e LIB_A:VAR3=override")
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertIn("VAR3=>-23*", client.user_io.out)
@@ -552,7 +552,7 @@ class Hello2Conan(ConanFile):
         self.assertIn("Building LIB_C, VAR2:24", client.user_io.out)
         self.assertIn("Building LIB_C, VAR3:override", client.user_io.out)
 
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertInSep("VAR3=>override*", client.user_io.out)
@@ -578,7 +578,7 @@ class Hello2Conan(ConanFile):
         self.assertIn("Building LIB_C, VAR2:24", client.user_io.out)
         self.assertIn("Building LIB_C, VAR3:-23", client.user_io.out)
 
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertInSep("VAR3=>bestvalue*", client.user_io.out)

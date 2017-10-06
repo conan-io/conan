@@ -362,6 +362,7 @@ class CMake(object):
         self._conanfile.run(command)
 
     def install(self, args=None, build_dir=None):
+        mkdir(self._conanfile.package_folder)
         if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
             raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
                                  "Make sure 'package_folder' is defined")
