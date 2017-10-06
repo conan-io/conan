@@ -37,6 +37,7 @@ from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
 from conans.client import settings_preprocessor
+from conans.tools import set_global_instances
 
 default_manifest_folder = '.conan_manifests'
 
@@ -148,8 +149,7 @@ class ConanAPIV1(object):
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
                                      settings_preprocessor)
         # Patch the tools module with a good requester and user_io
-        tools._global_requester = get_basic_requester(self._client_cache)
-        tools._global_output = self._user_io.out
+        set_global_instances(self._user_io.out, get_basic_requester(self._client_cache))
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False, cwd=None,

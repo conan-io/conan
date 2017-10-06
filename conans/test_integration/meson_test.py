@@ -33,7 +33,7 @@ class ConanFileToolsTest(ConanFile):
         meson = Meson(self)
         meson.configure()
         meson.build()
-        
+
 """
         meson_build = """
 project('conan_hello', 'c')
