@@ -78,6 +78,7 @@ def write_generators(conanfile, path, output):
                 generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
 
             try:
+                generator.output_path = path
                 content = generator.content
                 if isinstance(content, dict):
                     if generator.filename:
