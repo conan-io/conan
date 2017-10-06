@@ -1,16 +1,12 @@
 import unittest
 
-import six
-
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile
 from conans.model.build_info import CppInfo
 from conans.model.ref import ConanFileReference
-from nose.plugins.attrib import attr
 
 
-@attr('slow')
 class PkgGeneratorTest(unittest.TestCase):
 
     def variables_setup_test(self):
