@@ -39,7 +39,7 @@ def _get_env_cmake_system_name():
 class CMake(object):
 
     def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True,
-                 parallel=True, build_type=None):
+                 parallel=True, build_type=None, toolset=None):
         """
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
         :param generator: Generator name to use or none to autodetect
@@ -47,6 +47,8 @@ class CMake(object):
                True for auto-detect or directly a string with the system name
         :param parallel: Try to build with multiple cores if available
         :param build_type: Overrides default build type comming from settings
+        :param toolset: Toolset name to use (such as llvm-vs2014) or none for default one,
+                applies only to certain generators (e.g. Visual Studio)
         """
         if isinstance(settings_or_conanfile, Settings):
             self._settings = settings_or_conanfile
@@ -71,6 +73,7 @@ class CMake(object):
         self._build_type = self._settings.get_safe("build_type")
 
         self.generator = generator or self._generator()
+        self.toolset = toolset
         self.build_dir = None
         self._cmake_system_name = _get_env_cmake_system_name()
         if self._cmake_system_name is None:  # Not overwritten using environment
@@ -225,11 +228,14 @@ class CMake(object):
 
     @property
     def command_line(self):
-        return _join_arguments([
+        args = [
             '-G "%s"' % self.generator,
             self.flags,
             '-Wno-dev'
-        ])
+        ]
+        if self.toolset:
+            args.append('-T "%s"' % self.toolset)
+        return _join_arguments(args)
 
     def _build_type_definition(self):
         if self._build_type and not self.is_multi_configuration:
