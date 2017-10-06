@@ -2,6 +2,7 @@ import argparse
 import inspect
 import os
 import sys
+from argparse import ArgumentError
 
 from conans import __version__ as CLIENT_VERSION
 from conans.client.conan_api import (Conan, default_manifest_folder)
@@ -465,21 +466,35 @@ class Command(object):
         It requires to have been previously installed and have a conanbuildinfo.txt generated file.
         """
         parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
-        parser.add_argument("reference", nargs='?', default="",
+        parser.add_argument("path",
                             help="Specify the location of the folder containing the conanfile."
-                            "By default it will be the current directory. It can also use a full "
-                            "reference e.g. openssl/1.0.2@lasote/testing and the recipe "
-                            "'imports()' for that package in the local conan cache will be used ")
+                            "By default it will be the current directory."
+                            "With --undo option, this parameter is the folder "
+                            "containing the conan_imports_manifest.txt file generated in a previous"
+                            "execution. e.j: conan imports ./imported_files --undo ")
         parser.add_argument("--file", "-f", help="Use another filename, "
                             "e.g.: conan imports -f=conanfile2.py")
         parser.add_argument("-d", "--dest",
                             help="Directory to copy the artifacts to. By default it will be the"
                                  " current directory")
+        parser.add_argument("--build_folder", "-bf",
+                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
+                                 "files (from a previous conan install execution)")
         parser.add_argument("-u", "--undo", default=False, action="store_true",
                             help="Undo imports. Remove imported files")
-
         args = parser.parse_args(*args)
-        return self._conan.imports(args.reference, args.undo, args.dest, args.file)
+
+        if args.undo:
+            return self._conan.imports_undo(args.path)
+
+        try:
+            if "@" in args.path and ConanFileReference.loads(args.path):
+                raise ArgumentError(None, "Parameter 'path' cannot be a reference," 
+                                    " but a folder containing a conanfile.py or conanfile.txt file.")
+        except ConanException:
+            pass
+
+        return self._conan.imports(args.path, args.dest, args.file, args.build_folder)
 
     def export(self, *args):
         """ Copies the package recipe (conanfile.py and associated files) to your local cache.
