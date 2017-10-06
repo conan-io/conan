@@ -54,6 +54,18 @@ class SettingsItem(object):
             result._definition = {k: v.copy() for k, v in self._definition.items()}
         return result
 
+    def copy_values(self):
+        if self._value is None and "None" not in self._definition:
+            return None
+
+        result = SettingsItem({}, name=self._name)
+        result._value = self._value
+        if self.is_final:
+            result._definition = self._definition[:]
+        else:
+            result._definition = {k: v.copy_values() for k, v in self._definition.items()}
+        return result
+
     @property
     def is_final(self):
         return not isinstance(self._definition, dict)
@@ -192,6 +204,16 @@ class Settings(object):
         result = Settings({}, name=self._name, parent_value=self._parent_value)
         for k, v in self._data.items():
             result._data[k] = v.copy()
+        return result
+
+    def copy_values(self):
+        """ deepcopy, recursive
+        """
+        result = Settings({}, name=self._name, parent_value=self._parent_value)
+        for k, v in self._data.items():
+            value = v.copy_values()
+            if value is not None:
+                result._data[k] = value
         return result
 
     @staticmethod

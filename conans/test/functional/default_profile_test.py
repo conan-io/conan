@@ -10,6 +10,24 @@ from conans.util.files import save
 
 class DefaultProfileTest(unittest.TestCase):
 
+    def conanfile_txt_incomplete_profile_test(self):
+        conanfile = '''from conans import ConanFile
+class MyConanfile(ConanFile):
+    pass
+'''
+
+        client = TestClient()
+        save(client.client_cache.default_profile_path, "[env]\nValue1=A")
+
+        client.save({CONANFILE: conanfile})
+        client.run("create Pkg/0.1@lasote/stable")
+        self.assertIn("Pkg/0.1@lasote/stable: Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' "
+                      "created", client.out)
+
+        client.save({"conanfile.txt": "[requires]\nPkg/0.1@lasote/stable"}, clean_first=True)
+        client.run('install .')
+        self.assertIn("Pkg/0.1@lasote/stable: Already installed!", client.out)
+
     def change_default_profile_test(self):
         br = '''
 import os
