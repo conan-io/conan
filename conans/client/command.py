@@ -185,7 +185,11 @@ class Command(object):
 
     def package_files(self, *args):
         """Creates a package binary from given precompiled artifacts in user folder, skipping
-           the package recipe build() and package() methods
+           the package recipe build() method. If source_folder or build_folder is specified,
+           then it will call the package() method to extract the artifacts. If source_folder
+           nor build_folder is not specified, then it will run an exact copy of the package,
+           as they are layout in the given folder, without running or even requiring to define a
+           package() method.
         """
         parser = argparse.ArgumentParser(description=self.package_files.__doc__,
                                          prog="conan package_files")
@@ -193,6 +197,14 @@ class Command(object):
                             help='package recipe reference e.g., MyPackage/1.2@user/channel')
         parser.add_argument("--package_folder", "-pf",
                             help='Get binaries from this path, relative to current or absolute')
+        parser.add_argument("--source_folder", "-sf",
+                            help='Get artifacts from this path, relative to current or absolute.'
+                            ' If specified, artifacts will be extracted/copied calling the '
+                            'package() method')
+        parser.add_argument("--build_folder", "-bf",
+                            help='Get artifacts from this path, relative to current or absolute'
+                            ' If specified, artifacts will be extracted/copied calling the '
+                            'package() method')
         parser.add_argument("--profile", "-pr",
                             help='Profile for this package')
         parser.add_argument("--options", "-o",
@@ -206,6 +218,8 @@ class Command(object):
 
         args = parser.parse_args(*args)
         return self._conan.package_files(reference=args.reference,
+                                         source_folder=args.source_folder,
+                                         build_folder=args.build_folder,
                                          package_folder=args.package_folder,
                                          profile_name=args.profile, force=args.force,
                                          settings=args.settings, options=args.options)
@@ -254,7 +268,7 @@ class Command(object):
                                    filename=args.file, cwd=args.cwd)
 
     def config(self, *args):
-        """Manages conan.conf information
+        """Manages conan configuration information
         """
         parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
 
@@ -262,11 +276,13 @@ class Command(object):
         rm_subparser = subparsers.add_parser('rm', help='rm an existing config element')
         set_subparser = subparsers.add_parser('set', help='set/add value')
         get_subparser = subparsers.add_parser('get', help='get the value of existing element')
+        install_subparser = subparsers.add_parser('install',
+                                                  help='install a full configuration from a zip file, local or remote')
 
         rm_subparser.add_argument("item", help="item to remove")
         get_subparser.add_argument("item", nargs="?", help="item to print")
         set_subparser.add_argument("item", help="key=value to set")
-
+        install_subparser.add_argument("item", nargs="?", help="configuration file to use")
         args = parser.parse_args(*args)
 
         if args.subcommand == "set":
@@ -279,6 +295,8 @@ class Command(object):
             return self._conan.config_get(args.item)
         elif args.subcommand == "rm":
             return self._conan.config_rm(args.item)
+        elif args.subcommand == "install":
+            return self._conan.config_install(args.item)
 
     def info(self, *args):
         """Prints information about a package recipe's dependency graph.
@@ -354,11 +372,11 @@ class Command(object):
                 only = []
             if only and args.paths and (set(only) - set(path_only_options)):
                 raise ConanException("Invalid --only value '%s' with --path specified, allowed values: [%s]."
-                                               % (only, str_path_only_options))
+                                     % (only, str_path_only_options))
             elif only and not args.paths and (set(only) - set(info_only_options)):
                 raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
-                                               "Use --only=None to show only the references." %
-                                               (only, str_only_options))
+                                     "Use --only=None to show only the references."
+                                     % (only, str_only_options))
 
             if args.graph:
                 self._outputer.info_graph(args.graph, deps_graph, project_reference, args.cwd)
@@ -408,7 +426,7 @@ class Command(object):
         parser.add_argument("reference", help='package recipe reference '
                             'e.g. MyPkg/0.1@user/channel, or local path to the build folder'
                             ' (relative or absolute)')
-        parser.add_argument("package", nargs="?", default="",
+        parser.add_argument("package_id", nargs="?", default="",
                             help='Package ID to regenerate. e.g., '
                                  '9cf83afd07b678d38a9c1645f605875400847ff3'
                                  ' This optional parameter is only used for the local conan '
@@ -418,7 +436,8 @@ class Command(object):
         parser.add_argument("--source_folder", "-sf", help="local folder containing the sources")
 
         args = parser.parse_args(*args)
-        return self._conan.package(reference=args.reference, package=args.package, build_folder=args.build_folder,
+        return self._conan.package(reference=args.reference, package_id=args.package_id,
+                                   build_folder=args.build_folder,
                                    source_folder=args.source_folder)
 
     def source(self, *args):
@@ -436,9 +455,10 @@ class Command(object):
                                  " folder, then the execution and retrieval of the source code."
                                  " Otherwise, if the code has already been retrieved, it will"
                                  " do nothing.")
+        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
 
         args = parser.parse_args(*args)
-        return self._conan.source(args.reference, args.force)
+        return self._conan.source(args.reference, args.force, cwd=args.cwd)
 
     def imports(self, *args):
         """ Execute the 'imports' stage of a conanfile.txt or a conanfile.py.
@@ -697,7 +717,6 @@ class Command(object):
 
         verify_ssl = get_bool_from_text(args.verify_ssl) if hasattr(args, 'verify_ssl') else False
 
-
         remote = args.remote if hasattr(args, 'remote') else None
         url = args.url if hasattr(args, 'url') else None
 
@@ -746,6 +765,10 @@ class Command(object):
         parser_update.add_argument('item', help='key="value to set", e.j: settings.compiler=gcc')
         parser_update.add_argument('profile',  help='name of the profile')
 
+        parser_get = subparsers.add_parser('get', help='Get a profile key')
+        parser_get.add_argument('item', help='key="value to get", e.j: settings.compiler')
+        parser_get.add_argument('profile',  help='name of the profile')
+
         parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
         parser_remove.add_argument('item', help='key", e.j: settings.compiler')
         parser_remove.add_argument('profile',  help='name of the profile')
@@ -768,6 +791,9 @@ class Command(object):
             except:
                 raise ConanException("Please specify key=value")
             self._conan.update_profile(profile, key, value)
+        elif args.subcommand == "get":
+            key = args.item
+            self._outputer.writeln(self._conan.get_profile_key(profile, key))
         elif args.subcommand == "remove":
             self._conan.delete_profile_key(profile, args.item)
 
@@ -871,8 +897,9 @@ class Command(object):
             logger.error(exc)
             errors = True
         except SystemExit as exc:
-            logger.error(exc)
-            self._user_io.out.error("Exiting with code: %d" % exc.code)
+            if exc.code != 0:
+                logger.error(exc)
+                self._user_io.out.error("Exiting with code: %d" % exc.code)
             errors = exc.code
         except ConanException as exc:
             errors = True

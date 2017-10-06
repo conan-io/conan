@@ -15,8 +15,27 @@ import stat
 def make_read_only(path):
     for root, _, files in os.walk(path):
         for f in files:
-            mode = os.stat(f).st_mode
-            os.chmod(os.path.join(root, f), mode & ~ stat.S_IWRITE)
+            full_path = os.path.join(root, f)
+            mode = os.stat(full_path).st_mode
+            os.chmod(full_path, mode & ~ stat.S_IWRITE)
+
+
+_DIRTY_FOLDER = ".dirty"
+
+
+def set_dirty(folder):
+    dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    save(dirty_file, "")
+
+
+def clean_dirty(folder):
+    dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    os.remove(dirty_file)
+
+
+def is_dirty(folder):
+    dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    return os.path.exists(dirty_file)
 
 
 def decode_text(text):

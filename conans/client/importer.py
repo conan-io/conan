@@ -2,7 +2,6 @@ import calendar
 import fnmatch
 import os
 import time
-import stat
 
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
@@ -10,7 +9,6 @@ from conans.errors import ConanException
 from conans.model.manifest import FileTreeManifest
 from conans.tools import environment_append
 from conans.util.files import save, md5sum, load
-from conans.util.env_reader import get_env
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
 
@@ -65,10 +63,6 @@ def run_imports(conanfile, dest_folder, output):
         for f in copied_files:
             abs_path = os.path.join(dest_folder, f)
             file_dict[f] = md5sum(abs_path)
-        if get_env("CONAN_READ_ONLY_CACHE", False):
-            for f in copied_files:
-                mode = os.stat(f).st_mode
-                os.chmod(f, mode | stat.S_IWRITE)
         manifest = FileTreeManifest(date, file_dict)
         save(os.path.join(dest_folder, IMPORTS_MANIFESTS), str(manifest))
     return copied_files
@@ -111,7 +105,6 @@ class _FileImporter(object):
             file_copier = FileCopier(matching_path, final_dst_path)
             files = file_copier(pattern, src=src, links=True, ignore_case=ignore_case,
                                 excludes=excludes)
-
             self.copied_files.update(files)
 
     def _get_folders(self, pattern):
@@ -119,6 +112,6 @@ class _FileImporter(object):
         each dependency
         """
         if not pattern:
-            return {pkg: deps.rootpath for pkg, deps in self._conanfile.deps_cpp_info.dependencies}
-        return {pkg: deps.rootpath for pkg, deps in self._conanfile.deps_cpp_info.dependencies
+            return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies}
+        return {pkg: cpp_info.rootpath for pkg, cpp_info in self._conanfile.deps_cpp_info.dependencies
                 if fnmatch.fnmatch(pkg, pattern)}

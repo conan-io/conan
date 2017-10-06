@@ -62,7 +62,6 @@ class InstallUpdateTest(unittest.TestCase):
             manifest = load(manifest_file)
             lines = manifest.splitlines()
             lines[0] = "123"
-            os.chmod(manifest_file, 0o777)
             save(manifest_file, "\n".join(lines))
 
         self.client.run("install --update")

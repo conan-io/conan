@@ -1,6 +1,5 @@
 import os
 import platform
-import tempfile
 import unittest
 
 from collections import namedtuple
@@ -19,8 +18,11 @@ from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.visual_project_files import get_vs_project_files
-from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool
+from conans.test.utils.context_manager import which
+from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
+    set_global_instances
 from conans.util.files import save
+import requests
 
 
 class RunnerMock(object):
@@ -73,9 +75,6 @@ class ToolsTest(unittest.TestCase):
     def test_global_tools_overrided(self):
         client = TestClient()
 
-        tools._global_requester = None
-        tools._global_output = None
-
         conanfile = """
 from conans import ConanFile, tools
 
@@ -84,26 +83,23 @@ class HelloConan(ConanFile):
     version = "0.1"
 
     def build(self):
-        assert(tools._global_requester != None)
-        assert(tools._global_output != None)
+        assert(tools.net._global_requester != None)
+        assert(tools.files._global_output != None)
         """
         client.save({"conanfile.py": conanfile})
         client.run("install -g txt")
         client.run("build")
 
         # Not test the real commmand get_command if it's setting the module global vars
-        tools._global_requester = None
-        tools._global_output = None
-        tmp = tempfile.mkdtemp()
+        tmp = temp_folder()
         conf = default_client_conf.replace("\n[proxies]", "\n[proxies]\nhttp = http://myproxy.com")
         os.mkdir(os.path.join(tmp, ".conan"))
         save(os.path.join(tmp, ".conan", CONAN_CONF), conf)
         with tools.environment_append({"CONAN_USER_HOME": tmp}):
             conan_api = ConanAPIV1.factory()
         conan_api.remote_list()
-        self.assertEquals(tools._global_requester.proxies, {"http": "http://myproxy.com"})
-
-        self.assertIsNotNone(tools._global_output.warn)
+        self.assertEquals(tools.net._global_requester.proxies, {"http": "http://myproxy.com"})
+        self.assertIsNotNone(tools.files._global_output.warn)
 
     def test_environment_nested(self):
         with tools.environment_append({"A": "1", "Z": "40"}):
@@ -124,10 +120,14 @@ class HelloConan(ConanFile):
     def system_package_tool_fail_when_not_0_returned_test(self):
         runner = RunnerMock(return_ok=False)
         spt = SystemPackageTool(runner=runner)
-        platforms = {"Linux": "sudo apt-get update", "Darwin": "brew update", "Windows": "choco outdated"}
+        platforms = {"Linux": "sudo apt-get update", "Darwin": "brew update"}
         if platform.system() in platforms:
             msg = "Command '%s' failed" % platforms[platform.system()]
             with self.assertRaisesRegexp(ConanException, msg):
+                spt.update()
+        elif platform.system() == "Windows" and which("choco.exe"):
+            spt = SystemPackageTool(runner=runner, tool=ChocolateyTool())
+            with self.assertRaisesRegexp(ConanException, "Command 'choco outdated' failed"):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
@@ -197,16 +197,18 @@ class HelloConan(ConanFile):
         spt.install("a_package", force=False)
         self.assertEquals(runner.command_called, "pkg info a_package")
 
-        os_info.is_freebsd = False
-        os_info.is_windows = True
+        # Chocolatey is an optional package manager on Windows
+        if platform.system() == "Windows" and which("choco.exe"):
+            os_info.is_freebsd = False
+            os_info.is_windows = True
 
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "choco outdated")
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "choco install --yes a_package")
-        spt.install("a_package", force=False)
-        self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+            spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
+            spt.update()
+            self.assertEquals(runner.command_called, "choco outdated")
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "choco install --yes a_package")
+            spt.install("a_package", force=False)
+            self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
         os.environ["CONAN_SYSREQUIRES_SUDO"] = "False"
 
@@ -256,16 +258,18 @@ class HelloConan(ConanFile):
         spt.install("a_package", force=True)
         self.assertEquals(runner.command_called, "pkgutil --install --yes a_package")
 
-        os_info.is_solaris = False
-        os_info.is_windows = True
+        # Chocolatey is an optional package manager on Windows
+        if platform.system() == "Windows" and which("choco.exe"):
+            os_info.is_solaris = False
+            os_info.is_windows = True
 
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "choco outdated")
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "choco install --yes a_package")
-        spt.install("a_package", force=False)
-        self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+            spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
+            spt.update()
+            self.assertEquals(runner.command_called, "choco outdated")
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "choco install --yes a_package")
+            spt.install("a_package", force=False)
+            self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
         del os.environ["CONAN_SYSREQUIRES_SUDO"]
 
@@ -300,13 +304,16 @@ class HelloConan(ConanFile):
     def system_package_tool_installed_test(self):
         if platform.system() != "Linux" and platform.system() != "Macos" and platform.system() != "Windows":
             return
+        if platform.system() == "Windows" and not which("choco.exe"):
+            return
         spt = SystemPackageTool()
-        if platform.system() == "Windows":
+        expected_package = "git"
+        if platform.system() == "Windows" and which("choco.exe"):
+            spt = SystemPackageTool(tool=ChocolateyTool())
             # Git is not installed by default on Chocolatey
-            self.assertTrue(spt._tool.installed("chocolatey"))
-        else:
-            # Git should be installed on development/testing machines
-            self.assertTrue(spt._tool.installed("git"))
+            expected_package = "chocolatey"
+        # The expected should be installed on development/testing machines
+        self.assertTrue(spt._tool.installed(expected_package))
         # This package hopefully doesn't exist
         self.assertFalse(spt._tool.installed("oidfjgesiouhrgioeurhgielurhgaeiorhgioearhgoaeirhg"))
 
@@ -433,26 +440,26 @@ class HelloConan(ConanFile):
         client.save(files)
         client.run("export lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86_64")
-        self.assertTrue("Release|x64", client.user_io.out)
-        self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Release|x64", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
 
         # Try with x86
         client.save(files, clean_first=True)
         client.run("export lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86")
-        self.assertTrue("Release|x86", client.user_io.out)
-        self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Release|x86", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
 
         # Try with x86 debug
         client.save(files, clean_first=True)
         client.run("export lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
-        self.assertTrue("Debug|x86", client.user_io.out)
-        self.assertTrue("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        self.assertIn("Debug|x86", client.user_io.out)
+        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
 
     def download_retries_test(self):
         out = TestBufferConanOutput()
-
+        set_global_instances(out, requests)
         # Connection error
         with self.assertRaisesRegexp(ConanException, "HTTPConnectionPool"):
             tools.download("http://fakeurl3.es/nonexists",
@@ -471,5 +478,18 @@ class HelloConan(ConanFile):
         tools.download("http://www.zlib.net/manual.html",
                        dest, out=out,
                        retry=3, retry_wait=0)
+
+        self.assertTrue(os.path.exists(dest))
+
+        # overwrite = False
+        with self.assertRaises(ConanException):
+            tools.download("http://www.zlib.net/manual.html",
+                           dest, out=out,
+                           retry=3, retry_wait=0, overwrite=False)
+
+        # overwrite = True
+        tools.download("http://www.zlib.net/manual.html",
+                       dest, out=out,
+                       retry=3, retry_wait=0, overwrite=True)
 
         self.assertTrue(os.path.exists(dest))

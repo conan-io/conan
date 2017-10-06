@@ -13,6 +13,7 @@ from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
 from conans import __version__ as CLIENT_VERSION, tools
+from conans.client import settings_preprocessor
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan
@@ -34,9 +35,9 @@ from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USE
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.util.env_reader import get_env
-from conans.util.files import save_files, load, save
+from conans.util.files import save_files, save
 from conans.util.log import logger
+from conans.tools import set_global_instances
 
 
 class TestingResponse(object):
@@ -262,6 +263,9 @@ class MockedUserIO(UserIO):
 
     def get_username(self, remote_name):
         """Overridable for testing purpose"""
+        username_env = self._get_env_username(remote_name)
+        if username_env:
+            return username_env
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         if len(sub_dict) - 1 < index:
@@ -271,6 +275,10 @@ class MockedUserIO(UserIO):
 
     def get_password(self, remote_name):
         """Overridable for testing purpose"""
+        password_env = self._get_env_password(remote_name)
+        if password_env:
+            return password_env
+
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         tmp = sub_dict[index][1]
@@ -287,7 +295,7 @@ class TestClient(object):
     def __init__(self, base_folder=None, current_folder=None,
                  servers=None, users=None, client_version=CLIENT_VERSION,
                  min_server_compatible_version=MIN_SERVER_COMPATIBLE_VERSION,
-                 requester_class=None, runner=None, path_with_spaces=True):
+                 requester_class=None, runner=None, path_with_spaces=True, default_profile=True):
         """
         storage_folder: Local storage path
         current_folder: Current execution folder
@@ -326,6 +334,13 @@ class TestClient(object):
 
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+        # Enforcing VS 2015, even if VS2017 is auto detected
+        if default_profile:
+            profile = self.client_cache.default_profile
+            if profile.settings.get("compiler.version") == "15":
+                profile.settings["compiler.version"] = "14"
+                save(self.client_cache.default_profile_path, profile.dumps())
 
     @property
     def paths(self):
@@ -374,9 +389,7 @@ class TestClient(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
-        # Patch the globals in tools
-        tools._global_requester = requests
-        tools._global_output = self.user_io.out
+        set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
@@ -392,7 +405,8 @@ class TestClient(object):
             tuple if required
         """
         self.init_dynamic_vars(user_io)
-        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
+        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
+                      self.search_manager, settings_preprocessor)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)

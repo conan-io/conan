@@ -92,7 +92,7 @@ class ConsumerFileTest(ConanFile):
         # again should do nothing
         self.client.run("install %s --build missing --manifests %s"
                         % (str(self.reference), folder))
-        self.assertNotIn("manifest", self.client.user_io.out)
+        self.assertNotIn("Installed manifest", self.client.user_io.out)
 
         # now verify
         self.client.run("install %s --build missing --verify %s" % (str(self.reference), folder))
@@ -227,11 +227,9 @@ class ConanFileTest(ConanFile):
         info = os.path.join(client.paths.package(package_reference), "conaninfo.txt")
         info_content = load(info)
         info_content += "# Dummy string"
-        os.chmod(info, 0o777)
         save(info, info_content)
         manifest = client.paths.load_package_manifest(package_reference)
         manifest.file_sums["conaninfo.txt"] = md5(info_content)
-        os.chmod(client.paths.digestfile_package(package_reference), 0o777)
         save(client.paths.digestfile_package(package_reference), str(manifest))
 
         manifest = client.paths.load_package_manifest(package_reference)
@@ -286,7 +284,6 @@ class ConanFileTest(ConanFile):
                                                    "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         package_path = self.client.paths.package(package_reference)
         file_path = os.path.join(package_path, "conaninfo.txt")
-        os.chmod(file_path, 0o777)
         save(file_path, load(file_path) + "RANDOM STRING")
 
         self.client.run("install %s --build missing --manifests" % str(self.reference),

@@ -4,6 +4,7 @@ import shutil
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
 from conans.errors import ConanException
 from conans.migrations import Migrator, CONAN_VERSION
+from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.util.files import load, save
 from conans.model.version import Version
 
@@ -131,7 +132,7 @@ def migrate_c_src_export_source(client_cache, out):
     package_folders = list_folder_subdirs(client_cache.store, 4)
     for package in package_folders:
         package_folder = os.path.join(client_cache.store, package)
-        c_src = os.path.join(package_folder, "export/.c_src")
+        c_src = os.path.join(package_folder, "export/%s" % EXPORT_SOURCES_DIR_OLD)
         if os.path.exists(c_src):
             out.warn("Migration: Removing package with old export_sources layout: %s" % package)
             try:
