@@ -7,7 +7,6 @@ import uuid
 from conans.errors import ConanException, NotFoundException
 from conans.model.conan_file import ConanFile
 from conans.util.config_parser import ConfigParser
-from conans.util.files import rmdir
 from conans.tools import chdir
 from conans.client.generators import registered_generators
 from conans.model import Generator
@@ -40,7 +39,7 @@ def _parse_module(conanfile_module, filename):
                 raise ConanException("More than 1 conanfile in the file")
         if (inspect.isclass(attr) and issubclass(attr, Generator) and attr != Generator and
                 attr.__dict__["__module__"] == filename):
-                registered_generators.add(attr.__name__, attr)
+            registered_generators.add(attr.__name__, attr)
 
     if result is None:
         raise ConanException("No subclass of ConanFile")
@@ -51,14 +50,6 @@ def _parse_module(conanfile_module, filename):
 def _parse_file(conan_file_path):
     """ From a given path, obtain the in memory python import module
     """
-    # Check if precompiled exist, delete it
-    if os.path.exists(conan_file_path + "c"):
-        os.unlink(conan_file_path + "c")
-
-    # Python 3
-    pycache = os.path.join(os.path.dirname(conan_file_path), "__pycache__")
-    if os.path.exists(pycache):
-        rmdir(pycache)
 
     if not os.path.exists(conan_file_path):
         raise NotFoundException("%s not found!" % conan_file_path)
@@ -70,17 +61,23 @@ def _parse_file(conan_file_path):
         sys.path.append(current_dir)
         old_modules = list(sys.modules.keys())
         with chdir(current_dir):
+            sys.dont_write_bytecode = True
             loaded = imp.load_source(filename, conan_file_path)
+            sys.dont_write_bytecode = False
         # Put all imported files under a new package name
         module_id = uuid.uuid1()
         added_modules = set(sys.modules).difference(old_modules)
         for added in added_modules:
             module = sys.modules[added]
             if module:
-                folder = os.path.dirname(module.__file__)
-                if folder.startswith(current_dir):
-                    module = sys.modules.pop(added)
-                    sys.modules["%s.%s" % (module_id, added)] = module
+                try:
+                    folder = os.path.dirname(module.__file__)
+                except AttributeError:  # some module doesn't have __file__
+                    pass
+                else:
+                    if folder.startswith(current_dir):
+                        module = sys.modules.pop(added)
+                        sys.modules["%s.%s" % (module_id, added)] = module
     except Exception:
         import traceback
         trace = traceback.format_exc().split('\n')

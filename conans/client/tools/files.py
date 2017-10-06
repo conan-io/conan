@@ -118,11 +118,12 @@ def untargz(filename, destination="."):
 def check_with_algorithm_sum(algorithm_name, file_path, signature):
     real_signature = _generic_algorithm_sum(file_path, algorithm_name)
     if real_signature != signature:
-        raise ConanException("%s signature failed for '%s' file."
+        raise ConanException("%s signature failed for '%s' file. \n"
+                             " Provided signature: %s  \n"
                              " Computed signature: %s" % (algorithm_name,
                                                           os.path.basename(file_path),
+                                                          signature,
                                                           real_signature))
-
 
 def check_sha1(file_path, signature):
     check_with_algorithm_sum("sha1", file_path, signature)
@@ -209,7 +210,7 @@ def collect_libs(conanfile, folder="lib"):
         return []
     lib_folder = os.path.join(conanfile.package_folder, folder)
     if not os.path.exists(lib_folder):
-        conanfile.output.warn("Lib folder doesn't exist, can't collect libraries")
+        conanfile.output.warn("Lib folder doesn't exist, can't collect libraries: {0}".format(lib_folder))
         return []
     files = os.listdir(lib_folder)
     result = []
@@ -220,3 +221,12 @@ def collect_libs(conanfile, folder="lib"):
                 name = name[3:]
             result.append(name)
     return result
+
+
+def which(filename):
+    """ same affect as posix which command or shutil.which from python3 """
+    for path in os.environ["PATH"].split(os.pathsep):
+        fullname = os.path.join(path, filename)
+        if os.path.exists(fullname) and os.access(fullname, os.X_OK):
+            return os.path.join(path, filename)
+    return None
