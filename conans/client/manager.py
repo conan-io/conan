@@ -241,6 +241,8 @@ class ConanManager(object):
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
         else:
+            self._user_io.out.info("Getting the complete package list "
+                                   "from '%s'..." % str(reference))
             packages_props = remote_proxy.search_packages(reference, None)
             if not packages_props:
                 output = ScopedOutput(str(reference), self._user_io.out)
@@ -355,7 +357,9 @@ class ConanManager(object):
         @param generators: List of generators from command line
         @param no_imports: Install specified packages but avoid running imports
         """
-        generators = generators or []
+        generators = set(generators) if generators else set()
+        generators.add("txt")  # Add txt generator by default
+
         manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
                                            client_cache=self._client_cache,
                                            verify=manifest_verify,

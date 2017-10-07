@@ -54,7 +54,7 @@ class CompleteFlowTest(unittest.TestCase):
         # THEN A NEW USER DOWNLOADS THE PACKAGES AND UPLOADS COMPRESSING AGAIN
         # BECAUSE ONLY TGZ IS KEPT WHEN UPLOADING
         other_client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        other_client.run("install Hello0/0.1@lasote/stable --all")
+        other_client.run("download Hello0/0.1@lasote/stable")
         other_client.run("upload Hello0/0.1@lasote/stable --all")
         self.assertIn("Compressing recipe", self.client.user_io.out)
         self.assertIn("Compressing package", self.client.user_io.out)
