@@ -9,6 +9,16 @@ import re
 import six
 from conans.util.log import logger
 import tarfile
+import stat
+
+
+def make_read_only(path):
+    for root, _, files in os.walk(path):
+        for f in files:
+            full_path = os.path.join(root, f)
+            mode = os.stat(full_path).st_mode
+            os.chmod(full_path, mode & ~ stat.S_IWRITE)
+
 
 _DIRTY_FOLDER = ".dirty"
 
@@ -132,7 +142,6 @@ def relative_dirs(path):
 
 
 def _change_permissions(func, path, exc_info):
-    import stat
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR)
         func(path)

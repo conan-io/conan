@@ -6,7 +6,7 @@ import shutil
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
-from conans.util.files import save, rmdir, mkdir
+from conans.util.files import save, rmdir, mkdir, make_read_only
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import (ConanException, conanfile_exception_formatter,
@@ -18,6 +18,7 @@ from conans.client.output import ScopedOutput
 from conans.client.source import config_source
 from conans.tools import environment_append
 from conans.util.tracer import log_package_built
+from conans.util.env_reader import get_env
 
 
 def _init_package_info(deps_graph, paths, current_path):
@@ -95,6 +96,9 @@ class _ConanPackageBuilder(object):
                                                         self._conan_file.short_paths)
             create_package(self._conan_file, source_folder, self.build_folder, package_folder,
                            self._out)
+
+        if get_env("CONAN_READ_ONLY_CACHE", False):
+            make_read_only(package_folder)
 
     def _build_package(self):
         """ builds the package, creating the corresponding build folder if necessary
@@ -399,6 +403,8 @@ class ConanInstaller(object):
                                           short_paths=conan_file.short_paths):
             _handle_system_requirements(conan_file, package_reference,
                                         self._client_cache, output)
+            if get_env("CONAN_READ_ONLY_CACHE", False):
+                make_read_only(package_folder)
             return True
 
         _raise_package_not_found_error(conan_file, package_reference.conan, output)
