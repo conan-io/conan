@@ -306,8 +306,7 @@ class ConanAPIV1(object):
                               remote=remote,
                               profile=profile,
                               build_modes=build,
-                              update=update
-                              )
+                              update=update)
 
         test_folders = [test_folder] if test_folder else ["test_package", "test"]
         for test_folder_name in test_folders:
@@ -336,8 +335,7 @@ class ConanAPIV1(object):
                               remote=remote,
                               profile=profile,
                               update=update,
-                              generators=["txt"]
-                              )
+                              generators=["txt"])
         self._manager.build(test_conanfile, test_folder, build_folder, package_folder=None,
                             test=str(reference))
 
@@ -364,48 +362,63 @@ class ConanAPIV1(object):
                                     profile=profile, force=force)
 
     @api_method
-    def install(self, reference="", package=None, settings=None, options=None, env=None, scope=None, all=False,
+    def download(self, reference, remote=None, package=None):
+        # Install packages without settings (fixed ids or all)
+        if not reference or not isinstance(reference, ConanFileReference):
+            raise ConanException("Invalid package recipe reference. "
+                                 "e.g., MyPackage/1.2@user/channel")
+        self._manager.download(reference, package, remote=remote)
+
+    @api_method
+    def install_reference(self, reference, settings=None, options=None, env=None, scope=None,
+                          remote=None, werror=False, verify=None, manifests=None,
+                          manifests_interactive=None, build=None, profile_name=None,
+                          update=False, generator=None, cwd=None):
+
+        self._user_io.out.werror_active = werror
+        cwd = prepare_cwd(cwd)
+        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
+        manifest_folder, manifest_interactive, manifest_verify = manifests
+
+        profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
+                                    self._client_cache.profiles_path)
+
+        self._manager.install(reference=reference, current_path=cwd, remote=remote,
+                              profile=profile, build_modes=build, update=update,
+                              manifest_folder=manifest_folder,
+                              manifest_verify=manifest_verify,
+                              manifest_interactive=manifest_interactive,
+                              generators=generator)
+
+    @api_method
+    def install(self, path="", settings=None, options=None, env=None, scope=None,
                 remote=None, werror=False, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
                 update=False, generator=None, no_imports=False, filename=None, cwd=None):
 
         self._user_io.out.werror_active = werror
         cwd = prepare_cwd(cwd)
+        path = os.path.normpath(os.path.join(cwd, path))
 
-        generator = set(generator) if generator else set()
-        generator.add("txt")  # Add txt generator by default
 
-        try:
-            ref = ConanFileReference.loads(reference)
-        except:
-            ref = os.path.normpath(os.path.join(cwd, reference))
+        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
+        manifest_folder, manifest_interactive, manifest_verify = manifests
 
-        if all or package:  # Install packages without settings (fixed ids or all)
-            if all:
-                package = []
-            if not reference or not isinstance(ref, ConanFileReference):
-                raise ConanException("Invalid package recipe reference. "
-                                     "e.g., MyPackage/1.2@user/channel")
-            self._manager.download(ref, package, remote=remote)
-        else:  # Classic install, package chosen with settings and options
-            manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
-            manifest_folder, manifest_interactive, manifest_verify = manifests
+        profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
+                                    self._client_cache.profiles_path)
 
-            profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
-                                        self._client_cache.profiles_path)
-
-            self._manager.install(reference=ref,
-                                  current_path=cwd,
-                                  remote=remote,
-                                  profile=profile,
-                                  build_modes=build,
-                                  filename=filename,
-                                  update=update,
-                                  manifest_folder=manifest_folder,
-                                  manifest_verify=manifest_verify,
-                                  manifest_interactive=manifest_interactive,
-                                  generators=generator,
-                                  no_imports=no_imports)
+        self._manager.install(reference=path,
+                              current_path=cwd,
+                              remote=remote,
+                              profile=profile,
+                              build_modes=build,
+                              filename=filename,
+                              update=update,
+                              manifest_folder=manifest_folder,
+                              manifest_verify=manifest_verify,
+                              manifest_interactive=manifest_interactive,
+                              generators=generator,
+                              no_imports=no_imports)
 
     @api_method
     def config_get(self, item):
@@ -429,8 +442,9 @@ class ConanAPIV1(object):
         return configuration_install(item, self._client_cache, self._user_io.out, self._runner)
 
     @api_method
-    def info_build_order(self, reference, settings=None, options=None, env=None, scope=None, profile_name=None,
-                         filename=None, remote=None, build_order=None, check_updates=None, cwd=None):
+    def info_build_order(self, reference, settings=None, options=None, env=None, scope=None,
+                         profile_name=None, filename=None, remote=None, build_order=None,
+                         check_updates=None, cwd=None):
 
         current_path = prepare_cwd(cwd)
         try:
@@ -438,13 +452,16 @@ class ConanAPIV1(object):
         except:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, cwd, self._client_cache.profiles_path)
-        graph = self._manager.info_build_order(reference, profile, filename, build_order, remote, check_updates, cwd=cwd)
+        profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
+                                    self._client_cache.profiles_path)
+        graph = self._manager.info_build_order(reference, profile, filename, build_order,
+                                               remote, check_updates, cwd=cwd)
         return graph
 
     @api_method
-    def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None, scope=None,
-                            profile_name=None, filename=None, remote=None, check_updates=None, cwd=None):
+    def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
+                            scope=None, profile_name=None, filename=None, remote=None,
+                            check_updates=None, cwd=None):
 
         current_path = prepare_cwd(cwd)
         try:
@@ -452,8 +469,10 @@ class ConanAPIV1(object):
         except:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, cwd, self._client_cache.profiles_path)
-        ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote, check_updates, cwd)
+        profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
+                                    self._client_cache.profiles_path)
+        ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote,
+                                                check_updates, cwd)
         ref_list, project_reference = ret
         return ref_list, project_reference
 
@@ -469,8 +488,9 @@ class ConanAPIV1(object):
 
         profile = profile_from_args(profile_name, settings, options, env, scope, current_path,
                                     self._client_cache.profiles_path)
-        ret = self._manager.info_get_graph(reference=reference, current_path=current_path, remote=remote,
-                                           profile=profile, check_updates=update, filename=filename)
+        ret = self._manager.info_get_graph(reference=reference, current_path=current_path,
+                                           remote=remote, profile=profile, check_updates=update,
+                                           filename=filename)
         deps_graph, graph_updates_info, project_reference = ret
         return deps_graph, graph_updates_info, project_reference
 

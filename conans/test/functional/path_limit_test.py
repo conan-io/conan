@@ -70,9 +70,9 @@ class PathLengthLimitTest(unittest.TestCase):
         client.run("search")
         self.assertIn("There are no packages", client.user_io.out)
 
-        for download in ("", "--all"):
+        for command in ("install", "download"):
             client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-            client2.run("install lib/0.1@lasote/channel %s" % download)
+            client2.run("%s lib/0.1@lasote/channel" % command)
             reference = ConanFileReference.loads("lib/0.1@lasote/channel")
             export_folder = client2.client_cache.export(reference)
             export_files = os.listdir(export_folder)
