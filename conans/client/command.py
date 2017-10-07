@@ -226,7 +226,9 @@ class Command(object):
 
     def download(self, *args):
         """Downloads a conan package to the local cache without using settings by specifying the
-        package ID to be installed. If only a reference is specified, it will download all packages
+        package ID to be installed. Not transitive, requirements of the specified reference
+        wont be retrieved. Useful together with 'conan copy' to automate the promotion of packages
+        to a different user/channel. If only a reference is specified, it will download all packages
         in the specified remote. If no remote is specified will search sequentially in the available
         configured remotes."""
 
