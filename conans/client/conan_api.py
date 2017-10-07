@@ -478,29 +478,18 @@ class ConanAPIV1(object):
     def build(self, path, source_folder=None, package_folder=None, filename=None,
               build_folder=None):
 
-        conanfile_folder = os.path.abspath(path)
+        conanfile_folder = self._abs_relative_to(path, os.getcwd())
+        build_folder = self._abs_relative_to(build_folder, os.getcwd()) or os.getcwd()
+        source_folder = self._abs_relative_to(source_folder, os.getcwd()) or conanfile_folder
+        default_pkg_folder = os.path.join(build_folder, "package")
+        package_folder = self._abs_relative_to(package_folder, build_folder) or default_pkg_folder
 
-        if build_folder and not os.path.isabs(build_folder):
-            build_folder = os.path.normpath(os.path.join(os.getcwd(), build_folder))
+        conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)
+        if conanfile_abs_path.endswith(".txt"):
+              raise ConanException("A conanfile.py is needed to call 'conan build' "
+                                   "(not valid conanfile.txt)")
 
-        build_folder = build_folder or os.getcwd()
-
-        if source_folder and not os.path.isabs(source_folder):
-            source_folder = os.path.normpath(os.path.join(os.getcwd(), source_folder))
-
-        source_folder = source_folder or conanfile_folder
-
-        if package_folder and not os.path.isabs(package_folder):
-            package_folder = os.path.normpath(os.path.join(build_folder, package_folder))
-
-        package_folder = package_folder or os.path.join(build_folder, "package")
-
-        if filename and filename.endswith(".txt"):
-            raise ConanException("A conanfile.py is needed to call 'conan build'")
-
-        conanfile_path = os.path.join(conanfile_folder, filename or CONANFILE)
-
-        self._manager.build(conanfile_path, source_folder, build_folder, package_folder)
+        self._manager.build(conanfile_abs_path, source_folder, build_folder, package_folder)
 
     @api_method
     def package(self, reference="", package_id=None, build_folder=None, source_folder=None,
@@ -536,14 +525,11 @@ class ConanAPIV1(object):
         build_folder = self._abs_relative_to(build_folder, os.getcwd()) or os.getcwd()
 
         mkdir(source_folder)
+        if not os.path.exists(build_folder):
+            raise ConanException("Specified build_folder doesn't exist")
 
         conanfile_abs_path = self._get_conanfile_path(path, CONANFILE)
         self._manager.source(conanfile_abs_path, source_folder, build_folder)
-
-        # PENDING TESTS:
-        #  src_folder, src_folder doesn't exist
-        #  no build_folder => OK, build_folder without the files CRASH
-        #  build_folder with files => vars are present in source
 
     @staticmethod
     def _abs_relative_to(path, base_relative):

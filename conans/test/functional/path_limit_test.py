@@ -111,31 +111,6 @@ class PathLengthLimitTest(unittest.TestCase):
             self.assertTrue(os.path.exists(link_source))
             self.assertEqual(load(os.path.join(link_source + "/file0.txt")), "file0 content")
 
-    def source_test(self):
-        client = TestClient()
-        files = {"conanfile.py": base}
-        client.save(files)
-        client.run("export user/channel")
-
-        conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
-        client.run("source lib/0.1@user/channel")
-        self.assertIn("Configuring sources", client.user_io.out)
-
-        if platform.system() == "Windows":
-            source_folder = client.client_cache.source(conan_ref)
-            link_source = load(os.path.join(source_folder, ".conan_link"))
-            self.assertTrue(os.path.exists(link_source))
-
-        # Nothing changes, so source is still there
-        client.run("export user/channel")
-        client.run("source lib/0.1@user/channel")
-        self.assertNotIn("Configuring sources", client.user_io.out)
-
-        # But if we remove the source, it will retrieve sources again
-        client.run("remove lib/0.1@user/channel -s -f")
-        client.run("source lib/0.1@user/channel")
-        self.assertIn("Configuring sources", client.user_io.out)
-
     def package_copier_test(self):
         client = TestClient()
         files = {"conanfile.py": base}

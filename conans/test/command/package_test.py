@@ -212,7 +212,7 @@ class MyConan(ConanFile):
         client.save(files)
         origin_folder = client.current_folder
         client.run("install")
-        client.run("source")
+        client.run("source .")
         client.run("build .")
         error = client.run("package .", ignore_error=True)
         self.assertTrue(error)
