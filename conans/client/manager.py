@@ -449,30 +449,18 @@ class ConanManager(object):
     def imports_undo(self, current_path):
         undo_imports(current_path, self._user_io.out)
 
-    def imports(self, current_path, reference, conan_file_path, dest_folder):
-        if not isinstance(reference, ConanFileReference):
-            output = ScopedOutput("PROJECT", self._user_io.out)
-            if not conan_file_path:
-                conan_file_path = os.path.join(reference, CONANFILE)
-                if not os.path.exists(conan_file_path):
-                    conan_file_path = os.path.join(reference, CONANFILE_TXT)
-            elif not os.path.isabs(conan_file_path):
-                conan_file_path = os.path.abspath(os.path.join(reference, conan_file_path))
-            reference = None
-        else:
-            output = ScopedOutput(str(reference), self._user_io.out)
-            conan_file_path = self._client_cache.conanfile(reference)
+    def imports(self, conan_file_path, dest_folder, build_folder):
+        """
+        :param conan_file_path: Abs path to a conanfile
+        :param dest_folder:  Folder where to put the files
+        :param build_folder: Folder containing the conaninfo/conanbuildinfo.txt files
+        :return:
+        """
 
-        conanfile = self.load_consumer_conanfile(conan_file_path, current_path,
-                                                 output, reference=reference,
-                                                 deps_info_required=True)
+        output = ScopedOutput("PROJECT", self._user_io.out)
+        conanfile = self.load_consumer_conanfile(conan_file_path, build_folder,
+                                                 output, deps_info_required=True)
 
-        if dest_folder:
-            if not os.path.isabs(dest_folder):
-                dest_folder = os.path.normpath(os.path.join(current_path, dest_folder))
-            mkdir(dest_folder)
-        else:
-            dest_folder = current_path
         run_imports(conanfile, dest_folder, output)
 
     def local_package(self, package_folder, recipe_folder, build_folder, source_folder):

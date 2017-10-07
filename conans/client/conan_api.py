@@ -29,10 +29,10 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference, is_a_reference
 from conans.model.scope import Scopes
 from conans.model.version import Version
-from conans.paths import CONANFILE, get_conan_user_home
+from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, save_files, exception_message_safe, save
+from conans.util.files import rmdir, save_files, exception_message_safe, save, mkdir
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
@@ -549,19 +549,53 @@ class ConanAPIV1(object):
         current_path, reference = _get_reference(reference, cwd)
         self._manager.source(current_path, reference, force)
 
-    @api_method
-    def imports(self, reference, undo=False, dest=None, filename=None, cwd=None):
-        cwd = prepare_cwd(cwd)
-
-        if undo:
-            if not os.path.isabs(reference):
-                current_path = os.path.normpath(os.path.join(cwd, reference))
-            else:
-                current_path = reference
-            self._manager.imports_undo(current_path)
+    @staticmethod
+    def _abs_relative_to(path, base_relative):
+        """Gets an absolute path from "path" parameter, prepending base_relative if not abs yet"""
+        if not path:
+            return None
+        if not os.path.isabs(path):
+            return os.path.normpath(os.path.join(base_relative, path))
         else:
-            current_path, reference = _get_reference(reference, cwd)
-            self._manager.imports(current_path, reference, filename, dest)
+            return path
+
+    @api_method
+    def imports(self, path, dest=None, filename=None, build_folder=None):
+        """
+        :param path: Path to the conanfile
+        :param dest: Dir to put the imported files. (Abs path or relative to cwd)
+        :param filename: Alternative name of the conanfile. Default: conanfile.py or conanfile.txt
+        :param build_folder: Dir where the conaninfo.txt and conanbuildinfo.txt files are
+        :return: None
+        """
+
+        conanfile_folder = self._abs_relative_to(path, os.getcwd())
+        build_folder = self._abs_relative_to(build_folder, os.getcwd()) or os.getcwd()
+        dest = self._abs_relative_to(dest, os.getcwd()) or os.getcwd()
+
+        def get_conanfile_path(the_filename):  # Probably can be reused in other method?
+            def raise_if_not_exists(some_path):
+                if not os.path.exists(some_path):
+                    raise ConanException("Conanfile not found: %s" % some_path)
+
+            if the_filename:
+                conanfile_path = os.path.join(conanfile_folder, the_filename)
+                raise_if_not_exists(conanfile_path)
+            else:
+                conanfile_path = os.path.join(conanfile_folder, CONANFILE)
+                if not os.path.exists(conanfile_path):
+                    conanfile_path = os.path.join(conanfile_folder, CONANFILE_TXT)
+                    raise_if_not_exists(conanfile_path)
+            return conanfile_path
+
+        mkdir(dest)
+        conanfile_abs_path = get_conanfile_path(filename)
+        self._manager.imports(conanfile_abs_path, dest, build_folder)
+
+    @api_method
+    def imports_undo(self, manifest_path):
+        manifest_path = self._abs_relative_to(manifest_path, os.getcwd())
+        self._manager.imports_undo(manifest_path)
 
     @api_method
     def export(self, user, channel, path=None, keep_source=False, filename=None, cwd=None,
