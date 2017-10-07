@@ -102,7 +102,7 @@ class ConanfileToolsTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": file_content})
         client.run("install")
-        error = client.run("build", ignore_error=True)
+        error = client.run("build .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("patch: error: no patch data found!", client.user_io.out)
         self.assertIn("ERROR: test/1.9.10@PROJECT: Error in build() method, line 12",

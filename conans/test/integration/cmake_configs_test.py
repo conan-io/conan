@@ -30,7 +30,7 @@ class CMakeConfigsTest(unittest.TestCase):
                 client.run("export lasote/stable")
 
         client.run('install . --build missing')
-        client.run("build")
+        client.run("build .")
         cmd = os.sep.join([".", "bin", "say_hello"])
         client.runner(cmd, cwd=client.current_folder)
         self.assertIn("Hello Release Hello2 Hello Release Hello1 Hello Release Hello0",

@@ -178,6 +178,8 @@ class LibAConan(ConanFile):
 
         client.save({"conanfile.py": conanfile_a,
                      "main.cpp": main_cpp}, clean_first=True)
+
         client.run("install")
-        client.run("build")
+        client.run("build .")
+
         subprocess.Popen("./main", cwd=client.current_folder)

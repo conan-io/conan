@@ -559,6 +559,7 @@ class ConanManager(object):
                 pass
 
         try:
+            mkdir(build_folder)
             os.chdir(build_folder)
             conan_file._conanfile_directory = source_folder
             conan_file.build_folder = build_folder
