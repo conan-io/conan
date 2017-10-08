@@ -415,6 +415,10 @@ class PackageOptions(object):
             self._data[name].value = value
 
     def propagate_upstream(self, package_values, down_ref, own_ref, output, ignore_unknown=False):
+        """ ignore_unknown: do not raise Exception if the given option doesn't exist in this package.
+                            Useful for pattern defined options like "-o *:shared=True", for packages
+                            not defining the "shared" options, they will not fail
+        """
         if not package_values:
             return
 
