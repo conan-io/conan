@@ -4,6 +4,7 @@ import platform
 from collections import OrderedDict
 from contextlib import contextmanager
 
+from conans.client import defs_to_string, join_arguments
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
@@ -100,7 +101,7 @@ class CMake(object):
 
     @property
     def flags(self):
-        return _defs_to_string(self.definitions)
+        return defs_to_string(self.definitions)
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -235,7 +236,7 @@ class CMake(object):
         ]
         if self.toolset:
             args.append('-T "%s"' % self.toolset)
-        return _join_arguments(args)
+        return join_arguments(args)
 
     def _build_type_definition(self):
         if self._build_type and not self.is_multi_configuration:
@@ -244,7 +245,7 @@ class CMake(object):
 
     @property
     def runtime(self):
-        return _defs_to_string(self._runtime_definition())
+        return defs_to_string(self._runtime_definition())
 
     def _runtime_definition(self):
         if self._runtime:
@@ -324,10 +325,10 @@ class CMake(object):
         self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
         mkdir(self.build_dir)
-        arg_list = _join_arguments([
+        arg_list = join_arguments([
             self.command_line,
             args_to_string(args),
-            _defs_to_string(defs),
+            defs_to_string(defs),
             args_to_string([source_dir])
         ])
         command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
@@ -359,7 +360,7 @@ class CMake(object):
                     args.append("--")
                 args.append("-j%i" % cpu_count())
 
-        arg_list = _join_arguments([
+        arg_list = join_arguments([
             args_to_string([build_dir]),
             self.build_config,
             args_to_string(args)
@@ -391,13 +392,6 @@ class CMake(object):
     @verbose.setter
     def verbose(self, value):
         self.definitions["CMAKE_VERBOSE_MAKEFILE"] = "ON" if value else "OFF"
-
-def _defs_to_string(defs):
-    return " ".join(['-D{0}="{1}"'.format(k, v) for k, v in defs.items()])
-
-
-def _join_arguments(args):
-    return " ".join(filter(None, args))
 
 
 @contextmanager

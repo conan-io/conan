@@ -136,6 +136,9 @@ class ConanFile(object):
         # Are we in local cache? Suggest a better name
         self.in_local_cache = False
 
+        # Init a description
+        self.description = None
+
     @property
     def env(self):
         """Apply the self.deps_env_info into a copy of self._env_values

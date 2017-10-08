@@ -18,3 +18,7 @@ SET CONAN_LOGGING_LEVEL=10
 %PYTHON%/Scripts/pip.exe install -r conans/requirements.txt
 %PYTHON%/Scripts/pip.exe install -r conans/requirements_dev.txt
 %PYTHON%/Scripts/pip.exe install -r conans/requirements_server.txt
+
+C:/Python35/Scripts/pip.exe install meson
+choco install pkgconfiglite -y
+choco install ninja -y
