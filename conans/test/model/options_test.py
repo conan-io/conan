@@ -125,6 +125,106 @@ Boost:thread=True
 Boost:thread.multi=off
 Poco:deps_bundled=True""")
 
+    def pattern_positive_test(self):
+        boost_values = PackageOptionValues()
+        boost_values.add_option("static", False)
+        boost_values.add_option("path", "FuzzBuzz")
+
+        options = {"Boost.*": boost_values}
+        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
+        output = TestBufferConanOutput()
+        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
+                                                     ("path", "FuzzBuzz"),
+                                                     ("static", "False"),
+                                                     ("Boost.*:path", "FuzzBuzz"),
+                                                     ("Boost.*:static", "False"),
+                                                     ])
+
+    def multi_pattern_test(self):
+        boost_values = PackageOptionValues()
+        boost_values.add_option("static", False)
+        boost_values.add_option("path", "FuzzBuzz")
+        boost_values2 = PackageOptionValues()
+        boost_values2.add_option("optimized", 2)
+
+        options = {"Boost.*": boost_values,
+                   "*": boost_values2}
+        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
+        output = TestBufferConanOutput()
+        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.assertEqual(self.sut.values.as_list(), [("optimized", "2"),
+                                                     ("path", "FuzzBuzz"),
+                                                     ("static", "False"),
+                                                     ('*:optimized', '2'),
+                                                     ("Boost.*:path", "FuzzBuzz"),
+                                                     ("Boost.*:static", "False"),
+                                                     ])
+
+    def multi_pattern_error_test(self):
+        boost_values = PackageOptionValues()
+        boost_values.add_option("optimized", 4)
+        boost_values2 = PackageOptionValues()
+        boost_values2.add_option("optimized", 2)
+
+        options = {"Boost.*": boost_values,
+                   "*": boost_values2}
+        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
+        output = TestBufferConanOutput()
+        output.werror_active = True
+        with self.assertRaises(ConanException):
+            self.sut.propagate_upstream(options, down_ref, own_ref, output)
+
+    def all_positive_test(self):
+        boost_values = PackageOptionValues()
+        boost_values.add_option("static", False)
+        boost_values.add_option("path", "FuzzBuzz")
+
+        options = {"*": boost_values}
+        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
+        output = TestBufferConanOutput()
+        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
+                                                     ("path", "FuzzBuzz"),
+                                                     ("static", "False"),
+                                                     ("*:path", "FuzzBuzz"),
+                                                     ("*:static", "False"),
+                                                     ])
+
+    def pattern_ignore_test(self):
+        boost_values = PackageOptionValues()
+        boost_values.add_option("fake_option", "FuzzBuzz")
+
+        options = {"Boost.*": boost_values}
+        down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
+        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        output = TestBufferConanOutput()
+        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
+                                                     ("path", "NOTDEF"),
+                                                     ("static", "True"),
+                                                     ("Boost.*:fake_option", "FuzzBuzz"),
+                                                     ])
+
+    def pattern_unmatch_test(self):
+        boost_values = PackageOptionValues()
+        boost_values.add_option("fake_option", "FuzzBuzz")
+
+        options = {"OpenSSL.*": boost_values}
+        down_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
+        output = TestBufferConanOutput()
+        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
+                                                     ("path", "NOTDEF"),
+                                                     ("static", "True"),
+                                                     ("OpenSSL.*:fake_option", "FuzzBuzz"),
+                                                     ])
+
 
 class OptionsValuesTest(unittest.TestCase):
 
