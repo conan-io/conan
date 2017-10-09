@@ -148,7 +148,7 @@ class MyConan(ConanFile):
             package_folder = os.path.join(recipe_folder, "package")
             os.makedirs(package_folder)
             client.current_folder = package_folder
-            client.run('package .. --build_folder=../build')
+            client.run('package .. --build-folder=../build')
         else:
             package_folder = temp_folder()
             client.current_folder = package_folder
@@ -212,8 +212,8 @@ class MyConan(ConanFile):
         client.save(files)
         origin_folder = client.current_folder
         client.run("install")
-        client.run("source")
-        client.run("build")
+        client.run("source .")
+        client.run("build .")
         error = client.run("package .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Cannot 'conan package' to the build folder", client.user_io.out)

@@ -174,7 +174,8 @@ class MyLib(ConanFile):
             client = TestClient()
             client.save({"conanfile.py": conanfile % settings_line})
             client.run("install")
-            client.run("build", ignore_error=True)
+            client.run("build .", ignore_error=True)
+
             self.assertIn("You must specify compiler, compiler.version and arch in "
                           "your settings to use a CMake generator", client.user_io.out,)
 
@@ -199,14 +200,15 @@ class MyLib(ConanFile):
         """
         client = TestClient()
         client.save({"conanfile.py": conanfile % "True"})
-        client.run("build", ignore_error=True)
+        client.run("build .", ignore_error=True)
 
         self.assertIn("self.deps_cpp_info not defined. If you need it for a local command run "
                       "'conan install'", client.user_io.out)
 
         client.run("install")
-        client.run("build")
+        client.run("build .")
 
         client.save({"conanfile.py": conanfile % "False"}, clean_first=True)
         client.run("install")
-        client.run("build")
+        client.run("build .")
+

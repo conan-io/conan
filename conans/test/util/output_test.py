@@ -36,7 +36,7 @@ class PkgConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("install")
-        client.run("source")
+        client.run("source .")
         self.assertIn("TEXT", client.user_io.out)
         self.assertIn("ENDTEXT", client.user_io.out)
 

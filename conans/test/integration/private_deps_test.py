@@ -142,7 +142,7 @@ class PrivateDepsTest(unittest.TestCase):
         client.save(files3)
 
         client.run('install --build missing')
-        client.run('build')
+        client.run('build .')
 
         # assert Hello3 only depends on Hello2, and Hello1
         info_path = os.path.join(client.current_folder, BUILD_INFO_CMAKE)
@@ -195,7 +195,7 @@ class PrivateDepsTest(unittest.TestCase):
 
         client2.save(files3)
         client2.run('install -o language=1 --build missing')
-        client2.run('build')
+        client2.run('build .')
         self.assertNotIn("libhello0.a", client2.user_io.out)
         self.assertNotIn("libhello00.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)
@@ -215,7 +215,7 @@ class PrivateDepsTest(unittest.TestCase):
 
         client2.save(files3, clean_first=True)
         client2.run('install -o language=1 --build missing')
-        client2.run('build')
+        client2.run('build .')
         self.assertNotIn("libhello0.a", client2.user_io.out)
         self.assertNotIn("libhello00.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)
