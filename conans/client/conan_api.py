@@ -248,7 +248,7 @@ class ConanAPIV1(object):
         manifest_folder, manifest_interactive, manifest_verify = manifests
         self._manager.install(inject_require=conanfile_reference,
                               reference=test_folder,
-                              current_path=build_folder,
+                              build_folder=build_folder,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
@@ -299,7 +299,7 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, scope,
                                     cwd, self._client_cache.profiles_path)
         self._manager.install(reference=reference,
-                              current_path=cwd,
+                              build_folder=cwd,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
@@ -328,7 +328,7 @@ class ConanAPIV1(object):
         test_conanfile = os.path.join(test_folder, CONANFILE)
         self._manager.install(inject_require=reference,
                               reference=test_folder,
-                              current_path=build_folder,
+                              build_folder=build_folder,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
@@ -373,17 +373,19 @@ class ConanAPIV1(object):
     def install_reference(self, reference, settings=None, options=None, env=None, scope=None,
                           remote=None, werror=False, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
-                          update=False, generator=None, cwd=None):
+                          update=False, generator=None, build_folder=None):
 
         self._user_io.out.werror_active = werror
-        cwd = prepare_cwd(cwd)
+        cwd = os.getcwd()
+        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
 
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
 
-        self._manager.install(reference=reference, current_path=cwd, remote=remote,
+        self._manager.install(reference=reference, build_folder=build_folder, remote=remote,
                               profile=profile, build_modes=build, update=update,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
@@ -394,12 +396,14 @@ class ConanAPIV1(object):
     def install(self, path="", settings=None, options=None, env=None, scope=None,
                 remote=None, werror=False, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
-                update=False, generator=None, no_imports=False, filename=None, cwd=None):
+                update=False, generator=None, no_imports=False, filename=None,
+                build_folder=None):
 
         self._user_io.out.werror_active = werror
-        cwd = prepare_cwd(cwd)
-        path = os.path.normpath(os.path.join(cwd, path))
 
+        cwd = os.getcwd()
+        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        conanfile_folder = self._abs_relative_to(path, cwd, default=cwd)
 
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
@@ -407,8 +411,8 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
 
-        self._manager.install(reference=path,
-                              current_path=cwd,
+        self._manager.install(reference=conanfile_folder,
+                              build_folder=build_folder,
                               remote=remote,
                               profile=profile,
                               build_modes=build,
@@ -444,49 +448,50 @@ class ConanAPIV1(object):
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None, scope=None,
                          profile_name=None, filename=None, remote=None, build_order=None,
-                         check_updates=None, cwd=None):
+                         check_updates=None, build_folder=None):
 
-        current_path = prepare_cwd(cwd)
+        current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
+        profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
                                     self._client_cache.profiles_path)
         graph = self._manager.info_build_order(reference, profile, filename, build_order,
-                                               remote, check_updates, cwd=cwd)
+                                               remote, check_updates, cwd=current_path)
         return graph
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             scope=None, profile_name=None, filename=None, remote=None,
-                            check_updates=None, cwd=None):
+                            check_updates=None, build_folder=None):
 
-        current_path = prepare_cwd(cwd)
+        current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
+        profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
                                     self._client_cache.profiles_path)
         ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote,
-                                                check_updates, cwd)
+                                                check_updates, current_path)
         ref_list, project_reference = ret
         return ref_list, project_reference
 
     @api_method
-    def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None, scope=None,
-                       profile_name=None, update=False, filename=None, cwd=None):
+    def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None,
+                       scope=None, profile_name=None, update=False, filename=None,
+                       build_folder=None):
 
-        current_path = prepare_cwd(cwd)
+        current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(reference)
         except:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, current_path,
+        profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
                                     self._client_cache.profiles_path)
         ret = self._manager.info_get_graph(reference=reference, current_path=current_path,
                                            remote=remote, profile=profile, check_updates=update,
@@ -498,11 +503,13 @@ class ConanAPIV1(object):
     def build(self, path, source_folder=None, package_folder=None, filename=None,
               build_folder=None):
 
-        conanfile_folder = self._abs_relative_to(path, os.getcwd())
-        build_folder = self._abs_relative_to(build_folder, os.getcwd()) or os.getcwd()
-        source_folder = self._abs_relative_to(source_folder, os.getcwd()) or conanfile_folder
+        cwd = os.getcwd()
+        conanfile_folder = self._abs_relative_to(path, cwd)
+        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        source_folder = self._abs_relative_to(source_folder, cwd, default=conanfile_folder)
         default_pkg_folder = os.path.join(build_folder, "package")
-        package_folder = self._abs_relative_to(package_folder, build_folder) or default_pkg_folder
+        package_folder = self._abs_relative_to(package_folder, build_folder,
+                                               default=default_pkg_folder)
 
         conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)
         if conanfile_abs_path.endswith(".txt"):
@@ -540,9 +547,10 @@ class ConanAPIV1(object):
 
     @api_method
     def source(self, path, source_folder=None, build_folder=None):
-        path = self._abs_relative_to(path, os.getcwd())
-        source_folder = self._abs_relative_to(source_folder, os.getcwd()) or os.getcwd()
-        build_folder = self._abs_relative_to(build_folder, os.getcwd()) or os.getcwd()
+        cwd = os.getcwd()
+        path = self._abs_relative_to(path, cwd)
+        source_folder = self._abs_relative_to(source_folder, cwd, default=cwd)
+        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
 
         mkdir(source_folder)
         if not os.path.exists(build_folder):
@@ -552,10 +560,11 @@ class ConanAPIV1(object):
         self._manager.source(conanfile_abs_path, source_folder, build_folder)
 
     @staticmethod
-    def _abs_relative_to(path, base_relative):
-        """Gets an absolute path from "path" parameter, prepending base_relative if not abs yet"""
+    def _abs_relative_to(path, base_relative, default=None):
+        """Gets an absolute path from "path" parameter, prepending base_relative if not abs yet.
+        If path is none, will return the 'default'"""
         if not path:
-            return None
+            return default
         if not os.path.isabs(path):
             return os.path.normpath(os.path.join(base_relative, path))
         else:
@@ -587,10 +596,10 @@ class ConanAPIV1(object):
         :param build_folder: Dir where the conaninfo.txt and conanbuildinfo.txt files are
         :return: None
         """
-
-        conanfile_folder = self._abs_relative_to(path, os.getcwd())
-        build_folder = self._abs_relative_to(build_folder, os.getcwd()) or os.getcwd()
-        dest = self._abs_relative_to(dest, os.getcwd()) or os.getcwd()
+        cwd = os.getcwd()
+        conanfile_folder = self._abs_relative_to(path, cwd)
+        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        dest = self._abs_relative_to(dest, cwd, default=cwd)
 
         mkdir(dest)
         conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)

@@ -189,7 +189,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("source .")
         client.run("build . ")
         client.current_folder = package_folder
-        client.run("package .. --build_folder=..")
+        client.run("package .. --build-folder=..")
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")

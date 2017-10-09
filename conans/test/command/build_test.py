@@ -121,7 +121,7 @@ class AConan(ConanFile):
         self.assertIn("Src folder=>%s" % client.current_folder, client.out)
 
         # Try absolute package folder
-        client.run("build . --build_folder build1 --package_folder '%s'" %
+        client.run("build . --build-folder build1 --package_folder '%s'" %
                    os.path.join(client.current_folder, "mypackage"))
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build1"),
                       client.out)
@@ -140,7 +140,7 @@ class AConan(ConanFile):
         self.assertIn("Src folder=>%s" % client.current_folder, client.out)
 
         # Try different source
-        error = client.run("build . --source_folder '%s' --build_folder other/build" %
+        error = client.run("build . --source_folder '%s' --build-folder other/build" %
                            os.path.join(client.current_folder, "mysrc"), ignore_error=True)
         self.assertTrue(error)  # src is not created automatically, it makes no sense
         mkdir(os.path.join(client.current_folder, "mysrc"))

@@ -148,7 +148,7 @@ class MyConan(ConanFile):
             package_folder = os.path.join(recipe_folder, "package")
             os.makedirs(package_folder)
             client.current_folder = package_folder
-            client.run('package .. --build_folder=../build')
+            client.run('package .. --build-folder=../build')
         else:
             package_folder = temp_folder()
             client.current_folder = package_folder

@@ -183,10 +183,11 @@ class MyTest(ConanFile):
         self.client.save({"subfolder/conanfile.py": conanfile})
         self.client.run("export --path ./subfolder lasote/testing")
 
-        self.client.run("info --cwd ./subfolder")
+        self.client.run("info ./subfolder --build-folder ./subfolder")
         self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)
 
-        self.client.run("info --cwd ./subfolder --build_order Pkg/0.1@lasote/testing --json=jsonfile.txt")
+        self.client.run("info ./subfolder --build_folder ./subfolder --build_order "
+                        "Pkg/0.1@lasote/testing --json=jsonfile.txt")
         path = os.path.join(self.client.current_folder, "subfolder", "jsonfile.txt")
         self.assertTrue(os.path.exists(path))
 

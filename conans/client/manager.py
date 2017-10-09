@@ -339,13 +339,13 @@ class ConanManager(object):
 
         return deps_graph, graph_updates_info, self._get_project_reference(reference, conanfile)
 
-    def install(self, reference, current_path, profile, remote=None,
+    def install(self, reference, build_folder, profile, remote=None,
                 build_modes=None, filename=None, update=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
                 generators=None, no_imports=False, inject_require=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
-        @param current_path: where the output files will be saved
+        @param build_folder: where the output files will be saved
         @param remote: install only from that remote
         @param profile: Profile object with both the -s introduced options and profile readed values
         @param build_modes: List of build_modes specified
@@ -368,7 +368,7 @@ class ConanManager(object):
                                   update=update, check_updates=False, manifest_manager=manifest_manager)
 
         loader = self.get_loader(profile)
-        conanfile = self._get_conanfile_object(loader, reference, filename, current_path)
+        conanfile = self._get_conanfile_object(loader, reference, filename, build_folder)
         if inject_require:
             self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
@@ -408,21 +408,21 @@ class ConanManager(object):
         if not isinstance(reference, ConanFileReference):
             build_requires.install("", conanfile, installer)
 
-        installer.install(deps_graph, current_path)
+        installer.install(deps_graph, build_folder)
         build_mode.report_matches()
 
         # Write generators
         tmp = list(conanfile.generators)  # Add the command line specified generators
         tmp.extend([g for g in generators if g not in tmp])
         conanfile.generators = tmp
-        write_generators(conanfile, current_path, output)
+        write_generators(conanfile, build_folder, output)
 
         if not isinstance(reference, ConanFileReference):
             content = normalize(conanfile.info.dumps())
-            save(os.path.join(current_path, CONANINFO), content)
+            save(os.path.join(build_folder, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
             if not no_imports:
-                run_imports(conanfile, current_path, output)
+                run_imports(conanfile, build_folder, output)
             call_system_requirements(conanfile, output)
 
         if manifest_manager:

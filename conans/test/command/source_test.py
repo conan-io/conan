@@ -9,6 +9,12 @@ import os
 
 class SourceTest(unittest.TestCase):
 
+    def source_reference_test(self):
+        client = TestClient()
+        error = client.run("source lib/1.0@conan/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("'conan source' doesn't accept a reference anymore", client.out)
+
     def source_local_cwd_test(self):
         conanfile = '''
 import os
@@ -26,8 +32,8 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile})
         subdir = os.path.join(client.current_folder, "subdir")
         os.mkdir(subdir)
-        client.run("install .. --cwd subdir")  # IMPORTANT! SHOULD WE CHANGE THE CWD FROM INSTALL TO BUILD_FOLDER?
-        client.run("source . --build_folder subdir --source_folder subdir")
+        client.run("install . --build_folder subdir")
+        client.run("source . --build-folder subdir --source_folder subdir")
         self.assertIn("PROJECT: Configuring sources", client.user_io.out)
         self.assertIn("PROJECT: cwd=>%s" % subdir, client.user_io.out)
 
@@ -108,12 +114,12 @@ class ConanLib(ConanFile):
         src_folder = os.path.join(client.current_folder, "src")
         mkdir(build_folder)
         mkdir(src_folder)
-        client.run("source . --build_folder='%s' --source_folder='%s'" % (build_folder, src_folder),
+        client.run("source . --build-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
                    ignore_error=True)
         self.assertIn("self.deps_cpp_info not defined.", client.out)
 
-        client.run("install .. --cwd build --build ")  # IMPORTANT! change cwd with build_folder?
-        client.run("source . --build_folder='%s' --source_folder='%s'" % (build_folder, src_folder),
+        client.run("install . --build-folder build --build ")
+        client.run("source . --build-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
                    ignore_error=True)
         self.assertIn("FLAG=FLAG", client.out)
         self.assertIn("MYVAR=foo", client.out)
