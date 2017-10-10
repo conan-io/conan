@@ -250,9 +250,10 @@ class ConanManager(object):
             else:
                 remote_proxy.download_packages(reference, list(packages_props.keys()))
 
-    def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename, current_path):
+    def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename,
+                              conanfile_folder):
         if isinstance(reference_or_path, ConanFileReference):
-            conanfile = loader.load_virtual([reference_or_path], current_path)
+            conanfile = loader.load_virtual([reference_or_path], conanfile_folder)
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
             try:
@@ -347,18 +348,22 @@ class ConanManager(object):
         @param reference: ConanFileReference or path to user space conanfile
         @param build_folder: where the output files will be saved
         @param remote: install only from that remote
-        @param profile: Profile object with both the -s introduced options and profile readed values
+        @param profile: Profile object with both the -s introduced options and profile read values
         @param build_modes: List of build_modes specified
         @param filename: Optional filename of the conanfile
         @param update: Check for updated in the upstream remotes (and update)
         @param manifest_folder: Folder to install the manifests
         @param manifest_verify: Verify dependencies manifests against stored ones
-        @param manifest_interactive: Install deps manifests in folder for later verify, asking user for confirmation
-        @param generators: List of generators from command line
+        @param manifest_interactive: Install deps manifests in folder for later verify, asking user
+        for confirmation
+        @param generators: List of generators from command line. If False, no generator will be
+        written
         @param no_imports: Install specified packages but avoid running imports
+        @param inject_require: Reference to add as a requirement to the conanfile
         """
-        generators = set(generators) if generators else set()
-        generators.add("txt")  # Add txt generator by default
+        if generators is not False:
+            generators = set(generators) if generators else set()
+            generators.add("txt")  # Add txt generator by default
 
         manifest_manager = ManifestManager(manifest_folder, user_io=self._user_io,
                                            client_cache=self._client_cache,
@@ -408,16 +413,17 @@ class ConanManager(object):
         if not isinstance(reference, ConanFileReference):
             build_requires.install("", conanfile, installer)
 
-        installer.install(deps_graph, build_folder)
+        installer.install(deps_graph)
         build_mode.report_matches()
 
-        # Write generators
-        tmp = list(conanfile.generators)  # Add the command line specified generators
-        tmp.extend([g for g in generators if g not in tmp])
-        conanfile.generators = tmp
-        write_generators(conanfile, build_folder, output)
-
-        if not isinstance(reference, ConanFileReference):
+        if build_folder:
+            # Write generators
+            if generators is not False:
+                tmp = list(conanfile.generators)  # Add the command line specified generators
+                tmp.extend([g for g in generators if g not in tmp])
+                conanfile.generators = tmp
+                write_generators(conanfile, build_folder, output)
+            # Write conaninfo
             content = normalize(conanfile.info.dumps())
             save(os.path.join(build_folder, CONANINFO), content)
             output.info("Generated %s" % CONANINFO)
@@ -517,8 +523,7 @@ class ConanManager(object):
 
     def build(self, conanfile_path, source_folder, build_folder, package_folder, test=False):
         """ Call to build() method saved on the conanfile.py
-        param conanfile_path: the original source directory of the user containing a
-                            conanfile.py
+        param conanfile_path: path to a conanfile.py
         """
         logger.debug("Building in %s" % build_folder)
         logger.debug("Conanfile in %s" % conanfile_path)

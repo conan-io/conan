@@ -76,6 +76,31 @@ class MyPkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
+    def create_in_subfolder_test(self):
+        client = TestClient()
+        client.save({"subfolder/conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+"""})
+        client.run("create lasote/channel --path subfolder")
+        self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
+        client.run("search")
+        self.assertIn("Pkg/0.1@lasote/channel", client.out)
+
+    def create_in_subfolder_with_different_name_test(self):
+        # Now with a different name
+        client = TestClient()
+        client.save({"subfolder/CustomConanFile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+"""})
+        client.run("create lasote/channel --path subfolder --file CustomConanFile.py")
+        self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
+        client.run("search")
+        self.assertIn("Pkg/0.1@lasote/channel", client.out)
+
     def create_test_package_test(self):
         client = TestClient()
         client.save({"conanfile.py": """from conans import ConanFile
