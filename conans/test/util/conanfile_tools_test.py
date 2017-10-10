@@ -92,6 +92,20 @@ class ConanfileToolsTest(unittest.TestCase):
         tmp_dir, file_path, text_file = self._save_files(file_content)
         self._build_and_check(tmp_dir, file_path, text_file, "ONE TWO DOH!")
 
+    def test_patch_new(self):
+        file_content = base_conanfile + '''
+    def build(self):
+        patch_content = """--- /dev/null
++++ b/newfile
+@@ -0,0 +1 @@
++New file
+"""
+        patch(patch_string=patch_content)
+
+'''
+        tmp_dir, file_path, text_file = self._save_files(file_content)
+        self._build_and_check(tmp_dir, file_path, text_file, "ONE TWO DOH!")
+
     def test_error_patch(self):
         file_content = base_conanfile + '''
     def build(self):
