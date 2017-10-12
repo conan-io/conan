@@ -676,15 +676,20 @@ class Command(object):
     def search(self, *args):
         """ Search package recipes and binaries in the local cache or in a remote server.
         If you provide a pattern, then it will search for existing package recipes matching that pattern.
+        If a full and complete package reference is provided, like Pkg/0.1@user/channel, then the existing
+        package binaries for that reference will be displayed.
         You can search in a remote or in the local cache, if nothing is specified, the local conan cache is
-        assumed
+        assumed.
+        Search is case sensitive, exact case has to be used. For case insensitive file systems, like Windows,
+        case sensitive search can be forced with the --case-sensitive argument
         """
         parser = argparse.ArgumentParser(description=self.search.__doc__, prog="conan search")
         parser.add_argument('pattern', nargs='?', help='Pattern name, e.g. openssl/* or package'
                                                        ' recipe reference if "-q" is used. e.g. '
                                                        'MyPackage/1.2@user/channel')
         parser.add_argument('--case-sensitive', default=False,
-                            action='store_true', help='Make a case-sensitive search')
+                            action='store_true', help='Make a case-sensitive search. Use it to guarantee case-sensitive '
+                            'search in Windows or other case-insensitive filesystems')
         parser.add_argument('-r', '--remote', help='Remote origin')
         parser.add_argument('--raw', default=False, action='store_true',
                             help='Print just the list of recipes')

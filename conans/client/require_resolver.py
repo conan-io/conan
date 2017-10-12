@@ -50,7 +50,8 @@ class RequireResolver(object):
         search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
         resolved = self._resolve_local(search_ref, version_range)
         if not resolved:
-            remote_found = self._remote_search.search_remotes(search_ref)
+            # We should use ignorecase=False, we want the exact case!
+            remote_found = self._remote_search.search_remotes(search_ref, ignorecase=False)
             if remote_found:
                 resolved = self._resolve_version(version_range, remote_found)
 
