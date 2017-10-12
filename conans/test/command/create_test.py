@@ -23,8 +23,7 @@ class MyPkg(ConanFile):
             self.package_folder
         except Exception as exc:
             assert("Access to 'self.package_folder' is blocked from source() method" in str(exc))
-            
-        assert(not hasattr(self, "package_folder"))
+
     def configure(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")

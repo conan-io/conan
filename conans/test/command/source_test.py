@@ -26,18 +26,6 @@ class ConanLib(ConanFile):
     def source(self):
         self.output.info("Running source!")
         self.output.info("cwd=>%s" % os.getcwd())
-        
-        # Also try to access the build and package folders, should be forbidden
-        try:
-            self.build_folder
-        except Exception as exc:
-            assert("Access to 'self.build_folder' is blocked from source() method" in str(exc))
-
-        try:
-            self.package_folder
-        except Exception as exc:
-            assert("Access to 'self.package_folder' is blocked from source() method" in str(exc))
-            
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
@@ -114,8 +102,6 @@ class ConanLib(ConanFile):
 
     def source(self):
         assert(os.getcwd() == self.source_folder)
-        assert(not hasattr(self, "build_folder"))
-        assert(not hasattr(self, "package_folder"))
         self.output.info("FLAG=%s" % self.deps_cpp_info["Hello"].cppflags[0])
         self.output.info("MYVAR=%s" % self.deps_env_info["Hello"].MYVAR)
         self.output.info("OTHERVAR=%s" % self.deps_user_info["Hello"].OTHERVAR)
@@ -150,8 +136,17 @@ class ConanLib(ConanFile):
 
     def source(self):
         assert(os.getcwd() == self.source_folder)
-        assert(not hasattr(self, "build_folder"))
-        assert(not hasattr(self, "package_folder"))
+         # Also try to access the build and package folders, should be forbidden
+        try:
+            self.build_folder
+        except Exception as exc:
+            assert("Access to 'self.build_folder' is blocked from source() method" in str(exc))
+
+        try:
+            self.package_folder
+        except Exception as exc:
+            assert("Access to 'self.package_folder' is blocked from source() method" in str(exc))
+
 '''
         # First, failing source()
         client = TestClient()
