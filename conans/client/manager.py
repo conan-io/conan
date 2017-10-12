@@ -116,10 +116,10 @@ class ConanManager(object):
         self._search_manager = search_manager
         self._settings_preprocessor = settings_preprocessor
 
-    def load_consumer_conanfile(self, conanfile_path, build_folder, output, reference=None,
+    def load_consumer_conanfile(self, conanfile_path, info_folder, output, reference=None,
                                 deps_info_required=False):
 
-        profile = read_conaninfo_profile(build_folder) or self._client_cache.default_profile
+        profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
         loader = self.get_loader(profile)
         if conanfile_path.endswith(".py"):
             consumer = not reference
@@ -127,7 +127,7 @@ class ConanManager(object):
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
         if deps_info_required is not None:
-            _load_deps_info(build_folder, conanfile, required=deps_info_required)
+            _load_deps_info(info_folder, conanfile, required=deps_info_required)
 
         return conanfile
 
