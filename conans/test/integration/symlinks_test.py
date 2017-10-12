@@ -97,7 +97,7 @@ class TestConan(ConanFile):
         os.symlink("file1.txt", file11)
         save(file2, "Hello2")
         os.symlink("version1", latest)
-        client.run("package_files Hello/0.1@lasote/stable")
+        client.run("export-pkg Hello/0.1@lasote/stable")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 

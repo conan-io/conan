@@ -28,6 +28,9 @@ class AConan(ConanFile):
     version = "0.1"
 
     def package(self):
+        assert(self.package_folder == os.getcwd())
+        assert(hasattr(self, "package_folder"))
+        assert(hasattr(self, "build_folder"))
         mkdir(os.path.join(self.package_folder, "include"))
 """
 
@@ -49,6 +52,7 @@ class ConanBuildTest(unittest.TestCase):
 
 
         conanfile_user_info = """
+import os
 from conans import ConanFile
 
 class AConan(ConanFile):
@@ -58,11 +62,12 @@ class AConan(ConanFile):
     def build(self):
         self.deps_user_info
         self.deps_env_info
+        assert(self.build_folder == os.getcwd())
+        assert(hasattr(self, "package_folder"))
 """
         client.save({CONANFILE: conanfile_user_info}, clean_first=True)
         client.run("install --build=missing")
         client.run("build .")
-
 
     def build_test(self):
         """ Try to reuse variables loaded from txt generator => deps_cpp_info

@@ -141,8 +141,6 @@ class PythonBuildTest(unittest.TestCase):
         self.assertEqual([' Hello Baz', ' Hello Foo', ' Hello Boom', ' Hello Bar'],
                          lines)
 
-        client.run("package Consumer/0.1@lasote/stable")
-
     def basic_source_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile, "__init__.py": "", "mytest.py": test})

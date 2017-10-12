@@ -147,7 +147,7 @@ class ConanLib(ConanFile):
         mkdir(self.client.current_folder)
         self.client.run("install .. --no-imports")
         self.client.current_folder = tmp
-        self.client.run("imports . --build-folder=build")
+        self.client.run("imports . --info-folder=build")
         files = os.listdir(self.client.current_folder)
         self.assertIn("file1.txt", files)
         self.assertIn("file2.txt", files)

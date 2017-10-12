@@ -352,26 +352,38 @@ class ConanAPIV1(object):
                                       version, user, channel, remote, update)
 
     @api_method
-    def package_files(self, reference, source_folder=None, build_folder=None, package_folder=None,
-                      profile_name=None, force=False, settings=None, options=None, cwd=None):
+    def export_pkg(self, path, user, channel, source_folder=None, build_folder=None,
+                   profile_name=None, settings=None, options=None, env=None, force=False,
+                   no_export=False, name=None, version=None):
 
-        cwd = prepare_cwd(cwd)
+        settings = settings or []
+        options = options or []
+        env = env or []
 
-        reference = ConanFileReference.loads(reference)
-        profile = profile_from_args(profile_name, settings, options, env=None, scope=None, cwd=cwd,
+        cwd = os.getcwd()
+        path = self._abs_relative_to(path, cwd)
+        source_folder = self._abs_relative_to(source_folder, cwd, default=cwd)
+        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        profile = profile_from_args(profile_name, settings, options, env=env, scope=None, cwd=cwd,
                                     default_folder=self._client_cache.profiles_path)
-        package_folder = package_folder or cwd
-        if not source_folder and build_folder:
-            source_folder = build_folder
-        if not os.path.isabs(package_folder):
-            package_folder = os.path.join(cwd, package_folder)
-        if source_folder and not os.path.isabs(source_folder):
-            source_folder = os.path.normpath(os.path.join(cwd, source_folder))
-        if build_folder and not os.path.isabs(build_folder):
-            build_folder = os.path.normpath(os.path.join(cwd, build_folder))
-        self._manager.package_files(reference=reference, source_folder=source_folder,
-                                    build_folder=build_folder, package_folder=package_folder,
-                                    profile=profile, force=force)
+        conanfile_abs_path = self._get_conanfile_path(path, "conanfile.py")
+
+        if not no_export or not (name and version):
+            conanfile = load_conanfile_class(conanfile_abs_path)
+
+            if not no_export:
+                if (name and conanfile.name != name) or (version and conanfile.version != version):
+                    raise ConanException("Specified name/version doesn't match with the "
+                                         "name/version in the conanfile")
+                self._manager.export(user, channel, conanfile_abs_path)
+
+            if not (name and version):
+                name = conanfile.name
+                version = conanfile.version
+
+        reference = ConanFileReference(name, version, user, channel)
+        self._manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
+                                 profile=profile, force=force)
 
     @api_method
     def download(self, reference, remote=None, package=None):
@@ -471,7 +483,7 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
                                     self._client_cache.profiles_path)
         graph = self._manager.info_build_order(reference, profile, filename, build_order,
-                                               remote, check_updates, cwd=current_path)
+                                               remote, check_updates)
         return graph
 
     @api_method
@@ -488,7 +500,7 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
                                     self._client_cache.profiles_path)
         ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote,
-                                                check_updates, current_path)
+                                                check_updates)
         ref_list, project_reference = ret
         return ref_list, project_reference
 
@@ -505,7 +517,7 @@ class ConanAPIV1(object):
 
         profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
                                     self._client_cache.profiles_path)
-        ret = self._manager.info_get_graph(reference=reference, current_path=current_path,
+        ret = self._manager.info_get_graph(reference=reference,
                                            remote=remote, profile=profile, check_updates=update,
                                            filename=filename)
         deps_graph, graph_updates_info, project_reference = ret
@@ -531,45 +543,28 @@ class ConanAPIV1(object):
         self._manager.build(conanfile_abs_path, source_folder, build_folder, package_folder)
 
     @api_method
-    def package(self, reference="", package_id=None, build_folder=None, source_folder=None,
-                cwd=None):
-        try:
-            ref = ConanFileReference.loads(reference)
-        except:
-            if "@" in reference:
-                raise
-            ref = None
-
-        if ref:  # cache packaging
-            # TODO: other args are unused. Either raise, or split API in two methods
-            self._manager.package(ref, package_id)
-        else:  # local packaging
-            current_path = prepare_cwd(cwd)
-            recipe_folder = reference
-            if not os.path.isabs(recipe_folder):
-                recipe_folder = os.path.join(current_path, recipe_folder)
-            recipe_folder = os.path.normpath(recipe_folder)
-            build_folder = build_folder or recipe_folder
-            if not os.path.isabs(build_folder):
-                build_folder = os.path.join(current_path, build_folder)
-            build_folder = os.path.normpath(build_folder)
-            package_folder = current_path
-            source_folder = source_folder or recipe_folder
-            self._manager.local_package(package_folder, recipe_folder, build_folder, source_folder)
+    def package(self, path, build_folder, package_folder, source_folder=None):
+        cwd = os.getcwd()
+        conanfile_folder = self._abs_relative_to(path, cwd)
+        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        source_folder = self._abs_relative_to(source_folder, cwd, default=conanfile_folder)
+        default_pkg = os.path.join(build_folder, "package")
+        package_folder = self._abs_relative_to(package_folder, build_folder, default=default_pkg)
+        self._manager.local_package(package_folder, conanfile_folder, build_folder, source_folder)
 
     @api_method
-    def source(self, path, source_folder=None, build_folder=None):
+    def source(self, path, source_folder=None, info_folder=None):
         cwd = os.getcwd()
         path = self._abs_relative_to(path, cwd)
         source_folder = self._abs_relative_to(source_folder, cwd, default=cwd)
-        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        info_folder = self._abs_relative_to(info_folder, cwd, default=cwd)
 
         mkdir(source_folder)
-        if not os.path.exists(build_folder):
-            raise ConanException("Specified build_folder doesn't exist")
+        if not os.path.exists(info_folder):
+            raise ConanException("Specified info-folder doesn't exist")
 
         conanfile_abs_path = self._get_conanfile_path(path, CONANFILE)
-        self._manager.source(conanfile_abs_path, source_folder, build_folder)
+        self._manager.source(conanfile_abs_path, source_folder, info_folder)
 
     @staticmethod
     def _abs_relative_to(path, base_relative, default=None):
@@ -600,7 +595,7 @@ class ConanAPIV1(object):
 
 
     @api_method
-    def imports(self, path, dest=None, filename=None, build_folder=None):
+    def imports(self, path, dest=None, filename=None, info_folder=None):
         """
         :param path: Path to the conanfile
         :param dest: Dir to put the imported files. (Abs path or relative to cwd)
@@ -610,12 +605,12 @@ class ConanAPIV1(object):
         """
         cwd = os.getcwd()
         conanfile_folder = self._abs_relative_to(path, cwd)
-        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        info_folder = self._abs_relative_to(info_folder, cwd, default=cwd)
         dest = self._abs_relative_to(dest, cwd, default=cwd)
 
         mkdir(dest)
         conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)
-        self._manager.imports(conanfile_abs_path, dest, build_folder)
+        self._manager.imports(conanfile_abs_path, dest, info_folder)
 
     @api_method
     def imports_undo(self, manifest_path):

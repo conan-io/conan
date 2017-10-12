@@ -137,18 +137,6 @@ class BuildIdTest(unittest.TestCase):
         self.assertEqual("Release file1", content)
         self._check_conaninfo(client)
 
-    def package_error_test(self):
-        client = TestClient()
-
-        client.save({"conanfile.py": conanfile})
-        client.run("export user/channel")
-        client.save({"conanfile.txt": consumer}, clean_first=True)
-        client.run('install -s build_type=Debug')
-        error = client.run("package Pkg/0.1@user/channel", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("ERROR: package command does not support recipes with 'build_id'",
-                      client.user_io.out)
-
     def remove_specific_builds_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile})

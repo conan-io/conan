@@ -66,7 +66,7 @@ class CaseSensitiveTest(unittest.TestCase):
         client.save({CONANFILE: conanfile})
         client.run("export lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
-        error = client.run("package hello0/0.1@lasote/stable", ignore_error=True)
+        error = client.run("export-pkg hello0/0.1@lasote/stable", ignore_error=True)
         self._check(error, client)
 
     def copy_test(self):

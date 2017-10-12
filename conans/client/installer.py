@@ -3,6 +3,7 @@ import time
 import platform
 import shutil
 
+from conans.client import tools
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
@@ -246,11 +247,12 @@ def call_system_requirements(conanfile, output):
         raise ConanException("Error in system requirements")
 
 
-def call_package_info(conanfile):
+def call_package_info(conanfile, package_folder):
     # Once the node is build, execute package info, so it has access to the
     # package folder and artifacts
-    with conanfile_exception_formatter(str(conanfile), "package_info"):
-        conanfile.package_info()
+    with tools.chdir(package_folder):
+        with conanfile_exception_formatter(str(conanfile), "package_info"):
+            conanfile.package_info()
 
 
 class ConanInstaller(object):
@@ -346,9 +348,9 @@ class ConanInstaller(object):
 
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
             output = ScopedOutput(str(conan_ref), self._out)
-            package_ref = PackageReference(conan_ref, package_id)
 
             if build_needed and (conan_ref, package_id) not in self._built_packages:
+                package_ref = PackageReference(conan_ref, package_id)
                 build_allowed = self._build_mode.allowed(conan_file, conan_ref)
                 if not build_allowed:
                     _raise_package_not_found_error(conan_file, conan_ref, output)
@@ -372,22 +374,27 @@ class ConanInstaller(object):
                 self._remote_proxy.handle_package_manifest(package_ref, installed=True)
 
                 # Call the info method
-                call_package_info(conan_file)
+                package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
+                call_package_info(conan_file, package_folder)
 
                 # Log build
                 self._log_built_package(conan_file, package_ref, time.time() - t1)
                 self._built_packages.add((conan_ref, package_id))
             else:
                 # Get the package, we have a not outdated remote package
+                package_ref = None
                 if conan_ref:
+                    package_ref = PackageReference(conan_ref, package_id)
                     self.get_remote_package(conan_file, package_ref, output)
 
                 # Assign to the node the propagated info
                 # (conan_ref could be None if user project, but of course assign the info
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
-                # Call the info method
-                call_package_info(conan_file)
+                if package_ref:
+                    # Call the info method
+                    package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
+                    call_package_info(conan_file, package_folder)
 
     def get_remote_package(self, conan_file, package_reference, output):
         """Get remote package. It won't check if it's outdated"""

@@ -116,9 +116,10 @@ class Command(object):
                         gitlab_clang_versions=args.ci_gitlab_clang)
 
     def test(self, *args):
-        """ Runs a test_folder/conanfile.py to test an already built package.
-        If the binary package has not been created yet, you can use 'conan create' command
-        to build and test the package.
+        """ Runs a test_folder/conanfile.py to test an existing package.
+        The package to be tested must exist in the local cache or any configured remote.
+        To create and test a binary package for a local directory conanfile.py use the
+        'conan create' command.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
         parser.add_argument("reference", nargs="?",
@@ -240,47 +241,6 @@ class Command(object):
                                   conan_file_path=args.path, name=name, version=version, user=user,
                                   channel=channel, filename=args.file)
 
-    def package_files(self, *args):
-        """Creates a package binary from given precompiled artifacts in user folder, skipping
-           the package recipe build() method. If source_folder or build_folder is specified,
-           then it will call the package() method to extract the artifacts. If source_folder
-           nor build_folder is not specified, then it will run an exact copy of the package,
-           as they are layout in the given folder, without running or even requiring to define a
-           package() method.
-        """
-        parser = argparse.ArgumentParser(description=self.package_files.__doc__,
-                                         prog="conan package_files")
-        parser.add_argument("reference",
-                            help='package recipe reference e.g., MyPackage/1.2@user/channel')
-        parser.add_argument("--package-folder", "--package_folder", "-pf",
-                            help='Get binaries from this path, relative to current or absolute')
-        parser.add_argument("--source-folder", "--source_folder", "-sf",
-                            help='Get artifacts from this path, relative to current or absolute.'
-                            ' If specified, artifacts will be extracted/copied calling the '
-                            'package() method')
-        parser.add_argument("--build-folder", "--build_folder", "-bf",
-                            help='Get artifacts from this path, relative to current or absolute'
-                            ' If specified, artifacts will be extracted/copied calling the '
-                            'package() method')
-        parser.add_argument("--profile", "-pr",
-                            help='Profile for this package')
-        parser.add_argument("--options", "-o",
-                            help='Options for this package. e.g., -o with_qt=true',
-                            nargs=1, action=Extender)
-        parser.add_argument("--settings", "-s",
-                            help='Settings for this package e.g., -s compiler=gcc',
-                            nargs=1, action=Extender)
-        parser.add_argument('-f', '--force', default=False,
-                            action='store_true', help='Overwrite existing package if existing')
-
-        args = parser.parse_args(*args)
-        return self._conan.package_files(reference=args.reference,
-                                         source_folder=args.source_folder,
-                                         build_folder=args.build_folder,
-                                         package_folder=args.package_folder,
-                                         profile_name=args.profile, force=args.force,
-                                         settings=args.settings, options=args.options)
-
     def download(self, *args):
         """Downloads a conan package to the local cache without using settings by specifying the
         package ID to be installed. Not transitive, requirements of the specified reference
@@ -314,7 +274,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
         parser.add_argument("path", nargs='?', default="",
-                            help='path to conanfile.py. e.g., ./my_project/')
+                            help='path to a recipe (conanfile.py). e.g., ./my_project/')
         parser.add_argument("--file", "-f", help="specify conanfile filename")
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
@@ -491,89 +451,22 @@ class Command(object):
                                     args.package_filter, args.paths, project_reference)
         return
 
-    def build(self, *args):
-        """ Utility command to call the build() method of a local 'conanfile.py'.
-        The recipe will be built in the local directory specified by --build_folder,
-        reading the sources from --source_folder. If you are using a build helper, like CMake(), the
-        --package_folder will be configured as destination folder for the install step.
-        """
-
-        parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
-        parser.add_argument("path", help='path to a conanfile.py, e.g., conan build .')
-        parser.add_argument("--file", "-f", help="specify conanfile filename")
-        parser.add_argument("--source-folder", "--source_folder", "-sf",
-                            help="local folder containing the sources. Defaulted to the directory "
-                                 "of the conanfile. A relative path can also be specified "
-                                 "(relative to the current directory)")
-        parser.add_argument("--build-folder", "--build_folder", "-bf",
-                            help="build folder, working directory of the build process. Defaulted "
-                                 "to the current directory. A relative path can also be specified "
-                                 "(relative to the current directory)")
-        parser.add_argument("--package-folder", "--package_folder", "-pf",
-                            help="folder to install the package (when the build system or build() "
-                                 "method does it). Defaulted to the '{build_folder}/package' folder"
-                                 ". A relative path can be specified (relative to the build_folder "
-                                 "directory)")
-        args = parser.parse_args(*args)
-        return self._conan.build(path=args.path, source_folder=args.source_folder,
-                                 package_folder=args.package_folder, filename=args.file,
-                                 build_folder=args.build_folder)
-
-    def package(self, *args):
-        """ Calls your conanfile.py 'package' method for a specific package recipe.
-        It won't create a new package, use 'install' or 'test_package' instead for
-        creating packages in the conan local cache, or 'build' for conanfile.py in user space.
-
-        Intended for package creators, for regenerating a package without recompiling
-        the source, i.e. for troubleshooting, and fixing the package() method, not
-        normal operation.
-
-        It requires the package has been built locally, it won't
-        re-package otherwise. When used in a user space project, it
-        will execute from the build folder specified as parameter, and the current
-        directory. This is useful while creating package recipes or just for
-        extracting artifacts from the current project, without even being a package
-
-        This command also works locally, in the user space, and it will copy artifacts from the
-        provided folder to the current one.
-        """
-        parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("reference", help='package recipe reference '
-                            'e.g. MyPkg/0.1@user/channel, or local path to the build folder'
-                            ' (relative or absolute)')
-        parser.add_argument("package_id", nargs="?", default="",
-                            help='Package ID to regenerate. e.g., '
-                                 '9cf83afd07b678d38a9c1645f605875400847ff3'
-                                 ' This optional parameter is only used for the local conan '
-                                 'cache. If not specified, ALL binaries for this recipe are '
-                                 're-packaged')
-        parser.add_argument("--build-folder", "--build_folder", "-bf",
-                            help="local folder containing the build")
-        parser.add_argument("--source-folder", "--source_folder", "-sf",
-                            help="local folder containing the sources")
-
-        args = parser.parse_args(*args)
-        return self._conan.package(reference=args.reference, package_id=args.package_id,
-                                   build_folder=args.build_folder,
-                                   source_folder=args.source_folder)
-
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method to configure the source directory.
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("path", help='path to conanfile.py, e.g., conan source .')
+        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan source .')
 
         parser.add_argument("--source-folder", "--source_folder", "-s",
                             help='Destination directory. Defaulted to current directory')
-        parser.add_argument("--build-folder", "--build_folder", "-bf",
+        parser.add_argument("--info-folder", "-if",  # IMPORTANT, MAKE DECISSION ABOUT NAMING
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to the "
                             "current directory. Optional, source method will run without the "
                             "information retrieved from the conaninfo.txt and conanbuildinfo.txt, "
                             "only required when using conditional source() based on settings, "
                             "options, env_info and user_info ")
-
         args = parser.parse_args(*args)
 
         try:
@@ -588,7 +481,78 @@ class Command(object):
         except ConanException:
             pass
 
-        return self._conan.source(args.path, args.source_folder, args.build_folder)
+        return self._conan.source(args.path, args.source_folder, args.info_folder)
+
+    def build(self, *args):
+        """ Utility command to call the build() method of a local 'conanfile.py'.
+        The recipe will be built in the local directory specified by --build_folder,
+        reading the sources from --source_folder. If you are using a build helper, like CMake(), the
+        --package_folder will be configured as destination folder for the install step.
+        """
+
+        parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
+        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan build .')
+        parser.add_argument("--file", "-f", help="specify conanfile filename")
+        parser.add_argument("--source-folder", "--source_folder", "-sf",
+                            help="local folder containing the sources. Defaulted to the directory "
+                                 "of the conanfile. A relative path can also be specified "
+                                 "(relative to the current directory)")
+        parser.add_argument("--build-folder", "--build_folder", "-bf",
+                            help="build folder, working directory of the build process. Defaulted "
+                                 "to the current directory. A relative path can also be specified "
+                                 "(relative to the current directory)")
+        parser.add_argument("--package-folder", "--package_folder", "-pf",
+                            help="folder to install the package (when the build system or build() "
+                                 "method does it). Defaulted to the '{build_folder}/package' folder"
+                                 ". A relative path can be specified (relative to the build_folder "
+                                 "directory). Also an absolute path is allowed.")
+        args = parser.parse_args(*args)
+        return self._conan.build(path=args.path, source_folder=args.source_folder,
+                                 package_folder=args.package_folder, filename=args.file,
+                                 build_folder=args.build_folder)
+
+    def package(self, *args):
+        """ Calls your conanfile.py 'package' method of a local conanfile.py
+        It won't create a new package, use 'create' instead for creating packages in the conan
+        local cache, or 'build' for building in the user space.
+
+        This command works locally, in the user space, and it will copy artifacts from the
+        provided folder to the current one.
+        """
+        parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
+        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan package .')
+        parser.add_argument("--source-folder", "--source_folder", "-sf",
+                            help="local folder containing the sources. Defaulted to the directory "
+                                 "of the conanfile. A relative path can also be specified "
+                                 "(relative to the current directory)")
+        parser.add_argument("--build-folder", "--build_folder", "-bf",
+                            help="build folder, working directory of the build process. Defaulted "
+                                 "to the current directory. A relative path can also be specified "
+                                 "(relative to the current directory)")
+        parser.add_argument("--package-folder", "--package_folder", "-pf",
+                            help="folder to install the package. Defaulted to the "
+                                 "'{build_folder}/package' folder. A relative path can be specified"
+                                 " (relative to the build_folder directory). Also an absolute path"
+                                 "is allowed.")
+
+        args = parser.parse_args(*args)
+        try:
+            if "@" in args.path and ConanFileReference.loads(args.path):
+                raise ArgumentError(None,
+                                    "'conan package' doesn't accept a reference anymore. "
+                                    " The path parameter should be a folder containing a "
+                                    "conanfile.py file. If you were using the 'conan package' "
+                                    "command for development purposes we recommend to use "
+                                    "the local development commands: 'conan build' + "
+                                    "'conan package' and finally 'conan create' to regenerate the "
+                                    "package, or 'conan export_package' to store the already built "
+                                    "binaries in the local cache without rebuilding them.")
+        except ConanException:
+            pass
+
+        return self._conan.package(path=args.path, build_folder=args.build_folder,
+                                   source_folder=args.source_folder,
+                                   package_folder=args.package_folder)
 
     def imports(self, *args):
         """ Execute the 'imports' stage of a conanfile.txt or a conanfile.py.
@@ -596,8 +560,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
         parser.add_argument("path",
-                            help="Specify the location of the folder containing the conanfile."
-                            "By default it will be the current directory."
+                            help="path to a recipe (conanfile.py). e.g., ./my_project/"
                             "With --undo option, this parameter is the folder "
                             "containing the conan_imports_manifest.txt file generated in a previous"
                             "execution. e.j: conan imports ./imported_files --undo ")
@@ -606,7 +569,7 @@ class Command(object):
         parser.add_argument("-d", "--dest",
                             help="Directory to copy the artifacts to. By default it will be the"
                                  " current directory")
-        parser.add_argument("--build-folder", "--build_folder", "-bf",
+        parser.add_argument("--info-folder", "-if",  # IMPORTANT!! take a decission about name
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                                  "files (from a previous conan install execution)")
         parser.add_argument("-u", "--undo", default=False, action="store_true",
@@ -624,7 +587,55 @@ class Command(object):
         except ConanException:
             pass
 
-        return self._conan.imports(args.path, args.dest, args.file, args.build_folder)
+        return self._conan.imports(args.path, args.dest, args.file, args.info_folder)
+
+    def export_pkg(self, *args):
+        """Exports the specified recipe and then creates a package binary from given precompiled
+           artifacts in user folder, skipping the build() method of the recipe, by calling the
+           package() method to extract the artifacts from the local "--source_folder" and
+           "--build_folder".
+        """
+        parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
+                                         prog="conan export-pkg .")
+        parser.add_argument("path", help='path to a recipe (conanfile.py). e.j: "." ')
+        parser.add_argument("reference", help='user/channel, or a full package reference'
+                                              ' (Pkg/version@user/channel), if name and version '
+                                              ' are not declared in the recipe (conanfile.py)')
+        parser.add_argument("--source-folder", "--source_folder", "-sf",
+                            help="local folder containing the sources. Defaulted to the directory "
+                                 "of the conanfile. A relative path can also be specified "
+                                 "(relative to the current directory)")
+        parser.add_argument("--build-folder", "--build_folder", "-bf",
+                            help="build folder, working directory of the build process. Defaulted "
+                                 "to the current directory. A relative path can also be specified "
+                                 "(relative to the current directory)")
+        parser.add_argument("--profile", "-pr",
+                            help='Profile for this package')
+        parser.add_argument("--options", "-o",
+                            help='Options for this package. e.g., -o with_qt=true',
+                            nargs=1, action=Extender)
+        parser.add_argument("--settings", "-s",
+                            help='Settings for this package e.g., -s compiler=gcc',
+                            nargs=1, action=Extender)
+        parser.add_argument("--env", "-e",
+                            help='Environment variables that will be set during the package build, '
+                                 '-e CXX=/usr/bin/clang++',
+                            nargs=1, action=Extender)
+        parser.add_argument('-f', '--force', default=False,
+                            action='store_true', help='Overwrite existing package if existing')
+        parser.add_argument('--no-export', '-ne', help='Do not export the recipe', default=False)
+
+        args = parser.parse_args(*args)
+        return self._conan.export_pkg(reference=args.reference,
+                                      path=args.path,
+                                      source_folder=args.source_folder,
+                                      build_folder=args.build_folder,
+                                      profile_name=args.profile,
+                                      env=args.env,
+                                      settings=args.settings,
+                                      options=args.options,
+                                      force=args.force,
+                                      no_export=args.no_export)
 
     def export(self, *args):
         """ Copies the package recipe (conanfile.py and associated files) to your local cache.
@@ -1002,7 +1013,7 @@ class Command(object):
         max_len = max((len(c) for c in commands)) + 2
         fmt = '  %-{}s'.format(max_len)
         for name in sorted(self._commands()):
-            if name != "test_package": # If I do it hidden it can't be called
+            if name != "test-package":  # If I do it hidden it can't be called
                 self._user_io.out.write(fmt % name, Color.GREEN)
                 self._user_io.out.writeln(commands[name].__doc__.split('\n', 1)[0].strip())
 
@@ -1013,6 +1024,8 @@ class Command(object):
         for m in inspect.getmembers(self, predicate=inspect.ismethod):
             method_name = m[0]
             if not method_name.startswith('_'):
+                if "export_pkg" == method_name:
+                    method_name = "export-pkg"
                 method = m[1]
                 if method.__doc__ and not method.__doc__.startswith('HIDDEN'):
                     result[method_name] = method

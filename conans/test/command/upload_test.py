@@ -165,7 +165,7 @@ class UploadTest(unittest.TestCase):
                       "hello.cpp": ""})
         client2.run("create frodo/stable")
         client2.save({"hello.cpp": "changed!"}, clean_first=True)
-        client2.run("package_files Hello0/1.2.1@frodo/stable -f")
+        client2.run("export-pkg Hello0/1.2.1@frodo/stable -f")
         client2.run("upload Hello0/1.2.1@frodo/stable --all")
         self.assertIn("Recipe is up to date, upload skipped", client2.out)
         self.assertNotIn("Uploading conanfile.py", client2.out)

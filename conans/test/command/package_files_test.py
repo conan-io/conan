@@ -27,7 +27,7 @@ class TestConan(ConanFile):
         client.run("export lasote/stable")
 
         client.save({"include/header.h": "//Windows header"}, clean_first=True)
-        client.run("package_files Hello/0.1@lasote/stable -s os=Windows")
+        client.run("export-pkg Hello/0.1@lasote/stable -s os=Windows")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         win_package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
         package_folder = client.client_cache.package(win_package_ref, short_paths=short_paths)
@@ -45,11 +45,11 @@ class TestConan(ConanFile):
 
         # Now repeat
         client.save({"include/header.h": "//Windows header2"}, clean_first=True)
-        err = client.run("package_files Hello/0.1@lasote/stable -s os=Windows", ignore_error=True)
+        err = client.run("export-pkg Hello/0.1@lasote/stable -s os=Windows", ignore_error=True)
         self.assertTrue(err)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
                       client.user_io.out)
-        client.run("package_files Hello/0.1@lasote/stable -s os=Windows -f")
+        client.run("export-pkg Hello/0.1@lasote/stable -s os=Windows -f")
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header2")
 
@@ -71,7 +71,7 @@ class TestConan(ConanFile):
         client.save({"lib/libmycoollib.a": ""}, clean_first=True)
         settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
                     '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("package_files Hello/0.1@lasote/stable %s" % settings)
+        client.run("export-pkg Hello/0.1@lasote/stable %s" % settings)
         self._consume(client, settings + " -g cmake")
 
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
@@ -103,7 +103,7 @@ class TestConan(ConanFile):
                      "libs/what": "",
                      "lib/hello.lib": "My Lib",
                      "lib/bye.txt": ""}, clean_first=True)
-        client.run("package_files Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
+        client.run("export-pkg Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
         package_folder = client.client_cache.package(package_ref)
@@ -135,7 +135,7 @@ class TestConan(ConanFile):
                      "build/libs/what": "",
                      "build/lib/hello.lib": "My Lib",
                      "build/lib/bye.txt": ""}, clean_first=True)
-        client.run("package_files Hello/0.1@lasote/stable -s os=Windows --build_folder=build "
+        client.run("export-pkg Hello/0.1@lasote/stable -s os=Windows --build_folder=build "
                    "--source_folder=src")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
@@ -154,7 +154,7 @@ class TestConan(ConanFile):
         client.save({"Release_x86/lib/libmycoollib.a": ""}, clean_first=True)
         settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
                     '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("package_files Hello/0.1@lasote/stable %s -pf=Release_x86" % settings)
+        client.run("export-pkg Hello/0.1@lasote/stable %s -pf=Release_x86" % settings)
         self._consume(client, settings + " -g cmake")
 
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
@@ -176,7 +176,7 @@ class TestConan(ConanFile):
         client.save({"Release_x86/lib/libmycoollib.a": ""}, clean_first=True)
         settings = ('-s os=Windows -s compiler=gcc -s compiler.version=4.9 '
                     '-s compiler.libcxx=libstdc++ -s build_type=Release -s arch=x86')
-        client.run("package_files Hello1/0.1@lasote/stable %s -pf=Release_x86" % settings)
+        client.run("export-pkg Hello1/0.1@lasote/stable %s -pf=Release_x86" % settings)
 
         # consumer
         consumer = """

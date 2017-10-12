@@ -6,11 +6,25 @@ class CreateTest(unittest.TestCase):
 
     def create_test(self):
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
+        client.save({"conanfile.py": """
+import os
+from conans import ConanFile
 class MyPkg(ConanFile):
     def source(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+        
+        try:
+            self.build_folder
+        except Exception as exc:
+            assert("Access to 'self.build_folder' is blocked from source() method" in str(exc))
+
+        try:
+            self.package_folder
+        except Exception as exc:
+            assert("Access to 'self.package_folder' is blocked from source() method" in str(exc))
+            
+        assert(not hasattr(self, "package_folder"))
     def configure(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
@@ -20,12 +34,18 @@ class MyPkg(ConanFile):
     def build(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+        assert(self.build_folder == os.getcwd())
+        assert(hasattr(self, "package_folder"))
     def package(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+        assert(self.package_folder == os.getcwd())
+        assert(hasattr(self, "build_folder"))
     def package_info(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+        assert(self.package_folder == os.getcwd())
+        assert(hasattr(self, "build_folder"))
 """})
         client.run("create Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)

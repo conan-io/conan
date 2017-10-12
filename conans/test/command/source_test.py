@@ -1,6 +1,5 @@
 import unittest
 
-from conans.client import tools
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
@@ -27,13 +26,25 @@ class ConanLib(ConanFile):
     def source(self):
         self.output.info("Running source!")
         self.output.info("cwd=>%s" % os.getcwd())
+        
+        # Also try to access the build and package folders, should be forbidden
+        try:
+            self.build_folder
+        except Exception as exc:
+            assert("Access to 'self.build_folder' is blocked from source() method" in str(exc))
+
+        try:
+            self.package_folder
+        except Exception as exc:
+            assert("Access to 'self.package_folder' is blocked from source() method" in str(exc))
+            
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
         subdir = os.path.join(client.current_folder, "subdir")
         os.mkdir(subdir)
         client.run("install . --build_folder subdir")
-        client.run("source . --build-folder subdir --source_folder subdir")
+        client.run("source . --info-folder subdir --source_folder subdir")
         self.assertIn("PROJECT: Configuring sources", client.user_io.out)
         self.assertIn("PROJECT: cwd=>%s" % subdir, client.user_io.out)
 
@@ -70,9 +81,9 @@ class ConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         # Automatically created
-        error = client.run("source . --build_folder=missing_folder", ignore_error=True)
+        error = client.run("source . --info-folder=missing_folder", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Specified build_folder doesn't exist", client.out)
+        self.assertIn("Specified info-folder doesn't exist", client.out)
 
     def build_folder_reading_infos_test(self):
         conanfile = '''
@@ -102,6 +113,9 @@ class ConanLib(ConanFile):
     requires="Hello/0.1@conan/testing"
 
     def source(self):
+        assert(os.getcwd() == self.source_folder)
+        assert(not hasattr(self, "build_folder"))
+        assert(not hasattr(self, "package_folder"))
         self.output.info("FLAG=%s" % self.deps_cpp_info["Hello"].cppflags[0])
         self.output.info("MYVAR=%s" % self.deps_env_info["Hello"].MYVAR)
         self.output.info("OTHERVAR=%s" % self.deps_user_info["Hello"].OTHERVAR)
@@ -114,17 +128,37 @@ class ConanLib(ConanFile):
         src_folder = os.path.join(client.current_folder, "src")
         mkdir(build_folder)
         mkdir(src_folder)
-        client.run("source . --build-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
+        client.run("source . --info-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
                    ignore_error=True)
         self.assertIn("self.deps_cpp_info not defined.", client.out)
 
         client.run("install . --build-folder build --build ")
-        client.run("source . --build-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
+        client.run("source . --info-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
                    ignore_error=True)
         self.assertIn("FLAG=FLAG", client.out)
         self.assertIn("MYVAR=foo", client.out)
         self.assertIn("OTHERVAR=bar", client.out)
         self.assertIn("CURDIR=%s" % src_folder, client.out)
+
+    def source_do_not_have_build_folder_nor_source_folder_test(self):
+        conanfile = '''
+import os
+from conans import ConanFile
+from conans.util.files import save
+
+class ConanLib(ConanFile):
+
+    def source(self):
+        assert(os.getcwd() == self.source_folder)
+        assert(not hasattr(self, "build_folder"))
+        assert(not hasattr(self, "package_folder"))
+'''
+        # First, failing source()
+        client = TestClient()
+        client.save({CONANFILE: conanfile,
+                     BUILD_INFO: ""})
+
+        client.run("source .")
 
     def local_source_test(self):
         conanfile = '''

@@ -37,7 +37,7 @@ class PackageTester(object):
         build_folder = self._build_folder(profile, test_folder)
         rmdir(build_folder)
         test_conanfile = self._call_requirements(test_conanfile_path, profile)
-        ref = self._get_reference_to_test(test_conanfile, name, version, user, channel)
+        ref = self._get_reference_to_test(test_conanfile.requires, name, version, user, channel)
         if build_modes is None:
             build_modes = ["never"]
         self._manager.install(inject_require=ref,
@@ -57,12 +57,10 @@ class PackageTester(object):
         return build_folder
 
     @staticmethod
-    def _get_reference_to_test(test_conanfile, name, version, user, channel):
+    def _get_reference_to_test(requires, name, version, user, channel):
         """Given the requirements of a test_package/conanfile.py and a user specified values,
         check if there are any conflict in the specified version and return the package to be
         tested"""
-
-        requires = test_conanfile.requires
 
         # User do not specify anything, and there is a require
         if name is None and len(requires.items()) == 1:
@@ -72,7 +70,7 @@ class PackageTester(object):
         elif name is not None and name in requires:
             a_ref = requires[name].conan_reference
             if version and (version != a_ref.version):
-                raise ConanException("The specified reference doesn't match with the "
+                raise ConanException("The specified version doesn't match with the "
                                      "requirement of the test_package/conanfile.py")
             pname, pversion, puser, pchannel = a_ref
             if user and channel:  # Override from the command line
@@ -84,8 +82,9 @@ class PackageTester(object):
             else:
                 pname, pversion, puser, pchannel = name, version, user, channel
         else:
-            raise ConanException("Specify a reference in the 'conan test' command or a "
-                                 "requirement in the test_package/conanfile.py file.")
+            raise ConanException("Cannot deduce the reference to be tested, specify a reference in "
+                                 "the 'conan test' command or a single requirement in the "
+                                 "test_package/conanfile.py file.")
 
         return ConanFileReference(pname, pversion, puser, pchannel)
 
