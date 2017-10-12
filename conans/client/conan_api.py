@@ -352,9 +352,9 @@ class ConanAPIV1(object):
                                       version, user, channel, remote, update)
 
     @api_method
-    def export_pkg(self, path, user, channel, source_folder=None, build_folder=None,
+    def export_pkg(self, path, name, channel, source_folder=None, build_folder=None,
                    profile_name=None, settings=None, options=None, env=None, force=False,
-                   no_export=False, name=None, version=None):
+                   no_export=False, user=None, version=None):
 
         settings = settings or []
         options = options or []
@@ -375,7 +375,7 @@ class ConanAPIV1(object):
                 if (name and conanfile.name != name) or (version and conanfile.version != version):
                     raise ConanException("Specified name/version doesn't match with the "
                                          "name/version in the conanfile")
-                self._manager.export(user, channel, conanfile_abs_path)
+                self._manager.export(user, channel, path)
 
             if not (name and version):
                 name = conanfile.name

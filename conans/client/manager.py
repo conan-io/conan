@@ -215,12 +215,6 @@ class ConanManager(object):
             package_output = ScopedOutput(str(reference), self._user_io.out)
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     package_output, local=True)
-        else:  # we are specifying a final package
-            shutil.copytree(package_folder, dest_package_folder, symlinks=True)
-            save(os.path.join(dest_package_folder, CONANINFO), conanfile.info.dumps())
-            # Create the digest for the package
-            digest = FileTreeManifest.create(dest_package_folder)
-            save(os.path.join(dest_package_folder, CONAN_MANIFEST), str(digest))
 
     def download(self, reference, package_ids, remote=None):
         """ Download conanfile and specified packages to local repository

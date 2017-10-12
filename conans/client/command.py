@@ -623,11 +623,15 @@ class Command(object):
                             nargs=1, action=Extender)
         parser.add_argument('-f', '--force', default=False,
                             action='store_true', help='Overwrite existing package if existing')
-        parser.add_argument('--no-export', '-ne', help='Do not export the recipe', default=False)
+        parser.add_argument('--no-export', '-ne', help='Do not export the recipe', default=False,
+                            action='store_true')
 
         args = parser.parse_args(*args)
-        return self._conan.export_pkg(reference=args.reference,
-                                      path=args.path,
+        name, version, user, channel = get_reference_fields(args.reference)
+
+        return self._conan.export_pkg(path=args.path,
+                                      name=name,
+                                      version=version,
                                       source_folder=args.source_folder,
                                       build_folder=args.build_folder,
                                       profile_name=args.profile,
@@ -635,7 +639,9 @@ class Command(object):
                                       settings=args.settings,
                                       options=args.options,
                                       force=args.force,
-                                      no_export=args.no_export)
+                                      no_export=args.no_export,
+                                      user=user,
+                                      channel=channel)
 
     def export(self, *args):
         """ Copies the package recipe (conanfile.py and associated files) to your local cache.

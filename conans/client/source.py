@@ -111,10 +111,10 @@ def block_build_and_package_folders():
           "unexpected results."
 
     def raise_when_access_build(*args):
-        raise Exception(msg % "self.build_folder")
+        raise ConanException(msg % "self.build_folder")
 
     def raise_when_access_package(*args):
-        raise Exception(msg % "self.package_folder")
+        raise ConanException(msg % "self.package_folder")
 
     ConanFile.build_folder = property(raise_when_access_build)
     ConanFile.package_folder = property(raise_when_access_package)

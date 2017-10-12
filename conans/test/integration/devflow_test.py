@@ -1,7 +1,7 @@
 import unittest
 from conans.test.utils.tools import TestClient
 import os
-from conans.util.files import mkdir, load
+from conans.util.files import mkdir, load, rmdir
 from conans.model.ref import ConanFileReference
 
 
@@ -59,7 +59,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")
-        client.run("export-pkg Pkg/0.1@lasote/testing -pf=../pkg")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../pkg")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -82,7 +82,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")
-        client.run("export-pkg Pkg/0.1@lasote/testing -pf='%s'" % package_folder)
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf='%s'" % package_folder)
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -92,7 +92,6 @@ class DevInSourceFlowTest(unittest.TestCase):
 
     def child_build_test(self):
         client = TestClient()
-        repo_folder = client.current_folder
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         package_folder = os.path.join(build_folder, "package")
@@ -106,7 +105,12 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.current_folder = package_folder
         client.run("package ../.. --build_folder=../")
         self._assert_pkg(package_folder)
-        client.run("export-pkg Pkg/0.1@lasote/testing -bf=../")
+        rmdir(package_folder)  # IMPORTANT: Symptom that package + package_folder is not fitting
+        # well now. (To discuss)
+        # But I think now you choose you way to develop, local or cache, if you use conan export-pkg
+        # you are done, if you use package() you need the "conan project" feature
+        client.current_folder = build_folder
+        client.run("export-pkg .. Pkg/0.1@lasote/testing --source_folder=.. ")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -169,7 +173,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")
-        client.run("export-pkg Pkg/0.1@lasote/testing -pf=../build/package")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build/package")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -192,7 +196,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")
-        client.run("export-pkg Pkg/0.1@lasote/testing -pf=./pkg")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./pkg")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -216,9 +220,10 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.current_folder = package_folder
         client.run("package ../.. --build_folder=../ --package_folder=./package")
         self._assert_pkg(package_folder)
+        rmdir(package_folder)
         client.current_folder = repo_folder
-        client.run("export lasote/testing")
-        client.run("export-pkg Pkg/0.1@lasote/testing -pf=./build/package")
+
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./build")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)

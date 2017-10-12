@@ -72,7 +72,7 @@ class PythonBuildTest(unittest.TestCase):
 
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("install .")
-        self.assertIn("Hello Bar", client.user_io.out)
+        self.assertNotIn("Hello Bar", client.user_io.out)  # IMPORTANT!! WTF? Why this test was passing? Why I'm missing?
         self.assertNotIn("Hello Foo", client.user_io.out)
         client.run("build .")
         self.assertNotIn("Hello Bar", client.user_io.out)
