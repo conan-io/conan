@@ -26,7 +26,7 @@ from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
-from conans.model.ref import ConanFileReference, is_a_reference
+from conans.model.ref import ConanFileReference
 from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT
@@ -38,6 +38,7 @@ from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
 from conans.client import settings_preprocessor
 from conans.tools import set_global_instances
+from conans.client.uploader import is_a_reference
 
 default_manifest_folder = '.conan_manifests'
 
