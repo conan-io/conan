@@ -4,12 +4,13 @@ from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
 import os
 from conans.model.manifest import FileTreeManifest
-from conans.util.files import load
+from conans.util.files import load, mkdir
+from nose_parameterized.parameterized import parameterized
 
 
 class DeployTest(unittest.TestCase):
-
-    def deploy_test(self):
+    @parameterized.expand([(True, ), (False, )])
+    def deploy_test(self, deploy_to_abs):
         client = TestClient()
         libconanfile = """from conans import ConanFile
 from conans.tools import save
@@ -28,6 +29,11 @@ class Lib(ConanFile):
         client.run("create Lib/0.1@user/testing")
         self.assertNotIn("Lib deploy()", client.out)
 
+        if deploy_to_abs:
+            dll_folder = temp_folder()
+            mkdir(dll_folder)
+        else:
+            dll_folder = ""
         conanfile = """from conans import ConanFile
 from conans.tools import save
 class Pkg(ConanFile):
@@ -39,8 +45,8 @@ class Pkg(ConanFile):
     def deploy(self):
         self.output.info("Pkg deploy()")
         self.copy("*.exe")
-        self.copy_deps("*.dll")
-"""
+        self.copy_deps("*.dll", dst="%s")
+""" % dll_folder.replace("\\", "/")
         client.save({"conanfile.py": conanfile})
         client.run("create Pkg/0.1@user/testing")
         self.assertNotIn("deploy()", client.out)
@@ -54,7 +60,10 @@ class Pkg(ConanFile):
                                                                    "deploy_manifest.txt")))
 
         app = os.path.join(client.current_folder, "myapp.exe")
-        lib = os.path.join(client.current_folder, "mylib.dll")
+        if deploy_to_abs:
+            lib = os.path.join(dll_folder, "mylib.dll")
+        else:
+            lib = os.path.join(client.current_folder, "mylib.dll")
         self.assertEqual(sorted([app, lib]),
                          sorted(deploy_manifest.file_sums.keys()))
         self.assertEqual(load(app), "myexe")
