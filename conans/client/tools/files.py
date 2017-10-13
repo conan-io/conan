@@ -67,14 +67,12 @@ def unzip(filename, destination=".", keep_permissions=False):
     import zipfile
     full_path = os.path.normpath(os.path.join(os.getcwd(), destination))
 
-    import time
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):
-            the_size = round(the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
-            if time.time() >= print_progress.last_time + 60 or the_size != print_progress.last_size:
+            the_size = (the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
+            if the_size > print_progress.last_size + 1:
                 txt_msg = "Unzipping %d %%" % the_size
                 _global_output.rewrite_line(txt_msg)
-                print_progress.last_time = time.time()
                 print_progress.last_size = the_size
     else:
         def print_progress(_, __):
@@ -87,7 +85,7 @@ def unzip(filename, destination=".", keep_permissions=False):
         else:
             _global_output.info("Unzipping %s" % human_size(uncompress_size))
         extracted_size = 0
-        print_progress.last_time = time.time()
+
         print_progress.last_size = -1
         if platform.system() == "Windows":
             for file_ in z.infolist():
