@@ -390,7 +390,7 @@ class ConanAPIV1(object):
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
-                              generators=generator)
+                              generators=generator, deploy=True)
 
     @api_method
     def install(self, path="", settings=None, options=None, env=None, scope=None,

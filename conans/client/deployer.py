@@ -68,39 +68,6 @@ def run_imports(conanfile, dest_folder, output):
     return copied_files
 
 
-def run_deploy(conanfile, dest_folder, output):
-    dest_folder = os.path.abspath(dest_folder)
-
-    deploy_output = ScopedOutput("%s deploy()" % output.scope, output)
-    file_importer = _FileImporter(conanfile, dest_folder)
-    package_copied = set()
-
-    # This is necessary to capture FileCopier full destination paths
-    # Maybe could be improved in FileCopier
-    def file_copier(*args, **kwargs):
-        file_copy = FileCopier(conanfile.package_folder, dest_folder)
-        copied = file_copy(*args, **kwargs)
-        package_copied.update(copied)
-
-    conanfile.copy_deps = file_importer
-    conanfile.copy = file_copier
-    with environment_append(conanfile.env):
-        conanfile.deploy()
-
-    copied_files = file_importer.copied_files
-    copied_files.update(package_copied)
-    report_copied_files(copied_files, deploy_output)
-    if copied_files:
-        date = calendar.timegm(time.gmtime())
-        file_dict = {}
-        for f in copied_files:
-            abs_path = os.path.join(dest_folder, f)
-            file_dict[f] = md5sum(abs_path)
-        manifest = FileTreeManifest(date, file_dict)
-        save(os.path.join(dest_folder, "deploy_manifest.txt"), str(manifest))
-    return copied_files
-
-
 class _FileImporter(object):
     """ manages the copy of files, resources, libs from the local store to the user
     space. E.g.: shared libs, dlls, they will be in the package folder of your
