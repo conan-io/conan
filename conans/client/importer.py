@@ -48,6 +48,18 @@ def undo_imports(current_path, output):
         raise ConanException("Cannot remove manifest file (open or busy): %s" % manifest_path)
 
 
+def _report_save_manifest(copied_files, output, dest_folder, manifest_name):
+    report_copied_files(copied_files, output)
+    if copied_files:
+        date = calendar.timegm(time.gmtime())
+        file_dict = {}
+        for f in copied_files:
+            abs_path = os.path.join(dest_folder, f)
+            file_dict[f] = md5sum(abs_path)
+        manifest = FileTreeManifest(date, file_dict)
+        save(os.path.join(dest_folder, manifest_name), str(manifest))
+
+
 def run_imports(conanfile, dest_folder, output):
     file_importer = _FileImporter(conanfile, dest_folder)
     conanfile.copy = file_importer
@@ -56,21 +68,11 @@ def run_imports(conanfile, dest_folder, output):
         conanfile.imports()
     copied_files = file_importer.copied_files
     import_output = ScopedOutput("%s imports()" % output.scope, output)
-    report_copied_files(copied_files, import_output)
-    if copied_files:
-        date = calendar.timegm(time.gmtime())
-        file_dict = {}
-        for f in copied_files:
-            abs_path = os.path.join(dest_folder, f)
-            file_dict[f] = md5sum(abs_path)
-        manifest = FileTreeManifest(date, file_dict)
-        save(os.path.join(dest_folder, IMPORTS_MANIFESTS), str(manifest))
+    _report_save_manifest(copied_files, import_output, dest_folder, IMPORTS_MANIFESTS)
     return copied_files
 
 
 def run_deploy(conanfile, dest_folder, output):
-    dest_folder = os.path.abspath(dest_folder)
-
     deploy_output = ScopedOutput("%s deploy()" % output.scope, output)
     file_importer = _FileImporter(conanfile, dest_folder)
     package_copied = set()
@@ -89,16 +91,7 @@ def run_deploy(conanfile, dest_folder, output):
 
     copied_files = file_importer.copied_files
     copied_files.update(package_copied)
-    report_copied_files(copied_files, deploy_output)
-    if copied_files:
-        date = calendar.timegm(time.gmtime())
-        file_dict = {}
-        for f in copied_files:
-            abs_path = os.path.join(dest_folder, f)
-            file_dict[f] = md5sum(abs_path)
-        manifest = FileTreeManifest(date, file_dict)
-        save(os.path.join(dest_folder, "deploy_manifest.txt"), str(manifest))
-    return copied_files
+    _report_save_manifest(copied_files, deploy_output, dest_folder, "deploy_manifest.txt")
 
 
 class _FileImporter(object):
