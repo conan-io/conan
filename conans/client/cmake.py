@@ -74,7 +74,7 @@ class CMake(object):
         self._build_type = self._settings.get_safe("build_type")
 
         self.generator = generator or self._generator()
-        self.toolset = toolset
+        self.toolset = self._toolset(toolset)
         self.build_dir = None
         self._cmake_system_name = _get_env_cmake_system_name()
         if self._cmake_system_name is None:  # Not overwritten using environment
@@ -146,6 +146,11 @@ class CMake(object):
             return "MinGW Makefiles"  # it is valid only under Windows
 
         return "Unix Makefiles"
+
+    def _toolset(self, toolset=None):
+        if "CONAN_CMAKE_TOOLSET" in os.environ:
+            return os.environ["CONAN_CMAKE_TOOLSET"]
+        return toolset
 
     def _cmake_compiler_options(self, the_os, arch):
         cmake_definitions = OrderedDict()
