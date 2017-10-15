@@ -23,6 +23,14 @@ set(CONAN_EXE_LINKER_FLAGS_{dep}{build_type}_LIST "{deps.exelinkflags_list}")
 """
 
 
+def _cmake_string_representation(value):
+    """Escapes the specified string for use in a CMake command surrounded with double quotes
+       :param value the string to escape"""
+    return '"{0}"'.format(value.replace('\\', '\\\\')
+                               .replace('$', '\\$')
+                               .replace('"', '\\"'))
+
+
 def _build_type_str(build_type):
     if build_type:
         return "_" + str(build_type).upper()
@@ -33,7 +41,7 @@ def cmake_user_info_vars(deps_user_info):
     lines = []
     for dep, the_vars in deps_user_info.items():
         for name, value in the_vars.vars.items():
-            lines.append('set(CONAN_USER_%s_%s "%s")' % (dep.upper(), name, value))
+            lines.append('set(CONAN_USER_%s_%s %s)' % (dep.upper(), name, _cmake_string_representation(value)))
     return "\n".join(lines)
 
 
@@ -56,7 +64,7 @@ def cmake_settings_info(settings):
     for item in settings.items():
         key, value = item
         name = "CONAN_SETTINGS_%s" % key.upper().replace(".", "_")
-        settings_info += "set({key} \"{value}\")\n".format(key=name, value=value)
+        settings_info += "set({key} {value})\n".format(key=name, value=_cmake_string_representation(value))
     return settings_info
 
 
@@ -396,20 +404,27 @@ endmacro()
 
 cmake_macros = """
 macro(conan_basic_setup)
+    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH)
+    cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
     endif()
     conan_check_compiler()
-    conan_output_dirs_setup()
+    if(NOT ARGUMENTS_NO_OUTPUT_DIRS)
+        conan_output_dirs_setup()
+    endif()
     conan_set_find_library_paths()
-    if(NOT "${ARGV0}" STREQUAL "TARGETS")
+    if(NOT ARGUMENTS_TARGETS)
         message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
     else()
         message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
     endif()
-    conan_set_rpath()
+    if(NOT ARGUMENTS_SKIP_RPATH)
+        message(STATUS "Conan: Adjusting default RPATHs Conan policies")
+        conan_set_rpath()
+    endif()
     conan_set_vs_runtime()
     conan_set_libcxx()
     conan_set_find_paths()
@@ -447,18 +462,18 @@ endmacro()
 
 macro(conan_set_vs_runtime)
     if(CONAN_LINK_RUNTIME)
-        if(DEFINED CMAKE_CXX_FLAGS_RELEASE)
-            string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
-        endif()
-        if(DEFINED CMAKE_CXX_FLAGS_DEBUG)
-            string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-        endif()
-        if(DEFINED CMAKE_C_FLAGS_RELEASE)
-            string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
-        endif()
-        if(DEFINED CMAKE_C_FLAGS_DEBUG)
-            string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
-        endif()
+        foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                     CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                     CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+            if(DEFINED ${flag})
+                string(REPLACE "/MD" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+            endif()
+        endforeach()
+        foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+            if(DEFINED ${flag})
+                string(REPLACE "/MDd" ${CONAN_LINK_RUNTIME} ${flag} "${${flag}}")
+            endif()
+        endforeach()
     endif()
 endmacro()
 
@@ -487,12 +502,14 @@ else()
 endif()
 
 macro(conan_basic_setup)
+    set(options TARGETS)
+    cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
     endif()
     conan_check_compiler()
     # conan_output_dirs_setup()
-    if(NOT "${ARGV0}" STREQUAL "TARGETS")
+    if(NOT ARGUMENTS_TARGETS)
         message(STATUS "Conan: Using cmake global configuration")
         conan_global_flags()
     else()
@@ -511,18 +528,18 @@ macro(conan_set_vs_runtime)
     # debug, forcing MXd for debug builds. It will generate MSVCRT warnings if the dependencies
     # are installed with "conan install" and the wrong build time.
     if(CONAN_LINK_RUNTIME MATCHES "MT")
-        if(DEFINED CMAKE_CXX_FLAGS_RELEASE)
-            string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
-        endif()
-        if(DEFINED CMAKE_CXX_FLAGS_DEBUG)
-            string(REPLACE "/MDd" "/MTd" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-        endif()
-        if(DEFINED CMAKE_C_FLAGS_RELEASE)
-            string(REPLACE "/MD" "/MT" CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
-        endif()
-        if(DEFINED CMAKE_C_FLAGS_DEBUG)
-            string(REPLACE "/MDd" "/MTd" CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
-        endif()
+        foreach(flag CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE
+                     CMAKE_C_FLAGS_RELWITHDEBINFO CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                     CMAKE_C_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_MINSIZEREL)
+            if(DEFINED ${flag})
+                string(REPLACE "/MD" "/MT" ${flag} "${${flag}}")
+            endif()
+        endforeach()
+        foreach(flag CMAKE_C_FLAGS_DEBUG CMAKE_CXX_FLAGS_DEBUG)
+            if(DEFINED ${flag})
+                string(REPLACE "/MDd" "/MTd" ${flag} "${${flag}}")
+            endif()
+        endforeach()
     endif()
 endmacro()
 

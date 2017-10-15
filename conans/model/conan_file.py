@@ -1,3 +1,5 @@
+import copy
+
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
@@ -6,7 +8,7 @@ from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
 
-from conans.model.user_info import UserDepsInfo
+from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 
 
@@ -112,7 +114,8 @@ class ConanFile(object):
 
         # user declared variables
         self.user_info = None
-        self.deps_user_info = UserDepsInfo()  # Keys are the package names, and the values a dict with the vars
+        # Keys are the package names, and the values a dict with the vars
+        self.deps_user_info = DepsUserInfo()
 
         self.copy = None  # initialized at runtime
 
@@ -130,11 +133,24 @@ class ConanFile(object):
         self._user = user
         self._channel = channel
 
+        # Are we in local cache? Suggest a better name
+        self.in_local_cache = False
+
+        # Init a description
+        self.description = None
+
     @property
     def env(self):
-        simple, multiple = self._env_values.env_dicts(self.name)
-        simple.update(multiple)
-        return simple
+        """Apply the self.deps_env_info into a copy of self._env_values
+        (user specified from profiles or -e)"""
+        # Cannot be lazy cached, because it's called in configure node, and we still don't have
+        # the deps_env_info objects available
+        tmp_env_values = self._env_values.copy()
+        tmp_env_values.update(self.deps_env_info)
+
+        ret, multiple = tmp_env_values.env_dicts(self.name)
+        ret.update(multiple)
+        return ret
 
     @property
     def channel(self):
@@ -155,21 +171,9 @@ class ConanFile(object):
         return self._user
 
     def collect_libs(self, folder="lib"):
-        if not self.package_folder:
-            return []
-        lib_folder = os.path.join(self.package_folder, folder)
-        if not os.path.exists(lib_folder):
-            self.output.warn("Lib folder doesn't exist, can't collect libraries")
-            return []
-        files = os.listdir(lib_folder)
-        result = []
-        for f in files:
-            name, ext = os.path.splitext(f)
-            if ext in (".so", ".lib", ".a", ".dylib"):
-                if ext != ".lib" and name.startswith("lib"):
-                    name = name[3:]
-                result.append(name)
-        return result
+        self.output.warn("Use 'self.collect_libs' is deprecated, "
+                         "use tools.collect_libs(self) instead")
+        return tools.collect_libs(self, folder=folder)
 
     @property
     def scope(self):
@@ -178,16 +182,6 @@ class ConanFile(object):
     @scope.setter
     def scope(self, value):
         self._scope = value
-        if value.dev:
-            self.requires.allow_dev = True
-            try:
-                if hasattr(self, "dev_requires"):
-                    if isinstance(self.dev_requires, tuple):
-                        self.requires.add_dev(*self.dev_requires)
-                    else:
-                        self.requires.add_dev(self.dev_requires, )
-            except Exception as e:
-                raise ConanException("Error while initializing dev_requirements. %s" % str(e))
 
     @property
     def conanfile_directory(self):

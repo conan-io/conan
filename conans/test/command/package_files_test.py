@@ -5,11 +5,14 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import load
 import os
 from conans.test.utils.conanfile import TestConanFile
+from nose_parameterized import parameterized
+import platform
 
 
 class PackageFilesTest(unittest.TestCase):
 
-    def test_basic(self):
+    @parameterized.expand([(False, ), (True, )])
+    def test_basic(self, short_paths):
         client = TestClient()
         conanfile = """
 from conans import ConanFile
@@ -18,6 +21,8 @@ class TestConan(ConanFile):
     version = "0.1"
     settings = "os"
 """
+        if short_paths:
+            conanfile += "    short_paths = True"
         client.save({CONANFILE: conanfile})
         client.run("export lasote/stable")
 
@@ -25,7 +30,13 @@ class TestConan(ConanFile):
         client.run("package_files Hello/0.1@lasote/stable -s os=Windows")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         win_package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
-        package_folder = client.client_cache.package(win_package_ref)
+        package_folder = client.client_cache.package(win_package_ref, short_paths=short_paths)
+        if short_paths and platform.system() == "Windows":
+            self.assertEqual(load(os.path.join(client.client_cache.package(win_package_ref),
+                                               ".conan_link")),
+                             package_folder)
+        else:
+            self.assertEqual(client.client_cache.package(win_package_ref), package_folder)
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header")
         self._consume(client, "-s os=Windows")
@@ -70,6 +81,71 @@ class TestConan(ConanFile):
         # ensure the recipe hash is computed and added
         client.run("search Hello/0.1@lasote/stable")
         self.assertIn("outdated from recipe: False", client.user_io.out)
+
+    def test_build_folders(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    settings = "os"
+
+    def package(self):
+        self.copy("*.h", src="include", dst="inc")
+        self.copy("*.lib", src="lib", dst="lib")
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("export lasote/stable")
+
+        client.save({"include/header.h": "//Windows header",
+                     "include/header.txt": "",
+                     "libs/what": "",
+                     "lib/hello.lib": "My Lib",
+                     "lib/bye.txt": ""}, clean_first=True)
+        client.run("package_files Hello/0.1@lasote/stable -s os=Windows --build-folder=.")
+        conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        package_folder = client.client_cache.package(package_ref)
+        inc = os.path.join(package_folder, "inc")
+        self.assertEqual(os.listdir(inc), ["header.h"])
+        self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
+        lib = os.path.join(package_folder, "lib")
+        self.assertEqual(os.listdir(lib), ["hello.lib"])
+        self.assertEqual(load(os.path.join(lib, "hello.lib")), "My Lib")
+
+    def test_build_source_folders(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    settings = "os"
+
+    def package(self):
+        self.copy("*.h", src="include", dst="inc")
+        self.copy("*.lib", src="lib", dst="lib")
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("export lasote/stable")
+
+        client.save({"src/include/header.h": "//Windows header",
+                     "src/include/header.txt": "",
+                     "build/libs/what": "",
+                     "build/lib/hello.lib": "My Lib",
+                     "build/lib/bye.txt": ""}, clean_first=True)
+        client.run("package_files Hello/0.1@lasote/stable -s os=Windows --build_folder=build "
+                   "--source_folder=src")
+        conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        package_folder = client.client_cache.package(package_ref)
+        inc = os.path.join(package_folder, "inc")
+        self.assertEqual(os.listdir(inc), ["header.h"])
+        self.assertEqual(load(os.path.join(inc, "header.h")), "//Windows header")
+        lib = os.path.join(package_folder, "lib")
+        self.assertEqual(os.listdir(lib), ["hello.lib"])
+        self.assertEqual(load(os.path.join(lib, "hello.lib")), "My Lib")
 
     def test_paths(self):
         client = TestClient()

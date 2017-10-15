@@ -18,7 +18,7 @@ class ManifestManager(object):
         self._log = []
 
     def print_log(self):
-        self._user_io.out.success("\nManifests")
+        self._user_io.out.success("\nManifests : %s" % (self._paths.store))
         for log_entry in self._log:
             self._user_io.out.info(log_entry)
 

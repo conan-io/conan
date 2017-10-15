@@ -1,6 +1,5 @@
 from conans.model.ref import ConanFileReference
 from conans.errors import ConanException
-import re
 
 
 def satisfying(list_versions, versionexpr, output):
@@ -14,8 +13,6 @@ def satisfying(list_versions, versionexpr, output):
     for v in list_versions:
         try:
             ver = SemVer(v, loose=True)
-            if not ver.prerelease:  # Hack to allow version "2.1" match expr "<=2.1"
-                ver.prerelease = [0]
             candidates[ver] = v
         except (ValueError, AttributeError):
             output.warn("Version '%s' is not semver, cannot be compared with a range" % str(v))
@@ -24,7 +21,6 @@ def satisfying(list_versions, versionexpr, output):
 
 
 class RequireResolver(object):
-    expr_pattern = re.compile("")
 
     def __init__(self, output, local_search, remote_search):
         self._output = output
@@ -54,7 +50,8 @@ class RequireResolver(object):
         search_ref = str(ConanFileReference(ref.name, "*", ref.user, ref.channel))
         resolved = self._resolve_local(search_ref, version_range)
         if not resolved:
-            remote_found = self._remote_search.search_remotes(search_ref)
+            # We should use ignorecase=False, we want the exact case!
+            remote_found = self._remote_search.search_remotes(search_ref, ignorecase=False)
             if remote_found:
                 resolved = self._resolve_version(version_range, remote_found)
 

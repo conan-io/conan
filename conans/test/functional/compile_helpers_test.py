@@ -419,7 +419,7 @@ class CompileHelpersTest(unittest.TestCase):
 
             win_settings = MockSettings("Release", os="Windows", arch="x86",
                                         compiler_name="Visual Studio", libcxx=None,
-                                        version="12")
+                                        version="14")
             env = ConfigureEnvironment(MockConanfile(win_settings))
             command = "%s && SET" % env.command_line
             runner(command, output=output)
@@ -470,7 +470,7 @@ class ProfilesEnvironmentTest(unittest.TestCase):
 
         self.client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         self.client.run("install --build=missing --pr scopes_env")
-        self.client.run("build")
+        self.client.run("build .")
         self.assertRegexpMatches(str(self.client.user_io.out), "PATH=['\"]*/path/to/my/folder")
         self._assert_env_variable_printed("CC", "/path/tomy/gcc_build")
         self._assert_env_variable_printed("CXX", "/path/tomy/g++_build")

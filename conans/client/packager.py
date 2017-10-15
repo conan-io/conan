@@ -11,7 +11,8 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
-def create_package(conanfile, source_folder, build_folder, package_folder, output, local=False):
+def create_package(conanfile, source_folder, build_folder, package_folder, output, local=False,
+                   copy_info=False):
     """ copies built artifacts, libs, headers, data, etc from build_folder to
     package folder
     """
@@ -42,7 +43,6 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
         conanfile.copy = FileCopier(build_folder, package_folder)
         with conanfile_exception_formatter(str(conanfile), "package"):
             conanfile.package()
-
         conanfile.copy.report(package_output, warn=True)
     except Exception as e:
         if not local:
@@ -57,27 +57,25 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
             raise
         raise ConanException(e)
 
-    _create_aux_files(build_folder, package_folder, conanfile)
+    _create_aux_files(build_folder, package_folder, conanfile, copy_info)
     output.success("Package '%s' created" % os.path.basename(package_folder))
 
 
-def _create_aux_files(build_folder, package_folder, conanfile):
+def _create_aux_files(build_folder, package_folder, conanfile, copy_info):
     """ auxiliary method that creates CONANINFO and manifest in
     the package_folder
     """
-
     logger.debug("Creating config files to %s" % package_folder)
-    if hasattr(conanfile, "build_id"):
-        # It is important to create a new fresh CONANINFO, because for shared
-        # build_id folders, the existing one in the build folders is wrong
-        save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
-    else:
+    if copy_info:
         try:
             shutil.copy(os.path.join(build_folder, CONANINFO), package_folder)
         except IOError:
             raise ConanException("%s does not exist inside of your %s folder. "
                                  "Try to re-build it again to solve it."
                                  % (CONANINFO, build_folder))
+    else:
+        save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
+
     # Create the digest for the package
     digest = FileTreeManifest.create(package_folder)
     save(os.path.join(package_folder, CONAN_MANIFEST), str(digest))

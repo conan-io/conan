@@ -1,4 +1,5 @@
-from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException, ConanException
+from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException, ConanException, \
+    AuthenticationException
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
@@ -187,8 +188,11 @@ class RestApiClient(object):
         if ignore_deleted_file and ignore_deleted_file in deleted:
             deleted.remove(ignore_deleted_file)
 
+        if not new and not deleted and modified == ["conanmanifest.txt"]:
+            return False
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
+
         if files_to_upload:
             # Get the upload urls
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
@@ -198,6 +202,8 @@ class RestApiClient(object):
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
+
+        return files_to_upload or deleted
 
     def upload_package(self, package_reference, the_files, retry, retry_wait):
         """
@@ -213,6 +219,8 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
+        if not new and not deleted and modified == ["conanmanifest.txt"]:
+            return False
 
         files_to_upload = {filename: the_files[filename] for filename in new + modified}
         if files_to_upload:        # Obtain upload urls
@@ -226,22 +234,26 @@ class RestApiClient(object):
             self._output.rewrite_line("Requesting upload permissions...Done!")
             self._output.writeln("")
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
-        else:
-            self._output.rewrite_line("Package is up to date.")
-            self._output.writeln("")
         if deleted:
             self._remove_package_files(package_reference, deleted)
 
         logger.debug("====> Time rest client upload_package: %f" % (time.time() - t1))
+        return files_to_upload or deleted
 
     @handle_return_deserializer()
     def authenticate(self, user, password):
-        '''Sends user + password to get a token'''
+        """Sends user + password to get a token"""
         auth = HTTPBasicAuth(user, password)
         url = "%s/users/authenticate" % self._remote_api_url
         t1 = time.time()
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
+        if ret.status_code == 401:
+            raise AuthenticationException("Wrong user or password")
+        # Cannot check content-type=text/html, conan server is doing it wrong
+        if not ret.ok or "html>" in str(ret.content):
+            raise ConanException("%s\n\nInvalid server response, check remote URL and "
+                                 "try again" % str(ret.content))
         duration = time.time() - t1
         log_client_rest_api_call(url, "GET", duration, self.custom_headers)
         return ret

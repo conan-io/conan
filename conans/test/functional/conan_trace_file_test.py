@@ -104,7 +104,7 @@ class HelloConan(ConanFile):
         self.assertEquals(json.loads(actions[2])["name"], "export")
 
         self.assertEquals(json.loads(actions[3])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[3])["name"], "install")
+        self.assertEquals(json.loads(actions[3])["name"], "install_reference")
 
         self.assertEquals(json.loads(actions[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
         self.assertEquals(json.loads(actions[4])["_id"], "Hello0/0.1@lasote/stable")

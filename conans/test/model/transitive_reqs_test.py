@@ -16,7 +16,6 @@ from conans.model.requires import Requirements
 from conans.client.conf import default_settings_yml
 from conans.model.values import Values
 from conans.test.utils.test_files import temp_folder
-from conans.model.scope import Scopes
 from conans.model.profile import Profile
 
 
@@ -698,6 +697,56 @@ class ChatConan(ConanFile):
                          "%s:0b09634eb446bffb8d3042a3f19d813cfc162b9d\n"
                          "%s:48bb3c5cbdb4822ae87914437ca3cceb733c7e1d"
                          % (str(hello_ref), str(say_ref)))
+
+    def test_transitive_pattern_options(self):
+        say_content = """
+from conans import ConanFile
+
+class SayConan(ConanFile):
+    name = "Say"
+    version = "0.1"
+    options = {"myoption": [123, 234]}
+"""
+        hello_content = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    requires = "Say/0.1@user/testing"
+    options = {"myoption": [123, 234]}
+"""
+        chat_content = """
+from conans import ConanFile
+
+class ChatConan(ConanFile):
+    name = "Chat"
+    version = "2.3"
+    requires = "Hello/1.2@user/testing"
+    default_options = "*:myoption=234"
+"""
+        self.retriever.conan(say_ref, say_content)
+        self.retriever.conan(hello_ref, hello_content)
+        deps_graph = self.root(chat_content)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello)})
+
+        self.assertEqual(hello.conan_ref, hello_ref)
+        self.assertEqual(say.conan_ref, say_ref)
+
+        self._check_say(say.conanfile, options="myoption=234")
+
+        conanfile = hello.conanfile
+        self.assertEqual(conanfile.options.values.dumps(), "myoption=234\nSay:myoption=234")
+        self.assertEqual(conanfile.info.full_options.dumps(), "myoption=234\nSay:myoption=234")
+
+        conanfile = chat.conanfile
+        self.assertEqual(conanfile.options.values.dumps(), "Hello:myoption=234\nSay:myoption=234")
+        self.assertEqual(conanfile.info.full_options.dumps(), "Hello:myoption=234\nSay:myoption=234")
 
     def test_transitive_two_levels_wrong_options(self):
         say_content = """
@@ -1489,6 +1538,170 @@ class ChatConan(ConanFile):
                          "shared=True\nHello:shared=False\nSay:shared=False")
 
 
+class ConanRequirementsOptimizerTest(unittest.TestCase):
+    liba_content = """
+from conans import ConanFile
+
+class LibAConan(ConanFile):
+    name = "LibA"
+    version = "0.1"
+    options = {"shared": [True, False]}
+    default_options = "shared=False"
+    def requirements(self):
+        self.output.info("LibA requirements()")
+    def configure(self):
+        self.output.info("LibA configure()")
+"""
+    libb_content = """
+from conans import ConanFile
+
+class LibBConan(ConanFile):
+    name = "LibB"
+    version = "0.1"
+    requires = "LibA/0.1@user/testing"
+"""
+    libc_content = """
+from conans import ConanFile
+
+class LibCConan(ConanFile):
+    name = "LibC"
+    version = "0.1"
+    requires = "LibB/0.1@user/testing"
+"""
+    libd_content = """
+from conans import ConanFile
+
+class LibDConan(ConanFile):
+    name = "LibD"
+    version = "0.1"
+    requires = "LibB/0.1@user/testing"
+"""
+    consumer_content = """
+from conans import ConanFile
+
+class ConsumerConan(ConanFile):
+    requires = "LibC/0.1@user/testing", "LibD/0.1@user/testing"
+"""
+
+    def setUp(self):
+        self.output = TestBufferConanOutput()
+        self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
+        self.retriever = Retriever(self.loader, self.output)
+        self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader,
+                                        MockRequireResolver())
+        liba_ref = ConanFileReference.loads("LibA/0.1@user/testing")
+        libb_ref = ConanFileReference.loads("LibB/0.1@user/testing")
+        libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
+        libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
+        self.retriever.conan(liba_ref, self.liba_content)
+        self.retriever.conan(libb_ref, self.libb_content)
+        self.retriever.conan(libc_ref, self.libc_content)
+        self.retriever.conan(libd_ref, self.libd_content)
+
+    def root(self, content):
+        root_conan = self.retriever.root(content)
+        deps_graph = self.builder.load(root_conan)
+        return deps_graph
+
+    def test_avoid_duplicate_expansion(self):
+        self.root(self.consumer_content)
+        self.assertEqual(1, str(self.output).count("LibA requirements()"))
+        self.assertEqual(1, str(self.output).count("LibA configure()"))
+
+    def test_expand_requirements(self):
+        libd_content = """
+from conans import ConanFile
+
+class LibDConan(ConanFile):
+    name = "LibD"
+    version = "0.1"
+    requires = "LibB/0.1@user/testing", ("LibA/0.2@user/testing", "override")
+"""
+        libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
+        self.retriever.conan(libd_ref, libd_content)
+
+        self.root(self.consumer_content)
+        self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overriden by "
+                      "LibD/0.1@user/testing to LibA/0.2@user/testing", str(self.output))
+        self.assertIn("WARN: Conflict in LibB/0.1@user/testing", str(self.output))
+        self.assertEqual(2, str(self.output).count("LibA requirements()"))
+        self.assertEqual(2, str(self.output).count("LibA configure()"))
+
+    def test_expand_requirements_direct(self):
+        libd_content = """
+from conans import ConanFile
+
+class LibDConan(ConanFile):
+    name = "LibD"
+    version = "0.1"
+    requires = "LibB/0.1@user/testing", "LibA/0.2@user/testing"
+"""
+        libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
+        self.retriever.conan(libd_ref, libd_content)
+
+        self.root(self.consumer_content)
+        self.assertIn("LibB/0.1@user/testing requirement LibA/0.1@user/testing overriden by "
+                      "LibD/0.1@user/testing to LibA/0.2@user/testing", str(self.output))
+        self.assertIn("WARN: Conflict in LibB/0.1@user/testing", str(self.output))
+        self.assertEqual(3, str(self.output).count("LibA requirements()"))
+        self.assertEqual(3, str(self.output).count("LibA configure()"))
+
+    def test_expand_options(self):
+        """ if only one path changes the default option, it has to be expanded
+        upstream, as things might change
+        """
+        libd_content = """
+from conans import ConanFile
+
+class LibDConan(ConanFile):
+    name = "LibD"
+    version = "0.1"
+    requires = "LibB/0.1@user/testing"
+    default_options = "LibA:shared=True"
+"""
+        libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
+        self.retriever.conan(libd_ref, libd_content)
+
+        self.root(self.consumer_content)
+        self.assertEqual(2, str(self.output).count("LibA requirements()"))
+        self.assertEqual(2, str(self.output).count("LibA configure()"))
+
+    def test_expand_conflict_options(self):
+        """ if one of the nodes causes an explicit conflict of options,
+        then, the other downstream is discarded there, no need to propagate twice
+        upstream
+        """
+
+        libc_content = """
+from conans import ConanFile
+
+class LibCConan(ConanFile):
+    name = "LibC"
+    version = "0.1"
+    requires = "LibB/0.1@user/testing"
+    default_options = "LibA:shared=False"
+"""
+        libd_content = """
+from conans import ConanFile
+
+class LibDConan(ConanFile):
+    name = "LibD"
+    version = "0.1"
+    requires = "LibB/0.1@user/testing"
+    default_options = "LibA:shared=True"
+"""
+        libd_ref = ConanFileReference.loads("LibD/0.1@user/testing")
+        self.retriever.conan(libd_ref, libd_content)
+        libc_ref = ConanFileReference.loads("LibC/0.1@user/testing")
+        self.retriever.conan(libc_ref, libc_content)
+
+        self.root(self.consumer_content)
+        self.assertIn("WARN: LibD/0.1@user/testing tried to change LibB/0.1@user/testing "
+                      "option LibA:shared to True", str(self.output))
+        self.assertEqual(1, str(self.output).count("LibA requirements()"))
+        self.assertEqual(1, str(self.output).count("LibA configure()"))
+
+
 class CoreSettingsTest(unittest.TestCase):
 
     def setUp(self):
@@ -1654,7 +1867,7 @@ class SayConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
-                                    ['Android', 'FreeBSD', 'Macos', 'SunOS', "Windows", "iOS"]),
+                                    ['Android', 'Arduino', 'FreeBSD', 'Macos', 'SunOS', "Windows", "iOS", "tvOS", "watchOS"]),
                       str(cm.exception))
 
     def test_config_remove2(self):

@@ -16,7 +16,7 @@ from conans.server.store.file_manager import FileManager
 from conans.util.log import logger
 from conans.server.conf.default_server_conf import default_server_conf
 
-MIN_CLIENT_COMPATIBLE_VERSION = '0.19.3'
+MIN_CLIENT_COMPATIBLE_VERSION = '0.25.0'
 
 
 class ConanServerConfigParser(ConfigParser):

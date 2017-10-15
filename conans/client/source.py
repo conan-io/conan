@@ -6,8 +6,8 @@ import six
 from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
-from conans.paths import DIRTY_FILE, EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE
-from conans.util.files import rmdir, save
+from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
+from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty
 
 
 def merge_directories(src, dst):
@@ -21,18 +21,18 @@ def merge_directories(src, dst):
             shutil.copy2(src_file, dst_file)
 
 
-def config_source(export_folder, export_source_folder, src_folder, conan_file, output, force=False):
+def config_source(export_folder, export_source_folder, src_folder,
+                  conan_file, output, force=False):
     """ creates src folder and retrieve, calling source() from conanfile
     the necessary source code
     """
-    dirty = os.path.join(src_folder, DIRTY_FILE)
 
     def remove_source(raise_error=True):
         output.warn("This can take a while for big packages")
         try:
             rmdir(src_folder)
         except BaseException as e_rm:
-            save(dirty, "")  # Creation of DIRTY flag
+            set_dirty(src_folder)
             msg = str(e_rm)
             if six.PY2:
                 msg = str(e_rm).decode("latin1")  # Windows prints some chars in latin1
@@ -44,7 +44,7 @@ def config_source(export_folder, export_source_folder, src_folder, conan_file, o
     if force:
         output.warn("Forced removal of source folder")
         remove_source()
-    elif os.path.exists(dirty):
+    elif is_dirty(src_folder):
         output.warn("Trying to remove dirty source folder")
         remove_source()
     elif conan_file.build_policy_always:
@@ -56,7 +56,8 @@ def config_source(export_folder, export_source_folder, src_folder, conan_file, o
         shutil.copytree(export_folder, src_folder, symlinks=True)
         # Now move the export-sources to the right location
         merge_directories(export_source_folder, src_folder)
-        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c", CONANFILE+"o"):
+        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
+                  CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
             try:
                 os.remove(os.path.join(src_folder, f))
             except OSError:
@@ -66,13 +67,13 @@ def config_source(export_folder, export_source_folder, src_folder, conan_file, o
         except OSError:
             pass
 
-        save(dirty, "")  # Creation of DIRTY flag
+        set_dirty(src_folder)
         os.chdir(src_folder)
         try:
             with tools.environment_append(conan_file.env):
                 with conanfile_exception_formatter(str(conan_file), "source"):
                     conan_file.source()
-            os.remove(dirty)  # Everything went well, remove DIRTY flag
+            clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
         except Exception as e:
             os.chdir(export_folder)
             # in case source() fails (user error, typically), remove the src_folder
@@ -84,19 +85,14 @@ def config_source(export_folder, export_source_folder, src_folder, conan_file, o
             raise ConanException(e)
 
 
-def config_source_local(current_path, conan_file, output):
-    output.info('Configuring sources in %s' % current_path)
-    dirty = os.path.join(current_path, DIRTY_FILE)
-    if os.path.exists(dirty):
-        output.warn("Your previous source command failed")
-
-    save(dirty, "")  # Creation of DIRTY flag
-    try:
-        with conanfile_exception_formatter(str(conan_file), "source"):
-            with tools.environment_append(conan_file.env):
-                conan_file.source()
-            os.remove(dirty)  # Everything went well, remove DIRTY flag
-    except ConanExceptionInUserConanfileMethod:
-        raise
-    except Exception as e:
-        raise ConanException(e)
+def config_source_local(dest_dir, conan_file, output):
+    output.info('Configuring sources in %s' % dest_dir)
+    with tools.chdir(dest_dir):
+        try:
+            with conanfile_exception_formatter(str(conan_file), "source"):
+                with tools.environment_append(conan_file.env):
+                    conan_file.source()
+        except ConanExceptionInUserConanfileMethod:
+            raise
+        except Exception as e:
+            raise ConanException(e)

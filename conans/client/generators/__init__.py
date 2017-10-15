@@ -1,8 +1,10 @@
-from conans.client.generators.virtualrunenv import VirtualRunEnvGenerator
-from conans.errors import ConanException
-from conans.model import registered_generators
-from conans.util.files import save, normalize
 from os.path import join
+
+from conans.client.generators.pkg_config import PkgConfigGenerator
+from conans.errors import ConanException
+from conans.util.files import save, normalize
+
+from .virtualrunenv import VirtualRunEnvGenerator
 from .text import TXTGenerator
 from .gcc import GCCGenerator
 from .cmake import CMakeGenerator
@@ -10,32 +12,52 @@ from .qmake import QmakeGenerator
 from .qbs import QbsGenerator
 from .scons import SConsGenerator
 from .visualstudio import VisualStudioGenerator
+from .visualstudio_multi import VisualStudioMultiGenerator
+from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
-from .env import ConanEnvGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 
 
-def _save_generator(name, klass):
-    if name not in registered_generators:
-        registered_generators.add(name, klass)
+class _GeneratorManager(object):
+    def __init__(self):
+        self._generators = {}
 
-_save_generator("txt", TXTGenerator)
-_save_generator("gcc", GCCGenerator)
-_save_generator("cmake", CMakeGenerator)
-_save_generator("cmake_multi", CMakeMultiGenerator)
-_save_generator("qmake", QmakeGenerator)
-_save_generator("qbs", QbsGenerator)
-_save_generator("scons", SConsGenerator)
-_save_generator("visual_studio", VisualStudioGenerator)
-_save_generator("xcode", XCodeGenerator)
-_save_generator("ycm", YouCompleteMeGenerator)
-_save_generator("virtualenv", VirtualEnvGenerator)
-_save_generator("env", ConanEnvGenerator)
-_save_generator("virtualbuildenv", VirtualBuildEnvGenerator)
-_save_generator("virtualrunenv", VirtualRunEnvGenerator)
+    def add(self, name, generator_class):
+        if name not in self._generators:
+            self._generators[name] = generator_class
+
+    @property
+    def available(self):
+        return list(self._generators.keys())
+
+    def __contains__(self, name):
+        return name in self._generators
+
+    def __getitem__(self, key):
+        return self._generators[key]
+
+
+registered_generators = _GeneratorManager()
+
+registered_generators.add("txt", TXTGenerator)
+registered_generators.add("gcc", GCCGenerator)
+registered_generators.add("cmake", CMakeGenerator)
+registered_generators.add("cmake_multi", CMakeMultiGenerator)
+registered_generators.add("qmake", QmakeGenerator)
+registered_generators.add("qbs", QbsGenerator)
+registered_generators.add("scons", SConsGenerator)
+registered_generators.add("visual_studio", VisualStudioGenerator)
+registered_generators.add("visual_studio_multi", VisualStudioMultiGenerator)
+registered_generators.add("visual_studio_legacy", VisualStudioLegacyGenerator)
+registered_generators.add("xcode", XCodeGenerator)
+registered_generators.add("ycm", YouCompleteMeGenerator)
+registered_generators.add("virtualenv", VirtualEnvGenerator)
+registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
+registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
+registered_generators.add("pkg_config", PkgConfigGenerator)
 
 
 def write_generators(conanfile, path, output):
@@ -55,6 +77,7 @@ def write_generators(conanfile, path, output):
                 generator = generator_class(conanfile.deps_cpp_info, conanfile.cpp_info)
 
             try:
+                generator.output_path = path
                 content = generator.content
                 if isinstance(content, dict):
                     if generator.filename:

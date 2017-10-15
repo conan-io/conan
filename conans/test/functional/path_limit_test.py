@@ -70,9 +70,9 @@ class PathLengthLimitTest(unittest.TestCase):
         client.run("search")
         self.assertIn("There are no packages", client.user_io.out)
 
-        for download in ("", "--all"):
+        for command in ("install", "download"):
             client2 = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-            client2.run("install lib/0.1@lasote/channel %s" % download)
+            client2.run("%s lib/0.1@lasote/channel" % command)
             reference = ConanFileReference.loads("lib/0.1@lasote/channel")
             export_folder = client2.client_cache.export(reference)
             export_files = os.listdir(export_folder)
@@ -110,31 +110,6 @@ class PathLengthLimitTest(unittest.TestCase):
             link_source = load(os.path.join(package_folder, ".conan_link"))
             self.assertTrue(os.path.exists(link_source))
             self.assertEqual(load(os.path.join(link_source + "/file0.txt")), "file0 content")
-
-    def source_test(self):
-        client = TestClient()
-        files = {"conanfile.py": base}
-        client.save(files)
-        client.run("export user/channel")
-
-        conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
-        client.run("source lib/0.1@user/channel")
-        self.assertIn("Configuring sources", client.user_io.out)
-
-        if platform.system() == "Windows":
-            source_folder = client.client_cache.source(conan_ref)
-            link_source = load(os.path.join(source_folder, ".conan_link"))
-            self.assertTrue(os.path.exists(link_source))
-
-        # Nothing changes, so source is still there
-        client.run("export user/channel")
-        client.run("source lib/0.1@user/channel")
-        self.assertNotIn("Configuring sources", client.user_io.out)
-
-        # But if we remove the source, it will retrieve sources again
-        client.run("remove lib/0.1@user/channel -s -f")
-        client.run("source lib/0.1@user/channel")
-        self.assertIn("Configuring sources", client.user_io.out)
 
     def package_copier_test(self):
         client = TestClient()
@@ -195,6 +170,39 @@ class PathLengthLimitTest(unittest.TestCase):
             self.assertFalse(os.path.exists(link_source))
             self.assertFalse(os.path.exists(link_build))
             self.assertFalse(os.path.exists(link_package))
+
+    def basic_disabled_test(self):
+        client = TestClient()
+        base = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    short_paths = True
+'''
+        files = {"conanfile.py": base}
+        client.save(files)
+        client.client_cache.conan_config.set_item("general.user_home_short", "None")
+
+        client.run("create lib/0.1@user/channel")
+        package_ref = PackageReference.loads("lib/0.1@user/channel:"
+                                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        client.run("search")
+        self.assertIn("lib/0.1@user/channel", client.user_io.out)
+        client.run("search lib/0.1@user/channel")
+        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
+
+        conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
+        source_folder = client.client_cache.source(conan_ref)
+        link_source = os.path.join(source_folder, ".conan_link")
+        self.assertFalse(os.path.exists(link_source))
+
+        build_folder = client.client_cache.build(package_ref)
+        link_build = os.path.join(build_folder, ".conan_link")
+        self.assertFalse(os.path.exists(link_build))
+
+        package_folder = client.client_cache.package(package_ref)
+        link_package = os.path.join(package_folder, ".conan_link")
+        self.assertFalse(os.path.exists(link_package))
 
     def failure_test(self):
 

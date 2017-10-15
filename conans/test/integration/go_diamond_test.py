@@ -35,8 +35,8 @@ class GoDiamondTest(unittest.TestCase):
         files3 = hello_conan_files(conan_reference=conan_reference, number=4, deps=[3], lang='go')
         client.save(files3)
         client.run("install --build missing")
-        client.run("build")
-        command = os.sep.join([".", "bin", "say_hello"])
+        client.run("build .")
+
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
                            var_to_add=[('GOPATH', client.current_folder), ]):
 
