@@ -169,6 +169,31 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
+    def _strip_prefix(self, filename):
+        if filename.startswith(b'a/') or filename.startswith(b'b/'):
+            return filename[2:]
+        return filename
+
+    # account for new and deleted files, upstream dep won't fix them
+    items = []
+    for p in patchset:
+        if "dev/null" in p.source:
+            if p.target.startswith(b"b/"):
+                p.target = p.target[2:]
+            if base_path:
+                p.target = os.path.join(base_path, p.target)
+            new_file = "".join(s[1:] for s in p.hunks[0].text)
+            save(p.target, new_file)
+        elif "dev/null" in p.target:
+            if p.source.startswith(b"a/"):
+                p.source = p.source[2:]
+            if base_path:
+                p.source = os.path.join(base_path, p.source)
+            os.unlink(p.source)
+        else:
+            items.append(p)
+    patchset.items = items
+
     if not patchset.apply(root=base_path, strip=strip):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 

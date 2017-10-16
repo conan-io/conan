@@ -92,19 +92,30 @@ class ConanfileToolsTest(unittest.TestCase):
         tmp_dir, file_path, text_file = self._save_files(file_content)
         self._build_and_check(tmp_dir, file_path, text_file, "ONE TWO DOH!")
 
-    def test_patch_new(self):
-        file_content = base_conanfile + '''
+    def test_patch_new_delete(self):
+        conanfile = base_conanfile + '''
     def build(self):
+        from conans.tools import load, save
+        save("oldfile", "legacy code")
+        assert(os.path.exists("oldfile"))
         patch_content = """--- /dev/null
 +++ b/newfile
-@@ -0,0 +1 @@
-+New file
+@@ -0,0 +0,1 @@
++New file!
+--- a/oldfile
++++ b/dev/null
+@@ -0,1 +0,0 @@
+-legacy code
 """
         patch(patch_string=patch_content)
-
+        self.output.info("NEW FILE=%s" % load("newfile"))
+        self.output.info("OLD FILE=%s" % os.path.exists("oldfile"))
 '''
-        tmp_dir, file_path, text_file = self._save_files(file_content)
-        self._build_and_check(tmp_dir, file_path, text_file, "ONE TWO DOH!")
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create user/testing")
+        self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!", client.out)
+        self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
 
     def test_error_patch(self):
         file_content = base_conanfile + '''
