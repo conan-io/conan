@@ -389,8 +389,8 @@ class ConanInstaller(object):
                 # Get the package, we have a not outdated remote package
                 package_ref = None
                 if conan_ref:
+                    package_ref = PackageReference(conan_ref, package_id)
                     with self._client_cache.package_lock(package_ref):
-                        package_ref = PackageReference(conan_ref, package_id)
                         self._get_remote_package(conan_file, package_ref, output)
 
                 # Assign to the node the propagated info
