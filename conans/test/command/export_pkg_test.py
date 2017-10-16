@@ -162,7 +162,47 @@ class TestConan(ConanFile):
         self.assertEqual(os.listdir(lib), ["hello.lib"])
         self.assertEqual(load(os.path.join(lib, "hello.lib")), "My Lib")
 
-    # !!!!! PENDING, TEST DIFFERENT FOLDERS, PARTIAL REFERENCE, INCORRECT REFERENCE...
+    def test_partial_references(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    settings = "os"
+
+    def package(self):
+        self.copy("*")
+"""
+        # Partial reference is ok
+        client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
+        client.run("export-pkg . conan/stable")
+        self.assertIn("Hello/0.1@conan/stable package(): Copied 1 '.txt' files: file.txt", client.out)
+
+        # Specify different name or version is not working
+        error = client.run("export-pkg . lib/1.0@conan/stable -f", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Specified name/version doesn't match with the name/version "
+                      "in the conanfile", client.out)
+
+        error = client.run("export-pkg . Hello/1.1@conan/stable -f", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Specified name/version doesn't match with the name/version "
+                      "in the conanfile", client.out)
+
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    settings = "os"
+
+    def package(self):
+        self.copy("*")
+"""
+        # Partial reference is ok
+        client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
+        client.run("export-pkg . anyname/1.222@conan/stable")
+        self.assertIn("anyname/1.222@conan/stable package(): Copied 1 '.txt' files: file.txt", client.out)
+
 
     def test_with_deps(self):
         client = TestClient()

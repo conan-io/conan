@@ -65,10 +65,11 @@ class MyConan(ConanFile):
         else:
             package_folder = temp_folder()
             client.current_folder = package_folder
-            client.run('package "{0}" --build_folder="{0}/build"'
-                       ' --package_folder="{1}"'.format(recipe_folder, package_folder))
+            build_folder = os.path.join(recipe_folder, "build")
+            client.run('package "{0}" --build_folder="{2}"'
+                       ' --package_folder="{1}"'.format(recipe_folder, package_folder, build_folder))
             self.assertEqual(sorted(os.listdir(package_folder)),
-                             sorted(["build", "include", "lib", "conaninfo.txt",
+                             sorted(["include", "lib", "conaninfo.txt",
                                      "conanmanifest.txt"]))
 
         content = load(os.path.join(package_folder, "include/file.h"))

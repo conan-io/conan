@@ -370,12 +370,12 @@ class ConanAPIV1(object):
 
         if not no_export or not (name and version):
             conanfile = load_conanfile_class(conanfile_abs_path)
-
             if not no_export:
-                if (name and conanfile.name != name) or (version and conanfile.version != version):
+                if (name and conanfile.name and conanfile.name != name) or \
+                   (version and conanfile.version and conanfile.version != version):
                     raise ConanException("Specified name/version doesn't match with the "
                                          "name/version in the conanfile")
-                self._manager.export(user, channel, path)
+                self._manager.export(user, channel, path, name=name, version=version)
 
             if not (name and version):
                 name = conanfile.name
