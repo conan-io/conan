@@ -60,15 +60,19 @@ class MyConan(ConanFile):
         if default_folder:
             package_folder = os.path.join(client.current_folder, "package")
             client.run('package .. --build-folder=.')
+            self.assertEqual(sorted(os.listdir(package_folder)),
+                             sorted(["include", "lib", "conaninfo.txt", "conanmanifest.txt"]))
         else:
             package_folder = temp_folder()
             client.current_folder = package_folder
             client.run('package "{0}" --build_folder="{0}/build"'
                        ' --package_folder="{1}"'.format(recipe_folder, package_folder))
+            self.assertEqual(sorted(os.listdir(package_folder)),
+                             sorted(["build", "include", "lib", "conaninfo.txt",
+                                     "conanmanifest.txt"]))
+
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
-        self.assertEqual(sorted(os.listdir(package_folder)),
-                         sorted(["include", "lib", "conaninfo.txt", "conanmanifest.txt"]))
         self.assertEqual(os.listdir(os.path.join(package_folder, "include")), ["file.h"])
         self.assertEqual(os.listdir(os.path.join(package_folder, "lib")), ["mypkg.lib"])
 

@@ -4,6 +4,7 @@ import shutil
 import sys
 import uuid
 from collections import Counter
+from contextlib import contextmanager
 from io import StringIO
 
 import requests
@@ -354,6 +355,18 @@ class TestClient(object):
     @property
     def out(self):
         return self.user_io.out
+
+    @contextmanager
+    def chdir(self, newdir):
+        old_dir = self.current_folder
+        if not os.path.isabs(newdir):
+            newdir = os.path.join(old_dir, newdir)
+        mkdir(newdir)
+        self.current_folder = newdir
+        try:
+            yield()
+        finally:
+            self.current_folder = old_dir
 
     def _init_collaborators(self, user_io=None):
 

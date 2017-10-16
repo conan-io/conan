@@ -397,7 +397,7 @@ class ConanAPIV1(object):
     def install_reference(self, reference, settings=None, options=None, env=None, scope=None,
                           remote=None, werror=False, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
-                          update=False, generator=None, build_folder=None):
+                          update=False, generators=None, build_folder=None):
 
         self._user_io.out.werror_active = werror
         cwd = os.getcwd()
@@ -409,18 +409,20 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
                                     self._client_cache.profiles_path)
 
+        if not generators:  # We don't want the default txt
+            generators = False
         self._manager.install(reference=reference, build_folder=build_folder, remote=remote,
                               profile=profile, build_modes=build, update=update,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
-                              generators=generator)
+                              generators=generators)
 
     @api_method
     def install(self, path="", settings=None, options=None, env=None, scope=None,
                 remote=None, werror=False, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
-                update=False, generator=None, no_imports=False, filename=None,
+                update=False, generators=None, no_imports=False, filename=None,
                 build_folder=None):
 
         self._user_io.out.werror_active = werror
@@ -445,7 +447,7 @@ class ConanAPIV1(object):
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
-                              generators=generator,
+                              generators=generators,
                               no_imports=no_imports)
 
     @api_method

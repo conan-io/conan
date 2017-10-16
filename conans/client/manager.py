@@ -459,7 +459,8 @@ class ConanManager(object):
                                  "--build_folder and package folder can't be the same")
         output = ScopedOutput("PROJECT", self._user_io.out)
         conan_file_path = os.path.join(recipe_folder, CONANFILE)
-        conanfile = self.load_consumer_conanfile(conan_file_path, build_folder, output)
+        conanfile = self.load_consumer_conanfile(conan_file_path, build_folder, output,
+                                                 deps_info_required=True)
         packager.create_package(conanfile, source_folder, build_folder, package_folder, output,
                                 local=True, copy_info=True)
 
@@ -474,7 +475,8 @@ class ConanManager(object):
             # Append env_vars to execution environment and clear when block code ends
             output = ScopedOutput(("%s test package" % test) if test else "Project",
                                   self._user_io.out)
-            conan_file = self.load_consumer_conanfile(conanfile_path, build_folder, output)
+            conan_file = self.load_consumer_conanfile(conanfile_path, build_folder, output,
+                                                      deps_info_required=True)
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"

@@ -71,6 +71,7 @@ def config_source(export_folder, export_source_folder, src_folder,
 
         set_dirty(src_folder)
         os.chdir(src_folder)
+        conan_file.source_folder = src_folder
         try:
             with tools.environment_append(conan_file.env):
                 with conanfile_exception_formatter(str(conan_file), "source"):

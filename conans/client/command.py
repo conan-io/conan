@@ -303,7 +303,7 @@ class Command(object):
                                        verify=args.verify, manifests=args.manifests,
                                        manifests_interactive=args.manifests_interactive,
                                        build=args.build, profile_name=args.profile,
-                                       update=args.update, generator=args.generator,
+                                       update=args.update, generators=args.generator,
                                        no_imports=args.no_imports, filename=args.file,
                                        build_folder=args.build_folder)
         else:
@@ -315,7 +315,7 @@ class Command(object):
                                                  manifests_interactive=args.manifests_interactive,
                                                  build=args.build, profile_name=args.profile,
                                                  update=args.update,
-                                                 generator=args.generator,
+                                                 generators=args.generator,
                                                  build_folder=args.build_folder)
 
     def config(self, *args):

@@ -126,35 +126,6 @@ class ConanLib(ConanFile):
         self.assertIn("OTHERVAR=bar", client.out)
         self.assertIn("CURDIR=%s" % src_folder, client.out)
 
-    def source_do_not_have_build_folder_nor_source_folder_test(self):
-        conanfile = '''
-import os
-from conans import ConanFile
-from conans.util.files import save
-
-class ConanLib(ConanFile):
-
-    def source(self):
-        assert(os.getcwd() == self.source_folder)
-         # Also try to access the build and package folders, should be forbidden
-        try:
-            self.build_folder
-        except Exception as exc:
-            assert("Access to 'self.build_folder' is blocked from source() method" in str(exc))
-
-        try:
-            self.package_folder
-        except Exception as exc:
-            assert("Access to 'self.package_folder' is blocked from source() method" in str(exc))
-
-'''
-        # First, failing source()
-        client = TestClient()
-        client.save({CONANFILE: conanfile,
-                     BUILD_INFO: ""})
-
-        client.run("source .")
-
     def local_source_test(self):
         conanfile = '''
 from conans import ConanFile

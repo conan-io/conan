@@ -13,16 +13,6 @@ class MyPkg(ConanFile):
     def source(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
-        
-        try:
-            self.build_folder
-        except Exception as exc:
-            assert("Access to 'self.build_folder' is blocked from source() method" in str(exc))
-
-        try:
-            self.package_folder
-        except Exception as exc:
-            assert("Access to 'self.package_folder' is blocked from source() method" in str(exc))
 
     def configure(self):
         assert(self.version=="0.1")
