@@ -124,7 +124,12 @@ class ConanFile(object):
         # something that can run commands, as os.sytem
         self._runner = runner
 
+<<<<<<< HEAD
         self._conanfile_directory = conanfile_directory
+=======
+        self.conanfile_directory = conanfile_directory
+        self.package_folder = None  # Assigned at runtime
+>>>>>>> radical/develop
         self._scope = None
 
         # user specified env variables
@@ -181,10 +186,6 @@ class ConanFile(object):
     @scope.setter
     def scope(self, value):
         self._scope = value
-
-    @property
-    def conanfile_directory(self):
-        return self._conanfile_directory
 
     @property
     def build_policy_missing(self):

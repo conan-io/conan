@@ -175,8 +175,9 @@ class ConanManager(object):
                                  "You exported '%s' but already existing '%s'"
                                  % (conan_ref_str, " ".join(str(s) for s in refs)))
         output = ScopedOutput(str(conan_ref), self._user_io.out)
-        export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
-                         filename)
+        with self._client_cache.conanfile_write_lock(conan_ref):
+            export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
+                             filename)
 
     def export_pkg(self, reference, source_folder, build_folder, profile, force):
 
@@ -493,7 +494,7 @@ class ConanManager(object):
         try:
             mkdir(build_folder)
             os.chdir(build_folder)
-            conan_file._conanfile_directory = source_folder
+            conan_file.conanfile_directory = source_folder
             conan_file.build_folder = build_folder
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
