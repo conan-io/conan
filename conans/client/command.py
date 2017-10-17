@@ -1053,7 +1053,7 @@ class Command(object):
                 self._user_io.out.writeln(commands[name].__doc__.split('\n', 1)[0].strip())
 
         self._user_io.out.writeln("")
-        self._user_io.out.writeln('Conan commands. Type $conan "command" -h for help',
+        self._user_io.out.writeln('Conan commands. Type "conan <command> -h" for help',
                                   Color.BRIGHT_YELLOW)
 
     def _commands(self):
