@@ -177,14 +177,14 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     # account for new and deleted files, upstream dep won't fix them
     items = []
     for p in patchset:
-        if "dev/null" in p.source:
+        if b"dev/null" in p.source:
             if p.target.startswith(b"b/"):
                 p.target = p.target[2:]
             if base_path:
                 p.target = os.path.join(base_path, p.target)
             new_file = "".join(s[1:] for s in p.hunks[0].text)
             save(p.target, new_file)
-        elif "dev/null" in p.target:
+        elif b"dev/null" in p.target:
             if p.source.startswith(b"a/"):
                 p.source = p.source[2:]
             if base_path:
