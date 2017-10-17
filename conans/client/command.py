@@ -1017,16 +1017,36 @@ class Command(object):
     def _show_help(self):
         """ prints a summary of all commands
         """
-        self._user_io.out.writeln('Conan commands. Type $conan "command" -h for help',
-                                  Color.BRIGHT_YELLOW)
-        commands = self._commands()
-        # future-proof way to ensure tabular formatting
+        grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
+                ("Creator's commands", ("new", "create", "upload", "export", "export-pkg", "test")),
+                ("Package development commands", ("source", "build", "package")),
+                ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
+                                   "alias", "download")),
+                ("Deprecated", ("test_package",))]
+
+        def check_all_commands_listed():
+            """Keep updated the main directory, raise if don't"""
+            all_commands = self._commands()
+            all_in_grps = [command for _, command_list in grps for command in command_list]
+            if set(all_in_grps) != set(all_commands):
+                diff = set(all_commands) - set(all_in_grps)
+                raise Exception("Some command is missing in the main help: %s" % ",".join(diff))
+            return all_commands
+
+        commands = check_all_commands_listed()
         max_len = max((len(c) for c in commands)) + 2
         fmt = '  %-{}s'.format(max_len)
-        for name in sorted(self._commands()):
-            if name != "test-package":  # If I do it hidden it can't be called
+
+        for group_name, comm_names in grps:
+            self._user_io.out.writeln(group_name, Color.MAGENTA)
+            for name in comm_names:
+                # future-proof way to ensure tabular formatting
                 self._user_io.out.write(fmt % name, Color.GREEN)
                 self._user_io.out.writeln(commands[name].__doc__.split('\n', 1)[0].strip())
+
+        self._user_io.out.writeln("")
+        self._user_io.out.writeln('Conan commands. Type $conan "command" -h for help',
+                                  Color.BRIGHT_YELLOW)
 
     def _commands(self):
         """ returns a list of available commands
