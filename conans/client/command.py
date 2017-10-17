@@ -1026,7 +1026,7 @@ class Command(object):
         """ prints a summary of all commands
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
-                ("Creator's commands", ("new", "create", "upload", "export", "export-pkg", "test")),
+                ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
                                    "alias", "download")),
