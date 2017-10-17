@@ -162,7 +162,7 @@ class Command(object):
                                 version=version, build_modes=args.build)
 
     def test_package(self, *args):
-        """THIS METHOD IS DEPRECATED and will be removed.
+        """THIS METHOD IS DEPRECATED and will be removed. Use 'conan create' and/or 'conan test' instead.
         Use 'conan create' to generate binary packages for a recipe.
         If you want to test a package you can use 'conan test' command.
         """
@@ -203,7 +203,7 @@ class Command(object):
                                         version=version)
 
     def create(self, *args):
-        """ Creates a binary package for the recipe (conanfile.py) located in the current directory.
+        """ Builds a binary package for the recipe (conanfile.py) located in the current directory.
         Uses the specified configuration in a profile or in -s settings, -o options etc.
         If a 'test_package' folder (the name can be configured with -tf) is found, the command will
         run the consumer project to ensure that the package has been created correctly. Check the
@@ -242,12 +242,13 @@ class Command(object):
                                   channel=channel, filename=args.file)
 
     def download(self, *args):
-        """Downloads a conan package to the local cache without using settings by specifying the
-        package ID to be installed. Not transitive, requirements of the specified reference
-        wont be retrieved. Useful together with 'conan copy' to automate the promotion of packages
-        to a different user/channel. If only a reference is specified, it will download all packages
-        in the specified remote. If no remote is specified will search sequentially in the available
-        configured remotes."""
+        """Downloads a conan recipe or binary package to the local cache by id, without using settings.
+         It works specifying the recipe reference and package ID to be installed.
+         Not transitive, requirements of the specified reference will be retrieved.
+         Useful together with 'conan copy' to automate the promotion of
+         packages to a different user/channel. If only a reference is specified, it will download
+         all packages in the specified remote.
+         If no remote is specified will search sequentially in the available configured remotes."""
 
         parser = argparse.ArgumentParser(description=self.download.__doc__, prog="conan download")
         parser.add_argument("reference",
@@ -262,15 +263,17 @@ class Command(object):
         return self._conan.download(reference=reference, package=args.package, remote=args.remote)
 
     def install(self, *args):
-        """Installs the requirements specified in a 'conanfile.py' or 'conanfile.txt'.
+        """Installs the requirements specified in a conanfile (.py or .txt).
            If any requirement is not found in the local cache it will retrieve the recipe from a
            remote, looking for it sequentially in the available configured remotes.
            When the recipes have been downloaded it will try to download a binary package matching
            the specified settings, only from the remote from which the recipe was retrieved.
            If no binary package is found you can build the package from sources using the '--build'
            option.
+           When the package is installed, Conan will write the files for the specified generators.
            It can also be used to install a concrete recipe/package specifying a reference in the
            "path" parameter.
+
         """
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
         parser.add_argument("path", nargs='?', default="",
@@ -319,7 +322,7 @@ class Command(object):
                                                  build_folder=args.build_folder)
 
     def config(self, *args):
-        """Manages conan configuration information
+        """Updates the conan.conf keys/values. Also installs a remote zip with config files.
         """
         parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
 
@@ -351,9 +354,9 @@ class Command(object):
             return self._conan.config_install(args.item)
 
     def info(self, *args):
-        """Prints information about a package recipe's dependency graph.
-        You can use it for your current project (just point to the path of your conanfile
-        if you want), or for any existing package in your local cache.
+        """Gets information about a package recipe's dependency graph.
+        You can use it for your current project, by passing a path to a conanfile.py as the
+        reference, or for any existing package in your local cache.
         """
 
         info_only_options = ["id", "build_id", "remote", "url", "license", "requires", "update",
@@ -452,7 +455,7 @@ class Command(object):
         return
 
     def source(self, *args):
-        """ Calls your local conanfile.py 'source()' method to configure the source directory.
+        """ Calls your local conanfile.py 'source()' method.
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
@@ -484,7 +487,7 @@ class Command(object):
         return self._conan.source(args.path, args.source_folder, args.install_folder)
 
     def build(self, *args):
-        """ Utility command to call the build() method of a local 'conanfile.py'.
+        """ Calls your local conanfile.py 'build()' method.
         The recipe will be built in the local directory specified by --build_folder,
         reading the sources from --source_folder. If you are using a build helper, like CMake(), the
         --package_folder will be configured as destination folder for the install step.
@@ -512,12 +515,13 @@ class Command(object):
                                  build_folder=args.build_folder)
 
     def package(self, *args):
-        """ Calls your conanfile.py 'package' method of a local conanfile.py
-        It won't create a new package, use 'create' instead for creating packages in the conan
-        local cache, or 'build' for building in the user space.
+        """ Calls your local conanfile.py 'package()' method.
 
         This command works locally, in the user space, and it will copy artifacts from the
-        provided folder to the current one.
+        --build_folder and --source_folder folder to the --package_folder one.
+
+        It won't create a new package in the local cache, if you want to do it, use 'create' or use
+        'export-pkg' after a 'build' command.
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan package .')
@@ -555,8 +559,9 @@ class Command(object):
                                    package_folder=args.package_folder)
 
     def imports(self, *args):
-        """ Execute the 'imports' stage of a conanfile.txt or a conanfile.py.
-        It requires to have been previously installed and have a conanbuildinfo.txt generated file.
+        """ Calls your local conanfile.py or conanfile.txt 'imports' method.
+        It requires to have been previously installed and have a conanbuildinfo.txt generated file
+        in the --install-folder (defaulted to current directory).
         """
         parser = argparse.ArgumentParser(description=self.imports.__doc__, prog="conan imports")
         parser.add_argument("path",
@@ -590,10 +595,10 @@ class Command(object):
         return self._conan.imports(args.path, args.dest, args.file, args.install_folder)
 
     def export_pkg(self, *args):
-        """Exports the specified recipe and then creates a package binary from given precompiled
-           artifacts in user folder, skipping the build() method of the recipe, by calling the
-           package() method to extract the artifacts from the local "--source_folder" and
-           "--build_folder".
+        """Exports the recipe and creates a package from given precompiled files calling the 'package' method.
+           It executes the package() method applied to the local folders '--source_folder' and
+           '--build_folder' and creates a new package in the local cache for the specified
+           'reference' and for the specified '--settings', '--options' and or '--profile'.
         """
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg .")
@@ -644,9 +649,10 @@ class Command(object):
                                       channel=channel)
 
     def export(self, *args):
-        """ Copies the package recipe (conanfile.py and associated files) to your local cache.
-        From the local cache it can be shared and reused in other projects.
-        Also, from the local cache, it can be uploaded to any remote with the "upload" command.
+        """ Copies the recipe (conanfile.py and associated files) to your local cache.
+        Use the 'reference' param to specify a user and channel where to export.
+        Once the recipe is in the local cache it can be shared and reused. It can be uploaded
+        to any remote with the "conan upload" command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
         parser.add_argument("reference", help='user/channel, or a full package reference'
@@ -667,7 +673,7 @@ class Command(object):
                                   name=name, version=version)
 
     def remove(self, *args):
-        """Remove any package recipe or binary matching a pattern.
+        """Removes any package recipe or binary matching a pattern, from the local cache or a remote.
         It can also be used to remove temporary source or build folders in the local conan cache.
         If no remote is specified, the removal will be done by default in the local conan cache.
         """
@@ -709,7 +715,7 @@ class Command(object):
                                   force=args.force, remote=args.remote, outdated=args.outdated)
 
     def copy(self, *args):
-        """ Copy conan recipes and packages to another user/channel.
+        """ Copies conan recipes and packages to another user/channel.
         Useful to promote packages (e.g. from "beta" to "stable").
         Also for moving packages from one user to another.
         """
@@ -734,7 +740,8 @@ class Command(object):
                                 all=args.all, package=args.package)
 
     def user(self, *parameters):
-        """ Update your cached user name (and auth token) to avoid it being requested later.
+        """ Authenticates against a remote with user and pass, storing the auth token if success.
+        Useful to avoid the user and password being requested later.
         e.g. while you're uploading a package.
         You can have more than one user (one per remote). Changing the user, or introducing the
         password is only necessary to upload packages to a remote.
@@ -768,7 +775,8 @@ class Command(object):
                                                        ' recipe reference if "-q" is used. e.g. '
                                                        'MyPackage/1.2@user/channel')
         parser.add_argument('--case-sensitive', default=False,
-                            action='store_true', help='Make a case-sensitive search. Use it to guarantee case-sensitive '
+                            action='store_true', help='Make a case-sensitive search. '
+                                                      'Use it to guarantee case-sensitive '
                             'search in Windows or other case-insensitive filesystems')
         parser.add_argument('-r', '--remote', help='Remote origin')
         parser.add_argument('--raw', default=False, action='store_true',
@@ -812,7 +820,7 @@ class Command(object):
             self._outputer.print_search_references(refs, args.pattern, args.raw)
 
     def upload(self, *args):
-        """ Uploads a package recipe and the generated binary packages to a specified remote
+        """ Uploads a recipe and binary packages to a remote.
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan upload")
@@ -849,7 +857,7 @@ class Command(object):
                                   skip_upload=args.skip_upload, integrity_check=args.check)
 
     def remote(self, *args):
-        """ Handles the remote list and the package recipes associated to a remote.
+        """ Manages the remote list and the package recipes associated to a remote.
         """
         parser = argparse.ArgumentParser(description=self.remote.__doc__, prog="conan remote")
         subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
@@ -977,7 +985,7 @@ class Command(object):
         return
 
     def get(self, *args):
-        """ Gets a file or list a directory of a given reference or package
+        """ Gets a file or list a directory of a given reference or package.
         """
         parser = argparse.ArgumentParser(description=self.get.__doc__,
                                          prog="conan get")
@@ -1002,7 +1010,7 @@ class Command(object):
         return
 
     def alias(self, *args):
-        """ Creates and export an alias recipe
+        """ Creates and export an 'alias recipe'.
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan alias")
