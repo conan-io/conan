@@ -92,9 +92,6 @@ def unzip(filename, destination=".", keep_permissions=False):
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
                 try:
-                    # Win path limit is 260 chars
-                    if len(file_.filename) + len(full_path) >= 260:
-                        raise ValueError("Filename too long")
                     z.extract(file_, full_path)
                 except Exception as e:
                     _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
@@ -128,6 +125,7 @@ def check_with_algorithm_sum(algorithm_name, file_path, signature):
                                                           os.path.basename(file_path),
                                                           signature,
                                                           real_signature))
+
 
 def check_sha1(file_path, signature):
     check_with_algorithm_sum("sha1", file_path, signature)
