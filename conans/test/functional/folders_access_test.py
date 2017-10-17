@@ -148,7 +148,7 @@ class TestFoldersAccess(unittest.TestCase):
 
         # Now use infos to get the deps_cpp_info
         self.client.run("install . --build missing")
-        self.client.run("source .")  # Default folder, not needed to specify --info-folder
+        self.client.run("source .")  # Default folder, not needed to specify --install-folder
 
         # Install in different location
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
@@ -160,7 +160,7 @@ class TestFoldersAccess(unittest.TestCase):
         self.client.current_folder = build_dir
         self.client.run("install .. ")
         self.client.current_folder = old_dir
-        self.client.run("source . --info-folder=build1")
+        self.client.run("source . --install-folder=build1")
 
     def build_local_command_test(self):
 

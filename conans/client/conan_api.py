@@ -187,8 +187,8 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, None, cwd,
                                     self._client_cache.profiles_path)
 
-        tm = PackageTester(self._manager, self._user_io)
-        tm.install_build_and_test(base_folder, profile, test_folder_name, name,
+        pt = PackageTester(self._manager, self._user_io)
+        pt.install_build_and_test(base_folder, profile, test_folder_name, name,
                                   version, user, channel, remote, update, build_modes=build_modes)
 
     @api_method

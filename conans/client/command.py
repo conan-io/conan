@@ -214,7 +214,7 @@ class Command(object):
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe')
-        parser.add_argument('--path', '-p', default=None,
+        parser.add_argument('--cwd', '-c', default=None,
                             help='Optional. Folder with a %s. Default current directory.'
                             % CONANFILE)
         parser.add_argument("--file", "-f", help="specify conanfile filename")
@@ -238,7 +238,7 @@ class Command(object):
                                   args.env, args.scope, args.test_folder, args.not_export,
                                   args.build, args.keep_source, args.verify, args.manifests,
                                   args.manifests_interactive, args.remote, args.update,
-                                  conan_file_path=args.path, name=name, version=version, user=user,
+                                  conan_file_path=args.cwd, name=name, version=version, user=user,
                                   channel=channel, filename=args.file)
 
     def download(self, *args):
@@ -460,7 +460,7 @@ class Command(object):
 
         parser.add_argument("--source-folder", "--source_folder", "-s",
                             help='Destination directory. Defaulted to current directory')
-        parser.add_argument("--info-folder", "-if",  # IMPORTANT, MAKE DECISSION ABOUT NAMING
+        parser.add_argument("--install-folder", "-if",
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to the "
                             "current directory. Optional, source method will run without the "
@@ -481,7 +481,7 @@ class Command(object):
         except ConanException:
             pass
 
-        return self._conan.source(args.path, args.source_folder, args.info_folder)
+        return self._conan.source(args.path, args.source_folder, args.install_folder)
 
     def build(self, *args):
         """ Utility command to call the build() method of a local 'conanfile.py'.
@@ -569,7 +569,7 @@ class Command(object):
         parser.add_argument("-d", "--dest",
                             help="Directory to copy the artifacts to. By default it will be the"
                                  " current directory")
-        parser.add_argument("--info-folder", "-if",  # IMPORTANT!! take a decission about name
+        parser.add_argument("--install-folder", "-if",
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                                  "files (from a previous conan install execution)")
         parser.add_argument("-u", "--undo", default=False, action="store_true",
@@ -587,7 +587,7 @@ class Command(object):
         except ConanException:
             pass
 
-        return self._conan.imports(args.path, args.dest, args.file, args.info_folder)
+        return self._conan.imports(args.path, args.dest, args.file, args.install_folder)
 
     def export_pkg(self, *args):
         """Exports the specified recipe and then creates a package binary from given precompiled

@@ -92,7 +92,7 @@ class MyPkg(ConanFile):
     name = "Pkg"
     version = "0.1"
 """})
-        client.run("create lasote/channel --path subfolder")
+        client.run("create lasote/channel --cwd subfolder")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
@@ -105,7 +105,7 @@ class MyPkg(ConanFile):
     name = "Pkg"
     version = "0.1"
 """})
-        client.run("create lasote/channel --path subfolder --file CustomConanFile.py")
+        client.run("create lasote/channel --cwd subfolder --file CustomConanFile.py")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)

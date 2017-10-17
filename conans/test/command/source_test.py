@@ -32,7 +32,7 @@ class ConanLib(ConanFile):
         subdir = os.path.join(client.current_folder, "subdir")
         os.mkdir(subdir)
         client.run("install . --build_folder subdir")
-        client.run("source . --info-folder subdir --source_folder subdir")
+        client.run("source . --install-folder subdir --source_folder subdir")
         self.assertIn("PROJECT: Configuring sources", client.user_io.out)
         self.assertIn("PROJECT: cwd=>%s" % subdir, client.user_io.out)
 
@@ -69,7 +69,7 @@ class ConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         # Automatically created
-        error = client.run("source . --info-folder=missing_folder", ignore_error=True)
+        error = client.run("source . --install-folder=missing_folder", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Specified info-folder doesn't exist", client.out)
 
@@ -114,12 +114,12 @@ class ConanLib(ConanFile):
         src_folder = os.path.join(client.current_folder, "src")
         mkdir(build_folder)
         mkdir(src_folder)
-        client.run("source . --info-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
+        client.run("source . --install-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
                    ignore_error=True)
         self.assertIn("self.deps_cpp_info not defined.", client.out)
 
         client.run("install . --build-folder build --build ")
-        client.run("source . --info-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
+        client.run("source . --install-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
                    ignore_error=True)
         self.assertIn("FLAG=FLAG", client.out)
         self.assertIn("MYVAR=foo", client.out)
