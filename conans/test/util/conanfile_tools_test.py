@@ -100,7 +100,9 @@ class ConanfileToolsTest(unittest.TestCase):
         assert(os.path.exists("oldfile"))
         patch_content = """--- /dev/null
 +++ b/newfile
-@@ -0,0 +0,1 @@
+@@ -0,0 +0,3 @@
++New file!
++New file!
 +New file!
 --- a/oldfile
 +++ b/dev/null
@@ -114,7 +116,8 @@ class ConanfileToolsTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         client.run("create user/testing")
-        self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!", client.out)
+        self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
+                      client.out)
         self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
 
     def test_error_patch(self):
