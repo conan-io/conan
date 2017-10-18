@@ -1,5 +1,4 @@
 from conans.model import Generator
-from conans.model.build_info import CppInfo
 from conans.paths import BUILD_INFO_CMAKE
 from conans.client.generators.cmake_common import cmake_dependency_vars,\
     cmake_macros, generate_targets_section, cmake_dependencies, cmake_package_info,\
