@@ -423,11 +423,12 @@ class ConanManager(object):
             if not no_imports:
                 run_imports(conanfile, build_folder, output)
             call_system_requirements(conanfile, output)
-        elif deploy:
-            # The conanfile loaded is really a virtual one. The one with the deploy is the first level one
-            deploy_conanfile = deps_graph.inverse_levels()[1][0].conanfile
-            if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
-                run_deploy(deploy_conanfile, build_folder, output)
+
+            if deploy:
+                # The conanfile loaded is really a virtual one. The one with the deploy is the first level one
+                deploy_conanfile = deps_graph.inverse_levels()[1][0].conanfile
+                if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
+                    run_deploy(deploy_conanfile, build_folder, output)
 
         if manifest_manager:
             manifest_manager.print_log()
