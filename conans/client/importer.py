@@ -3,6 +3,7 @@ import fnmatch
 import os
 import time
 
+from conans import tools
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
@@ -65,7 +66,8 @@ def run_imports(conanfile, dest_folder, output):
     conanfile.copy = file_importer
     conanfile.imports_folder = dest_folder
     with environment_append(conanfile.env):
-        conanfile.imports()
+        with tools.chdir(dest_folder):
+            conanfile.imports()
     copied_files = file_importer.copied_files
     import_output = ScopedOutput("%s imports()" % output.scope, output)
     _report_save_manifest(copied_files, import_output, dest_folder, IMPORTS_MANIFESTS)

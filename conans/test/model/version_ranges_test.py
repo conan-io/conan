@@ -153,7 +153,7 @@ class MockSearchRemote(object):
     def __init__(self, packages=None):
         self.packages = packages or []
 
-    def search_remotes(self, pattern):  # @UnusedVariable
+    def search_remotes(self, pattern, ignorecase):  # @UnusedVariable
         return self.packages
 
 

@@ -7,7 +7,7 @@ from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedCl
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
 import os
-from conans.paths import rm_conandir, EXPORT_SOURCES_TGZ_NAME
+from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.client.remover import DiskRemover
 from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
@@ -123,6 +123,11 @@ class ConanProxy(object):
                                                     current_remote)
 
     def get_recipe(self, conan_reference):
+        with self._client_cache.conanfile_write_lock(conan_reference):
+            result = self._get_recipe(conan_reference)
+        return result
+
+    def _get_recipe(self, conan_reference):
         output = ScopedOutput(str(conan_reference), self._out)
 
         # check if it is in disk

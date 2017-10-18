@@ -45,6 +45,7 @@ conan_basic_setup()''')
 """
 
 conanfile_bare = """from conans import ConanFile
+from conans import tools
 
 class {package_name}Conan(ConanFile):
     name = "{name}"
@@ -55,7 +56,7 @@ class {package_name}Conan(ConanFile):
     license = "None"
 
     def package_info(self):
-        self.cpp_info.libs = self.collect_libs()
+        self.cpp_info.libs = tools.collect_libs(self)
 """
 
 conanfile_sources = """from conans import ConanFile, CMake

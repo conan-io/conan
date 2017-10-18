@@ -10,7 +10,7 @@ from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages

@@ -8,7 +8,7 @@ class BasicClientTest(unittest.TestCase):
     def help_test(self):
         client = TestClient()
         client.run("")
-        self.assertIn('Conan commands. Type $conan "command" -h', client.out)
+        self.assertIn('Conan commands. Type "conan <command> -h" for help', client.out)
 
         client.run("--version")
         self.assertIn("Conan version %s" % __version__, client.out)

@@ -55,7 +55,7 @@ class MyConanfile(ConanFile):
     '''
         client.save({CONANFILE: reuse}, clean_first=True)
         client.run("export lasote/stable")
-        client.run('install reuse/0.1@lasote/stable --build')
+        client.run('install reuse/0.1@lasote/stable --build -g txt')
 
         # Assert generator TXT
         txt_contents = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))

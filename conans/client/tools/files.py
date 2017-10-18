@@ -70,8 +70,10 @@ def unzip(filename, destination=".", keep_permissions=False):
     if hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
         def print_progress(the_size, uncomp_size):
             the_size = (the_size * 100.0 / uncomp_size) if uncomp_size != 0 else 0
-            txt_msg = "Unzipping %.0f %%" % the_size
-            _global_output.rewrite_line(txt_msg)
+            if the_size > print_progress.last_size + 1:
+                txt_msg = "Unzipping %d %%" % the_size
+                _global_output.rewrite_line(txt_msg)
+                print_progress.last_size = the_size
     else:
         def print_progress(_, __):
             pass
@@ -83,14 +85,13 @@ def unzip(filename, destination=".", keep_permissions=False):
         else:
             _global_output.info("Unzipping %s" % human_size(uncompress_size))
         extracted_size = 0
+
+        print_progress.last_size = -1
         if platform.system() == "Windows":
             for file_ in z.infolist():
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
                 try:
-                    # Win path limit is 260 chars
-                    if len(file_.filename) + len(full_path) >= 260:
-                        raise ValueError("Filename too long")
                     z.extract(file_, full_path)
                 except Exception as e:
                     _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
@@ -124,6 +125,7 @@ def check_with_algorithm_sum(algorithm_name, file_path, signature):
                                                           os.path.basename(file_path),
                                                           signature,
                                                           real_signature))
+
 
 def check_sha1(file_path, signature):
     check_with_algorithm_sum("sha1", file_path, signature)
