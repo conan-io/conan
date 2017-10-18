@@ -65,6 +65,15 @@ class UploadTest(unittest.TestCase):
         client = TestClient(servers=self._servers, users={"default": [("lasote", "mypass")]})
         return client
 
+    def pattern_upload_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create user/testing")
+        client.run("upload Hello0/*@user/testing --confirm --all")
+        self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
+        self.assertIn("Uploading conan_package.tgz", client.user_io.out)
+        self.assertIn("Uploading conanfile.py", client.user_io.out)
+
     def corrupt_upload_test(self):
         client = self._client()
 

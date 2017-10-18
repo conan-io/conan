@@ -2,9 +2,18 @@ import os
 import time
 
 from conans.errors import ConanException, NotFoundException
-from conans.model.ref import PackageReference, is_a_reference, ConanFileReference
+from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
+
+
+def is_a_reference(ref):
+    try:
+        ConanFileReference.loads(ref)
+        return "*" not in ref  # If is a pattern, it is not a reference
+    except ConanException:
+        pass
+    return False
 
 
 class ConanUploader(object):
