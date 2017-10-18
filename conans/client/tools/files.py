@@ -1,18 +1,15 @@
 import platform
-from contextlib import contextmanager
-
 import logging
-
 import re
-
 import os
 import sys
+
+from contextlib import contextmanager
+from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import load, save, _generic_algorithm_sum
-from patch import fromfile, fromstring
-import traceback
 
 
 _global_output = None
@@ -125,6 +122,7 @@ def check_with_algorithm_sum(algorithm_name, file_path, signature):
                                                           os.path.basename(file_path),
                                                           signature,
                                                           real_signature))
+
 
 def check_sha1(file_path, signature):
     check_with_algorithm_sum("sha1", file_path, signature)
