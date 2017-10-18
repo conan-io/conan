@@ -25,29 +25,27 @@ class PackageTester(object):
 
         return test_conanfile
 
-    def install_build_and_test(self, base_folder, profile, test_folder_name, name,
-                               version, user, channel, remote, update, build_modes=None):
+    def install_build_and_test(self, conanfile_abs_path, profile, name, version, user, channel,
+                               remote, update, build_modes=None):
         """
         Installs the reference (specified by the parameters or extracted from the test conanfile)
         and builds the test_package/conanfile.py running the test() method.
         """
-
-        test_conanfile_path = self.get_conanfile_path(base_folder, test_folder_name)
-        test_folder = os.path.dirname(test_conanfile_path)
-        build_folder = self._build_folder(profile, test_folder)
+        base_folder = os.path.dirname(conanfile_abs_path)
+        build_folder = self._build_folder(profile, base_folder)
         rmdir(build_folder)
-        test_conanfile = self._call_requirements(test_conanfile_path, profile)
+        test_conanfile = self._call_requirements(conanfile_abs_path, profile)
         ref = self._get_reference_to_test(test_conanfile.requires, name, version, user, channel)
         if build_modes is None:
             build_modes = ["never"]
         self._manager.install(inject_require=ref,
-                              reference=test_folder,
+                              reference=base_folder,
                               build_folder=build_folder,
                               remote=remote,
                               profile=profile,
                               update=update,
                               build_modes=build_modes)
-        self._manager.build(test_conanfile_path, test_folder, build_folder, package_folder=None,
+        self._manager.build(conanfile_abs_path, base_folder, build_folder, package_folder=None,
                             test=str(ref))
 
     @staticmethod
@@ -78,7 +76,9 @@ class PackageTester(object):
         # Different from the requirements in test_package
         elif name is not None:
             if not version or not channel or not user:
-                raise ConanException("Specify a reference in the 'conan test' command")
+                reqs = ", ".join(requires.keys())
+                raise ConanException("The package name '%s' doesn't match with any requirement "
+                                     "in the testing conanfile.py: %s" % (name, reqs))
             else:
                 pname, pversion, puser, pchannel = name, version, user, channel
         else:
@@ -87,17 +87,3 @@ class PackageTester(object):
                                  "test_package/conanfile.py file.")
 
         return ConanFileReference(pname, pversion, puser, pchannel)
-
-    @staticmethod
-    def get_conanfile_path(base_folder, test_folder_name):
-
-        test_folders = [test_folder_name] if test_folder_name else ["test_package", "test"]
-
-        for test_folder_name in test_folders:
-            test_folder = os.path.join(base_folder, test_folder_name)
-            test_conanfile_path = os.path.join(test_folder, "conanfile.py")
-            if os.path.exists(test_conanfile_path):
-                return test_conanfile_path
-        else:
-            raise ConanException("test folder '%s' not available, "
-                                 "or it doesn't have a conanfile.py" % test_folder_name)

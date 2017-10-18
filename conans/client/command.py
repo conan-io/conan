@@ -122,15 +122,12 @@ class Command(object):
         'conan create' command.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
+        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan source .')
         parser.add_argument("reference", nargs="?",
                             help='a full package reference pkg/version@user/channel, '
                             'or just the package name "pkg" if the test_package conanfile is '
-                            'requiring more than one reference')
-        parser.add_argument('--path', '-p', default=None,
-                            help='Optional. Folder with a test_folder directory. '
-                                 'Default current directory.')
-        parser.add_argument("-tf", "--test-folder", "--test_folder",
-                            help='alternative test folder name, by default is "test_package"')
+                            'requiring more than one reference. Empty if the conanfile has only'
+                            'one require')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
@@ -153,11 +150,10 @@ class Command(object):
                         channel = None
                         user = None
                 else:
-                    raise ConanException("Invalid refernce: %s" % args.reference)
+                    raise ConanException("Invalid reference: %s" % args.reference)
 
-        return self._conan.test(args.profile, args.settings, args.options,
-                                args.env, args.path, args.test_folder,
-                                args.remote, args.update,
+        return self._conan.test(args.path, args.profile, args.settings, args.options,
+                                args.env, args.remote, args.update,
                                 user=user, channel=channel, name=name,
                                 version=version, build_modes=args.build)
 

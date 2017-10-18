@@ -8,8 +8,6 @@ from conans.model.requires import Requirement
 
 class PackageTesterTest(unittest.TestCase):
 
-
-
     def unit_test_get_reference_to_test(self):
 
         obj = PackageTester(None, None)

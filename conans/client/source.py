@@ -2,12 +2,10 @@ import os
 import shutil
 
 import six
-from contextlib import contextmanager
 
 from conans import tools
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
-from conans.model.conan_file import ConanFile
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
 from conans.util.files import rmdir, set_dirty, is_dirty, clean_dirty
 
@@ -75,8 +73,9 @@ def config_source(export_folder, export_source_folder, src_folder,
         try:
             with tools.environment_append(conan_file.env):
                 with conanfile_exception_formatter(str(conan_file), "source"):
-                    with block_build_and_package_folders():
-                        conan_file.source()
+                    conan_file.build_folder = None
+                    conan_file.package_folder = None
+                    conan_file.source()
             clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
         except Exception as e:
             os.chdir(export_folder)
@@ -97,31 +96,10 @@ def config_source_local(dest_dir, conan_file, output):
         try:
             with conanfile_exception_formatter(str(conan_file), "source"):
                 with tools.environment_append(conan_file.env):
-                    with block_build_and_package_folders():
-                        conan_file.source()
+                    conan_file.build_folder = None
+                    conan_file.package_folder = None
+                    conan_file.source()
         except ConanExceptionInUserConanfileMethod:
             raise
         except Exception as e:
             raise ConanException(e)
-
-
-@contextmanager
-def block_build_and_package_folders():
-    msg = "Access to '%s' is blocked from source() method: Source method is called once, " \
-          "not one per configuration, so using build_folder or package_folder can produce " \
-          "unexpected results."
-
-    def raise_when_access_build(*args):
-        raise ConanException(msg % "self.build_folder")
-
-    def raise_when_access_package(*args):
-        raise ConanException(msg % "self.package_folder")
-
-    ConanFile.build_folder = property(raise_when_access_build)
-    ConanFile.package_folder = property(raise_when_access_package)
-
-    try:
-        yield()
-    finally:
-        ConanFile.build_folder = None
-        ConanFile.package_folder = None

@@ -174,8 +174,8 @@ class ConanAPIV1(object):
             self._user_io.out.success("File saved: %s" % f)
 
     @api_method
-    def test(self, profile_name=None, settings=None, options=None, env=None, path=None,
-             test_folder_name=None, remote=None, update=False, user=None, channel=None, name=None,
+    def test(self, path, profile_name=None, settings=None, options=None, env=None, remote=None,
+             update=False, user=None, channel=None, name=None,
              version=None, build_modes=None):
 
         settings = settings or []
@@ -183,13 +183,14 @@ class ConanAPIV1(object):
         env = env or []
         cwd = os.getcwd()
         base_folder = self._abs_relative_to(path, cwd, default=cwd)
+        conanfile_abs_path = self._get_conanfile_path(base_folder, "conanfile.py")
 
         profile = profile_from_args(profile_name, settings, options, env, None, cwd,
                                     self._client_cache.profiles_path)
 
         pt = PackageTester(self._manager, self._user_io)
-        pt.install_build_and_test(base_folder, profile, test_folder_name, name,
-                                  version, user, channel, remote, update, build_modes=build_modes)
+        pt.install_build_and_test(conanfile_abs_path, profile, name, version, user, channel, remote,
+                                  update, build_modes=build_modes)
 
     @api_method
     def test_package(self, profile_name=None, settings=None, options=None, env=None,
@@ -339,17 +340,27 @@ class ConanAPIV1(object):
                               filename=filename)
 
         base_folder = self._abs_relative_to(conan_file_path, cwd, default=cwd)
-        tm = PackageTester(self._manager, self._user_io)
-        try:
-            tm.get_conanfile_path(base_folder, test_folder)
-        except ConanException:
-            self._user_io.out.warn("test package folder not available, or it doesn't have "
-                                   "a conanfile.py\nIt is recommended to set a 'test_package' "
-                                   "while creating packages")
-        else:
+
+        def get_test_conanfile_path(tf):
+            """Searchs in the declared test_folder or in the standard locations"""
+            test_folders = [tf] if tf else ["test_package", "test"]
+
+            for test_folder_name in test_folders:
+                test_folder = os.path.join(base_folder, test_folder_name)
+                test_conanfile_path = os.path.join(test_folder, "conanfile.py")
+                if os.path.exists(test_conanfile_path):
+                    return test_conanfile_path
+            else:
+                if tf:
+                    raise ConanException("test folder '%s' not available, "
+                                         "or it doesn't have a conanfile.py" % tf)
+
+        test_conanfile_path = get_test_conanfile_path(test_folder)
+        if test_conanfile_path:
+            pt = PackageTester(self._manager, self._user_io)
             scoped_output.highlight("Testing with 'test_package'")
-            tm.install_build_and_test(base_folder, profile, test_folder, name,
-                                      version, user, channel, remote, update)
+            pt.install_build_and_test(test_conanfile_path, profile, name, version, user,
+                                      channel, remote, update)
 
     @api_method
     def export_pkg(self, path, name, channel, source_folder=None, build_folder=None,
@@ -416,7 +427,8 @@ class ConanAPIV1(object):
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
-                              generators=generators)
+                              generators=generators,
+                              cwd=cwd)
 
     @api_method
     def install(self, path="", settings=None, options=None, env=None, scope=None,

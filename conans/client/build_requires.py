@@ -87,7 +87,7 @@ class BuildRequires(object):
 
     def _install(self, build_requires_references, build_requires_options, installer):
         # No need current path
-        conanfile = self._loader.load_virtual(build_requires_references, scope_options=False,
+        conanfile = self._loader.load_virtual(build_requires_references, None, scope_options=False,
                                               build_requires_options=build_requires_options)
         # compute and print the graph of transitive build-requires
         deps_graph = self._graph_builder.load(conanfile)

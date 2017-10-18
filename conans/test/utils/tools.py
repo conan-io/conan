@@ -364,7 +364,7 @@ class TestClient(object):
         mkdir(newdir)
         self.current_folder = newdir
         try:
-            yield()
+            yield
         finally:
             self.current_folder = old_dir
 

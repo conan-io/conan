@@ -1,7 +1,6 @@
 import fnmatch
 import os
 import time
-import shutil
 from collections import OrderedDict, Counter
 
 import copy
@@ -190,7 +189,7 @@ class ConanManager(object):
                                   manifest_manager=None)
 
         loader = self.get_loader(profile)
-        conanfile = loader.load_virtual([reference])
+        conanfile = loader.load_virtual([reference], None)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 
@@ -242,9 +241,11 @@ class ConanManager(object):
             else:
                 remote_proxy.download_packages(reference, list(packages_props.keys()))
 
-    def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename):
+    def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename, cwd=None):
+        """cwd only used for virtuals, to pass it the current directory and make available the
+        conanfile.conanfile_directory (smell)"""
         if isinstance(reference_or_path, ConanFileReference):
-            conanfile = loader.load_virtual([reference_or_path])
+            conanfile = loader.load_virtual([reference_or_path], cwd)
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
             try:
@@ -258,7 +259,8 @@ class ConanManager(object):
 
         return conanfile
 
-    def _inject_require(self, conanfile, inject_require):
+    @staticmethod
+    def _inject_require(conanfile, inject_require):
         """ test_package functionality requires injecting the tested package as requirement
         before running the install
         """
@@ -333,7 +335,7 @@ class ConanManager(object):
     def install(self, reference, build_folder, profile, remote=None,
                 build_modes=None, filename=None, update=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                generators=None, no_imports=False, inject_require=None):
+                generators=None, no_imports=False, inject_require=None, cwd=None):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param build_folder: where the output files will be saved
@@ -350,6 +352,7 @@ class ConanManager(object):
         written
         @param no_imports: Install specified packages but avoid running imports
         @param inject_require: Reference to add as a requirement to the conanfile
+        @param cwd: Only used in case of reference, to get a conanfile_directory to a virtual SMELL
         """
         if generators is not False:
             generators = set(generators) if generators else set()
@@ -360,10 +363,10 @@ class ConanManager(object):
                                            verify=manifest_verify,
                                            interactive=manifest_interactive) if manifest_folder else None
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
-                                  update=update, check_updates=False, manifest_manager=manifest_manager)
+                                  update=update, manifest_manager=manifest_manager)
 
         loader = self.get_loader(profile)
-        conanfile = self._get_conanfile_object(loader, reference, filename)
+        conanfile = self._get_conanfile_object(loader, reference, filename, cwd=cwd)
         if inject_require:
             self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)

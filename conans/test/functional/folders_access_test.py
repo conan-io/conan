@@ -47,17 +47,12 @@ class AConan(ConanFile):
         assert(self.source_folder == os.getcwd())
         self.assert_in_local_cache()
         
-        try:
-            self.build_folder
-        except Exception as exc:
-            assert("Access to 'self.build_folder' is blocked from source() method" in str(exc))
-
-        try:
-            self.package_folder
-        except Exception as exc:
-            assert("Access to 'self.package_folder' is blocked from source() method" in str(exc))
+        # Prevented to use them, it's dangerous, because the source is run only for the first
+        # config, so only the first build_folder/package_folder would be modified
+        assert(self.build_folder is None)
+        assert(self.package_folder is None)
                         
-        assert(hasattr(self, "source_folder"))
+        assert(self.source_folder is not None)
         self.copy_source_folder = self.source_folder
         
         if %(source_with_infos)s:
@@ -79,7 +74,7 @@ class AConan(ConanFile):
         else:
             assert(self.source_folder == self.build_folder)
 
-        assert(hasattr(self, "package_folder"))
+        assert(self.package_folder is not None)
         self.copy_build_folder = self.build_folder
         
     def package(self):

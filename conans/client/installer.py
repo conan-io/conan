@@ -155,9 +155,14 @@ class _ConanPackageBuilder(object):
         in every build, as some configure processes actually change the source
         code. Receives the build_folder because it can change if the method build_id() exists
         """
+        package_folder = self._client_cache.package(self._package_reference,
+                                                    self._conan_file.short_paths)
+
         os.chdir(self.build_folder)
         self._conan_file.build_folder = self.build_folder
         self._conan_file.conanfile_directory = self.build_folder
+        self._conan_file.package_folder = package_folder
+
         # Read generators from conanfile and generate the needed files
         logger.debug("Writing generators")
         write_generators(self._conan_file, self.build_folder, self._out)

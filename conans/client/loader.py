@@ -109,11 +109,11 @@ class ConanFileLoader(object):
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, references, scope_options=True,
+    def load_virtual(self, references, cwd, scope_options=True,
                      build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(None, self._runner, self._settings.copy(), conanfile_directory=None)
+        conanfile = ConanFile(None, self._runner, self._settings.copy(), conanfile_directory=cwd)
         conanfile.settings = self._settings.copy_values()
         # Assign environment
         conanfile._env_values.update(self._env_values)

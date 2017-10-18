@@ -104,7 +104,7 @@ class VirtualEnvGenerator(Generator):
 
     @property
     def content(self):
-        venv_name = os.path.basename(self.conanfile.conanfile_directory or os.getcwd())
+        venv_name = os.path.basename(self.conanfile.conanfile_directory)
         deactivate_lines = self._deactivate_lines()
         activate_lines = self._activate_lines(venv_name)
 
