@@ -62,7 +62,7 @@ class PackageTester(object):
 
         # User do not specify anything, and there is a require
         if name is None and len(requires.items()) == 1:
-            _, req = requires.items()[0]
+            _, req = list(requires.items())[0]
             pname, pversion, puser, pchannel = req.conan_reference
         # The specified name is already in the test_package/conanfile requires, check conflicts
         elif name is not None and name in requires:
