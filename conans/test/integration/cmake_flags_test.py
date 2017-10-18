@@ -202,8 +202,7 @@ class MyLib(ConanFile):
         client.save({"conanfile.py": conanfile % "True"})
         client.run("build .", ignore_error=True)
 
-        self.assertIn("self.deps_cpp_info not defined. If you need it for a local command run "
-                      "'conan install'", client.user_io.out)
+        self.assertIn("conanbuildinfo.txt file not found", client.user_io.out)
 
         client.run("install")
         client.run("build .")
