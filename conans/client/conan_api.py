@@ -712,7 +712,8 @@ class ConanAPIV1(object):
     def profile_list(self):
         folder = self._client_cache.profiles_path
         if os.path.exists(folder):
-            return [name for name in os.listdir(folder) if not os.path.isdir(name)]
+            return [name for name in os.listdir(folder)
+                    if not os.path.isdir(os.path.join(folder, name))]
         else:
             self._user_io.out.info("No profiles defined")
             return []
