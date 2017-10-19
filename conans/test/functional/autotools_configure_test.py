@@ -1,3 +1,4 @@
+import platform
 import unittest
 
 from conans.client.configure_build_environment import AutoToolsBuildEnvironment
@@ -36,7 +37,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
             self.assertEquals(runner.command_called, "mymake -j%s" % cpu_count())
 
         ab.make(args=["things"])
-        self.assertEquals(runner.command_called, "make 'things' -j%s" % cpu_count())
+        things = "'things'" if platform.system() != "Windows" else "things"
+        self.assertEquals(runner.command_called, "make %s -j%s" % (things, cpu_count()))
 
     def test_variables(self):
         # GCC 32
