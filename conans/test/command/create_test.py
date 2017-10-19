@@ -74,6 +74,33 @@ class MyPkg(ConanFile):
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
 
+    def create_werror_test(self):
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+        """})
+        client.run("export LibA/0.1@user/channel")
+        client.run("export LibA/0.2@user/channel")
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "LibA/0.1@user/channel"
+        """})
+        client.run("export LibB/0.1@user/channel")
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "LibA/0.2@user/channel"
+        """})
+        client.run("export LibC/0.1@user/channel")
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
+        """})
+        error = client.run("create Consumer/0.1@lasote/testing --werror", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
+                      client.out)
+
     def test_error_create_name_version(self):
         client = TestClient()
         conanfile = """
