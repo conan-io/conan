@@ -12,7 +12,7 @@ from conans.client.detect import detected_os
 from conans.client.export import export_conanfile, load_export_conanfile
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
-from conans.client.importer import run_imports, undo_imports
+from conans.client.importer import run_imports, undo_imports, run_deploy
 from conans.client.installer import ConanInstaller, call_system_requirements
 from conans.client.loader import ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
@@ -335,7 +335,7 @@ class ConanManager(object):
     def install(self, reference, build_folder, profile, remote=None,
                 build_modes=None, filename=None, update=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                generators=None, no_imports=False, inject_require=None, cwd=None):
+                generators=None, no_imports=False, inject_require=None, cwd=None, deploy=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param build_folder: where the output files will be saved
@@ -423,6 +423,12 @@ class ConanManager(object):
             if not no_imports:
                 run_imports(conanfile, build_folder, output)
             call_system_requirements(conanfile, output)
+
+            if deploy:
+                # The conanfile loaded is really a virtual one. The one with the deploy is the first level one
+                deploy_conanfile = deps_graph.inverse_levels()[1][0].conanfile
+                if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
+                    run_deploy(deploy_conanfile, build_folder, output)
 
         if manifest_manager:
             manifest_manager.print_log()
