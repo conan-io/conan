@@ -11,6 +11,7 @@ from conans.util.files import save, load
 import sys
 from conans.test.utils.tools import TestClient
 import platform
+from conans.paths import long_paths_support
 
 
 class OutputTest(unittest.TestCase):
@@ -81,7 +82,7 @@ class PkgConan(ConanFile):
         self.assertEqual(content, "Hello world!")
 
     def short_paths_unzip_output_test(self):
-        if platform.system() != "Windows":
+        if long_paths_support:
             return
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "src/"*40, "example.txt")
