@@ -28,9 +28,6 @@ class AConan(ConanFile):
     version = "0.1"
 
     def package(self):
-        assert(self.package_folder == os.getcwd())
-        assert(hasattr(self, "package_folder"))
-        assert(hasattr(self, "build_folder"))
         mkdir(os.path.join(self.package_folder, "include"))
 """
 

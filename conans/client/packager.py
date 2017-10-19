@@ -43,12 +43,12 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
         if source_folder != build_folder:
             conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
             with conanfile_exception_formatter(str(conanfile), "package"):
-                with tools.chdir(package_folder):
+                with tools.chdir(build_folder):
                     conanfile.package()
             conanfile.copy.report(package_output, warn=True)
         conanfile.copy = FileCopier(build_folder, package_folder)
 
-        with tools.chdir(package_folder):
+        with tools.chdir(build_folder):
             with conanfile_exception_formatter(str(conanfile), "package"):
                 conanfile.package()
         conanfile.copy.report(package_output, warn=True)
