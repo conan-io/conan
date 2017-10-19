@@ -9,7 +9,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
     def _set_deps_info(self, conanfile):
         conanfile.deps_cpp_info.include_paths.append("path/includes")
-        conanfile.deps_cpp_info.include_paths.append("other/include/path")
+        conanfile.deps_cpp_info.include_paths.append("other\include\path")
         # To test some path in win, to be used with MinGW make or MSYS etc
         conanfile.deps_cpp_info.lib_paths.append("one\lib\path")
         conanfile.deps_cpp_info.libs.append("onelib")
