@@ -1,17 +1,15 @@
 import platform
-from contextlib import contextmanager
-
 import logging
-
 import re
-
 import os
 import sys
+
+from contextlib import contextmanager
+from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import load, save, _generic_algorithm_sum
-from patch import fromfile, fromstring
 
 
 _global_output = None
@@ -170,6 +168,29 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
 
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
+
+    # account for new and deleted files, upstream dep won't fix them
+    items = []
+    for p in patchset:
+        source = p.source.decode("utf-8")
+        if source.startswith("a/"):
+            source = source[2:]
+        target = p.target.decode("utf-8")
+        if target.startswith("b/"):
+            target = target[2:]
+        if "dev/null" in source:
+            if base_path:
+                target = os.path.join(base_path, target)
+            hunks = [s.decode("utf-8") for s in p.hunks[0].text]
+            new_file = "".join(hunk[1:] for hunk in hunks)
+            save(target, new_file)
+        elif "dev/null" in target:
+            if base_path:
+                source = os.path.join(base_path, source)
+            os.unlink(source)
+        else:
+            items.append(p)
+    patchset.items = items
 
     if not patchset.apply(root=base_path, strip=strip):
         raise ConanException("Failed to apply patch: %s" % patch_file)
