@@ -78,7 +78,7 @@ class AConan(ConanFile):
         self.copy_build_folder = self.build_folder
         
     def package(self):
-        assert(self.package_folder == os.getcwd())
+        assert(self.build_folder == os.getcwd()) # Folder where we copy things to destination
     
         self.assert_in_local_cache()
         self.assert_deps_infos()

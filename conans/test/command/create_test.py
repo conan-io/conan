@@ -52,18 +52,12 @@ class MyPkg(ConanFile):
     def build(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
-        assert(self.build_folder == os.getcwd())
-        assert(hasattr(self, "package_folder"))
     def package(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
-        assert(self.package_folder == os.getcwd())
-        assert(hasattr(self, "build_folder"))
     def package_info(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
-        assert(self.package_folder == os.getcwd())
-        assert(hasattr(self, "build_folder"))
 """})
         client.run("create Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
