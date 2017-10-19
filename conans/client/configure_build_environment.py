@@ -132,7 +132,7 @@ class AutoToolsBuildEnvironment(object):
             else:
                 host_arch = "arm" if "arm" in arch_setting else arch_setting
 
-            host = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
+            host = "%s%s" % (host_arch, { "Linux": "-linux-gnueabi",
                                          "Android": "-linux-android"}.get(os_setting, ""))
             if arch_setting == "armv7hf" and os_setting == "Linux":
                 host += "hf"
@@ -182,11 +182,12 @@ class AutoToolsBuildEnvironment(object):
             self._conanfile.run("%s/configure %s %s"
                                 % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
-    def make(self, args=""):
+    def make(self, args="", make_program=None):
+        make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(self.vars):
             str_args = args_to_string(args)
             cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else ""
-            self._conanfile.run("make %s %s" % (str_args, cpu_count_option))
+            self._conanfile.run("%s %s %s" % (make_program, str_args, cpu_count_option))
 
     @property
     def _sysroot_flag(self):
