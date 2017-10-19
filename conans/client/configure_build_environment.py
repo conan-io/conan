@@ -118,16 +118,20 @@ class AutoToolsBuildEnvironment(object):
         os_setting = self._conanfile.settings.get_safe("os")
 
         if os_detected == "Windows" and os_setting != "Windows":
-            return None, None, None    # Don't know what to do with these, even exists? its only for configure
+            # Don't know what to do with these, even exists? its only for configure
+            return None, None, None
 
         # Building FOR windows
         if os_setting == "Windows":
             build = "i686-w64-mingw32" if arch_detected == "x86" else "x86_64-w64-mingw32"
             host = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
         else:  # Building for Linux or Android
-            build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu", "Darwin": "apple-macos"}.get(os_detected,
-                                                                                                  os_detected.lower()))
-            if arch_setting == "armv8":
+            build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu",
+                                               "Darwin": "apple-macos"}.get(os_detected,
+                                                                            os_detected.lower()))
+            if arch_setting == "x86":
+                host_arch = "i686"
+            elif arch_setting == "armv8":
                 host_arch = "aarch64"
             else:
                 host_arch = "arm" if "arm" in arch_setting else arch_setting
