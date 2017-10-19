@@ -1191,7 +1191,7 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
         --build=never      Default option. Never build, use binary packages or fail if a binary package is not found.
         --build=missing    Build from code if a binary package is not found.
         --build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
-        --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters.
+        --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters. 'pattern' is a fnmatch file pattern of a package name.
 '''
 
 
