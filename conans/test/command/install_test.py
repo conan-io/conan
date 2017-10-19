@@ -19,6 +19,21 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
+    def install_package_folder_test(self):
+        # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+import os
+class Pkg(ConanFile):
+    def package_info(self):
+        self.dummy_doesnt_exist_not_break
+        self.output.info("Hello")
+        self.env_info.PATH = os.path.join(self.package_folder, "bin")
+"""})
+        client.run("install .")
+        self.assertNotIn("Hello", client.out)
+        self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
+
     def _create(self, number, version, deps=None, export=True, no_config=False):
         files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config)
 
