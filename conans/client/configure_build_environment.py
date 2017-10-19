@@ -2,6 +2,7 @@ import copy
 import platform
 import os
 
+from conans.client.tools.files import unix_path
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
@@ -207,7 +208,7 @@ class AutoToolsBuildEnvironment(object):
         if self._build_type == "Debug":
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
-            ret.append("-s")  # Remove all symbol table and relocation information from the executable.
+            ret.append("-s") # Remove all symbol table and relocation information from the executable.
         if self._sysroot_flag:
             ret.append(self._sysroot_flag)
         return ret
@@ -244,8 +245,8 @@ class AutoToolsBuildEnvironment(object):
                         ret.append(arg)
             return ret
 
-        lib_paths = ['-L%s' % x for x in self.library_paths]
-        include_paths = ['-I%s' % x for x in self.include_paths]
+        lib_paths = ['-L%s' % unix_path(x) for x in self.library_paths]
+        include_paths = ['-I%s' % unix_path(x) for x in self.include_paths]
 
         ld_flags = append(self.link_flags, lib_paths)
         cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])
