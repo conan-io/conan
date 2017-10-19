@@ -255,8 +255,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(target)
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "x86")
-        self.assertFalse(build)
-        self.assertFalse(host)
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-linux-gnueabi")
         self.assertFalse(target)
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
@@ -273,7 +273,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         build, host, target = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86-linux-android")
+        self.assertEquals(host, "i686-linux-android")
 
         build, host, target = get_values("Linux", "x86_64", "Android", "x86_64")
         self.assertEquals(build, "x86_64-linux-gnu")
@@ -314,8 +314,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(target)
 
         build, host, target = get_values("Windows", "x86_64", "Windows", "x86")
-        self.assertFalse(build)
-        self.assertFalse(host)
+        self.assertEquals(build, "x86_64-w64-mingw32")
+        self.assertEquals(host, "i686-w64-mingw32")
         self.assertFalse(target)
 
         build, host, target = get_values("Windows", "x86_64", "Linux", "armv7hf")

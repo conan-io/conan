@@ -216,8 +216,6 @@ def cross_building(settings, self_os=None, self_arch=None):
     os_setting = settings.get_safe("os")
     arch_setting = settings.get_safe("arch")
     platform_os = {"Darwin": "Macos"}.get(self_os, self_os)
-    if self_os == os_setting and self_arch == "x86_64" and arch_setting == "x86":
-        return False  # not really considered cross
 
     if os_setting and platform_os != os_setting:
         return True
