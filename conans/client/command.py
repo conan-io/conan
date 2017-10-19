@@ -158,7 +158,7 @@ class Command(object):
                                 version=version, build_modes=args.build)
 
     def test_package(self, *args):
-        """THIS METHOD IS DEPRECATED and will be removed. Use 'conan create' and/or 'conan test' instead.
+        """METHOD DEPRECATED, will be removed. Use 'conan create' and/or 'conan test'.
         Use 'conan create' to generate binary packages for a recipe.
         If you want to test a package you can use 'conan test' command.
         """
@@ -199,7 +199,7 @@ class Command(object):
                                         version=version)
 
     def create(self, *args):
-        """ Builds a binary package for the recipe (conanfile.py) located in the current directory.
+        """ Builds a binary package for recipe (conanfile.py) located in current folder.
         Uses the specified configuration in a profile or in -s settings, -o options etc.
         If a 'test_package' folder (the name can be configured with -tf) is found, the command will
         run the consumer project to ensure that the package has been created correctly. Check the
@@ -238,7 +238,7 @@ class Command(object):
                                   channel=channel, filename=args.file)
 
     def download(self, *args):
-        """Downloads a conan recipe or binary package to the local cache by id, without using settings.
+        """Download recipe and binaries to the local cache, without using settings.
          It works specifying the recipe reference and package ID to be installed.
          Not transitive, requirements of the specified reference will be retrieved.
          Useful together with 'conan copy' to automate the promotion of
@@ -318,7 +318,7 @@ class Command(object):
                                                  build_folder=args.build_folder)
 
     def config(self, *args):
-        """Updates the conan.conf keys/values. Also installs a remote zip with config files.
+        """Manage configuration. Edit conan.conf or install full configuration
         """
         parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
 
@@ -591,7 +591,7 @@ class Command(object):
         return self._conan.imports(args.path, args.dest, args.file, args.install_folder)
 
     def export_pkg(self, *args):
-        """Exports the recipe and creates a package from given precompiled files calling the 'package' method.
+        """Exports recipe and creates package from given binaries calling 'package()'.
            It executes the package() method applied to the local folders '--source_folder' and
            '--build_folder' and creates a new package in the local cache for the specified
            'reference' and for the specified '--settings', '--options' and or '--profile'.
@@ -669,7 +669,7 @@ class Command(object):
                                   name=name, version=version)
 
     def remove(self, *args):
-        """Removes any package recipe or binary matching a pattern, from the local cache or a remote.
+        """Removes packages or binaries matching pattern, from local cache or remote.
         It can also be used to remove temporary source or build folders in the local conan cache.
         If no remote is specified, the removal will be done by default in the local conan cache.
         """
@@ -736,7 +736,7 @@ class Command(object):
                                 all=args.all, package=args.package)
 
     def user(self, *parameters):
-        """ Authenticates against a remote with user and pass, storing the auth token if success.
+        """ Authenticates against a remote with user/password, caching the auth token.
         Useful to avoid the user and password being requested later.
         e.g. while you're uploading a package.
         You can have more than one user (one per remote). Changing the user, or introducing the
@@ -756,7 +756,7 @@ class Command(object):
                                 password=args.password)
 
     def search(self, *args):
-        """ Search package recipes and binaries in the local cache or in a remote server.
+        """ Search package recipes and binaries in the local cache or in a remote.
 
         If you provide a pattern, then it will search for existing package recipes matching that pattern.
         If a full and complete package reference is provided, like Pkg/0.1@user/channel, then the existing
@@ -1042,7 +1042,7 @@ class Command(object):
         fmt = '  %-{}s'.format(max_len)
 
         for group_name, comm_names in grps:
-            self._user_io.out.writeln(group_name, Color.MAGENTA)
+            self._user_io.out.writeln(group_name, Color.BRIGHT_MAGENTA)
             for name in comm_names:
                 # future-proof way to ensure tabular formatting
                 self._user_io.out.write(fmt % name, Color.GREEN)
