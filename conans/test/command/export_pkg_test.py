@@ -1,14 +1,13 @@
 import unittest
 
 from conans.client import tools
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, long_paths_support
 from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import load
 import os
 from conans.test.utils.conanfile import TestConanFile
 from nose_parameterized import parameterized
-import platform
 
 
 class PackageFilesTest(unittest.TestCase):
@@ -22,7 +21,7 @@ class TestConan(ConanFile):
     name = "Hello"
     version = "0.1"
     settings = "os"
-    
+
     def package(self):
         self.copy("*")
 """
@@ -35,7 +34,7 @@ class TestConan(ConanFile):
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         win_package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
         package_folder = client.client_cache.package(win_package_ref, short_paths=short_paths)
-        if short_paths and platform.system() == "Windows":
+        if short_paths and not long_paths_support:
             self.assertEqual(load(os.path.join(client.client_cache.package(win_package_ref),
                                                ".conan_link")),
                              package_folder)
@@ -85,7 +84,7 @@ class TestConan(ConanFile):
         client.run("new Hello/0.1 --bare")
         tools.replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
                               'license = "None"', """license = "None"
-                              
+
     def package(self):
         self.copy("*")""")
         client.save({"lib/libmycoollib.a": ""})
@@ -202,7 +201,6 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile, "file.txt": "txt contents"})
         client.run("export-pkg . anyname/1.222@conan/stable")
         self.assertIn("anyname/1.222@conan/stable package(): Copied 1 '.txt' files: file.txt", client.out)
-
 
     def test_with_deps(self):
         client = TestClient()

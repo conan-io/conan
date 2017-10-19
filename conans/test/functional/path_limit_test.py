@@ -3,10 +3,10 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.util.files import load
 import os
 from conans.model.ref import PackageReference, ConanFileReference
-import platform
 from conans.tools import environment_append
 from conans.test import CONAN_TEST_FOLDER
 import tempfile
+from conans.paths import long_paths_support
 
 
 base = '''
@@ -80,7 +80,7 @@ class PathLengthLimitTest(unittest.TestCase):
             package_ref = PackageReference.loads("lib/0.1@lasote/channel:"
                                                  "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
             package_folder = client2.client_cache.package(package_ref, short_paths=None)
-            if platform.system() == "Windows":
+            if not long_paths_support:
                 original_folder = client2.client_cache.package(package_ref)
                 link = load(os.path.join(original_folder, ".conan_link"))
                 self.assertEqual(link, package_folder)
@@ -97,7 +97,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client.save(files)
         client.run("export user/channel")
         conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
-        if platform.system() == "Windows":
+        if not long_paths_support:
             source_folder = client.client_cache.export_sources(conan_ref)
             link_source = load(os.path.join(source_folder, ".conan_link"))
             self.assertTrue(os.path.exists(link_source))
@@ -126,7 +126,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client.run("search lib/0.1@memsharded/stable")
         self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
 
-        if platform.system() == "Windows":
+        if not long_paths_support:
             conan_ref = ConanFileReference.loads("lib/0.1@lasote/channel")
             package_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
             package_folder = client.client_cache.package(package_ref)
@@ -152,7 +152,7 @@ class PathLengthLimitTest(unittest.TestCase):
         file2 = load(os.path.join(package_folder, "myfile2.txt"))
         self.assertEqual("Hello2 extra path length", file2)
 
-        if platform.system() == "Windows":
+        if not long_paths_support:
             conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
             source_folder = client.client_cache.source(conan_ref)
             link_source = load(os.path.join(source_folder, ".conan_link"))
@@ -179,9 +179,7 @@ from conans import ConanFile
 class ConanLib(ConanFile):
     short_paths = True
 '''
-        files = {"conanfile.py": base}
-        client.save(files)
-        client.client_cache.conan_config.set_item("general.user_home_short", "None")
+        client.save({"conanfile.py": base})
 
         client.run("create lib/0.1@user/channel")
         package_ref = PackageReference.loads("lib/0.1@user/channel:"
@@ -193,16 +191,19 @@ class ConanLib(ConanFile):
 
         conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
         source_folder = client.client_cache.source(conan_ref)
-        link_source = os.path.join(source_folder, ".conan_link")
-        self.assertFalse(os.path.exists(link_source))
-
         build_folder = client.client_cache.build(package_ref)
-        link_build = os.path.join(build_folder, ".conan_link")
-        self.assertFalse(os.path.exists(link_build))
-
         package_folder = client.client_cache.package(package_ref)
+        link_source = os.path.join(source_folder, ".conan_link")
+        link_build = os.path.join(build_folder, ".conan_link")
         link_package = os.path.join(package_folder, ".conan_link")
-        self.assertFalse(os.path.exists(link_package))
+        if long_paths_support:
+            self.assertFalse(os.path.exists(link_source))
+            self.assertFalse(os.path.exists(link_build))
+            self.assertFalse(os.path.exists(link_package))
+        else:
+            self.assertTrue(os.path.exists(link_source))
+            self.assertTrue(os.path.exists(link_build))
+            self.assertTrue(os.path.exists(link_package))
 
     def failure_test(self):
 
