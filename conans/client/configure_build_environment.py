@@ -2,7 +2,6 @@ import copy
 import platform
 import os
 
-from conans.client.tools.files import unix_path
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
