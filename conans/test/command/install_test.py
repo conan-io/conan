@@ -270,3 +270,17 @@ class TestConan(ConanFile):
         conaninfo = load(os.path.join(client.current_folder, "os_dir/conaninfo.txt"))
         self.assertNotIn("os=Windows", conaninfo)
         self.assertIn("os=Macos", conaninfo)
+
+    def install_reference_not_conanbuildinfo_test(self):
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    settings = "os"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create conan/stable")
+        client.save({}, clean_first=True)
+        client.run("install Hello/0.1@conan/stable")
+        self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))

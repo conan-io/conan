@@ -4,13 +4,45 @@ import unittest
 
 class CreateTest(unittest.TestCase):
 
+    def transitive_same_name_test(self):
+        # https://github.com/conan-io/conan/issues/1366
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "HelloBar"
+    version = "0.1"
+'''
+        test_package = '''
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    requires = "HelloBar/0.1@lasote/testing"
+    def test(self):
+        pass
+'''
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
+        client.run("create lasote/testing")
+        self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
+                      client.user_io.out)
+        client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
+                     "    requires='HelloBar/0.1@lasote/testing'",
+                     "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
+        client.run("create lasote/stable")
+        self.assertNotIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
+                         client.user_io.out)
+
     def create_test(self):
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
+        client.save({"conanfile.py": """
+import os
+from conans import ConanFile
 class MyPkg(ConanFile):
     def source(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+
     def configure(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
@@ -20,12 +52,18 @@ class MyPkg(ConanFile):
     def build(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+        assert(self.build_folder == os.getcwd())
+        assert(hasattr(self, "package_folder"))
     def package(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+        assert(self.package_folder == os.getcwd())
+        assert(hasattr(self, "build_folder"))
     def package_info(self):
         assert(self.version=="0.1")
         assert(self.name=="Pkg")
+        assert(self.package_folder == os.getcwd())
+        assert(hasattr(self, "build_folder"))
 """})
         client.run("create Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
@@ -75,6 +113,31 @@ class MyPkg(ConanFile):
         self.assertTrue(error)
         self.assertIn("Invalid parameter 'lasote', specify the full reference or user/channel",
                       client.out)
+
+    def create_in_subfolder_test(self):
+        client = TestClient()
+        client.save({"subfolder/conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+"""})
+        client.run("create lasote/channel --cwd subfolder")
+        self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
+        client.run("search")
+        self.assertIn("Pkg/0.1@lasote/channel", client.out)
+
+    def create_in_subfolder_with_different_name_test(self):
+        # Now with a different name
+        client = TestClient()
+        client.save({"subfolder/CustomConanFile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+"""})
+        client.run("create lasote/channel --cwd subfolder --file CustomConanFile.py")
+        self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
+        client.run("search")
+        self.assertIn("Pkg/0.1@lasote/channel", client.out)
 
     def create_test_package_test(self):
         client = TestClient()

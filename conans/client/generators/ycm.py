@@ -175,8 +175,10 @@ def FlagsForFile( filename, **kwargs ):
         flags = ['-x', 'c++']
         flags.extend(self.deps_build_info.cppflags)
         flags.extend(self.build_info.cppflags)
+
         flags.extend(prefixed("-D", self.deps_build_info.defines))
         flags.extend(prefixed("-D", self.build_info.defines))
+
         flags.extend(prefixed("-I", self.build_info.include_paths))
         flags.extend(prefixed("-I", self.deps_build_info.include_paths))
 
@@ -187,4 +189,4 @@ def FlagsForFile( filename, **kwargs ):
             pass
 
         return self.template.format(default_flags="'" + "', '".join(flags) + "'",
-                cxx_version=cxx_version)
+                                    cxx_version=cxx_version)
