@@ -245,8 +245,8 @@ class AutoToolsBuildEnvironment(object):
                         ret.append(arg)
             return ret
 
-        lib_paths = ['-L%s' % unix_path(x) for x in self.library_paths]
-        include_paths = ['-I%s' % unix_path(x) for x in self.include_paths]
+        lib_paths = ['-L%s' % x.replace("\\", "/") for x in self.library_paths]
+        include_paths = ['-I%s' % x.replace("\\", "/") for x in self.include_paths]
 
         ld_flags = append(self.link_flags, lib_paths)
         cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])
