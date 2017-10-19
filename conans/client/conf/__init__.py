@@ -70,6 +70,7 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
 # cache_no_locks = True
+# user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
