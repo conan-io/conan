@@ -2,7 +2,7 @@ import copy
 import platform
 import os
 
-from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
+from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture, which, vcvars_command
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
                             "libstdcxx": "-library=stdcxx4",
@@ -182,11 +182,22 @@ class AutoToolsBuildEnvironment(object):
             self._conanfile.run("%s/configure %s %s"
                                 % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
-    def make(self, args=""):
+    def make(self, args="", make_program=None):
         with environment_append(self.vars):
             str_args = args_to_string(args)
             cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else ""
-            self._conanfile.run("make %s %s" % (str_args, cpu_count_option))
+            if self._conanfile.settings.get_safe("os") == "Windows":
+                if make_program is None:
+                    for m in ('mingw32-make.exe', 'jom.exe', 'make.exe'):
+                        make_program = which(m)
+                        if make_program is not None:
+                            break;
+                    else:
+                        make_program = "%s && nmake" % vcvars_command(self._conanfile.settings)
+                        cpu_count_option = ""
+            if make_program is None:
+                make_program = "make"
+            self._conanfile.run("%s %s %s" % (make_program, str_args, cpu_count_option))
 
     @property
     def _sysroot_flag(self):
