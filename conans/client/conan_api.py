@@ -298,11 +298,12 @@ class ConanAPIV1(object):
                keep_source=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote=None, update=False, conan_file_path=None, filename=None,
-               user=None, channel=None, name=None, version=None):
+               user=None, channel=None, name=None, version=None, werror=False):
 
         settings = settings or []
         options = options or []
         env = env or []
+        self._user_io.out.werror_active = werror
 
         cwd = os.getcwd()
         conanfile_folder = self._abs_relative_to(conan_file_path, cwd, default=cwd)

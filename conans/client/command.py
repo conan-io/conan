@@ -222,6 +222,8 @@ class Command(object):
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
+        parser.add_argument("--werror", action='store_true', default=False,
+                            help='Error instead of warnings for graph inconsistencies')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -235,7 +237,7 @@ class Command(object):
                                   args.build, args.keep_source, args.verify, args.manifests,
                                   args.manifests_interactive, args.remote, args.update,
                                   conan_file_path=args.cwd, name=name, version=version, user=user,
-                                  channel=channel, filename=args.file)
+                                  channel=channel, filename=args.file, werror=args.werror)
 
     def download(self, *args):
         """Downloads a conan recipe or binary package to the local cache by id, without using settings.
