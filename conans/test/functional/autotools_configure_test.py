@@ -2,7 +2,9 @@ import unittest
 
 from conans.client.configure_build_environment import AutoToolsBuildEnvironment
 from conans import tools
+from conans.client.tools.oss import cpu_count
 from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.util.tools_test import RunnerMock
 
 
 class AutoToolsConfigureTest(unittest.TestCase):
@@ -20,6 +22,21 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.sharedlinkflags.append("shared_link_flag")
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
+
+    def test_mocked_methods(self):
+
+        runner = RunnerMock()
+        conanfile = MockConanfile(MockSettings({}), runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        ab.make(make_program="othermake")
+        self.assertEquals(runner.command_called, "othermake -j%s" % cpu_count())
+
+        with tools.environment_append({"CONAN_MAKE_PROGRAM": "mymake"}):
+            ab.make(make_program="othermake")
+            self.assertEquals(runner.command_called, "mymake -j%s" % cpu_count())
+
+        ab.make(args=["things"])
+        self.assertEquals(runner.command_called, "make 'things' -j%s" % cpu_count())
 
     def test_variables(self):
         # GCC 32
