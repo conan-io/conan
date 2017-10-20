@@ -463,7 +463,8 @@ class Command(object):
         parser.add_argument("--source-folder", "--source_folder", "-s",
                             help='Destination directory. Defaulted to current directory')
         parser.add_argument("--install-folder", "-if",
-                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
+                            help="Optional. Local folder containing the conaninfo.txt and "
+                            "conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to the "
                             "current directory. Optional, source method will run without the "
                             "information retrieved from the conaninfo.txt and conanbuildinfo.txt, "
