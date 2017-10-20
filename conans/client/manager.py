@@ -510,6 +510,7 @@ class ConanManager(object):
             conan_file.build_folder = build_folder
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
+            conan_file.install_folder = install_folder
             with environment_append(conan_file.env):
                 output.highlight("Running build()")
                 with conanfile_exception_formatter(str(conan_file), "build"):

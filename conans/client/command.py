@@ -506,7 +506,7 @@ class Command(object):
         parser.add_argument("--install-folder", "--install_folder", "-if",
                             help="Optional. Local folder containing the conaninfo.txt and "
                                  "conanbuildinfo.txt files (from a previous conan install "
-                                 "execution). Defaulted to --build-folder ")
+                                 "execution). Defaulted to --build-folder")
         args = parser.parse_args(*args)
         return self._conan.build(path=args.path, source_folder=args.source_folder,
                                  package_folder=args.package_folder, filename=args.file,

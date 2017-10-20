@@ -162,6 +162,8 @@ class _ConanPackageBuilder(object):
         self._conan_file.build_folder = self.build_folder
         self._conan_file.conanfile_directory = self.build_folder
         self._conan_file.package_folder = package_folder
+        # In local cache, install folder always is build_folder
+        self._conan_file.install_folder = self.build_folder
 
         # Read generators from conanfile and generate the needed files
         logger.debug("Writing generators")

@@ -1,4 +1,6 @@
 import unittest
+
+from conans import tools
 from conans.test.utils.tools import TestClient
 import os
 from conans.util.files import mkdir, load, rmdir
@@ -230,3 +232,23 @@ class DevOutSourceFlowTest(unittest.TestCase):
         cache_package_folder = os.path.join(cache_package_folder,
                                             os.listdir(cache_package_folder)[0])
         self._assert_pkg(cache_package_folder)
+
+    def build_local_different_folders_test(self):
+        # Real build, needed to ensure that the generator is put in the correct place and
+        # cmake finds it, using an install_folder different from build_folder
+        client = TestClient()
+        client.run("new lib/1.0")
+        client.run("source . --source-folder src")
+
+        # Patch the CMakeLists to include the generator file from a different folder
+        install_dir = os.path.join(client.current_folder, "install_x86")
+        tools.replace_in_file(os.path.join(client.current_folder, "src", "hello", "CMakeLists.txt"),
+                              "${CMAKE_BINARY_DIR}/conanbuildinfo.cmake",
+                              '"%s/conanbuildinfo.cmake"' % install_dir)
+
+        client.run("install . --install-folder install_x86 -s arch=x86")
+        client.run("build . --build-folder build_x86 --install-folder '%s' "
+                   "--source-folder src" % install_dir)
+
+        self.assertIn("Built target greet", client.out)
+
