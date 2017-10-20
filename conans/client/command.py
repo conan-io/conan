@@ -503,8 +503,8 @@ class Command(object):
         parser.add_argument("--package-folder", "--package_folder", "-pf",
                             help="folder to install the package (when the build system or build() "
                                  "method does it). Defaulted to the '{build_folder}/package' folder"
-                                 ". A relative path can be specified (relative to the build_folder "
-                                 "directory). Also an absolute path is allowed.")
+                                 ". A relative path can be specified, relative to the current "
+                                 " folder. Also an absolute path is allowed.")
         args = parser.parse_args(*args)
         return self._conan.build(path=args.path, source_folder=args.source_folder,
                                  package_folder=args.package_folder, filename=args.file,
@@ -532,7 +532,7 @@ class Command(object):
         parser.add_argument("--package-folder", "--package_folder", "-pf",
                             help="folder to install the package. Defaulted to the "
                                  "'{build_folder}/package' folder. A relative path can be specified"
-                                 " (relative to the build_folder directory). Also an absolute path"
+                                 " (relative to the current directory). Also an absolute path"
                                  "is allowed.")
 
         args = parser.parse_args(*args)
