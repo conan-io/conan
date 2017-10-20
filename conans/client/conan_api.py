@@ -548,8 +548,7 @@ class ConanAPIV1(object):
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
         source_folder = self._abs_relative_to(source_folder, cwd, default=conanfile_folder)
         default_pkg_folder = os.path.join(build_folder, "package")
-        package_folder = self._abs_relative_to(package_folder, build_folder,
-                                               default=default_pkg_folder)
+        package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg_folder)
 
         conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)
         if conanfile_abs_path.endswith(".txt"):
@@ -565,7 +564,7 @@ class ConanAPIV1(object):
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
         source_folder = self._abs_relative_to(source_folder, cwd, default=conanfile_folder)
         default_pkg = os.path.join(build_folder, "package")
-        package_folder = self._abs_relative_to(package_folder, build_folder, default=default_pkg)
+        package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg)
         self._manager.local_package(package_folder, conanfile_folder, build_folder, source_folder)
 
     @api_method

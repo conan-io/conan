@@ -1,14 +1,45 @@
 import unittest
+
+from conans import tools
 from conans.test.utils.tools import TestClient
-from conans.model.ref import ConanFileReference, PackageReference
 import os
 from conans.paths import CONANFILE
-from conans.util.files import mkdir, load
+from conans.util.files import load
 from conans.test.utils.test_files import temp_folder
 from nose_parameterized import parameterized
 
 
 class PackageLocalCommandTest(unittest.TestCase):
+
+    def package_with_destination_test(self):
+        client = TestClient()
+
+        def prepare_for_package(the_client):
+            the_client.save({"src/header.h": "contents"}, clean_first=True)
+            the_client.run("new lib/1.0 -s")
+
+            # don't need real build
+            tools.replace_in_file(os.path.join(client.current_folder,
+                                               "conanfile.py"), "cmake =",
+                                  "return\n#")
+            the_client.run("install . --build-folder build")
+            the_client.run("build . --build-folder build")
+
+        # In current dir subdir
+        prepare_for_package(client)
+        client.run("package . --build-folder build --package_folder=subdir")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
+
+        # Default path
+        prepare_for_package(client)
+        client.run("package . --build-folder build")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build", "package")))
+
+        # Abs path
+        prepare_for_package(client)
+        pf = os.path.join(client.current_folder, "mypackage/two")
+        client.run("package . --build-folder build --package_folder='%s'" % pf)
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
     def package_with_reference_errors_test(self):
         client = TestClient()

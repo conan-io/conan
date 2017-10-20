@@ -108,7 +108,7 @@ class AConan(ConanFile):
         with client.chdir("build1"):
             client.run("install ..")
         # Try relative to cwd
-        client.run("build . --build_folder build1 --package_folder pkg")
+        client.run("build . --build_folder build1 --package_folder build1/pkg")
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build1"),
                       client.out)
         self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "build1", "pkg"),
@@ -119,8 +119,7 @@ class AConan(ConanFile):
         client.run("build . --build_folder build1 --package_folder package1")
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "build1"),
                       client.out)
-        self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "build1",
-                                                          "package"),
+        self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "package"),
                       client.out)
         self.assertIn("Src folder=>%s" % client.current_folder, client.out)
 
@@ -142,8 +141,7 @@ class AConan(ConanFile):
 
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "other/mybuild"),
                       client.out)
-        self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "other", "mybuild",
-                                                          "relpackage"),
+        self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "relpackage"),
                       client.out)
         self.assertIn("Src folder=>%s" % client.current_folder, client.out)
 
@@ -233,7 +231,7 @@ cmake_minimum_required(VERSION 2.8.12)
         with client.chdir("build"):
             client.run("install ..")
         client.run("build . -pf=mypkg -bf=build")
-        header = load(os.path.join(client.current_folder, "build/mypkg/include/header.h"))
+        header = load(os.path.join(client.current_folder, "mypkg/include/header.h"))
         self.assertEqual(header, "my header2 h!!")
 
     def build_with_deps_env_info_test(self):

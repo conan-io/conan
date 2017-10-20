@@ -218,7 +218,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("source ..")
         client.run("build .. --source_folder=.")
         client.current_folder = package_folder
-        client.run("package ../.. --build_folder=../ --package_folder=./package")
+        client.run("package ../.. --build_folder=../")
         self._assert_pkg(package_folder)
         rmdir(package_folder)
         client.current_folder = repo_folder

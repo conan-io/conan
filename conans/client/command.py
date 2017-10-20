@@ -158,7 +158,7 @@ class Command(object):
                                 version=version, build_modes=args.build)
 
     def test_package(self, *args):
-        """METHOD DEPRECATED, will be removed. Use 'conan create' and/or 'conan test'.
+        """DEPRECATED, will be removed. Use 'conan create' and/or 'conan test'.
         Use 'conan create' to generate binary packages for a recipe.
         If you want to test a package you can use 'conan test' command.
         """
@@ -199,7 +199,7 @@ class Command(object):
                                         version=version)
 
     def create(self, *args):
-        """ Builds a binary package for recipe (conanfile.py) located in current folder.
+        """ Builds a binary package for recipe (conanfile.py) located in current dir.
         Uses the specified configuration in a profile or in -s settings, -o options etc.
         If a 'test_package' folder (the name can be configured with -tf) is found, the command will
         run the consumer project to ensure that the package has been created correctly. Check the
@@ -240,7 +240,7 @@ class Command(object):
                                   channel=channel, filename=args.file, werror=args.werror)
 
     def download(self, *args):
-        """Download recipe and binaries to the local cache, without using settings.
+        """Downloads recipe and binaries to the local cache, without using settings.
          It works specifying the recipe reference and package ID to be installed.
          Not transitive, requirements of the specified reference will be retrieved.
          Useful together with 'conan copy' to automate the promotion of
@@ -320,7 +320,7 @@ class Command(object):
                                                  build_folder=args.build_folder)
 
     def config(self, *args):
-        """Manage configuration. Edit conan.conf or install full configuration
+        """Manages configuration. Edits the conan.conf or installs config files.
         """
         parser = argparse.ArgumentParser(description=self.config.__doc__, prog="conan config")
 
@@ -352,7 +352,7 @@ class Command(object):
             return self._conan.config_install(args.item)
 
     def info(self, *args):
-        """Gets information about a package recipe's dependency graph.
+        """Gets information about the dependency graph of a recipe.
         You can use it for your current project, by passing a path to a conanfile.py as the
         reference, or for any existing package in your local cache.
         """
@@ -505,8 +505,8 @@ class Command(object):
         parser.add_argument("--package-folder", "--package_folder", "-pf",
                             help="folder to install the package (when the build system or build() "
                                  "method does it). Defaulted to the '{build_folder}/package' folder"
-                                 ". A relative path can be specified (relative to the build_folder "
-                                 "directory). Also an absolute path is allowed.")
+                                 ". A relative path can be specified, relative to the current "
+                                 " folder. Also an absolute path is allowed.")
         args = parser.parse_args(*args)
         return self._conan.build(path=args.path, source_folder=args.source_folder,
                                  package_folder=args.package_folder, filename=args.file,
@@ -534,7 +534,7 @@ class Command(object):
         parser.add_argument("--package-folder", "--package_folder", "-pf",
                             help="folder to install the package. Defaulted to the "
                                  "'{build_folder}/package' folder. A relative path can be specified"
-                                 " (relative to the build_folder directory). Also an absolute path"
+                                 " (relative to the current directory). Also an absolute path"
                                  "is allowed.")
 
         args = parser.parse_args(*args)
@@ -593,7 +593,7 @@ class Command(object):
         return self._conan.imports(args.path, args.dest, args.file, args.install_folder)
 
     def export_pkg(self, *args):
-        """Exports recipe and creates package from given binaries calling 'package()'.
+        """Exports a recipe & creates a package with given files calling 'package'.
            It executes the package() method applied to the local folders '--source_folder' and
            '--build_folder' and creates a new package in the local cache for the specified
            'reference' and for the specified '--settings', '--options' and or '--profile'.
@@ -647,7 +647,7 @@ class Command(object):
                                       channel=channel)
 
     def export(self, *args):
-        """ Copies the recipe (conanfile.py and associated files) to your local cache.
+        """ Copies the recipe (conanfile.py & associated files) to your local cache.
         Use the 'reference' param to specify a user and channel where to export.
         Once the recipe is in the local cache it can be shared and reused. It can be uploaded
         to any remote with the "conan upload" command.
@@ -671,7 +671,7 @@ class Command(object):
                                   name=name, version=version)
 
     def remove(self, *args):
-        """Removes packages or binaries matching pattern, from local cache or remote.
+        """Removes packages or binaries matching pattern from local cache or remote.
         It can also be used to remove temporary source or build folders in the local conan cache.
         If no remote is specified, the removal will be done by default in the local conan cache.
         """
@@ -738,7 +738,7 @@ class Command(object):
                                 all=args.all, package=args.package)
 
     def user(self, *parameters):
-        """ Authenticates against a remote with user/password, caching the auth token.
+        """ Authenticates against a remote with user/pass, caching the auth token.
         Useful to avoid the user and password being requested later.
         e.g. while you're uploading a package.
         You can have more than one user (one per remote). Changing the user, or introducing the
@@ -758,7 +758,7 @@ class Command(object):
                                 password=args.password)
 
     def search(self, *args):
-        """ Search package recipes and binaries in the local cache or in a remote.
+        """ Searches package recipes and binaries in the local cache or in a remote.
 
         If you provide a pattern, then it will search for existing package recipes matching that pattern.
         If a full and complete package reference is provided, like Pkg/0.1@user/channel, then the existing
@@ -923,7 +923,7 @@ class Command(object):
             return self._conan.remote_update_ref(reference, remote)
 
     def profile(self, *args):
-        """ List profiles in the '.conan/profiles' folder, or show profile details.
+        """ Lists profiles in the '.conan/profiles' folder, or shows profile details.
         The 'list' subcommand will always use the default user 'conan/profiles' folder. But the
         'show' subcommand is able to resolve absolute and relative paths, as well as to map names to
         '.conan/profiles' folder, in the same way as the '--profile' install argument.
@@ -1008,7 +1008,7 @@ class Command(object):
         return
 
     def alias(self, *args):
-        """ Creates and export an 'alias recipe'.
+        """ Creates and exports an 'alias recipe'.
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
                                          prog="conan alias")
@@ -1040,7 +1040,7 @@ class Command(object):
             return all_commands
 
         commands = check_all_commands_listed()
-        max_len = max((len(c) for c in commands)) + 2
+        max_len = max((len(c) for c in commands)) + 1
         fmt = '  %-{}s'.format(max_len)
 
         for group_name, comm_names in grps:
