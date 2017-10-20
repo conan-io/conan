@@ -22,12 +22,12 @@ class PackageLocalCommandTest(unittest.TestCase):
             tools.replace_in_file(os.path.join(client.current_folder,
                                                "conanfile.py"), "cmake =",
                                   "return\n#")
-            the_client.run("install . --build-folder build")
-            the_client.run("build . --build-folder build")
+            the_client.run("install . --install-folder build")
+            the_client.run("build . --build-folder build2 --install-folder build")
 
         # In current dir subdir
         prepare_for_package(client)
-        client.run("package . --build-folder build --package_folder=subdir")
+        client.run("package . --build-folder build2 --install-folder build --package_folder=subdir")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
         # Default path

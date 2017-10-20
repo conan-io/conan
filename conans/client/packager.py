@@ -12,8 +12,8 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 
 
-def create_package(conanfile, source_folder, build_folder, package_folder, output, local=False,
-                   copy_info=False):
+def create_package(conanfile, source_folder, build_folder, package_folder, install_folder,
+                   output, local=False, copy_info=False):
     """ copies built artifacts, libs, headers, data, etc from build_folder to
     package folder
     """
@@ -65,22 +65,22 @@ def create_package(conanfile, source_folder, build_folder, package_folder, outpu
             raise
         raise ConanException(e)
 
-    _create_aux_files(build_folder, package_folder, conanfile, copy_info)
+    _create_aux_files(install_folder, package_folder, conanfile, copy_info)
     output.success("Package '%s' created" % os.path.basename(package_folder))
 
 
-def _create_aux_files(build_folder, package_folder, conanfile, copy_info):
+def _create_aux_files(install_folder, package_folder, conanfile, copy_info):
     """ auxiliary method that creates CONANINFO and manifest in
     the package_folder
     """
     logger.debug("Creating config files to %s" % package_folder)
     if copy_info:
         try:
-            shutil.copy(os.path.join(build_folder, CONANINFO), package_folder)
+            shutil.copy(os.path.join(install_folder, CONANINFO), package_folder)
         except IOError:
             raise ConanException("%s does not exist inside of your %s folder. "
                                  "Try to re-build it again to solve it."
-                                 % (CONANINFO, build_folder))
+                                 % (CONANINFO, install_folder))
     else:
         save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
 

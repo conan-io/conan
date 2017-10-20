@@ -282,7 +282,7 @@ class Command(object):
                             help='Generators to use')
         parser.add_argument("--werror", action='store_true', default=False,
                             help='Error instead of warnings for graph inconsistencies')
-        parser.add_argument("--build-folder", "--build_folder", "-c",
+        parser.add_argument("--install-folder", "--install_folder", "-if",
                             help='Use this directory as the directory where to put the generator'
                                  'files, conaninfo/conanbuildinfo.txt etc.')
 
@@ -307,7 +307,7 @@ class Command(object):
                                        build=args.build, profile_name=args.profile,
                                        update=args.update, generators=args.generator,
                                        no_imports=args.no_imports, filename=args.file,
-                                       build_folder=args.build_folder)
+                                       install_folder=args.install_folder)
         else:
             return self._conan.install_reference(reference, settings=args.settings,
                                                  options=args.options,
@@ -318,7 +318,7 @@ class Command(object):
                                                  build=args.build, profile_name=args.profile,
                                                  update=args.update,
                                                  generators=args.generator,
-                                                 build_folder=args.build_folder)
+                                                 install_folder=args.install_folder)
 
     def config(self, *args):
         """Manages configuration. Edits the conan.conf or installs config files.
@@ -388,9 +388,6 @@ class Command(object):
         parser.add_argument("--graph", "-g",
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
-        parser.add_argument("--build-folder", "--build_folder",
-                            help='Use this directory as the directory where to put the generator'
-                                 'files, conaninfo/conanbuildinfo.txt etc.')
         build_help = 'given a build policy (same install command "build" parameter), return an ' \
                      'ordered list of  ' \
                      'packages that would be built from sources in install command (simulation)'
@@ -406,11 +403,10 @@ class Command(object):
                                                profile_name=args.profile,
                                                filename=args.file, remote=args.remote,
                                                build_order=args.build_order,
-                                               check_updates=args.update,
-                                               build_folder=args.build_folder)
+                                               check_updates=args.update)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
-                self._outputer.json_build_order(ret, json_arg, args.build_folder)
+                self._outputer.json_build_order(ret, json_arg, os.getcwd())
             else:
                 self._outputer.build_order(ret)
 
@@ -423,8 +419,7 @@ class Command(object):
                                                        profile_name=args.profile,
                                                        filename=args.file,
                                                        remote=args.remote,
-                                                       check_updates=args.update,
-                                                       build_folder=args.build_folder)
+                                                       check_updates=args.update)
             self._outputer.nodes_to_build(nodes)
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
@@ -432,7 +427,7 @@ class Command(object):
                                               settings=args.settings,
                                               options=args.options, env=args.env, scope=args.scope,
                                               profile_name=args.profile, update=args.update,
-                                              filename=args.file, build_folder=args.build_folder)
+                                              filename=args.file)
             deps_graph, graph_updates_info, project_reference = data
             only = args.only
             if args.only == ["None"]:
@@ -446,8 +441,7 @@ class Command(object):
                                      % (only, str_only_options))
 
             if args.graph:
-                self._outputer.info_graph(args.graph, deps_graph, project_reference,
-                                          args.build_folder)
+                self._outputer.info_graph(args.graph, deps_graph, project_reference, os.getcwd())
             else:
                 self._outputer.info(deps_graph, graph_updates_info, only, args.remote,
                                     args.package_filter, args.paths, project_reference)
@@ -509,10 +503,15 @@ class Command(object):
                                  "method does it). Defaulted to the '{build_folder}/package' folder"
                                  ". A relative path can be specified, relative to the current "
                                  " folder. Also an absolute path is allowed.")
+        parser.add_argument("--install-folder", "--install_folder", "-if",
+                            help="Optional. Local folder containing the conaninfo.txt and "
+                                 "conanbuildinfo.txt files (from a previous conan install "
+                                 "execution). Defaulted to --build-folder ")
         args = parser.parse_args(*args)
         return self._conan.build(path=args.path, source_folder=args.source_folder,
                                  package_folder=args.package_folder, filename=args.file,
-                                 build_folder=args.build_folder)
+                                 build_folder=args.build_folder,
+                                 install_folder=args.install_folder)
 
     def package(self, *args):
         """ Calls your local conanfile.py 'package()' method.
@@ -538,7 +537,10 @@ class Command(object):
                                  "'{build_folder}/package' folder. A relative path can be specified"
                                  " (relative to the current directory). Also an absolute path"
                                  "is allowed.")
-
+        parser.add_argument("--install-folder", "--install_folder", "-if",
+                            help="Optional. Local folder containing the conaninfo.txt and "
+                                 "conanbuildinfo.txt files (from a previous conan install "
+                                 "execution). Defaulted to --build-folder ")
         args = parser.parse_args(*args)
         try:
             if "@" in args.path and ConanFileReference.loads(args.path):
@@ -556,7 +558,8 @@ class Command(object):
 
         return self._conan.package(path=args.path, build_folder=args.build_folder,
                                    source_folder=args.source_folder,
-                                   package_folder=args.package_folder)
+                                   package_folder=args.package_folder,
+                                   install_folder=args.install_folder)
 
     def imports(self, *args):
         """ Calls your local conanfile.py or conanfile.txt 'imports' method.
@@ -571,10 +574,10 @@ class Command(object):
                             "execution. e.j: conan imports ./imported_files --undo ")
         parser.add_argument("--file", "-f", help="Use another filename, "
                             "e.g.: conan imports -f=conanfile2.py")
-        parser.add_argument("-d", "--dest",
+        parser.add_argument("--import-folder", "--import_folder", "-if",
                             help="Directory to copy the artifacts to. By default it will be the"
                                  " current directory")
-        parser.add_argument("--install-folder", "-if",
+        parser.add_argument("--install-folder", "--install_folder", "-isf",
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                                  "files (from a previous conan install execution)")
         parser.add_argument("-u", "--undo", default=False, action="store_true",
@@ -592,7 +595,7 @@ class Command(object):
         except ConanException:
             pass
 
-        return self._conan.imports(args.path, args.dest, args.file, args.install_folder)
+        return self._conan.imports(args.path, args.import_folder, args.file, args.install_folder)
 
     def export_pkg(self, *args):
         """Exports a recipe & creates a package with given files calling 'package'.

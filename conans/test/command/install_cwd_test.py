@@ -28,5 +28,5 @@ class MyLib(ConanFile):
     def test_install_cwd(self):
         self.client.save({CONANFILE_TXT: "[requires]MyLib/0.1@lasote/stable"}, clean_first=True)
         os.mkdir(os.path.join(self.client.current_folder, "new"))
-        self.client.run("install . --build-folder new -g cmake")
+        self.client.run("install . --install-folder new -g cmake")
         self.assertTrue(os.path.join(self.client.current_folder, "new", "conanbuildinfo.cmake"))
