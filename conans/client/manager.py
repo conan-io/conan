@@ -392,9 +392,7 @@ class ConanManager(object):
         installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
                                    build_requires)
 
-        # Apply build_requires to consumer conanfile
-        if not isinstance(reference, ConanFileReference):
-            build_requires.install("", conanfile, installer)
+        build_requires.install("", conanfile, installer)
 
         installer.install(deps_graph)
         build_mode.report_matches()

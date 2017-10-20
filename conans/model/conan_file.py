@@ -140,8 +140,8 @@ class ConanFile(object):
 
     @property
     def env(self):
-        """Apply the self.deps_env_info into a copy of self._env_values
-        (user specified from profiles or -e)"""
+        """Apply the self.deps_env_info into a copy of self._env_values (will prioritize the
+        self._env_values, user specified from profiles or -e)"""
         # Cannot be lazy cached, because it's called in configure node, and we still don't have
         # the deps_env_info objects available
         tmp_env_values = self._env_values.copy()

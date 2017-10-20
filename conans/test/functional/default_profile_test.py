@@ -69,7 +69,7 @@ class BuildRequireConanfile(ConanFile):
     settings = "os", "compiler", "arch"
 
     def package_info(self):
-        self.env_info.MYVAR="from_build_require"
+        self.env_info.MyVAR="from_build_require"
 '''
 
         client = TestClient()
@@ -81,9 +81,6 @@ compiler=Visual Studio
 compiler.version=14
 compiler.runtime=MD
 arch=x86
-
-[env]
-MyVAR=23
 
 [options]
 mypackage:option1=2
@@ -114,10 +111,21 @@ class MyConanfile(ConanFile):
         assert(self.settings.compiler.runtime=="MD")
         assert(self.settings.arch=="x86")
         assert(self.options.option1=="2")
+    
+    def build(self):
         # This has changed, the value from profile higher priority than build require
-        assert(os.environ["MyVAR"]=="23")
+        assert(os.environ["MyVAR"]=="%s")
 
         '''
-        client.save({CONANFILE: cf}, clean_first=True)
+
+        # First apply just the default profile, we should get the env MYVAR="from_build_require"
+        client.save({CONANFILE: cf % "from_build_require"}, clean_first=True)
+        client.run("export lasote/stable")
+        client.run('install mypackage/0.1@lasote/stable --build missing')
+
+        # Then declare in the default profile the var, it should be prioritized from the br
+        default_profile_2 = default_profile + "\n[env]\nMyVAR=23"
+        save(client.client_cache.default_profile_path, default_profile_2)
+        client.save({CONANFILE: cf % "23"}, clean_first=True)
         client.run("export lasote/stable")
         client.run('install mypackage/0.1@lasote/stable --build missing')
