@@ -223,7 +223,7 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
 
 def unix_path(path):
     """"Used to translate windows paths to MSYS unix paths like
-    c/users/path/to/file"""
+    c/users/path/to/file. Not working in a regular console or MinGW!"""
     pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
     return pattern.sub('/\\1/', path).replace('\\', '/').lower()
 
