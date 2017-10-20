@@ -65,12 +65,11 @@ from conans import ConanFile
 
 class BuildRequireConanfile(ConanFile):
     name = "br"
-    version = "0.1"
+    version = "1.0"
     settings = "os", "compiler", "arch"
 
     def package_info(self):
         self.env_info.MYVAR="from_build_require"
-
 '''
 
         client = TestClient()
@@ -115,7 +114,8 @@ class MyConanfile(ConanFile):
         assert(self.settings.compiler.runtime=="MD")
         assert(self.settings.arch=="x86")
         assert(self.options.option1=="2")
-        assert(os.environ["MyVAR"], "from_build_require")
+        # This has changed, the value from profile higher priority than build require
+        assert(os.environ["MyVAR"]=="23")
 
         '''
         client.save({CONANFILE: cf}, clean_first=True)

@@ -7,7 +7,7 @@ import os
 from conans.paths import CONANFILE
 from collections import OrderedDict
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.profiles import create_profile
+from conans.test.utils.profiles import create_profile as _create_profile
 from nose_parameterized import parameterized
 
 
@@ -31,6 +31,14 @@ class AConan(ConanFile):
             self.run("env")
 
 """
+
+
+def create_profile(folder, name, settings=None, scopes=None, package_settings=None, env=None,
+                   package_env=None, options=None):
+    _create_profile(folder, name, settings, scopes, package_settings, env, package_env, options)
+    content = load(os.path.join(folder, name))
+    content = "include(default)\n" + content
+    save(os.path.join(folder, name), content)
 
 
 class ProfileTest(unittest.TestCase):
@@ -94,21 +102,23 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("'a value' is not a valid 'settings.os'", self.client.user_io.out)
 
         profile = '''
+        include(default)
         [env]
         ENV_VAR =   a value
         '''
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang")
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
         profile = '''
+        include(default)
         # Line with comments is not a problem
         [env]
         # Not even here
         ENV_VAR =   a value
         '''
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build -pr clang", ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable --build -pr clang")
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
     @parameterized.expand([("", ), ("./local_profiles/", ), (temp_folder() + "/", )])

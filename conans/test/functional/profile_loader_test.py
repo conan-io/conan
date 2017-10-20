@@ -12,10 +12,18 @@ from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.test.utils.profiles import create_profile
+from conans.test.utils.profiles import create_profile as _create_profile
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
+
+
+def create_profile(folder, name, settings=None, scopes=None, package_settings=None, env=None,
+                   package_env=None, options=None):
+    _create_profile(folder, name, settings, scopes, package_settings, env, package_env, options)
+    content = load(os.path.join(folder, name))
+    content = "include(default)\n" + content
+    save(os.path.join(folder, name), content)
 
 
 class ProfileParserTest(unittest.TestCase):
@@ -267,6 +275,7 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("'a value' is not a valid 'settings.os'", self.client.user_io.out)
 
         profile = '''
+        include(default)
         [env]
         ENV_VAR =   a value
         '''
@@ -274,7 +283,7 @@ class ProfileTest(unittest.TestCase):
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
-        profile = '''
+        profile = '''include(default)
         # Line with comments is not a problem
         [env]
         # Not even here
