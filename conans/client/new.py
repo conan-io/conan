@@ -55,6 +55,9 @@ class {package_name}Conan(ConanFile):
     url = "None"
     license = "None"
 
+    def package(self):
+        self.copy("*")
+
     def package_info(self):
         self.cpp_info.libs = tools.collect_libs(self)
 """

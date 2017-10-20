@@ -122,7 +122,8 @@ class Command(object):
         'conan create' command.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
-        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan source .')
+        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan test '
+                                         'pkg/version@user/channel ')
         parser.add_argument("reference", nargs="?",
                             help='a full package reference pkg/version@user/channel, '
                             'or just the package name "pkg" if the test_package conanfile is '
@@ -605,9 +606,8 @@ class Command(object):
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe (conanfile.py)')
         parser.add_argument("--source-folder", "--source_folder", "-sf",
-                            help="local folder containing the sources. Defaulted to the directory "
-                                 "of the conanfile. A relative path can also be specified "
-                                 "(relative to the current directory)")
+                            help="local folder containing the sources. Defaulted to --build-folder."
+                                 " A relative path to the current dir can also be specified" )
         parser.add_argument("--build-folder", "--build_folder", "-bf",
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "

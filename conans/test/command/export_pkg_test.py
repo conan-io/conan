@@ -77,18 +77,9 @@ class TestConan(ConanFile):
         client.run("export-pkg . Hello/0.1@lasote/stable %s" % settings)
         self.assertIn("Hello/0.1@lasote/stable: A new conanfile.py version was exported",
                       client.out)
-        self.assertIn("Hello/0.1@lasote/stable package(): WARN: No files copied!",
-                      client.out)  # --bare do not include a now mandatory package() method!
+        self.assertNotIn("Hello/0.1@lasote/stable package(): WARN: No files copied!",
+                         client.out)  # --bare include a now mandatory package() method!
 
-        # Try now creating a package method
-        client.run("new Hello/0.1 --bare")
-        tools.replace_in_file(os.path.join(client.current_folder, "conanfile.py"),
-                              'license = "None"', """license = "None"
-
-    def package(self):
-        self.copy("*")""")
-        client.save({"lib/libmycoollib.a": ""})
-        client.run("export-pkg . Hello/0.1@lasote/stable %s --force" % settings)
         self.assertIn("Copied 1 '.a' files: libmycoollib.a", client.out)
         self._consume(client, settings + " -g cmake")
 
@@ -129,6 +120,31 @@ class TestConan(ConanFile):
         lib = os.path.join(package_folder, "lib")
         self.assertEqual(os.listdir(lib), ["hello.lib"])
         self.assertEqual(load(os.path.join(lib, "hello.lib")), "My Lib")
+
+    def test_no_source_folder(self):
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    settings = "os"
+
+    def package(self):
+        self.copy("*.lib", dst="lib", keep_path=False)
+"""
+        client.save({CONANFILE: conanfile,
+                     "rootfile.lib": "contents",
+                     "build/lib/hello.lib": "My Lib"})
+        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build_folder=build")
+        conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        package_folder = client.client_cache.package(package_ref)
+        rootfile_path = os.path.join(package_folder, "lib", "rootfile.lib")
+        self.assertFalse(os.path.exists(rootfile_path))
+
+        hello_path = os.path.join(package_folder, "lib", "hello.lib")
+        self.assertTrue(os.path.exists(hello_path))
 
     def test_build_source_folders(self):
         client = TestClient()

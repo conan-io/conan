@@ -375,8 +375,8 @@ class ConanAPIV1(object):
 
         cwd = os.getcwd()
         path = self._abs_relative_to(path, cwd)
-        source_folder = self._abs_relative_to(source_folder, cwd, default=cwd)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        source_folder = self._abs_relative_to(source_folder, cwd, default=build_folder)
         profile = profile_from_args(profile_name, settings, options, env=env, scope=None, cwd=cwd,
                                     default_folder=self._client_cache.profiles_path)
         conanfile_abs_path = self._get_conanfile_path(path, "conanfile.py")
