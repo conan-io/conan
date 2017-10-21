@@ -249,6 +249,4 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("install . --install-folder install_x86 -s arch=x86")
         client.run("build . --build-folder build_x86 --install-folder '%s' "
                    "--source-folder src" % install_dir)
-
-        self.assertIn("Built target greet", client.out)
-
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_x86", "lib")))

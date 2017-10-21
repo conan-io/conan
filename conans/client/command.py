@@ -536,7 +536,7 @@ class Command(object):
                             help="folder to install the package. Defaulted to the "
                                  "'{build_folder}/package' folder. A relative path can be specified"
                                  " (relative to the current directory). Also an absolute path"
-                                 "is allowed.")
+                                 " is allowed.")
         parser.add_argument("--install-folder", "--install_folder", "-if",
                             help="Optional. Local folder containing the conaninfo.txt and "
                                  "conanbuildinfo.txt files (from a previous conan install "
