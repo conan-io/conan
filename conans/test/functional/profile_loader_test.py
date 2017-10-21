@@ -2,6 +2,7 @@ import os
 import unittest
 from collections import OrderedDict
 
+from conans import tools
 from conans.model.profile import Profile
 
 from conans.model.ref import ConanFileReference
@@ -342,6 +343,9 @@ class ProfileTest(unittest.TestCase):
 
         create_profile(self.client.client_cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
+
+        tools.replace_in_file(self.client.client_cache.default_profile_path,
+                              "compiler.libcxx", "#compiler.libcxx", strict=False)
 
         self.client.save(files)
         self.client.run("export lasote/stable")

@@ -1,5 +1,6 @@
 import unittest
 
+from conans.client import tools
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import save, load
@@ -170,6 +171,9 @@ class ProfileTest(unittest.TestCase):
 
         create_profile(self.client.client_cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
+
+        tools.replace_in_file(self.client.client_cache.default_profile_path,
+                              "compiler.libcxx", "#compiler.libcxx", strict=False)
 
         self.client.save(files)
         self.client.run("export lasote/stable")
