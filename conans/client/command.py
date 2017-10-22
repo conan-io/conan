@@ -616,6 +616,11 @@ class Command(object):
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "
                                  "(relative to the current directory)")
+        parser.add_argument("--install-folder", "-if",
+                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
+                            "files (from a previous conan install execution). Optional, if you "
+                            "don't specify this parameter, --profile and -s and -o will be used to "
+                            "calculate the ID of the package that will be created.")
         parser.add_argument("--profile", "-pr",
                             help='Profile for this package')
         parser.add_argument("--options", "-o",
@@ -641,6 +646,7 @@ class Command(object):
                                       version=version,
                                       source_folder=args.source_folder,
                                       build_folder=args.build_folder,
+                                      install_folder=args.install_folder,
                                       profile_name=args.profile,
                                       env=args.env,
                                       settings=args.settings,

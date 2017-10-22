@@ -367,8 +367,8 @@ class ConanAPIV1(object):
 
     @api_method
     def export_pkg(self, path, name, channel, source_folder=None, build_folder=None,
-                   profile_name=None, settings=None, options=None, env=None, force=False,
-                   no_export=False, user=None, version=None):
+                   install_folder=None, profile_name=None, settings=None, options=None,
+                   env=None, force=False, no_export=False, user=None, version=None):
 
         settings = settings or []
         options = options or []
@@ -378,8 +378,16 @@ class ConanAPIV1(object):
         path = self._abs_relative_to(path, cwd)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
         source_folder = self._abs_relative_to(source_folder, cwd, default=build_folder)
-        profile = profile_from_args(profile_name, settings, options, env=env, scope=None, cwd=cwd,
-                                    default_folder=self._client_cache.profiles_path)
+
+        if not install_folder:
+            profile = profile_from_args(profile_name, settings, options, env=env, scope=None, cwd=cwd,
+                                        default_folder=self._client_cache.profiles_path)
+        else:
+            if profile_name or settings or options or env:
+                self._user_io.out.warn("Ignoring profile/settings/options,"
+                                       " --install-folder specified")
+            profile = None
+
         conanfile_abs_path = self._get_conanfile_path(path, "conanfile.py")
 
         if not no_export or not (name and version):
@@ -397,7 +405,7 @@ class ConanAPIV1(object):
 
         reference = ConanFileReference(name, version, user, channel)
         self._manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
-                                 profile=profile, force=force)
+                                 install_folder=install_folder, profile=profile, force=force)
 
     @api_method
     def download(self, reference, remote=None, package=None):

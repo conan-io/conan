@@ -57,6 +57,28 @@ class TestConan(ConanFile):
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header2")
 
+        # Now use --install-folder and avoid the -s os=Windws, should fail without  -f
+        client.run("install . --install-folder=inst -s os=Windows")
+        err = client.run("export-pkg . Hello/0.1@lasote/stable -if inst", ignore_error=True)
+        self.assertTrue(err)
+        self.assertIn("Package already exists. Please use --force, -f to overwrite it",
+                      client.user_io.out)
+        client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f")
+        self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
+                         "//Windows header2")
+
+        # Try to specify a setting and the install folder
+        client.run("export-pkg . Hello/0.1@lasote/stable -if inst -s os=Linux", ignore_error=True)
+        self.assertIn("Ignoring profile/settings/options, --install-folder specified",
+                      client.user_io.out)
+        # Package already exists because os=Linux was ignored
+        self.assertIn("Package already exists. Please use --force, -f to overwrite it",
+                      client.user_io.out)
+
+        client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f --profile=default")
+        self.assertIn("Ignoring profile/settings/options, --install-folder specified",
+                      client.user_io.out)
+
     def _consume(self, client, install_args):
         consumer = """
 from conans import ConanFile

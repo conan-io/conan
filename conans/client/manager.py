@@ -178,7 +178,7 @@ class ConanManager(object):
             export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
                              filename)
 
-    def export_pkg(self, reference, source_folder, build_folder, profile, force):
+    def export_pkg(self, reference, source_folder, build_folder, install_folder, profile, force):
 
         conan_file_path = self._client_cache.conanfile(reference)
         if not os.path.exists(conan_file_path):
@@ -188,8 +188,14 @@ class ConanManager(object):
                                   remote_name=None, update=False, check_updates=False,
                                   manifest_manager=None)
 
+        assert(not (profile and install_folder))
+
+        profile = profile or read_conaninfo_profile(install_folder)
         loader = self.get_loader(profile)
         conanfile = loader.load_virtual([reference], None)
+        if install_folder:
+            _load_deps_info(install_folder, conanfile, required=True)
+
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 
