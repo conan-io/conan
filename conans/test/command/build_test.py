@@ -47,7 +47,6 @@ class ConanBuildTest(unittest.TestCase):
         client.run("build .")  # We do not need to specify -g txt anymore
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, BUILD_INFO)))
 
-
         conanfile_user_info = """
 import os
 from conans import ConanFile
@@ -153,8 +152,8 @@ class AConan(ConanFile):
         self.assertTrue(error)  # src is not created automatically, it makes no sense
         mkdir(os.path.join(client.current_folder, "mysrc"))
 
-        client.run("build . --source_folder '%s' --build_folder other/build" %
-                           os.path.join(client.current_folder, "mysrc"))
+        client.run("build . --source_folder '%s' --build_folder other/build"
+                   % os.path.join(client.current_folder, "mysrc"))
         self.assertIn("Build folder=>%s" % os.path.join(client.current_folder, "other", "build"),
                       client.out)
         self.assertIn("Package folder=>%s" % os.path.join(client.current_folder, "other", "build"),
@@ -242,10 +241,10 @@ from conans import ConanFile, CMake
 class AConan(ConanFile):
     name = "lib"
     version = "1.0"
-    
+
     def package_info(self):
         self.env_info.MYVAR = "23"
-    
+
 """
         client.save({CONANFILE: conanfile})
         client.run("export lasote/stable")
@@ -255,12 +254,10 @@ from conans import ConanFile
 
 class AConan(ConanFile):
     requires = "lib/1.0@lasote/stable"
-    
+
     def build(self):
         assert(self.deps_env_info["lib"].MYVAR == "23")
-    
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("install . --build missing")
         client.run("build .")
-

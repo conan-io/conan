@@ -187,7 +187,7 @@ class ConanAPIV1(object):
         conanfile_abs_path = self._get_conanfile_path(base_folder, "conanfile.py")
 
         profile = profile_from_args(profile_name, settings, options, env, None, cwd,
-                                    self._client_cache.profiles_path)
+                                    self._client_cache)
 
         pt = PackageTester(self._manager, self._user_io)
         pt.install_build_and_test(conanfile_abs_path, profile, name, version, user, channel, remote,
@@ -238,7 +238,7 @@ class ConanAPIV1(object):
         # shutil.copytree(test_folder, build_folder)
 
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
-                                    self._client_cache.profiles_path)
+                                    self._client_cache)
 
         loader = self._manager.get_loader(profile)
         test_conanfile = loader.load_conan(test_conanfile_path, self._user_io.out, consumer=True)
@@ -329,7 +329,7 @@ class ConanAPIV1(object):
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
         profile = profile_from_args(profile_name, settings, options, env, scope,
-                                    cwd, self._client_cache.profiles_path)
+                                    cwd, self._client_cache)
         self._manager.install(reference=reference,
                               build_folder=None,  # Not output anything
                               manifest_folder=manifest_folder,
@@ -378,7 +378,7 @@ class ConanAPIV1(object):
         source_folder = self._abs_relative_to(source_folder, cwd, default=cwd)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
         profile = profile_from_args(profile_name, settings, options, env=env, scope=None, cwd=cwd,
-                                    default_folder=self._client_cache.profiles_path)
+                                    client_cache=self._client_cache)
         conanfile_abs_path = self._get_conanfile_path(path, "conanfile.py")
 
         if not no_export or not (name and version):
@@ -420,7 +420,7 @@ class ConanAPIV1(object):
         manifest_folder, manifest_interactive, manifest_verify = manifests
 
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
-                                    self._client_cache.profiles_path)
+                                    self._client_cache)
 
         if not generators:  # We don't want the default txt
             generators = False
@@ -449,7 +449,7 @@ class ConanAPIV1(object):
         manifest_folder, manifest_interactive, manifest_verify = manifests
 
         profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
-                                    self._client_cache.profiles_path)
+                                    self._client_cache)
 
         self._manager.install(reference=conanfile_folder,
                               build_folder=build_folder,
@@ -497,7 +497,7 @@ class ConanAPIV1(object):
             reference = os.path.normpath(os.path.join(current_path, reference))
 
         profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
-                                    self._client_cache.profiles_path)
+                                    self._client_cache)
         graph = self._manager.info_build_order(reference, profile, filename, build_order,
                                                remote, check_updates)
         return graph
@@ -514,7 +514,7 @@ class ConanAPIV1(object):
             reference = os.path.normpath(os.path.join(current_path, reference))
 
         profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
-                                    self._client_cache.profiles_path)
+                                    self._client_cache)
         ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote,
                                                 check_updates)
         ref_list, project_reference = ret
@@ -532,7 +532,7 @@ class ConanAPIV1(object):
             reference = os.path.normpath(os.path.join(current_path, reference))
 
         profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
-                                    self._client_cache.profiles_path)
+                                    self._client_cache)
         ret = self._manager.info_get_graph(reference=reference,
                                            remote=remote, profile=profile, check_updates=update,
                                            filename=filename)
