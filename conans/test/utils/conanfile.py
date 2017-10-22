@@ -24,9 +24,14 @@ class MockDepsCppInfo(object):
 
 class MockConanfile(object):
 
-    def __init__(self, settings):
+    def __init__(self, settings, runner=None):
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
+        self.runner = runner
+
+    def run(self, *args):
+        if self.runner:
+            self.runner(*args, output=None)
 
 
 class TestConanFile(object):
