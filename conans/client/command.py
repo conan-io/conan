@@ -748,14 +748,17 @@ class Command(object):
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. '
                                  'If no name is provided it will show the current user.')
-        parser.add_argument("-p", "--password", help='User password. Use double quotes '
-                            'if password with spacing, and escape quotes if existing')
         parser.add_argument("--remote", "-r", help='look in the specified remote server')
         parser.add_argument('-c', '--clean', default=False,
                             action='store_true', help='Remove user and tokens for all remotes')
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("-p", "--password", help='User password. Use double quotes '
+                                                     'if password with spacing, and escape quotes if existing')
+        group.add_argument("-i", "--interactive", action='store_true', default=False,
+                           help='Request for user password without expose it security data')
         args = parser.parse_args(*parameters)  # To enable -h
         return self._conan.user(name=args.name, clean=args.clean, remote=args.remote,
-                                password=args.password)
+                                password=args.password, interactive=args.interactive)
 
     def search(self, *args):
         """ Searches package recipes and binaries in the local cache or in a remote.

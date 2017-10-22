@@ -658,13 +658,13 @@ class ConanAPIV1(object):
         self._manager.copy(reference, package, new_ref.user, new_ref.channel, force)
 
     @api_method
-    def user(self, name=None, clean=False, remote=None, password=None):
+    def user(self, name=None, clean=False, remote=None, password=None, interactive=False):
         if clean:
             localdb = LocalDB(self._client_cache.localdb)
             localdb.init(clean=True)
             self._user_io.out.success("Deleted user data")
             return
-        self._manager.user(remote, name, password)
+        self._manager.user(remote, name, password, interactive)
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
