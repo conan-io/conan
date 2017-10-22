@@ -131,20 +131,10 @@ class ConanManager(object):
         return conanfile
 
     def get_loader(self, profile):
-        return ConanFileLoader(self._runner, self._get_settings(profile),
-                               self._profile_with_defaults(profile))
-
-    def _get_settings(self, profile):
-        self._client_cache.settings.values = self._profile_with_defaults(profile).settings_values
+        self._client_cache.settings.values = profile.settings_values
         # Settings preprocessor
         self._settings_preprocessor.preprocess(self._client_cache.settings)
-        return self._client_cache.settings
-
-    def _profile_with_defaults(self, profile):
-        # Get the defaults, and apply on it the profile
-        tmp_profile = copy.copy(self._client_cache.default_profile)
-        tmp_profile.update(profile)
-        return tmp_profile
+        return ConanFileLoader(self._runner, self._client_cache.settings, profile)
 
     def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
                version=None):

@@ -42,6 +42,7 @@ endif()
 """
 
 test_profile = """
+include(default)
 [build_requires]
 Test1/0.1@lasote/stable
 """

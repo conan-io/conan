@@ -224,11 +224,14 @@ def _apply_inner_profile(doc, base_profile):
     base_profile.env_values.update(EnvValues.loads(doc.env))
 
 
-def profile_from_args(profile, settings, options, env, scope, cwd, default_folder):
+def profile_from_args(profile, settings, options, env, scope, cwd, client_cache):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
-    file_profile, _ = read_profile(profile, cwd, default_folder)
+    if profile is None:
+        file_profile = client_cache.default_profile
+    else:
+        file_profile, _ = read_profile(profile, cwd, client_cache.profiles_path)
     args_profile = _profile_parse_args(settings, options, env, scope)
 
     if file_profile:
