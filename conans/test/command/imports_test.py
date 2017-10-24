@@ -134,7 +134,7 @@ class ConanLib(ConanFile):
         self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
 
-        self.client.run("imports . -if myfolder")
+        self.client.run("imports . -imf myfolder")
         files = os.listdir(os.path.join(self.client.current_folder, "myfolder"))
         self.assertIn("file1.txt", files)
         self.assertIn("file2.txt", files)
@@ -158,7 +158,7 @@ class ConanLib(ConanFile):
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
 
         tmp_folder = temp_folder()
-        self.client.run('imports . -if "%s"' % tmp_folder)
+        self.client.run('imports . -imf "%s"' % tmp_folder)
         files = os.listdir(tmp_folder)
         self.assertIn("file1.txt", files)
         self.assertIn("file2.txt", files)
