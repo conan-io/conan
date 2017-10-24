@@ -617,9 +617,9 @@ class ConanManager(object):
         remover.remove(pattern, src, build_ids, package_ids_filter, force=force,
                        packages_query=packages_query, outdated=outdated)
 
-    def user(self, remote=None, name=None, password=None, interactive=False):
+    def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-        if interactive:
+        if password == "":
             if not remote:
                 remote = remote_proxy.registry.default_remote.name
             name, password = self._user_io.request_login(remote_name=remote, username=name)

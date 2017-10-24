@@ -98,7 +98,7 @@ class ConanLib(ConanFile):
         test_server = TestServer()
         servers = {"default": test_server}
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        conan.run('user -i -r default lasote')
+        conan.run('user -p -r default lasote')
         self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
         conan.run("user")
         self.assertIn("Current 'default' user: lasote", conan.user_io.out)
@@ -107,14 +107,7 @@ class ConanLib(ConanFile):
         test_server = TestServer()
         servers = {"default": test_server}
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        conan.run('user -i')
+        conan.run('user -p')
         self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
         conan.run("user")
         self.assertIn("Current 'default' user: lasote", conan.user_io.out)
-
-    def test_password_and_interactive_together(self):
-        test_server = TestServer()
-        servers = {"default": test_server}
-        conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        conan.run('user lasote -p mypass -i', ignore_error=True)
-        self.assertIn("ERROR: Exiting with code: 2", conan.user_io.out)
