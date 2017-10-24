@@ -12,7 +12,8 @@ from conans.client.detect import detect_defaults_settings
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
-from conans.client.profile_loader import read_profile, get_profile_path, profile_from_args
+from conans.client.profile_loader import read_profile, get_profile_path, profile_from_args, \
+    read_conaninfo_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -365,6 +366,19 @@ class ConanAPIV1(object):
             pt.install_build_and_test(test_conanfile_path, profile, name, version, user,
                                       channel, remote, update)
 
+    def _get_profile(self, profile_name, settings, options, env, cwd, install_folder):
+        if (profile_name or settings or options or env) and install_folder:
+            raise ConanException("Specifying profile, settings, options or env is "
+                                 "not compatible with --install-folder")
+
+        if not install_folder:
+            profile = profile_from_args(profile_name, settings, options, env=env, scope=None,
+                                        cwd=cwd, client_cache=self._client_cache)
+        else:
+            profile = read_conaninfo_profile(install_folder)
+
+        return profile
+
     @api_method
     def export_pkg(self, path, name, channel, source_folder=None, build_folder=None,
                    install_folder=None, profile_name=None, settings=None, options=None,
@@ -380,15 +394,7 @@ class ConanAPIV1(object):
 
         source_folder = self._abs_relative_to(source_folder, cwd, default=build_folder)
 
-        if not install_folder:
-            profile = profile_from_args(profile_name, settings, options, env=env, scope=None, cwd=cwd,
-                                        client_cache=self._client_cache)
-        else:
-            if profile_name or settings or options or env:
-                self._user_io.out.warn("Ignoring profile/settings/options,"
-                                       " --install-folder specified")
-            profile = None
-
+        profile = self._get_profile(profile_name, settings, options, env, cwd, install_folder)
         conanfile_abs_path = self._get_conanfile_path(path, "conanfile.py")
 
         if not no_export or not (name and version):

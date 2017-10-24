@@ -178,9 +178,6 @@ class ConanManager(object):
                                   remote_name=None, update=False, check_updates=False,
                                   manifest_manager=None)
 
-        assert(not (profile and install_folder))
-
-        profile = profile or read_conaninfo_profile(install_folder)
         loader = self.get_loader(profile)
         conanfile = loader.load_virtual([reference], None)
         if install_folder:

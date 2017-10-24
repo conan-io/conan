@@ -574,10 +574,10 @@ class Command(object):
                             "execution. e.j: conan imports ./imported_files --undo ")
         parser.add_argument("--file", "-f", help="Use another filename, "
                             "e.g.: conan imports -f=conanfile2.py")
-        parser.add_argument("--import-folder", "--import_folder", "-if",
+        parser.add_argument("--import-folder", "--import_folder", "-imf",
                             help="Directory to copy the artifacts to. By default it will be the"
                                  " current directory")
-        parser.add_argument("--install-folder", "--install_folder", "-isf",
+        parser.add_argument("--install-folder", "--install_folder", "-if",
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                                  "files (from a previous conan install execution)")
         parser.add_argument("-u", "--undo", default=False, action="store_true",
