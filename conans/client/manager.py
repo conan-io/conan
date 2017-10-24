@@ -111,7 +111,6 @@ class ConanManager(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._current_scopes = None
         self._search_manager = search_manager
         self._settings_preprocessor = settings_preprocessor
 
@@ -178,9 +177,6 @@ class ConanManager(object):
                                   remote_name=None, update=False, check_updates=False,
                                   manifest_manager=None)
 
-        assert(not (profile and install_folder))
-
-        profile = profile or read_conaninfo_profile(install_folder)
         loader = self.get_loader(profile)
         conanfile = loader.load_virtual([reference], None)
         if install_folder:
@@ -368,9 +364,6 @@ class ConanManager(object):
             self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
-
-        # This line is so the conaninfo stores the correct complete info
-        conanfile.info.scope = profile.scopes
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
