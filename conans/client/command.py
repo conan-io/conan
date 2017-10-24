@@ -393,6 +393,7 @@ class Command(object):
                             "files (from a previous conan install execution). Optional, if you "
                             "don't specify this parameter, --profile and -s and -o will be used to "
                             "calculate the ID of the package that will be created.")
+
         build_help = 'given a build policy (same install command "build" parameter), return an ' \
                      'ordered list of  ' \
                      'packages that would be built from sources in install command (simulation)'
@@ -410,6 +411,7 @@ class Command(object):
                                                build_order=args.build_order,
                                                check_updates=args.update,
                                                install_folder=args.install_folder)
+
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_build_order(ret, json_arg, os.getcwd())
@@ -426,6 +428,7 @@ class Command(object):
                                                        remote=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
+
             self._outputer.nodes_to_build(nodes)
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
@@ -435,6 +438,7 @@ class Command(object):
                                               profile_name=args.profile, update=args.update,
                                               filename=args.file,
                                               install_folder=args.install_folder)
+
             deps_graph, graph_updates_info, project_reference = data
             only = args.only
             if args.only == ["None"]:
