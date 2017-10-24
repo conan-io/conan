@@ -31,7 +31,7 @@ class ConanLib(ConanFile):
         client.save({CONANFILE: conanfile})
         subdir = os.path.join(client.current_folder, "subdir")
         os.mkdir(subdir)
-        client.run("install . --build_folder subdir")
+        client.run("install . --install-folder subdir")
         client.run("source . --install-folder subdir --source_folder subdir")
         self.assertIn("PROJECT: Configuring sources", client.user_io.out)
         self.assertIn("PROJECT: cwd=>%s" % subdir, client.user_io.out)
@@ -118,7 +118,7 @@ class ConanLib(ConanFile):
                    ignore_error=True)
         self.assertIn("self.deps_cpp_info not defined.", client.out)
 
-        client.run("install . --build-folder build --build ")
+        client.run("install . --install-folder build --build ")
         client.run("source . --install-folder='%s' --source_folder='%s'" % (build_folder, src_folder),
                    ignore_error=True)
         self.assertIn("FLAG=FLAG", client.out)

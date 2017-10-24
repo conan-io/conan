@@ -65,14 +65,16 @@ class AConan(ConanFile):
 
     def build(self):
         assert(self.build_folder == os.getcwd())
-    
+        
         self.assert_in_local_cache()
         self.assert_deps_infos()
         
         if self.no_copy_source and self.in_local_cache:
             assert(self.copy_source_folder == self.source_folder)  # Only in install
+            assert(self.install_folder == self.build_folder)
         else:
             assert(self.source_folder == self.build_folder)
+            self.install_folder
 
         assert(self.package_folder is not None)
         self.copy_build_folder = self.build_folder

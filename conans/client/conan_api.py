@@ -12,7 +12,8 @@ from conans.client.detect import detect_defaults_settings
 from conans.client.manager import ConanManager
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
-from conans.client.profile_loader import read_profile, get_profile_path, profile_from_args
+from conans.client.profile_loader import read_profile, get_profile_path, profile_from_args, \
+    read_conaninfo_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
@@ -276,7 +277,7 @@ class ConanAPIV1(object):
         manifest_folder, manifest_interactive, manifest_verify = manifests
         self._manager.install(inject_require=conanfile_reference,
                               reference=test_folder,
-                              build_folder=build_folder,
+                              install_folder=build_folder,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
@@ -289,6 +290,7 @@ class ConanAPIV1(object):
 
         test_conanfile = os.path.join(test_folder, CONANFILE)
         self._manager.build(test_conanfile, test_folder, build_folder, package_folder=None,
+                            install_folder=build_folder,
                             test=str(conanfile_reference))
 
     @api_method
@@ -331,7 +333,7 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, scope,
                                     cwd, self._client_cache)
         self._manager.install(reference=reference,
-                              build_folder=None,  # Not output anything
+                              install_folder=None,  # Not output anything
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
@@ -364,10 +366,23 @@ class ConanAPIV1(object):
             pt.install_build_and_test(test_conanfile_path, profile, name, version, user,
                                       channel, remote, update)
 
+    def _get_profile(self, profile_name, settings, options, env, cwd, install_folder):
+        if (profile_name or settings or options or env) and install_folder:
+            raise ConanException("Specifying profile, settings, options or env is "
+                                 "not compatible with --install-folder")
+
+        if not install_folder:
+            profile = profile_from_args(profile_name, settings, options, env=env, scope=None,
+                                        cwd=cwd, client_cache=self._client_cache)
+        else:
+            profile = read_conaninfo_profile(install_folder)
+
+        return profile
+
     @api_method
     def export_pkg(self, path, name, channel, source_folder=None, build_folder=None,
-                   profile_name=None, settings=None, options=None, env=None, force=False,
-                   no_export=False, user=None, version=None):
+                   install_folder=None, profile_name=None, settings=None, options=None,
+                   env=None, force=False, no_export=False, user=None, version=None):
 
         settings = settings or []
         options = options or []
@@ -375,10 +390,11 @@ class ConanAPIV1(object):
 
         cwd = os.getcwd()
         path = self._abs_relative_to(path, cwd)
-        source_folder = self._abs_relative_to(source_folder, cwd, default=cwd)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
-        profile = profile_from_args(profile_name, settings, options, env=env, scope=None, cwd=cwd,
-                                    client_cache=self._client_cache)
+
+        source_folder = self._abs_relative_to(source_folder, cwd, default=build_folder)
+
+        profile = self._get_profile(profile_name, settings, options, env, cwd, install_folder)
         conanfile_abs_path = self._get_conanfile_path(path, "conanfile.py")
 
         if not no_export or not (name and version):
@@ -396,7 +412,7 @@ class ConanAPIV1(object):
 
         reference = ConanFileReference(name, version, user, channel)
         self._manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
-                                 profile=profile, force=force)
+                                 install_folder=install_folder, profile=profile, force=force)
 
     @api_method
     def download(self, reference, remote=None, package=None):
@@ -410,11 +426,11 @@ class ConanAPIV1(object):
     def install_reference(self, reference, settings=None, options=None, env=None, scope=None,
                           remote=None, werror=False, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
-                          update=False, generators=None, build_folder=None):
+                          update=False, generators=None, install_folder=None):
 
         self._user_io.out.werror_active = werror
         cwd = os.getcwd()
-        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
 
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
@@ -424,7 +440,7 @@ class ConanAPIV1(object):
 
         if not generators:  # We don't want the default txt
             generators = False
-        self._manager.install(reference=reference, build_folder=build_folder, remote=remote,
+        self._manager.install(reference=reference, install_folder=install_folder, remote=remote,
                               profile=profile, build_modes=build, update=update,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
@@ -437,12 +453,12 @@ class ConanAPIV1(object):
                 remote=None, werror=False, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
                 update=False, generators=None, no_imports=False, filename=None,
-                build_folder=None):
+                install_folder=None):
 
         self._user_io.out.werror_active = werror
 
         cwd = os.getcwd()
-        build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
         conanfile_folder = self._abs_relative_to(path, cwd, default=cwd)
 
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
@@ -452,7 +468,7 @@ class ConanAPIV1(object):
                                     self._client_cache)
 
         self._manager.install(reference=conanfile_folder,
-                              build_folder=build_folder,
+                              install_folder=install_folder,
                               remote=remote,
                               profile=profile,
                               build_modes=build,
@@ -541,11 +557,12 @@ class ConanAPIV1(object):
 
     @api_method
     def build(self, path, source_folder=None, package_folder=None, filename=None,
-              build_folder=None):
+              build_folder=None, install_folder=None):
 
         cwd = os.getcwd()
         conanfile_folder = self._abs_relative_to(path, cwd)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        install_folder = self._abs_relative_to(install_folder, cwd, default=build_folder)
         source_folder = self._abs_relative_to(source_folder, cwd, default=conanfile_folder)
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg_folder)
@@ -555,17 +572,20 @@ class ConanAPIV1(object):
               raise ConanException("A conanfile.py is needed to call 'conan build' "
                                    "(not valid conanfile.txt)")
 
-        self._manager.build(conanfile_abs_path, source_folder, build_folder, package_folder)
+        self._manager.build(conanfile_abs_path, source_folder, build_folder, package_folder,
+                            install_folder)
 
     @api_method
-    def package(self, path, build_folder, package_folder, source_folder=None):
+    def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None):
         cwd = os.getcwd()
         conanfile_folder = self._abs_relative_to(path, cwd)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
+        install_folder = self._abs_relative_to(install_folder, cwd, default=build_folder)
         source_folder = self._abs_relative_to(source_folder, cwd, default=conanfile_folder)
         default_pkg = os.path.join(build_folder, "package")
         package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg)
-        self._manager.local_package(package_folder, conanfile_folder, build_folder, source_folder)
+        self._manager.local_package(package_folder, conanfile_folder, build_folder, source_folder,
+                                    install_folder)
 
     @api_method
     def source(self, path, source_folder=None, info_folder=None):

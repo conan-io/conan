@@ -142,8 +142,9 @@ class _ConanPackageBuilder(object):
         with environment_append(self._conan_file.env):
             package_folder = self._client_cache.package(self._package_reference,
                                                         self._conan_file.short_paths)
+            install_folder = self.build_folder  # While installing, the infos goes to build folder
             create_package(self._conan_file, source_folder, self.build_folder, package_folder,
-                           self._out)
+                           install_folder, self._out)
 
         if get_env("CONAN_READ_ONLY_CACHE", False):
             make_read_only(package_folder)
@@ -161,6 +162,8 @@ class _ConanPackageBuilder(object):
         self._conan_file.build_folder = self.build_folder
         self._conan_file.conanfile_directory = self.build_folder
         self._conan_file.package_folder = package_folder
+        # In local cache, install folder always is build_folder
+        self._conan_file.install_folder = self.build_folder
 
         # Read generators from conanfile and generate the needed files
         logger.debug("Writing generators")

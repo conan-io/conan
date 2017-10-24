@@ -40,13 +40,13 @@ class PackageTester(object):
             build_modes = ["never"]
         self._manager.install(inject_require=ref,
                               reference=base_folder,
-                              build_folder=build_folder,
+                              install_folder=build_folder,
                               remote=remote,
                               profile=profile,
                               update=update,
                               build_modes=build_modes)
         self._manager.build(conanfile_abs_path, base_folder, build_folder, package_folder=None,
-                            test=str(ref))
+                            install_folder=build_folder, test=str(ref))
 
     @staticmethod
     def _build_folder(profile, test_folder):
