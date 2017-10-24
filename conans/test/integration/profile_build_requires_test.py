@@ -108,7 +108,7 @@ class BuildRequiresTest(unittest.TestCase):
 
         client.run("install --profile ./profile.txt --build missing")
         self.assertNotIn("Hello World!", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertIn("Hello World!", client.user_io.out)
         self.assertIn("Project: Hello world from python tool!", client.user_io.out)
 
@@ -245,12 +245,12 @@ class MyLib(ConanFile):
         client.run("install -o MyLib:coverage=True --build missing")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertIn("Project: Coverage True", client.user_io.out)
 
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("install -o coverage=True")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertIn("Project: Coverage True", client.user_io.out)

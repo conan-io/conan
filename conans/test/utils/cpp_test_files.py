@@ -149,7 +149,7 @@ class {name}Conan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["hello{name}"]
-
+{additional_info}
     def imports(self):
         self.copy(pattern="*.dylib", dst=".", src="lib")
         self.copy(pattern="*.dll", dst=".", src="bin")
@@ -310,7 +310,8 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
                           pure_c=False, config=True, build=True, collect_libs=False,
-                          use_cmake=True, cmake_targets=False, no_copy_source=False):
+                          use_cmake=True, cmake_targets=False, no_copy_source=False,
+                          use_additional_infos=0):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -345,13 +346,23 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                         pure_c=pure_c, cmake_targets=cmake_targets)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
     build_env = conanfile_build_cmake if use_cmake else conanfile_build_new_env
+
+    info_tmp = """
+        self.env_info.%s.append("2")
+        self.user_info.%s = "UserValue" """
+
+    res = ""
+    for i in range(use_additional_infos):
+        res += info_tmp % ("EnvVar%d" % i, "UserVar%d" % i)
+
     conanfile = conanfile_template.format(name=name,
                                           version=version,
                                           requires=requires,
                                           language=language,
                                           static=static,
                                           libcxx_remove=libcxx_remove,
-                                          build=build_env)
+                                          build=build_env,
+                                          additional_info=res)
 
     if no_copy_source:
         conanfile = conanfile.replace("exports = '*'", """exports = '*'

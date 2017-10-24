@@ -1,16 +1,20 @@
+import platform
 import unittest
 
 from conans.client.configure_build_environment import AutoToolsBuildEnvironment
 from conans import tools
+from conans.client.tools.oss import cpu_count
 from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.util.tools_test import RunnerMock
 
 
 class AutoToolsConfigureTest(unittest.TestCase):
 
     def _set_deps_info(self, conanfile):
         conanfile.deps_cpp_info.include_paths.append("path/includes")
-        conanfile.deps_cpp_info.include_paths.append("other/include/path")
-        conanfile.deps_cpp_info.lib_paths.append("one/lib/path")
+        conanfile.deps_cpp_info.include_paths.append("other\include\path")
+        # To test some path in win, to be used with MinGW make or MSYS etc
+        conanfile.deps_cpp_info.lib_paths.append("one\lib\path")
         conanfile.deps_cpp_info.libs.append("onelib")
         conanfile.deps_cpp_info.libs.append("twolib")
         conanfile.deps_cpp_info.defines.append("onedefinition")
@@ -20,6 +24,22 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.sharedlinkflags.append("shared_link_flag")
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
+
+    def test_mocked_methods(self):
+
+        runner = RunnerMock()
+        conanfile = MockConanfile(MockSettings({}), runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        ab.make(make_program="othermake")
+        self.assertEquals(runner.command_called, "othermake -j%s" % cpu_count())
+
+        with tools.environment_append({"CONAN_MAKE_PROGRAM": "mymake"}):
+            ab.make(make_program="othermake")
+            self.assertEquals(runner.command_called, "mymake -j%s" % cpu_count())
+
+        ab.make(args=["things"])
+        things = "'things'" if platform.system() != "Windows" else "things"
+        self.assertEquals(runner.command_called, "make %s -j%s" % (things, cpu_count()))
 
     def test_variables(self):
         # GCC 32
@@ -255,8 +275,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(target)
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "x86")
-        self.assertFalse(build)
-        self.assertFalse(host)
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-linux-gnueabi")
         self.assertFalse(target)
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
@@ -273,7 +293,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         build, host, target = get_values("Linux", "x86_64", "Android", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "x86-linux-android")
+        self.assertEquals(host, "i686-linux-android")
 
         build, host, target = get_values("Linux", "x86_64", "Android", "x86_64")
         self.assertEquals(build, "x86_64-linux-gnu")
@@ -314,8 +334,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(target)
 
         build, host, target = get_values("Windows", "x86_64", "Windows", "x86")
-        self.assertFalse(build)
-        self.assertFalse(host)
+        self.assertEquals(build, "x86_64-w64-mingw32")
+        self.assertEquals(host, "i686-w64-mingw32")
         self.assertFalse(target)
 
         build, host, target = get_values("Windows", "x86_64", "Linux", "armv7hf")

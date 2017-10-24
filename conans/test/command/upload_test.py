@@ -65,6 +65,15 @@ class UploadTest(unittest.TestCase):
         client = TestClient(servers=self._servers, users={"default": [("lasote", "mypass")]})
         return client
 
+    def pattern_upload_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create user/testing")
+        client.run("upload Hello0/*@user/testing --confirm --all")
+        self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
+        self.assertIn("Uploading conan_package.tgz", client.user_io.out)
+        self.assertIn("Uploading conanfile.py", client.user_io.out)
+
     def corrupt_upload_test(self):
         client = self._client()
 
@@ -164,10 +173,10 @@ class UploadTest(unittest.TestCase):
         client2.save({"conanfile.py": conanfile,
                       "hello.cpp": ""})
         client2.run("create frodo/stable")
-        client2.save({"hello.cpp": "changed!"}, clean_first=True)
-        client2.run("package_files Hello0/1.2.1@frodo/stable -f")
+        client2.save({"hello.cpp": "changed!"})
+        client2.run("export-pkg . Hello0/1.2.1@frodo/stable -f --no-export")
         client2.run("upload Hello0/1.2.1@frodo/stable --all")
-        self.assertIn("Recipe is up to date, upload skipped", client2.out)
+        self.assertIn("Recipe is up to date, upload skipped", client2.out) # We didn't export again
         self.assertNotIn("Uploading conanfile.py", client2.out)
         self.assertNotIn("Uploading conan_sources.tgz", client2.out)
         self.assertNotIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",

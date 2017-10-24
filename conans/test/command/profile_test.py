@@ -19,6 +19,8 @@ class ProfileTest(unittest.TestCase):
         create_profile(client.client_cache.profiles_path, "profile3")
         create_profile(client.client_cache.profiles_path, "profile1")
         create_profile(client.client_cache.profiles_path, "profile2")
+        # Make sure local folder doesn't interact with profiles
+        os.mkdir(os.path.join(client.current_folder, "profile3"))
         client.run("profile list")
         self.assertEqual(list(["profile1", "profile2", "profile3"]),
                          list(str(client.user_io.out).splitlines()))

@@ -698,6 +698,56 @@ class ChatConan(ConanFile):
                          "%s:48bb3c5cbdb4822ae87914437ca3cceb733c7e1d"
                          % (str(hello_ref), str(say_ref)))
 
+    def test_transitive_pattern_options(self):
+        say_content = """
+from conans import ConanFile
+
+class SayConan(ConanFile):
+    name = "Say"
+    version = "0.1"
+    options = {"myoption": [123, 234]}
+"""
+        hello_content = """
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "1.2"
+    requires = "Say/0.1@user/testing"
+    options = {"myoption": [123, 234]}
+"""
+        chat_content = """
+from conans import ConanFile
+
+class ChatConan(ConanFile):
+    name = "Chat"
+    version = "2.3"
+    requires = "Hello/1.2@user/testing"
+    default_options = "*:myoption=234"
+"""
+        self.retriever.conan(say_ref, say_content)
+        self.retriever.conan(hello_ref, hello_content)
+        deps_graph = self.root(chat_content)
+
+        self.assertEqual(3, len(deps_graph.nodes))
+        hello = _get_nodes(deps_graph, "Hello")[0]
+        say = _get_nodes(deps_graph, "Say")[0]
+        chat = _get_nodes(deps_graph, "Chat")[0]
+        self.assertEqual(_get_edges(deps_graph), {Edge(hello, say), Edge(chat, hello)})
+
+        self.assertEqual(hello.conan_ref, hello_ref)
+        self.assertEqual(say.conan_ref, say_ref)
+
+        self._check_say(say.conanfile, options="myoption=234")
+
+        conanfile = hello.conanfile
+        self.assertEqual(conanfile.options.values.dumps(), "myoption=234\nSay:myoption=234")
+        self.assertEqual(conanfile.info.full_options.dumps(), "myoption=234\nSay:myoption=234")
+
+        conanfile = chat.conanfile
+        self.assertEqual(conanfile.options.values.dumps(), "Hello:myoption=234\nSay:myoption=234")
+        self.assertEqual(conanfile.info.full_options.dumps(), "Hello:myoption=234\nSay:myoption=234")
+
     def test_transitive_two_levels_wrong_options(self):
         say_content = """
 from conans import ConanFile
@@ -1817,7 +1867,7 @@ class SayConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
-                                    ['Android', 'Arduino', 'FreeBSD', 'Macos', 'SunOS', "Windows", "iOS"]),
+                                    ['Android', 'Arduino', 'FreeBSD', 'Macos', 'SunOS', "Windows", "iOS", "tvOS", "watchOS"]),
                       str(cm.exception))
 
     def test_config_remove2(self):

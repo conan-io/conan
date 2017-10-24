@@ -98,6 +98,6 @@ class BuildRequires(object):
         self._profile_build_requires.pop("*", None)
         self._profile_build_requires.pop("&!", None)
 
-        installer.install(deps_graph, "")
+        installer.install(deps_graph)
         self._profile_build_requires = old_build_requires  # Restore original values
         return deps_graph

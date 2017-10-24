@@ -10,6 +10,8 @@ import os
 from conans.util.files import save, load
 import sys
 from conans.test.utils.tools import TestClient
+import platform
+from conans.paths import long_paths_support
 
 
 class OutputTest(unittest.TestCase):
@@ -35,7 +37,8 @@ class PkgConan(ConanFile):
        self.output.info("TEXT ÑÜíóúéáàèòù абвгдежзийкл 做戏之说  ENDTEXT")
 """
         client.save({"conanfile.py": conanfile})
-        client.run("source")
+        client.run("install")
+        client.run("source .")
         self.assertIn("TEXT", client.user_io.out)
         self.assertIn("ENDTEXT", client.user_io.out)
 
@@ -77,3 +80,30 @@ class PkgConan(ConanFile):
         self.assertRegexpMatches(output, "Unzipping [\d]+B")
         content = load(os.path.join(output_dir, "example.txt"))
         self.assertEqual(content, "Hello world!")
+
+    def short_paths_unzip_output_test(self):
+        if long_paths_support:
+            return
+        tmp_dir = temp_folder()
+        file_path = os.path.join(tmp_dir, "src/"*40, "example.txt")
+        save(file_path, "Hello world!")
+
+        zip_path = os.path.join(tmp_dir, 'example.zip')
+        zipf = zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED)
+        for root, _, files in os.walk(tmp_dir):
+            for f in files:
+                zipf.write(os.path.join(root, f), os.path.join("src/"*20, f))
+        zipf.close()
+
+        output_dir = os.path.join(tmp_dir, "dst/"*40, "output_dir")
+        new_out = StringIO()
+        old_out = sys.stdout
+        try:
+            import conans
+            conans.tools.set_global_instances(ConanOutput(new_out), None)
+            tools.unzip(zip_path, output_dir)
+        finally:
+            conans.tools.set_global_instances(ConanOutput(old_out), None)
+
+        output = new_out.getvalue()
+        self.assertIn("ERROR: Error extract src/src", output)

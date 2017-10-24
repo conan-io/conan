@@ -1,7 +1,7 @@
 import unittest
 from conans.test.utils.tools import TestClient
 import os
-from conans.util.files import mkdir, load
+from conans.util.files import mkdir, load, rmdir
 from conans.model.ref import ConanFileReference
 
 
@@ -51,14 +51,15 @@ class DevInSourceFlowTest(unittest.TestCase):
                      "file.h": "file_h_contents!"})
 
         client.current_folder = build_folder
-        client.run("install ../recipe -g txt")
+        client.run("install ../recipe")
         client.run("build ../recipe")
         client.current_folder = package_folder
-        client.run("package ../recipe --build_folder=../build")
+        client.run("package ../recipe --build_folder=../build --package_folder='%s'" %
+                   package_folder)
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")
-        client.run("package_files Pkg/0.1@lasote/testing -pf=../pkg")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../pkg")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -74,14 +75,14 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "file.h": "file_h_contents!"})
 
-        client.run("install . -g txt")
+        client.run("install .")
         client.run("build .")
         client.current_folder = package_folder
-        client.run("package .. --build_folder=..")
+        client.run("package .. --build_folder=.. --package_folder='%s' " % package_folder)
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")
-        client.run("package_files Pkg/0.1@lasote/testing -pf=./pkg")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf='%s'" % package_folder)
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -91,23 +92,25 @@ class DevInSourceFlowTest(unittest.TestCase):
 
     def child_build_test(self):
         client = TestClient()
-        repo_folder = client.current_folder
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
-        package_folder = os.path.join(client.current_folder, "pkg")
+        package_folder = os.path.join(build_folder, "package")
         mkdir(package_folder)
         client.save({"conanfile.py": conanfile,
                      "file.h": "file_h_contents!"})
 
         client.current_folder = build_folder
-        client.run("install .. -g txt")
+        client.run("install ..")
         client.run("build ..")
         client.current_folder = package_folder
-        client.run("package .. --build_folder=../build")
+        client.run("package ../.. --build_folder=../")
         self._assert_pkg(package_folder)
-        client.current_folder = repo_folder
-        client.run("export lasote/testing")
-        client.run("package_files Pkg/0.1@lasote/testing -pf=./pkg")
+        rmdir(package_folder)  # IMPORTANT: Symptom that package + package_folder is not fitting
+        # well now. (To discuss)
+        # But I think now you choose you way to develop, local or cache, if you use conan export-pkg
+        # you are done, if you use package() you need the "conan project" feature
+        client.current_folder = build_folder
+        client.run("export-pkg .. Pkg/0.1@lasote/testing --source_folder=.. ")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -150,7 +153,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         repo_folder = os.path.join(client.current_folder, "recipe")
         src_folder = os.path.join(client.current_folder, "src")
         build_folder = os.path.join(client.current_folder, "build")
-        package_folder = os.path.join(client.current_folder, "pkg")
+        package_folder = os.path.join(build_folder, "package")
         mkdir(repo_folder)
         mkdir(src_folder)
         mkdir(build_folder)
@@ -159,17 +162,18 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile_out})
 
         client.current_folder = build_folder
-        client.run("install ../recipe -g txt")
+        client.run("install ../recipe")
         client.current_folder = src_folder
+        client.run("install ../recipe")
         client.run("source ../recipe")
         client.current_folder = build_folder
         client.run("build ../recipe --source_folder=../src")
         client.current_folder = package_folder
-        client.run("package ../recipe --source_folder=../src --build_folder=../build")
+        client.run("package ../../recipe --source_folder=../../src --build_folder=../")
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")
-        client.run("package_files Pkg/0.1@lasote/testing -pf=../pkg")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build/package")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -184,15 +188,15 @@ class DevOutSourceFlowTest(unittest.TestCase):
         mkdir(package_folder)
         client.save({"conanfile.py": conanfile_out})
 
-        client.run("install . -g txt")
+        client.run("install .")
         client.run("source .")
         client.run("build . ")
         client.current_folder = package_folder
-        client.run("package .. --build_folder=..")
+        client.run("package .. --build-folder=.. --package_folder='%s'" % package_folder)
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")
-        client.run("package_files Pkg/0.1@lasote/testing -pf=./pkg")
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./pkg")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
@@ -205,20 +209,21 @@ class DevOutSourceFlowTest(unittest.TestCase):
         repo_folder = client.current_folder
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
-        package_folder = os.path.join(client.current_folder, "pkg")
+        package_folder = os.path.join(build_folder, "package")
         mkdir(package_folder)
         client.save({"conanfile.py": conanfile_out})
 
         client.current_folder = build_folder
-        client.run("install .. -g txt")
+        client.run("install ..")
         client.run("source ..")
         client.run("build .. --source_folder=.")
         client.current_folder = package_folder
-        client.run("package .. --build_folder=../build")
+        client.run("package ../.. --build_folder=../")
         self._assert_pkg(package_folder)
+        rmdir(package_folder)
         client.current_folder = repo_folder
-        client.run("export lasote/testing")
-        client.run("package_files Pkg/0.1@lasote/testing -pf=./pkg")
+
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./build")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)
