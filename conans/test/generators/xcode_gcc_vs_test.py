@@ -21,6 +21,8 @@ class Pkg(ConanFile):
         os.makedirs(os.path.join(self.package_folder, "include"))
     def package_info(self):
         self.cpp_info.libs = ["hello"]
+        self.cpp_info.cppflags = ["-some_cpp_compiler_flag"]
+        self.cpp_info.cflags = ["-some_c_compiler_flag"]
 """})
         client.run("export Hello/0.1@lasote/stable")
         conanfile_txt = '''[requires]
@@ -86,8 +88,11 @@ xcode
         # CHECK XCODE GENERATOR
         xcode = load(os.path.join(client.current_folder, BUILD_INFO_XCODE))
 
+        expected_c_flags = '-some_c_compiler_flag'
+        expected_cpp_flags = '-some_cpp_compiler_flag'
+
         self.assertIn('LIBRARY_SEARCH_PATHS = $(inherited) "%s"' % expected_lib_dirs, xcode)
         self.assertIn('HEADER_SEARCH_PATHS = $(inherited) "%s"' % expected_include_dirs, xcode)
         self.assertIn("GCC_PREPROCESSOR_DEFINITIONS = $(inherited)", xcode)
-        self.assertIn("OTHER_CFLAGS = $(inherited)", xcode)
-        self.assertIn("OTHER_CPLUSPLUSFLAGS = $(inherited)", xcode)
+        self.assertIn('OTHER_CFLAGS = $(inherited) %s' % expected_c_flags, xcode)
+        self.assertIn('OTHER_CPLUSPLUSFLAGS = $(inherited) %s' % expected_cpp_flags, xcode)
