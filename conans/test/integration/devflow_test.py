@@ -84,7 +84,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
         client.run("export lasote/testing")
-        client.run("export-pkg . Pkg/0.1@lasote/testing -bf='%s'" % package_folder)
+        client.run("export-pkg . Pkg/0.1@lasote/testing -bf='%s' -if=." % package_folder)
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
         cache_package_folder = client.client_cache.packages(ref)

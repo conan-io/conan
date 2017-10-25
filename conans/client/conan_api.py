@@ -9,7 +9,7 @@ from conans import __version__ as client_version, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.detect import detect_defaults_settings
-from conans.client.manager import ConanManager
+from conans.client.manager import ConanManager, existing_info_files
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
 from conans.client.profile_loader import read_profile, get_profile_path, profile_from_args, \
@@ -30,7 +30,7 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.scope import Scopes
 from conans.model.version import Version
-from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT
+from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT, CONANINFO, BUILD_INFO
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, save_files, exception_message_safe, save, mkdir
@@ -367,11 +367,10 @@ class ConanAPIV1(object):
                                       channel, remote, update)
 
     def _get_profile(self, profile_name, settings, options, env, cwd, install_folder):
-        if (profile_name or settings or options or env) and install_folder:
-            raise ConanException("Specifying profile, settings, options or env is "
-                                 "not compatible with --install-folder")
 
-        if not install_folder:
+        infos_present = existing_info_files(install_folder)
+
+        if not infos_present:
             profile = profile_from_args(profile_name, settings, options, env=env, scope=None,
                                         cwd=cwd, client_cache=self._client_cache)
         else:
@@ -379,36 +378,52 @@ class ConanAPIV1(object):
 
         return profile
 
+    def _validate_can_read_infos(self, install_folder, cwd):
+        if install_folder and not existing_info_files(self._abs_relative_to(install_folder, cwd)):
+                raise ConanException("The specified --install-folder doesn't contain '%s' and '%s' "
+                                     "files" % (CONANINFO, BUILD_INFO))
+
+    @staticmethod
+    def _validate_one_settings_source(install_folder, profile_name, settings, options, env):
+        if install_folder and existing_info_files(install_folder) and \
+           (profile_name or settings or options or env):
+            raise ConanException("%s and %s are found, at '%s' folder, so specifying profile, "
+                                 "settings, options or env is not allowed" % (CONANINFO, BUILD_INFO,
+                                                                              install_folder))
+
     @api_method
     def export_pkg(self, path, name, channel, source_folder=None, build_folder=None,
                    install_folder=None, profile_name=None, settings=None, options=None,
-                   env=None, force=False, no_export=False, user=None, version=None):
+                   env=None, force=False, user=None, version=None):
 
         settings = settings or []
         options = options or []
         env = env or []
-
         cwd = os.getcwd()
+
+        # Checks that info files exists if the install folder is specified
+        self._validate_can_read_infos(install_folder, cwd)
+
         path = self._abs_relative_to(path, cwd)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
-
+        install_folder = self._abs_relative_to(install_folder, cwd, default=build_folder)
         source_folder = self._abs_relative_to(source_folder, cwd, default=build_folder)
+
+        # Checks that no both settings and info files are specified
+        self._validate_one_settings_source(install_folder, profile_name, settings, options, env)
 
         profile = self._get_profile(profile_name, settings, options, env, cwd, install_folder)
         conanfile_abs_path = self._get_conanfile_path(path, "conanfile.py")
+        conanfile = load_conanfile_class(conanfile_abs_path)
+        if (name and conanfile.name and conanfile.name != name) or \
+           (version and conanfile.version and conanfile.version != version):
+            raise ConanException("Specified name/version doesn't match with the "
+                                 "name/version in the conanfile")
+        self._manager.export(user, channel, path, name=name, version=version)
 
-        if not no_export or not (name and version):
-            conanfile = load_conanfile_class(conanfile_abs_path)
-            if not no_export:
-                if (name and conanfile.name and conanfile.name != name) or \
-                   (version and conanfile.version and conanfile.version != version):
-                    raise ConanException("Specified name/version doesn't match with the "
-                                         "name/version in the conanfile")
-                self._manager.export(user, channel, path, name=name, version=version)
-
-            if not (name and version):
-                name = conanfile.name
-                version = conanfile.version
+        if not (name and version):
+            name = conanfile.name
+            version = conanfile.version
 
         reference = ConanFileReference(name, version, user, channel)
         self._manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
