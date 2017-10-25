@@ -100,6 +100,10 @@ class OSInfo(object):
                                  ("centos", "redhat", "fedora", "pidora", "scientific",
                                   "xenserver", "amazon", "oracle", "rhel")
 
+    @property
+    def with_pacman(self):
+        return self.is_linux and self.linux_distro == "arch"
+
     @staticmethod
     def get_win_os_version():
         """
