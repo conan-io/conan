@@ -626,6 +626,10 @@ class ConanManager(object):
 
     def user(self, remote=None, name=None, password=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
+        if password == "":
+            if not remote:
+                remote = remote_proxy.registry.default_remote.name
+            name, password = self._user_io.request_login(remote_name=remote, username=name)
         return remote_proxy.authenticate(name, password)
 
     def get_path(self, reference, package_id=None, path=None, remote=None):

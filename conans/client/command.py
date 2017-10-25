@@ -589,7 +589,7 @@ class Command(object):
 
         try:
             if "@" in args.path and ConanFileReference.loads(args.path):
-                raise ArgumentError(None, "Parameter 'path' cannot be a reference," 
+                raise ArgumentError(None, "Parameter 'path' cannot be a reference,"
                                           " but a folder containing a conanfile.py or conanfile.txt"
                                           " file.")
         except ConanException:
@@ -758,11 +758,12 @@ class Command(object):
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. '
                                  'If no name is provided it will show the current user.')
-        parser.add_argument("-p", "--password", help='User password. Use double quotes '
-                            'if password with spacing, and escape quotes if existing')
         parser.add_argument("--remote", "-r", help='look in the specified remote server')
         parser.add_argument('-c', '--clean', default=False,
                             action='store_true', help='Remove user and tokens for all remotes')
+        parser.add_argument("-p", "--password", nargs='?', const="", type=str,
+                            help='User password. Use double quotes if password with spacing, and escape quotes if '
+                                 'existing. Request for user password without expose it security data when empty')
         args = parser.parse_args(*parameters)  # To enable -h
         return self._conan.user(name=args.name, clean=args.clean, remote=args.remote,
                                 password=args.password)
