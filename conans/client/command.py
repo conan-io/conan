@@ -636,8 +636,6 @@ class Command(object):
                             nargs=1, action=Extender)
         parser.add_argument('-f', '--force', default=False,
                             action='store_true', help='Overwrite existing package if existing')
-        parser.add_argument('--no-export', '-ne', help='Do not export the recipe', default=False,
-                            action='store_true')
 
         args = parser.parse_args(*args)
         name, version, user, channel = get_reference_fields(args.reference)
@@ -653,7 +651,6 @@ class Command(object):
                                       settings=args.settings,
                                       options=args.options,
                                       force=args.force,
-                                      no_export=args.no_export,
                                       user=user,
                                       channel=channel)
 

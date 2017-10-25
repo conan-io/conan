@@ -200,7 +200,8 @@ class ConanManager(object):
             if force:
                 rmdir(dest_package_folder)
             else:
-                raise ConanException("Package already exists. Please use --force, -f to overwrite it")
+                raise ConanException("Package already exists. Please use --force, -f to "
+                                     "overwrite it")
 
         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
         conanfile.info.recipe_hash = recipe_hash
