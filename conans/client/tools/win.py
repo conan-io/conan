@@ -79,9 +79,9 @@ def vs_installation_path(version):
     return vs_installation_path._cached[version]
 
 
-def vcvars_command(settings):
-    arch_setting = settings.get_safe("arch")
-    compiler_version = settings.get_safe("compiler.version")
+def vcvars_command(settings, arch=None, compiler_version=None):
+    arch_setting = arch or settings.get_safe("arch")
+    compiler_version = compiler_version or settings.get_safe("compiler.version")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
