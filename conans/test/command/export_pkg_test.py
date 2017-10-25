@@ -49,11 +49,19 @@ class TestConan(ConanFile):
         # Now repeat
         client.save({CONANFILE: conanfile})
         client.save({"include/header.h": "//Windows header2"})
-        err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows", ignore_error=True)
-        self.assertTrue(err)
+        err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --install-folder=Fake",
+                         ignore_error=True)
         self.assertIn("Package already exists. Please use --force, -f to overwrite it",
                       client.user_io.out)
-        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows -f")
+        self.assertTrue(err)
+
+        # Will fail because it finds the info files in the curdir.
+        err = client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows -f", ignore_error=True)
+        self.assertTrue(err)
+        self.assertIn("conaninfo.txt and conanbuildinfo.txt are found", client.out)
+
+        client.run("export-pkg . Hello/0.1@lasote/stable --install-folder=NonExist -s os=Windows "
+                   "-f")
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header2")
 
@@ -70,16 +78,12 @@ class TestConan(ConanFile):
         # Try to specify a setting and the install folder
         error = client.run("export-pkg . Hello/0.1@lasote/stable -if inst -s os=Linux", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Specifying profile, settings, options or env is not compatible with "
-                      "--install-folder", client.user_io.out)
+        self.assertIn("conaninfo.txt and conanbuildinfo.txt are found", client.user_io.out)
 
         error = client.run("export-pkg . Hello/0.1@lasote/stable -if inst -f --profile=default",
                            ignore_error=True)
-        self.assertIn("Specifying profile, settings, options or env is not compatible with "
-                      "--install-folder", client.user_io.out)
+        self.assertIn("conaninfo.txt and conanbuildinfo.txt are found", client.user_io.out)
         self.assertTrue(error)
-        self.assertIn("Specifying profile, settings, options or env is not compatible with "
-                      "--install-folder", client.user_io.out)
 
     def _consume(self, client, install_args):
         consumer = """

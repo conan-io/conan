@@ -180,7 +180,7 @@ class ConanManager(object):
 
         loader = self.get_loader(profile)
         conanfile = loader.load_virtual([reference], None)
-        if install_folder:
+        if install_folder and existing_info_files(install_folder):
             _load_deps_info(install_folder, conanfile, required=True)
 
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
@@ -685,3 +685,8 @@ def _load_deps_info(current_path, conanfile, required):
         conanfile.deps_user_info = get_forbidden_access_object("deps_user_info")
     except ConanException:
         raise ConanException("Parse error in '%s' file in %s" % (BUILD_INFO, current_path))
+
+
+def existing_info_files(folder):
+    return os.path.exists(os.path.join(folder, CONANINFO)) and  \
+           os.path.exists(os.path.join(folder, BUILD_INFO))

@@ -9,7 +9,7 @@ from conans import __version__ as client_version, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.detect import detect_defaults_settings
-from conans.client.manager import ConanManager
+from conans.client.manager import ConanManager, existing_info_files
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
 from conans.client.profile_loader import read_profile, get_profile_path, profile_from_args, \
@@ -30,7 +30,7 @@ from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.scope import Scopes
 from conans.model.version import Version
-from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT
+from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT, CONANINFO, BUILD_INFO
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.env_reader import get_env
 from conans.util.files import rmdir, save_files, exception_message_safe, save, mkdir
@@ -367,11 +367,13 @@ class ConanAPIV1(object):
                                       channel, remote, update)
 
     def _get_profile(self, profile_name, settings, options, env, cwd, install_folder):
-        if (profile_name or settings or options or env) and install_folder:
-            raise ConanException("Specifying profile, settings, options or env is "
-                                 "not compatible with --install-folder")
+        infos_present = existing_info_files(install_folder)
+        if (profile_name or settings or options or env) and infos_present:
+            raise ConanException("%s and %s are found, at '%s' folder, so specifying profile, "
+                                 "settings, options or env is not allowed" % (CONANINFO, BUILD_INFO,
+                                                                              install_folder))
 
-        if not install_folder:
+        if not infos_present:
             profile = profile_from_args(profile_name, settings, options, env=env, scope=None,
                                         cwd=cwd, client_cache=self._client_cache)
         else:
@@ -391,7 +393,7 @@ class ConanAPIV1(object):
         cwd = os.getcwd()
         path = self._abs_relative_to(path, cwd)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
-
+        install_folder = self._abs_relative_to(install_folder, cwd, default=build_folder)
         source_folder = self._abs_relative_to(source_folder, cwd, default=build_folder)
 
         profile = self._get_profile(profile_name, settings, options, env, cwd, install_folder)

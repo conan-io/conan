@@ -618,9 +618,10 @@ class Command(object):
                                  "(relative to the current directory)")
         parser.add_argument("--install-folder", "-if",
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
-                            "files (from a previous conan install execution). Optional, if you "
-                            "don't specify this parameter, --profile and -s and -o will be used to "
-                            "calculate the ID of the package that will be created.")
+                            "files (from a previous conan install execution). Defaulted to "
+                            "--build-folder. If these files are found in the specified folder, "
+                            "they will be used, then if you specify --profile, -s, -o, --env, "
+                            "it will raise an error.")
         parser.add_argument("--profile", "-pr",
                             help='Profile for this package')
         parser.add_argument("--options", "-o",
