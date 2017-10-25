@@ -77,7 +77,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or "
+        _global_output.warn("Only available for linux with apt-get, yum, or pacman or OSx with brew or "
                             "FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
