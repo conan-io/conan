@@ -618,9 +618,10 @@ class Command(object):
                                  "(relative to the current directory)")
         parser.add_argument("--install-folder", "-if",
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
-                            "files (from a previous conan install execution). Optional, if you "
-                            "don't specify this parameter, --profile and -s and -o will be used to "
-                            "calculate the ID of the package that will be created.")
+                            "files (from a previous conan install execution). Defaulted to "
+                            "--build-folder. If these files are found in the specified folder, "
+                            "they will be used, then if you specify --profile, -s, -o, --env, "
+                            "it will raise an error.")
         parser.add_argument("--profile", "-pr",
                             help='Profile for this package')
         parser.add_argument("--options", "-o",
@@ -635,8 +636,6 @@ class Command(object):
                             nargs=1, action=Extender)
         parser.add_argument('-f', '--force', default=False,
                             action='store_true', help='Overwrite existing package if existing')
-        parser.add_argument('--no-export', '-ne', help='Do not export the recipe', default=False,
-                            action='store_true')
 
         args = parser.parse_args(*args)
         name, version, user, channel = get_reference_fields(args.reference)
@@ -652,7 +651,6 @@ class Command(object):
                                       settings=args.settings,
                                       options=args.options,
                                       force=args.force,
-                                      no_export=args.no_export,
                                       user=user,
                                       channel=channel)
 
