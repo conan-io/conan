@@ -624,10 +624,10 @@ class Command(object):
         parser.add_argument("--profile", "-pr",
                             help='Profile for this package')
         parser.add_argument("--options", "-o",
-                            help='Options for this package. e.g., -o with_qt=true',
+                            help='Define options values, e.g., -o Pkg:with_qt=true',
                             nargs=1, action=Extender)
         parser.add_argument("--settings", "-s",
-                            help='Settings for this package e.g., -s compiler=gcc',
+                            help='Define settings values, e.g., -s compiler=gcc',
                             nargs=1, action=Extender)
         parser.add_argument("--env", "-e",
                             help='Environment variables that will be set during the package build, '
@@ -763,7 +763,7 @@ class Command(object):
                             action='store_true', help='Remove user and tokens for all remotes')
         parser.add_argument("-p", "--password", nargs='?', const="", type=str,
                             help='User password. Use double quotes if password with spacing, and escape quotes if '
-                                 'existing. Request for user password without expose it security data when empty')
+                                 'existing. If empty, the password is requested interactively (not exposed)')
         args = parser.parse_args(*parameters)  # To enable -h
         return self._conan.user(name=args.name, clean=args.clean, remote=args.remote,
                                 password=args.password)
