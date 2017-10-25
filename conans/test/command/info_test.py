@@ -3,7 +3,7 @@ import os
 import re
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
-from conans.paths import CONANFILE
+from conans.paths import CONANFILE, CONANFILE_TXT
 from conans.model.ref import ConanFileReference
 import textwrap
 from conans.util.files import load
@@ -47,6 +47,43 @@ class InfoTest(unittest.TestCase):
         if export:
             self.client.run("export lasote/stable")
             self.assertNotIn("WARN: Conanfile doesn't have 'url'", self.client.user_io.out)
+
+    def profile_and_info_test(self):
+        conanfile_parent = """
+from conans import ConanFile
+
+class MyConan(ConanFile):
+    name = "Parent"
+    version = "0.1"
+    settings = "os"
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile_parent})
+        client.run("create conan/testing")
+
+        profile = "[settings]\nos=Windows"
+        conanfile1 = """
+[requires]
+Parent/0.1@conan/testing
+"""
+        client.save({CONANFILE_TXT: conanfile1,
+                     "myprofile": profile}, clean_first=True)
+
+        client.run("info --profile myprofile")
+        self.assertIn("""Parent/0.1@conan/testing
+    ID: 3475bd55b91ae904ac96fde0f106a136ab951a5e
+""", client.out)
+
+        client.run("info")
+        self.assertNotIn("""Parent/0.1@conan/testing
+    ID: 3475bd55b91ae904ac96fde0f106a136ab951a5e
+""", client.out)
+
+        client.run("install --install-folder=mydest --profile myprofile --build")
+        client.run("info --install-folder=mydest")
+        self.assertIn("""Parent/0.1@conan/testing
+    ID: 3475bd55b91ae904ac96fde0f106a136ab951a5e
+""", client.out)
 
     def graph_test(self):
         self.client = TestClient()

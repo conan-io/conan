@@ -125,7 +125,6 @@ class ConanFile(object):
         self._runner = runner
 
         self.conanfile_directory = conanfile_directory
-        self._scope = None
 
         # user specified env variables
         self._env_values = EnvValues()  # Updated at runtime, user specified -e
@@ -176,11 +175,7 @@ class ConanFile(object):
 
     @property
     def scope(self):
-        return self._scope
-
-    @scope.setter
-    def scope(self, value):
-        self._scope = value
+        raise ConanException("Scope feature has been removed!")
 
     @property
     def build_policy_missing(self):

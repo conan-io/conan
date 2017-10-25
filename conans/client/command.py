@@ -193,7 +193,7 @@ class Command(object):
             args.keep_source = True
 
         return self._conan.test_package(args.profile, args.settings, args.options,
-                                        args.env, args.scope, args.test_folder, args.not_export,
+                                        args.env, None, args.test_folder, args.not_export,
                                         args.build, args.keep_source, args.verify, args.manifests,
                                         args.manifests_interactive, args.remote, args.update,
                                         cwd=args.cwd, user=user, channel=channel, name=name,
@@ -234,7 +234,7 @@ class Command(object):
         name, version, user, channel = get_reference_fields(args.reference)
 
         return self._conan.create(args.profile, args.settings, args.options,
-                                  args.env, args.scope, args.test_folder, args.not_export,
+                                  args.env, args.test_folder, args.not_export,
                                   args.build, args.keep_source, args.verify, args.manifests,
                                   args.manifests_interactive, args.remote, args.update,
                                   conan_file_path=args.cwd, name=name, version=version, user=user,
@@ -300,7 +300,7 @@ class Command(object):
         except ConanException:
             return self._conan.install(path=args.path,
                                        settings=args.settings, options=args.options,
-                                       env=args.env, scope=args.scope,
+                                       env=args.env,
                                        remote=args.remote, werror=args.werror,
                                        verify=args.verify, manifests=args.manifests,
                                        manifests_interactive=args.manifests_interactive,
@@ -311,7 +311,7 @@ class Command(object):
         else:
             return self._conan.install_reference(reference, settings=args.settings,
                                                  options=args.options,
-                                                 env=args.env, scope=args.scope,
+                                                 env=args.env,
                                                  remote=args.remote, werror=args.werror,
                                                  verify=args.verify, manifests=args.manifests,
                                                  manifests_interactive=args.manifests_interactive,
@@ -388,6 +388,12 @@ class Command(object):
         parser.add_argument("--graph", "-g",
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
+        parser.add_argument("--install-folder", "-if",
+                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
+                            "files (from a previous conan install execution). Optional, if you "
+                            "don't specify this parameter, --profile and -s and -o will be used to "
+                            "calculate the ID of the package that will be created.")
+
         build_help = 'given a build policy (same install command "build" parameter), return an ' \
                      'ordered list of  ' \
                      'packages that would be built from sources in install command (simulation)'
@@ -399,11 +405,13 @@ class Command(object):
         if args.build_order:
             ret = self._conan.info_build_order(args.reference, settings=args.settings,
                                                options=args.options,
-                                               env=args.env, scope=args.scope,
+                                               env=args.env,
                                                profile_name=args.profile,
                                                filename=args.file, remote=args.remote,
                                                build_order=args.build_order,
-                                               check_updates=args.update)
+                                               check_updates=args.update,
+                                               install_folder=args.install_folder)
+
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_build_order(ret, json_arg, os.getcwd())
@@ -415,19 +423,22 @@ class Command(object):
             nodes, _ = self._conan.info_nodes_to_build(args.reference, build_modes=args.build,
                                                        settings=args.settings,
                                                        options=args.options, env=args.env,
-                                                       scope=args.scope,
                                                        profile_name=args.profile,
                                                        filename=args.file,
                                                        remote=args.remote,
-                                                       check_updates=args.update)
+                                                       check_updates=args.update,
+                                                       install_folder=args.install_folder)
+
             self._outputer.nodes_to_build(nodes)
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
             data = self._conan.info_get_graph(args.reference, remote=args.remote,
                                               settings=args.settings,
-                                              options=args.options, env=args.env, scope=args.scope,
+                                              options=args.options, env=args.env,
                                               profile_name=args.profile, update=args.update,
-                                              filename=args.file)
+                                              filename=args.file,
+                                              install_folder=args.install_folder)
+
             deps_graph, graph_updates_info, project_reference = data
             only = args.only
             if args.only == ["None"]:
@@ -1187,8 +1198,6 @@ def _add_manifests_arguments(parser):
 def _add_common_install_arguments(parser, build_help):
     parser.add_argument("--update", "-u", action='store_true', default=False,
                         help="check updates exist from upstream remotes")
-    parser.add_argument("--scope", "-sc", nargs=1, action=Extender,
-                        help='Use the specified scope in the install command')
     parser.add_argument("--profile", "-pr", default=None,
                         help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", help='look in the specified remote server')

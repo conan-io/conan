@@ -22,9 +22,11 @@ class AConan(ConanFile):
     settings = "os", "compiler", "arch"
 
     def build(self):
-        self.output.warn("Scope myscope: %s" % self.scope.myscope)
-        self.output.warn("Scope otherscope: %s" % self.scope.otherscope)
-        self.output.warn("Scope undefined: %s" % self.scope.undefined)
+        try:
+            self.scope
+            assert(False) # Do not reach this point
+        except Exception:
+            pass
         # Print environment vars
         if self.settings.os == "Windows":
             self.run("SET")
@@ -34,9 +36,9 @@ class AConan(ConanFile):
 """
 
 
-def create_profile(folder, name, settings=None, scopes=None, package_settings=None, env=None,
+def create_profile(folder, name, settings=None, package_settings=None, env=None,
                    package_env=None, options=None):
-    _create_profile(folder, name, settings, scopes, package_settings, env, package_env, options)
+    _create_profile(folder, name, settings, package_settings, env, package_env, options)
     content = load(os.path.join(folder, name))
     content = "include(default)\n" + content
     save(os.path.join(folder, name), content)
@@ -90,15 +92,6 @@ class ProfileTest(unittest.TestCase):
                         ignore_error=True)
         self.assertIn("Error reading 'clang' profile: Invalid env line 'as'",
                       self.client.user_io.out)
-
-        profile = '''
-        [scopes]
-        as
-        '''
-        save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
-                        ignore_error=True)
-        self.assertIn("Error reading 'clang' profile: Bad scope as", self.client.user_io.out)
 
         profile = '''
         [settings]
@@ -252,20 +245,13 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("language=1", info)
         self.assertIn("static=False", info)
 
-    def scopes_env_test(self):
+    def env_test(self):
         # Create a profile and use it
         create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={},
-                       scopes={"Hello0:myscope": "1",
-                               "ALL:otherscope": "2",
-                               "undefined": "3"},  # undefined scope do not apply to my packages
                        env=[("CXX", "/path/tomy/g++"), ("CC", "/path/tomy/gcc")])
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("export lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr scopes_env")
-
-        self.assertIn("Scope myscope: 1", self.client.user_io.out)
-        self.assertIn("Scope otherscope: 2", self.client.user_io.out)
-        self.assertIn("Scope undefined: None", self.client.user_io.out)
 
         self._assert_env_variable_printed("CC", "/path/tomy/gcc")
         self._assert_env_variable_printed("CXX", "/path/tomy/g++")
@@ -301,7 +287,7 @@ class DefaultNameConan(ConanFile):
                  "test_package/conanfile.py": test_conanfile}
         # Create a profile and use it
         create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={},
-                       scopes={}, env=[("ONE_VAR", "ONE_VALUE")])
+                       env=[("ONE_VAR", "ONE_VALUE")])
 
         self.client.save(files)
         self.client.run("test_package --profile scopes_env")
@@ -311,8 +297,8 @@ class DefaultNameConan(ConanFile):
 
         # Try now with package environment vars
         create_profile(self.client.client_cache.profiles_path, "scopes_env2", settings={},
-                       scopes={}, package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
-                                               "Hello0": [("ONE_VAR", "PACKAGE VALUE")]})
+                       package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
+                                    "Hello0": [("ONE_VAR", "PACKAGE VALUE")]})
 
         self.client.run("test_package --profile scopes_env2")
 
@@ -372,8 +358,7 @@ class DefaultNameConan(ConanFile):
 
         # Create a profile that doesn't activate the require
         create_profile(self.client.client_cache.profiles_path, "scopes_env",
-                       settings={"os": "Linux"},
-                       scopes={})
+                       settings={"os": "Linux"})
 
         # Install with the previous profile
         self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
@@ -382,8 +367,7 @@ class DefaultNameConan(ConanFile):
 
         # Create a profile that activate the require
         create_profile(self.client.client_cache.profiles_path, "scopes_env",
-                       settings={"os": "Windows"},
-                       scopes={})
+                       settings={"os": "Windows"})
 
         # Install with the previous profile
         self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")

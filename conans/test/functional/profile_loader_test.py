@@ -19,9 +19,9 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save, load
 
 
-def create_profile(folder, name, settings=None, scopes=None, package_settings=None, env=None,
+def create_profile(folder, name, settings=None, package_settings=None, env=None,
                    package_env=None, options=None):
-    _create_profile(folder, name, settings, scopes, package_settings, env, package_env, options)
+    _create_profile(folder, name, settings, package_settings, env, package_env, options)
     content = load(os.path.join(folder, name))
     content = "include(default)\n" + content
     save(os.path.join(folder, name), content)
@@ -68,7 +68,7 @@ os=$OTHERVAR
 os=thing""")
 
 
-conanfile_scope_env = """
+conanfile_env = """
 import platform
 from conans import ConanFile
 
@@ -78,9 +78,11 @@ class AConan(ConanFile):
     settings = "os", "compiler", "arch"
 
     def build(self):
-        self.output.warn("Scope myscope: %s" % self.scope.myscope)
-        self.output.warn("Scope otherscope: %s" % self.scope.otherscope)
-        self.output.warn("Scope undefined: %s" % self.scope.undefined)
+        try:
+           self.scope
+           assert(False) # Do not reach this point.
+        except Exception:
+           pass
         # Print environment vars
         if self.settings.os == "Windows":
             self.run("SET")
@@ -194,9 +196,6 @@ class ProfileTest(unittest.TestCase):
         profile.env_values.add("CXX", "path/to/my/compiler/g++")
         profile.env_values.add("CC", "path/to/my/compiler/gcc")
 
-        profile.scopes["p1"]["conaning"] = "1"
-        profile.scopes["p2"]["testing"] = "2"
-
         profile.build_requires["*"] = ["android_toolchain/1.2.8@lasote/testing"]
         profile.build_requires["zlib/*"] = ["cmake/1.0.2@lasote/stable",
                                             "autotools/1.0.3@lasote/stable"]
@@ -211,9 +210,6 @@ class ProfileTest(unittest.TestCase):
         self.assertEquals(new_profile.env_values.env_dicts(""), ({'CXX': 'path/to/my/compiler/g++',
                                                                   'CC': 'path/to/my/compiler/gcc'}, {}))
 
-        self.assertEquals(dict(new_profile.scopes)["p1"]["conaning"], '1')
-        self.assertEquals(dict(new_profile.scopes)["p2"]["testing"], '2')
-
         self.assertEquals(new_profile.build_requires["zlib/*"],
                           [ConanFileReference.loads("cmake/1.0.2@lasote/stable"),
                            ConanFileReference.loads("autotools/1.0.3@lasote/stable")])
@@ -221,7 +217,7 @@ class ProfileTest(unittest.TestCase):
                           [ConanFileReference.loads("android_toolchain/1.2.8@lasote/testing")])
 
     def bad_syntax_test(self):
-        self.client.save({CONANFILE: conanfile_scope_env})
+        self.client.save({CONANFILE: conanfile_env})
         self.client.run("export lasote/stable")
 
         profile = '''
@@ -259,14 +255,6 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("Error reading 'clang' profile: Invalid env line 'as'", self.client.user_io.out)
 
         profile = '''
-        [scopes]
-        as
-        '''
-        save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
-        self.assertIn("Error reading 'clang' profile: Bad scope as", self.client.user_io.out)
-
-        profile = '''
         [settings]
         os =   a value
         '''
@@ -296,7 +284,7 @@ class ProfileTest(unittest.TestCase):
 
     @parameterized.expand([("", ), ("./local_profiles/", ), (temp_folder() + "/", )])
     def install_with_missing_profile_test(self, path):
-        self.client.save({CONANFILE: conanfile_scope_env})
+        self.client.save({CONANFILE: conanfile_env})
         error = self.client.run('install -pr "%sscopes_env"' % path, ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Specified profile '%sscopes_env' doesn't exist" % path,
@@ -304,7 +292,7 @@ class ProfileTest(unittest.TestCase):
 
     def install_profile_env_test(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
-        files["conanfile.py"] = conanfile_scope_env
+        files["conanfile.py"] = conanfile_env
 
         create_profile(self.client.client_cache.profiles_path, "envs", settings={},
                        env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", "2")]})
@@ -415,20 +403,13 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("language=1", info)
         self.assertIn("static=False", info)
 
-    def scopes_env_test(self):
+    def env_test(self):
         # Create a profile and use it
         create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={},
-                       scopes={"Hello0:myscope": "1",
-                               "ALL:otherscope": "2",
-                               "undefined": "3"},  # undefined scope do not apply to my packages
                        env=[("CXX", "/path/tomy/g++"), ("CC", "/path/tomy/gcc")])
-        self.client.save({CONANFILE: conanfile_scope_env})
+        self.client.save({CONANFILE: conanfile_env})
         self.client.run("export lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr scopes_env")
-
-        self.assertIn("Scope myscope: 1", self.client.user_io.out)
-        self.assertIn("Scope otherscope: 2", self.client.user_io.out)
-        self.assertIn("Scope undefined: None", self.client.user_io.out)
 
         self._assert_env_variable_printed("CC", "/path/tomy/gcc")
         self._assert_env_variable_printed("CXX", "/path/tomy/g++")
@@ -465,11 +446,11 @@ class DefaultNameConan(ConanFile):
         pass
 
 '''
-        files = {"conanfile.py": conanfile_scope_env,
+        files = {"conanfile.py": conanfile_env,
                  "test_package/conanfile.py": test_conanfile}
         # Create a profile and use it
         create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={},
-                       scopes={}, env=[("ONE_VAR", "ONE_VALUE")])
+                       env=[("ONE_VAR", "ONE_VALUE")])
 
         self.client.save(files)
         self.client.run("test_package --profile scopes_env")
@@ -479,8 +460,8 @@ class DefaultNameConan(ConanFile):
 
         # Try now with package environment vars
         create_profile(self.client.client_cache.profiles_path, "scopes_env2", settings={},
-                       scopes={}, package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
-                                               "Hello0": [("ONE_VAR", "PACKAGE VALUE")]})
+                       package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
+                                    "Hello0": [("ONE_VAR", "PACKAGE VALUE")]})
 
         self.client.run("test_package --profile scopes_env2")
 
@@ -539,7 +520,7 @@ class DefaultNameConan(ConanFile):
 
         # Create a profile that doesn't activate the require
         create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={"os": "Linux"},
-                       scopes={})
+                       )
 
         # Install with the previous profile
         self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
@@ -547,8 +528,8 @@ class DefaultNameConan(ConanFile):
                 WinRequire/0.1@lasote/stable''', self.client.user_io.out)
 
         # Create a profile that activate the require
-        create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={"os": "Windows"},
-                       scopes={})
+        create_profile(self.client.client_cache.profiles_path, "scopes_env",
+                       settings={"os": "Windows"})
 
         # Install with the previous profile
         self.client.run("info Hello/0.1@lasote/stable --profile scopes_env")
@@ -670,7 +651,6 @@ one/1.5@lasote/stable
         self.assertEquals("FromProfile3And34", profile.env_values.data[None]["MYVAR"])
         self.assertEquals("1", profile.env_values.data["package1"]["ENVY"])
         self.assertEquals(profile.settings, {"os": "1"})
-        self.assertEquals(profile.scopes.package_scope(), {"dev": True, "my_scope": "AVALUE"})
         self.assertEquals(profile.options.as_list(), [('zlib:aoption', '1'), ('zlib:otheroption', '12')])
         self.assertEquals(profile.build_requires, {"*": [ConanFileReference.loads("one/1.0@lasote/stable"),
                                                          ConanFileReference.loads("two/1.2@lasote/stable"),
