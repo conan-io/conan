@@ -232,7 +232,7 @@ class ConanManager(object):
             packages_props = remote_proxy.search_packages(reference, None)
             if not packages_props:
                 output = ScopedOutput(str(reference), self._user_io.out)
-                output.warn("No remote binary packages found in remote")
+                output.warn("No remote package binaries found in remote")
             else:
                 remote_proxy.download_packages(reference, list(packages_props.keys()))
 

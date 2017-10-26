@@ -54,7 +54,7 @@ def build_id(conan_file):
 
 
 class _ConanPackageBuilder(object):
-    """Builds and packages a single conan_file binary package"""
+    """Builds and packages a single conan_file package binary"""
 
     def __init__(self, conan_file, package_reference, client_cache, output):
         self._client_cache = client_cache
@@ -264,7 +264,7 @@ def call_package_info(conanfile, package_folder):
 
 
 class ConanInstaller(object):
-    """ main responsible of retrieving binary packages or building them from source
+    """ main responsible of retrieving package binaries or building them from source
     locally in case they are not found in remotes
     """
     def __init__(self, client_cache, output, remote_proxy, build_mode, build_requires):
@@ -294,7 +294,7 @@ class ConanInstaller(object):
         """ computes a list of nodes that are not required to be built, as they are
         private requirements of already available shared libraries as binaries.
 
-        If the package requiring a private node has an up to date binary package,
+        If the package requiring a private node has an up to date package binary,
         the private node is not retrieved nor built
         """
         skip_nodes = set()  # Nodes that require private packages but are already built

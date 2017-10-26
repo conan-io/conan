@@ -203,7 +203,7 @@ class ConanAPIV1(object):
                      version=None):
 
         self._user_io.out.warn("THIS METHOD IS DEPRECATED and will be removed. "
-                               "Use 'conan create' to generate binary packages for a "
+                               "Use 'conan create' to generate package binaries for a "
                                "recipe. If you want to test a package you can use 'conan test' "
                                "command.")
 
@@ -715,7 +715,7 @@ class ConanAPIV1(object):
     @api_method
     def upload(self, pattern, package=None, remote=None, all=False, force=False, confirm=False,
                retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
-        """ Uploads a package recipe and the generated binary packages to a specified remote
+        """ Uploads a package recipe and the generated package binaries to a specified remote
         """
         if package and not is_a_reference(pattern):
             raise ConanException("-p parameter only allowed with a valid recipe reference, "

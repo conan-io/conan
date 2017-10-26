@@ -116,7 +116,7 @@ class ConanLib(ConanFile):
         time.sleep(1)
         upload("mycontent2")
 
-        # This is no longer necessary, as binary packages are removed when recipe is updated
+        # This is no longer necessary, as package binaries are removed when recipe is updated
         # client.run("remove Pkg/0.1@lasote/channel -p -f")
         client.run("install Pkg/0.1@lasote/channel -u --build=missing")
         conan_ref = ConanFileReference.loads("Pkg/0.1@lasote/channel")

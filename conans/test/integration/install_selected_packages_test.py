@@ -82,7 +82,7 @@ class InstallSelectedPackagesTest(unittest.TestCase):
 
         # And try to download all
         self.new_client.run("download Hello0/0.1@lasote/stable")
-        self.assertIn("No remote binary packages found in remote", self.new_client.user_io.out)
+        self.assertIn("No remote package binaries found in remote", self.new_client.user_io.out)
 
     def _upload_some_packages(self, client):
         self.ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
