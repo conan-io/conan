@@ -771,7 +771,7 @@ class Command(object):
 
         If you provide a pattern, then it will search for existing package recipes matching that pattern.
         If a full and complete package reference is provided, like Pkg/0.1@user/channel, then the existing
-        package binaries for that reference will be displayed.
+        binary packages for that reference will be displayed.
         You can search in a remote or in the local cache, if nothing is specified, the local conan cache is
         assumed.
         Search is case sensitive, exact case has to be used. For case insensitive file systems, like Windows,
