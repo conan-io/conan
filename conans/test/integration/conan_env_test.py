@@ -2,9 +2,10 @@ import os
 import platform
 import unittest
 
+from conans.client.generators.text import TXTGenerator
 from conans.model.info import ConanInfo
-from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE, CONANINFO, CONANENV
+from conans.model.ref import ConanFileReference, PackageReference
+from conans.paths import CONANFILE, CONANINFO, CONANENV, BUILD_INFO
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import load
@@ -155,61 +156,6 @@ class MyTest(ConanFile):
                      "test_package/conanfile.py": test_conanfile})
         client.run("test_package -e MYVAR=MYVALUE")
         self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
-
-    def generator_env_test(self):
-        client = TestClient()
-        conanfile = """from conans import ConanFile
-class MyPkg(ConanFile):
-    name = "Pkg"
-    version = "0.1"
-    def package_info(self):
-        self.env_info.MY_VAR = "MY_VALUE"
-        self.env_info.OTHER_VAR.append("OTHER_VALUE")
-"""
-        client.save({"conanfile.py": conanfile})
-        client.run("export lasote/testing")
-        test_conanfile = """from conans import ConanFile
-import os
-class MyTest(ConanFile):
-    name = "Test"
-    version = "0.1"
-    requires = "Pkg/0.1@lasote/testing"
-    def package_info(self):
-        self.env_info.OTHER_VAR.extend(["OTHER_VALUE2", "OTHER_VALUE3"])
-"""
-        client.save({"conanfile.py": test_conanfile})
-        client.run("export lasote/testing")
-        test_conanfile = """from conans import ConanFile
-import os
-class MyTest(ConanFile):
-    requires = "Test/0.1@lasote/testing"
-"""
-        client.save({"conanfile.py": test_conanfile})
-        client.run("install --build=missing -g env -e OTHER_VAR=[COMMAND_LINE_VALUE] -e WHAT=EVER")
-        contents = load(os.path.join(client.current_folder, CONANENV))
-        result = """[MY_VAR]
-MY_VALUE
-[OTHER_VAR]
-OTHER_VALUE2
-OTHER_VALUE3
-OTHER_VALUE
-
-[Pkg:MY_VAR]
-MY_VALUE
-[Pkg:OTHER_VAR]
-OTHER_VALUE
-
-[Test:OTHER_VAR]
-OTHER_VALUE2
-OTHER_VALUE3
-"""
-        self.assertEqual(contents.splitlines(), result.splitlines())
-        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
-        env_section = """[env]
-    MY_VAR=MY_VALUE
-    OTHER_VAR=[COMMAND_LINE_VALUE,OTHER_VALUE2,OTHER_VALUE3,OTHER_VALUE]
-    WHAT=EVER"""
-        self.assertIn("\n".join(env_section.splitlines()), "\n".join(conaninfo.splitlines()))
 
     def env_path_order_test(self):
         client = TestClient()
@@ -433,7 +379,8 @@ class HelloConan(ConanFile):
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
         client.run("export lasote/stable")
-        client.run("install Hello2/0.1@lasote/stable --build -g virtualenv -e CPPFLAGS=[OtherFlag=2]")
+        client.run("install Hello2/0.1@lasote/stable --build "
+                   "-g virtualenv -e CPPFLAGS=[OtherFlag=2]")
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate.%s" % ext)))
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "deactivate.%s" % ext)))
@@ -490,26 +437,26 @@ class Hello2Conan(ConanFile):
         files["conanfile.py"] = reuse
         client.save(files)
         client.run("install . --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>99", client.user_io.out)
 
         # Now specify a different value in command Line, but conaninfo already exists
         # So you cannot override it from command line without deleting the conaninfo.TXTGenerator
         client.run("install . -e VAR1=100 --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>100", client.user_io.out)
 
         # Remove conaninfo
         os.remove(os.path.join(client.current_folder, CONANINFO))
         client.run("install . -e VAR1=100 --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>100", client.user_io.out)
 
         # Now from a profile
         os.remove(os.path.join(client.current_folder, CONANINFO))
         client.save({"myprofile": "[env]\nVAR1=102"}, clean_first=False)
         client.run("install . --profile ./myprofile --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>102", client.user_io.out)
 
     def test_complex_deps_propagation(self):
@@ -521,7 +468,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertIn("VAR1=>800*", client.user_io.out)
         self.assertIn("VAR2=>24*", client.user_io.out)
         self.assertIn("VAR3=>22*", client.user_io.out)
@@ -541,7 +488,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900*" % {"sep": os.pathsep}, client.user_io.out)
         self.assertInSep("VAR2=>24:23*" % {"sep": os.pathsep}, client.user_io.out)
         self.assertInSep("VAR3=>45*", client.user_io.out)
@@ -553,7 +500,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing")
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900*", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertInSep("VAR3=>23*", client.user_io.out)
@@ -565,7 +512,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e VAR1=[override] -e VAR3=SIMPLE")
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>override:700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertIn("VAR3=>SIMPLE*", client.user_io.out)
@@ -579,7 +526,7 @@ class Hello2Conan(ConanFile):
 
         client.save({"conanfile.py": reuse})
         client.run("install . --build missing -e LIB_A:VAR3=override")
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertIn("VAR3=>-23*", client.user_io.out)
@@ -605,7 +552,7 @@ class Hello2Conan(ConanFile):
         self.assertIn("Building LIB_C, VAR2:24", client.user_io.out)
         self.assertIn("Building LIB_C, VAR3:override", client.user_io.out)
 
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertInSep("VAR3=>override*", client.user_io.out)
@@ -631,10 +578,98 @@ class Hello2Conan(ConanFile):
         self.assertIn("Building LIB_C, VAR2:24", client.user_io.out)
         self.assertIn("Building LIB_C, VAR3:-23", client.user_io.out)
 
-        client.run("build")
+        client.run("build .")
         self.assertInSep("VAR1=>700:800:900", client.user_io.out)
         self.assertInSep("VAR2=>24:23*", client.user_io.out)
         self.assertInSep("VAR3=>bestvalue*", client.user_io.out)
+
+
+    def check_conaninfo_completion_test(self):
+        """
+        consumer -> B -> C
+                      -> D (conditional)
+
+        The overwritten environment variables caused by the consumer have to be reflected in B's conaninfo.txt
+        """
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile
+class LibConan(ConanFile):
+    name = "libC"
+    version = "1.0"
+    
+    def package_info(self):
+        self.env_info.MYVAR = "ValueByLibC"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export foo/bar")
+
+        conanfile = """
+from conans import ConanFile
+class LibConan(ConanFile):
+    name = "libD"
+    version = "1.0"
+    
+    def package_info(self):
+        self.env_info.MYVAR = "ValueByLibD"
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export foo/bar")
+
+        conanfile = """
+import os
+from conans import ConanFile
+class LibConan(ConanFile):
+    name = "libB"
+    version = "1.0"
+    
+    def requirements(self):
+        if os.environ.get("DEP", None) == "C":
+            self.requires.add("libC/1.0@foo/bar")
+        else:
+            self.requires.add("libD/1.0@foo/bar")
+    
+    def build_info(self):
+        self.output.warn("Value of MYVAR: %s" % os.environ["MYVAR"])
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export foo/bar")
+
+        refb = PackageReference.loads("libB/1.0@foo/bar:5fecb9aaf431791c8c06ab146f3451823f982bb8")
+
+        # With no overrides, B takes dependency D and the value should be ValueByLibD
+        client.run("install libB/1.0@foo/bar --build")
+        self.assertTrue("Value of MYVAR: ValueByLibD")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n\n"))  # Not user input env
+
+        # B takes dependency C and the value should be ValueByLibC
+        client.run("install libB/1.0@foo/bar --build -e DEP=C")
+        self.assertTrue("Value of MYVAR: ValueByLibC")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n\n"))  # Not user input env
+
+        # Consumer overrides MYVAR, so his conaninfo should have it
+        client.run("install libB/1.0@foo/bar --build -e MYVAR=ValueByConsumer")
+        self.assertTrue("Value of MYVAR: ValueByConsumer")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n    MYVAR=ValueByConsumer\n"))
+
+        # Consumer overrides MYVAR, so his conaninfo should have it, but not the libC, because
+        # is not a dependency
+        client.run("install libB/1.0@foo/bar --build -e libB:MYVAR=ValueByConsumer "
+                   "-e libC:MYVAR=OtherValue")
+        self.assertTrue("Value of MYVAR: ValueByConsumer")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n    libB:MYVAR=ValueByConsumer\n"))
+
+        # Consumer overrides MYVAR, so his conaninfo should have it, both libB and libD
+        client.run("install libB/1.0@foo/bar --build -e libB:MYVAR=ValueByConsumer "
+                   "-e libD:MYVAR=OtherValue")
+        self.assertTrue("Value of MYVAR: ValueByConsumer")
+        conaninfo = load(os.path.join(client.client_cache.package(refb), CONANINFO))
+        self.assertTrue(conaninfo.endswith("[env]\n    libB:MYVAR=ValueByConsumer\n"
+                                           "    libD:MYVAR=OtherValue\n"))  # Not user input env
 
     def test_conaninfo_filtered(self):
         client = TestClient()
@@ -658,40 +693,38 @@ class Hello2Conan(ConanFile):
                    "-e LIB_B2:NEWVAR=VALUE -e VAR3=[newappend]")
 
         info = load_conaninfo("A")
-        self.assertEquals(info.env_values.env_dicts("LIB_A"), ({"VAR3": "override", "GLOBAL": "99"}, {}))
-        self.assertEquals(info.env_values.env_dicts(""), ({'GLOBAL': '99'}, {'VAR3': ['newappend']}))
+        self.assertEquals(info.env_values.env_dicts("LIB_A"),
+                          ({"VAR3": "override", "GLOBAL": "99"}, {}))
+        self.assertEquals(info.env_values.env_dicts(""),
+                          ({'GLOBAL': '99'}, {'VAR3': ['newappend']}))
 
         info = load_conaninfo("B")
         self.assertEquals(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': "override"},
-                                                               {'VAR2': ['23'], 'VAR1': ['900']}))
+                                                               {}))
 
         self.assertEquals(info.env_values.env_dicts("LIB_B"), ({'GLOBAL': '99', "VAR2": "222"},
-                                                               {'VAR3': ['newappend', '-23'], 'VAR1': ["900"]}))
+                                                               {'VAR3': ['newappend']}))
 
         info = load_conaninfo("B2")
         self.assertEquals(info.env_values.env_dicts("LIB_A"), ({'GLOBAL': '99', 'VAR3': 'override'},
-                                                               {'VAR2': ['23'], 'VAR1': ['900']}))
+                                                               {}))
 
         self.assertEquals(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
-                                                                {'VAR2': ['23'], 'VAR1': ['900'],
-                                                                 'VAR3': ['newappend', '-23']}))
+                                                                {'VAR3': ['newappend']}))
 
         info = load_conaninfo("C")
         self.assertEquals(info.env_values.env_dicts("LIB_B2"), ({'GLOBAL': '99', 'NEWVAR': "VALUE"},
-                                                                {'VAR3': ['newappend', '-23'],
-                                                                 'VAR1': ['800', '800_2', '900'],
-                                                                 'VAR2': ['24', '24_2', '23']}))
+                                                                {'VAR3': ['newappend']}))
         self.assertEquals(info.env_values.env_dicts("LIB_C"), ({'GLOBAL': '99'},
-                                                               {'VAR2': ['24', '24_2', '23'],
-                                                                'VAR1': ['800', '800_2', '900'],
-                                                                'VAR3': ['newappend', "-23"]}))
+                                                               {'VAR3': ['newappend']}))
 
         # Now check the info for the project
         info = ConanInfo.loads(load(os.path.join(client.current_folder, CONANINFO)))
         self.assertEquals(info.env_values.env_dicts("PROJECT"), ({'GLOBAL': '99'},
-                                                                 {'VAR2': ['24', '24_2', '23'],
-                                                                  'VAR1': ['700', '800', '800_2', '900'],
-                                                                  'VAR3': ['newappend', 'bestvalue']}))
+                                                                 {'VAR3': ['newappend']}))
+
+        _, _, buildinfo = TXTGenerator.loads(load(os.path.join(client.current_folder, BUILD_INFO)))
+        self.assertEquals(buildinfo["LIB_A"].VAR1, ["900"])
 
     def _export(self, client, name, requires, env_vars, env_vars_append=None):
             hello_file = """

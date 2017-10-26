@@ -3,6 +3,7 @@ import fnmatch
 import os
 import time
 
+from conans import tools
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
@@ -48,15 +49,8 @@ def undo_imports(current_path, output):
         raise ConanException("Cannot remove manifest file (open or busy): %s" % manifest_path)
 
 
-def run_imports(conanfile, dest_folder, output):
-    file_importer = _FileImporter(conanfile, dest_folder)
-    conanfile.copy = file_importer
-    conanfile.imports_folder = dest_folder
-    with environment_append(conanfile.env):
-        conanfile.imports()
-    copied_files = file_importer.copied_files
-    import_output = ScopedOutput("%s imports()" % output.scope, output)
-    report_copied_files(copied_files, import_output)
+def _report_save_manifest(copied_files, output, dest_folder, manifest_name):
+    report_copied_files(copied_files, output)
     if copied_files:
         date = calendar.timegm(time.gmtime())
         file_dict = {}
@@ -64,8 +58,42 @@ def run_imports(conanfile, dest_folder, output):
             abs_path = os.path.join(dest_folder, f)
             file_dict[f] = md5sum(abs_path)
         manifest = FileTreeManifest(date, file_dict)
-        save(os.path.join(dest_folder, IMPORTS_MANIFESTS), str(manifest))
+        save(os.path.join(dest_folder, manifest_name), str(manifest))
+
+
+def run_imports(conanfile, dest_folder, output):
+    file_importer = _FileImporter(conanfile, dest_folder)
+    conanfile.copy = file_importer
+    conanfile.imports_folder = dest_folder
+    with environment_append(conanfile.env):
+        with tools.chdir(dest_folder):
+            conanfile.imports()
+    copied_files = file_importer.copied_files
+    import_output = ScopedOutput("%s imports()" % output.scope, output)
+    _report_save_manifest(copied_files, import_output, dest_folder, IMPORTS_MANIFESTS)
     return copied_files
+
+
+def run_deploy(conanfile, dest_folder, output):
+    deploy_output = ScopedOutput("%s deploy()" % output.scope, output)
+    file_importer = _FileImporter(conanfile, dest_folder)
+    package_copied = set()
+
+    # This is necessary to capture FileCopier full destination paths
+    # Maybe could be improved in FileCopier
+    def file_copier(*args, **kwargs):
+        file_copy = FileCopier(conanfile.package_folder, dest_folder)
+        copied = file_copy(*args, **kwargs)
+        package_copied.update(copied)
+
+    conanfile.copy_deps = file_importer
+    conanfile.copy = file_copier
+    with environment_append(conanfile.env):
+        conanfile.deploy()
+
+    copied_files = file_importer.copied_files
+    copied_files.update(package_copied)
+    _report_save_manifest(copied_files, deploy_output, dest_folder, "deploy_manifest.txt")
 
 
 class _FileImporter(object):

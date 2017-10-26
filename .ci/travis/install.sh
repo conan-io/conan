@@ -8,6 +8,8 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     brew outdated pyenv || brew upgrade pyenv
     brew install pyenv-virtualenv
     brew install pkg-config
+    brew install ninja
+    brew install meson
 
     if which pyenv > /dev/null; then
         eval "$(pyenv init -)"
@@ -43,7 +45,15 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     pyenv activate conan
 else
     sudo apt-get update
-    sudo apt-get install gcc-multilib g++-multilib
+    sudo apt-get install gcc-multilib g++-multilib wget unzip
+
+    wget https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip
+    unzip ninja-linux.zip
+    sudo mv ninja /usr/bin/ninja
+    rm ninja-linux.zip
+
+    # Will fail if no python3 available
+    pip3 install meson || true
 fi
 
 pip install -r conans/requirements_dev.txt

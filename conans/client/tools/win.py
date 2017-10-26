@@ -5,23 +5,24 @@ import subprocess
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import unix_path
+from conans.client.tools.oss import cpu_count
 from conans.errors import ConanException
 
 _global_output = None
 
 
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None):
+                       arch=None, parallel=True):
     """ Do both: set the environment variables and call the .sln build
     """
     vcvars = vcvars_command(settings)
-    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch)
+    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch, parallel)
     command = "%s && %s" % (vcvars, build)
     return command
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None):
+                      arch=None, parallel=True):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -43,6 +44,9 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         command += '"x64"' if arch == "x86_64" else '"x86"'
     elif "ARM" in arch.upper():
         command += ' /p:Platform="ARM"'
+
+    if parallel:
+        command += ' /m:%s' % cpu_count()
 
     if targets:
         command += " /target:%s" % ";".join(targets)
@@ -75,9 +79,9 @@ def vs_installation_path(version):
     return vs_installation_path._cached[version]
 
 
-def vcvars_command(settings):
-    arch_setting = settings.get_safe("arch")
-    compiler_version = settings.get_safe("compiler.version")
+def vcvars_command(settings, arch=None, compiler_version=None):
+    arch_setting = arch or settings.get_safe("arch")
+    compiler_version = compiler_version or settings.get_safe("compiler.version")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
@@ -102,6 +106,9 @@ def vcvars_command(settings):
                 else:
                     raise ConanException("VS2017 '%s' variable not defined, "
                                          "and vswhere didn't find it" % env_var)
+            if not os.path.isdir(vs_path):
+                _global_output.warn('VS variable %s points to the non-existing path "%s",'
+                    'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
             command = ('set "VSCMD_START_DIR=%%CD%%" && '
                        'call "%s" %s' % (vcvars_path, param))
@@ -110,6 +117,9 @@ def vcvars_command(settings):
                 vs_path = os.environ[env_var]
             except KeyError:
                 raise ConanException("VS '%s' variable not defined. Please install VS" % env_var)
+            if not os.path.isdir(vs_path):
+                _global_output.warn('VS variable %s points to the non-existing path "%s",'
+                    'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
             command = ('call "%s" %s' % (vcvars_path, param))
 

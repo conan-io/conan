@@ -33,7 +33,7 @@ class InLocalCacheTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("install .")
-        client.run("build")
+        client.run("build .")
         self.assertIn("build() IN LOCAL CACHE=> False", client.user_io.out)
 
         pack_folder = os.path.join(client.current_folder, "package")

@@ -4,6 +4,7 @@ from conans.model.conan_file import ConanFile
 from conans.model.options import Options
 from conans.model.settings import Settings
 from conans.client.cmake import CMake
+from conans.client.meson import Meson
 from conans.client.gcc import GCC
 from conans.client.configure_environment import ConfigureEnvironment
 from conans.client.configure_build_environment import (AutoToolsBuildEnvironment, VisualStudioBuildEnvironment)
@@ -16,4 +17,4 @@ COMPLEX_SEARCH_CAPABILITY = "complex_search"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
 
-__version__ = '0.27.0'
+__version__ = '0.28.0'

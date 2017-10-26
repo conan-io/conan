@@ -2,6 +2,7 @@ import copy
 import platform
 import os
 
+from conans.client import join_arguments
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
@@ -118,21 +119,25 @@ class AutoToolsBuildEnvironment(object):
         os_setting = self._conanfile.settings.get_safe("os")
 
         if os_detected == "Windows" and os_setting != "Windows":
-            return None, None, None    # Don't know what to do with these, even exists? its only for configure
+            # Don't know what to do with these, even exists? its only for configure
+            return None, None, None
 
         # Building FOR windows
         if os_setting == "Windows":
             build = "i686-w64-mingw32" if arch_detected == "x86" else "x86_64-w64-mingw32"
             host = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
         else:  # Building for Linux or Android
-            build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu", "Darwin": "apple-macos"}.get(os_detected,
-                                                                                                  os_detected.lower()))
-            if arch_setting == "armv8":
+            build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu",
+                                               "Darwin": "apple-macos"}.get(os_detected,
+                                                                            os_detected.lower()))
+            if arch_setting == "x86":
+                host_arch = "i686"
+            elif arch_setting == "armv8":
                 host_arch = "aarch64"
             else:
                 host_arch = "arm" if "arm" in arch_setting else arch_setting
 
-            host = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
+            host = "%s%s" % (host_arch, { "Linux": "-linux-gnueabi",
                                          "Android": "-linux-android"}.get(os_setting, ""))
             if arch_setting == "armv7hf" and os_setting == "Linux":
                 host += "hf"
@@ -182,11 +187,12 @@ class AutoToolsBuildEnvironment(object):
             self._conanfile.run("%s/configure %s %s"
                                 % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
-    def make(self, args=""):
+    def make(self, args="", make_program=None):
+        make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(self.vars):
             str_args = args_to_string(args)
-            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else ""
-            self._conanfile.run("make %s %s" % (str_args, cpu_count_option))
+            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
+            self._conanfile.run("%s" % join_arguments([make_program, str_args, cpu_count_option]))
 
     @property
     def _sysroot_flag(self):
@@ -207,7 +213,7 @@ class AutoToolsBuildEnvironment(object):
         if self._build_type == "Debug":
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
-            ret.append("-s")  # Remove all symbol table and relocation information from the executable.
+            ret.append("-s") # Remove all symbol table and relocation information from the executable.
         if self._sysroot_flag:
             ret.append(self._sysroot_flag)
         return ret
@@ -244,8 +250,8 @@ class AutoToolsBuildEnvironment(object):
                         ret.append(arg)
             return ret
 
-        lib_paths = ['-L%s' % x for x in self.library_paths]
-        include_paths = ['-I%s' % x for x in self.include_paths]
+        lib_paths = ['-L%s' % x.replace("\\", "/") for x in self.library_paths]
+        include_paths = ['-I%s' % x.replace("\\", "/") for x in self.include_paths]
 
         ld_flags = append(self.link_flags, lib_paths)
         cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])

@@ -11,6 +11,8 @@ class SystemPackageTool(object):
     def __init__(self, runner=None, os_info=None, tool=None):
         env_sudo = os.environ.get("CONAN_SYSREQUIRES_SUDO", None)
         self._sudo = (env_sudo != "False" and env_sudo != "0")
+        if env_sudo is None and os.name == 'posix' and os.geteuid() == 0:
+            self._sudo = False
         os_info = os_info or OSInfo()
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info)
@@ -23,6 +25,8 @@ class SystemPackageTool(object):
             return AptTool()
         elif os_info.with_yum:
             return YumTool()
+        elif os_info.with_pacman:
+            return PacManTool()
         elif os_info.is_macos:
             return BrewTool()
         elif os_info.is_freebsd:
@@ -73,7 +77,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        _global_output.warn("Only available for linux with apt-get or yum or OSx with brew or "
+        _global_output.warn("Only available for linux with apt-get, yum, or pacman or OSx with brew or "
                             "FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
@@ -149,6 +153,17 @@ class ChocolateyTool(object):
 
     def installed(self, package_name):
         exit_code = self._runner('choco search --local-only --exact %s | findstr /c:"1 packages installed."' % package_name, None)
+        return exit_code == 0
+
+class PacManTool(object):
+    def update(self):
+        _run(self._runner, "%spacman -Syyu --noconfirm" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%spacman -S --noconfirm %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner("pacman -Qi %s" % package_name, None)
         return exit_code == 0
 
 

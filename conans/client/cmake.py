@@ -4,6 +4,7 @@ import platform
 from collections import OrderedDict
 from contextlib import contextmanager
 
+from conans.client import defs_to_string, join_arguments
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
@@ -39,7 +40,7 @@ def _get_env_cmake_system_name():
 class CMake(object):
 
     def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True,
-                 parallel=True, build_type=None):
+                 parallel=True, build_type=None, toolset=None):
         """
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
         :param generator: Generator name to use or none to autodetect
@@ -47,6 +48,8 @@ class CMake(object):
                True for auto-detect or directly a string with the system name
         :param parallel: Try to build with multiple cores if available
         :param build_type: Overrides default build type comming from settings
+        :param toolset: Toolset name to use (such as llvm-vs2014) or none for default one,
+                applies only to certain generators (e.g. Visual Studio)
         """
         if isinstance(settings_or_conanfile, Settings):
             self._settings = settings_or_conanfile
@@ -71,6 +74,7 @@ class CMake(object):
         self._build_type = self._settings.get_safe("build_type")
 
         self.generator = generator or self._generator()
+        self.toolset = self._toolset(toolset)
         self.build_dir = None
         self._cmake_system_name = _get_env_cmake_system_name()
         if self._cmake_system_name is None:  # Not overwritten using environment
@@ -97,7 +101,7 @@ class CMake(object):
 
     @property
     def flags(self):
-        return _defs_to_string(self.definitions)
+        return defs_to_string(self.definitions)
 
     @staticmethod
     def options_cmd_line(options, option_upper=True, value_upper=True):
@@ -143,6 +147,11 @@ class CMake(object):
 
         return "Unix Makefiles"
 
+    def _toolset(self, toolset=None):
+        if "CONAN_CMAKE_TOOLSET" in os.environ:
+            return os.environ["CONAN_CMAKE_TOOLSET"]
+        return toolset
+
     def _cmake_compiler_options(self, the_os, arch):
         cmake_definitions = OrderedDict()
 
@@ -171,7 +180,7 @@ class CMake(object):
             platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
             if (platform_os != the_os) or os_ver:  # We are cross building
                 if the_os:
-                    ret["CMAKE_SYSTEM_NAME"] = the_os
+                    ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS", "watchOS"] else the_os
                     if os_ver:
                         ret["CMAKE_SYSTEM_VERSION"] = os_ver
                 else:
@@ -225,11 +234,14 @@ class CMake(object):
 
     @property
     def command_line(self):
-        return _join_arguments([
+        args = [
             '-G "%s"' % self.generator,
             self.flags,
             '-Wno-dev'
-        ])
+        ]
+        if self.toolset:
+            args.append('-T "%s"' % self.toolset)
+        return join_arguments(args)
 
     def _build_type_definition(self):
         if self._build_type and not self.is_multi_configuration:
@@ -238,7 +250,7 @@ class CMake(object):
 
     @property
     def runtime(self):
-        return _defs_to_string(self._runtime_definition())
+        return defs_to_string(self._runtime_definition())
 
     def _runtime_definition(self):
         if self._runtime:
@@ -318,10 +330,10 @@ class CMake(object):
         self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
         mkdir(self.build_dir)
-        arg_list = _join_arguments([
+        arg_list = join_arguments([
             self.command_line,
             args_to_string(args),
-            _defs_to_string(defs),
+            defs_to_string(defs),
             args_to_string([source_dir])
         ])
         command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
@@ -353,7 +365,7 @@ class CMake(object):
                     args.append("--")
                 args.append("-j%i" % cpu_count())
 
-        arg_list = _join_arguments([
+        arg_list = join_arguments([
             args_to_string([build_dir]),
             self.build_config,
             args_to_string(args)
@@ -362,6 +374,7 @@ class CMake(object):
         self._conanfile.run(command)
 
     def install(self, args=None, build_dir=None):
+        mkdir(self._conanfile.package_folder)
         if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
             raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
                                  "Make sure 'package_folder' is defined")
@@ -385,13 +398,6 @@ class CMake(object):
     @verbose.setter
     def verbose(self, value):
         self.definitions["CMAKE_VERBOSE_MAKEFILE"] = "ON" if value else "OFF"
-
-def _defs_to_string(defs):
-    return " ".join(['-D{0}="{1}"'.format(k, v) for k, v in defs.items()])
-
-
-def _join_arguments(args):
-    return " ".join(filter(None, args))
 
 
 @contextmanager

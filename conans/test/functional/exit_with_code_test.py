@@ -22,7 +22,7 @@ class HelloConan(ConanFile):
         client = TestClient()
         files = {CONANFILE: base}
         client.save(files)
-        client.run("install -g txt")
-        error_code = client.run("build", ignore_error=True)
+        client.run("install")
+        error_code = client.run("build .", ignore_error=True)
         self.assertEquals(error_code, 34)
         self.assertIn("Exiting with code: 34", client.user_io.out)

@@ -11,34 +11,85 @@ from conans.paths import CONANFILE
 @attr("slow")
 class ConanTestTest(unittest.TestCase):
 
-    def transitive_same_name_test(self):
-        # https://github.com/conan-io/conan/issues/1366
-        client = TestClient()
+    def test_partial_reference(self):
+
+        # Create two packages to test with the same test
         conanfile = '''
 from conans import ConanFile
 
 class HelloConan(ConanFile):
-    name = "HelloBar"
+    name = "Hello"
     version = "0.1"
 '''
-        test_package = '''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("create conan/stable")
+        client.run("create conan/testing")
+        client.run("create conan/foo")
+
+        def test(conanfile_test, test_reference, path=None):
+            path = path or "."
+            client.save({os.path.join(path, CONANFILE): conanfile_test}, clean_first=True)
+            client.run("test %s %s" % (path, test_reference))
+
+        # Now try with no reference in conan test, because we already have it in the requires
+        test('''
 from conans import ConanFile
 
 class HelloTestConan(ConanFile):
-    requires = "HelloBar/0.1@lasote/testing"
+    requires = "Hello/0.1@conan/stable"
     def test(self):
-        pass
-'''
-        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-        client.run("test_package")
-        self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
-                      client.user_io.out)
-        client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
-                     "    requires='HelloBar/0.1@lasote/testing'",
-                     "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
-        client.run("test_package")
-        self.assertNotIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
-                         client.user_io.out)
+        self.output.warn("Tested ok!")    
+''', "")
+        self.assertIn("Tested ok!", client.out)
+
+        # Now try having two references and specifing nothing
+        with self.assertRaises(Exception):
+            test('''
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    requires = "Hello/0.1@conan/stable", "other/ref@conan/Stable"
+    def test(self):
+        self.output.warn("Tested ok!")    
+''', "")
+        self.assertIn("Cannot deduce the reference to be tested,", client.out)
+
+        # Specify a valid name
+        test('''
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    requires = "Hello/0.1@conan/stable"
+    def test(self):
+        self.output.warn("Tested ok!")    
+''', "Hello")
+        self.assertIn("Tested ok!", client.out)
+
+        # Specify a wrong name
+        with self.assertRaises(Exception):
+            test('''
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    requires = "Hello/0.1@conan/stable", "other/ref@conan/Stable"
+    def test(self):
+        self.output.warn("Tested ok!")    
+''', "badname")
+        self.assertIn("The package name 'badname' doesn't match with any requirement in "
+                      "the testing conanfile.py: Hello, other", client.out)
+
+        # Specify a complete reference but not matching with the requires, it's ok, the
+        # require could be a tool or whatever
+        test('''
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    requires = "Hello/0.1@conan/stable"
+    def test(self):
+        self.output.warn("Tested ok!")    
+''', "Hello/0.1@conan/foo")
+        self.assertIn("Tested ok!", client.out)
 
     def test_package_env_test(self):
         client = TestClient()
@@ -66,7 +117,8 @@ class HelloTestConan(ConanFile):
 '''
 
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-        client.run("test_package")
+        client.run("export lasote/testing")
+        client.run("test test_package --build missing")
 
     def scopes_test_package_test(self):
         client = TestClient()
@@ -92,8 +144,10 @@ class HelloReuseConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "test/conanfile.py": test_conanfile})
-        client.run("test_package --scope Hello:dev=True --build=missing")
-        self.assertIn("Hello/0.1@lasote/stable: Scope: dev=True", client.user_io.out)
+        client.run("export lasote/stable")
+        client.run("test test --scope Hello:dev=True --build=missing")
+        # we are not in dev scope anymore
+        self.assertNotIn("Hello/0.1@lasote/stable: Scope: dev=True", client.user_io.out)
 
     def fail_test_package_test(self):
         client = TestClient()
@@ -121,13 +175,17 @@ class HelloReuseConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "FindXXX.cmake": "Hello FindCmake",
                      "test/conanfile.py": test_conanfile})
-        client.run("test_package")
+        client.run("create lasote/stable")
+        client.run("test test")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
-        client.run("test_package")
+        client.run("test test")  # Test do not rebuild the package
+        self.assertEqual("Hello FindCmake",
+                         load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
+        client.run("create lasote/stable")  # create rebuild the package
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
 
@@ -146,7 +204,7 @@ import os
 
 class HelloReuseConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    requires = "Hello0/0.1@ lasote/stable"
+    requires = "Hello0/0.1@lasote/stable"
     generators = "cmake"
 
     def build(self):
@@ -209,13 +267,13 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         files["test_package/conanfile.py"] = test_conanfile
         files["test_package/main.cpp"] = files["main.cpp"]
         client.save(files)
-        client.run("export lasote/stable")
-        error = client.run("test_package -s build_type=Release")
+        client.run("create lasote/stable")
+        error = client.run("test test_package -s build_type=Release")
         self.assertFalse(error)
         self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.user_io.out)
         self.assertNotIn("WARN: conanenv.txt file not found", client.user_io.out)
         self.assertIn('Hello Hello0', client.user_io.out)
-        error = client.run("test_package -s Hello0:build_type=Debug -o Hello0:language=1")
+        error = client.run("test test_package -s Hello0:build_type=Debug -o Hello0:language=1 --build missing")
         self.assertFalse(error)
         self.assertIn('Hola Hello0', client.user_io.out)
         self.assertIn('BUILD_TYPE=>Debug', client.user_io.out)

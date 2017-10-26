@@ -4,6 +4,7 @@ import shutil
 import sys
 import uuid
 from collections import Counter
+from contextlib import contextmanager
 from io import StringIO
 
 import requests
@@ -35,8 +36,9 @@ from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USE
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.util.files import save_files, save
+from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
+from conans.tools import set_global_instances
 
 
 class TestingResponse(object):
@@ -354,6 +356,18 @@ class TestClient(object):
     def out(self):
         return self.user_io.out
 
+    @contextmanager
+    def chdir(self, newdir):
+        old_dir = self.current_folder
+        if not os.path.isabs(newdir):
+            newdir = os.path.join(old_dir, newdir)
+        mkdir(newdir)
+        self.current_folder = newdir
+        try:
+            yield
+        finally:
+            self.current_folder = old_dir
+
     def _init_collaborators(self, user_io=None):
 
         output = TestBufferConanOutput()
@@ -388,9 +402,7 @@ class TestClient(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
-        # Patch the globals in tools
-        tools._global_requester = requests
-        tools._global_output = self.user_io.out
+        set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
@@ -407,7 +419,7 @@ class TestClient(object):
         """
         self.init_dynamic_vars(user_io)
         conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                      self.search_manager, settings_preprocessor)
+                       self.search_manager, settings_preprocessor)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)
@@ -426,6 +438,7 @@ class TestClient(object):
 
         if not ignore_error and error:
             logger.error(self.user_io.out)
+            print(self.user_io.out)
             raise Exception("Command failed:\n%s" % command_line)
 
         self.all_output += str(self.user_io.out)
@@ -439,3 +452,5 @@ class TestClient(object):
         if clean_first:
             shutil.rmtree(self.current_folder, ignore_errors=True)
         save_files(path, files)
+        if not files:
+            mkdir(self.current_folder)

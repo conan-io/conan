@@ -69,9 +69,12 @@ def config_source(export_folder, export_source_folder, src_folder,
 
         set_dirty(src_folder)
         os.chdir(src_folder)
+        conan_file.source_folder = src_folder
         try:
             with tools.environment_append(conan_file.env):
                 with conanfile_exception_formatter(str(conan_file), "source"):
+                    conan_file.build_folder = None
+                    conan_file.package_folder = None
                     conan_file.source()
             clean_dirty(src_folder)  # Everything went well, remove DIRTY flag
         except Exception as e:
@@ -85,12 +88,16 @@ def config_source(export_folder, export_source_folder, src_folder,
             raise ConanException(e)
 
 
-def config_source_local(current_path, conan_file, output):
-    output.info('Configuring sources in %s' % current_path)
-    with tools.chdir(current_path):
+def config_source_local(dest_dir, conan_file, output):
+    output.info('Configuring sources in %s' % dest_dir)
+    conan_file.source_folder = dest_dir
+
+    with tools.chdir(dest_dir):
         try:
             with conanfile_exception_formatter(str(conan_file), "source"):
                 with tools.environment_append(conan_file.env):
+                    conan_file.build_folder = None
+                    conan_file.package_folder = None
                     conan_file.source()
         except ConanExceptionInUserConanfileMethod:
             raise
