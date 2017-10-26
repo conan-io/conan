@@ -4,10 +4,6 @@
 import subprocess
 
 
-def cmd_output(command):
-    return subprocess.check_output(command).decode().strip()
-
-
 def is_apple_os(_os):
     """returns True if OS is Apple one (Macos, iOS, watchOS or tvOS"""
     return str(_os) in ['Macos', 'iOS', 'watchOS', 'tvOS']
@@ -57,50 +53,67 @@ def apple_deployment_target_flag_name(_os):
             'tvOS': '-mappletvos-version-min'}.get(str(_os))
 
 
-class XCRun:
+class XCRun(object):
 
     def __init__(self, sdk=None):
         self.sdk = sdk
 
     def _invoke(self, args):
+        def cmd_output(cmd):
+            return subprocess.check_output(cmd).decode().strip()
+
         command = ['xcrun', '-find']
         if self.sdk:
             command.extend(['-sdk', self.sdk])
         command.extend(args)
         return cmd_output(command)
 
+    @property
     def find(self, tool):
         """find SDK tools (e.g. clang, ar, ranlib, lipo, codesign, etc.)"""
         return self._invoke(['--find', tool])
 
+    @property
     def sdk_path(self):
         """obtain sdk path (aka apple sysroot or -isysroot"""
         return self._invoke(['--show-sdk-path'])
 
+    @property
     def sdk_version(self):
         """obtain sdk version"""
         return self._invoke(['--show-sdk-version'])
 
+    @property
     def sdk_platform_path(self):
         """obtain sdk platform path"""
         return self._invoke(['--show-sdk-platform-path'])
 
+    @property
     def sdk_platform_version(self):
         """obtain sdk platform version"""
         return self._invoke(['--show-sdk-platform-version'])
 
     @property
     def cc(self):
+        """path to C compiler (CC)"""
         return self.find('clang')
 
     @property
     def cxx(self):
+        """path to C++ compiler (CXX)"""
         return self.find('clang++')
 
     @property
     def ar(self):
+        """path to archiver (AR)"""
         return self.find('ar')
 
     @property
     def ranlib(self):
+        """path to archive indexer (RANBLI)"""
         return self.find('ranlib')
+
+    @property
+    def strip(self):
+        """path to symbol removal utility (STRIP)"""
+        return self.find('strip')
