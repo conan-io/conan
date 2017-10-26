@@ -68,7 +68,6 @@ class XCRun(object):
         command.extend(args)
         return cmd_output(command)
 
-    @property
     def find(self, tool):
         """find SDK tools (e.g. clang, ar, ranlib, lipo, codesign, etc.)"""
         return self._invoke(['--find', tool])

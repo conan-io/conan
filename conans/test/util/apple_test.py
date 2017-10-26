@@ -74,7 +74,7 @@ class AppleTest(unittest.TestCase):
         self.assertTrue(xcrun.ranlib.endswith('ranlib'))
         self.assertTrue(xcrun.strip.endswith('strip'))
 
-        self.assertTrue(os.path.isdir(xcrun.sdk_path()))
+        self.assertTrue(os.path.isdir(xcrun.sdk_path))
 
         xcrun = tools.XCRun()
         self.assertTrue(xcrun.find('lipo').endswith('lipo'))
