@@ -218,7 +218,7 @@ Then add that 'conan' file to your PATH and you are ready:
       remove     Remove any folder from your local/remote store
       search     show local/remote packages
       test       build and run your package test. Must have conanfile.py with "test"
-      upload     uploads a conanfile or package binaries from the local store to any remote.
+      upload     uploads a conanfile or binary packages from the local store to any remote.
       user       shows or change the current user 
 
 License

@@ -76,7 +76,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         # Upload only the recipe, so the package is outdated in the server
         self.client.run("upload Hello0/0.1@lasote/stable")
 
-        # Now, with the new_client, remove only the package binary from Hello0
+        # Now, with the new_client, remove only the binary package from Hello0
         rmdir(new_client.paths.packages(self.ref))
         # And try to install Hello1 again, should not complain because the remote
         # binary is in the "same version" than local cached Hello0
@@ -113,7 +113,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         # Upload only the recipe, so the package is outdated in the server
         self.client.run("upload Hello0/0.1@lasote/stable")
 
-        # Now, with the new_client, remove only the package binary from Hello0
+        # Now, with the new_client, remove only the binary package from Hello0
         rmdir(new_client.paths.packages(self.ref))
         # And try to install Hello1 again, should not complain because the remote
         # binary is in the "same version" than local cached Hello0

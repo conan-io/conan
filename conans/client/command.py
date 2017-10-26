@@ -118,7 +118,7 @@ class Command(object):
     def test(self, *args):
         """ Runs a test_folder/conanfile.py to test an existing package.
         The package to be tested must exist in the local cache or any configured remote.
-        To create and test a package binary for a local directory conanfile.py use the
+        To create and test a binary package for a local directory conanfile.py use the
         'conan create' command.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
@@ -160,7 +160,7 @@ class Command(object):
 
     def test_package(self, *args):
         """DEPRECATED, will be removed. Use 'conan create' and/or 'conan test'.
-        Use 'conan create' to generate package binaries for a recipe.
+        Use 'conan create' to generate binary packages for a recipe.
         If you want to test a package you can use 'conan test' command.
         """
 
@@ -200,7 +200,7 @@ class Command(object):
                                         version=version)
 
     def create(self, *args):
-        """ Builds a package binary for recipe (conanfile.py) located in current dir.
+        """ Builds a binary package for recipe (conanfile.py) located in current dir.
         Uses the specified configuration in a profile or in -s settings, -o options etc.
         If a 'test_package' folder (the name can be configured with -tf) is found, the command will
         run the consumer project to ensure that the package has been created correctly. Check the
@@ -265,9 +265,9 @@ class Command(object):
         """Installs the requirements specified in a conanfile (.py or .txt).
            If any requirement is not found in the local cache it will retrieve the recipe from a
            remote, looking for it sequentially in the available configured remotes.
-           When the recipes have been downloaded it will try to download a package binary matching
+           When the recipes have been downloaded it will try to download a binary package matching
            the specified settings, only from the remote from which the recipe was retrieved.
-           If no package binary is found you can build the package from sources using the '--build'
+           If no binary package is found you can build the package from sources using the '--build'
            option.
            When the package is installed, Conan will write the files for the specified generators.
            It can also be used to install a concrete recipe/package specifying a reference in the
@@ -771,7 +771,7 @@ class Command(object):
 
         If you provide a pattern, then it will search for existing package recipes matching that pattern.
         If a full and complete package reference is provided, like Pkg/0.1@user/channel, then the existing
-        package binaries for that reference will be displayed.
+        binary packages for that reference will be displayed.
         You can search in a remote or in the local cache, if nothing is specified, the local conan cache is
         assumed.
         Search is case sensitive, exact case has to be used. For case insensitive file systems, like Windows,
@@ -827,7 +827,7 @@ class Command(object):
             self._outputer.print_search_references(refs, args.pattern, args.raw)
 
     def upload(self, *args):
-        """ Uploads a recipe and package binaries to a remote.
+        """ Uploads a recipe and binary packages to a remote.
 
             If you use the --force variable, it won't check the package date. It will override
             the remote with the local package.
@@ -1208,10 +1208,10 @@ def _add_common_install_arguments(parser, build_help):
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
 
-        --build            Build all from sources, do not use package binaries.
-        --build=never      Default option. Never build, use package binaries or fail if a package binary is not found.
-        --build=missing    Build from code if a package binary is not found.
-        --build=outdated   Build from code if the binary is not built with the current recipe or when missing package binary.
+        --build            Build all from sources, do not use binary packages.
+        --build=never      Default option. Never build, use binary packages or fail if a binary package is not found.
+        --build=missing    Build from code if a binary package is not found.
+        --build=outdated   Build from code if the binary is not built with the current recipe or when missing binary package.
         --build=[pattern]  Build always these packages from source, but never build the others. Allows multiple --build parameters. 'pattern' is a fnmatch file pattern of a package name.
 '''
 
