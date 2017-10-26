@@ -33,8 +33,8 @@ class PkgConfig(object):
         if self.msvc_syntax:
             command.append('--msvc-syntax')
         if self.define_variables:
-            for name, value in self.define_variables:
-                command.append('--definevariable=%s=%s' % (name, value))
+            for name, value in self.define_variables.items():
+                command.append('--define-variable=%s=%s' % (name, value))
         return self._cmd_output(command)
 
     def _get_option(self, option):

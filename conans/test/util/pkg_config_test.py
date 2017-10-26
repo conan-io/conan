@@ -47,3 +47,27 @@ class PkgConfigTest(unittest.TestCase):
 
             self.assertEquals(pkg_config.variables['prefix'], '/usr/local')
         os.unlink(filename)
+
+    def test_define_prefix(self):
+        if platform.system() == "Windows":
+            return
+        tmp_dir = temp_folder()
+        filename = os.path.join(tmp_dir, 'libastral.pc')
+        with open(filename, 'w') as f:
+            f.write(libastral_pc)
+        with environment_append({'PKG_CONFIG_PATH': tmp_dir}):
+            pkg_config = PkgConfig("libastral", variables={'prefix': '/home/conan'})
+
+            self.assertEquals(frozenset(pkg_config.cflags),
+                              frozenset(['-D_USE_LIBASTRAL', '-I/home/conan/include/libastral']))
+            self.assertEquals(frozenset(pkg_config.cflags_only_I), frozenset(['-I/home/conan/include/libastral']))
+            self.assertEquals(frozenset(pkg_config.cflags_only_other), frozenset(['-D_USE_LIBASTRAL']))
+
+            self.assertEquals(frozenset(pkg_config.libs),
+                              frozenset(['-L/home/conan/lib/libastral', '-lastral', '-Wl,--whole-archive']))
+            self.assertEquals(frozenset(pkg_config.libs_only_L), frozenset(['-L/home/conan/lib/libastral']))
+            self.assertEquals(frozenset(pkg_config.libs_only_l), frozenset(['-lastral', ]))
+            self.assertEquals(frozenset(pkg_config.libs_only_other), frozenset(['-Wl,--whole-archive']))
+
+            self.assertEquals(pkg_config.variables['prefix'], '/home/conan')
+        os.unlink(filename)
