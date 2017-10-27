@@ -286,15 +286,18 @@ class PackageOption(object):
             self._possible_values = sorted(str(v) for v in possible_values)
 
     def __bool__(self):
-        if not self._value:
+        if not self.value:
             return False
-        return self._value.lower() not in _falsey_options
+        return self.value.lower() not in _falsey_options
 
     def __nonzero__(self):
         return self.__bool__()
 
     def __str__(self):
-        return str(self._value)
+        return str(self.value)
+
+    def __int__(self):
+        return int(self.value)
 
     def _check_option_value(self, value):
         """ checks that the provided value is allowed by current restrictions
