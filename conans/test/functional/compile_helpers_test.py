@@ -2,8 +2,8 @@ import os
 import platform
 import unittest
 
-from conans.client.configure_environment import ConfigureEnvironment
-from conans.client.gcc import GCC
+from conans.client.build.configure_environment import ConfigureEnvironment
+from conans.client.build.gcc import GCC
 from conans.client.runner import ConanRunner
 from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo

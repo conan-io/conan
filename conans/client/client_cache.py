@@ -2,7 +2,7 @@ import os
 from collections import OrderedDict
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
-from conans.client.detect import detect_defaults_settings
+from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException

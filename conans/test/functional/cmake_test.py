@@ -10,7 +10,7 @@ from conans import tools
 from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
-from conans.client.cmake import CMake
+from conans.client.build.cmake import CMake
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.tools import cpu_count
 from conans.util.files import save
