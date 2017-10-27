@@ -146,8 +146,10 @@ class AutoToolsBuildEnvironment(object):
 
         return build, host, None
 
-    def configure(self, configure_dir=None, args=None, build=None, host=None, target=None):
+    def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
+                  pkg_config_paths=None):
         """
+        :param pkg_config_paths: Optional paths to locate the *.pc files
         :param configure_dir: Absolute or relative path to the configure script
         :param args: Optional arguments to pass to configure.
         :param build: In which system the program will be built. "False" skips the --build flag
@@ -183,9 +185,18 @@ class AutoToolsBuildEnvironment(object):
             if target or auto_target:  # User specified value or automatic
                 triplet_args.append("--target %s" % (target or auto_target))
 
-        with environment_append(self.vars):
-            self._conanfile.run("%s/configure %s %s"
-                                % (configure_dir, args_to_string(args), " ".join(triplet_args)))
+        if pkg_config_paths:
+            pkg_env = {"PKG_CONFIG_PATH": os.pathsep.join(pkg_config_paths)}
+        else:
+            # If we are using pkg_config generator automate the pcs location, otherwise it could
+            # read wrong files
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.build_folder} \
+                if "pkg_config" in self._conanfile.generators else {}
+
+        with environment_append(pkg_env):
+            with environment_append(self.vars):
+                self._conanfile.run("%s/configure %s %s"
+                                    % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
     def make(self, args="", make_program=None):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
@@ -213,7 +224,8 @@ class AutoToolsBuildEnvironment(object):
         if self._build_type == "Debug":
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
-            ret.append("-s") # Remove all symbol table and relocation information from the executable.
+            # Remove all symbol table and relocation information from the executable.
+            ret.append("-s")
         if self._sysroot_flag:
             ret.append(self._sysroot_flag)
         return ret
