@@ -1191,8 +1191,7 @@ def _add_common_install_arguments(parser, build_help):
                         help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", help='look in the specified remote server')
     parser.add_argument("--options", "-o",
-                        help='Options to build the package, overwriting the defaults. e.g., '
-                             '-o with_qt=true',
+                        help='Define options values, e.g., -o Pkg:with_qt=true',
                         nargs=1, action=Extender)
     parser.add_argument("--settings", "-s",
                         help='Settings to build the package, overwriting the defaults. e.g., '
