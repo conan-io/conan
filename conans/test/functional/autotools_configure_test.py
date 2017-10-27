@@ -1,7 +1,7 @@
 import platform
 import unittest
 
-from conans.client.configure_build_environment import AutoToolsBuildEnvironment
+from conans.client.build.configure_build_environment import AutoToolsBuildEnvironment
 from conans import tools
 from conans.client.tools.oss import cpu_count
 from conans.test.utils.conanfile import MockConanfile, MockSettings

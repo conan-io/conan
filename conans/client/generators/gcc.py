@@ -1,4 +1,4 @@
-from conans.client.configure_build_environment import architecture_dict, stdlib_flags, \
+from conans.client.build.configure_build_environment import architecture_dict, stdlib_flags, \
     stdlib_defines
 from conans.model import Generator
 from conans.paths import BUILD_INFO_GCC

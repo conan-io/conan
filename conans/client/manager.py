@@ -3,12 +3,10 @@ import os
 import time
 from collections import OrderedDict, Counter
 
-import copy
-
 from conans.client import packager
 from conans.client.client_cache import ClientCache
 from conans.client.deps_builder import DepsGraphBuilder
-from conans.client.detect import detected_os
+from conans.client.conf.detect import detected_os
 from conans.client.export import export_conanfile, load_export_conanfile
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
