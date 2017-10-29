@@ -175,7 +175,7 @@ class Downloader(object):
                 else:
                     dl_size = download_chunks(ret_buffer=ret)
 
-                if dl_size != total_length:
+                if dl_size < total_length:
                     raise ConanException("Transfer interrupted before "
                                          "complete: %s < %s" % (dl_size, total_length))
 
