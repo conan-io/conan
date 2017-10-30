@@ -8,7 +8,7 @@ _global_output = None
 
 class SystemPackageTool(object):
 
-    def __init__(self, runner=None, os_info=None, tool=None):
+    def __init__(self, runner=None, os_info=None, tool=None, recommends=False):
         env_sudo = os.environ.get("CONAN_SYSREQUIRES_SUDO", None)
         self._sudo = (env_sudo != "False" and env_sudo != "0")
         if env_sudo is None and os.name == 'posix' and os.geteuid() == 0:
@@ -18,6 +18,7 @@ class SystemPackageTool(object):
         self._tool = tool or self._create_tool(os_info)
         self._tool._sudo_str = "sudo " if self._sudo else ""
         self._tool._runner = runner or ConanRunner()
+        self._tool._recommends = recommends
 
     @staticmethod
     def _create_tool(os_info):
@@ -44,9 +45,9 @@ class SystemPackageTool(object):
         self._tool.update()
 
     def install(self, packages, update=True, force=False):
-        '''
+        """
             Get the system package tool install command.
-        '''
+        '"""
         packages = [packages] if isinstance(packages, str) else list(packages)
         if not force and self._installed(packages):
             return
@@ -77,7 +78,7 @@ class NullTool(object):
         pass
 
     def install(self, package_name):
-        _global_output.warn("Only available for linux with apt-get, yum, or pacman or OSx with brew or "
+        _global_output.warn("Only available for linux with apt-get, yum, or pacman or OSX with brew or "
                             "FreeBSD with pkg or Solaris with pkgutil")
 
     def installed(self, package_name):
@@ -89,7 +90,8 @@ class AptTool(object):
         _run(self._runner, "%sapt-get update" % self._sudo_str)
 
     def install(self, package_name):
-        _run(self._runner, "%sapt-get install -y %s" % (self._sudo_str, package_name))
+        recommends_str = '' if self._recommends else '--no-install-recommends '
+        _run(self._runner, "%sapt-get install -y %s%s" % (self._sudo_str, recommends_str, package_name))
 
     def installed(self, package_name):
         exit_code = self._runner("dpkg -s %s" % package_name, None)
@@ -154,6 +156,7 @@ class ChocolateyTool(object):
     def installed(self, package_name):
         exit_code = self._runner('choco search --local-only --exact %s | findstr /c:"1 packages installed."' % package_name, None)
         return exit_code == 0
+
 
 class PacManTool(object):
     def update(self):

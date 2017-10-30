@@ -172,7 +172,7 @@ class HelloConan(ConanFile):
         with self.assertRaises(ConanException):
             runner.return_ok = False
             spt.install("a_package")
-            self.assertEquals(runner.command_called, "sudo apt-get install -y a_package")
+            self.assertEquals(runner.command_called, "sudo apt-get install -y --no-install-recommends a_package")
 
         runner.return_ok = True
         spt.install("a_package", force=False)
@@ -224,6 +224,11 @@ class HelloConan(ConanFile):
 
         os_info.linux_distro = "ubuntu"
         spt = SystemPackageTool(runner=runner, os_info=os_info)
+        spt.install("a_package", force=True)
+        self.assertEquals(runner.command_called, "apt-get install -y --no-install-recommends a_package")
+
+        os_info.linux_distro = "ubuntu"
+        spt = SystemPackageTool(runner=runner, os_info=os_info, recommends=True)
         spt.install("a_package", force=True)
         self.assertEquals(runner.command_called, "apt-get install -y a_package")
 
@@ -291,7 +296,8 @@ class HelloConan(ConanFile):
         spt.install(packages)
         self.assertEquals(2, runner.calls)
 
-        runner = RunnerMultipleMock(["sudo apt-get update", "sudo apt-get install -y yet_another_package"])
+        runner = RunnerMultipleMock(["sudo apt-get update",
+                                     "sudo apt-get install -y --no-install-recommends yet_another_package"])
         spt = SystemPackageTool(runner=runner, tool=AptTool())
         spt.install(packages)
         self.assertEquals(7, runner.calls)
