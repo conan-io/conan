@@ -8,7 +8,7 @@ from conans.util.files import load
 
 class ToolsDownloadTest(unittest.TestCase):
 
-    def test_download(self):
+    def test_download_github_raw(self):
         tmp_folder = temp_folder()
         with tools.chdir(tmp_folder):
             tools.download("https://raw.githubusercontent.com/conan-io/conan/develop/README.rst",
