@@ -1,5 +1,6 @@
-from conans.client.configure_build_environment import (AutoToolsBuildEnvironment, VisualStudioBuildEnvironment)
 from conans.client.generators.virtualenv import VirtualEnvGenerator
+from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
+from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 
 
 class VirtualBuildEnvGenerator(VirtualEnvGenerator):

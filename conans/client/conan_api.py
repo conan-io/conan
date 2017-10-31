@@ -8,7 +8,7 @@ import conans
 from conans import __version__ as client_version, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
-from conans.client.detect import detect_defaults_settings
+from conans.client.conf.detect import detect_defaults_settings
 from conans.client.manager import ConanManager, existing_info_files
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput

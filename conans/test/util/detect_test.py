@@ -1,6 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestBufferConanOutput
-from conans.client.detect import detect_defaults_settings
+from conans.client.conf.detect import detect_defaults_settings
 import platform
 
 
