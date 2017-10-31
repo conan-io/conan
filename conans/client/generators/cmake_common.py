@@ -107,11 +107,11 @@ set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
 
 
 _target_template = """
-    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
+    conan_package_library_targets("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
                                   CONAN_FULLPATH_LIBS_{uname} "{deps}" "")
-    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
+    conan_package_library_targets("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
                                   CONAN_FULLPATH_LIBS_{uname}_DEBUG "{deps}" "debug")
-    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
+    conan_package_library_targets("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
                                   CONAN_FULLPATH_LIBS_{uname}_RELEASE "{deps}" "release")
 
     add_library({name} INTERFACE IMPORTED)
@@ -166,7 +166,24 @@ def generate_targets_section(dependencies):
 
 _cmake_common_macros = """
 
-function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path deps build_type)
+function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
+    foreach(_LIBRARY_NAME ${libraries})
+        unset(CONAN_FOUND_LIBRARY CACHE)
+        find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
+                     NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+        if(CONAN_FOUND_LIBRARY)
+            message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
+            set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${CONAN_FOUND_LIBRARY})
+        else()
+            message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
+            set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
+        endif()
+    endforeach()
+    unset(CONAN_FOUND_LIBRARY CACHE)
+    set(${libraries_abs_path} ${CONAN_FULLPATH_LIBS} PARENT_SCOPE)
+endfunction()
+
+function(conan_package_library_targets libraries package_libdir libraries_abs_path deps build_type)
     foreach(_LIBRARY_NAME ${libraries})
         unset(CONAN_FOUND_LIBRARY CACHE)
         find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
