@@ -43,6 +43,7 @@ class BuildMode(object):
         self._out = output
         self.outdated = False
         self.missing = False
+        self.never = False
         self.patterns = []
         self._unused_patterns = []
         self.all = False
@@ -53,22 +54,23 @@ class BuildMode(object):
         if len(params) == 0:
             self.all = True
         else:
-            never = False
             for param in params:
                 if param == "outdated":
                     self.outdated = True
                 elif param == "missing":
                     self.missing = True
                 elif param == "never":
-                    never = True
+                    self.never = True
                 else:
                     self.patterns.append("%s" % param)
 
-            if never and (self.outdated or self.missing or self.patterns):
+            if self.never and (self.outdated or self.missing or self.patterns):
                 raise ConanException("--build=never not compatible with other options")
         self._unused_patterns = list(self.patterns)
 
     def forced(self, conan_file, reference):
+        if self.never:
+            return False
         if self.all:
             return True
 
