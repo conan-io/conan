@@ -107,40 +107,17 @@ set(CONAN_CMD_C_FLAGS ${CONAN_C_FLAGS})
 
 
 _target_template = """
-    #conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
-    #                              CONAN_FULLPATH_LIBS_{uname})
-    message(STATUS "0TARGET {name} WILL LINK " ${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}})
-    message(STATUS "0TARGET {name} WILL LINK " ${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}})
+    conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}}}" "${{CONAN_LIB_DIRS_{uname}}}"
+                                  CONAN_FULLPATH_LIBS_{uname} "{deps}" "")
     conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_DEBUG}}" "${{CONAN_LIB_DIRS_{uname}_DEBUG}}"
-                                  CONAN_FULLPATH_LIBS_{uname}_DEBUG)
+                                  CONAN_FULLPATH_LIBS_{uname}_DEBUG "{deps}" "debug")
     conan_find_libraries_abs_path("${{CONAN_LIBS_{uname}_RELEASE}}" "${{CONAN_LIB_DIRS_{uname}_RELEASE}}"
-                                  CONAN_FULLPATH_LIBS_{uname}_RELEASE)
-    message(STATUS "1TARGET {name} WILL LINK " ${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}})
-    message(STATUS "1TARGET {name} WILL LINK " ${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}})
+                                  CONAN_FULLPATH_LIBS_{uname}_RELEASE "{deps}" "release")
+
     add_library({name} INTERFACE IMPORTED)
 
-    unset(CONAN_FULLPATH_LIBS)
-    foreach(_LIBRARY_NAME ${{CONAN_LIBS_{uname}}})
-        unset(CONAN_FOUND_LIBRARY CACHE)
-        find_library(CONAN_FOUND_LIBRARY NAME ${{_LIBRARY_NAME}} PATHS "${{CONAN_LIB_DIRS_{uname}}}"
-                     NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-        if(CONAN_FOUND_LIBRARY)
-            message(STATUS "Library ${{_LIBRARY_NAME}} found ${{CONAN_FOUND_LIBRARY}}")
-            message(STATUS "Creating imported library: " ${{_LIBRARY_NAME}})
-            add_library(${{_LIBRARY_NAME}} UNKNOWN IMPORTED)
-            set_target_properties(${{_LIBRARY_NAME}} PROPERTIES IMPORTED_LOCATION ${{CONAN_FOUND_LIBRARY}})
-            set_property(TARGET ${{_LIBRARY_NAME}} PROPERTY INTERFACE_LINK_LIBRARIES {deps})
-            set(CONAN_FULLPATH_LIBS ${{_LIBRARY_NAME}} ${{CONAN_FULLPATH_LIBS}})
-        else()
-            message(STATUS "Library ${{_LIBRARY_NAME}} not found in package, might be system one")
-            set(CONAN_FULLPATH_LIBS ${{CONAN_FULLPATH_LIBS}} ${{_LIBRARY_NAME}})
-        endif()
-    endforeach()
-    message(STATUS "TARGET {name} WILL LINK " ${{CONAN_FULLPATH_LIBS}})
-    message(STATUS "2TARGET {name} WILL LINK " ${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}})
-    message(STATUS "2TARGET {name} WILL LINK " ${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}})
     # Property INTERFACE_LINK_FLAGS do not work, necessary to add to INTERFACE_LINK_LIBRARIES
-    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
+    set_property(TARGET {name} PROPERTY INTERFACE_LINK_LIBRARIES ${{CONAN_FULLPATH_LIBS_{uname}}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_LIST}}
                                                                  $<$<CONFIG:Release>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
                                                                  $<$<CONFIG:RelWithDebInfo>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
                                                                  $<$<CONFIG:MinSizeRel>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
@@ -177,7 +154,7 @@ def generate_targets_section(dependencies):
 
     for dep_name, dep_info in dependencies:
         use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
-        deps = "" if not use_deps else " ".join(use_deps)
+        deps = "" if not use_deps else ";".join(use_deps)
         section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                                uname=dep_name.upper()))
 
@@ -189,21 +166,25 @@ def generate_targets_section(dependencies):
 
 _cmake_common_macros = """
 
-function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path)
-    unset(libraries_abs_path CACHE)
+function(conan_find_libraries_abs_path libraries package_libdir libraries_abs_path deps build_type)
     foreach(_LIBRARY_NAME ${libraries})
         unset(CONAN_FOUND_LIBRARY CACHE)
-        find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir} NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+        find_library(CONAN_FOUND_LIBRARY NAME ${_LIBRARY_NAME} PATHS ${package_libdir}
+                     NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
         if(CONAN_FOUND_LIBRARY)
             message(STATUS "Library ${_LIBRARY_NAME} found ${CONAN_FOUND_LIBRARY}")
-            set(_CONAN_FULLPATH_LIBS ${_CONAN_FULLPATH_LIBS} ${CONAN_FOUND_LIBRARY})
+            set(_LIB_NAME ${_LIBRARY_NAME}${build_type})
+            add_library(${_LIB_NAME} UNKNOWN IMPORTED)
+            set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
+            set_property(TARGET ${_LIB_NAME} PROPERTY INTERFACE_LINK_LIBRARIES ${deps})
+            set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIB_NAME})
         else()
             message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
-            set(_CONAN_FULLPATH_LIBS ${_CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
+            set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIBRARY_NAME})
         endif()
     endforeach()
     unset(CONAN_FOUND_LIBRARY CACHE)
-    set(${libraries_abs_path} ${_CONAN_FULLPATH_LIBS} PARENT_SCOPE)
+    set(${libraries_abs_path} ${CONAN_FULLPATH_LIBS} PARENT_SCOPE)
 endfunction()
 
 macro(conan_set_libcxx)
