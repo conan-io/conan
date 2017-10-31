@@ -122,7 +122,7 @@ _target_template = """
                                                                  $<$<CONFIG:RelWithDebInfo>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
                                                                  $<$<CONFIG:MinSizeRel>:${{CONAN_FULLPATH_LIBS_{uname}_RELEASE}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_RELEASE_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_RELEASE_LIST}}>
                                                                  $<$<CONFIG:Debug>:${{CONAN_FULLPATH_LIBS_{uname}_DEBUG}} ${{CONAN_SHARED_LINKER_FLAGS_{uname}_DEBUG_LIST}} ${{CONAN_EXE_LINKER_FLAGS_{uname}_DEBUG_LIST}}>
-                                                                 )
+                                                                 {deps})
     set_property(TARGET {name} PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${{CONAN_INCLUDE_DIRS_{uname}}}
                                                                       $<$<CONFIG:Release>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
                                                                       $<$<CONFIG:RelWithDebInfo>:${{CONAN_INCLUDE_DIRS_{uname}_RELEASE}}>
@@ -154,7 +154,7 @@ def generate_targets_section(dependencies):
 
     for dep_name, dep_info in dependencies:
         use_deps = ["CONAN_PKG::%s" % d for d in dep_info.public_deps]
-        deps = "" if not use_deps else ";".join(use_deps)
+        deps = "" if not use_deps else " ".join(use_deps)
         section.append(_target_template.format(name="CONAN_PKG::%s" % dep_name, deps=deps,
                                                uname=dep_name.upper()))
 
@@ -193,7 +193,8 @@ function(conan_package_library_targets libraries package_libdir libraries_abs_pa
             set(_LIB_NAME ${_LIBRARY_NAME}${build_type})
             add_library(${_LIB_NAME} UNKNOWN IMPORTED)
             set_target_properties(${_LIB_NAME} PROPERTIES IMPORTED_LOCATION ${CONAN_FOUND_LIBRARY})
-            set_property(TARGET ${_LIB_NAME} PROPERTY INTERFACE_LINK_LIBRARIES ${deps})
+            string(REPLACE " " ";" deps_list "${deps}")
+            set_property(TARGET ${_LIB_NAME} PROPERTY INTERFACE_LINK_LIBRARIES ${deps_list})
             set(CONAN_FULLPATH_LIBS ${CONAN_FULLPATH_LIBS} ${_LIB_NAME})
         else()
             message(STATUS "Library ${_LIBRARY_NAME} not found in package, might be system one")
