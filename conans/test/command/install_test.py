@@ -8,7 +8,7 @@ from conans.paths import CONANFILE, CONANINFO
 from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
-from conans.client.detect import detected_os
+from conans.client.conf.detect import detected_os
 from conans.util.files import load
 
 
