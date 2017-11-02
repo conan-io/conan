@@ -409,10 +409,11 @@ class ConanManager(object):
                 tmp.extend([g for g in generators if g not in tmp])
                 conanfile.generators = tmp
                 write_generators(conanfile, install_folder, output)
-            # Write conaninfo
-            content = normalize(conanfile.info.dumps())
-            save(os.path.join(install_folder, CONANINFO), content)
-            output.info("Generated %s" % CONANINFO)
+            if not isinstance(reference, ConanFileReference):
+                # Write conaninfo
+                content = normalize(conanfile.info.dumps())
+                save(os.path.join(install_folder, CONANINFO), content)
+                output.info("Generated %s" % CONANINFO)
             if not no_imports:
                 run_imports(conanfile, install_folder, output)
             call_system_requirements(conanfile, output)
