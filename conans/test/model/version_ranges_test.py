@@ -30,6 +30,8 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "4.2.3-pre")
         result = satisfying(["4.2.2", "4.2.3-pre", "4.2.4"], "~4.2.3-", output)
         self.assertEqual(result, "4.2.4")
+        result = satisfying(["4.2.2", "4.2.3-pre", "4.2.3"], "~4.2.3-", output)
+        self.assertEqual(result, "4.2.3")
 
     def basic_test(self):
         output = TestBufferConanOutput()
