@@ -85,9 +85,38 @@ def vs_installation_path(version):
     return vs_installation_path._cached[version]
 
 
+def find_windows_10_sdk():
+    """finds valid Windows 10 SDK version which can be passed to vcvarsall.bat (vcvars_command)"""
+    # uses the same method as VCVarsQueryRegistry.bat
+    from six.moves import winreg  # @UnresolvedImport
+    hives = [
+        (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Wow6432Node'),
+        (winreg.HKEY_CURRENT_USER, r'SOFTWARE\Wow6432Node'),
+        (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE'),
+        (winreg.HKEY_CURRENT_USER, r'SOFTWARE')
+    ]
+    for key, subkey in hives:
+        try:
+            hkey = winreg.OpenKey(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey)
+            installation_folder, _ = winreg.QueryValueEx(hkey, 'InstallationFolder')
+            if os.path.isdir(installation_folder):
+                include_dir = os.path.join(installation_folder, 'include')
+                for sdk_version in os.listdir(include_dir):
+                    if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
+                        windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
+                        if os.path.isfile(windows_h):
+                            return sdk_version
+        except EnvironmentError:
+            pass
+        finally:
+            winreg.CloseKey(hkey)
+    return None
+
+
 def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
+    os_setting = settings.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
@@ -144,6 +173,14 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
             vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
             command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
 
+    if os_setting == 'WindowsStore':
+        os_version_setting = settings.get_safe("os.version")
+        if os_version_setting == '8.1':
+            command += ' store 8.1'
+        elif os_version_setting == '10.0':
+            command += ' store ' + find_windows_10_sdk()
+        else:
+            raise ConanException('unsupported Windows Store version %s' % os_version_setting)
     return command
 
 
