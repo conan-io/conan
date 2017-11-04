@@ -5,7 +5,7 @@ import subprocess
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import unix_path
-from conans.client.tools.oss import cpu_count
+from conans.client.tools.oss import cpu_count, detected_architecture
 from conans.errors import ConanException
 
 _global_output = None
@@ -90,7 +90,19 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
-    param = "x86" if arch_setting == "x86" else "amd64"
+    # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
+    if detected_architecture() == 'x86_64':
+        vcvars_arch = {'x86': 'x86',
+                       'x86_64': 'amd64',
+                       'armv7': 'amd64_arm',
+                       'armv8': 'amd64_arm64'}.get(arch_setting)
+    elif detected_architecture() == 'x86':
+        vcvars_arch = {'x86': 'x86',
+                       'x86_64': 'x86_amd64',
+                       'armv7': 'x86_arm',
+                       'armv8': 'x86_arm64'}.get(arch_setting)
+    if not vcvars_arch:
+        raise ConanException('unsupported architecture %s' % arch_setting)
     existing_version = os.environ.get("VisualStudioVersion")
     if existing_version:
         command = "echo Conan:vcvars already set"
@@ -119,7 +131,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                     'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
             command = ('set "VSCMD_START_DIR=%%CD%%" && '
-                       'call "%s" %s' % (vcvars_path, param))
+                       'call "%s" %s' % (vcvars_path, vcvars_arch))
         else:
             try:
                 vs_path = os.environ[env_var]
@@ -129,7 +141,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                 _global_output.warn('VS variable %s points to the non-existing path "%s",'
                     'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
-            command = ('call "%s" %s' % (vcvars_path, param))
+            command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
 
     return command
 
