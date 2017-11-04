@@ -40,11 +40,12 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         raise ConanException("Cannot build_sln_command, arch not defined")
     command += "msbuild %s /p:Configuration=%s" % (sln_path, build_type)
     arch = str(arch)
-    if arch in ["x86_64", "x86"]:
-        command += ' /p:Platform='
-        command += '"x64"' if arch == "x86_64" else '"x86"'
-    elif "ARM" in arch.upper():
-        command += ' /p:Platform="ARM"'
+    msvc_arch = {'x86': 'x86',
+                 'x86_64': 'x64',
+                 'armv7': 'ARM',
+                 'armv8': 'ARM64'}.get(arch)
+    if msvc_arch:
+        command += ' /p:Platform="%s"' % msvc_arch
 
     if parallel:
         command += ' /m:%s' % cpu_count()
