@@ -121,6 +121,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
         raise ConanException("compiler.version setting required for vcvars not defined")
 
     # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
+    arch_setting = arch_setting or 'x86_64'
     if detected_architecture() == 'x86_64':
         vcvars_arch = {'x86': 'x86',
                        'x86_64': 'amd64',
