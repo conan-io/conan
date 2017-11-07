@@ -29,9 +29,13 @@ conan_basic_setup()''')
 
     def build(self):
         cmake = CMake(self)
-        self.run('cmake hello %s' % cmake.command_line)
-        self.run("cmake --build . %s" % cmake.build_config)
+        cmake.configure(source_dir="%s/hello" % self.source_folder)
+        cmake.build()
 
+        # Explicit way:
+        # self.run('cmake %s/hello %s' % (self.source_folder, cmake.command_line))
+        # self.run("cmake --build . %s" % cmake.build_config)
+        
     def package(self):
         self.copy("*.h", dst="include", src="hello")
         self.copy("*hello.lib", dst="lib", keep_path=False)
@@ -45,6 +49,7 @@ conan_basic_setup()''')
 """
 
 conanfile_bare = """from conans import ConanFile
+from conans import tools
 
 class {package_name}Conan(ConanFile):
     name = "{name}"
@@ -54,8 +59,11 @@ class {package_name}Conan(ConanFile):
     url = "None"
     license = "None"
 
+    def package(self):
+        self.copy("*")
+
     def package_info(self):
-        self.cpp_info.libs = self.collect_libs()
+        self.cpp_info.libs = tools.collect_libs(self)
 """
 
 conanfile_sources = """from conans import ConanFile, CMake
@@ -75,8 +83,12 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        self.run('cmake %s/src %s' % (self.source_folder, cmake.command_line))
-        self.run("cmake --build . %s" % cmake.build_config)
+        cmake.configure(source_dir="%s/src" % self.source_folder)
+        cmake.build()
+
+        # Explicit way:
+        # self.run('cmake %s/src %s' % (self.source_folder, cmake.command_line))
+        # self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
         self.copy("*.h", dst="include", src="src")

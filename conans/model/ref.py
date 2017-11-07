@@ -95,12 +95,3 @@ class PackageReference(namedtuple("PackageReference", "conan package_id")):
 
     def __repr__(self):
         return "%s:%s" % (self.conan, self.package_id)
-
-
-def is_a_reference(ref):
-    try:
-        ConanFileReference.loads(ref)
-        return True
-    except:
-        pass
-    return False

@@ -5,7 +5,6 @@ from conans.test.utils.tools import TestServer, TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
 from nose.plugins.attrib import attr
-from conans.model.build_info import DepsCppInfo
 from conans.util.files import load
 import os
 from conans.paths import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE

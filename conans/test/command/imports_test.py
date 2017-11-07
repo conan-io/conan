@@ -125,8 +125,7 @@ class ConanLib(ConanFile):
 
     def install_manifest_without_install_test(self):
         self.client.save({"conanfile.txt": test1}, clean_first=True)
-        tmp_folder = temp_folder()
-        self.client.run('imports . -d "%s"' % tmp_folder, ignore_error=True)
+        self.client.run('imports . ', ignore_error=True)
         self.assertIn("You can generate it using 'conan install'", self.client.user_io.out)
 
     def install_dest_test(self):
@@ -135,7 +134,7 @@ class ConanLib(ConanFile):
         self.assertNotIn("file1.txt", os.listdir(self.client.current_folder))
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
 
-        self.client.run("imports . -d myfolder")
+        self.client.run("imports . -imf myfolder")
         files = os.listdir(os.path.join(self.client.current_folder, "myfolder"))
         self.assertIn("file1.txt", files)
         self.assertIn("file2.txt", files)
@@ -147,7 +146,7 @@ class ConanLib(ConanFile):
         mkdir(self.client.current_folder)
         self.client.run("install .. --no-imports")
         self.client.current_folder = tmp
-        self.client.run("imports . --build-folder=build")
+        self.client.run("imports . --install-folder=build --import-folder=.")
         files = os.listdir(self.client.current_folder)
         self.assertIn("file1.txt", files)
         self.assertIn("file2.txt", files)
@@ -159,7 +158,7 @@ class ConanLib(ConanFile):
         self.assertNotIn("file2.txt", os.listdir(self.client.current_folder))
 
         tmp_folder = temp_folder()
-        self.client.run('imports . -d "%s"' % tmp_folder)
+        self.client.run('imports . -imf "%s"' % tmp_folder)
         files = os.listdir(tmp_folder)
         self.assertIn("file1.txt", files)
         self.assertIn("file2.txt", files)

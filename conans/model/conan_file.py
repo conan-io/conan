@@ -124,8 +124,7 @@ class ConanFile(object):
         # something that can run commands, as os.sytem
         self._runner = runner
 
-        self._conanfile_directory = conanfile_directory
-        self.package_folder = None  # Assigned at runtime
+        self.conanfile_directory = conanfile_directory
         self._scope = None
 
         # user specified env variables
@@ -141,8 +140,8 @@ class ConanFile(object):
 
     @property
     def env(self):
-        """Apply the self.deps_env_info into a copy of self._env_values
-        (user specified from profiles or -e)"""
+        """Apply the self.deps_env_info into a copy of self._env_values (will prioritize the
+        self._env_values, user specified from profiles or -e first, then inherited)"""
         # Cannot be lazy cached, because it's called in configure node, and we still don't have
         # the deps_env_info objects available
         tmp_env_values = self._env_values.copy()
@@ -182,10 +181,6 @@ class ConanFile(object):
     @scope.setter
     def scope(self, value):
         self._scope = value
-
-    @property
-    def conanfile_directory(self):
-        return self._conanfile_directory
 
     @property
     def build_policy_missing(self):

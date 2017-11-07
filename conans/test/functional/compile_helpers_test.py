@@ -2,8 +2,8 @@ import os
 import platform
 import unittest
 
-from conans.client.configure_environment import ConfigureEnvironment
-from conans.client.gcc import GCC
+from conans.client.build.configure_environment import ConfigureEnvironment
+from conans.client.build.gcc import GCC
 from conans.client.runner import ConanRunner
 from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo
@@ -486,4 +486,4 @@ class ProfilesEnvironmentTest(unittest.TestCase):
             profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
         for varname, value in env.items():
             profile.env_values.add(varname, value)
-        save(os.path.join(self.client.client_cache.profiles_path, name), profile.dumps())
+        save(os.path.join(self.client.client_cache.profiles_path, name), "include(default)\n" + profile.dumps())

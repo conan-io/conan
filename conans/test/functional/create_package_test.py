@@ -51,7 +51,7 @@ class ExporterTest(unittest.TestCase):
 
         client.save(files, path=reg_folder)
         client.save({CONANFILE: myconan1,
-                     CONANINFO: "//empty",
+                     "infos/%s" % CONANINFO: "//empty",
                      "include/no_copy/lib0.h":                     "NO copy",
                      "include/math/lib1.h":                        "copy",
                      "include/math/lib2.h":                        "copy",
@@ -76,6 +76,7 @@ class ExporterTest(unittest.TestCase):
         package_ref = PackageReference(conan_ref, "myfakeid")
         build_folder = client.paths.build(package_ref)
         package_folder = client.paths.package(package_ref)
+        install_folder = os.path.join(build_folder, "infos")
 
         shutil.copytree(reg_folder, build_folder)
 
@@ -83,8 +84,8 @@ class ExporterTest(unittest.TestCase):
         loader = ConanFileLoader(None, Settings(), Profile())
         conanfile = loader.load_conan(conanfile_path, None)
 
-        create_package(conanfile, build_folder, build_folder, package_folder, output,
-                       copy_info=True)
+        create_package(conanfile, build_folder, build_folder, package_folder, install_folder,
+                       output, copy_info=True)
 
         # test build folder
         self.assertTrue(os.path.exists(build_folder))

@@ -177,7 +177,8 @@ def get_travis(name, version, user, channel, linux_gcc_versions, linux_clang_ver
 
     xcode_map = {"8.1": "8.3",
                  "8.0": "8.2",
-                 "7.3": "7.3"}
+                 "7.3": "7.3",
+                 "9.0": "9"}
     for apple_clang in osx_clang_versions:
         xcode = xcode_map[apple_clang]
         config.append(osx_config.format(xcode=xcode, version=apple_clang))
@@ -246,7 +247,7 @@ def ci_get_files(name, version, user, channel, visual_versions, linux_gcc_versio
     if gitlab_clang_versions is True:
         gitlab_clang_versions = clang_versions
     if osx_clang_versions is True:
-        osx_clang_versions = ["7.3", "8.0", "8.1"]
+        osx_clang_versions = ["7.3", "8.0", "8.1", "9.0"]
     if not visual_versions:
         visual_versions = []
     if not linux_gcc_versions:

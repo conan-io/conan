@@ -38,7 +38,7 @@ def pyinstall(source_folder):
     conan_path = os.path.join(source_folder, 'conans', 'conan.py')
     conan_server_path = os.path.join(source_folder, 'conans', 'conan_server.py')
     conan_build_info_path = os.path.join(source_folder, "conans/build_info/command.py")
-    hidden = "--hidden-import=glob"
+    hidden = "--hidden-import=glob --hidden-import=pylint.reporters.text"
     if platform.system() != "Windows":
         hidden += " --hidden-import=setuptools.msvc"
     subprocess.call('python pyinstaller.py -y -p %s --console %s %s'

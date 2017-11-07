@@ -1,17 +1,15 @@
 import platform
-from contextlib import contextmanager
-
 import logging
-
 import re
-
 import os
 import sys
+
+from contextlib import contextmanager
+from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import load, save, _generic_algorithm_sum
-from patch import fromfile, fromstring
 
 
 _global_output = None
@@ -92,9 +90,6 @@ def unzip(filename, destination=".", keep_permissions=False):
                 extracted_size += file_.file_size
                 print_progress(extracted_size, uncompress_size)
                 try:
-                    # Win path limit is 260 chars
-                    if len(file_.filename) + len(full_path) >= 260:
-                        raise ValueError("Filename too long")
                     z.extract(file_, full_path)
                 except Exception as e:
                     _global_output.error("Error extract %s\n%s" % (file_.filename, str(e)))
@@ -128,6 +123,7 @@ def check_with_algorithm_sum(algorithm_name, file_path, signature):
                                                           os.path.basename(file_path),
                                                           signature,
                                                           real_signature))
+
 
 def check_sha1(file_path, signature):
     check_with_algorithm_sum("sha1", file_path, signature)
@@ -173,6 +169,29 @@ def patch(base_path=None, patch_file=None, patch_string=None, strip=0, output=No
     if not patchset:
         raise ConanException("Failed to parse patch: %s" % (patch_file if patch_file else "string"))
 
+    # account for new and deleted files, upstream dep won't fix them
+    items = []
+    for p in patchset:
+        source = p.source.decode("utf-8")
+        if source.startswith("a/"):
+            source = source[2:]
+        target = p.target.decode("utf-8")
+        if target.startswith("b/"):
+            target = target[2:]
+        if "dev/null" in source:
+            if base_path:
+                target = os.path.join(base_path, target)
+            hunks = [s.decode("utf-8") for s in p.hunks[0].text]
+            new_file = "".join(hunk[1:] for hunk in hunks)
+            save(target, new_file)
+        elif "dev/null" in target:
+            if base_path:
+                source = os.path.join(base_path, source)
+            os.unlink(source)
+        else:
+            items.append(p)
+    patchset.items = items
+
     if not patchset.apply(root=base_path, strip=strip):
         raise ConanException("Failed to apply patch: %s" % patch_file)
 
@@ -204,7 +223,7 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
 
 def unix_path(path):
     """"Used to translate windows paths to MSYS unix paths like
-    c/users/path/to/file"""
+    c/users/path/to/file. Not working in a regular console or MinGW!"""
     pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
     return pattern.sub('/\\1/', path).replace('\\', '/').lower()
 

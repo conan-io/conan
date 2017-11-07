@@ -1,9 +1,8 @@
 import os
 from collections import OrderedDict
-from genericpath import isdir
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
-from conans.client.detect import detect_defaults_settings
+from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException
@@ -14,6 +13,8 @@ from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.paths import SimplePaths, CONANINFO, PUT_HEADERS
 from conans.util.files import save, load, normalize
+from conans.util.locks import SimpleLock, ReadLock, WriteLock, NoLock
+
 
 CONAN_CONF = 'conan.conf'
 CONAN_SETTINGS = "settings.yml"
@@ -34,7 +35,29 @@ class ClientCache(SimplePaths):
         self._output = output
         self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
         self._default_profile = None
+        self._no_lock = None
         super(ClientCache, self).__init__(self._store_folder)
+
+    def _no_locks(self):
+        if self._no_lock is None:
+            self._no_lock = self.conan_config.cache_no_locks
+        return self._no_lock
+
+    def conanfile_read_lock(self, conan_ref):
+        if self._no_locks():
+            return NoLock()
+        return ReadLock(os.path.join(self.conan(conan_ref), "rw"))
+
+    def conanfile_write_lock(self, conan_ref):
+        if self._no_locks():
+            return NoLock()
+        return WriteLock(os.path.join(self.conan(conan_ref), "rw"))
+
+    def package_lock(self, package_ref):
+        if self._no_locks():
+            return NoLock()
+        return SimpleLock(os.path.join(self.conan(package_ref.conan), "locks",
+                                       package_ref.package_id))
 
     @property
     def put_headers_path(self):
@@ -144,7 +167,7 @@ class ClientCache(SimplePaths):
         packages_dir = self.packages(conan_reference)
         try:
             packages = [dirname for dirname in os.listdir(packages_dir)
-                        if isdir(os.path.join(packages_dir, dirname))]
+                        if os.path.isdir(os.path.join(packages_dir, dirname))]
         except:  # if there isn't any package folder
             packages = []
         return packages
@@ -155,7 +178,7 @@ class ClientCache(SimplePaths):
         builds_dir = self.builds(conan_reference)
         try:
             builds = [dirname for dirname in os.listdir(builds_dir)
-                      if isdir(os.path.join(builds_dir, dirname))]
+                      if os.path.isdir(os.path.join(builds_dir, dirname))]
         except:  # if there isn't any package folder
             builds = []
         return builds

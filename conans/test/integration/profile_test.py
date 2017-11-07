@@ -1,5 +1,6 @@
 import unittest
 
+from conans.client import tools
 from conans.test.utils.tools import TestClient
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.util.files import save, load
@@ -7,7 +8,7 @@ import os
 from conans.paths import CONANFILE
 from collections import OrderedDict
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.profiles import create_profile
+from conans.test.utils.profiles import create_profile as _create_profile
 from nose_parameterized import parameterized
 
 
@@ -33,6 +34,14 @@ class AConan(ConanFile):
 """
 
 
+def create_profile(folder, name, settings=None, scopes=None, package_settings=None, env=None,
+                   package_env=None, options=None):
+    _create_profile(folder, name, settings, scopes, package_settings, env, package_env, options)
+    content = load(os.path.join(folder, name))
+    content = "include(default)\n    \n" + content
+    save(os.path.join(folder, name), content)
+
+
 class ProfileTest(unittest.TestCase):
 
     def setUp(self):
@@ -47,7 +56,8 @@ class ProfileTest(unittest.TestCase):
         '''
         clang_profile_path = os.path.join(self.client.client_cache.profiles_path, "clang")
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
+                        ignore_error=True)
         self.assertIn("Error reading 'clang' profile", self.client.user_io.out)
         self.assertIn("Bad syntax", self.client.user_io.out)
 
@@ -56,7 +66,8 @@ class ProfileTest(unittest.TestCase):
         [invented]
         '''
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
+                        ignore_error=True)
         self.assertIn("Unrecognized field 'invented'", self.client.user_io.out)
         self.assertIn("Error reading 'clang' profile", self.client.user_io.out)
 
@@ -65,23 +76,28 @@ class ProfileTest(unittest.TestCase):
         as
         '''
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
-        self.assertIn("Error reading 'clang' profile: Invalid setting line 'as'", self.client.user_io.out)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
+                        ignore_error=True)
+        self.assertIn("Error reading 'clang' profile: Invalid setting line 'as'",
+                      self.client.user_io.out)
 
         profile = '''
         [env]
         as
         '''
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
-        self.assertIn("Error reading 'clang' profile: Invalid env line 'as'", self.client.user_io.out)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
+                        ignore_error=True)
+        self.assertIn("Error reading 'clang' profile: Invalid env line 'as'",
+                      self.client.user_io.out)
 
         profile = '''
         [scopes]
         as
         '''
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
+                        ignore_error=True)
         self.assertIn("Error reading 'clang' profile: Bad scope as", self.client.user_io.out)
 
         profile = '''
@@ -89,26 +105,29 @@ class ProfileTest(unittest.TestCase):
         os =   a value
         '''
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang",
+                        ignore_error=True)
         # stripped "a value"
         self.assertIn("'a value' is not a valid 'settings.os'", self.client.user_io.out)
 
         profile = '''
+        include(default)
         [env]
         ENV_VAR =   a value
         '''
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang", ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable --build missing -pr clang")
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
         profile = '''
+        include(default)
         # Line with comments is not a problem
         [env]
         # Not even here
         ENV_VAR =   a value
         '''
         save(clang_profile_path, profile)
-        self.client.run("install Hello0/0.1@lasote/stable --build -pr clang", ignore_error=True)
+        self.client.run("install Hello0/0.1@lasote/stable --build -pr clang")
         self._assert_env_variable_printed("ENV_VAR", "a value")
 
     @parameterized.expand([("", ), ("./local_profiles/", ), (temp_folder() + "/", )])
@@ -133,7 +152,8 @@ class ProfileTest(unittest.TestCase):
         self._assert_env_variable_printed("OTHER_VAR", "2")
 
         # Override with package var
-        self.client.run("install Hello0/0.1@lasote/stable --build -pr envs -e Hello0:A_VAR=OTHER_VALUE")
+        self.client.run("install Hello0/0.1@lasote/stable --build "
+                        "-pr envs -e Hello0:A_VAR=OTHER_VALUE")
         self._assert_env_variable_printed("A_VAR", "OTHER_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "2")
 
@@ -160,6 +180,9 @@ class ProfileTest(unittest.TestCase):
 
         create_profile(self.client.client_cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
+
+        tools.replace_in_file(self.client.client_cache.default_profile_path,
+                              "compiler.libcxx", "#compiler.libcxx", strict=False)
 
         self.client.save(files)
         self.client.run("export lasote/stable")
@@ -297,7 +320,8 @@ class DefaultNameConan(ConanFile):
         self.assertIn("My var is IN_TEST_PACKAGE", str(self.client.user_io.out))
 
         # Try now overriding some variables with command line
-        self.client.run("test_package --profile scopes_env2 -e DefaultName:ONE_VAR=InTestPackageOverride "
+        self.client.run("test_package --profile scopes_env2 "
+                        "-e DefaultName:ONE_VAR=InTestPackageOverride "
                         "-e Hello0:ONE_VAR=PackageValueOverride ")
 
         self._assert_env_variable_printed("ONE_VAR", "PackageValueOverride")
@@ -347,7 +371,8 @@ class DefaultNameConan(ConanFile):
         self.client.run("export lasote/stable")
 
         # Create a profile that doesn't activate the require
-        create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={"os": "Linux"},
+        create_profile(self.client.client_cache.profiles_path, "scopes_env",
+                       settings={"os": "Linux"},
                        scopes={})
 
         # Install with the previous profile
@@ -356,7 +381,8 @@ class DefaultNameConan(ConanFile):
                 WinRequire/0.1@lasote/stable''', self.client.user_io.out)
 
         # Create a profile that activate the require
-        create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={"os": "Windows"},
+        create_profile(self.client.client_cache.profiles_path, "scopes_env",
+                       settings={"os": "Windows"},
                        scopes={})
 
         # Install with the previous profile

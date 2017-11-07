@@ -2,6 +2,7 @@ import copy
 import platform
 import os
 
+from conans.client import join_arguments
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
@@ -34,46 +35,6 @@ def stdlib_defines(compiler, libcxx):
         elif str(libcxx) == "libstdc++11":
             ret.append("_GLIBCXX_USE_CXX11_ABI=1")
     return ret
-
-
-class VisualStudioBuildEnvironment(object):
-    """
-    - LIB: library paths with semicolon separator
-    - CL: /I (include paths)
-    """
-    def __init__(self, conanfile):
-        """
-        :param conanfile: ConanFile instance
-        :param quote_paths: The path directories will be quoted. If you are using the vars together with
-                            environment_append keep it to True, for virtualbuildenv quote_paths=False is required.
-        """
-        self.include_paths = conanfile.deps_cpp_info.include_paths
-        self.lib_paths = conanfile.deps_cpp_info.lib_paths
-
-    @property
-    def vars(self):
-        """Used in conanfile with environment_append"""
-        cl_args = " ".join(['/I"%s"' % lib for lib in self.include_paths]) + environ_value_prefix("CL")
-        lib_paths = ";".join(['%s' % lib for lib in self.lib_paths]) + environ_value_prefix("LIB", ";")
-        return {"CL": cl_args,
-                "LIB": lib_paths}
-
-    @property
-    def vars_dict(self):
-        """Used in virtualbuildenvironment"""
-        # Here we do not quote the include paths, it's going to be used by virtual environment
-        cl = ['/I%s' % lib for lib in self.include_paths]
-        lib = [lib for lib in self.lib_paths] # copy
-
-        if os.environ.get("CL", None):
-            cl.append(os.environ.get("CL"))
-
-        if os.environ.get("LIB", None):
-            lib.append(os.environ.get("LIB"))
-
-        ret = {"CL": cl,
-               "LIB": lib}
-        return ret
 
 
 class AutoToolsBuildEnvironment(object):
@@ -118,21 +79,25 @@ class AutoToolsBuildEnvironment(object):
         os_setting = self._conanfile.settings.get_safe("os")
 
         if os_detected == "Windows" and os_setting != "Windows":
-            return None, None, None    # Don't know what to do with these, even exists? its only for configure
+            # Don't know what to do with these, even exists? its only for configure
+            return None, None, None
 
         # Building FOR windows
         if os_setting == "Windows":
             build = "i686-w64-mingw32" if arch_detected == "x86" else "x86_64-w64-mingw32"
             host = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
         else:  # Building for Linux or Android
-            build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu", "Darwin": "apple-macos"}.get(os_detected,
-                                                                                                  os_detected.lower()))
-            if arch_setting == "armv8":
+            build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu",
+                                               "Darwin": "apple-macos"}.get(os_detected,
+                                                                            os_detected.lower()))
+            if arch_setting == "x86":
+                host_arch = "i686"
+            elif arch_setting == "armv8":
                 host_arch = "aarch64"
             else:
                 host_arch = "arm" if "arm" in arch_setting else arch_setting
 
-            host = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
+            host = "%s%s" % (host_arch, { "Linux": "-linux-gnueabi",
                                          "Android": "-linux-android"}.get(os_setting, ""))
             if arch_setting == "armv7hf" and os_setting == "Linux":
                 host += "hf"
@@ -182,11 +147,12 @@ class AutoToolsBuildEnvironment(object):
             self._conanfile.run("%s/configure %s %s"
                                 % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
-    def make(self, args=""):
+    def make(self, args="", make_program=None):
+        make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(self.vars):
             str_args = args_to_string(args)
-            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else ""
-            self._conanfile.run("make %s %s" % (str_args, cpu_count_option))
+            cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
+            self._conanfile.run("%s" % join_arguments([make_program, str_args, cpu_count_option]))
 
     @property
     def _sysroot_flag(self):
@@ -207,7 +173,7 @@ class AutoToolsBuildEnvironment(object):
         if self._build_type == "Debug":
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
-            ret.append("-s")  # Remove all symbol table and relocation information from the executable.
+            ret.append("-s") # Remove all symbol table and relocation information from the executable.
         if self._sysroot_flag:
             ret.append(self._sysroot_flag)
         return ret
@@ -244,8 +210,8 @@ class AutoToolsBuildEnvironment(object):
                         ret.append(arg)
             return ret
 
-        lib_paths = ['-L%s' % x for x in self.library_paths]
-        include_paths = ['-I%s' % x for x in self.include_paths]
+        lib_paths = ['-L%s' % x.replace("\\", "/") for x in self.library_paths]
+        include_paths = ['-I%s' % x.replace("\\", "/") for x in self.include_paths]
 
         ld_flags = append(self.link_flags, lib_paths)
         cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])
@@ -293,11 +259,11 @@ class AutoToolsBuildEnvironment(object):
 
         ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
 
-        cpp_flags = " ".join(cpp_flags) + environ_value_prefix("CPPFLAGS")
-        cxx_flags = " ".join(cxx_flags) + environ_value_prefix("CXXFLAGS")
-        cflags = " ".join(c_flags) + environ_value_prefix("CFLAGS")
-        ldflags = " ".join(ld_flags) + environ_value_prefix("LDFLAGS")
-        libs = " ".join(libs) + environ_value_prefix("LIBS")
+        cpp_flags = " ".join(cpp_flags) + _environ_value_prefix("CPPFLAGS")
+        cxx_flags = " ".join(cxx_flags) + _environ_value_prefix("CXXFLAGS")
+        cflags = " ".join(c_flags) + _environ_value_prefix("CFLAGS")
+        ldflags = " ".join(ld_flags) + _environ_value_prefix("LDFLAGS")
+        libs = " ".join(libs) + _environ_value_prefix("LIBS")
 
         ret = {"CPPFLAGS": cpp_flags.strip(),
                "CXXFLAGS": cxx_flags.strip(),
@@ -309,7 +275,7 @@ class AutoToolsBuildEnvironment(object):
         return ret
 
 
-def environ_value_prefix(var_name, prefix=" "):
+def _environ_value_prefix(var_name, prefix=" "):
     if os.environ.get(var_name, ""):
         return "%s%s" % (prefix, os.environ.get(var_name, ""))
     else:

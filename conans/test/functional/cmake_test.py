@@ -10,7 +10,7 @@ from conans import tools
 from conans.model.conan_file import ConanFile
 from conans.model.settings import Settings
 from conans.client.conf import default_settings_yml
-from conans.client.cmake import CMake
+from conans.client.build.cmake import CMake
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.tools import cpu_count
 from conans.util.files import save
@@ -426,7 +426,6 @@ build_type: [ Release]
         settings.compiler = "Visual Studio"
         settings.compiler.version = "12"
         settings.arch = "x86"
-        settings.os = "Windows"
 
         conan_file = ConanFileMock()
         conan_file.settings = settings
@@ -449,6 +448,23 @@ build_type: [ Release]
         del cmake.definitions["CMAKE_VERBOSE_MAKEFILE"]
         self.assertFalse(cmake.verbose)
 
+    def set_toolset_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file, toolset="v141")
+        self.assertIn('-T "v141"', cmake.command_line)
+
+        with tools.environment_append({"CONAN_CMAKE_TOOLSET": "v141"}):
+            cmake = CMake(conan_file)
+            self.assertIn('-T "v141"', cmake.command_line)
+
     @staticmethod
     def scape(args):
         pattern = "%s" if sys.platform == "win32" else r"'%s'"
@@ -459,7 +475,7 @@ class ConanFileMock(ConanFile):
     def __init__(self, shared=None):
         self.command = None
         self.path = None
-        self._conanfile_directory = "."
+        self.conanfile_directory = "."
         self.source_folder = self.build_folder = "."
         self.settings = None
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")

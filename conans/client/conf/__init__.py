@@ -69,7 +69,10 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
 # read_only_cache = True              # environment CONAN_READ_ONLY_CACHE
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
+# cache_no_locks = True
+# user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
 
+# conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
 
 # cmake_generator                     # environment CONAN_CMAKE_GENERATOR
 # http://www.vtk.org/Wiki/CMake_Cross_Compiling
@@ -154,7 +157,7 @@ class ConanClientConfigParser(ConfigParser, object):
                                                                       None),
 
                "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
-
+               "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
                }
 
         # Filter None values
@@ -239,6 +242,13 @@ class ConanClientConfigParser(ConfigParser, object):
             return self.get_item("general.default_profile")
         except ConanException:
             return DEFAULT_PROFILE_NAME
+
+    @property
+    def cache_no_locks(self):
+        try:
+            return self.get_item("general.cache_no_locks")
+        except ConanException:
+            return False
 
     @property
     def storage(self):
