@@ -345,6 +345,9 @@ class PackageOptions(object):
                       for k, v in definition.items()}
         self._modified = {}
 
+    def __contains__(self, option):
+        return str(option) in self._data
+
     @staticmethod
     def loads(text):
         return PackageOptions(yaml.load(text) or {})
@@ -463,6 +466,9 @@ class Options(object):
 
     def clear(self):
         self._package_options.clear()
+
+    def __contains__(self, option):
+        return option in self._package_options
 
     def __getitem__(self, item):
         return self._deps_package_values.setdefault(item, PackageOptionValues())
