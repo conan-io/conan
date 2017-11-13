@@ -54,9 +54,9 @@ class PrivateDepsTest(unittest.TestCase):
                                                  "conanbuildinfo.cmake"))
         conanbuildinfo_cmake = " ".join(conanbuildinfo_cmake.splitlines())
         self.assertIn("CONAN_PKG::gf PROPERTY INTERFACE_LINK_LIBRARIES "
-                      "${CONAN_FULLPATH_LIBS_GF}", conanbuildinfo_cmake)
+                      "${CONAN_PACKAGE_TARGETS_GF}", conanbuildinfo_cmake)
         self.assertIn("CONAN_PKG::ImGuiTest PROPERTY INTERFACE_LINK_LIBRARIES "
-                      "${CONAN_FULLPATH_LIBS_IMGUITEST}", conanbuildinfo_cmake)
+                      "${CONAN_PACKAGE_TARGETS_IMGUITEST}", conanbuildinfo_cmake)
 
     def consumer_force_build_test(self):
         """If a conanfile requires another private conanfile, but in the install is forced
