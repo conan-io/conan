@@ -349,5 +349,37 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(target)
 
         build, host, target = get_values("Darwin", "x86_64", "Android", "armv7hf")
-        self.assertEquals(build, "x86_64-apple-macos")
+        self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "arm-linux-androideabi")
+
+        build, host, target = get_values("Darwin", "x86_64", "Macos", "x86")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "i686-apple-darwin")
+
+        build, host, target = get_values("Darwin", "x86_64", "iOS", "armv7")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "arm-apple-darwin")
+
+        build, host, target = get_values("Darwin", "x86_64", "watchOS", "armv7k")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "arm-apple-darwin")
+
+        build, host, target = get_values("Darwin", "x86_64", "tvOS", "arm64")
+        self.assertEquals(build, "x86_64-apple-darwin")
+        self.assertEquals(host, "arm-apple-darwin")
+
+    def cross_build_command_test(self):
+        runner = RunnerMock()
+        conanfile = MockConanfile(MockSettings({}), runner)
+        ab = AutoToolsBuildEnvironment(conanfile)
+        ab.configure()
+        self.assertEquals(runner.command_called, "./configure  ")
+
+        ab.configure(host="x86_64-apple-darwin")
+        self.assertEquals(runner.command_called, "./configure  --host=x86_64-apple-darwin")
+
+        ab.configure(build="arm-apple-darwin")
+        self.assertEquals(runner.command_called, "./configure  --build=arm-apple-darwin")
+
+        ab.configure(target="i686-apple-darwin")
+        self.assertEquals(runner.command_called, "./configure  --target=i686-apple-darwin")
