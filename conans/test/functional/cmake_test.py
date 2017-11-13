@@ -370,6 +370,31 @@ build_type: [ Release]
         cmake.test()
         self.assertEqual('cmake --build %s' % CMakeTest.scape('. --target test'), conan_file.command)
 
+    def test_run_tests(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.compiler.runtime = "MDd"
+        settings.arch = "x86"
+        settings.build_type = None
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+        cmake.test()
+        self.assertEqual('cmake --build %s' % CMakeTest.scape('. --target RUN_TESTS'), conan_file.command)
+
+        cmake.generator = "Ninja Makefiles"
+        cmake.test()
+        self.assertEqual('cmake --build %s' % CMakeTest.scape('. --target test -- -j%i' % cpu_count()),
+                         conan_file.command)
+
+        cmake.generator = "NMake Makefiles"
+        cmake.test()
+        self.assertEqual('cmake --build %s' % CMakeTest.scape('. --target test -- -j%i' % cpu_count()),
+                         conan_file.command)
+
     def test_clean_sh_path(self):
 
         if platform.system() != "Windows":
