@@ -383,7 +383,8 @@ build_type: [ Release]
         conan_file.settings = settings
         cmake = CMake(conan_file)
         cmake.test()
-        self.assertEqual('cmake --build %s' % CMakeTest.scape('. --target RUN_TESTS'), conan_file.command)
+        self.assertIn('cmake --build %s' % CMakeTest.scape('. --target RUN_TESTS -- /m:%i' % cpu_count()),
+                      conan_file.command)
 
         cmake.generator = "Ninja Makefiles"
         cmake.test()
