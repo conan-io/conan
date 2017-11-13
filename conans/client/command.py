@@ -741,10 +741,9 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
         parser.add_argument("reference", default="",
-                            help='package recipe reference'
-                            'e.g., MyPackage/1.2@user/channel')
+                            help='package reference. e.g., MyPackage/1.2@user/channel')
         parser.add_argument("user_channel", default="",
-                            help='Destination user/channel'
+                            help='Destination user/channel. '
                             'e.g., lasote/testing')
         parser.add_argument("--package", "-p", nargs=1, action=Extender,
                             help='copy specified package ID')
