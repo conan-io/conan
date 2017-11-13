@@ -16,7 +16,9 @@ def _prepare_sources(client_cache, user_io, remote_manager, reference):
 
 
 def _get_package_ids(client_cache, reference, package_ids):
-    if not package_ids or package_ids is True:
+    if not package_ids:
+        return []
+    if package_ids is True:
         packages = client_cache.packages(reference)
         if os.path.exists(packages):
             package_ids = os.listdir(packages)
@@ -27,6 +29,9 @@ def _get_package_ids(client_cache, reference, package_ids):
 
 def cmd_copy(reference, user_channel, package_ids, client_cache, user_io, remote_manager,
              force=False):
+    """
+    param package_ids: Falsey=do not copy binaries. True=All existing. []=list of ids
+    """
     src_ref = ConanFileReference.loads(reference)
 
     short_paths = _prepare_sources(client_cache, user_io, remote_manager, src_ref)
