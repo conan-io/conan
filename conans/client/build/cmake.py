@@ -329,7 +329,7 @@ class CMake(object):
 
     def test(self, args=None, build_dir=None, target=None):
         if not target:
-            target = "RUN_TESTS" if self._compiler == "Visual Studio" else "test"
+            target = "RUN_TESTS" if self.is_multi_configuration else "test"
         self.build(args=args, build_dir=build_dir, target=target)
 
     @property

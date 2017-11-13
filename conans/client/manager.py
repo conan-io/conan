@@ -4,9 +4,11 @@ import time
 from collections import OrderedDict, Counter
 
 from conans.client import packager
+from conans.client.build_requires import BuildRequires
 from conans.client.client_cache import ClientCache
-from conans.client.deps_builder import DepsGraphBuilder
+from conans.client.cmd.export import cmd_export
 from conans.client.conf.detect import detected_os
+from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
 from conans.client.importer import run_imports, undo_imports, run_deploy
@@ -24,14 +26,13 @@ from conans.client.source import config_source_local
 from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO
-from conans.tools import environment_append
-from conans.util.files import save,  rmdir, normalize, mkdir, load
-from conans.util.log import logger
-from conans.model.manifest import FileTreeManifest
-from conans.client.build_requires import BuildRequires
 from conans.search.search import filter_outdated
+from conans.tools import environment_append
+from conans.util.files import save, rmdir, normalize, mkdir, load
+from conans.util.log import logger
 
 
 class BuildMode(object):
@@ -134,7 +135,6 @@ class ConanManager(object):
 
     def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
                version=None):
-        from conans.client.cmd.export import cmd_export
         cmd_export(user, channel, conan_file_path, self._user_io.out, self._search_manager,
                    self._client_cache, keep_source, filename, name, version)
 
