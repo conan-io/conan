@@ -456,6 +456,8 @@ class ConanAPIV1(object):
 
         if not generators:  # We don't want the default txt
             generators = False
+
+        mkdir(install_folder)
         self._manager.install(reference=reference, install_folder=install_folder, remote=remote,
                               profile=profile, build_modes=build, update=update,
                               manifest_folder=manifest_folder,
