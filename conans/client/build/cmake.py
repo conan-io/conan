@@ -384,7 +384,7 @@ class CMake(object):
         if isinstance(args, ConanFile):
             raise ConanException(deprecated_conanfile_param_message)
         if not target:
-            target = "RUN_TESTS" if self._compiler == "Visual Studio" else "test"
+            target = "RUN_TESTS" if self.is_multi_configuration else "test"
         self._build_new(args=args, build_dir=build_dir, target=target)
 
     @property
