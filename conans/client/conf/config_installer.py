@@ -34,9 +34,10 @@ def _process_git_repo(repo_url, client_cache, output, runner, tmp_folder):
     _process_folder(tmp_folder, client_cache, output)
 
 
-def _process_zip_file(zippath, client_cache, output, tmp_folder):
+def _process_zip_file(zippath, client_cache, output, tmp_folder, remove=False):
     unzip(zippath, tmp_folder)
-    os.unlink(zippath)
+    if remove:
+        os.unlink(zippath)
     _process_folder(tmp_folder, client_cache, output)
 
 
@@ -77,7 +78,7 @@ def _process_download(item, client_cache, output, tmp_folder):
     output.info("Trying to download  %s" % item)
     zippath = os.path.join(tmp_folder, "config.zip")
     tools.download(item, zippath, out=output)
-    _process_zip_file(zippath, client_cache, output, tmp_folder)
+    _process_zip_file(zippath, client_cache, output, tmp_folder, remove=True)
 
 
 def configuration_install(item, client_cache, output, runner):
