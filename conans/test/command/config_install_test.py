@@ -131,6 +131,7 @@ Other/1.2@user/channel conan-center
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
         self._check(zippath)
+        self.assertTrue(os.path.exists(zippath))
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.client_cache.profiles_path)
