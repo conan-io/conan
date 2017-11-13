@@ -88,7 +88,7 @@ class AutoToolsBuildEnvironment(object):
             host = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
         else:  # Building for Linux or Android
             build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu",
-                                               "Darwin": "apple-macos"}.get(os_detected,
+                                               "Darwin": "apple-darwin"}.get(os_detected,
                                                                             os_detected.lower()))
             if arch_setting == "x86":
                 host_arch = "i686"
@@ -97,8 +97,12 @@ class AutoToolsBuildEnvironment(object):
             else:
                 host_arch = "arm" if "arm" in arch_setting else arch_setting
 
-            host = "%s%s" % (host_arch, { "Linux": "-linux-gnueabi",
-                                         "Android": "-linux-android"}.get(os_setting, ""))
+            host = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
+                                         "Android": "-linux-android",
+                                         "Macos": "-apple-darwin",
+                                         "iOS": "-apple-darwin",
+                                         "watchOS": "-apple-darwin",
+                                         "tvOS": "-apple-darwin"}.get(os_setting, ""))
             if arch_setting == "armv7hf" and os_setting == "Linux":
                 host += "hf"
             elif "arm" in arch_setting and arch_setting != "armv8" and os_setting == "Android":
