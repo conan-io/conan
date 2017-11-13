@@ -15,6 +15,8 @@ from conans.test.utils.tools import TestBufferConanOutput
 from conans.tools import cpu_count
 from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
+from conans.model.options import Options, PackageOptions
+from conans.errors import ConanException
 
 
 class CMakeTest(unittest.TestCase):
@@ -225,33 +227,10 @@ build_type: [ Release]
         conanfile to configure/build/test"""
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
-        settings.compiler = "Visual Studio"
-        settings.compiler.version = "12"
-        settings.arch = "x86"
-        settings.os = "Windows"
-
-        dot_dir = "." if sys.platform == 'win32' else "'.'"
-
-        cross = "-DCMAKE_SYSTEM_NAME=\"Windows\" " if platform.system() != "Windows" else ""
-
         conan_file = ConanFileMock()
         conan_file.settings = settings
-        cmake = CMake(settings)
-        cmake.configure(conan_file)
-        cores = '-DCONAN_CXX_FLAGS="/MP{0}" -DCONAN_C_FLAGS="/MP{0}" '.format(tools.cpu_count())
-        self.assertEqual('cd {0} && cmake -G "Visual Studio 12 2013" {1}-DCONAN_EXPORTED="1" '
-                         '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" {2}'
-                         '-Wno-dev {0}'.format(dot_dir, cross, cores),
-                         conan_file.command)
-
-        cmake.build(conan_file)
-        self.assertEqual('cmake --build %s %s'
-                         % (dot_dir, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
-        cmake.test()
-        self.assertEqual('cmake --build %s %s %s'
-                         % (dot_dir, CMakeTest.scape('--target RUN_TESTS'),
-                            (CMakeTest.scape('-- /m:%i' % cpu_count()))),
-                         conan_file.command)
+        with self.assertRaises(ConanException):
+            CMake(settings)
 
     def convenient_functions_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -489,6 +468,7 @@ class ConanFileMock(ConanFile):
         self.conanfile_directory = "."
         self.source_folder = self.build_folder = "."
         self.settings = None
+        self.options = Options(PackageOptions.loads(""))
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = TestBufferConanOutput()
         if shared is not None:
