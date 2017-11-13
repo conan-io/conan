@@ -245,9 +245,12 @@ build_type: [ Release]
                          conan_file.command)
 
         cmake.build(conan_file)
-        self.assertEqual('cmake --build %s' % dot_dir, conan_file.command)
+        self.assertEqual('cmake --build %s %s'
+                         % (dot_dir, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
         cmake.test()
-        self.assertEqual('cmake --build %s %s' % (dot_dir, CMakeTest.scape('--target RUN_TESTS')),
+        self.assertEqual('cmake --build %s %s %s'
+                         % (dot_dir, CMakeTest.scape('--target RUN_TESTS'),
+                            (CMakeTest.scape('-- /m:%i' % cpu_count()))),
                          conan_file.command)
 
     def convenient_functions_test(self):
@@ -282,18 +285,22 @@ build_type: [ Release]
                          conan_file.command)
 
         cmake.build()
-        self.assertEqual('cmake --build %s' % dot_dir, conan_file.command)
+        self.assertEqual('cmake --build %s %s' %
+                         (dot_dir, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         cmake.test()
-        self.assertEqual('cmake --build %s %s' % (dot_dir, target_test), conan_file.command)
+        self.assertEqual('cmake --build %s %s %s' %
+                         (dot_dir, target_test, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         settings.build_type = "Debug"
         cmake = CMake(conan_file)
         cmake.build()
-        self.assertEqual('cmake --build %s --config Debug' % dot_dir, conan_file.command)
+        self.assertEqual('cmake --build %s --config Debug %s' %
+                         (dot_dir,(CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         cmake.test()
-        self.assertEqual('cmake --build %s --config Debug %s' % (dot_dir, target_test), conan_file.command)
+        self.assertEqual('cmake --build %s --config Debug %s %s' %
+                         (dot_dir, target_test, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         cmake.configure(source_dir="/source", build_dir=self.tempdir,
                         args=['--foo "bar"'], defs={"SHARED": True})
@@ -312,30 +319,34 @@ build_type: [ Release]
             escaped_args = '--target install "--bar \'foo\'"'
         else:
             escaped_args = r"'--target' 'install' '--bar '\''foo'\'''"
-        self.assertEqual('cmake --build %s --config Debug %s' % (tempdir, escaped_args),
-                         conan_file.command)
+        self.assertEqual('cmake --build %s --config Debug %s %s'
+                         % (tempdir, escaped_args, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         cmake.test(args=["--bar 'foo'"])
         if sys.platform == 'win32':
             escaped_args = '%s "--bar \'foo\'"' % target_test
         else:
             escaped_args = r"%s '--bar '\''foo'\'''" % target_test
-        self.assertEqual('cmake --build %s --config Debug %s' % (tempdir, escaped_args),
-                         conan_file.command)
+        self.assertEqual('cmake --build %s --config Debug %s %s' %
+                         (tempdir, escaped_args, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         settings.build_type = "Release"
         cmake = CMake(conan_file)
         cmake.build()
-        self.assertEqual('cmake --build %s --config Release' % dot_dir, conan_file.command)
+        self.assertEqual('cmake --build %s --config Release %s' %
+                         (dot_dir, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         cmake.test()
-        self.assertEqual('cmake --build %s --config Release %s' % (dot_dir, target_test), conan_file.command)
+        self.assertEqual('cmake --build %s --config Release %s %s'
+                         % (dot_dir, target_test, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         cmake.build(build_dir=self.tempdir)
-        self.assertEqual('cmake --build %s --config Release' % tempdir, conan_file.command)
+        self.assertEqual('cmake --build %s --config Release %s'
+                         % (tempdir, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         cmake.test(build_dir=self.tempdir)
-        self.assertEqual('cmake --build %s --config Release %s' % (tempdir, target_test), conan_file.command)
+        self.assertEqual('cmake --build %s --config Release %s %s'
+                         % (tempdir, target_test, (CMakeTest.scape('-- /m:%i' % cpu_count()))), conan_file.command)
 
         settings.compiler = "gcc"
         settings.compiler.version = "5.4"
