@@ -41,6 +41,7 @@ from conans.client import settings_preprocessor
 from conans.tools import set_global_instances
 from conans.client.uploader import is_a_reference
 
+
 default_manifest_folder = '.conan_manifests'
 
 
@@ -159,17 +160,17 @@ class ConanAPIV1(object):
             cwd=None, visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
             gitlab_gcc_versions=None, gitlab_clang_versions=None):
-        from conans.client.new import get_files
+        from conans.client.cmd.new import cmd_new
         cwd = prepare_cwd(cwd)
-        files = get_files(name, header=header, pure_c=pure_c, test=test,
-                          exports_sources=exports_sources, bare=bare,
-                          visual_versions=visual_versions,
-                          linux_gcc_versions=linux_gcc_versions,
-                          linux_clang_versions=linux_clang_versions,
-                          osx_clang_versions=osx_clang_versions, shared=shared,
-                          upload_url=upload_url, gitignore=gitignore,
-                          gitlab_gcc_versions=gitlab_gcc_versions,
-                          gitlab_clang_versions=gitlab_clang_versions)
+        files = cmd_new(name, header=header, pure_c=pure_c, test=test,
+                        exports_sources=exports_sources, bare=bare,
+                        visual_versions=visual_versions,
+                        linux_gcc_versions=linux_gcc_versions,
+                        linux_clang_versions=linux_clang_versions,
+                        osx_clang_versions=osx_clang_versions, shared=shared,
+                        upload_url=upload_url, gitignore=gitignore,
+                        gitlab_gcc_versions=gitlab_gcc_versions,
+                        gitlab_clang_versions=gitlab_clang_versions)
 
         save_files(cwd, files)
         for f in sorted(files):
@@ -683,14 +684,14 @@ class ConanAPIV1(object):
                              outdated=outdated)
 
     @api_method
-    def copy(self, reference="", user_channel="", force=False, all=False, package=None):
-        reference = ConanFileReference.loads(reference)
-        new_ref = ConanFileReference.loads("%s/%s@%s" % (reference.name,
-                                                         reference.version,
-                                                         user_channel))
-        if all:
-            package = []
-        self._manager.copy(reference, package, new_ref.user, new_ref.channel, force)
+    def copy(self, reference, user_channel, force=False, packages=None):
+        """
+        param packages: None=No binaries, True=All binaries, else list of IDs
+        """
+        from conans.client.cmd.copy import cmd_copy
+        # FIXME: conan copy does not support short-paths in Windows
+        cmd_copy(reference, user_channel, packages, self._client_cache,
+                 self._user_io, self._manager._remote_manager, force=force)
 
     @api_method
     def user(self, name=None, clean=False, remote=None, password=None):
