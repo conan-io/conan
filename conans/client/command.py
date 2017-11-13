@@ -755,9 +755,12 @@ class Command(object):
                             default=False,
                             help='Override destination packages and the package recipe')
         args = parser.parse_args(*args)
+        if args.all and args.package:
+            raise ConanException("Cannot specify both --all and --package")
+
         return self._conan.copy(reference=args.reference, user_channel=args.user_channel,
                                 force=args.force,
-                                all=args.all, package=args.package)
+                                packages=args.package or args.all)
 
     def user(self, *parameters):
         """ Authenticates against a remote with user/pass, caching the auth token.
