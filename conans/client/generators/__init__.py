@@ -19,6 +19,7 @@ from .ycm import YouCompleteMeGenerator
 from .virtualenv import VirtualEnvGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
+from .boostbuild import BoostBuildGenerator
 
 
 class _GeneratorManager(object):
@@ -57,6 +58,7 @@ registered_generators.add("ycm", YouCompleteMeGenerator)
 registered_generators.add("virtualenv", VirtualEnvGenerator)
 registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
 registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
+registered_generators.add("boost-build", BoostBuildGenerator)
 registered_generators.add("pkg_config", PkgConfigGenerator)
 
 
