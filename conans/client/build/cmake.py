@@ -364,6 +364,10 @@ class CMake(object):
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count())
+            elif "Visual Studio" in self.generator:
+                if "--" not in args:
+                    args.append("--")
+                args.append("/m:%i" % cpu_count())
 
         arg_list = join_arguments([
             args_to_string([build_dir]),
