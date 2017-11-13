@@ -1,13 +1,8 @@
-import os
 import unittest
 
-from conans.client.profile_loader import _load_profile, read_profile
+from conans.client.profile_loader import _load_profile
 from conans.model.profile import Profile
 from collections import OrderedDict
-
-from conans.model.ref import ConanFileReference
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
 
 
 class ProfileTest(unittest.TestCase):
@@ -50,6 +45,8 @@ compiler.runtime=MT
     def package_settings_update_test(self):
         prof = '''[settings]
 MyPackage:os=Windows
+   
+    # In the previous line there are some spaces
 '''
         np, _ = _load_profile(prof, None, None)
 

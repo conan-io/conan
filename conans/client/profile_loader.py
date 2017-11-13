@@ -22,7 +22,7 @@ class ProfileParser(object):
         self.profile_text = ""
 
         for counter, line in enumerate(text.splitlines()):
-            if not line or line.strip().startswith("#"):
+            if not line.strip() or line.strip().startswith("#"):
                 continue
             elif line.strip().startswith("["):
                 self.profile_text = "\n".join(text.splitlines()[counter:])

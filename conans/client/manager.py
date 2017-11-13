@@ -3,12 +3,10 @@ import os
 import time
 from collections import OrderedDict, Counter
 
-import copy
-
 from conans.client import packager
 from conans.client.client_cache import ClientCache
 from conans.client.deps_builder import DepsGraphBuilder
-from conans.client.detect import detected_os
+from conans.client.conf.detect import detected_os
 from conans.client.export import export_conanfile, load_export_conanfile
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
@@ -45,6 +43,7 @@ class BuildMode(object):
         self._out = output
         self.outdated = False
         self.missing = False
+        self.never = False
         self.patterns = []
         self._unused_patterns = []
         self.all = False
@@ -55,22 +54,23 @@ class BuildMode(object):
         if len(params) == 0:
             self.all = True
         else:
-            never = False
             for param in params:
                 if param == "outdated":
                     self.outdated = True
                 elif param == "missing":
                     self.missing = True
                 elif param == "never":
-                    never = True
+                    self.never = True
                 else:
                     self.patterns.append("%s" % param)
 
-            if never and (self.outdated or self.missing or self.patterns):
+            if self.never and (self.outdated or self.missing or self.patterns):
                 raise ConanException("--build=never not compatible with other options")
         self._unused_patterns = list(self.patterns)
 
     def forced(self, conan_file, reference):
+        if self.never:
+            return False
         if self.all:
             return True
 
@@ -411,10 +411,11 @@ class ConanManager(object):
                 tmp.extend([g for g in generators if g not in tmp])
                 conanfile.generators = tmp
                 write_generators(conanfile, install_folder, output)
-            # Write conaninfo
-            content = normalize(conanfile.info.dumps())
-            save(os.path.join(install_folder, CONANINFO), content)
-            output.info("Generated %s" % CONANINFO)
+            if not isinstance(reference, ConanFileReference):
+                # Write conaninfo
+                content = normalize(conanfile.info.dumps())
+                save(os.path.join(install_folder, CONANINFO), content)
+                output.info("Generated %s" % CONANINFO)
             if not no_imports:
                 run_imports(conanfile, install_folder, output)
             call_system_requirements(conanfile, output)

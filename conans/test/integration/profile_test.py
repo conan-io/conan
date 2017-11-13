@@ -38,7 +38,7 @@ def create_profile(folder, name, settings=None, scopes=None, package_settings=No
                    package_env=None, options=None):
     _create_profile(folder, name, settings, scopes, package_settings, env, package_env, options)
     content = load(os.path.join(folder, name))
-    content = "include(default)\n" + content
+    content = "include(default)\n    \n" + content
     save(os.path.join(folder, name), content)
 
 
