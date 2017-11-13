@@ -260,6 +260,9 @@ def call_package_info(conanfile, package_folder):
     # package folder and artifacts
     with tools.chdir(package_folder):
         with conanfile_exception_formatter(str(conanfile), "package_info"):
+            conanfile.source_folder = None
+            conanfile.build_folder = None
+            conanfile.install_folder = None
             conanfile.package_info()
 
 
