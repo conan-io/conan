@@ -893,7 +893,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
         return self._conan.upload(pattern=args.pattern, package=args.package, remote=args.remote,
-                                  all=args.all,
+                                  all_packages=args.all,
                                   force=args.force, confirm=args.confirm, retry=args.retry,
                                   retry_wait=args.retry_wait,
                                   skip_upload=args.skip_upload, integrity_check=args.check)
