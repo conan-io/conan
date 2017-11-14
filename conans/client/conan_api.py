@@ -21,7 +21,7 @@ from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans.client.runner import ConanRunner
 from conans.client.store.localdb import LocalDB
-from conans.client.package_tester import PackageTester
+from conans.client.cmd.test import PackageTester
 from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
@@ -39,7 +39,7 @@ from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
 from conans.client import settings_preprocessor
 from conans.tools import set_global_instances
-from conans.client.uploader import is_a_reference
+from conans.client.cmd.uploader import CmdUpload
 
 
 default_manifest_folder = '.conan_manifests'
@@ -716,17 +716,14 @@ class ConanAPIV1(object):
         return ret
 
     @api_method
-    def upload(self, pattern, package=None, remote=None, all=False, force=False, confirm=False,
-               retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
+    def upload(self, pattern, package=None, remote=None, all_packages=False, force=False,
+               confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        if package and not is_a_reference(pattern):
-            raise ConanException("-p parameter only allowed with a valid recipe reference, "
-                                 "not with a pattern")
-
-        self._manager.upload(pattern, package, remote, all_packages=all, force=force,
-                             confirm=confirm, retry=retry, retry_wait=retry_wait,
-                             skip_upload=skip_upload, integrity_check=integrity_check)
+        uploader = CmdUpload(self._client_cache, self._user_io, self._manager._remote_manager,
+                             self._manager._search_manager, remote)
+        return uploader.upload(pattern, package, all_packages, force, confirm, retry,
+                               retry_wait, skip_upload, integrity_check)
 
     @api_method
     def remote_list(self):
