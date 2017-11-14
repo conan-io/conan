@@ -111,9 +111,13 @@ class CMake(object):
         return "Unix Makefiles"
 
     def _toolset(self, toolset=None):
-        if "CONAN_CMAKE_TOOLSET" in os.environ:
-            return os.environ["CONAN_CMAKE_TOOLSET"]
-        return toolset
+        if toolset:
+            return toolset
+        elif self._settings.get_safe("compiler") == "Visual Studio":
+            subs_toolset = self._settings.get_safe("compiler.toolset")
+            if subs_toolset:
+                return subs_toolset
+        return None
 
     def _cmake_compiler_options(self, the_os, arch):
         cmake_definitions = OrderedDict()
