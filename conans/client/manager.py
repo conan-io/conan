@@ -1,6 +1,5 @@
 import fnmatch
 import os
-import time
 from collections import OrderedDict, Counter
 
 from conans.client import packager
@@ -23,7 +22,6 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.client.remover import ConanRemover
 from conans.client.require_resolver import RequireResolver
 from conans.client.source import config_source_local
-from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
@@ -490,30 +488,6 @@ class ConanManager(object):
             import traceback
             trace = traceback.format_exc().split('\n')
             raise ConanException("Unable to build it successfully\n%s" % '\n'.join(trace[3:]))
-
-    def upload(self, conan_reference_or_pattern, package_id=None, remote=None, all_packages=None,
-               force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
-               integrity_check=False):
-        """If package_id is provided, conan_reference_or_pattern is a ConanFileReference"""
-        t1 = time.time()
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
-                                  remote)
-        uploader = ConanUploader(self._client_cache, self._user_io, remote_proxy,
-                                 self._search_manager)
-
-        if package_id:  # Upload package
-            ref = ConanFileReference.loads(conan_reference_or_pattern)
-            uploader.check_reference(ref)
-            uploader.upload_package(PackageReference(ref, package_id), retry=retry,
-                                    retry_wait=retry_wait, skip_upload=skip_upload,
-                                    integrity_check=integrity_check)
-        else:  # Upload conans
-            uploader.upload(conan_reference_or_pattern, all_packages=all_packages,
-                            force=force, confirm=confirm,
-                            retry=retry, retry_wait=retry_wait, skip_upload=skip_upload,
-                            integrity_check=integrity_check)
-
-        logger.debug("====> Time manager upload: %f" % (time.time() - t1))
 
     def _get_search_adapter(self, remote):
         if remote:
