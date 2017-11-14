@@ -22,7 +22,7 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True):
+                      arch=None, parallel=True, toolset=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -50,6 +50,10 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
 
     if targets:
         command += " /target:%s" % ";".join(targets)
+
+    if toolset:
+        command += " /p:PlatformToolset=%s" % toolset
+
     return command
 
 
