@@ -193,6 +193,12 @@ class PackageIDTest(unittest.TestCase):
             self.assertTrue(error)
             self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
 
+            # Specify a toolset not involved with the visual version is ok, needed to build:
+            self.client.run('install Hello/1.2.0@user/testing'
+                            ' -s compiler="Visual Studio" '
+                            ' -s compiler.version=15 -s compiler.toolset=v141_clang_c2 '
+                            '--build missing')
+
     def test_toolset_visual_incompatibility(self):
         # By default is the same to build with native visual or the toolchain
         self._export("Hello", "1.2.0", package_id_text="self.info.vs_toolset_incompatible()",
