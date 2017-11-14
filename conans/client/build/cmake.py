@@ -7,29 +7,12 @@ from contextlib import contextmanager
 from conans.client import defs_to_string, join_arguments
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
-from conans.model.settings import Settings
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir
 from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
-
-# Deprecated in 0.22
-deprecated_conanfile_param_message = '''
-*******************************   WARNING!!! ************************************
-
-Do not pass 'self' to configure() nor build() methods, it is deprecated and will be removed.
-
-Instance CMake with the conanfile instance instead:
-
-    cmake = CMake(self)
-    cmake.configure() # Optional args, defs, source_dir and build_dir parameters
-    cmake.build() # Optional args, build_dir and target
-
-
-**********************************************************************************
-'''
 
 
 def _get_env_cmake_system_name():
@@ -39,7 +22,7 @@ def _get_env_cmake_system_name():
 
 class CMake(object):
 
-    def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True,
+    def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None):
         """
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
@@ -51,18 +34,11 @@ class CMake(object):
         :param toolset: Toolset name to use (such as llvm-vs2014) or none for default one,
                 applies only to certain generators (e.g. Visual Studio)
         """
-        if isinstance(settings_or_conanfile, Settings):
-            self._settings = settings_or_conanfile
-            self._conanfile = None
-            self.configure = self._configure_old
-            self.build = self._build_old
-        elif isinstance(settings_or_conanfile, ConanFile):
-            self._settings = settings_or_conanfile.settings
-            self._conanfile = settings_or_conanfile
-            self.configure = self._configure_new
-            self.build = self._build_new
-        else:
-            raise ConanException("First parameter of CMake() has to be a ConanFile instance.")
+        if not isinstance(conanfile, ConanFile):
+            raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
+
+        self._settings = conanfile.settings
+        self._conanfile = conanfile
 
         self._os = self._settings.get_safe("os")
         self._compiler = self._settings.get_safe("compiler")
@@ -102,19 +78,6 @@ class CMake(object):
     @property
     def flags(self):
         return defs_to_string(self.definitions)
-
-    @staticmethod
-    def options_cmd_line(options, option_upper=True, value_upper=True):
-        """ FIXME: this function seems weird, not tested, not used.
-        Probably should be deprecated
-        """
-        result = []
-        for option, value in options.values.as_list():
-            if value is not None:
-                option = option.upper() if option_upper else option
-                value = value.upper() if value_upper else value
-                result.append("-D%s=%s" % (option, value))
-        return ' '.join(result)
 
     def _generator(self):
 
@@ -296,14 +259,14 @@ class CMake(object):
         # Shared library
         try:
             ret["BUILD_SHARED_LIBS"] = "ON" if self._conanfile.options.shared else "OFF"
-        except:
+        except ConanException:
             pass
 
         # Install to package folder
         try:
             if self._conanfile.package_folder:
                 ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
-        except:
+        except AttributeError:
             pass
 
         if self._os == "Windows" and self._compiler == "Visual Studio":
@@ -313,17 +276,7 @@ class CMake(object):
                 ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
         return ret
 
-    def _configure_old(self, conanfile, args=None, defs=None, source_dir=None, build_dir=None):
-        """Deprecated in 0.22"""
-        if not isinstance(conanfile, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
-        self._conanfile = conanfile
-        self._conanfile.output.warn(deprecated_conanfile_param_message)
-        return self._configure_new(args=args, defs=defs, source_dir=source_dir, build_dir=build_dir)
-
-    def _configure_new(self, args=None, defs=None, source_dir=None, build_dir=None):
-        if isinstance(args, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
+    def configure(self, args=None, defs=None, source_dir=None, build_dir=None):
         args = args or []
         defs = defs or {}
         source_dir = source_dir or self._conanfile.source_folder
@@ -343,17 +296,7 @@ class CMake(object):
         else:
             self._conanfile.run(command)
 
-    def _build_old(self, conanfile, args=None, build_dir=None, target=None):
-        """Deprecated in 0.22"""
-        if not isinstance(conanfile, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
-        self._conanfile = conanfile
-        self._conanfile.output.warn(deprecated_conanfile_param_message)
-        return self._build_new(args=args, build_dir=build_dir, target=target)
-
-    def _build_new(self, args=None, build_dir=None, target=None):
-        if isinstance(args, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
+    def build(self, args=None, build_dir=None, target=None):
         args = args or []
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
         if target is not None:
@@ -364,6 +307,10 @@ class CMake(object):
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count())
+            elif "Visual Studio" in self.generator:
+                if "--" not in args:
+                    args.append("--")
+                args.append("/m:%i" % cpu_count())
 
         arg_list = join_arguments([
             args_to_string([build_dir]),
@@ -378,21 +325,19 @@ class CMake(object):
         if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
             raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
                                  "Make sure 'package_folder' is defined")
-        self._build_new(args=args, build_dir=build_dir, target="install")
+        self.build(args=args, build_dir=build_dir, target="install")
 
     def test(self, args=None, build_dir=None, target=None):
-        if isinstance(args, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
         if not target:
-            target = "RUN_TESTS" if self._compiler == "Visual Studio" else "test"
-        self._build_new(args=args, build_dir=build_dir, target=target)
+            target = "RUN_TESTS" if self.is_multi_configuration else "test"
+        self.build(args=args, build_dir=build_dir, target=target)
 
     @property
     def verbose(self):
         try:
             verbose = self.definitions["CMAKE_VERBOSE_MAKEFILE"]
             return get_bool_from_text(str(verbose))
-        except:
+        except KeyError:
             return False
 
     @verbose.setter

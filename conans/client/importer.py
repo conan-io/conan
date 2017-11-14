@@ -74,26 +74,28 @@ def run_imports(conanfile, dest_folder, output):
     return copied_files
 
 
-def run_deploy(conanfile, dest_folder, output):
+def run_deploy(conanfile, install_folder, output):
     deploy_output = ScopedOutput("%s deploy()" % output.scope, output)
-    file_importer = _FileImporter(conanfile, dest_folder)
+    file_importer = _FileImporter(conanfile, install_folder)
     package_copied = set()
 
     # This is necessary to capture FileCopier full destination paths
     # Maybe could be improved in FileCopier
     def file_copier(*args, **kwargs):
-        file_copy = FileCopier(conanfile.package_folder, dest_folder)
+        file_copy = FileCopier(conanfile.package_folder, install_folder)
         copied = file_copy(*args, **kwargs)
         package_copied.update(copied)
 
     conanfile.copy_deps = file_importer
     conanfile.copy = file_copier
+    conanfile.install_folder = install_folder
     with environment_append(conanfile.env):
-        conanfile.deploy()
+        with tools.chdir(install_folder):
+            conanfile.deploy()
 
     copied_files = file_importer.copied_files
     copied_files.update(package_copied)
-    _report_save_manifest(copied_files, deploy_output, dest_folder, "deploy_manifest.txt")
+    _report_save_manifest(copied_files, deploy_output, install_folder, "deploy_manifest.txt")
 
 
 class _FileImporter(object):

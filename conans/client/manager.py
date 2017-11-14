@@ -4,10 +4,11 @@ import time
 from collections import OrderedDict, Counter
 
 from conans.client import packager
+from conans.client.build_requires import BuildRequires
 from conans.client.client_cache import ClientCache
-from conans.client.deps_builder import DepsGraphBuilder
+from conans.client.cmd.export import cmd_export
 from conans.client.conf.detect import detected_os
-from conans.client.export import export_conanfile, load_export_conanfile
+from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
 from conans.client.importer import run_imports, undo_imports, run_deploy
@@ -15,7 +16,6 @@ from conans.client.installer import ConanInstaller, call_system_requirements
 from conans.client.loader import ConanFileLoader
 from conans.client.manifest_manager import ManifestManager
 from conans.client.output import ScopedOutput, Color
-from conans.client.package_copier import PackageCopier
 from conans.client.printer import Printer
 from conans.client.profile_loader import read_conaninfo_profile
 from conans.client.proxy import ConanProxy
@@ -26,16 +26,13 @@ from conans.client.source import config_source_local
 from conans.client.uploader import ConanUploader
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
+from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO
-from conans.tools import environment_append
-from conans.util.files import save,  rmdir, normalize, mkdir, load
-from conans.util.log import logger
-from conans.model.manifest import FileTreeManifest
-from conans.client.loader_parse import load_conanfile_class
-from conans.client.build_requires import BuildRequires
-from conans.client.linter import conan_linter
 from conans.search.search import filter_outdated
+from conans.tools import environment_append
+from conans.util.files import save, rmdir, normalize, mkdir, load
+from conans.util.log import logger
 
 
 class BuildMode(object):
@@ -43,6 +40,7 @@ class BuildMode(object):
         self._out = output
         self.outdated = False
         self.missing = False
+        self.never = False
         self.patterns = []
         self._unused_patterns = []
         self.all = False
@@ -53,22 +51,23 @@ class BuildMode(object):
         if len(params) == 0:
             self.all = True
         else:
-            never = False
             for param in params:
                 if param == "outdated":
                     self.outdated = True
                 elif param == "missing":
                     self.missing = True
                 elif param == "never":
-                    never = True
+                    self.never = True
                 else:
                     self.patterns.append("%s" % param)
 
-            if never and (self.outdated or self.missing or self.patterns):
+            if self.never and (self.outdated or self.missing or self.patterns):
                 raise ConanException("--build=never not compatible with other options")
         self._unused_patterns = list(self.patterns)
 
     def forced(self, conan_file, reference):
+        if self.never:
+            return False
         if self.all:
             return True
 
@@ -136,35 +135,8 @@ class ConanManager(object):
 
     def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
                version=None):
-        """ Export the conans
-        param conanfile_path: the original source directory of the user containing a
-                           conanfile.py
-        param user: user under this package will be exported
-        param channel: string (stable, testing,...)
-        """
-        assert conan_file_path
-        logger.debug("Exporting %s" % conan_file_path)
-
-        src_folder = conan_file_path
-        conanfile_name = filename or CONANFILE
-        conan_file_path = os.path.join(conan_file_path, conanfile_name)
-        if ((os.path.exists(conan_file_path) and conanfile_name not in os.listdir(src_folder)) or
-                (conanfile_name != "conanfile.py" and conanfile_name.lower() == "conanfile.py")):
-            raise ConanException("Wrong '%s' case" % conanfile_name)
-        conan_linter(conan_file_path, self._user_io.out)
-        conanfile = load_export_conanfile(conan_file_path, self._user_io.out, name, version)
-        conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
-        conan_ref_str = str(conan_ref)
-        # Maybe a platform check could be added, but depends on disk partition
-        refs = self._search_manager.search(conan_ref_str, ignorecase=True)
-        if refs and conan_ref not in refs:
-            raise ConanException("Cannot export package with same name but different case\n"
-                                 "You exported '%s' but already existing '%s'"
-                                 % (conan_ref_str, " ".join(str(s) for s in refs)))
-        output = ScopedOutput(str(conan_ref), self._user_io.out)
-        with self._client_cache.conanfile_write_lock(conan_ref):
-            export_conanfile(output, self._client_cache, conanfile, src_folder, conan_ref, keep_source,
-                             filename)
+        cmd_export(user, channel, conan_file_path, self._user_io.out, self._search_manager,
+                   self._client_cache, keep_source, filename, name, version)
 
     def export_pkg(self, reference, source_folder, build_folder, install_folder, profile, force):
 
@@ -409,10 +381,11 @@ class ConanManager(object):
                 tmp.extend([g for g in generators if g not in tmp])
                 conanfile.generators = tmp
                 write_generators(conanfile, install_folder, output)
-            # Write conaninfo
-            content = normalize(conanfile.info.dumps())
-            save(os.path.join(install_folder, CONANINFO), content)
-            output.info("Generated %s" % CONANINFO)
+            if not isinstance(reference, ConanFileReference):
+                # Write conaninfo
+                content = normalize(conanfile.info.dumps())
+                save(os.path.join(install_folder, CONANINFO), content)
+                output.info("Generated %s" % CONANINFO)
             if not no_imports:
                 run_imports(conanfile, install_folder, output)
             call_system_requirements(conanfile, output)
@@ -581,30 +554,6 @@ class ConanManager(object):
             ordered_packages = filter_outdated(ordered_packages, recipe_hash)
 
         return ordered_packages, reference, recipe_hash, packages_query
-
-    def copy(self, reference, package_ids, username, channel, force=False):
-        """ Copy or move conanfile (exported) and packages to another user and or channel
-        @param reference: ConanFileReference containing the packages to be moved
-        @param package_ids: list of ids or [] for all list
-        @param username: Destination username
-        @param channel: Destination channel
-        @param remote: install only from that remote
-        """
-        # It is necessary to make sure the sources are complete before proceeding
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, None)
-
-        # Now we can actually copy
-        conan_file_path = self._client_cache.conanfile(reference)
-        conanfile = load_conanfile_class(conan_file_path)
-        remote_proxy.complete_recipe_sources(reference, short_paths=conanfile.short_paths)
-        copier = PackageCopier(self._client_cache, self._user_io, conanfile.short_paths)
-        if not package_ids:
-            packages = self._client_cache.packages(reference)
-            if os.path.exists(packages):
-                package_ids = os.listdir(packages)
-            else:
-                package_ids = []
-        copier.copy(reference, package_ids, username, channel, force)
 
     def remove(self, pattern, src=False, build_ids=None, package_ids_filter=None, force=False,
                remote=None, packages_query=None, outdated=False):
