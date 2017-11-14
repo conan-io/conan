@@ -28,6 +28,7 @@ class MockConanfile(object):
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
         self.runner = runner
+        self.generators = []
 
     def run(self, *args):
         if self.runner:

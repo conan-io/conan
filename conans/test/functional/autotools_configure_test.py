@@ -4,8 +4,10 @@ import unittest
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans import tools
 from conans.client.tools.oss import cpu_count
+from conans.paths import CONANFILE
 from conans.test.utils.conanfile import MockConanfile, MockSettings
 from conans.test.util.tools_test import RunnerMock
+from conans.test.utils.tools import TestClient
 
 
 class AutoToolsConfigureTest(unittest.TestCase):
@@ -349,6 +351,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(target)
 
         build, host, target = get_values("Darwin", "x86_64", "Android", "armv7hf")
+
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "arm-linux-androideabi")
 
@@ -367,6 +370,40 @@ class AutoToolsConfigureTest(unittest.TestCase):
         build, host, target = get_values("Darwin", "x86_64", "tvOS", "arm64")
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "arm-apple-darwin")
+
+
+    def test_pkg_config_paths(self):
+        if platform.system() == "Windows":
+            return
+        client = TestClient()
+        conanfile = """
+from conans import ConanFile, tools, AutoToolsBuildEnvironment
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "1.2.1"
+    generators = %s
+
+    def build(self):
+        tools.save("configure", "printenv")
+        self.run("chmod +x configure")
+        autot = AutoToolsBuildEnvironment(self)
+        autot.configure(%s)
+
+"""
+
+        client.save({CONANFILE: conanfile % ("'txt'", "")})
+        client.run("create conan/testing")
+        self.assertNotIn("PKG_CONFIG_PATH=", client.out)
+
+        client.save({CONANFILE: conanfile % ("'pkg_config'", "")})
+        client.run("create conan/testing")
+        self.assertIn("PKG_CONFIG_PATH=%s" % client.client_cache.conan_folder, client.out)
+
+        client.save({CONANFILE: conanfile % ("'pkg_config'",
+                                             "pkg_config_paths=['/tmp/hello', '/tmp/foo']")})
+        client.run("create conan/testing")
+        self.assertIn("PKG_CONFIG_PATH=/tmp/hello:/tmp/foo", client.out)
 
     def cross_build_command_test(self):
         runner = RunnerMock()
