@@ -15,8 +15,9 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
                        arch=None, parallel=True, force_vcvars=False, toolset=None):
     """ Do both: set the environment variables and call the .sln build
     """
-    vcvars = vcvars_command(settings, force=force_vcvars, toolset=toolset)
-    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch, parallel)
+    vcvars = vcvars_command(settings, force=force_vcvars)
+    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
+                              parallel, toolset=toolset)
     command = "%s && %s" % (vcvars, build)
     return command
 
