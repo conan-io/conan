@@ -1,5 +1,3 @@
-import copy
-
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
