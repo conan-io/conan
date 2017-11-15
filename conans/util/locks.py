@@ -82,7 +82,9 @@ class Lock(object):
 
     def _remove_pid(self, pid):
         pids = self._pids()
-        pids.remove(pid)
+        # legal situation - conan may remove directory with lock file during write
+        if pid in pids:
+            pids.remove(pid)
         self._save_pids(pids)
 
     def _add_reader(self):
