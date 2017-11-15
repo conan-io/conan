@@ -112,6 +112,7 @@ class {package_name}Conan(ConanFile):
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    no_copy_source = True
     # No settings/options are necessary, this is header only
 
     def source(self):

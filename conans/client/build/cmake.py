@@ -48,6 +48,8 @@ class CMake(object):
         self._libcxx = self._settings.get_safe("compiler.libcxx")
         self._runtime = self._settings.get_safe("compiler.runtime")
         self._build_type = self._settings.get_safe("build_type")
+        self._cxxstd = self._settings.get_safe("compiler.cxxstd")
+        self._cstd = self._settings.get_safe("compiler.cstd")
 
         self.generator = generator or self._generator()
         self.toolset = self._toolset(toolset)
@@ -232,6 +234,30 @@ class CMake(object):
             return "--config %s" % self._build_type
         return ""
 
+    def _get_standard_vars(self):
+        ret = {}
+        # Standard C++
+        if self._cxxstd:
+            if self._cxxstd.endswith("gnu"):
+                ret["CONAN_CMAKE_CXX_STANDARD"] = self._cxxstd[:-3]
+                ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "ON"
+                ret["CONAN_STD_CXX_FLAG"] = "gnu++%s" % self._cxxstd[:-3]  # CMake < 3.1
+            else:
+                ret["CONAN_CMAKE_CXX_STANDARD"] = self._cxxstd
+                ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
+                ret["CONAN_STD_CXX_FLAG"] = "c++%s" % self._cxxstd
+        # Standard C
+        if self._cstd:
+            if self._cstd.endswith("gnu"):
+                ret["CONAN_CMAKE_C_STANDARD"] = self._cstd[:-3]
+                ret["CONAN_CMAKE_C_EXTENSIONS"] = "ON"
+                ret["CONAN_STD_C_FLAG"] = "gnu%s" % self._cstd[:-3]  # CMake < 3.1
+            else:
+                ret["CONAN_CMAKE_C_STANDARD"] = self._cstd
+                ret["CONAN_CMAKE_C_EXTENSIONS"] = "OFF"
+                ret["CONAN_STD_C_FLAG"] = "c%s" % self._cstd
+        return ret
+
     def _get_cmake_definitions(self):
         ret = OrderedDict()
         ret.update(self._build_type_definition())
@@ -244,6 +270,8 @@ class CMake(object):
             ret["CONAN_COMPILER"] = self._compiler
         if self._compiler_version:
             ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
+
+        ret.update(self._get_standard_vars())
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
         if self._os in ("Linux", "FreeBSD", "SunOS"):
