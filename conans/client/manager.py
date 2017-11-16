@@ -110,18 +110,38 @@ class ConanManager(object):
         self._search_manager = search_manager
         self._settings_preprocessor = settings_preprocessor
 
-    def load_consumer_conanfile(self, conanfile_path, info_folder, output, reference=None,
-                                deps_info_required=False):
-
+    def _load_consumer_conanfile(self, conanfile_path, info_folder, output,
+                                 deps_info_required=False):
+        """loads a conanfile for local flow: source, imports, package, build
+        """
         profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
         loader = self.get_loader(profile)
         if conanfile_path.endswith(".py"):
-            consumer = not reference
-            conanfile = loader.load_conan(conanfile_path, output, consumer, reference)
+            conanfile = loader.load_conan(conanfile_path, output, consumer=True)
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
         if deps_info_required is not None:
             _load_deps_info(info_folder, conanfile, required=deps_info_required)
+
+        return conanfile
+
+    def _load_install_conanfile(self, loader, reference_or_path, conanfile_filename, cwd=None):
+        """loads a conanfile for installation: install, info
+        cwd only used for virtuals, to pass it the current directory and make available the
+        conanfile.conanfile_directory (smell)"""
+        if isinstance(reference_or_path, ConanFileReference):
+            conanfile = loader.load_virtual([reference_or_path], cwd)
+            loader.dev_reference = reference_or_path
+        else:
+            output = ScopedOutput("PROJECT", self._user_io.out)
+            try:
+                if conanfile_filename and conanfile_filename.endswith(".txt"):
+                    raise NotFoundException("")
+                conan_file_path = os.path.join(reference_or_path, conanfile_filename or CONANFILE)
+                conanfile = loader.load_conan(conan_file_path, output, consumer=True)
+            except NotFoundException:  # Load conanfile.txt
+                conan_path = os.path.join(reference_or_path, conanfile_filename or CONANFILE_TXT)
+                conanfile = loader.load_conan_txt(conan_path, output)
 
         return conanfile
 
@@ -204,24 +224,6 @@ class ConanManager(object):
             else:
                 remote_proxy.download_packages(reference, list(packages_props.keys()))
 
-    def _get_conanfile_object(self, loader, reference_or_path, conanfile_filename, cwd=None):
-        """cwd only used for virtuals, to pass it the current directory and make available the
-        conanfile.conanfile_directory (smell)"""
-        if isinstance(reference_or_path, ConanFileReference):
-            conanfile = loader.load_virtual([reference_or_path], cwd)
-        else:
-            output = ScopedOutput("PROJECT", self._user_io.out)
-            try:
-                if conanfile_filename and conanfile_filename.endswith(".txt"):
-                    raise NotFoundException("")
-                conan_file_path = os.path.join(reference_or_path, conanfile_filename or CONANFILE)
-                conanfile = loader.load_conan(conan_file_path, output, consumer=True)
-            except NotFoundException:  # Load conanfile.txt
-                conan_path = os.path.join(reference_or_path, conanfile_filename or CONANFILE_TXT)
-                conanfile = loader.load_conan_txt(conan_path, output)
-
-        return conanfile
-
     @staticmethod
     def _inject_require(conanfile, inject_require):
         """ test_package functionality requires injecting the tested package as requirement
@@ -241,7 +243,7 @@ class ConanManager(object):
 
     def _get_deps_graph(self, reference, profile, filename, remote_proxy):
         loader = self.get_loader(profile)
-        conanfile = self._get_conanfile_object(loader, reference, filename)
+        conanfile = self._load_install_conanfile(loader, reference, filename)
         graph_builder = self._get_graph_builder(loader, False, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
         return deps_graph, graph_builder, conanfile
@@ -329,7 +331,7 @@ class ConanManager(object):
                                   update=update, manifest_manager=manifest_manager)
 
         loader = self.get_loader(profile)
-        conanfile = self._get_conanfile_object(loader, reference, filename, cwd=cwd)
+        conanfile = self._load_install_conanfile(loader, reference, filename, cwd=cwd)
         if inject_require:
             self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
@@ -407,7 +409,7 @@ class ConanManager(object):
         """
         output = ScopedOutput("PROJECT", self._user_io.out)
         # only infos if exist
-        conanfile = self.load_consumer_conanfile(conanfile_path, info_folder, output)
+        conanfile = self._load_consumer_conanfile(conanfile_path, info_folder, output)
         config_source_local(source_folder, conanfile, output)
 
     def imports_undo(self, current_path):
@@ -422,7 +424,7 @@ class ConanManager(object):
         """
 
         output = ScopedOutput("PROJECT", self._user_io.out)
-        conanfile = self.load_consumer_conanfile(conan_file_path, info_folder,
+        conanfile = self._load_consumer_conanfile(conan_file_path, info_folder,
                                                  output, deps_info_required=True)
 
         run_imports(conanfile, dest_folder, output)
@@ -434,7 +436,7 @@ class ConanManager(object):
                                  "--build_folder and package folder can't be the same")
         output = ScopedOutput("PROJECT", self._user_io.out)
         conan_file_path = os.path.join(recipe_folder, CONANFILE)
-        conanfile = self.load_consumer_conanfile(conan_file_path, install_folder, output,
+        conanfile = self._load_consumer_conanfile(conan_file_path, install_folder, output,
                                                  deps_info_required=True)
         packager.create_package(conanfile, source_folder, build_folder, package_folder,
                                 install_folder, output, local=True, copy_info=True)
@@ -451,7 +453,7 @@ class ConanManager(object):
             # Append env_vars to execution environment and clear when block code ends
             output = ScopedOutput(("%s test package" % test) if test else "Project",
                                   self._user_io.out)
-            conan_file = self.load_consumer_conanfile(conanfile_path, install_folder, output,
+            conan_file = self._load_consumer_conanfile(conanfile_path, install_folder, output,
                                                       deps_info_required=True)
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
