@@ -8,7 +8,7 @@ from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
 conanfile_scope_env = """
-from conans import ConanFile, ConfigureEnvironment
+from conans import ConanFile
 
 class AConan(ConanFile):
     settings = "os"

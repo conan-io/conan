@@ -49,12 +49,12 @@ compiler:
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0"]
         libcxx: [libstdc++, libstdc++11, libc++]
-        cppstd: [None, 98, 11, 14, 17]
+        cppstd: [None, 98, 11, 14, 17, 98gnu, 11gnu, 14gnu, 17gnu]
         cstd: [None, 90, 99, 11, 90gnu, 99gnu, 11gnu]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0"]
         libcxx: [libstdc++, libc++]
-        cppstd: [None, 98, 11, 14, 17]
+        cppstd: [None, 98, 11, 14, 17, 98gnu, 11gnu, 14gnu, 17gnu]
         cstd: [None, 90, 99, 11, 90gnu, 99gnu, 11gnu]
 
 build_type: [None, Debug, Release]

@@ -37,7 +37,7 @@ def cppstd_flag(compiler, compiler_version, cppstd):
     flag = None
     if func:
         flag = func(compiler_version, cppstd)
-    return "-std=%s" % flag if flag else None
+    return flag
 
 
 def cstd_flag(compiler, compiler_version, cstd):
@@ -50,7 +50,7 @@ def cstd_flag(compiler, compiler_version, cstd):
     flag = None
     if func:
         flag = func(compiler_version, cstd)
-    return "-std=%s" % flag if flag else None
+    return flag
 
 
 def cppstd_default_setting(compiler, compiler_version):
@@ -270,9 +270,9 @@ def _cppstd_gcc(gcc_version, cppstd):
         v17gnu = "gnu++1z"
 
     flag = {"98": v98, "98gnu": v98gnu,
-            "v11": v11, "v11gnu": v11gnu,
-            "v14": v14, "v14gnu": v14gnu,
-            "v17": v17, "v17gnu": v17gnu}.get(cppstd)
+            "11": v11, "11gnu": v11gnu,
+            "14": v14, "14gnu": v14gnu,
+            "17": v17, "17gnu": v17gnu}.get(cppstd)
     return "-std=%s" % flag if flag else None
 
 
