@@ -37,9 +37,9 @@ class ImportTest(unittest.TestCase):
         conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
     requires='LibC/0.1@lasote/testing'
+    keep_imports = True
     def imports(self):
         self.copy("license*", dst="licenses", folder=True, ignore_case=True)
-        self.keep_imports = True
 
     def package(self):
         self.copy("*")
