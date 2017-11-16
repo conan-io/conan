@@ -5,7 +5,7 @@ import os
 from conans.client import join_arguments
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
                           detected_architecture)
-from conans.client.build.compilers_info import (cxxstd_flag, cstd_flag, stdlib_flags,
+from conans.client.build.compilers_info import (cppstd_flag, cstd_flag, stdlib_flags,
                                                 architecture_dict, stdlib_defines)
 
 
@@ -25,7 +25,7 @@ class AutoToolsBuildEnvironment(object):
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
-        self._cxxstd = conanfile.settings.get_safe("compiler.cxxstd")
+        self._cppstd = conanfile.settings.get_safe("compiler.cppstd")
         self._cstd = conanfile.settings.get_safe("compiler.cstd")
 
         # Set the generic objects before mapping to env vars to let the user
@@ -44,8 +44,8 @@ class AutoToolsBuildEnvironment(object):
         # Not declared by default
         self.fpic = None
 
-        self.cxxstd_flag = cxxstd_flag(self._compiler, self._compiler_version, self._cxxstd)
-        self.cstd_flag = cstd_flag(self._compiler, self._compiler_version, self._cxxstd)
+        self.cppstd_flag = cppstd_flag(self._compiler, self._compiler_version, self._cppstd)
+        self.cstd_flag = cstd_flag(self._compiler, self._compiler_version, self._cppstd)
 
     def _get_host_build_target_flags(self, arch_detected, os_detected):
         """Based on google search for build/host triplets, it could need a lot
@@ -215,7 +215,7 @@ class AutoToolsBuildEnvironment(object):
         if self.fpic:
             tmp_compilation_flags.append("-fPIC")
 
-        cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cxxstd_flag)
+        cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = append(tmp_compilation_flags, self.cstd_flag)
 
         return ld_flags, cpp_flags, libs, cxx_flags, c_flags

@@ -7,6 +7,7 @@ from conans.model.values import Values
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
+from conans.client.build.compilers_info import cppstd_default_setting, cstd_default_setting
 
 
 class RequirementInfo(object):
@@ -251,6 +252,7 @@ class ConanInfo(object):
         result.recipe_hash = None
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
+        result.default_std_matching()
 
         return result
 
@@ -361,6 +363,28 @@ class ConanInfo(object):
         self.settings.clear()
         self.options.clear()
         self.requires.unrelated_mode()
+
+    def default_std_matching(self):
+        """
+        If we are building with gcc 7, and we specify cppstd==14gnu, it's the default, so the
+        same as specifying None, packages are the same
+        """
+
+        if self.settings.compiler and self.settings.compiler.cppstd:
+            default = cppstd_default_setting(str(self.settings.compiler),
+                                             str(self.settings.compiler.version))
+            if default == str(self.settings.compiler.cppstd):
+                self.settings.compiler.cppstd = None
+
+        if self.settings.compiler and self.settings.compiler.cstd:
+            default = cstd_default_setting(str(self.settings.compiler),
+                                           str(self.settings.compiler.version))
+            if default == str(self.settings.compiler.cstd):
+                self.settings.compiler.cstd = None
+
+    def default_std_non_matching(self):
+        self.settings.compiler.cppstd = self.full_settings.compiler.cppstd
+        self.settings.compiler.cstd = self.full_settings.compiler.cstd
 
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than

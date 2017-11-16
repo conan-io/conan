@@ -13,6 +13,7 @@ from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
+from conans.client.build.compilers_info import cppstd_flag, cstd_flag
 
 
 def _get_env_cmake_system_name():
@@ -48,7 +49,7 @@ class CMake(object):
         self._libcxx = self._settings.get_safe("compiler.libcxx")
         self._runtime = self._settings.get_safe("compiler.runtime")
         self._build_type = self._settings.get_safe("build_type")
-        self._cxxstd = self._settings.get_safe("compiler.cxxstd")
+        self._cppstd = self._settings.get_safe("compiler.cppstd")
         self._cstd = self._settings.get_safe("compiler.cstd")
 
         self.generator = generator or self._generator()
@@ -237,25 +238,27 @@ class CMake(object):
     def _get_standard_vars(self):
         ret = {}
         # Standard C++
-        if self._cxxstd:
-            if self._cxxstd.endswith("gnu"):
-                ret["CONAN_CMAKE_CXX_STANDARD"] = self._cxxstd[:-3]
+        if self._cppstd:
+            if self._cppstd.endswith("gnu"):
+                ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd[:-3]
                 ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "ON"
-                ret["CONAN_STD_CXX_FLAG"] = "gnu++%s" % self._cxxstd[:-3]  # CMake < 3.1
             else:
-                ret["CONAN_CMAKE_CXX_STANDARD"] = self._cxxstd
+                ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd
                 ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
-                ret["CONAN_STD_CXX_FLAG"] = "c++%s" % self._cxxstd
+
+            ret["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._compiler, self._compiler_version,
+                                                    self._cppstd)  # CMake < 3.1
         # Standard C
         if self._cstd:
             if self._cstd.endswith("gnu"):
                 ret["CONAN_CMAKE_C_STANDARD"] = self._cstd[:-3]
                 ret["CONAN_CMAKE_C_EXTENSIONS"] = "ON"
-                ret["CONAN_STD_C_FLAG"] = "gnu%s" % self._cstd[:-3]  # CMake < 3.1
             else:
                 ret["CONAN_CMAKE_C_STANDARD"] = self._cstd
                 ret["CONAN_CMAKE_C_EXTENSIONS"] = "OFF"
-                ret["CONAN_STD_C_FLAG"] = "c%s" % self._cstd
+
+            # CMake < 3.1
+            ret["CONAN_STD_C_FLAG"] = cstd_flag(self._compiler, self._compiler_version, self._cstd)
         return ret
 
     def _get_cmake_definitions(self):
