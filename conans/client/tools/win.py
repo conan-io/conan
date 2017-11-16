@@ -12,17 +12,18 @@ _global_output = None
 
 
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None, parallel=True):
+                       arch=None, parallel=True, force_vcvars=False, toolset=None):
     """ Do both: set the environment variables and call the .sln build
     """
-    vcvars = vcvars_command(settings)
-    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch, parallel)
+    vcvars = vcvars_command(settings, force=force_vcvars)
+    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
+                              parallel, toolset=toolset)
     command = "%s && %s" % (vcvars, build)
     return command
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True):
+                      arch=None, parallel=True, toolset=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -50,6 +51,10 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
 
     if targets:
         command += " /target:%s" % ";".join(targets)
+
+    if toolset:
+        command += " /p:PlatformToolset=%s" % toolset
+
     return command
 
 
@@ -79,7 +84,7 @@ def vs_installation_path(version):
     return vs_installation_path._cached[version]
 
 
-def vcvars_command(settings, arch=None, compiler_version=None):
+def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     if not compiler_version:
@@ -91,9 +96,12 @@ def vcvars_command(settings, arch=None, compiler_version=None):
         command = "echo Conan:vcvars already set"
         existing_version = existing_version.split(".")[0]
         if existing_version != compiler_version:
-            raise ConanException("Error, Visual environment already set to %s\n"
-                                 "Current settings visual version: %s"
-                                 % (existing_version, compiler_version))
+            message = "Visual environment already set to %s\n " \
+                      "Current settings visual version: %s" % (existing_version, compiler_version)
+            if not force:
+                raise ConanException("Error, %s" % message)
+            else:
+                _global_output.warn(message)
     else:
         env_var = "vs%s0comntools" % compiler_version
 

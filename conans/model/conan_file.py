@@ -216,9 +216,6 @@ class ConanFile(object):
         This is also the place for conditional requirements
         """
 
-    def imports(self):
-        pass
-
     def build(self):
         self.output.warn("This conanfile has no build step")
 

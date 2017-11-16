@@ -366,8 +366,7 @@ class HelloConan(ConanFile):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     def vcvars_constrained_test(self):
-        if platform.system() != "Windows":
-            return
+
         text = """os: [Windows]
 compiler:
     Visual Studio:
@@ -380,12 +379,17 @@ compiler:
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings)
         settings.compiler.version = "14"
-        cmd = tools.vcvars_command(settings)
-        self.assertIn("vcvarsall.bat", cmd)
-        with tools.environment_append({"VisualStudioVersion": "12"}):
-            with self.assertRaisesRegexp(ConanException,
-                                         "Error, Visual environment already set to 12"):
-                tools.vcvars_command(settings)
+        with tools.environment_append({"vs140comntools": "path/to/fake"}):
+            cmd = tools.vcvars_command(settings)
+            self.assertIn("vcvarsall.bat", cmd)
+            with tools.environment_append({"VisualStudioVersion": "12"}):
+                with self.assertRaisesRegexp(ConanException,
+                                             "Error, Visual environment already set to 12"):
+                    tools.vcvars_command(settings)
+
+            with tools.environment_append({"VisualStudioVersion": "12"}):
+                # Not raising
+                tools.vcvars_command(settings, force=True)
 
     def run_in_bash_test(self):
         if platform.system() != "Windows":

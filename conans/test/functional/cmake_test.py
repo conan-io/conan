@@ -470,6 +470,7 @@ build_type: [ Release]
         settings.compiler = "Visual Studio"
         settings.compiler.version = "15"
         settings.arch = "x86"
+        settings.compiler.toolset = "v140"  # Will be overwritten by parameter
 
         conan_file = ConanFileMock()
         conan_file.settings = settings
@@ -477,9 +478,23 @@ build_type: [ Release]
         cmake = CMake(conan_file, toolset="v141")
         self.assertIn('-T "v141"', cmake.command_line)
 
+        # DEPRECATED VARIABLE, NOT MODIFY ANYMORE THE TOOLSET
         with tools.environment_append({"CONAN_CMAKE_TOOLSET": "v141"}):
             cmake = CMake(conan_file)
-            self.assertIn('-T "v141"', cmake.command_line)
+            self.assertNotIn('-T "v141"', cmake.command_line)
+
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "15"
+        settings.arch = "x86"
+        settings.compiler.toolset = "v140"
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+
+        cmake = CMake(conan_file)
+        self.assertIn('-T "v140"', cmake.command_line)
 
     @staticmethod
     def scape(args):
