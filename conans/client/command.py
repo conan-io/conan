@@ -65,6 +65,14 @@ class Command(object):
         self._user_io = user_io
         self._outputer = outputer
 
+    def clean(self, *args):
+        """Remove source and build folders from local cache.
+        Also cleans the local test_package/build folder if existing
+        """
+        argparse.ArgumentParser(description=self.clean.__doc__,
+                                prog="conan clean.")
+        self._conan.clean()
+
     def new(self, *args):
         """Creates a new package recipe template with a 'conanfile.py'.
         And optionally, 'test_package' package testing files.
@@ -1073,7 +1081,7 @@ class Command(object):
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download")),
+                                   "alias", "download", "clean")),
                 ("Deprecated", ("test_package",))]
 
         def check_all_commands_listed():
