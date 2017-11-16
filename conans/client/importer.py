@@ -62,6 +62,8 @@ def _report_save_manifest(copied_files, output, dest_folder, manifest_name):
 
 
 def run_imports(conanfile, dest_folder, output):
+    if not hasattr(conanfile, "imports"):
+        return []
     file_importer = _FileImporter(conanfile, dest_folder)
     conanfile.copy = file_importer
     conanfile.imports_folder = dest_folder
