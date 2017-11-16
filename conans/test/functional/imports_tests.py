@@ -2,6 +2,7 @@ import unittest
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 import os
+from conans.model.ref import ConanFileReference, PackageReference
 
 
 conanfile = """from conans import ConanFile
@@ -30,6 +31,29 @@ class ImportTest(unittest.TestCase):
                      "license.txt": "LicenseC"}, clean_first=True)
         client.run("export lasote/testing")
         return client
+
+    def repackage_test(self):
+        client = self._set_up()
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    requires='LibC/0.1@lasote/testing'
+    keep_imports = True
+    def imports(self):
+        self.copy("license*", dst="licenses", folder=True, ignore_case=True)
+
+    def package(self):
+        self.copy("*")
+"""
+        client.save({"conanfile.py": conanfile}, clean_first=True)
+        client.run("create Pkg/0.1@user/testing --build=missing")
+        self.assertIn("Pkg/0.1@user/testing package(): Copied 1 '.md' files: LICENSE.md",
+                      client.out)
+        pkg_ref = PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing"),
+                                   "e6f2dac07251ad9958120a7f7c324366fb3b6f2a")
+        pkg_folder = client.client_cache.package(pkg_ref)
+        self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibA/LICENSE.txt")))
+        self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibB/LICENSE.md")))
+        self.assertTrue(os.path.exists(os.path.join(pkg_folder, "licenses/LibC/license.txt")))
 
     def imports_folders_test(self):
         client = self._set_up()

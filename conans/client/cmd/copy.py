@@ -11,7 +11,8 @@ def _prepare_sources(client_cache, user_io, remote_manager, reference):
     remote_proxy = ConanProxy(client_cache, user_io, remote_manager, None)
     conan_file_path = client_cache.conanfile(reference)
     conanfile = load_conanfile_class(conan_file_path)
-    remote_proxy.complete_recipe_sources(reference, short_paths=conanfile.short_paths)
+    remote_proxy.complete_recipe_sources(conanfile, reference,
+                                         short_paths=conanfile.short_paths)
     return conanfile.short_paths
 
 
