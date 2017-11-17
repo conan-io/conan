@@ -59,8 +59,6 @@ def _load_export_conanfile(conanfile_path, output, name, version):
         if not field_value:
             output.warn("Conanfile doesn't have '%s'.\n"
                         "It is recommended to add it as attribute" % field)
-    if getattr(conanfile, "conan_info", None):
-        output.warn("conan_info() method is deprecated, use package_id() instead")
 
     try:
         # Exports is the only object field, we need to do this, because conan export needs it

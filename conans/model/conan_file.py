@@ -125,6 +125,8 @@ class ConanFile(object):
         self.conanfile_directory = conanfile_directory
         self._scope = None
 
+        self.develop = False
+
         # user specified env variables
         self._env_values = EnvValues()  # Updated at runtime, user specified -e
         self._user = user
