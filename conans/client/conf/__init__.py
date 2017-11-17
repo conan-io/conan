@@ -45,6 +45,7 @@ compiler:
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
+        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp, v140, v140_xp, v140_clang_c2, LLVM-vs2014, LLVM-vs2014_xp, v141, v141_xp, v141_clang_c2]  
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0"]
         libcxx: [libstdc++, libstdc++11, libc++]

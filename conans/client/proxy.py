@@ -1,6 +1,6 @@
 from conans.client.local_file_getter import get_path
 from conans.client.output import ScopedOutput
-from conans.util.files import rmdir
+from conans.util.files import rmdir, mkdir
 from conans.model.ref import PackageReference
 from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedClient,
                            NotFoundException)
@@ -234,8 +234,12 @@ class ConanProxy(object):
 
         raise ConanException("No remote defined")
 
-    def complete_recipe_sources(self, conan_reference, force_complete=True, short_paths=False):
+    def complete_recipe_sources(self, conanfile, conan_reference, force_complete=True, short_paths=False):
         sources_folder = self._client_cache.export_sources(conan_reference, short_paths)
+        if not hasattr(conanfile, "exports_sources"):
+            mkdir(sources_folder)
+            return None
+
         ignore_deleted_file = None
         if not os.path.exists(sources_folder):
             # If not path to sources exists, we have a problem, at least an empty folder
@@ -261,7 +265,8 @@ class ConanProxy(object):
         """
         conan_file_path = self._client_cache.conanfile(conan_reference)
         conanfile = load_conanfile_class(conan_file_path)
-        ignore_deleted_file = self.complete_recipe_sources(conan_reference, force_complete=False,
+        ignore_deleted_file = self.complete_recipe_sources(conanfile, conan_reference,
+                                                           force_complete=False,
                                                            short_paths=conanfile.short_paths)
         remote, ref_remote = self._get_remote(conan_reference)
 

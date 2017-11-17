@@ -268,9 +268,8 @@ class Command(object):
                             action=OnceArgument)
 
         args = parser.parse_args(*args)
-        reference = ConanFileReference.loads(args.reference)
 
-        return self._conan.download(reference=reference, package=args.package, remote=args.remote)
+        return self._conan.download(reference=args.reference, package=args.package, remote=args.remote)
 
     def install(self, *args):
         """Installs the requirements specified in a conanfile (.py or .txt).
