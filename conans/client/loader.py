@@ -30,6 +30,7 @@ class ConanFileLoader(object):
 
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
+        self.dev_reference = None
 
     def load_conan(self, conanfile_path, output, consumer=False, reference=None):
         """ loads a ConanFile object from the given file
@@ -67,6 +68,9 @@ class ConanFileLoader(object):
             else:
                 result.scope = self._scopes.package_scope(result.name)
                 result.in_local_cache = True
+
+            if consumer or (self.dev_reference and self.dev_reference == reference):
+                result.develop = True
 
             return result
         except Exception as e:  # re-raise with file name
