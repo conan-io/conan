@@ -348,6 +348,11 @@ class PackageOptions(object):
     def __contains__(self, option):
         return str(option) in self._data
 
+    def add_option(self, name, values, default):
+        self._data[name] = PackageOption(values, name)
+        self._check_field(name)
+        self._data[name].value = default
+
     @staticmethod
     def loads(text):
         return PackageOptions(yaml.load(text) or {})
@@ -373,6 +378,9 @@ class PackageOptions(object):
     def _check_field(self, field):
         if field not in self._data:
             raise ConanException(option_not_exist_msg(field, list(self._data.keys())))
+
+    def get_safe(self, name):
+        return self._data.get(name, None)
 
     def __getattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field

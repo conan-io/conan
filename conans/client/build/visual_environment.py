@@ -39,7 +39,7 @@ class VisualStudioBuildEnvironment(object):
         if self.settings.get_safe("compiler") == "Visual Studio":
             flag = cppstd_flag(self.settings.get_safe("compiler"),
                                self.settings.get_safe("compiler.version"),
-                               self.settings.get_safe("compiler.cppstd"))
+                               self.options.cppstd)
             if flag:
                 cl.append(flag)
         lib = [lib for lib in self.lib_paths]  # copy

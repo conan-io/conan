@@ -15,7 +15,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 from conans.tools import cpu_count
 from conans.util.files import save
 from conans.test.utils.test_files import temp_folder
-from conans.model.options import Options, PackageOptions
+from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.errors import ConanException
 
 
@@ -509,11 +509,13 @@ class ConanFileMock(ConanFile):
         self.conanfile_directory = "."
         self.source_folder = self.build_folder = "."
         self.settings = None
-        self.options = Options(PackageOptions.loads(""))
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = TestBufferConanOutput()
         if shared is not None:
-            self.options = namedtuple("options", "shared")(shared)
+            self.options = Options(PackageOptions({"shared": ["True", "False"]}))
+            self.options.values = OptionsValues([("shared",  shared)])
+        else:
+            self.options = Options(PackageOptions({}))
 
     def run(self, command):
         self.command = command

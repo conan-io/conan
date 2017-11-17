@@ -25,8 +25,8 @@ class AutoToolsBuildEnvironment(object):
         self._compiler = conanfile.settings.get_safe("compiler")
         self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
-        self._cppstd = conanfile.settings.get_safe("compiler.cppstd")
-        self._cstd = conanfile.settings.get_safe("compiler.cstd")
+        self._cppstd = conanfile.options.get_safe("cppstd")
+        self._cstd = conanfile.options.get_safe("cstd")
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value

@@ -223,6 +223,9 @@ class MyLib(ConanFile):
     version = "0.1"
     settings = "arch", "compiler"
     generators = "cmake"
+    
+    def options(self, config):
+        config.add_cppstd()
 
     def build(self):
         cmake = CMake(self)
@@ -251,7 +254,7 @@ target_link_libraries(mylib ${CONAN_LIBS})
         self.assertIn("Error in build()", client.out)
 
         # Now specify c++14
-        client.run("install . --install-folder=build -s compiler.cppstd=14gnu")
+        client.run("install . --install-folder=build -o cppstd=14gnu")
         client.run("build . --build-folder=build")
         self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS ON", client.out)
         libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"

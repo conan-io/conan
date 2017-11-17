@@ -39,6 +39,7 @@ class CMake(object):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
         self._settings = conanfile.settings
+        self._options = conanfile.options
         self._conanfile = conanfile
 
         self._os = self._settings.get_safe("os")
@@ -49,8 +50,10 @@ class CMake(object):
         self._libcxx = self._settings.get_safe("compiler.libcxx")
         self._runtime = self._settings.get_safe("compiler.runtime")
         self._build_type = self._settings.get_safe("build_type")
-        self._cppstd = self._settings.get_safe("compiler.cppstd")
-        self._cstd = self._settings.get_safe("compiler.cstd")
+        tmpcppstd = self._options.get_safe("cppstd")
+        self._cppstd = str(tmpcppstd) if tmpcppstd else None
+        tmpcstd = self._options.get_safe("cstd")
+        self._cstd = str(tmpcstd) if tmpcstd else None
 
         self.generator = generator or self._generator()
         self.toolset = self._toolset(toolset)

@@ -53,7 +53,7 @@ def cstd_flag(compiler, compiler_version, cstd):
     return flag
 
 
-def cppstd_default_setting(compiler, compiler_version):
+def cppstd_default(compiler, compiler_version):
 
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": "98",
@@ -61,7 +61,7 @@ def cppstd_default_setting(compiler, compiler_version):
     return default
 
 
-def cstd_default_setting(compiler, compiler_version):
+def cstd_default(compiler, compiler_version):
 
     default = {"gcc": _gcc_cstd_default(compiler, compiler_version),
                "clang": "11gnu",

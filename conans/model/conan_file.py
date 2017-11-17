@@ -10,21 +10,60 @@ from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 
 
-def create_options(conanfile):
-    try:
-        package_options = PackageOptions(getattr(conanfile, "options", None))
-        options = Options(package_options)
+class DynamicOptionsManager(object):
+    """
+    Class to allow the recipe creator to add options and standard options, using even settings
+    to condition the options
+    """
 
-        default_options = getattr(conanfile, "default_options", None)
-        if default_options:
-            if isinstance(default_options, (list, tuple)):
-                default_values = OptionsValues(default_options)
-            elif isinstance(default_options, str):
-                default_values = OptionsValues.loads(default_options)
-            else:
-                raise ConanException("Please define your default_options as list or "
-                                     "multiline string")
-            options.values = default_values
+    def __init__(self, options, settings):
+        self.options = options
+        self.settings = settings
+
+    def add_option(self, *args, **kwargs):
+        return self.options.add_option(*args, **kwargs)
+
+    def add_shared(self, default=False):
+        self.options.add_option("shared", [True, False], default)
+
+    def add_cppstd(self, default=None):
+        default = default or "11"
+        if self.settings.get_safe("compiler") == "Visual Studio":
+            self.options.add_option("cppstd", ["11", "14", "17"], default)
+        else:
+            self.options.add_option("cppstd",
+                                    ["98", "11", "14", "17", "98gnu", "11gnu", "14gnu", "17gnu"],
+                                    default)
+
+    def add_cstd(self, default=None):
+        default = default or "11"
+        if self.settings.get_safe("compiler") != "Visual Studio":
+            self.options.add_option("cppstd",
+                                    ["90", "99", "11", "90gnu", "99gnu", "11gnu"], default)
+
+
+def create_options(conanfile, settings):
+    try:
+        options_symbol = getattr(conanfile, "options", None)
+        if callable(options_symbol):
+
+            package_options = PackageOptions(None)
+            options = Options(package_options)
+            conanfile.options(DynamicOptionsManager(options, settings))
+        else:
+            package_options = PackageOptions(options_symbol)
+            options = Options(package_options)
+
+            default_options = getattr(conanfile, "default_options", None)
+            if default_options:
+                if isinstance(default_options, (list, tuple)):
+                    default_values = OptionsValues(default_options)
+                elif isinstance(default_options, str):
+                    default_values = OptionsValues.loads(default_options)
+                else:
+                    raise ConanException("Please define your default_options as list or "
+                                         "multiline string")
+                options.values = default_values
         return options
     except Exception as e:
         raise ConanException("Error while initializing options. %s" % str(e))
@@ -97,9 +136,9 @@ class ConanFile(object):
             self.generators = [self.generators]
 
         # User defined options
-        self.options = create_options(self)
-        self.requires = create_requirements(self)
+        self.options = create_options(self, settings)
         self.settings = create_settings(self, settings)
+        self.requires = create_requirements(self)
         self.exports = create_exports(self)
         self.exports_sources = create_exports_sources(self)
         # needed variables to pack the project
