@@ -37,6 +37,10 @@ class DevelopTest(unittest.TestCase):
         self.assertIn("Develop package!", client.out)
         self.assertIn("Develop package_info!", client.out)
         self.assertIn("Develop package_id!", client.out)
+
+        client.run("install Pkg/0.1@user/testing --build")
+        self.assertNotIn("Develop", client.out)
+
         consumer = """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "Pkg/0.1@user/testing"

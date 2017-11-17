@@ -131,7 +131,6 @@ class ConanManager(object):
         conanfile.conanfile_directory (smell)"""
         if isinstance(reference_or_path, ConanFileReference):
             conanfile = loader.load_virtual([reference_or_path], cwd)
-            loader.dev_reference = reference_or_path
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
             try:
@@ -300,7 +299,7 @@ class ConanManager(object):
     def install(self, reference, install_folder, profile, remote=None,
                 build_modes=None, filename=None, update=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                generators=None, no_imports=False, inject_require=None, cwd=None, deploy=False):
+                generators=None, no_imports=False, inject_require=None, cwd=None, install_reference=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -331,6 +330,8 @@ class ConanManager(object):
                                   update=update, manifest_manager=manifest_manager)
 
         loader = self.get_loader(profile)
+        if not install_reference and isinstance(reference, ConanFileReference):  # is a create
+            loader.dev_reference = reference
         conanfile = self._load_install_conanfile(loader, reference, filename, cwd=cwd)
         if inject_require:
             self._inject_require(conanfile, inject_require)
@@ -390,7 +391,7 @@ class ConanManager(object):
                 run_imports(conanfile, install_folder, output)
             call_system_requirements(conanfile, output)
 
-            if deploy:
+            if install_reference:
                 # The conanfile loaded is really a virtual one. The one with the deploy is the first level one
                 deploy_conanfile = deps_graph.inverse_levels()[1][0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
