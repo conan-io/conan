@@ -41,6 +41,7 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         return conan_path
 
+
 say_content = """
 from conans import ConanFile
 
@@ -329,7 +330,7 @@ class ChatConan(ConanFile):
     version = "2.3"
     requires = "Hello/1.2@user/testing"
 
-    def conan_info(self):
+    def package_id(self):
         hello_require = self.info.requires["Hello"]
         hello_require.version = hello_require.full_version.minor()
         say_require = self.info.requires["Say"]
@@ -377,7 +378,7 @@ class ChatConan(ConanFile):
     version = "2.3"
     requires = "Hello/1.2@user/testing"
 
-    def conan_info(self):
+    def package_id(self):
         self.info.requires["Hello"].full_package_mode()
         self.info.requires["Say"].semver_mode()
 """
@@ -1391,7 +1392,7 @@ class HelloConan(ConanFile):
     version = "1.2"
     requires = "Say/0.1@user/testing"
 
-    def conan_info(self):
+    def package_id(self):
         self.info.requires.clear()
 """
 
@@ -1414,7 +1415,7 @@ class HelloConan(ConanFile):
     version = "1.2"
     requires = "Say/0.1@user/testing"
 
-    def conan_info(self):
+    def package_id(self):
         self.info.requires.remove("Say")
 """
 
@@ -1437,7 +1438,7 @@ class ChatConan(ConanFile):
     version = "1.2"
     requires = "Hello/1.2@user/testing", "Bye/0.2@user/testing"
 
-    def conan_info(self):
+    def package_id(self):
         self.info.requires.remove("Bye", "Hello")
 """
 
@@ -1476,7 +1477,7 @@ class HelloConan(ConanFile):
     options = {"shared": [True, False]}
     default_options = "shared=True"
 
-    def conan_info(self):
+    def package_id(self):
         if self.options.shared:
             self.info.options["Say"] = self.info.full_options["Say"]
 """
@@ -1491,7 +1492,7 @@ class ChatConan(ConanFile):
     options = {"shared": [True, False]}
     default_options = "shared=True"
 
-    def conan_info(self):
+    def package_id(self):
         if self.options.shared:
             self.info.options["Hello"] = self.info.full_options["Hello"]
             self.info.options["Say"].shared = self.info.full_options["Say"].shared
@@ -1729,7 +1730,7 @@ class SayConan(ConanFile):
     settings = "os"
     options = {"myoption": [1, 2, 3]}
 
-    def conan_info(self):
+    def package_id(self):
         self.info.settings.os = "Win"
         self.info.options.myoption = "1,2,3"
 """
@@ -1867,7 +1868,8 @@ class SayConan(ConanFile):
         with self.assertRaises(ConanException) as cm:
             self.root(content, options="arch_independent=True", settings="os=Linux")
         self.assertIn(bad_value_msg("settings.os", "Linux",
-                                    ['Android', 'Arduino', 'FreeBSD', 'Macos', 'SunOS', "Windows", "iOS", "tvOS", "watchOS"]),
+                                    ['Android', 'Arduino', 'FreeBSD', 'Macos',
+                                     'SunOS', "Windows", "iOS", "tvOS", "watchOS"]),
                       str(cm.exception))
 
     def test_config_remove2(self):
