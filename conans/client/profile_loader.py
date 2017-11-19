@@ -86,7 +86,7 @@ def read_conaninfo_profile(current_path):
 def get_profile_path(profile_name, default_folder, cwd):
     if os.path.isabs(profile_name):
         profile_path = profile_name
-    elif cwd and (os.path.exists(os.path.join(cwd, profile_name)) or profile_name.startswith(".")):
+    elif cwd and profile_name.startswith("."):
         # relative path name
         profile_path = os.path.abspath(os.path.join(cwd, profile_name))
     else:

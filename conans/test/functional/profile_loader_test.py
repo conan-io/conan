@@ -177,12 +177,11 @@ class ProfileTest(unittest.TestCase):
         self.assertIn("QTPATH2=C:/QtCommercial2/5.8/msvc2015_64/bin", new_profile.dumps())
 
     def profile_load_dump_test(self):
-
         # Empty profile
         tmp = temp_folder()
         profile = Profile()
-        dump = profile.dumps()
-        new_profile, _ = self._get_profile(tmp, "")
+        dumps = profile.dumps()
+        new_profile, _ = self._get_profile(tmp, dumps)
         self.assertEquals(new_profile.settings, profile.settings)
 
         # Settings
@@ -564,7 +563,7 @@ class DefaultNameConan(ConanFile):
         [env]
         MYVAR=$MY_MAGIC_VAR what they seem.
         '''
-        profile, vars = self._get_profile(tmp, txt)
+        profile, _ = self._get_profile(tmp, txt)
         self.assertEquals("The owls are not what they seem.", profile.env_values.data[None]["MYVAR"])
 
         # Order in replacement, variable names (simplification of preprocessor)
@@ -575,7 +574,7 @@ class DefaultNameConan(ConanFile):
                 [env]
                 MYVAR=$P2
                 '''
-        profile, vars = self._get_profile(tmp, txt)
+        profile, _ = self._get_profile(tmp, txt)
         self.assertEquals("Diane, the coffee at the Great Northern2", profile.env_values.data[None]["MYVAR"])
 
         # Variables without spaces
@@ -588,8 +587,8 @@ MYVAR=$VARIABLE WITH SPACES
             self._get_profile(tmp, txt)
 
     def test_profiles_includes(self):
-
         tmp = temp_folder()
+
         def save_profile(txt, name):
             abs_profile_path = os.path.join(tmp, name)
             save(abs_profile_path, txt)
@@ -610,11 +609,7 @@ two/1.2@lasote/stable
         profile1 = """
  # Include in subdir, curdir
 MYVAR=1
-include(profile0.txt)
-
-
-
-
+include(./profile0.txt)
 
 [settings]
 os=Windows
@@ -631,7 +626,7 @@ my_scope=TRUE
 
         profile2 = """
 #  Include in subdir
-include(subdir/profile1.txt)
+include(./subdir/profile1.txt)
 [settings]
 os=$MYVAR
 """
@@ -664,9 +659,10 @@ one/1.5@lasote/stable
 
         save_profile(profile4, "profile4.txt")
 
-        profile, vars = read_profile("./profile4.txt", tmp, None)
+        profile, variables = read_profile("./profile4.txt", tmp, None)
 
-        self.assertEquals(vars, {"MYVAR": "1", "OTHERVAR": "34", "PROFILE_DIR": tmp , "ROOTVAR": "0"})
+        self.assertEquals(variables, {"MYVAR": "1", "OTHERVAR": "34", "PROFILE_DIR":
+                                      tmp, "ROOTVAR": "0"})
         self.assertEquals("FromProfile3And34", profile.env_values.data[None]["MYVAR"])
         self.assertEquals("1", profile.env_values.data["package1"]["ENVY"])
         self.assertEquals(profile.settings, {"os": "1"})
