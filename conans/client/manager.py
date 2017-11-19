@@ -226,6 +226,10 @@ class ConanManager(object):
         # create an instance of a deployment
         dp = BinaryPacker(name, version, user, channel, properties, package_dir, output_dir)
 
+        # set pack name if user has supplied it
+        if pack_name != None:
+            dp.filename = pack_name
+
         # we can create an archive using the deployment
         # output_file can be overriden by the user, or use the one computed automatically.
         # supports: zip, tar.gz, tar.bz2, tar.xz
