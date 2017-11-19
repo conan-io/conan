@@ -38,6 +38,7 @@ from conans.client.loader_parse import load_conanfile_class
 from conans.client.build_requires import BuildRequires
 from conans.client.linter import conan_linter
 from conans.search.search import filter_outdated
+from conans.client.binary_packer import BinaryPacker
 
 
 class BuildMode(object):
@@ -210,6 +211,25 @@ class ConanManager(object):
             package_output = ScopedOutput(str(reference), self._user_io.out)
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     install_folder, package_output, local=True)
+
+    def pack(self, reference, name, version, user, channel,
+             package_id, properties, pack_name, output_dir='.', target_scheme=None):
+
+        """ Pack a compiled binary package
+        @param reference: ConanFileReference
+        """
+        packages_folder = self._client_cache.packages(reference)
+
+        # this is the dir where the package files reside
+        package_dir = os.path.join(packages_folder, package_id)
+
+        # create an instance of a deployment
+        dp = BinaryPacker(name, version, user, channel, properties, package_dir, output_dir)
+
+        # we can create an archive using the deployment
+        # output_file can be overriden by the user, or use the one computed automatically.
+        # supports: zip, tar.gz, tar.bz2, tar.xz
+        dp.compress(output_file=dp.filename, compression='.' + target_scheme)
 
     def download(self, reference, package_ids, remote=None):
         """ Download conanfile and specified packages to local repository

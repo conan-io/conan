@@ -240,6 +240,56 @@ class Command(object):
                                   conan_file_path=args.cwd, name=name, version=version, user=user,
                                   channel=channel, filename=args.file, werror=args.werror)
 
+    def pack(self, *args):
+        """ Packs a binary package.
+        """
+        parser = argparse.ArgumentParser(description=self.pack.__doc__, prog="conan pack")
+        parser.add_argument("reference", help='user/channel, or a full package reference'
+                                              ' (Pkg/version@user/channel), if name and version '
+                                              ' are not declared in the recipe')
+
+        parser.add_argument("--package_id", default=None, required=True, help="specify package id to pack.")
+
+        parser.add_argument("--out", default=os.getcwd(), help='Directory to output the packed binaries.')
+
+        parser.add_argument("--packname", default=None, help='Name used for packing. '
+                                                             'If ommited it will be automatically generated.')
+
+        # TODO: obtain the list of supported methods from the packing class
+        parser.add_argument("--target", default='zip',
+                            help='Scheme to use for packing the binary package.')
+
+        args = parser.parse_args(*args)
+
+        try:
+            reference = ConanFileReference.loads(args.reference)
+        except ConanException:
+            print("Could not load reference: %s" % str(args.reference))
+        else:
+            if reference:
+                ret = self._conan.search_packages(reference)
+                ordered_packages, reference, recipe_hash, package_query = ret
+
+                if args.package_id in ordered_packages:
+                    name, version, user, channel = get_reference_fields(args.reference)
+
+                    properties = ordered_packages[args.package_id]
+                    return self._conan.pack(reference,
+                                            name=name,
+                                            version=version,
+                                            user=user,
+                                            channel=channel,
+                                            package_id=args.package_id,
+                                            properties=properties,
+                                            pack_name=args.packname,
+                                            output_dir=args.out,
+                                            target_scheme=args.target)
+                else:
+                    print("\n%s is not an existing package of %s" % (args.package_id, str(reference)))
+            else:
+                print("Could not load reference: %s" % str(args.reference))
+
+
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
          It works specifying the recipe reference and package ID to be installed.
@@ -1043,7 +1093,7 @@ class Command(object):
         """ prints a summary of all commands
         """
         grps = [("Consumer commands", ("install", "config", "get", "info", "search")),
-                ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
+                ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test", "pack")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
                                    "alias", "download")),

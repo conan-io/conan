@@ -1,56 +1,50 @@
 import os
+import shutil
 import zipfile
 import tarfile
 
-from conans.model.conan_file import ConanFile
-from conans.model.settings import Settings
 from conans.errors import ConanException
 from conans.util import files
 from conans import tools
 
-class Deployment(object):
-    def __init__(self, settings_or_conanfile):
-        if isinstance(settings_or_conanfile, ConanFile):
-            self._settings = settings_or_conanfile.settings
-            self._conanfile = settings_or_conanfile
-            #self.configure = self._configure_new
-            #self.build = self._build_new
-        else:
-            raise ConanException("First parameter of Deployment() has to be a ConanFile instance.")
+class BinaryPacker(object):
+    def __init__(self, name, version, user, channel, properties, package_dir, output_dir):
+        self._name = name
+        self._version = version
+        self._user = user
+        self._channel = channel
+        self._properties = properties
+        self._package_dir = package_dir
+        self._output_dir = output_dir
+        self._packname = ''
 
-        self._copied_package = False
+        self._os = properties['settings']['os']
+        self._compiler = properties['settings']['compiler']
+        self._compiler_version = properties['settings']['compiler.version']
+        self._arch = properties['settings']['arch']
+        #self._libcxx = self._settings.get_safe("compiler.libcxx")
+        self._runtime = properties['settings']['compiler.runtime']
+        self._build_type = properties['settings']['build_type']
+        self._link = 'shared' if properties['options']['shared'] else 'static'
 
-        self._link = 'shared' if self._conanfile.options.shared else 'static'
-
-        self._os = self._settings.get_safe("os")
-        self._compiler = self._settings.get_safe("compiler")
-        self._compiler_version = self._settings.get_safe("compiler.version")
-        self._arch = self._settings.get_safe("arch")
-        self._op_system_version = self._settings.get_safe("os.version")
-        self._libcxx = self._settings.get_safe("compiler.libcxx")
-        self._runtime = self._settings.get_safe("compiler.runtime")
-        self._build_type = self._settings.get_safe("build_type")
-
-        super(Deployment, self).__init__()
-
-        self._name = self._settings.get_safe("name")
-        self._version = self._settings.get_safe("version")
-
-        self.filename = self.build_deployment_name()
+        self.filename = self.construct_pack_name()
 
 
-    def compress(self, output_file=None, src_stage_dir='artifacts', compression='zip', checksum=True):
-        self._deployment_dir = os.path.join(src_stage_dir, self.filename)
-        if not os.path.exists(self._deployment_dir):
-            os.makedirs(self._deployment_dir)
+    def compress(self, output_file=None, src_stage_dir='packs', compression='zip', checksum=True):
+        self._packing_dir = os.path.join(self._output_dir, src_stage_dir, self.filename)
 
-        self._conanfile.copy("*", dst=self._deployment_dir)
-        self._copied_package = True
+        # TODO: make add --force option for deleting existing pack destinations (?)
+        if os.path.exists(self._packing_dir):
+            #print("\nRemoving: " + self._packing_dir)
+            shutil.rmtree(self._packing_dir)
+            #print(self._packing_dir + " already exists. Remove first.")
 
-        #self._conanfile.output.warn("Compressing: %s" % src_dir)
-        #self._conanfile.output.warn("Archive: %s" % output_file)
+        print("\nPacking in: " + self._packing_dir)
 
-        with tools.chdir(os.path.dirname(self._deployment_dir)):
+        print("\nCopying: " + self._package_dir)
+        shutil.copytree(self._package_dir, self._packing_dir, symlinks=True)
+
+        with tools.chdir(os.path.dirname(self._packing_dir)):
             if compression == '.zip':
                 self.zip(output_file, output_file + compression)
             elif compression == '.gz' or compression == '.bz2' or compression == '.xz':
@@ -58,6 +52,9 @@ class Deployment(object):
             else:
                 raise ConanException("[%s] is not a supported compression filetype." % compression)
 
+            print("Created: " + os.path.join(os.getcwd(), output_file + compression))
+
+            # allow use to set this (?)
             if checksum:
                 md5sum_file = '{0}.md5'.format(output_file)
                 with open(md5sum_file, "w") as tf:
@@ -82,8 +79,8 @@ class Deployment(object):
 
 
     @property
-    def deployment_dir(self):
-        return self._deployment_dir
+    def pack_dir(self):
+        return self._pack_dir
 
     @property
     def os(self):
@@ -141,9 +138,9 @@ class Deployment(object):
             return ''
 
 
-    def build_deployment_name(self):
-        return '{name}-{version}-{os}-{arch}-{build}-{compiler}{compiler_version}'.format(name=self._conanfile.name,
-                                                                                          version=self._conanfile.version,
+    def construct_pack_name(self):
+        return '{name}-{version}-{os}-{arch}-{build}-{compiler}{compiler_version}'.format(name=self._name,
+                                                                                          version=self._version,
                                                                                           os=self.os,
                                                                                           arch=self.arch,
                                                                                           build=self.build,
@@ -152,8 +149,8 @@ class Deployment(object):
 
     @property
     def filename(self):
-        return self._deployment_name
+        return self._packname
 
     @filename.setter
     def filename(self, filename):
-        self._deployment_name = filename
+        self._packname = filename
