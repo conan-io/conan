@@ -273,7 +273,7 @@ class CMake(object):
         except AttributeError:
             pass
 
-        if self._os == "Windows" and self._compiler == "Visual Studio":
+        if str(self._os) in ["Windows", "WindowsStore"] and self._compiler == "Visual Studio":
             if self.parallel:
                 cpus = tools.cpu_count()
                 ret["CONAN_CXX_FLAGS"] = "/MP%s" % cpus
