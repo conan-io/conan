@@ -5,8 +5,6 @@ from conans.model.options import Options
 from conans.model.settings import Settings
 from conans.client.build.cmake import CMake
 from conans.client.build.meson import Meson
-from conans.client.build.gcc import GCC
-from conans.client.build.configure_environment import ConfigureEnvironment
 from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 from conans.client.run_environment import RunEnvironment

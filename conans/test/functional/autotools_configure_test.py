@@ -43,6 +43,88 @@ class AutoToolsConfigureTest(unittest.TestCase):
         things = "'things'" if platform.system() != "Windows" else "things"
         self.assertEquals(runner.command_called, "make %s -j%s" % (things, cpu_count()))
 
+    def test_cppstd(self):
+        # Valid one for GCC
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "7.1",
+                                 "compiler.cppstd": "17"})
+        conanfile = MockConanfile(settings)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("-std=c++1z", expected)
+
+        # Invalid one for GCC
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "4.9",
+                                 "compiler.cppstd": "17"})
+        conanfile = MockConanfile(settings)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertNotIn("-std", expected)
+
+        # Valid one for Clang
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "clang",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "4.0",
+                                 "compiler.cppstd": "17"})
+        conanfile = MockConanfile(settings)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("-std=c++1z", expected)
+
+        # Invalid one for Clang
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "clang",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "3.3",
+                                 "compiler.cppstd": "17"})
+        conanfile = MockConanfile(settings)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertNotIn("-std=", expected)
+
+        # Visual Activate 11 is useless
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "compiler.cppstd": "11"})
+        conanfile = MockConanfile(settings)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertNotIn("-std=c++", expected)
+
+        # Visual Activate 17 in VS 2017
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "compiler.cppstd": "17"})
+        conanfile = MockConanfile(settings)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("/std=c++17", expected)
+
+        # Visual Activate 17 in VS 2015
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "14",
+                                 "compiler.cppstd": "17"})
+        conanfile = MockConanfile(settings)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("/std=c++latest", expected)
+
     def test_variables(self):
         # GCC 32
         settings = MockSettings({"build_type": "Release",

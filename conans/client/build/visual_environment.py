@@ -1,10 +1,15 @@
 import os
+from conans.client.build.compilers_info import cppstd_flag
 
 
 class VisualStudioBuildEnvironment(object):
     """
     - LIB: library paths with semicolon separator
     - CL: /I (include paths)
+
+    https://msdn.microsoft.com/en-us/library/fwkeyyhe.aspx
+    https://msdn.microsoft.com/en-us/library/9s7c9wdw.aspx
+
     """
     def __init__(self, conanfile):
         """
@@ -14,6 +19,7 @@ class VisualStudioBuildEnvironment(object):
         """
         self.include_paths = conanfile.deps_cpp_info.include_paths
         self.lib_paths = conanfile.deps_cpp_info.lib_paths
+        self.settings = conanfile.settings
 
     @property
     def vars(self):
@@ -28,6 +34,14 @@ class VisualStudioBuildEnvironment(object):
         """Used in virtualbuildenvironment"""
         # Here we do not quote the include paths, it's going to be used by virtual environment
         cl = ['/I%s' % lib for lib in self.include_paths]
+
+        # /std flag
+        if self.settings.get_safe("compiler") == "Visual Studio":
+            flag = cppstd_flag(self.settings.get_safe("compiler"),
+                               self.settings.get_safe("compiler.version"),
+                               self.settings.get_safe("compiler.cppstd"))
+            if flag:
+                cl.append(flag)
         lib = [lib for lib in self.lib_paths]  # copy
 
         if os.environ.get("CL", None):
