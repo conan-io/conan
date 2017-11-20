@@ -39,7 +39,7 @@ class HelloConan(ConanFile):
 
     def test_clean(self):
         for _ in (1, 2):
-            self.client.run("clean . -c")
+            self.client.run("clean . cache")
             self.assertFalse(os.path.exists(os.path.join(self.client.current_folder, "test_package/build")))
             self.assertTrue(os.path.exists(self.client.client_cache.export(self.conan_ref)))
             self.assertFalse(os.path.exists(self.client.client_cache.source(self.conan_ref)))
@@ -48,7 +48,7 @@ class HelloConan(ConanFile):
             self.assertTrue(os.path.exists(self.client.client_cache.package(self.pkg_ref)))
 
     def test_cache(self):
-        self.client.run("clean  -c")
+        self.client.run("clean  cache")
         self.assertTrue(os.path.exists(os.path.join(self.client.current_folder, "test_package/build")))
         self.assertFalse(os.path.exists(self.client.client_cache.source(self.conan_ref)))
         self.assertFalse(os.path.exists(self.client.client_cache.build(self.pkg_ref)))
@@ -59,3 +59,8 @@ class HelloConan(ConanFile):
         self.assertTrue(os.path.exists(self.client.client_cache.source(self.conan_ref)))
         self.assertTrue(os.path.exists(self.client.client_cache.export_sources(self.conan_ref)))
         self.assertTrue(os.path.exists(self.client.client_cache.build(self.pkg_ref)))
+
+    def test_error(self):
+        # too few arguments
+        error = self.client.run("clean", ignore_error=True)
+        self.assertTrue(error)
