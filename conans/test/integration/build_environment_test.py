@@ -4,7 +4,7 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.tools import unix_path
