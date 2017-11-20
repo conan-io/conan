@@ -248,7 +248,7 @@ add_library(mylib mylib.cpp)
 target_link_libraries(mylib ${CONAN_LIBS})
 """})
 
-        client.run("install . --install-folder=build")
+        client.run("install . --install-folder=build -o cppstd=98gnu")
         error = client.run("build . --build-folder=build", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Error in build()", client.out)
