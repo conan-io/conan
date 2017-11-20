@@ -135,8 +135,8 @@ class ProfileTest(unittest.TestCase):
         self.client.save({CONANFILE: conanfile_scope_env})
         error = self.client.run('install -pr "%sscopes_env"' % path, ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: Specified profile '%sscopes_env' doesn't exist" % path,
-                      self.client.user_io.out)
+        self.assertIn("ERROR: Profile not found:", self.client.out)
+        self.assertIn("scopes_env", self.client.out)
 
     def install_profile_env_test(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
