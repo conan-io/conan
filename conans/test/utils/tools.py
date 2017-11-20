@@ -328,6 +328,9 @@ class TestClient(object):
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
+        if default_profile:
+            self.client_cache.default_profile
+
     def update_servers(self, servers):
         self.servers = servers or {}
         save(self.client_cache.registry, "")
