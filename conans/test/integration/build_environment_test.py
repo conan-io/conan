@@ -4,7 +4,7 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from conans.model.ref import ConanFileReference
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.tools import unix_path
@@ -148,6 +148,46 @@ class ConanBash(ConanFile):
         client.run("install bash/0.1@lasote/stable --build")
         expected_curdir_base = unix_path(client.client_cache.conan(ConanFileReference.loads("bash/0.1@lasote/stable")))
         self.assertIn(expected_curdir_base, client.user_io.out)
+
+    def run_in_windows_bash_relative_path_test(self):
+        if platform.system() != "Windows":
+            return
+        conanfile = '''
+from conans import ConanFile, tools
+
+class ConanBash(ConanFile):
+    name = "bash"
+    version = "0.1"
+
+    def build(self):
+        tools.mkdir("relative")
+        tools.run_in_windows_bash(self, "pwd", "relative")
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("create bash/0.1@lasote/stable")
+        self.assertIn("build/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/relative", client.user_io.out)
+
+    def run_in_windows_bash_env_var_test(self):
+        if platform.system() != "Windows":
+            return
+        conanfile = '''
+from conans import ConanFile, tools
+
+class ConanBash(ConanFile):
+    name = "bash"
+    version = "0.1"
+    settings = "os", "compiler", "build_type", "arch"
+
+    def build(self):
+        with tools.environment_append({"MYVAR": "Hello MYVAR"}):
+            tools.run_in_windows_bash(self, "echo $MYVAR")
+        '''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("export lasote/stable")
+        client.run("install bash/0.1@lasote/stable --build")
+        self.assertIn("Hello MYVAR", client.user_io.out)
 
     def use_build_virtualenv_test(self):
         if platform.system() != "Linux":
