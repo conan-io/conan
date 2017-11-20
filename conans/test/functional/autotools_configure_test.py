@@ -112,7 +112,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertIn("/std=c++17", expected)
+        self.assertIn("/std:c++17", expected)
 
         # Visual Activate 17 in VS 2015
         settings = MockSettings({"build_type": "Release",
@@ -123,7 +123,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile = MockConanfile(settings, options)
         be = AutoToolsBuildEnvironment(conanfile)
         expected = be.vars["CXXFLAGS"]
-        self.assertIn("/std=c++latest", expected)
+        self.assertIn("/std:c++latest", expected)
 
     def test_variables(self):
         # GCC 32
