@@ -14,6 +14,8 @@ MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 default_settings_yml = """
 os:
     Windows:
+    WindowsStore:
+        version: ["8.1", "10.0"]
     Linux:
     Macos:
     Android:
