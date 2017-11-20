@@ -156,14 +156,21 @@ class ConanAPIV1(object):
         set_global_instances(self._user_io.out, get_basic_requester(self._client_cache))
 
     @api_method
-    def clean(self, cwd=None):
-        self.remove(pattern="*", builds=[], src=True, force=True)
-        cwd = prepare_cwd(cwd)
+    def clean(self, path=None, cache=None):
+        if cache:
+            self._user_io.out.info("Cleaning conan cache")
+            self.remove(pattern="*", builds=[], src=True, force=True)
+        if not path:
+            return
+        cwd = prepare_cwd(path)
         for test_folder_name in ["test_package", "test"]:
             test_folder = os.path.join(cwd, test_folder_name)
             test_conanfile_path = os.path.join(test_folder, "conanfile.py")
             if os.path.exists(test_conanfile_path):
-                rmdir(os.path.join(test_folder, "build"))
+                build_folder = os.path.join(test_folder, "build")
+                if os.path.exists(build_folder):
+                    self._user_io.out.info("Removing %s" % build_folder)
+                    rmdir(build_folder)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,

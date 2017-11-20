@@ -69,9 +69,14 @@ class Command(object):
         """Remove source and build folders from local cache.
         Also cleans the local test_package/build folder if existing
         """
-        argparse.ArgumentParser(description=self.clean.__doc__,
-                                prog="conan clean.")
-        self._conan.clean()
+        parser = argparse.ArgumentParser(description=self.clean.__doc__,
+                                         prog="conan clean")
+        parser.add_argument("path", nargs="?", help='Path to a package recipe, possibly '
+                            'containing a test_package/build folder to remove')
+        parser.add_argument("-c", "--cache", action='store_true', default=False,
+                            help='Remove all build and source folders from the local cache')
+        args = parser.parse_args(*args)
+        self._conan.clean(args.path, args.cache)
 
     def new(self, *args):
         """Creates a new package recipe template with a 'conanfile.py'.
