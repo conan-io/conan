@@ -20,6 +20,8 @@ class BuildSLNCommandTest(unittest.TestCase):
             build_sln_command(Settings({}), sln_path='dummy.sln', targets=None, upgrade_project=False,
                               build_type=None, arch='x86', parallel=False)
 
+
+
     def positive_test(self):
         command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None, upgrade_project=False,
                                     build_type='Debug', arch='x86', parallel=False)

@@ -33,10 +33,10 @@ def cppstd_flag(compiler, compiler_version, cppstd):
     func = {"gcc": _cppstd_gcc,
             "clang": _cppstd_clang,
             "apple-clang": _cppstd_apple_clang,
-            "Visual Studio": _cppstd_visualstudio}.get(compiler, None)
+            "Visual Studio": _cppstd_visualstudio}.get(str(compiler), None)
     flag = None
     if func:
-        flag = func(compiler_version, cppstd)
+        flag = func(str(compiler_version), str(cppstd))
     return flag
 
 
@@ -46,7 +46,7 @@ def cstd_flag(compiler, compiler_version, cstd):
     func = {"gcc": _cstd_gcc,
             "clang": _cstd_clang,
             "apple-clang": _cstd_apple_clang,
-            "Visual Studio": _cstd_visual_studio}.get(compiler, None)
+            "Visual Studio": _cstd_visual_studio}.get(str(compiler), None)
     flag = None
     if func:
         flag = func(compiler_version, cstd)
@@ -57,7 +57,7 @@ def cppstd_default(compiler, compiler_version):
 
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": "98",
-               "apple-clang": "98"}.get(compiler, None)
+               "apple-clang": "98"}.get(str(compiler), None)
     return default
 
 
@@ -65,7 +65,7 @@ def cstd_default(compiler, compiler_version):
 
     default = {"gcc": _gcc_cstd_default(compiler, compiler_version),
                "clang": "11gnu",
-               "apple-clang": "11gnu"}.get(compiler, None)
+               "apple-clang": "11gnu"}.get(str(compiler), None)
     return default
 
 
@@ -98,8 +98,8 @@ def _cppstd_visualstudio(visual_version, cppstd):
     if int(visual_version) >= 15:
         v17 = "c++17"
 
-    flag = {"14": v14, "17": v17}.get(cppstd, None)
-    return "/std=%s" % flag if flag else None
+    flag = {"14": v14, "17": v17}.get(str(cppstd), None)
+    return "/std:%s" % flag if flag else None
 
 
 def _cstd_apple_clang(clang_version, cstd):
@@ -117,7 +117,7 @@ def _cstd_apple_clang(clang_version, cstd):
 
     flag = {"90": v90, "90gnu": v90gnu,
             "99": v99, "99gnu": v99gnu,
-            "11": v11, "11gnu": v11gnu}.get(cstd, None)
+            "11": v11, "11gnu": v11gnu}.get(str(cstd), None)
 
     return "-std=%s" % flag if flag else None
 

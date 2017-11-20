@@ -328,13 +328,6 @@ class TestClient(object):
         logger.debug("Client storage = %s" % self.storage_folder)
         self.current_folder = current_folder or temp_folder(path_with_spaces)
 
-        # Enforcing VS 2015, even if VS2017 is auto detected
-        if default_profile:
-            profile = self.client_cache.default_profile
-            if profile.settings.get("compiler.version") == "15":
-                profile.settings["compiler.version"] = "14"
-                save(self.client_cache.default_profile_path, profile.dumps())
-
     def update_servers(self, servers):
         self.servers = servers or {}
         save(self.client_cache.registry, "")

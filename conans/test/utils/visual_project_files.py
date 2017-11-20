@@ -245,9 +245,44 @@ int main()
 }
 '''
 
+main_file_14 = '''#include <iostream>
 
-def get_vs_project_files():
+auto hello(){
+    return 2;
+}
+
+int main()
+{
+    std::cout << "Hello World!" << hello() << std::endl;
+    return 0;
+}
+'''
+
+
+main_file_17 = '''#include <iostream>
+
+auto hello(){
+    return 2;
+}
+
+int main()
+{
+    if constexpr(true)
+        std::cout << "Hello World!" << std::endl;
+    return 0;
+}
+'''
+
+
+def get_vs_project_files(std=False):
+    if not std:
+        main = main_file
+    elif std == 14:
+        main = main_file_14
+    elif std == 17:
+        main = main_file_17
+
     return {"MyProject.sln": sln_file,
             "MyProject/MyProject.vcxproj": vcxproj_file,
             "MyProject/MyProject.vcxproj.filters": filters_file,
-            "MyProject/main.cpp": main_file}
+            "MyProject/main.cpp": main}

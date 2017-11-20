@@ -1,3 +1,4 @@
+import copy
 import os
 from conans.client.build.compilers_info import cppstd_flag
 
@@ -19,12 +20,37 @@ class VisualStudioBuildEnvironment(object):
         """
         self.include_paths = conanfile.deps_cpp_info.include_paths
         self.lib_paths = conanfile.deps_cpp_info.lib_paths
-        self.settings = conanfile.settings
+        self.defines = copy.copy(conanfile.deps_cpp_info.defines)
+        self.runtime = conanfile.settings.get_safe("compiler.runtime")
+        self._settings = conanfile.settings
+        self._options = conanfile.options
+        self.std = self._std_cpp()
+
+    def _std_cpp(self):
+        if self._settings.get_safe("compiler") == "Visual Studio":
+            flag = cppstd_flag(self._settings.get_safe("compiler"),
+                               self._settings.get_safe("compiler.version"),
+                               self._options.cppstd)
+            return flag
+        return None
+
+    def _get_cl_list(self):
+        cl = ['/I%s' % lib for lib in self.include_paths]
+        if self.std:
+            cl.append(self.std)
+        return cl
 
     @property
     def vars(self):
         """Used in conanfile with environment_append"""
-        cl_args = " ".join(['/I"%s"' % lib for lib in self.include_paths]) + _environ_value_prefix("CL")
+        flags = ['/I"%s"' % lib for lib in self.include_paths]
+        if self.std:
+            flags.append(self.std)
+
+        flags.extend(['/D%s' % lib for lib in self.defines])
+        if self.runtime:
+            flags.append("/%s" % self.runtime)
+        cl_args = " ".join(flags) + _environ_value_prefix("CL")
         lib_paths = ";".join(['%s' % lib for lib in self.lib_paths]) + _environ_value_prefix("LIB", ";")
         return {"CL": cl_args,
                 "LIB": lib_paths}
@@ -34,14 +60,9 @@ class VisualStudioBuildEnvironment(object):
         """Used in virtualbuildenvironment"""
         # Here we do not quote the include paths, it's going to be used by virtual environment
         cl = ['/I%s' % lib for lib in self.include_paths]
+        if self.std:
+            cl.append(self.std)
 
-        # /std flag
-        if self.settings.get_safe("compiler") == "Visual Studio":
-            flag = cppstd_flag(self.settings.get_safe("compiler"),
-                               self.settings.get_safe("compiler.version"),
-                               self.options.cppstd)
-            if flag:
-                cl.append(flag)
         lib = [lib for lib in self.lib_paths]  # copy
 
         if os.environ.get("CL", None):

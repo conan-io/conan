@@ -417,7 +417,7 @@ compiler:
         if platform.system() != "Windows":
             return
         conan_build_vs = """
-from conans import ConanFile, tools
+from conans import ConanFile, tools, MSBuild
 import platform
 
 class HelloConan(ConanFile):
@@ -425,17 +425,31 @@ class HelloConan(ConanFile):
     version = "1.2.1"
     exports = "*"
     settings = "os", "build_type", "arch", "compiler"
-
+    
+    def options(self, config):
+        config.add_cppstd()
+        
     def build(self):
-        build_command = tools.build_sln_command(self.settings, "MyProject.sln")
-        self.output.warn(build_command)
-        self.run(build_command)
+        msbuild = MSBuild(self)
+        msbuild.build("MyProject.sln")
 
     def package(self):
         self.copy(pattern="*.exe")
 
 """
         client = TestClient()
+
+        # Try specifying the standard
+        files = get_vs_project_files(std=17)
+        files[CONANFILE] = conan_build_vs
+
+        client.save(files)
+        error = client.run("create Hello/1.2.1@lasote/stable -o Hello:cppstd=14", ignore_error=True)
+        self.assertTrue(error)
+        client.save(files)
+        client.run("create Hello/1.2.1@lasote/stable -o Hello:cppstd=17")
+        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+
         files = get_vs_project_files()
         files[CONANFILE] = conan_build_vs
 
@@ -459,6 +473,7 @@ class HelloConan(ConanFile):
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
         self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+
 
     def download_retries_test(self):
         out = TestBufferConanOutput()
