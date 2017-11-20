@@ -83,16 +83,27 @@ def read_conaninfo_profile(current_path):
     return profile
 
 
-def get_profile_path(profile_name, default_folder, cwd):
+def get_profile_path(profile_name, default_folder, cwd, exists=True):
+    def valid_path(profile_path):
+        if exists and not os.path.isfile(profile_path):
+            raise ConanException("Profile not found: %s" % profile_path)
+        return profile_path
+
     if os.path.isabs(profile_name):
-        profile_path = profile_name
-    elif cwd and (os.path.exists(os.path.join(cwd, profile_name)) or profile_name.startswith(".")):
-        # relative path name
+        return valid_path(profile_name)
+
+    if profile_name[:2] in ("./", ".\\"):  # local
         profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-    else:
-        if not os.path.exists(default_folder):
-            mkdir(default_folder)
-        profile_path = os.path.join(default_folder, profile_name)
+        return valid_path(profile_path)
+
+    if not os.path.exists(default_folder):
+        mkdir(default_folder)
+    profile_path = os.path.join(default_folder, profile_name)
+    if exists:
+        if not os.path.isfile(profile_path):
+            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+        if not os.path.isfile(profile_path):
+            raise ConanException("Profile not found: %s" % profile_name)
     return profile_path
 
 
@@ -105,17 +116,7 @@ def read_profile(profile_name, cwd, default_folder):
         return None, None
 
     profile_path = get_profile_path(profile_name, default_folder, cwd)
-    try:
-        text = load(profile_path)
-    except IOError:
-        folder = os.path.dirname(profile_path)
-        if os.path.exists(folder):
-            profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-        else:
-            profiles = []
-        current_profiles = ", ".join(profiles) or "[]"
-        raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                             "%s" % (profile_name, current_profiles))
+    text = load(profile_path)
 
     try:
         return _load_profile(text, profile_path, default_folder)
