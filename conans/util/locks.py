@@ -66,55 +66,32 @@ class Lock(object):
                     valid_pids.append(pid)
             return valid_pids
 
-    def _save_pids(self, pids):
-        save(self._count_file, ','.join([str(pid) for pid in pids]))
-
-    def _lockers(self):
-        pids = self._pids()
-        readers = [pid for pid in pids if pid > 0]
-        writers = [pid for pid in pids if pid < 0]
-        return len(readers), len(writers)
-
-    def _add_pid(self, pid):
-        pids = self._pids()
-        pids.append(pid)
-        self._save_pids(pids)
-
-    def _remove_pid(self, pid):
-        pids = self._pids()
-        # legal situation - conan may remove directory with lock file during write
-        if pid in pids:
-            pids.remove(pid)
-        self._save_pids(pids)
-
-    def _add_reader(self):
-        self._add_pid(os.getpid())
-
-    def _add_writer(self):
-        self._add_pid(-os.getpid())
-
-    def _remove_reader(self):
-        self._remove_pid(os.getpid())
-
-    def _remove_writer(self):
-        self._remove_pid(-os.getpid())
-
 
 class ReadLock(Lock):
+
+    def _save_pids(self, pids):
+        save(self._count_file, ','.join(str(pid) for pid in pids))
 
     def __enter__(self):
         while True:
             with fasteners.InterProcessLock(self._count_lock_file, logger=logger):
-                readers, writers = self._lockers()
-                if readers >= 0 and writers == 0:
-                    self._add_reader()
+                pids = self._pids()
+                if len(pids) >= 0:
+                    pids.append(os.getpid())
+                    save(self._count_file, ','.join(str(pid) for pid in pids))
                     break
             self._info_locked()
             time.sleep(READ_BUSY_DELAY)
 
     def __exit__(self, exc_type, exc_val, exc_tb):   # @UnusedVariable
         with fasteners.InterProcessLock(self._count_lock_file, logger=logger):
-            self._remove_reader()
+            pids = self._pids()
+            try:
+                pids.remove(os.getpid())
+            except ValueError:
+                # legal situation - conan may remove directory with lock file during write
+                pass
+            self._save_pids(pids)
 
 
 class WriteLock(Lock):
@@ -122,13 +99,13 @@ class WriteLock(Lock):
     def __enter__(self):
         while True:
             with fasteners.InterProcessLock(self._count_lock_file, logger=logger):
-                readers, writers = self._lockers()
-                if readers == 0 and writers == 0:
-                    self._add_writer()
+                pids = self._pids()
+                if not pids:
+                    save(self._count_file, "-%s" % os.getpid())
                     break
             self._info_locked()
             time.sleep(WRITE_BUSY_DELAY)
 
     def __exit__(self, exc_type, exc_val, exc_tb):  # @UnusedVariable
         with fasteners.InterProcessLock(self._count_lock_file, logger=logger):
-            self._remove_writer()
+            save(self._count_file, "")
