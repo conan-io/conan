@@ -417,7 +417,7 @@ compiler:
         if platform.system() != "Windows":
             return
         conan_build_vs = """
-from conans import ConanFile, tools, ConfigureEnvironment
+from conans import ConanFile, tools
 import platform
 
 class HelloConan(ConanFile):
@@ -428,10 +428,8 @@ class HelloConan(ConanFile):
 
     def build(self):
         build_command = tools.build_sln_command(self.settings, "MyProject.sln")
-        env = ConfigureEnvironment(self)
-        command = "%s && %s" % (env.command_line_env, build_command)
-        self.output.warn(command)
-        self.run(command)
+        self.output.warn(build_command)
+        self.run(build_command)
 
     def package(self):
         self.copy(pattern="*.exe")
