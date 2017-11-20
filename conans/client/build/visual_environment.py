@@ -27,7 +27,7 @@ class VisualStudioBuildEnvironment(object):
         self.std = self._std_cpp()
 
     def _std_cpp(self):
-        if self._settings.get_safe("compiler") == "Visual Studio":
+        if self._settings.get_safe("compiler") == "Visual Studio" and "cppstd" in self._options:
             flag = cppstd_flag(self._settings.get_safe("compiler"),
                                self._settings.get_safe("compiler.version"),
                                self._options.cppstd)
