@@ -34,22 +34,24 @@ class VisualStudioBuildEnvironment(object):
             return flag
         return None
 
-    def _get_cl_list(self):
-        cl = ['/I%s' % lib for lib in self.include_paths]
+    def _get_cl_list(self, quotes=True):
+        if quotes:
+            ret = ['/I%s' % lib for lib in self.include_paths]
+        else:
+            ret = ['/I%s' % lib for lib in self.include_paths]
         if self.std:
-            cl.append(self.std)
-        return cl
+            ret.append(self.std)
+
+            ret.extend(['/D%s' % lib for lib in self.defines])
+        if self.runtime:
+            ret.append("/%s" % self.runtime)
+
+        return ret
 
     @property
     def vars(self):
         """Used in conanfile with environment_append"""
-        flags = ['/I"%s"' % lib for lib in self.include_paths]
-        if self.std:
-            flags.append(self.std)
-
-        flags.extend(['/D%s' % lib for lib in self.defines])
-        if self.runtime:
-            flags.append("/%s" % self.runtime)
+        flags = self._get_cl_list()
         cl_args = " ".join(flags) + _environ_value_prefix("CL")
         lib_paths = ";".join(['%s' % lib for lib in self.lib_paths]) + _environ_value_prefix("LIB", ";")
         return {"CL": cl_args,
@@ -59,9 +61,7 @@ class VisualStudioBuildEnvironment(object):
     def vars_dict(self):
         """Used in virtualbuildenvironment"""
         # Here we do not quote the include paths, it's going to be used by virtual environment
-        cl = ['/I%s' % lib for lib in self.include_paths]
-        if self.std:
-            cl.append(self.std)
+        cl = self._get_cl_list(quotes=False)
 
         lib = [lib for lib in self.lib_paths]  # copy
 
