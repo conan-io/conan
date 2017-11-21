@@ -6,8 +6,11 @@
     environment:
       matrix:
         - PYTHON: "C:\\Python27"
+          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
         - PYTHON: "C:\\Python34"
+          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
         - PYTHON: "C:\\Python35"
+          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     build: false
     cache:
         - C:\mingw64-> appveyor.yml
@@ -22,6 +25,7 @@
     environment:
       matrix:
         - PYTHON: "C:\\Python35"
+          APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     build: false
     cache:
         - C:\mingw64-> appveyor.yml
@@ -31,3 +35,4 @@
       - .ci/appveyor/test.bat
     after_test:
       - .ci/appveyor/after.bat
+
