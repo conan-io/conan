@@ -10,27 +10,32 @@ from conans.util.files import load
 
 
 class VsSetting(object):
-    """ map Conan settings on their respective Visual Studio Settings.
-    """
+    """map Conan a setting on its respective Visual Studio Settings."""
 
     def __init__(self, conanfile_settings):
         self.settings = conanfile_settings
     
     @property
     def name(self):
+        """MsBuild setting name"""
         raise NotImplementedError
 
     @property
     def value(self):
+        """MsBuild setting value equivalent for the given conan setting"""        
         return NotImplementedError
 
     def condition_expression(self):
+        """encode this setting as a suitable <Import> condition"""
+        if (self.value is None):
+            return None
+
         return "'$({name})' == '{value}'".format(
             name=self.name,
             value=self.value)
 
 class VSBuildType(VsSetting):
-    """ mapConan settings.build_type on the Visual Studio 'Configuration'
+    """ map conan.settings.build_type on the Visual Studio 'Configuration'
     """
 
     @property
@@ -45,13 +50,11 @@ class VSBuildType(VsSetting):
         return str(self.settings.build_type)
 
 class VSArch(VsSetting):
-    """ map Conan settings.arch on the Visual Studio 'Platform'
-    """
+    """map conan.settings.arch on the Visual Studio 'Platform'"""
 
     platformMapping = {
         'x86': 'Win32',
-        'x86_64': 'x64'}
-    
+        'x86_64': 'x64'} 
 
     @property
     def name(self):
@@ -65,8 +68,7 @@ class VSArch(VsSetting):
         return VSArch.platformMapping.get(str(self.settings.arch))
 
 class VSVersion(VsSetting):
-    """ map Conan settings.compiler.version on the Visual Studio 'VisualStudioVersion'
-    """
+    """map conan.settings.compiler.version on the Visual Studio 'VisualStudioVersion'"""
 
     @property
     def name(self):
@@ -81,8 +83,7 @@ class VSVersion(VsSetting):
         return str(self.settings.compiler.version) + ".0"
 
 class VSToolset(VsSetting):
-    """ map Conan settings.compiler.toolset on the Visual Studio 'PlatformToolset'
-    """
+    """map conan.settings.compiler.toolset on the Visual Studio 'PlatformToolset'"""
 
     @property
     def name(self):
@@ -100,8 +101,11 @@ class VSToolset(VsSetting):
     
 
 
-class VisualStudioMultiGeneratorBase(object):
-    template = """<?xml version="1.0" encoding="utf-8"?>
+class VisualStudioMultiGeneratorHelper(object):
+    """Helper object to create
+    """
+
+    multi_content_template = """<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <ImportGroup Label="PropertySheets" >
     </ImportGroup>
@@ -112,77 +116,88 @@ class VisualStudioMultiGeneratorBase(object):
 </Project>
 """
 
-    def __init__(self, includeVersionCondition):
-        self.includeVersionCondition = includeVersionCondition
+    def __init__(self, generator, suppressVersionCondition):
+        self.generator = generator
+        self.suppressVersionCondition = suppressVersionCondition
 
-    def _condition_expression(self, settings):
-        conditions = []
-        if(settings.build_type.value):
-            conditions.append(VSBuildType(settings).condition_expression())
 
-        if(settings.arch.value):
-            conditions.append(VSArch(settings).condition_expression())
-        
-        if(self.includeVersionCondition):
-            # only include the IDE version if requested
-            if(settings.compiler.version.value):
-                conditions.append(VSVersion(settings).condition_expression())
-
-        if(settings.compiler.toolset.value):
-            conditions.append(VSToolset(settings).condition_expression())
-
-        return " And ".join(conditions)
-
-    def _property_filename(self, settings):
+    def settings_specific_filename(self):
+        settings = self.generator.conanfile.settings
         name = "conanbuildinfo"
-        if(settings.build_type.value):
+        if (settings.build_type.value):
             name += "_" + VSBuildType(settings).value
 
-        if(settings.arch.value):
+        if (settings.arch.value):
             name += "_" + VSArch(settings).value      
         
-        if(self.includeVersionCondition):
+        if (not self.suppressVersionCondition):
             # only include the IDE version if requested
             if(settings.compiler.version.value):
                 name += "_" + str(settings.compiler.version)
                 
-        if(settings.compiler.toolset.value):
+        if (settings.compiler.toolset.value):
             name += "_" + VSToolset(settings).value
 
         name += ".props"
         return name.lower()
 
-    def content(self, generator):
+    def settings_specific_content(self):
+        return VisualStudioGenerator(self.generator.conanfile).content
+
+    def settings_specific_condition(self):
+        conditions = []
+        settings = self.generator.conanfile.settings
+        if (settings.build_type.value):
+            conditions.append(VSBuildType(settings).condition_expression())
+
+        if (settings.arch.value):
+            conditions.append(VSArch(settings).condition_expression())
+        
+        if (not self.suppressVersionCondition):
+            # only include the IDE version if requested
+            if (settings.compiler.version.value):
+                conditions.append(VSVersion(settings).condition_expression())
+
+        if (settings.compiler.toolset.value):
+            conditions.append(VSToolset(settings).condition_expression())
+
+        return " And ".join(conditions)
+    
+    def multi_filename(self):
+        return 'conanbuildinfo_multi.props'
+
+    def multi_content(self):
         # there is also ClCompile.RuntimeLibrary, but it's handling is a bit complicated, so skipping for now
-        condition = self._condition_expression(generator.conanfile.settings)
+        condition = self.settings_specific_condition()
+        name_current = self.settings_specific_filename()
 
-        name_multi = 'conanbuildinfo_multi.props'
-        name_current = self._property_filename(generator.conanfile.settings)
-
-        multi_path = os.path.join(generator.output_path, name_multi)
+        # read the exising mult_filename or use the template if it doesn't exist
+        name_multi = self.multi_filename()
+        multi_path = os.path.join(self.generator.output_path, name_multi)
         if os.path.isfile(multi_path):
             content_multi = load(multi_path)
         else:
-            content_multi = self.template
+            content_multi = self.multi_content_template
 
+        # parse the multi_file and add a new import statement if needed
         dom = minidom.parseString(content_multi)
-        import_node = dom.createElement('Import')
-        import_node.setAttribute('Condition', condition)
-        import_node.setAttribute('Project', name_current)
         import_group = dom.getElementsByTagName('ImportGroup')[0]
         children = import_group.getElementsByTagName("Import")
         for node in children:
             if name_current == node.getAttribute("Project") and condition == node.getAttribute("Condition"):
+                # the import statement already exists
                 break
         else:
+            # create a new import statement
+            import_node = dom.createElement('Import')
+            import_node.setAttribute('Condition', condition)
+            import_node.setAttribute('Project', name_current)
+            # add it to the import group
             import_group.appendChild(import_node)
         content_multi = dom.toprettyxml()
         content_multi = "\n".join(line for line in content_multi.splitlines() if line.strip())
 
-        vs_generator = VisualStudioGenerator(generator.conanfile)
-        content_current = vs_generator.content
-
-        return {name_multi: content_multi, name_current: content_current}
+        return content_multi
 
 
 class VisualStudioMultiGenerator(Generator):
@@ -193,8 +208,12 @@ class VisualStudioMultiGenerator(Generator):
 
     @property
     def content(self):
-        return VisualStudioMultiGeneratorBase(
-            includeVersionCondition=True).content(self)
+        h = VisualStudioMultiGeneratorHelper(self,
+            suppressVersionCondition=False)
+        
+        return {h.multi_filename(): h.multi_content(),
+                h.settings_specific_filename(): h.settings_specific_content()}
+        
 
 class VisualStudioMultiToolsetGenerator(Generator):
 
@@ -204,6 +223,9 @@ class VisualStudioMultiToolsetGenerator(Generator):
 
     @property    
     def content(self):
-        return VisualStudioMultiGeneratorBase(
-            includeVersionCondition=False).content(self)
+        h = VisualStudioMultiGeneratorHelper(self,
+            suppressVersionCondition=True)
+        
+        return {h.multi_filename(): h.multi_content(),
+                h.settings_specific_filename(): h.settings_specific_content()}
 
