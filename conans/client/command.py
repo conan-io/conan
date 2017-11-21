@@ -1270,7 +1270,8 @@ def main(args):
             sys.exit(0)
 
         signal.signal(signal.SIGINT, ctrl_c_handler)
-        signal.signal(signal.SIGBREAK, ctrl_break_handler)
+        if sys.platform == 'win32':
+            signal.signal(signal.SIGBREAK, ctrl_break_handler)
         error = command.run(args)
     finally:
         os.chdir(current_dir)
