@@ -49,9 +49,9 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             self.assertIn('conanbuildinfo_debug_win32_12.props', content.keys())
 
             content_multi = content['conanbuildinfo_multi.props']
-            self.assertIn("<Import Condition=\" '$(Configuration)' == 'Debug' "
+            self.assertIn("<Import Condition=\"'$(Configuration)' == 'Debug' "
                           "And '$(Platform)' == 'Win32' "
-                          "And '$(VisualStudioVersion)' == '12.0' \" "
+                          "And '$(VisualStudioVersion)' == '12.0'\" "
                           "Project=\"conanbuildinfo_debug_win32_12.props\"/>", content_multi)
 
             with open('conanbuildinfo_multi.props', 'w') as f:
@@ -71,13 +71,14 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
             self.assertIn('conanbuildinfo_release_x64_14.props', content.keys())
 
             content_multi = content['conanbuildinfo_multi.props']
-            self.assertIn("<Import Condition=\" '$(Configuration)' == 'Debug' "
+            self.assertIn("<Import Condition=\"'$(Configuration)' == 'Debug' "
                           "And '$(Platform)' == 'Win32' "
-                          "And '$(VisualStudioVersion)' == '12.0' \" "
+                          "And '$(VisualStudioVersion)' == '12.0'\" "
                           "Project=\"conanbuildinfo_debug_win32_12.props\"/>", content_multi)
-            self.assertIn("<Import Condition=\" '$(Configuration)' == 'Release' "
+            self.assertIn("<Import Condition=\"'$(Configuration)' == 'Release' "
                           "And '$(Platform)' == 'x64' "
-                          "And '$(VisualStudioVersion)' == '14.0' \" "
+                          "And '$(VisualStudioVersion)' == '14.0'\" "
                           "Project=\"conanbuildinfo_release_x64_14.props\"/>", content_multi)
 
             os.unlink('conanbuildinfo_multi.props')
+
