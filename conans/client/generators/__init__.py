@@ -13,7 +13,7 @@ from .qbs import QbsGenerator
 from .scons import SConsGenerator
 from .visualstudio import VisualStudioGenerator
 from .visualstudio_multi import VisualStudioMultiGenerator
-from .visualstudiotoolset_multi import VisualStudioToolsetMultiGenerator
+from .visualstudio_multi import VisualStudioMultiToolsetGenerator
 from .visualstudiolegacy import VisualStudioLegacyGenerator
 from .xcode import XCodeGenerator
 from .ycm import YouCompleteMeGenerator
@@ -53,7 +53,7 @@ registered_generators.add("qbs", QbsGenerator)
 registered_generators.add("scons", SConsGenerator)
 registered_generators.add("visual_studio", VisualStudioGenerator)
 registered_generators.add("visual_studio_multi", VisualStudioMultiGenerator)
-registered_generators.add("visual_studio_toolset_multi", VisualStudioToolsetMultiGenerator)
+registered_generators.add("visual_studio_toolset_multi", VisualStudioMultiToolsetGenerator)
 registered_generators.add("visual_studio_legacy", VisualStudioLegacyGenerator)
 registered_generators.add("xcode", XCodeGenerator)
 registered_generators.add("ycm", YouCompleteMeGenerator)
