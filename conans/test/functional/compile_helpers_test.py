@@ -7,6 +7,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.util.files import save
 
+
 conanfile_scope_env = """
 from conans import ConanFile
 

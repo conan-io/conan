@@ -1261,11 +1261,17 @@ def main(args):
     try:
         import signal
 
-        def sigint_handler(_, __):
+        def ctrl_c_handler(_, __):
             print('You pressed Ctrl+C!')
             sys.exit(0)
 
-        signal.signal(signal.SIGINT, sigint_handler)
+        def ctrl_break_handler(_, __):
+            print('You pressed Ctrl+Break!')
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, ctrl_c_handler)
+        if sys.platform == 'win32':
+            signal.signal(signal.SIGBREAK, ctrl_break_handler)
         error = command.run(args)
     finally:
         os.chdir(current_dir)

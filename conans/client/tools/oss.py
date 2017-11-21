@@ -6,6 +6,7 @@ import sys
 import os
 from conans.model.version import Version
 from conans.util.log import logger
+from conans.client.tools import which
 
 _global_output = None
 
@@ -102,7 +103,12 @@ class OSInfo(object):
 
     @property
     def with_pacman(self):
-        return self.is_linux and self.linux_distro == "arch"
+        if self.is_linux:
+            return self.linux_distro == "arch"
+        elif self.is_windows and which('uname.exe'):
+            uname = subprocess.check_output(['uname.exe', '-s']).decode()
+            return uname.startswith('MSYS_NT') and which('pacman.exe')
+        return False
 
     @staticmethod
     def get_win_os_version():

@@ -462,7 +462,7 @@ class ConanAPIV1(object):
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
                               generators=generators,
-                              cwd=cwd, deploy=True)
+                              cwd=cwd, install_reference=True)
 
     @api_method
     def install(self, path="", settings=None, options=None, env=None, scope=None,
@@ -775,7 +775,8 @@ class ConanAPIV1(object):
 
     @api_method
     def create_profile(self, profile_name, detect=False):
-        profile_path = get_profile_path(profile_name, self._client_cache.profiles_path, os.getcwd())
+        profile_path = get_profile_path(profile_name, self._client_cache.profiles_path, os.getcwd(),
+                                        exists=False)
         if os.path.exists(profile_path):
             raise ConanException("Profile already exists")
 
