@@ -2,8 +2,7 @@ import os
 import shutil
 
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
-from conans.errors import ConanException
-from conans.migrations import Migrator, CONAN_VERSION
+from conans.migrations import Migrator
 from conans.paths import EXPORT_SOURCES_DIR_OLD
 from conans.util.files import load, save
 from conans.model.version import Version
@@ -41,8 +40,7 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
-
-        if old_version < Version("0.25"):
+        if old_version < Version("0.29"):
             old_settings = """
 os:
     Windows:
@@ -78,18 +76,6 @@ compiler:
 build_type: [None, Debug, Release]
 """
             self._update_settings_yml(old_settings)
-
-        if old_version < Version("0.20"):
-            conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
-            if conf_path:
-                backup_path = conf_path + ".backup"
-                save(backup_path, load(conf_path))
-                os.unlink(conf_path)
-                os.unlink(os.path.join(self.client_cache.conan_folder, CONAN_VERSION))
-                self.out.warn("*" * 40)
-                self.out.warn("Migration: Your Conan version was too old.")
-                self.out.warn("Your old conan.conf file has been backup'd to: %s" % backup_path)
-                self.out.warn("*" * 40)
 
         if old_version < Version("0.25"):
             from conans.paths import DEFAULT_PROFILE_NAME
