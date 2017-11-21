@@ -221,7 +221,7 @@ class VisualStudioMultiToolsetGenerator(Generator):
     def filename(self):
         pass
 
-    @property    
+    @property
     def content(self):
         h = VisualStudioMultiGeneratorHelper(self,
             suppressVersionCondition=True)
