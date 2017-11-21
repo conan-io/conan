@@ -5,7 +5,7 @@ from conans.model.version import Version
 
 
 class ConanName(object):
-    _max_chars = 50
+    _max_chars = 192
     _min_chars = 2
     _validation_pattern = re.compile("^[a-zA-Z0-9_][a-zA-Z0-9_\+\.-]{%s,%s}$"
                                      % (_min_chars - 1, _max_chars))
@@ -41,6 +41,25 @@ class ConanName(object):
             ConanName.invalid_name_message(name)
 
 
+class ConanPackageName(object):
+    _max_chars = 200
+
+    @staticmethod
+    def invalid_name_message(name, version, user, channel):
+        message = ("Package full name is too long. Valid names must contain at most %s characters.\n"
+                   "package name is %s characters long, "
+                   "package version is %s characters long, "
+                   "package user is %s characters long, "
+                   "package channel is %s characters long, "
+                   % (ConanPackageName._max_chars, len(name), len(version), len(user), len(channel)))
+        raise InvalidNameException(message)
+
+    @staticmethod
+    def validate_name(name, version, user, channel):
+        if (len(name) + len(version) + len(user) + len(channel)) > ConanPackageName._max_chars:
+            ConanPackageName.invalid_name_message(name, version, user, channel)
+
+
 class ConanFileReference(namedtuple("ConanFileReference", "name version user channel")):
     """ Full reference of a package recipes, e.g.:
     opencv/2.4.10@lasote/testing
@@ -57,6 +76,7 @@ class ConanFileReference(namedtuple("ConanFileReference", "name version user cha
         ConanName.validate_name(version, True)
         ConanName.validate_name(user)
         ConanName.validate_name(channel)
+        ConanPackageName.validate_name(name, version, user, channel)
         version = Version(version)
         return super(cls, ConanFileReference).__new__(cls, name, version, user, channel)
 
