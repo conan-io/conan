@@ -16,12 +16,12 @@ from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestRequester
+from conans.test.utils.tools import TestClient, TestBufferConanOutput
 from conans.test.utils.visual_project_files import get_vs_project_files
 from conans.test.utils.context_manager import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
-from conans.util.files import save
+from conans.util.files import save, load
 import requests
 
 
@@ -366,8 +366,7 @@ class HelloConan(ConanFile):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     def vcvars_constrained_test(self):
-        if platform.system() != "Windows":
-            return
+
         text = """os: [Windows]
 compiler:
     Visual Studio:
@@ -380,12 +379,17 @@ compiler:
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings)
         settings.compiler.version = "14"
-        cmd = tools.vcvars_command(settings)
-        self.assertIn("vcvarsall.bat", cmd)
-        with tools.environment_append({"VisualStudioVersion": "12"}):
-            with self.assertRaisesRegexp(ConanException,
-                                         "Error, Visual environment already set to 12"):
-                tools.vcvars_command(settings)
+        with tools.environment_append({"vs140comntools": "path/to/fake"}):
+            cmd = tools.vcvars_command(settings)
+            self.assertIn("vcvarsall.bat", cmd)
+            with tools.environment_append({"VisualStudioVersion": "12"}):
+                with self.assertRaisesRegexp(ConanException,
+                                             "Error, Visual environment already set to 12"):
+                    tools.vcvars_command(settings)
+
+            with tools.environment_append({"VisualStudioVersion": "12"}):
+                # Not raising
+                tools.vcvars_command(settings, force=True)
 
     def run_in_bash_test(self):
         if platform.system() != "Windows":
@@ -481,6 +485,7 @@ class HelloConan(ConanFile):
                        retry=3, retry_wait=0)
 
         self.assertTrue(os.path.exists(dest))
+        content = load(dest)
 
         # overwrite = False
         with self.assertRaises(ConanException):
@@ -494,6 +499,8 @@ class HelloConan(ConanFile):
                        retry=3, retry_wait=0, overwrite=True)
 
         self.assertTrue(os.path.exists(dest))
+        content_new = load(dest)
+        self.assertEqual(content, content_new)
 
         # Not authorized
         with self.assertRaises(ConanException):

@@ -261,3 +261,33 @@ class MyTest(ConanFile):
         # Test that the build require is applyed to testing
         client.run("create conan/stable --profile ./myprofile --build missing")
         self.assertIn("TESTING!!", client.user_io.out)
+
+    def build_policy_test(self):
+        # https://github.com/conan-io/conan/issues/1956
+        client = TestClient()
+        conanfile = '''
+from conans import ConanFile
+
+class HelloConan(ConanFile):
+    name = "HelloBar"
+    version = "0.1"
+    build_policy = "always"
+'''
+        test_package = '''
+from conans import ConanFile
+
+class HelloTestConan(ConanFile):
+    requires = "HelloBar/0.1@lasote/testing"
+    def test(self):
+        pass
+'''
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
+        client.run("create lasote/testing")
+        self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
+                      client.out)
+        client.save({"conanfile.py": conanfile.replace("HelloBar", "Hello") +
+                     "    requires='HelloBar/0.1@lasote/testing'",
+                     "test_package/conanfile.py": test_package.replace("HelloBar", "Hello")})
+        client.run("create lasote/stable")
+        self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
+                      client.out)

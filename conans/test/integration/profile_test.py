@@ -38,7 +38,7 @@ def create_profile(folder, name, settings=None, scopes=None, package_settings=No
                    package_env=None, options=None):
     _create_profile(folder, name, settings, scopes, package_settings, env, package_env, options)
     content = load(os.path.join(folder, name))
-    content = "include(default)\n" + content
+    content = "include(default)\n    \n" + content
     save(os.path.join(folder, name), content)
 
 
@@ -135,8 +135,8 @@ class ProfileTest(unittest.TestCase):
         self.client.save({CONANFILE: conanfile_scope_env})
         error = self.client.run('install -pr "%sscopes_env"' % path, ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: Specified profile '%sscopes_env' doesn't exist" % path,
-                      self.client.user_io.out)
+        self.assertIn("ERROR: Profile not found:", self.client.out)
+        self.assertIn("scopes_env", self.client.out)
 
     def install_profile_env_test(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)

@@ -8,7 +8,7 @@ import conans
 from conans import __version__ as client_version, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
-from conans.client.detect import detect_defaults_settings
+from conans.client.conf.detect import detect_defaults_settings
 from conans.client.manager import ConanManager, existing_info_files
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
@@ -21,7 +21,7 @@ from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans.client.runner import ConanRunner
 from conans.client.store.localdb import LocalDB
-from conans.client.package_tester import PackageTester
+from conans.client.cmd.test import PackageTester
 from conans.client.userio import UserIO
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
@@ -39,7 +39,8 @@ from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
 from conans.client import settings_preprocessor
 from conans.tools import set_global_instances
-from conans.client.uploader import is_a_reference
+from conans.client.cmd.uploader import CmdUpload
+
 
 default_manifest_folder = '.conan_manifests'
 
@@ -159,17 +160,17 @@ class ConanAPIV1(object):
             cwd=None, visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None,
             osx_clang_versions=None, shared=None, upload_url=None, gitignore=None,
             gitlab_gcc_versions=None, gitlab_clang_versions=None):
-        from conans.client.new import get_files
+        from conans.client.cmd.new import cmd_new
         cwd = prepare_cwd(cwd)
-        files = get_files(name, header=header, pure_c=pure_c, test=test,
-                          exports_sources=exports_sources, bare=bare,
-                          visual_versions=visual_versions,
-                          linux_gcc_versions=linux_gcc_versions,
-                          linux_clang_versions=linux_clang_versions,
-                          osx_clang_versions=osx_clang_versions, shared=shared,
-                          upload_url=upload_url, gitignore=gitignore,
-                          gitlab_gcc_versions=gitlab_gcc_versions,
-                          gitlab_clang_versions=gitlab_clang_versions)
+        files = cmd_new(name, header=header, pure_c=pure_c, test=test,
+                        exports_sources=exports_sources, bare=bare,
+                        visual_versions=visual_versions,
+                        linux_gcc_versions=linux_gcc_versions,
+                        linux_clang_versions=linux_clang_versions,
+                        osx_clang_versions=osx_clang_versions, shared=shared,
+                        upload_url=upload_url, gitignore=gitignore,
+                        gitlab_gcc_versions=gitlab_gcc_versions,
+                        gitlab_clang_versions=gitlab_clang_versions)
 
         save_files(cwd, files)
         for f in sorted(files):
@@ -432,10 +433,8 @@ class ConanAPIV1(object):
     @api_method
     def download(self, reference, remote=None, package=None):
         # Install packages without settings (fixed ids or all)
-        if not reference or not isinstance(reference, ConanFileReference):
-            raise ConanException("Invalid package recipe reference. "
-                                 "e.g., MyPackage/1.2@user/channel")
-        self._manager.download(reference, package, remote=remote)
+        conan_ref = ConanFileReference.loads(reference)
+        self._manager.download(conan_ref, package, remote=remote)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None, scope=None,
@@ -455,13 +454,15 @@ class ConanAPIV1(object):
 
         if not generators:  # We don't want the default txt
             generators = False
+
+        mkdir(install_folder)
         self._manager.install(reference=reference, install_folder=install_folder, remote=remote,
                               profile=profile, build_modes=build, update=update,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
                               generators=generators,
-                              cwd=cwd, deploy=True)
+                              cwd=cwd, install_reference=True)
 
     @api_method
     def install(self, path="", settings=None, options=None, env=None, scope=None,
@@ -683,14 +684,14 @@ class ConanAPIV1(object):
                              outdated=outdated)
 
     @api_method
-    def copy(self, reference="", user_channel="", force=False, all=False, package=None):
-        reference = ConanFileReference.loads(reference)
-        new_ref = ConanFileReference.loads("%s/%s@%s" % (reference.name,
-                                                         reference.version,
-                                                         user_channel))
-        if all:
-            package = []
-        self._manager.copy(reference, package, new_ref.user, new_ref.channel, force)
+    def copy(self, reference, user_channel, force=False, packages=None):
+        """
+        param packages: None=No binaries, True=All binaries, else list of IDs
+        """
+        from conans.client.cmd.copy import cmd_copy
+        # FIXME: conan copy does not support short-paths in Windows
+        cmd_copy(reference, user_channel, packages, self._client_cache,
+                 self._user_io, self._manager._remote_manager, force=force)
 
     @api_method
     def user(self, name=None, clean=False, remote=None, password=None):
@@ -713,17 +714,14 @@ class ConanAPIV1(object):
         return ret
 
     @api_method
-    def upload(self, pattern, package=None, remote=None, all=False, force=False, confirm=False,
-               retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
+    def upload(self, pattern, package=None, remote=None, all_packages=False, force=False,
+               confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        if package and not is_a_reference(pattern):
-            raise ConanException("-p parameter only allowed with a valid recipe reference, "
-                                 "not with a pattern")
-
-        self._manager.upload(pattern, package, remote, all_packages=all, force=force,
-                             confirm=confirm, retry=retry, retry_wait=retry_wait,
-                             skip_upload=skip_upload, integrity_check=integrity_check)
+        uploader = CmdUpload(self._client_cache, self._user_io, self._manager._remote_manager,
+                             self._manager._search_manager, remote)
+        return uploader.upload(pattern, package, all_packages, force, confirm, retry,
+                               retry_wait, skip_upload, integrity_check)
 
     @api_method
     def remote_list(self):
@@ -777,7 +775,8 @@ class ConanAPIV1(object):
 
     @api_method
     def create_profile(self, profile_name, detect=False):
-        profile_path = get_profile_path(profile_name, self._client_cache.profiles_path, os.getcwd())
+        profile_path = get_profile_path(profile_name, self._client_cache.profiles_path, os.getcwd(),
+                                        exists=False)
         if os.path.exists(profile_path):
             raise ConanException("Profile already exists")
 

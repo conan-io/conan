@@ -2,7 +2,7 @@ import os
 from collections import OrderedDict
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
-from conans.client.detect import detect_defaults_settings
+from conans.client.conf.detect import detect_defaults_settings
 from conans.client.output import Color
 from conans.client.profile_loader import read_profile
 from conans.errors import ConanException
@@ -46,12 +46,14 @@ class ClientCache(SimplePaths):
     def conanfile_read_lock(self, conan_ref):
         if self._no_locks():
             return NoLock()
-        return ReadLock(os.path.join(self.conan(conan_ref), "rw"))
+        return ReadLock(os.path.join(self.conan(conan_ref), "rw"), conan_ref,
+                        self._output)
 
     def conanfile_write_lock(self, conan_ref):
         if self._no_locks():
             return NoLock()
-        return WriteLock(os.path.join(self.conan(conan_ref), "rw"))
+        return WriteLock(os.path.join(self.conan(conan_ref), "rw"), conan_ref,
+                         self._output)
 
     def package_lock(self, package_ref):
         if self._no_locks():

@@ -221,3 +221,23 @@ class UploadTest(unittest.TestCase):
         # now it should be on the server
         client.run("search -r default")
         self.assertIn("Hello0/1.2.1@frodo/stable", client.user_io.out)
+
+    def upload_without_sources_test(self):
+        client = self._client()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create Pkg/0.1@user/testing")
+        client.run("upload * --all --confirm")
+        client2 = self._client()
+        client2.run("install Pkg/0.1@user/testing")
+        client2.run("remote remove default")
+        server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                             users={"lasote": "mypass"})
+        client2.users = {"server2": [("lasote", "mypass")]}
+        client2.update_servers({"server2": server2})
+        client2.run("upload * --all --confirm -r=server2")
+        self.assertIn("Uploading conanfile.py", client2.out)
+        self.assertIn("Uploading conan_package.tgz", client2.out)

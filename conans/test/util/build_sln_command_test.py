@@ -49,9 +49,16 @@ class BuildSLNCommandTest(unittest.TestCase):
 
     def target_test(self):
         command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=['teapot'], upgrade_project=False,
-                                    build_type='Debug', arch='x86', parallel=False)
+                                    build_type='Debug', arch='armv8', parallel=False)
         self.assertIn('msbuild dummy.sln', command)
-        self.assertIn('/p:Platform="x86"', command)
+        self.assertIn('/p:Platform="ARM64"', command)
         self.assertNotIn('devenv dummy.sln /upgrade', command)
         self.assertNotIn('/m:%s' % cpu_count(), command)
         self.assertIn('/target:teapot', command)
+
+    def toolset_test(self):
+        command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None,
+                                    upgrade_project=False, build_type='Debug', arch='armv7',
+                                    parallel=False, toolset="v110")
+        self.assertEquals('msbuild dummy.sln /p:Configuration=Debug /p:Platform="ARM" '
+                          '/p:PlatformToolset=v110', command)

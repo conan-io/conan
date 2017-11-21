@@ -124,12 +124,8 @@ class DepsGraph(object):
                                                   indirect_reqs)
 
                 # Once we are done, call package_id() to narrow and change possible values
-                if hasattr(conanfile, "conan_info"):
-                    # Deprecated in 0.19
-                    conanfile.conan_info()
-                else:
-                    with conanfile_exception_formatter(str(conanfile), "package_id"):
-                        conanfile.package_id()
+                with conanfile_exception_formatter(str(conanfile), "package_id"):
+                    conanfile.package_id()
         return ordered
 
     def direct_requires(self):

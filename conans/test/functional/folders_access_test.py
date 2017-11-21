@@ -100,17 +100,17 @@ class AConan(ConanFile):
         assert(self.package_folder == os.getcwd())
         assert(self.in_local_cache == True)
         
-        if self.no_copy_source: 
-            assert(self.copy_source_folder == self.source_folder)
-        else:
-            assert(self.source_folder == self.build_folder)
-            
-        assert(self.copy_package_folder == self.package_folder)
-        assert(self.copy_build_folder == self.build_folder)
+        assert(self.source_folder is None)
+        assert(self.build_folder is None)
+        assert(self.install_folder is None)
+
         
     def imports(self):
         assert(self.imports_folder == os.getcwd())
         
+    def deploy(self):
+        assert(self.install_folder == os.getcwd())
+
 """
 
 
@@ -203,6 +203,13 @@ class TestFoldersAccess(unittest.TestCase):
         error = self.client.run("imports .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: conanbuildinfo.txt file not found", self.client.out)
+
+    def deploy_test(self):
+        c1 = conanfile % {"no_copy_source": False, "source_with_infos": True,
+                          "local_command": False}
+        self.client.save({"conanfile.py": c1}, clean_first=True)
+        self.client.run("create user/testing --build missing")
+        self.client.run("install lib/1.0@user/testing")  # Checks deploy
 
     def full_install_test(self):
         c1 = conanfile % {"no_copy_source": False, "source_with_infos": False,
