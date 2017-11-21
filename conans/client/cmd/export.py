@@ -4,6 +4,8 @@ to the local store, as an initial step before building or uploading to remotes
 
 import shutil
 import os
+
+from conans.util.log import logger
 from conans.util.files import save, load, rmdir, is_dirty, set_dirty
 from conans.paths import CONAN_MANIFEST, CONANFILE
 from conans.errors import ConanException
@@ -12,9 +14,44 @@ from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
 from conans.model.conan_file import create_exports, create_exports_sources
 from conans.client.loader_parse import load_conanfile_class
+from conans.client.cmd.export_linter import conan_linter
+from conans.model.ref import ConanFileReference
 
 
-def load_export_conanfile(conanfile_path, output, name, version):
+def cmd_export(user, channel, conan_file_path, output, search_manager, client_cache,
+               keep_source=False, filename=None, name=None, version=None):
+    """ Export the recipe
+    param conanfile_path: the original source directory of the user containing a
+                       conanfile.py
+    param user: user under this package will be exported
+    param channel: string (stable, testing,...)
+    """
+    assert conan_file_path
+    logger.debug("Exporting %s" % conan_file_path)
+
+    src_folder = conan_file_path
+    conanfile_name = filename or CONANFILE
+    conan_file_path = os.path.join(conan_file_path, conanfile_name)
+    if ((os.path.exists(conan_file_path) and conanfile_name not in os.listdir(src_folder)) or
+            (conanfile_name != "conanfile.py" and conanfile_name.lower() == "conanfile.py")):
+        raise ConanException("Wrong '%s' case" % conanfile_name)
+    conan_linter(conan_file_path, output)
+    conanfile = _load_export_conanfile(conan_file_path, output, name, version)
+    conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
+    conan_ref_str = str(conan_ref)
+    # Maybe a platform check could be added, but depends on disk partition
+    refs = search_manager.search(conan_ref_str, ignorecase=True)
+    if refs and conan_ref not in refs:
+        raise ConanException("Cannot export package with same name but different case\n"
+                             "You exported '%s' but already existing '%s'"
+                             % (conan_ref_str, " ".join(str(s) for s in refs)))
+    output = ScopedOutput(str(conan_ref), output)
+    with client_cache.conanfile_write_lock(conan_ref):
+        _export_conanfile(output, client_cache, conanfile, src_folder, conan_ref, keep_source,
+                          filename)
+
+
+def _load_export_conanfile(conanfile_path, output, name, version):
     conanfile = load_conanfile_class(conanfile_path)
 
     for field in ["url", "license", "description"]:
@@ -22,8 +59,6 @@ def load_export_conanfile(conanfile_path, output, name, version):
         if not field_value:
             output.warn("Conanfile doesn't have '%s'.\n"
                         "It is recommended to add it as attribute" % field)
-    if getattr(conanfile, "conan_info", None):
-        output.warn("conan_info() method is deprecated, use package_id() instead")
 
     try:
         # Exports is the only object field, we need to do this, because conan export needs it
@@ -53,7 +88,7 @@ def load_export_conanfile(conanfile_path, output, name, version):
     return conanfile
 
 
-def export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source, filename):
+def _export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source, filename):
     destination_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(destination_folder, exports_source_folder)
@@ -132,7 +167,7 @@ def _execute_export(conanfile, origin_folder, destination_folder, destination_so
 
     try:
         os.unlink(os.path.join(origin_folder, CONANFILE + 'c'))
-    except:
+    except OSError:
         pass
 
     copier = FileCopier(origin_folder, destination_folder)

@@ -1,5 +1,5 @@
 import unittest
-
+from conans.errors import ConanException
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
@@ -125,6 +125,22 @@ class ConanLib(ConanFile):
         self.assertIn("MYVAR=foo", client.out)
         self.assertIn("OTHERVAR=bar", client.out)
         self.assertIn("CURDIR=%s" % src_folder, client.out)
+
+    def repeat_args_fails_test(self):
+        conanfile = '''
+from conans import ConanFile
+class ConanLib(ConanFile):
+
+    def source(self):
+        pass
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("source . --source-folder sf")
+        with self.assertRaisesRegexp(Exception, "Command failed"):
+            client.run("source . --source-folder sf --source-folder sf")
+        with self.assertRaisesRegexp(Exception, "Command failed"):
+            client.run("source . --source-folder sf --install-folder if --install-folder rr")
 
     def local_source_test(self):
         conanfile = '''

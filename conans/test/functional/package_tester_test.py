@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.package_tester import PackageTester
+from conans.client.cmd.test import PackageTester
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.requires import Requirement

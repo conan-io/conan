@@ -8,8 +8,8 @@ from conans.paths import CONANFILE, CONANINFO
 from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
-from conans.client.detect import detected_os
-from conans.util.files import load
+from conans.client.conf.detect import detected_os
+from conans.util.files import load, mkdir
 
 
 class InstallTest(unittest.TestCase):
@@ -299,3 +299,30 @@ class TestConan(ConanFile):
         client.save({}, clean_first=True)
         client.run("install Hello/0.1@conan/stable")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))
+
+    def install_with_profile_test(self):
+        # Test for https://github.com/conan-io/conan/pull/2043
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    settings = "os"
+    def requirements(self):
+        self.output.info("PKGOS=%s" % self.settings.os)
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("profile new myprofile")
+        client.run("profile update settings.os=Linux myprofile")
+        client.run("install . -pr=myprofile --build")
+        self.assertIn("PKGOS=Linux", client.out)
+        mkdir(os.path.join(client.current_folder, "myprofile"))
+        client.run("install . -pr=myprofile")
+        client.run("profile new myotherprofile")
+        client.run("profile update settings.os=FreeBSD myotherprofile")
+        client.run("install . -pr=myotherprofile")
+        self.assertIn("PKGOS=FreeBSD", client.out)
+        client.save({"myotherprofile": "Some garbage without sense [garbage]"})
+        client.run("install . -pr=myotherprofile")
+        self.assertIn("PKGOS=FreeBSD", client.out)
+        error = client.run("install . -pr=./myotherprofile", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Error parsing the profile", client.out)

@@ -19,6 +19,14 @@ class OptionsTest(unittest.TestCase):
         package_options.values = values
         self.sut = Options(package_options)
 
+    def test_in(self):
+        package_options = PackageOptions.loads("{static: [True, False]}")
+        sut = Options(package_options)
+        self.assertTrue("static" in sut)
+        self.assertFalse("shared" in sut)
+        self.assertTrue("shared" not in sut)
+        self.assertFalse("static" not in sut)
+
     def undefined_value_test(self):
         """ Not assigning a value to options will raise an error at validate() step
         """

@@ -197,12 +197,13 @@ class _ConanPackageBuilder(object):
             export_folder = self._client_cache.export(self._conan_ref)
             self._conan_file.conanfile_directory = export_folder
             # Now remove all files that were imported with imports()
-            for f in copied_files:
-                try:
-                    if f.startswith(self.build_folder):
-                        os.remove(f)
-                except OSError:
-                    self._out.warn("Unable to remove imported file from build: %s" % f)
+            if not getattr(self._conan_file, "keep_imports", False):
+                for f in copied_files:
+                    try:
+                        if f.startswith(self.build_folder):
+                            os.remove(f)
+                    except OSError:
+                        self._out.warn("Unable to remove imported file from build: %s" % f)
 
 
 def _raise_package_not_found_error(conan_file, conan_ref, out):
@@ -260,6 +261,9 @@ def call_package_info(conanfile, package_folder):
     # package folder and artifacts
     with tools.chdir(package_folder):
         with conanfile_exception_formatter(str(conanfile), "package_info"):
+            conanfile.source_folder = None
+            conanfile.build_folder = None
+            conanfile.install_folder = None
             conanfile.package_info()
 
 

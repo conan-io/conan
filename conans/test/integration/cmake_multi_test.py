@@ -4,7 +4,7 @@ from nose.plugins.attrib import attr
 import platform
 import os
 from conans.test.utils.multi_config import multi_config_files
-from conans.client.cmake import clean_sh_from_path
+from conans.client.build.cmake import clean_sh_from_path
 
 conanfile_py = """
 from conans import ConanFile, CMake

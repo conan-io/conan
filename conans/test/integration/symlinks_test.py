@@ -85,7 +85,7 @@ from conans import ConanFile
 class TestConan(ConanFile):
     name = "Hello"
     version = "0.1"
-    
+
     def package(self):
         self.copy("*", symlinks=True)
     """
@@ -122,7 +122,7 @@ class TestConan(ConanFile):
 
         client.run("export lasote/stable")
         client.run("install --build -f=conanfile.txt")
-        client.run("copy Hello/0.1@lasote/stable team/testing")
+        client.run("copy Hello/0.1@lasote/stable team/testing --all")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
         package_ref = PackageReference(conan_ref,

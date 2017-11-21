@@ -37,46 +37,6 @@ def stdlib_defines(compiler, libcxx):
     return ret
 
 
-class VisualStudioBuildEnvironment(object):
-    """
-    - LIB: library paths with semicolon separator
-    - CL: /I (include paths)
-    """
-    def __init__(self, conanfile):
-        """
-        :param conanfile: ConanFile instance
-        :param quote_paths: The path directories will be quoted. If you are using the vars together with
-                            environment_append keep it to True, for virtualbuildenv quote_paths=False is required.
-        """
-        self.include_paths = conanfile.deps_cpp_info.include_paths
-        self.lib_paths = conanfile.deps_cpp_info.lib_paths
-
-    @property
-    def vars(self):
-        """Used in conanfile with environment_append"""
-        cl_args = " ".join(['/I"%s"' % lib for lib in self.include_paths]) + environ_value_prefix("CL")
-        lib_paths = ";".join(['%s' % lib for lib in self.lib_paths]) + environ_value_prefix("LIB", ";")
-        return {"CL": cl_args,
-                "LIB": lib_paths}
-
-    @property
-    def vars_dict(self):
-        """Used in virtualbuildenvironment"""
-        # Here we do not quote the include paths, it's going to be used by virtual environment
-        cl = ['/I%s' % lib for lib in self.include_paths]
-        lib = [lib for lib in self.lib_paths] # copy
-
-        if os.environ.get("CL", None):
-            cl.append(os.environ.get("CL"))
-
-        if os.environ.get("LIB", None):
-            lib.append(os.environ.get("LIB"))
-
-        ret = {"CL": cl,
-               "LIB": lib}
-        return ret
-
-
 class AutoToolsBuildEnvironment(object):
     """
     - CPPFLAGS (C-PreProcesor-Flags NOT related with c++) (-I -D)
@@ -128,7 +88,7 @@ class AutoToolsBuildEnvironment(object):
             host = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
         else:  # Building for Linux or Android
             build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu",
-                                               "Darwin": "apple-macos"}.get(os_detected,
+                                               "Darwin": "apple-darwin"}.get(os_detected,
                                                                             os_detected.lower()))
             if arch_setting == "x86":
                 host_arch = "i686"
@@ -137,8 +97,12 @@ class AutoToolsBuildEnvironment(object):
             else:
                 host_arch = "arm" if "arm" in arch_setting else arch_setting
 
-            host = "%s%s" % (host_arch, { "Linux": "-linux-gnueabi",
-                                         "Android": "-linux-android"}.get(os_setting, ""))
+            host = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
+                                         "Android": "-linux-android",
+                                         "Macos": "-apple-darwin",
+                                         "iOS": "-apple-darwin",
+                                         "watchOS": "-apple-darwin",
+                                         "tvOS": "-apple-darwin"}.get(os_setting, ""))
             if arch_setting == "armv7hf" and os_setting == "Linux":
                 host += "hf"
             elif "arm" in arch_setting and arch_setting != "armv8" and os_setting == "Android":
@@ -146,8 +110,10 @@ class AutoToolsBuildEnvironment(object):
 
         return build, host, None
 
-    def configure(self, configure_dir=None, args=None, build=None, host=None, target=None):
+    def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
+                  pkg_config_paths=None):
         """
+        :param pkg_config_paths: Optional paths to locate the *.pc files
         :param configure_dir: Absolute or relative path to the configure script
         :param args: Optional arguments to pass to configure.
         :param build: In which system the program will be built. "False" skips the --build flag
@@ -173,19 +139,28 @@ class AutoToolsBuildEnvironment(object):
 
         if build is not False:  # Skipped by user
             if build or auto_build:  # User specified value or automatic
-                triplet_args.append("--build %s" % (build or auto_build))
+                triplet_args.append("--build=%s" % (build or auto_build))
 
         if host is not False:   # Skipped by user
             if host or auto_host:  # User specified value or automatic
-                triplet_args.append("--host %s" % (host or auto_host))
+                triplet_args.append("--host=%s" % (host or auto_host))
 
         if target is not False:  # Skipped by user
             if target or auto_target:  # User specified value or automatic
-                triplet_args.append("--target %s" % (target or auto_target))
+                triplet_args.append("--target=%s" % (target or auto_target))
 
-        with environment_append(self.vars):
-            self._conanfile.run("%s/configure %s %s"
-                                % (configure_dir, args_to_string(args), " ".join(triplet_args)))
+        if pkg_config_paths:
+            pkg_env = {"PKG_CONFIG_PATH": os.pathsep.join(pkg_config_paths)}
+        else:
+            # If we are using pkg_config generator automate the pcs location, otherwise it could
+            # read wrong files
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.build_folder} \
+                if "pkg_config" in self._conanfile.generators else {}
+
+        with environment_append(pkg_env):
+            with environment_append(self.vars):
+                self._conanfile.run("%s/configure %s %s"
+                                    % (configure_dir, args_to_string(args), " ".join(triplet_args)))
 
     def make(self, args="", make_program=None):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
@@ -213,7 +188,8 @@ class AutoToolsBuildEnvironment(object):
         if self._build_type == "Debug":
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
-            ret.append("-s") # Remove all symbol table and relocation information from the executable.
+            # Remove all symbol table and relocation information from the executable.
+            ret.append("-s")
         if self._sysroot_flag:
             ret.append(self._sysroot_flag)
         return ret
@@ -299,11 +275,11 @@ class AutoToolsBuildEnvironment(object):
 
         ld_flags, cpp_flags, libs, cxx_flags, c_flags = self._get_vars()
 
-        cpp_flags = " ".join(cpp_flags) + environ_value_prefix("CPPFLAGS")
-        cxx_flags = " ".join(cxx_flags) + environ_value_prefix("CXXFLAGS")
-        cflags = " ".join(c_flags) + environ_value_prefix("CFLAGS")
-        ldflags = " ".join(ld_flags) + environ_value_prefix("LDFLAGS")
-        libs = " ".join(libs) + environ_value_prefix("LIBS")
+        cpp_flags = " ".join(cpp_flags) + _environ_value_prefix("CPPFLAGS")
+        cxx_flags = " ".join(cxx_flags) + _environ_value_prefix("CXXFLAGS")
+        cflags = " ".join(c_flags) + _environ_value_prefix("CFLAGS")
+        ldflags = " ".join(ld_flags) + _environ_value_prefix("LDFLAGS")
+        libs = " ".join(libs) + _environ_value_prefix("LIBS")
 
         ret = {"CPPFLAGS": cpp_flags.strip(),
                "CXXFLAGS": cxx_flags.strip(),
@@ -315,7 +291,7 @@ class AutoToolsBuildEnvironment(object):
         return ret
 
 
-def environ_value_prefix(var_name, prefix=" "):
+def _environ_value_prefix(var_name, prefix=" "):
     if os.environ.get(var_name, ""):
         return "%s%s" % (prefix, os.environ.get(var_name, ""))
     else:
