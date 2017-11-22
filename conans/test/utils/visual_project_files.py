@@ -245,21 +245,22 @@ int main()
 }
 '''
 
-main_file_14 = '''#include <iostream>
+main_file_17_2015 = '''
+//available in 2015 with c++17
+#include <iostream>
 
-auto hello(){
-    return 2;
-}
-
-int main()
-{
-    std::cout << "Hello World!" << hello() << std::endl;
-    return 0;
+namespace test::mytest {
+struct mystruct {};
+};
+int main(){
+test::mytest::mystruct t;
 }
 '''
 
 
-main_file_17 = '''#include <iostream>
+main_file_17_2017 = '''
+//only available in visual 2017 with c++17
+#include <iostream>
 
 auto hello(){
     return 2;
@@ -277,10 +278,10 @@ int main()
 def get_vs_project_files(std=False):
     if not std:
         main = main_file
-    elif std == 14:
-        main = main_file_14
-    elif std == 17:
-        main = main_file_17
+    elif std == "cpp17_2015":
+        main = main_file_17_2015
+    elif std == "cpp17_2017":
+        main = main_file_17_2017
 
     return {"MyProject.sln": sln_file,
             "MyProject/MyProject.vcxproj": vcxproj_file,
