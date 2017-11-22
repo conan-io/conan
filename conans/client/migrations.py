@@ -2,11 +2,11 @@ import os
 import shutil
 
 from conans.client.client_cache import CONAN_CONF, PROFILES_FOLDER
-from conans.errors import ConanException
-from conans.migrations import Migrator, CONAN_VERSION
+from conans.migrations import Migrator
 from conans.paths import EXPORT_SOURCES_DIR_OLD
-from conans.util.files import load, save
+from conans.util.files import load, save, list_folder_subdirs
 from conans.model.version import Version
+from conans.errors import ConanException
 
 
 class ClientMigrator(Migrator):
@@ -41,8 +41,8 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
-
-        if old_version < Version("0.25"):
+        if old_version < Version("0.29"):
+            _migrate_lock_files(self.client_cache, self.out)
             old_settings = """
 os:
     Windows:
@@ -51,17 +51,23 @@ os:
     Android:
         api_level: ANY
     iOS:
-        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3"]
+        version: ["7.0", "7.1", "8.0", "8.1", "8.2", "8.3", "9.0", "9.1", "9.2", "9.3", "10.0", "10.1", "10.2", "10.3", "11.0"]
+    watchOS:
+        version: ["4.0"]
+    tvOS:
+        version: ["11.0"]
     FreeBSD:
     SunOS:
-arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64]
+    Arduino:
+        board: ANY
+arch: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
 compiler:
     sun-cc:
-       version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
-       threads: [None, posix]
-       libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
+        version: ["5.10", "5.11", "5.12", "5.13", "5.14"]
+        threads: [None, posix]
+        libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
-        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3", "7.1"]
+        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3", "6.4", "7.1", "7.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
@@ -69,27 +75,15 @@ compiler:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
-        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1"]
+        version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0"]
         libcxx: [libstdc++, libc++]
 
 build_type: [None, Debug, Release]
 """
             self._update_settings_yml(old_settings)
-
-        if old_version < Version("0.20"):
-            conf_path = os.path.join(self.client_cache.conan_folder, CONAN_CONF)
-            if conf_path:
-                backup_path = conf_path + ".backup"
-                save(backup_path, load(conf_path))
-                os.unlink(conf_path)
-                os.unlink(os.path.join(self.client_cache.conan_folder, CONAN_VERSION))
-                self.out.warn("*" * 40)
-                self.out.warn("Migration: Your Conan version was too old.")
-                self.out.warn("Your old conan.conf file has been backup'd to: %s" % backup_path)
-                self.out.warn("*" * 40)
 
         if old_version < Version("0.25"):
             from conans.paths import DEFAULT_PROFILE_NAME
@@ -104,6 +98,30 @@ build_type: [None, Debug, Release]
 
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.client_cache, self.out)
+
+
+def _migrate_lock_files(client_cache, out):
+    out.warn("Migration: Removing old lock files")
+    base_dir = client_cache.store
+    pkgs = list_folder_subdirs(base_dir, 4)
+    for pkg in pkgs:
+        out.info("Removing locks for %s" % pkg)
+        try:
+            count = os.path.join(base_dir, pkg, "rw.count")
+            if os.path.exists(count):
+                os.remove(count)
+            count = os.path.join(base_dir, pkg, "rw.count.lock")
+            if os.path.exists(count):
+                os.remove(count)
+            locks = os.path.join(base_dir, pkg, "locks")
+            if os.path.exists(locks):
+                shutil.rmtree(locks)
+        except Exception as e:
+            raise ConanException("Something went wrong while removing %s locks\n"
+                                 "Error: %s\n"
+                                 "Please clean your local conan cache manually"
+                                 % (pkg, str(e)))
+    out.warn("Migration: Removing old lock files finished\n")
 
 
 def migrate_to_default_profile(conf_path, default_profile_path):
