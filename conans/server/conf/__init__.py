@@ -1,6 +1,8 @@
 """
 Server's configuration variables
 """
+import six
+
 from conans import tools
 from conans.util.env_reader import get_env
 from datetime import timedelta
@@ -59,7 +61,10 @@ class ConanServerConfigParser(ConfigParser):
             if not self._loaded:
                 self._loaded = True
                 # To avoid encoding problems we use our tools.load
-                self.read_string(tools.load(self.config_filename))
+                if six.PY3:
+                    self.read_string(tools.load(self.config_filename))
+                else:
+                    self.read(self.config_filename)
 
             if varname:
                 section = dict(self.items(section))
