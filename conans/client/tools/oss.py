@@ -179,6 +179,8 @@ class OSInfo(object):
     def get_osx_version_name(version):
         if not version:
             return None
+        elif version.minor() == "10.13.Z":
+            return "High Sierra"
         elif version.minor() == "10.12.Z":
             return "Sierra"
         elif version.minor() == "10.11.Z":
