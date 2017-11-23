@@ -53,15 +53,13 @@ class ReplaceInFileTest(unittest.TestCase):
         replace_in_file(self.win_file, "nis", "nus")
         replace_in_file(self.bytes_file, "nis", "nus")
 
-        with open(self.win_file, "rt") as handler:
-            content = handler.read()
-            self.assertNotIn("nis", content)
-            self.assertIn("nus", content)
+        content = tools.load(self.win_file)
+        self.assertNotIn("nis", content)
+        self.assertIn("nus", content)
 
-        with open(self.bytes_file, "rt") as handler:
-            content = handler.read()
-            self.assertNotIn("nis", content)
-            self.assertIn("nus", content)
+        content = tools.load(self.bytes_file)
+        self.assertNotIn("nis", content)
+        self.assertIn("nus", content)
 
 
 class ToolsTest(unittest.TestCase):
