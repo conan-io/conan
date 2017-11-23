@@ -44,8 +44,10 @@ if __name__ == "__main__":
         file.write(get_tox_ini())
 
     pyver = os.getenv("pyver", None)
+    os.system("pip install tox --upgrade")
     command = "tox -e py%s" % pyver
     print("RUNNING: %s" % command)
     os.system(command)
 
+ 
  
