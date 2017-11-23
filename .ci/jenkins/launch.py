@@ -1,6 +1,8 @@
 import os
 import platform
 
+import shutil
+
 
 def get_tox_ini():
     tox_template = """
@@ -38,16 +40,15 @@ basepython=C:\Python36\python.exe
 
 if __name__ == "__main__":
 
-    # print(os.environ)
+    print(os.environ)
 
     with open("tox.ini", "w") as file:
         file.write(get_tox_ini())
 
+    # shutil.rmtree(".git")  # Clean the repo, save space
     pyver = os.getenv("pyver", None)
     os.system("pip install tox --upgrade")
     command = "tox -e py%s" % pyver
     print("RUNNING: %s" % command)
-    os.system(command)
-
- 
- 
+    ret = os.system(command)
+    exit(ret) 
