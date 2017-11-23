@@ -2,7 +2,7 @@ import unittest
 from conans.test.utils.tools import TestClient
 
 
-class ConanfileExtendTest(unittest.TestCase):
+class RemoveSubsettingTest(unittest.TestCase):
 
     def remove_subsetting_test(self):
         # https://github.com/conan-io/conan/issues/2049

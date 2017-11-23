@@ -148,7 +148,6 @@ class ConanManager(object):
         cache_settings = self._client_cache.settings.copy()
         cache_settings.values = profile.settings_values
         self._settings_preprocessor.preprocess(cache_settings)
-        cache_settings.remove_undefined()
         return ConanFileLoader(self._runner, cache_settings, profile)
 
     def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
