@@ -38,6 +38,31 @@ basepython=C:\Python36\python.exe
                            "Linux": tox_linux}.get(platform.system())
 
 
+def info():
+    print("Commit: %s" % os.getenv("GWBT_COMMIT_BEFORE"))
+    print("Ref: %s" % os.getenv("GWBT_REF"))
+    print("Branch: %s" % os.getenv("GWBT_BRANCH"))
+    print("Repo full name: %s" % os.getenv("GWBT_REPO_FULL_NAME"))
+
+
+def prepare():
+    if not os.getenv("$GWBT_COMMIT_AFTER", None):
+        print("ERROR: Builds only fired by github")
+        raise Exception()
+    if not os.getenv("GWBT_BRANCH", None):
+        print("ERROR: A branch is needed")
+        raise Exception()
+
+    branch = os.getenv("GWBT_BRANCH")
+    commit = os.getenv("GWBT_COMMIT_AFTER")
+    if not branch:
+        raise Exception("Not a branch!")
+    if os.path.exists(os.getenv("GWBT_REPO_NAME")):
+        shutil.rmtree(os.getenv("GWBT_REPO_NAME"))
+    os.system("git clone --single-branch --branch %s https://github.com/${GWBT_REPO_FULL_NAME}.git")
+    os.system("git reset --hard %s" % commit)
+
+
 def get_command(pyver):
     command = "tox -e py%s" % pyver
     if platform.system() == "Linux":
@@ -46,13 +71,12 @@ def get_command(pyver):
 
 if __name__ == "__main__":
 
-    print(os.environ)
+    info()
+    prepare()
 
     with open("tox.ini", "w") as file:
         file.write(get_tox_ini())
 
-    if os.getenv("JENKINS_HOME", None):
-        shutil.rmtree(".git")  # Clean the repo, save space
     pyver = os.getenv("pyver", None)
     os.system("pip install tox --upgrade")
 
