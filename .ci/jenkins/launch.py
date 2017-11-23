@@ -30,7 +30,7 @@ basepython=C:\Python34\python.exe
 basepython=C:\Python36\python.exe
 
 """
-
+ 
     tox_macos = """ """
     tox_linux = """ """
 
