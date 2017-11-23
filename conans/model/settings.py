@@ -178,6 +178,10 @@ class SettingsItem(object):
         if isinstance(self._definition, dict):
             self._definition[self._value].validate()
 
+    def remove_undefined(self):
+        if isinstance(self._definition, dict):
+            self._definition[self._value].remove_undefined()
+
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
@@ -224,6 +228,13 @@ class Settings(object):
         for field in self.fields:
             child = self._data[field]
             child.validate()
+
+    def remove_undefined(self):
+        for field, data in self._data.items():
+            if data.value is None:
+                self._data.pop(field)
+            else:
+                data.remove_undefined()
 
     @property
     def fields(self):
