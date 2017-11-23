@@ -41,7 +41,7 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
-        if old_version < Version("0.29"):
+        if old_version < Version("0.29.1"):
             _migrate_lock_files(self.client_cache, self.out)
             old_settings = """
 os:
