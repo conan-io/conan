@@ -38,6 +38,12 @@ basepython=C:\Python36\python.exe
                            "Linux": tox_linux}.get(platform.system())
 
 
+def get_command(pyver):
+    command = "tox -e py%s" % pyver
+    if platform.system() == "Linux":
+        command = 'docker run --rm -v$(pwd):/home/conan/ lasote/conantests bash -c "%s"' % command
+    return command
+
 if __name__ == "__main__":
 
     print(os.environ)
@@ -45,10 +51,13 @@ if __name__ == "__main__":
     with open("tox.ini", "w") as file:
         file.write(get_tox_ini())
 
-    # shutil.rmtree(".git")  # Clean the repo, save space
+    if os.getenv("JENKINS_HOME", None):
+        shutil.rmtree(".git")  # Clean the repo, save space
     pyver = os.getenv("pyver", None)
     os.system("pip install tox --upgrade")
-    command = "tox -e py%s" % pyver
+
+    command = get_command(pyver)
     print("RUNNING: %s" % command)
     ret = os.system(command)
     exit(ret) 
+ 
