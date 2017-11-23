@@ -1,7 +1,7 @@
 import os
 import platform
-
 import shutil
+import sys
 
 
 def get_tox_ini():
@@ -59,5 +59,5 @@ if __name__ == "__main__":
     command = get_command(pyver)
     print("RUNNING: %s" % command)
     ret = os.system(command)
-    exit(ret) 
+    sys.exit(ret)
  
