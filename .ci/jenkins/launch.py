@@ -1,6 +1,6 @@
 import os
 
-
+print("HEY")
 print(os.env)
 
 if os.getenv("py27"):
