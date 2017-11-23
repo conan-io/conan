@@ -60,4 +60,3 @@ if __name__ == "__main__":
     print("RUNNING: %s" % command)
     ret = os.system(command)
     sys.exit(ret)
- 
