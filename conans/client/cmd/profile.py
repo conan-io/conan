@@ -91,7 +91,6 @@ def cmd_profile_delete_key(profile_name, key, cache_profiles_path):
     first_key, rest_key = _get_profile_keys(key)
     profile, _ = read_profile(profile_name, os.getcwd(), cache_profiles_path)
 
-    # For options, env vars
     try:
         package, name = rest_key.split(":")
     except ValueError:
