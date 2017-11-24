@@ -8,11 +8,10 @@ import conans
 from conans import __version__ as client_version, tools
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
-from conans.client.conf.detect import detect_defaults_settings
 from conans.client.manager import ConanManager, existing_info_files
 from conans.client.migrations import ClientMigrator
 from conans.client.output import ConanOutput, ScopedOutput
-from conans.client.profile_loader import read_profile, get_profile_path, profile_from_args, \
+from conans.client.profile_loader import read_profile, profile_from_args, \
     read_conaninfo_profile
 from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
@@ -24,13 +23,12 @@ from conans.client.store.localdb import LocalDB
 from conans.client.cmd.test import PackageTester
 from conans.client.userio import UserIO
 from conans.errors import ConanException
-from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT, CONANINFO, BUILD_INFO
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, save_files, exception_message_safe, save, mkdir
+from conans.util.files import rmdir, save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
@@ -38,7 +36,7 @@ from conans.client import settings_preprocessor
 from conans.tools import set_global_instances
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
-    cmd_profile_delete_key
+    cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 
 
 default_manifest_folder = '.conan_manifests'
@@ -578,8 +576,8 @@ class ConanAPIV1(object):
 
         conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)
         if conanfile_abs_path.endswith(".txt"):
-              raise ConanException("A conanfile.py is needed to call 'conan build' "
-                                   "(not valid conanfile.txt)")
+            raise ConanException("A conanfile.py is needed to call 'conan build' "
+                                 "(not valid conanfile.txt)")
 
         self._manager.build(conanfile_abs_path, source_folder, build_folder, package_folder,
                             install_folder)
@@ -636,7 +634,6 @@ class ConanAPIV1(object):
                 conanfile_path = os.path.join(conanfile_folder, CONANFILE_TXT)
                 raise_if_not_exists(conanfile_path)
         return conanfile_path
-
 
     @api_method
     def imports(self, path, dest=None, filename=None, info_folder=None):
@@ -758,31 +755,12 @@ class ConanAPIV1(object):
 
     @api_method
     def profile_list(self):
-        folder = self._client_cache.profiles_path
-        if os.path.exists(folder):
-            return [name for name in os.listdir(folder)
-                    if not os.path.isdir(os.path.join(folder, name))]
-        else:
-            self._user_io.out.info("No profiles defined")
-            return []
+        return cmd_profile_list(self._client_cache.profiles_path, self._user_io.out)
 
     @api_method
     def create_profile(self, profile_name, detect=False):
-        profile_path = get_profile_path(profile_name, self._client_cache.profiles_path, os.getcwd(),
-                                        exists=False)
-        if os.path.exists(profile_path):
-            raise ConanException("Profile already exists")
-
-        profile = Profile()
-        if detect:
-            settings = detect_defaults_settings(self._user_io.out)
-            for name, value in settings:
-                profile.settings[name] = value
-
-        contents = profile.dumps()
-        save(profile_path, contents)
-        self._user_io.out.info("Empty profile created: %s" % profile_path)
-        return profile_path
+        return cmd_profile_create(profile_name, self._client_cache.profiles_path,
+                                  self._user_io.out, detect)
 
     @api_method
     def update_profile(self, profile_name, key, value):
@@ -880,4 +858,3 @@ def migrate_and_get_client_cache(base_folder, out, storage_folder=None):
     migrator.migrate()
 
     return client_cache
-

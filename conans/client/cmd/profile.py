@@ -6,6 +6,8 @@ from conans.util.files import save
 from conans.model.scope import Scopes
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
+from conans.model.profile import Profile
+from conans.client.conf.detect import detect_defaults_settings
 
 
 def _get_profile_keys(key):
@@ -17,6 +19,34 @@ def _get_profile_keys(key):
         raise ConanException("Invalid specified key: %s" % key)
 
     return first_key, rest_key
+
+
+def cmd_profile_list(cache_profiles_path, output):
+    folder = cache_profiles_path
+    if os.path.exists(folder):
+        return [name for name in os.listdir(folder)
+                if not os.path.isdir(os.path.join(folder, name))]
+    else:
+        output.info("No profiles defined")
+        return []
+
+
+def cmd_profile_create(profile_name, cache_profiles_path, output, detect=False):
+    profile_path = get_profile_path(profile_name, cache_profiles_path, os.getcwd(),
+                                    exists=False)
+    if os.path.exists(profile_path):
+        raise ConanException("Profile already exists")
+
+    profile = Profile()
+    if detect:
+        settings = detect_defaults_settings(output)
+        for name, value in settings:
+            profile.settings[name] = value
+
+    contents = profile.dumps()
+    save(profile_path, contents)
+    output.info("Empty profile created: %s" % profile_path)
+    return profile_path
 
 
 def cmd_profile_update(profile_name, key, value, cache_profiles_path):
