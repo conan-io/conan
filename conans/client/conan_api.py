@@ -24,11 +24,8 @@ from conans.client.store.localdb import LocalDB
 from conans.client.cmd.test import PackageTester
 from conans.client.userio import UserIO
 from conans.errors import ConanException
-from conans.model.env_info import EnvValues
-from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.model.scope import Scopes
 from conans.model.version import Version
 from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT, CONANINFO, BUILD_INFO
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
@@ -40,6 +37,8 @@ from conans.client.loader_parse import load_conanfile_class
 from conans.client import settings_preprocessor
 from conans.tools import set_global_instances
 from conans.client.cmd.uploader import CmdUpload
+from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
+    cmd_profile_delete_key
 
 
 default_manifest_folder = '.conan_manifests'
@@ -367,18 +366,6 @@ class ConanAPIV1(object):
             pt.install_build_and_test(test_conanfile_path, profile, name, version, user,
                                       channel, remote, update)
 
-    def _get_profile(self, profile_name, settings, options, env, cwd, install_folder):
-
-        infos_present = existing_info_files(install_folder)
-
-        if not infos_present:
-            profile = profile_from_args(profile_name, settings, options, env=env, scope=None,
-                                        cwd=cwd, client_cache=self._client_cache)
-        else:
-            profile = read_conaninfo_profile(install_folder)
-
-        return profile
-
     def _validate_can_read_infos(self, install_folder, cwd):
         if install_folder and not existing_info_files(self._abs_relative_to(install_folder, cwd)):
                 raise ConanException("The specified --install-folder doesn't contain '%s' and '%s' "
@@ -413,7 +400,13 @@ class ConanAPIV1(object):
         # Checks that no both settings and info files are specified
         self._validate_one_settings_source(install_folder, profile_name, settings, options, env)
 
-        profile = self._get_profile(profile_name, settings, options, env, cwd, install_folder)
+        infos_present = existing_info_files(install_folder)
+        if not infos_present:
+            profile = profile_from_args(profile_name, settings, options, env=env, scope=None,
+                                        cwd=cwd, client_cache=self._client_cache)
+        else:
+            profile = read_conaninfo_profile(install_folder)
+
         conanfile_abs_path = self._get_conanfile_path(path, "conanfile.py")
         conanfile = load_conanfile_class(conanfile_abs_path)
         if (name and conanfile.name and conanfile.name != name) or \
@@ -791,87 +784,17 @@ class ConanAPIV1(object):
         self._user_io.out.info("Empty profile created: %s" % profile_path)
         return profile_path
 
-    @staticmethod
-    def _get_profile_keys(key):
-        # settings.compiler.version => settings, compiler.version
-        tmp = key.split(".")
-        first_key = tmp[0]
-        rest_key = ".".join(tmp[1:]) if len(tmp) > 1 else None
-        if first_key not in ("build_requires", "settings", "options", "scopes", "env"):
-            raise ConanException("Invalid specified key: %s" % key)
-
-        return first_key, rest_key
-
     @api_method
     def update_profile(self, profile_name, key, value):
-        first_key, rest_key = self._get_profile_keys(key)
-
-        profile, _ = read_profile(profile_name, os.getcwd(), self._client_cache.profiles_path)
-        if first_key == "settings":
-            profile.settings[rest_key] = value
-        elif first_key == "options":
-            tmp = OptionsValues([(rest_key, value)])
-            profile.options.update(tmp)
-        elif first_key == "env":
-            profile.env_values.update(EnvValues.loads("%s=%s" % (rest_key, value)))
-        elif first_key == "scopes":
-            profile.update_scopes(Scopes.from_list(["%s=%s" % (rest_key, value)]))
-        elif first_key == "build_requires":
-            raise ConanException("Edit the profile manually to change the build_requires")
-
-        contents = profile.dumps()
-        profile_path = get_profile_path(profile_name, self._client_cache.profiles_path, os.getcwd())
-        save(profile_path, contents)
+        return cmd_profile_update(profile_name, key, value, self._client_cache.profiles_path)
 
     @api_method
     def get_profile_key(self, profile_name, key):
-        first_key, rest_key = self._get_profile_keys(key)
-        profile, _ = read_profile(profile_name, os.getcwd(), self._client_cache.profiles_path)
-        try:
-            if first_key == "settings":
-                return profile.settings[rest_key]
-            elif first_key == "options":
-                return dict(profile.options.as_list())[rest_key]
-            elif first_key == "env":
-                package = None
-                var = rest_key
-                if ":" in rest_key:
-                    package, var = rest_key.split(":")
-                return profile.env_values.data[package][var]
-            elif first_key == "build_requires":
-                raise ConanException("List the profile manually to see the build_requires")
-        except KeyError:
-            raise ConanException("Key not found: '%s'" % key)
+        return cmd_profile_get(profile_name, key, self._client_cache.profiles_path)
 
     @api_method
     def delete_profile_key(self, profile_name, key):
-        first_key, rest_key = self._get_profile_keys(key)
-        profile, _ = read_profile(profile_name, os.getcwd(), self._client_cache.profiles_path)
-
-        # For options, scopes, env vars
-        try:
-            package, name = rest_key.split(":")
-        except ValueError:
-            package = None
-            name = rest_key
-
-        try:
-            if first_key == "settings":
-                del profile.settings[rest_key]
-            elif first_key == "options":
-                profile.options.remove(name, package)
-            elif first_key == "env":
-                profile.env_values.remove(name, package)
-            elif first_key == "scopes":
-                profile.scopes.remove(name, package)
-            elif first_key == "build_requires":
-                raise ConanException("Edit the profile manually to delete a build_require")
-        except KeyError:
-            raise ConanException("Profile key '%s' doesn't exist" % key)
-
-        contents = profile.dumps()
-        profile_path = get_profile_path(profile_name, self._client_cache.profiles_path, os.getcwd())
-        save(profile_path, contents)
+        return cmd_profile_delete_key(profile_name, key, self._client_cache.profiles_path)
 
     @api_method
     def read_profile(self, profile=None):
