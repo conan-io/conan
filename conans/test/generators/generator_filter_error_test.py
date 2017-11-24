@@ -17,16 +17,18 @@ class Pkg(ConanFile):
 """, "header.h": ""})
         client.run("create Pkg/0.1@user/stable")
         client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/stable\n"
-                     "[generators]\ncmake\ntxt\ngcc\n"}, clean_first=True)
+                     "[generators]\nycm\ncmake\ntxt\ngcc\n"}, clean_first=True)
         client.run("install .")
 
         cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         txt = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
         gcc = load(os.path.join(client.current_folder, "conanbuildinfo.gcc"))
-
+        ycm = load(os.path.join(client.current_folder, ".ycm_extra_conf.py"))
         self.assertIn("Pkg/0.1/user/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
                       cmake)
         self.assertIn("Pkg/0.1/user/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
                       txt)
         self.assertIn("Pkg/0.1/user/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
                       gcc)
+        self.assertIn("Pkg/0.1/user/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
+                      ycm.replace("\\", "/"))
