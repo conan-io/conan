@@ -53,7 +53,7 @@ class MockSettings(Settings):
 
     @property
     def os(self):
-        return self._os
+        return MockSetting(self._os)
 
     @property
     def arch(self):

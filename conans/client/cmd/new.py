@@ -1,7 +1,7 @@
 import re
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.client.new_ci import ci_get_files
+from conans.client.cmd.new_ci import ci_get_files
 
 
 conanfile = """from conans import ConanFile, CMake, tools
@@ -35,7 +35,7 @@ conan_basic_setup()''')
         # Explicit way:
         # self.run('cmake %s/hello %s' % (self.source_folder, cmake.command_line))
         # self.run("cmake --build . %s" % cmake.build_config)
-        
+
     def package(self):
         self.copy("*.h", dst="include", src="hello")
         self.copy("*hello.lib", dst="lib", keep_path=False)
@@ -213,9 +213,9 @@ test_package/build
 """
 
 
-def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-              visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-              shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
+def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
+            visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
+            shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -226,7 +226,7 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
 
         pattern = re.compile('[\W_]+')
         package_name = pattern.sub('', name).capitalize()
-    except:
+    except ValueError:
         raise ConanException("Bad parameter, please use full package name,"
                              "e.g: MyLib/1.2.3@user/testing")
 

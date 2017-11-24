@@ -1,5 +1,3 @@
-import copy
-
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
@@ -127,6 +125,8 @@ class ConanFile(object):
         self.conanfile_directory = conanfile_directory
         self._scope = None
 
+        self.develop = False
+
         # user specified env variables
         self._env_values = EnvValues()  # Updated at runtime, user specified -e
         self._user = user
@@ -215,9 +215,6 @@ class ConanFile(object):
             self.settings.clear()
         This is also the place for conditional requirements
         """
-
-    def imports(self):
-        pass
 
     def build(self):
         self.output.warn("This conanfile has no build step")

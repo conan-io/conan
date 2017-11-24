@@ -268,9 +268,8 @@ class Command(object):
                             action=OnceArgument)
 
         args = parser.parse_args(*args)
-        reference = ConanFileReference.loads(args.reference)
 
-        return self._conan.download(reference=reference, package=args.package, remote=args.remote)
+        return self._conan.download(reference=args.reference, package=args.package, remote=args.remote)
 
     def install(self, *args):
         """Installs the requirements specified in a conanfile (.py or .txt).
@@ -741,10 +740,9 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.copy.__doc__, prog="conan copy")
         parser.add_argument("reference", default="",
-                            help='package recipe reference'
-                            'e.g., MyPackage/1.2@user/channel')
+                            help='package reference. e.g., MyPackage/1.2@user/channel')
         parser.add_argument("user_channel", default="",
-                            help='Destination user/channel'
+                            help='Destination user/channel. '
                             'e.g., lasote/testing')
         parser.add_argument("--package", "-p", nargs=1, action=Extender,
                             help='copy specified package ID')
@@ -755,9 +753,12 @@ class Command(object):
                             default=False,
                             help='Override destination packages and the package recipe')
         args = parser.parse_args(*args)
+        if args.all and args.package:
+            raise ConanException("Cannot specify both --all and --package")
+
         return self._conan.copy(reference=args.reference, user_channel=args.user_channel,
                                 force=args.force,
-                                all=args.all, package=args.package)
+                                packages=args.package or args.all)
 
     def user(self, *parameters):
         """ Authenticates against a remote with user/pass, caching the auth token.
@@ -891,7 +892,7 @@ class Command(object):
 
         args = parser.parse_args(*args)
         return self._conan.upload(pattern=args.pattern, package=args.package, remote=args.remote,
-                                  all=args.all,
+                                  all_packages=args.all,
                                   force=args.force, confirm=args.confirm, retry=args.retry,
                                   retry_wait=args.retry_wait,
                                   skip_upload=args.skip_upload, integrity_check=args.check)
@@ -1260,11 +1261,17 @@ def main(args):
     try:
         import signal
 
-        def sigint_handler(_, __):
+        def ctrl_c_handler(_, __):
             print('You pressed Ctrl+C!')
             sys.exit(0)
 
-        signal.signal(signal.SIGINT, sigint_handler)
+        def ctrl_break_handler(_, __):
+            print('You pressed Ctrl+Break!')
+            sys.exit(0)
+
+        signal.signal(signal.SIGINT, ctrl_c_handler)
+        if sys.platform == 'win32':
+            signal.signal(signal.SIGBREAK, ctrl_break_handler)
         error = command.run(args)
     finally:
         os.chdir(current_dir)

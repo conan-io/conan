@@ -174,7 +174,7 @@ class Downloader(object):
 
                 if file_path:
                     mkdir(os.path.dirname(file_path))
-                    with open(file_path, 'ab') as handle:
+                    with open(file_path, 'wb') as handle:
                         dl_size = download_chunks(file_handler=handle)
                 else:
                     dl_size = download_chunks(ret_buffer=ret)
