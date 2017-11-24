@@ -154,7 +154,7 @@ class MyTest(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("test_package -e MYVAR=MYVALUE")
+        client.run("create lasote/testing -e MYVAR=MYVALUE")
         self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
 
     def env_path_order_test(self):

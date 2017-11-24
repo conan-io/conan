@@ -168,7 +168,7 @@ class TestMyLib(ConanFile):
                      "profile.txt": profile,
                      "profile2.txt": profile2}, clean_first=True)
 
-        client.run("test_package --profile ./profile.txt --build missing")
+        client.run("create lasote/stable --profile ./profile.txt --build missing")
         self.assertEqual(2, str(client.user_io.out).splitlines().count("Hello World!"))
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.user_io.out)
         self.assertIn("MyLib/0.1@lasote/stable test package: Hello world from python tool!",
@@ -213,7 +213,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
                      "test_package/conanfile.py": test_conanfile,
                      "profile.txt": profile_patterns}, clean_first=True)
 
-        client.run("test_package --profile ./profile.txt --build missing")
+        client.run("create lasote/stable --profile=./profile.txt --build=missing")
         self.assertEqual(1, str(client.user_io.out).splitlines().count("Hello World!"))
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.user_io.out)
         self.assertNotIn("Project: Hello world from python tool!", client.user_io.out)

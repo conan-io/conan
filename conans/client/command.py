@@ -168,47 +168,6 @@ class Command(object):
                                 user=user, channel=channel, name=name,
                                 version=version, build_modes=args.build)
 
-    def test_package(self, *args):
-        """DEPRECATED, will be removed. Use 'conan create' and/or 'conan test'.
-        Use 'conan create' to generate binary packages for a recipe.
-        If you want to test a package you can use 'conan test' command.
-        """
-
-        parser = argparse.ArgumentParser(description=self.test_package.__doc__,
-                                         prog="conan test_package")
-        parser.add_argument("reference", nargs="?",
-                            help='a full package reference Pkg/version@user/channel, '
-                            'or just the user/channel if package and version are defined in recipe')
-        parser.add_argument("-ne", "--not-export", default=False, action='store_true',
-                            help='Do not export the conanfile before test execution')
-        parser.add_argument("-tf", "--test-folder", "--test_folder",
-                            help='alternative test folder name, by default is "test_package"')
-        parser.add_argument('--keep-source', '-k', default=False, action='store_true',
-                            help='Optional. Do not remove the source folder in local cache. '
-                                 'Use for testing purposes only')
-        parser.add_argument('--test-only', '-t', default=False, action='store_true',
-                            help='Just run the test, without exporting or building the package')
-        parser.add_argument("--cwd", "-c", help='Use this directory as the current directory')
-
-        _add_manifests_arguments(parser)
-        _add_common_install_arguments(parser, build_help=_help_build_policies)
-
-        args = parser.parse_args(*args)
-
-        name, version, user, channel = get_reference_fields(args.reference)
-
-        if args.test_only:
-            args.build = ["never"]
-            args.not_export = True
-            args.keep_source = True
-
-        return self._conan.test_package(args.profile, args.settings, args.options,
-                                        args.env, args.scope, args.test_folder, args.not_export,
-                                        args.build, args.keep_source, args.verify, args.manifests,
-                                        args.manifests_interactive, args.remote, args.update,
-                                        cwd=args.cwd, user=user, channel=channel, name=name,
-                                        version=version)
-
     def create(self, *args):
         """ Builds a binary package for recipe (conanfile.py) located in current dir.
         Uses the specified configuration in a profile or in -s settings, -o options etc.
@@ -1073,8 +1032,7 @@ class Command(object):
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download")),
-                ("Deprecated", ("test_package",))]
+                                   "alias", "download"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""

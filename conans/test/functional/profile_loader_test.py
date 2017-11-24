@@ -471,7 +471,7 @@ class DefaultNameConan(ConanFile):
                        scopes={}, env=[("ONE_VAR", "ONE_VALUE")])
 
         self.client.save(files)
-        self.client.run("test_package --profile scopes_env")
+        self.client.run("create lasote/stable --profile scopes_env")
 
         self._assert_env_variable_printed("ONE_VAR", "ONE_VALUE")
         self.assertIn("My var is ONE_VALUE", str(self.client.user_io.out))
@@ -481,20 +481,20 @@ class DefaultNameConan(ConanFile):
                        scopes={}, package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
                                                "Hello0": [("ONE_VAR", "PACKAGE VALUE")]})
 
-        self.client.run("test_package --profile scopes_env2")
+        self.client.run("create lasote/stable --profile scopes_env2")
 
         self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
         self.assertIn("My var is IN_TEST_PACKAGE", str(self.client.user_io.out))
 
         # Try now overriding some variables with command line
-        self.client.run("test_package --profile scopes_env2 -e DefaultName:ONE_VAR=InTestPackageOverride "
+        self.client.run("create lasote/stable --profile scopes_env2 -e DefaultName:ONE_VAR=InTestPackageOverride "
                         "-e Hello0:ONE_VAR=PackageValueOverride ")
 
         self._assert_env_variable_printed("ONE_VAR", "PackageValueOverride")
         self.assertIn("My var is InTestPackageOverride", str(self.client.user_io.out))
 
         # A global setting in command line won't override a scoped package variable
-        self.client.run("test_package --profile scopes_env2 -e ONE_VAR=AnotherValue")
+        self.client.run("create lasote/stable --profile scopes_env2 -e ONE_VAR=AnotherValue")
         self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
 
     def _assert_env_variable_printed(self, name, value):
