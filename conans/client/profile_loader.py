@@ -151,7 +151,7 @@ def _load_profile(text, profile_path, default_folder):
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
                            allowed_fields=["build_requires", "settings", "env",
-                                           "options"])
+                                           "scopes", "options"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
