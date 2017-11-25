@@ -23,6 +23,7 @@ from conans.client.remover import ConanRemover
 from conans.client.require_resolver import RequireResolver
 from conans.client.source import config_source_local
 from conans.client.userio import UserIO
+from conans.client.binary_packer import BinaryPacker
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
@@ -197,7 +198,30 @@ class ConanManager(object):
             package_output = ScopedOutput(str(reference), self._user_io.out)
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     install_folder, package_output, local=True)
+                                    
+    def pack(self, reference, name, version, user, channel,
+             package_id, properties, pack_name, output_dir='.', target_scheme=None):
 
+        """ Pack a compiled binary package
+        @param reference: ConanFileReference
+        """
+        packages_folder = self._client_cache.packages(reference)
+
+        # this is the dir where the package files reside
+        package_dir = os.path.join(packages_folder, package_id)
+
+        # create an instance of a deployment
+        dp = BinaryPacker(name, version, user, channel, properties, package_dir, output_dir)
+
+        # set pack name if user has supplied it
+        if pack_name != None:
+            dp.filename = pack_name
+
+        # we can create an archive using the deployment
+        # output_file can be overriden by the user, or use the one computed automatically.
+        # supports: zip, tar.gz, tar.bz2, tar.xz
+        dp.compress(output_file=dp.filename, compression='.' + target_scheme)
+        
     def download(self, reference, package_ids, remote=None):
         """ Download conanfile and specified packages to local repository
         @param reference: ConanFileReference
