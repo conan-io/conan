@@ -115,7 +115,7 @@ class BinaryPacker(object):
     def compiler(self):
         if self._compiler == 'Visual Studio':
             return 'vs'
-	else:
+        else:
             return self._compiler
 
     @property
