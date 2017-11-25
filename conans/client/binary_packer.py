@@ -141,7 +141,7 @@ class BinaryPacker(object):
 
     @property
     def build(self):
-	build_type = self.build_type
+    build_type = self.build_type
         runtime = '-'+self.compiler_runtime if self.compiler_runtime else ''
         link = '-'+self._link if self._link else ''
 
