@@ -430,6 +430,17 @@ class ConanAPIV1(object):
                                  install_folder=install_folder, profile=profile, force=force)
 
     @api_method
+    def pack(self, reference, name, version, user, channel,
+             package_id, properties, pack_name, output_dir=".", target_scheme=None):
+
+        if not reference or not isinstance(reference, ConanFileReference):
+            raise ConanException("Invalid package recipe reference. "
+                                 "e.g., MyPackage/1.2@user/channel")
+
+        self._manager.pack(reference, name, version, user, channel,
+                           package_id, properties, pack_name, output_dir, target_scheme)
+
+    @api_method
     def download(self, reference, remote=None, package=None):
         # Install packages without settings (fixed ids or all)
         if not reference or not isinstance(reference, ConanFileReference):
