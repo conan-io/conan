@@ -69,7 +69,7 @@ class ConsumerFileTest(ConanFile):
                                                    "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertTrue(os.path.exists(paths.digestfile_package(package_reference)))
         # now verify
-        self.client.run("create -lasote/stable -verify%s" % dest)
+        self.client.run("create lasote/stable --verify%s" % dest)
         self.assertIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
         self.assertIn("Manifest for '%s': OK" % str(package_reference), self.client.user_io.out)
 

@@ -1,4 +1,3 @@
-import hashlib
 import os
 import sys
 
@@ -28,7 +27,7 @@ from conans.model.version import Version
 from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT, CONANINFO, BUILD_INFO
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, save_files, exception_message_safe, mkdir
+from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
@@ -252,7 +251,10 @@ class ConanAPIV1(object):
             pt = PackageTester(self._manager, self._user_io)
             scoped_output.highlight("Testing with 'test_package'")
             pt.install_build_and_test(test_conanfile_path, profile, name, version, user,
-                                      channel, remote, update, build_modes=build_modes)
+                                      channel, remote, update, build_modes=build_modes,
+                                      manifest_folder=manifest_folder,
+                                      manifest_verify=manifest_verify,
+                                      manifest_interactive=manifest_interactive)
         else:
             self._manager.install(reference=reference,
                                   install_folder=None,  # Not output anything
