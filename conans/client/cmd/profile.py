@@ -3,7 +3,6 @@ import os
 from conans.errors import ConanException
 from conans.client.profile_loader import read_profile, get_profile_path
 from conans.util.files import save
-from conans.model.scope import Scopes
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
@@ -15,7 +14,7 @@ def _get_profile_keys(key):
     tmp = key.split(".")
     first_key = tmp[0]
     rest_key = ".".join(tmp[1:]) if len(tmp) > 1 else None
-    if first_key not in ("build_requires", "settings", "options", "scopes", "env"):
+    if first_key not in ("build_requires", "settings", "options", "env"):
         raise ConanException("Invalid specified key: %s" % key)
 
     return first_key, rest_key
@@ -60,8 +59,6 @@ def cmd_profile_update(profile_name, key, value, cache_profiles_path):
         profile.options.update(tmp)
     elif first_key == "env":
         profile.env_values.update(EnvValues.loads("%s=%s" % (rest_key, value)))
-    elif first_key == "scopes":
-        profile.update_scopes(Scopes.from_list(["%s=%s" % (rest_key, value)]))
     elif first_key == "build_requires":
         raise ConanException("Edit the profile manually to change the build_requires")
 
@@ -94,7 +91,6 @@ def cmd_profile_delete_key(profile_name, key, cache_profiles_path):
     first_key, rest_key = _get_profile_keys(key)
     profile, _ = read_profile(profile_name, os.getcwd(), cache_profiles_path)
 
-    # For options, scopes, env vars
     try:
         package, name = rest_key.split(":")
     except ValueError:
@@ -108,8 +104,6 @@ def cmd_profile_delete_key(profile_name, key, cache_profiles_path):
             profile.options.remove(name, package)
         elif first_key == "env":
             profile.env_values.remove(name, package)
-        elif first_key == "scopes":
-            profile.scopes.remove(name, package)
         elif first_key == "build_requires":
             raise ConanException("Edit the profile manually to delete a build_require")
     except KeyError:
