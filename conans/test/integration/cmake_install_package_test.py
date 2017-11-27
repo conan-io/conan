@@ -4,33 +4,7 @@ from conans.test.utils.tools import TestClient
 
 class CMakeInstallPackageTest(unittest.TestCase):
 
-    def new_gcc_version_policy_test(self):
-        client = TestClient()
-        conanfile = """from conans import ConanFile, CMake
-class AConan(ConanFile):
-    settings = "os", "compiler", "build_type", "arch"
-    exports_sources = "CMakeLists.txt", "*.h"
-    generators = "cmake"
-    def build(self):
-        cmake = CMake(self)
-        cmake.configure()
-"""
-        cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
-project(Chat CXX)
-cmake_minimum_required(VERSION 2.8.12)
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
-"""
-        client.save({"conanfile.py": conanfile,
-
-                     "CMakeLists.txt": cmake})
-        client.run("create Pkg/0.1@user/channel -s compiler=gcc -s compiler.version=7 "
-                   "-s compiler.libcxx=libstdc++")
-        print client.out
-
-
     def install_package_test(self):
-        return
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake
 
