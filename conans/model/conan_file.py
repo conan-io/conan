@@ -123,7 +123,6 @@ class ConanFile(object):
         self._runner = runner
 
         self.conanfile_directory = conanfile_directory
-        self._scope = None
 
         self.develop = False
 
@@ -173,14 +172,6 @@ class ConanFile(object):
         self.output.warn("Use 'self.collect_libs' is deprecated, "
                          "use tools.collect_libs(self) instead")
         return tools.collect_libs(self, folder=folder)
-
-    @property
-    def scope(self):
-        return self._scope
-
-    @scope.setter
-    def scope(self, value):
-        self._scope = value
 
     @property
     def build_policy_missing(self):
