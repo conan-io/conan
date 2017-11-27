@@ -1,4 +1,3 @@
-import hashlib
 import os
 import sys
 
@@ -28,7 +27,7 @@ from conans.model.version import Version
 from conans.paths import CONANFILE, get_conan_user_home, CONANFILE_TXT, CONANINFO, BUILD_INFO
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans.util.env_reader import get_env
-from conans.util.files import rmdir, save_files, exception_message_safe, mkdir
+from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
 from conans.util.tracer import log_command, log_exception
 from conans.client.loader_parse import load_conanfile_class
@@ -193,105 +192,6 @@ class ConanAPIV1(object):
                                   update, build_modes=build_modes)
 
     @api_method
-    def test_package(self, profile_name=None, settings=None, options=None, env=None,
-                     test_folder=None, not_export=False, build=None, keep_source=False,
-                     verify=None, manifests=None,
-                     manifests_interactive=None,
-                     remote=None, update=False, cwd=None, user=None, channel=None, name=None,
-                     version=None):
-
-        self._user_io.out.warn("THIS METHOD IS DEPRECATED and will be removed. "
-                               "Use 'conan create' to generate binary packages for a "
-                               "recipe. If you want to test a package you can use 'conan test' "
-                               "command.")
-
-        settings = settings or []
-        options = options or []
-        env = env or []
-        cwd = prepare_cwd(cwd)
-
-        if name and version:
-            package_name = name
-            package_version = version
-        else:
-            conanfile_path = os.path.join(cwd, "conanfile.py")
-            conanfile = load_conanfile_class(conanfile_path)
-            package_name = getattr(conanfile, "name", None)
-            package_version = getattr(conanfile, "version", None)
-        if not package_name or not package_version:
-            raise ConanException("conanfile.py doesn't declare package name or version")
-
-        test_folders = [test_folder] if test_folder else ["test_package", "test"]
-        for test_folder_name in test_folders:
-            test_folder = os.path.join(cwd, test_folder_name)
-            test_conanfile_path = os.path.join(test_folder, "conanfile.py")
-            if os.path.exists(test_conanfile_path):
-                break
-        else:
-            raise ConanException("test folder '%s' not available, "
-                                 "or it doesn't have a conanfile.py" % test_folder_name)
-
-        sha = hashlib.sha1("".join(options + settings).encode()).hexdigest()
-        build_folder = os.path.join(test_folder, "build", sha)
-        rmdir(build_folder)
-        # shutil.copytree(test_folder, build_folder)
-
-        profile = profile_from_args(profile_name, settings, options, env, cwd,
-                                    self._client_cache)
-
-        loader = self._manager.get_loader(profile)
-        test_conanfile = loader.load_conan(test_conanfile_path, self._user_io.out, consumer=True)
-
-        try:
-            if hasattr(test_conanfile, "requirements"):
-                test_conanfile.requirements()
-        except Exception as e:
-            raise ConanException("Error in test_package/conanfile.py requirements(). %s" % str(e))
-
-        requirement = test_conanfile.requires.get(package_name)
-        if requirement:
-            if requirement.conan_reference.version != package_version:
-                raise ConanException("package version is '%s', but test_package/conanfile "
-                                     "is requiring version '%s'\n"
-                                     "You can remove this requirement and use "
-                                     "'conan test_package user/channel' instead"
-                                     % (package_version, requirement.conan_reference.version))
-            user = user or requirement.conan_reference.user
-            channel = channel or requirement.conan_reference.channel
-
-        if not user or not channel:
-            raise ConanException("Please specify user and channel")
-        conanfile_reference = ConanFileReference(package_name, package_version, user, channel)
-
-        # Forcing an export!
-        if not not_export:
-            self._user_io.out.info("Exporting package recipe")
-            self._manager.export(user, channel, cwd, keep_source=keep_source)
-
-        if build is None:  # Not specified, force build the tested library
-            build = [package_name]
-
-        manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
-        manifest_folder, manifest_interactive, manifest_verify = manifests
-        self._manager.install(inject_require=conanfile_reference,
-                              reference=test_folder,
-                              install_folder=build_folder,
-                              manifest_folder=manifest_folder,
-                              manifest_verify=manifest_verify,
-                              manifest_interactive=manifest_interactive,
-                              remote=remote,
-                              profile=profile,
-                              build_modes=build,
-                              update=update,
-                              generators=["txt"]
-                              )
-
-        test_conanfile = os.path.join(test_folder, CONANFILE)
-        self._manager.build(test_conanfile, test_folder, build_folder, package_folder=None,
-                            install_folder=build_folder,
-                            test=str(conanfile_reference))
-
-    @api_method
     def create(self, profile_name=None, settings=None,
                options=None, env=None, test_folder=None, not_export=False,
                build_modes=None,
@@ -330,23 +230,11 @@ class ConanAPIV1(object):
         manifest_folder, manifest_interactive, manifest_verify = manifests
         profile = profile_from_args(profile_name, settings, options, env,
                                     cwd, self._client_cache)
-        self._manager.install(reference=reference,
-                              install_folder=None,  # Not output anything
-                              manifest_folder=manifest_folder,
-                              manifest_verify=manifest_verify,
-                              manifest_interactive=manifest_interactive,
-                              remote=remote,
-                              profile=profile,
-                              build_modes=build_modes,
-                              update=update,
-                              filename=filename)
-
-        base_folder = self._abs_relative_to(conan_file_path, cwd, default=cwd)
 
         def get_test_conanfile_path(tf):
             """Searchs in the declared test_folder or in the standard locations"""
             test_folders = [tf] if tf else ["test_package", "test"]
-
+            base_folder = self._abs_relative_to(conan_file_path, cwd, default=cwd)
             for test_folder_name in test_folders:
                 test_folder = os.path.join(base_folder, test_folder_name)
                 test_conanfile_path = os.path.join(test_folder, "conanfile.py")
@@ -358,11 +246,26 @@ class ConanAPIV1(object):
                                          "or it doesn't have a conanfile.py" % tf)
 
         test_conanfile_path = get_test_conanfile_path(test_folder)
+
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)
             scoped_output.highlight("Testing with 'test_package'")
             pt.install_build_and_test(test_conanfile_path, profile, name, version, user,
-                                      channel, remote, update)
+                                      channel, remote, update, build_modes=build_modes,
+                                      manifest_folder=manifest_folder,
+                                      manifest_verify=manifest_verify,
+                                      manifest_interactive=manifest_interactive)
+        else:
+            self._manager.install(reference=reference,
+                                  install_folder=None,  # Not output anything
+                                  manifest_folder=manifest_folder,
+                                  manifest_verify=manifest_verify,
+                                  manifest_interactive=manifest_interactive,
+                                  remote=remote,
+                                  profile=profile,
+                                  build_modes=build_modes,
+                                  update=update,
+                                  filename=filename)
 
     def _validate_can_read_infos(self, install_folder, cwd):
         if install_folder and not existing_info_files(self._abs_relative_to(install_folder, cwd)):
