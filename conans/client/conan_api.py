@@ -184,7 +184,7 @@ class ConanAPIV1(object):
         base_folder = self._abs_relative_to(path, cwd, default=cwd)
         conanfile_abs_path = self._get_conanfile_path(base_folder, "conanfile.py")
 
-        profile = profile_from_args(profile_name, settings, options, env, None, cwd,
+        profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
 
         pt = PackageTester(self._manager, self._user_io)
@@ -193,7 +193,7 @@ class ConanAPIV1(object):
 
     @api_method
     def create(self, profile_name=None, settings=None,
-               options=None, env=None, scope=None, test_folder=None, not_export=False,
+               options=None, env=None, test_folder=None, not_export=False,
                build_modes=None,
                keep_source=False, verify=None,
                manifests=None, manifests_interactive=None,
@@ -228,7 +228,7 @@ class ConanAPIV1(object):
 
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
-        profile = profile_from_args(profile_name, settings, options, env, scope,
+        profile = profile_from_args(profile_name, settings, options, env,
                                     cwd, self._client_cache)
 
         def get_test_conanfile_path(tf):
@@ -303,7 +303,7 @@ class ConanAPIV1(object):
 
         infos_present = existing_info_files(install_folder)
         if not infos_present:
-            profile = profile_from_args(profile_name, settings, options, env=env, scope=None,
+            profile = profile_from_args(profile_name, settings, options, env=env,
                                         cwd=cwd, client_cache=self._client_cache)
         else:
             profile = read_conaninfo_profile(install_folder)
@@ -331,7 +331,7 @@ class ConanAPIV1(object):
         self._manager.download(conan_ref, package, remote=remote)
 
     @api_method
-    def install_reference(self, reference, settings=None, options=None, env=None, scope=None,
+    def install_reference(self, reference, settings=None, options=None, env=None,
                           remote=None, werror=False, verify=None, manifests=None,
                           manifests_interactive=None, build=None, profile_name=None,
                           update=False, generators=None, install_folder=None):
@@ -343,7 +343,7 @@ class ConanAPIV1(object):
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
+        profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
 
         if not generators:  # We don't want the default txt
@@ -359,7 +359,7 @@ class ConanAPIV1(object):
                               cwd=cwd, install_reference=True)
 
     @api_method
-    def install(self, path="", settings=None, options=None, env=None, scope=None,
+    def install(self, path="", settings=None, options=None, env=None,
                 remote=None, werror=False, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
                 update=False, generators=None, no_imports=False, filename=None,
@@ -374,7 +374,7 @@ class ConanAPIV1(object):
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, cwd,
+        profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
 
         self._manager.install(reference=conanfile_folder,
@@ -412,7 +412,7 @@ class ConanAPIV1(object):
         return configuration_install(item, self._client_cache, self._user_io.out, self._runner)
 
     @api_method
-    def info_build_order(self, reference, settings=None, options=None, env=None, scope=None,
+    def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_name=None, filename=None, remote=None, build_order=None,
                          check_updates=None, build_folder=None):
 
@@ -422,7 +422,7 @@ class ConanAPIV1(object):
         except:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
+        profile = profile_from_args(profile_name, settings, options, env, build_folder,
                                     self._client_cache)
         graph = self._manager.info_build_order(reference, profile, filename, build_order,
                                                remote, check_updates)
@@ -430,7 +430,7 @@ class ConanAPIV1(object):
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
-                            scope=None, profile_name=None, filename=None, remote=None,
+                            profile_name=None, filename=None, remote=None,
                             check_updates=None, build_folder=None):
 
         current_path = os.getcwd()
@@ -439,7 +439,7 @@ class ConanAPIV1(object):
         except:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
+        profile = profile_from_args(profile_name, settings, options, env, build_folder,
                                     self._client_cache)
         ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote,
                                                 check_updates)
@@ -448,7 +448,7 @@ class ConanAPIV1(object):
 
     @api_method
     def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None,
-                       scope=None, profile_name=None, update=False, filename=None,
+                       profile_name=None, update=False, filename=None,
                        build_folder=None):
 
         current_path = os.getcwd()
@@ -457,7 +457,7 @@ class ConanAPIV1(object):
         except:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, scope, build_folder,
+        profile = profile_from_args(profile_name, settings, options, env, build_folder,
                                     self._client_cache)
         ret = self._manager.info_get_graph(reference=reference,
                                            remote=remote, profile=profile, check_updates=update,

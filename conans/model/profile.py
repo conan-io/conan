@@ -4,20 +4,18 @@ from collections import defaultdict
 
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
-from conans.model.scope import Scopes, _root
 from conans.model.values import Values
 
 
 class Profile(object):
     """A profile contains a set of setting (with values), environment variables
-    and scopes"""
+    """
 
     def __init__(self):
         # Sections
         self.settings = OrderedDict()
         self.package_settings = defaultdict(OrderedDict)
         self.env_values = EnvValues()
-        self.scopes = Scopes()
         self.options = OptionsValues()
         self.build_requires = OrderedDict()  # conan_ref Pattern: list of conan_ref
 
@@ -46,13 +44,6 @@ class Profile(object):
         result.append("[options]")
         result.append(self.options.dumps())
 
-        result.append("[scopes]")
-        if self.scopes[_root].get("dev", None):
-            # FIXME: Ugly _root import
-            del self.scopes[_root]["dev"]  # Do not include dev
-        scopes_txt = self.scopes.dumps()
-        result.append(scopes_txt)
-
         result.append("[env]")
         result.append(self.env_values.dumps())
 
@@ -61,7 +52,6 @@ class Profile(object):
     def update(self, other):
         self.update_settings(other.settings)
         self.update_package_settings(other.package_settings)
-        self.update_scopes(other.scopes)
         # this is the opposite
         other.env_values.update(self.env_values)
         self.env_values = other.env_values
@@ -95,10 +85,3 @@ class Profile(object):
         Specified package settings are prioritized to profile"""
         for package_name, settings in package_settings.items():
             self.package_settings[package_name].update(settings)
-
-    def update_scopes(self, new_scopes):
-        """Mix the specified settings with the current profile.
-        Specified settings are prioritized to profile"""
-        # apply the current profile
-        if new_scopes:
-            self.scopes.update(new_scopes)
