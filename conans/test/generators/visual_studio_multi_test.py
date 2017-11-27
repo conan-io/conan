@@ -13,6 +13,7 @@ from conans.client.conf import default_settings_yml
 from conans.client.generators import VisualStudioMultiGenerator
 from conans.tools import chdir
 from conans.test.utils.test_files import temp_folder
+from conans.client.generators.visualstudio_multi import VisualStudioMultiToolsetGenerator
 
 
 @attr('visual_studio')
@@ -81,71 +82,6 @@ class VisualStudioMultiGeneratorTest(unittest.TestCase):
                           "Project=\"conanbuildinfo_release_x64_14.props\"/>", content_multi)
 
             os.unlink('conanbuildinfo_multi.props')
-
-from conans.client.generators.visualstudio_multi import *
-class VsSetting_Test(unittest.TestCase):
-
-    def VsArch_test(self):
-        settings = Settings.loads(default_settings_yml)
-
-        self.assertEqual("Platform", VSArch(settings).name,
-            "verify the name of the MsBuild setting that is equivalen to conan.settings.arch")
-
-        self.assertIsNone( VSArch(settings).value,
-            "if the conan setting is missing then the Visual Studio setting should map to 'None'" )
-
-        settings.arch = "x86"
-        self.assertEqual("Win32", VSArch(settings).value)
-
-        settings.arch = "x86_64"
-        self.assertEqual("x64", VSArch(settings).value)
-
-    def VsVersion_test(self):
-        settings = Settings.loads(default_settings_yml)
-        settings.compiler = "Visual Studio"
-
-        self.assertEqual("VisualStudioVersion", VSVersion(settings).name,
-            "verify the name of the MsBuild setting that is equivalen to conan.settings.compiler.version")
-
-        self.assertIsNone(VSVersion(settings).value,
-            "if the conan setting is missing then the Visual Studio setting should map to 'None'" )
-
-        settings.compiler.version = "11"
-        self.assertEqual("11.0", VSVersion(settings).value)
-
-        settings.compiler.version = "15"
-        self.assertEqual("15.0", VSVersion(settings).value)
-
-    def VSBuildType_test(self):
-        settings = Settings.loads(default_settings_yml)
-
-        self.assertEqual("Configuration", VSBuildType(settings).name, 
-            "verify the name of the MsBuild setting that is equivalen to conan.settings.build_type")
-
-        self.assertIsNone(VSBuildType(settings).value,
-            "if the conan setting is missing then the Visual Studio setting should map to 'None'" )
-
-        settings.build_type = "Debug"
-        self.assertEqual("Debug", VSBuildType(settings).value)
-
-        settings.build_type = "Release"
-        self.assertEqual("Release", VSBuildType(settings).value)
-
-    def VsToolset_test(self):
-        settings = Settings.loads(default_settings_yml)
-        settings.compiler = "Visual Studio"
-
-        self.assertEqual("PlatformToolset", VSToolset(settings).name,
-            "verify the name of the MsBuild setting that is equivalen to conan.settings.compiler.toolset")
-
-        self.assertIsNone(VSToolset(settings).value,
-            "if the conan setting is missing then the Visual Studio setting should map to 'None'" )
-
-        settings.compiler.toolset = "v110"
-        self.assertEqual("v110", VSToolset(settings).value)
-
-        settings.compiler.toolset = "v141"
-        self.assertEqual("v141", VSToolset(settings).value)
 
 
 @attr('visual_studio')
