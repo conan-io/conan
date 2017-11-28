@@ -75,7 +75,8 @@ class BuildRequires(object):
                 package_build_requires.update(build_requires)
 
         # Make sure to remove itself
-        package_build_requires.pop(reference.name, None)
+        if isinstance(reference, ConanFileReference):
+            package_build_requires.pop(reference.name, None)
 
         if package_build_requires:
             self._output.info("Installing build requirements of: %s" % (str_ref or "PROJECT"))
