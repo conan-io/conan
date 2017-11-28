@@ -67,11 +67,15 @@ class BuildRequires(object):
     def install(self, reference, conanfile, installer):
         str_ref = str(reference)
         package_build_requires = self._get_recipe_build_requires(conanfile)
+
         for pattern, build_requires in self._profile_build_requires.items():
             if ((not str_ref and pattern == "&") or
                     (str_ref and pattern == "&!") or
                     fnmatch.fnmatch(str_ref, pattern)):
                 package_build_requires.update(build_requires)
+
+        # Make sure to remove itself
+        package_build_requires.pop(reference.name, None)
 
         if package_build_requires:
             self._output.info("Installing build requirements of: %s" % (str_ref or "PROJECT"))
