@@ -114,7 +114,7 @@ class ConanManager(object):
         """loads a conanfile for local flow: source, imports, package, build
         """
         profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
-        loader = self.get_loader(profile)
+        loader = self.get_loader(profile, local=True)
         if conanfile_path.endswith(".py"):
             conanfile = loader.load_conan(conanfile_path, output, consumer=True)
         else:
@@ -143,10 +143,12 @@ class ConanManager(object):
 
         return conanfile
 
-    def get_loader(self, profile):
+    def get_loader(self, profile, local=False):
         cache_settings = self._client_cache.settings.copy()
         cache_settings.values = profile.settings_values
         self._settings_preprocessor.preprocess(cache_settings)
+        if local:
+            cache_settings.remove_undefined()
         return ConanFileLoader(self._runner, cache_settings, profile)
 
     def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
