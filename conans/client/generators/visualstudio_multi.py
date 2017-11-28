@@ -3,16 +3,29 @@ from conans.model import Generator
 from conans.client.generators import VisualStudioGenerator
 from xml.dom import minidom
 from conans.util.files import load
+from conans.errors import ConanException
 
 
-class VSSettings(object):
-    def __init__(self, settings, use_version=True):
+class _VSSettings(object):
+    def __init__(self, settings):
         self._props = [("Configuration", settings.get_safe("build_type")),
-                       ("Platform", {'x86': 'Win32', 'x86_64': 'x64'}.get(settings.get_safe("arch"))),
-                       ("PlatformToolset", settings.get_safe("compiler.toolset"))]
+                       ("Platform", {'x86': 'Win32', 'x86_64': 'x64'}.get(settings.get_safe("arch")))]
 
-        if use_version:
-            self._props.append(("VisualStudioVersion", settings.get_safe("compiler.version")))
+        toolset = settings.get_safe("compiler.toolset")
+        if not toolset:
+            default_toolset = {"15": "v141",
+                               "14": "v140",
+                               "12": "v120",
+                               "11": "v110",
+                               "10": "v100",
+                               "9": "v90",
+                               "8": "v80"}
+            try:
+                vs_version = settings.get_safe("compiler.version")
+                toolset = default_toolset[vs_version]
+            except KeyError:
+                raise ConanException("Undefined Visual Studio version %s" % vs_version)
+        self._props.append(("PlatformToolset", toolset))
 
     @property
     def filename(self):
@@ -21,16 +34,10 @@ class VSSettings(object):
 
     @property
     def condition(self):
-        result = []
-        for k, v in self._props:
-            if v:
-                if k == "VisualStudioVersion":
-                    v += ".0"
-                result.append("'$(%s)' == '%s'" % (k, v))
-        return " And ".join(result)
+        return " And ".join("'$(%s)' == '%s'" % (k, v) for k, v in self._props if v)
 
 
-class _VisualStudioMultiBase(Generator):
+class VisualStudioMultiGenerator(Generator):
 
     multi_content_template = """<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
@@ -49,7 +56,7 @@ class _VisualStudioMultiBase(Generator):
 
     @property
     def content(self):
-        vs_settings = VSSettings(self.conanfile.settings, self.use_version)
+        vs_settings = _VSSettings(self.conanfile.settings)
         condition = vs_settings.condition
         name_current = vs_settings.filename
         name_multi = "conanbuildinfo_multi.props"
@@ -81,11 +88,3 @@ class _VisualStudioMultiBase(Generator):
 
         return {name_multi: content_multi,
                 vs_settings.filename: VisualStudioGenerator(self.conanfile).content}
-
-
-class VisualStudioMultiGenerator(_VisualStudioMultiBase):
-    use_version = True
-
-
-class VisualStudioMultiToolsetGenerator(_VisualStudioMultiBase):
-    use_version = False
