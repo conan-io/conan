@@ -230,7 +230,7 @@ class Settings(object):
             child.validate()
 
     def remove_undefined(self):
-        for field, data in self._data.items():
+        for field, data in list(self._data.items()):
             if data.value is None:
                 self._data.pop(field)
             else:
