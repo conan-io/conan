@@ -173,9 +173,8 @@ class ConanAPIV1(object):
             self._user_io.out.success("File saved: %s" % f)
 
     @api_method
-    def test(self, path, profile_name=None, settings=None, options=None, env=None, remote=None,
-             update=False, user=None, channel=None, name=None,
-             version=None, build_modes=None):
+    def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
+             remote=None, update=False, build_modes=None):
 
         settings = settings or []
         options = options or []
@@ -186,9 +185,9 @@ class ConanAPIV1(object):
 
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
-
+        reference = ConanFileReference.loads(reference)
         pt = PackageTester(self._manager, self._user_io)
-        pt.install_build_and_test(conanfile_abs_path, profile, name, version, user, channel, remote,
+        pt.install_build_and_test(conanfile_abs_path, reference, profile, remote,
                                   update, build_modes=build_modes)
 
     @api_method
@@ -250,8 +249,8 @@ class ConanAPIV1(object):
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)
             scoped_output.highlight("Testing with 'test_package'")
-            pt.install_build_and_test(test_conanfile_path, profile, name, version, user,
-                                      channel, remote, update, build_modes=build_modes,
+            pt.install_build_and_test(test_conanfile_path, reference, profile,
+                                      remote, update, build_modes=build_modes,
                                       manifest_folder=manifest_folder,
                                       manifest_verify=manifest_verify,
                                       manifest_interactive=manifest_interactive)
@@ -419,7 +418,7 @@ class ConanAPIV1(object):
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(reference)
-        except:
+        except ConanException:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
         profile = profile_from_args(profile_name, settings, options, env, build_folder,
@@ -436,7 +435,7 @@ class ConanAPIV1(object):
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(reference)
-        except:
+        except ConanException:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
         profile = profile_from_args(profile_name, settings, options, env, build_folder,
@@ -454,7 +453,7 @@ class ConanAPIV1(object):
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(reference)
-        except:
+        except ConanException:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
         profile = profile_from_args(profile_name, settings, options, env, build_folder,

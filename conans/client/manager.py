@@ -422,7 +422,7 @@ class ConanManager(object):
 
         output = ScopedOutput("PROJECT", self._user_io.out)
         conanfile = self._load_consumer_conanfile(conan_file_path, info_folder,
-                                                 output, deps_info_required=True)
+                                                  output, deps_info_required=True)
 
         run_imports(conanfile, dest_folder, output)
 
@@ -434,7 +434,7 @@ class ConanManager(object):
         output = ScopedOutput("PROJECT", self._user_io.out)
         conan_file_path = os.path.join(recipe_folder, CONANFILE)
         conanfile = self._load_consumer_conanfile(conan_file_path, install_folder, output,
-                                                 deps_info_required=True)
+                                                  deps_info_required=True)
         packager.create_package(conanfile, source_folder, build_folder, package_folder,
                                 install_folder, output, local=True, copy_info=True)
 
@@ -451,7 +451,7 @@ class ConanManager(object):
             output = ScopedOutput(("%s test package" % test) if test else "Project",
                                   self._user_io.out)
             conan_file = self._load_consumer_conanfile(conanfile_path, install_folder, output,
-                                                      deps_info_required=True)
+                                                       deps_info_required=True)
         except NotFoundException:
             # TODO: Auto generate conanfile from requirements file
             raise ConanException("'%s' file is needed for build.\n"

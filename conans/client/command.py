@@ -134,39 +134,15 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
         parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan test '
                                          'pkg/version@user/channel ')
-        parser.add_argument("reference", nargs="?",
-                            help='a full package reference pkg/version@user/channel, '
-                            'or just the package name "pkg" if the test_package conanfile is '
-                            'requiring more than one reference. Empty if the conanfile has only'
-                            'one require')
+        parser.add_argument("reference",
+                            help='a full package reference pkg/version@user/channel, of the '
+                            'package to be tested')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
-
         args = parser.parse_args(*args)
-
-        if not args.reference:
-            name = version = user = channel = None
-        else:
-            try:
-                name, version, user, channel = ConanFileReference.loads(args.reference)
-            except ConanException:
-                if "@" not in args.reference:
-                    if "/" in args.reference:
-                        raise ConanException("Specify the full reference or only a package name "
-                                             "without version (if the test_package/conanfile.py "
-                                             "is requiring the reference to be tested")
-                    else:
-                        name = args.reference
-                        version = None
-                        channel = None
-                        user = None
-                else:
-                    raise ConanException("Invalid reference: %s" % args.reference)
-
-        return self._conan.test(args.path, args.profile, args.settings, args.options,
+        return self._conan.test(args.path, args.reference, args.profile, args.settings, args.options,
                                 args.env, args.remote, args.update,
-                                user=user, channel=channel, name=name,
-                                version=version, build_modes=args.build)
+                                build_modes=args.build)
 
     def create(self, *args):
         """ Builds a binary package for recipe (conanfile.py) located in current dir.
