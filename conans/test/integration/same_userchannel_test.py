@@ -51,7 +51,7 @@ class HelloReuseConan(ConanFile):
                           "test/conanfile.py": self.test_conanfile})
 
     def test_testpackage(self):
-        self.client.run("test_package")
+        self.client.run("create lasote/stable")
         self.assertIn("Say/0.1@lasote/stable: Building lasote/stable", self.client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Building lasote/stable", self.client.user_io.out)
         self.assertNotIn("other/testing", self.client.user_io.out)
@@ -59,7 +59,7 @@ class HelloReuseConan(ConanFile):
         self.client.save({"conanfile.py": self.conanfile,
                           "test/conanfile.py": self.test_conanfile.replace("lasote/stable",
                                                                            "other/testing")})
-        self.client.run("test_package")
+        self.client.run("create other/testing")
         self.assertIn("Say/0.1@other/testing: Building other/testing", self.client.user_io.out)
         self.assertIn("Hello/0.1@other/testing: Building other/testing", self.client.user_io.out)
         self.assertNotIn("lasote/stable", self.client.user_io.out)

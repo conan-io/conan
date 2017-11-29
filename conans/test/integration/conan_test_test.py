@@ -39,7 +39,7 @@ from conans import ConanFile
 class HelloTestConan(ConanFile):
     requires = "Hello/0.1@conan/stable"
     def test(self):
-        self.output.warn("Tested ok!")    
+        self.output.warn("Tested ok!")
 ''', "")
         self.assertIn("Tested ok!", client.out)
 
@@ -51,7 +51,7 @@ from conans import ConanFile
 class HelloTestConan(ConanFile):
     requires = "Hello/0.1@conan/stable", "other/ref@conan/Stable"
     def test(self):
-        self.output.warn("Tested ok!")    
+        self.output.warn("Tested ok!")
 ''', "")
         self.assertIn("Cannot deduce the reference to be tested,", client.out)
 
@@ -62,7 +62,7 @@ from conans import ConanFile
 class HelloTestConan(ConanFile):
     requires = "Hello/0.1@conan/stable"
     def test(self):
-        self.output.warn("Tested ok!")    
+        self.output.warn("Tested ok!")
 ''', "Hello")
         self.assertIn("Tested ok!", client.out)
 
@@ -74,7 +74,7 @@ from conans import ConanFile
 class HelloTestConan(ConanFile):
     requires = "Hello/0.1@conan/stable", "other/ref@conan/Stable"
     def test(self):
-        self.output.warn("Tested ok!")    
+        self.output.warn("Tested ok!")
 ''', "badname")
         self.assertIn("The package name 'badname' doesn't match with any requirement in "
                       "the testing conanfile.py: Hello, other", client.out)
@@ -87,7 +87,7 @@ from conans import ConanFile
 class HelloTestConan(ConanFile):
     requires = "Hello/0.1@conan/stable"
     def test(self):
-        self.output.warn("Tested ok!")    
+        self.output.warn("Tested ok!")
 ''', "Hello/0.1@conan/foo")
         self.assertIn("Tested ok!", client.out)
 
@@ -119,35 +119,6 @@ class HelloTestConan(ConanFile):
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
         client.run("export lasote/testing")
         client.run("test test_package --build missing")
-
-    def scopes_test_package_test(self):
-        client = TestClient()
-        conanfile = """
-from conans import ConanFile
-
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-
-    def build(self):
-        self.output.info("Scope: %s" % self.scope)
-"""
-        test_conanfile = """
-from conans import ConanFile, CMake
-import os
-
-class HelloReuseConan(ConanFile):
-    requires = "Hello/0.1@lasote/stable"
-
-    def test(self):
-        self.conanfile_directory
-"""
-        client.save({"conanfile.py": conanfile,
-                     "test/conanfile.py": test_conanfile})
-        client.run("export lasote/stable")
-        client.run("test test --scope Hello:dev=True --build=missing")
-        # we are not in dev scope anymore
-        self.assertNotIn("Hello/0.1@lasote/stable: Scope: dev=True", client.user_io.out)
 
     def fail_test_package_test(self):
         client = TestClient()

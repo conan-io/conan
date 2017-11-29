@@ -79,9 +79,11 @@ class CMakeTest(unittest.TestCase):
 
         def check(text, build_config, generator=None):
             os = str(settings.os)
+            os_ver = str(settings.os.version) if settings.get_safe('os.version') else None
             for cmake_system_name in (True, False):
-                cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" "
-                         % {"Macos": "Darwin"}.get(os, os)
+                cross_ver = ("-DCMAKE_SYSTEM_VERSION=\"%s\" " % os_ver) if os_ver else ""
+                cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
+                         % ({"Macos": "Darwin"}.get(os, os), cross_ver)
                          if (platform.system() != os and cmake_system_name) else "")
                 cmake = CMake(conan_file, generator=generator, cmake_system_name=cmake_system_name)
                 new_text = text.replace("-DCONAN_EXPORTED", "%s-DCONAN_EXPORTED" % cross)
@@ -179,6 +181,21 @@ class CMakeTest(unittest.TestCase):
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m64" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev',
               "")
+
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "12"
+        settings.os = "WindowsStore"
+        settings.os.version = "8.1"
+        settings.build_type = "Debug"
+        check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              "--config Debug")
+
+        settings.os.version = "10.0"
+        check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              "--config Debug")
+
 
     def deleted_os_test(self):
         partial_settings = """
