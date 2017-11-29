@@ -21,14 +21,14 @@ class ConanLib(ConanFile):
     exports_sources = "*"
 
     def source(self):
-        extra_path = "1/" * 108
+        extra_path = "1/" * 90
         os.makedirs(extra_path)
         myfile = os.path.join(extra_path, "myfile.txt")
         # print("File length ", len(myfile))
         save(myfile, "Hello extra path length")
 
     def build(self):
-        extra_path = "1/" * 108
+        extra_path = "1/" * 90
         myfile = os.path.join(extra_path, "myfile2.txt")
         # print("File length ", len(myfile))
         save(myfile, "Hello2 extra path length")
@@ -61,7 +61,7 @@ class PathLengthLimitTest(unittest.TestCase):
                                  users={"lasote": "mypass"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        files = {"conanfile.py": base}
+        files = {"conanfile.py": base.replace("108", "90")}
         client.save(files)
         client.run("export lasote/channel")
         client.run("install lib/0.1@lasote/channel --build")
@@ -135,7 +135,7 @@ class PathLengthLimitTest(unittest.TestCase):
 
     def basic_test(self):
         client = TestClient()
-        files = {"conanfile.py": base}
+        files = {"conanfile.py": base.replace("108", "90")}
         client.save(files)
         client.run("export user/channel")
         client.run("install lib/0.1@user/channel --build")
