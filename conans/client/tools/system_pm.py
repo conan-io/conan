@@ -13,6 +13,8 @@ class SystemPackageTool(object):
         self._sudo = (env_sudo != "False" and env_sudo != "0")
         if env_sudo is None and os.name == 'posix' and os.geteuid() == 0:
             self._sudo = False
+        if env_sudo is None and os.name == 'nt':
+            self._sudo = False
         os_info = os_info or OSInfo()
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info)
