@@ -114,7 +114,7 @@ class ConanManager(object):
         """loads a conanfile for local flow: source, imports, package, build
         """
         profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
-        loader = self.get_loader(profile)
+        loader = self.get_loader(profile, local=True)
         if conanfile_path.endswith(".py"):
             conanfile = loader.load_conan(conanfile_path, output, consumer=True)
         else:
@@ -143,11 +143,18 @@ class ConanManager(object):
 
         return conanfile
 
-    def get_loader(self, profile):
-        self._client_cache.settings.values = profile.settings_values
-        # Settings preprocessor
-        self._settings_preprocessor.preprocess(self._client_cache.settings)
-        return ConanFileLoader(self._runner, self._client_cache.settings, profile)
+    def get_loader(self, profile, local=False):
+        """ When local=True it means that the state is being recovered from installed files
+        conaninfo.txt, conanbuildinfo.txt, and only local methods as build() are being executed.
+        Thus, it is necessary to restore settings from that info, as configure() is not called,
+        being necessary to remove those settings that doesn't have a value
+        """
+        cache_settings = self._client_cache.settings.copy()
+        cache_settings.values = profile.settings_values
+        self._settings_preprocessor.preprocess(cache_settings)
+        if local:
+            cache_settings.remove_undefined()
+        return ConanFileLoader(self._runner, cache_settings, profile)
 
     def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
                version=None):
