@@ -16,7 +16,6 @@ from nose.plugins.attrib import attr
 class ConanEnvTest(unittest.TestCase):
 
     @attr('slow')
-    @attr('windows_ci_excluded')
     def shared_in_current_directory_test(self):
         """
         - There is a package building a shared library
@@ -86,6 +85,16 @@ HELLO_EXPORT void hello();
                  "hello.h": hello_h,
                  "main.c": '#include "hello.h"\nint main(){\nhello();\nreturn 0;\n}'}
 
+        if platform.system() == "Windows":
+            files["main.c"] = """
+#include "hello.h"
+#include "windows.h"
+int main(){
+  SetErrorMode(SEM_NOGPFAULTERRORBOX); // Do not show dialog when dll missing
+  hello();
+  return 0;
+}
+"""
         client.save(files)
         client.run("export conan/stable")
         client.run("install lib/1.0@conan/stable -o lib:shared=True --build missing")
