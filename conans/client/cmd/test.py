@@ -14,7 +14,7 @@ class PackageTester(object):
         self._user_io = user_io
 
     def _call_requirements(self, conanfile_path, profile):
-        loader = self._manager.get_loader(profile)
+        loader = self._manager.get_loader(profile, local=True)
         test_conanfile = loader.load_conan(conanfile_path, self._user_io.out, consumer=True)
         try:
             if hasattr(test_conanfile, "requirements"):
