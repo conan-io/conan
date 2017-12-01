@@ -249,7 +249,6 @@ class ConanAPIV1(object):
 
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)
-            scoped_output.highlight("Testing with 'test_package'")
             pt.install_build_and_test(test_conanfile_path, profile, name, version, user,
                                       channel, remote, update, build_modes=build_modes,
                                       manifest_folder=manifest_folder,

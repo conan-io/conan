@@ -339,17 +339,14 @@ class ConanManager(object):
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
-        if inject_require:
-            output = ScopedOutput("%s test package" % str(inject_require), self._user_io.out)
-            output.info("Installing dependencies")
+        if not isinstance(reference, ConanFileReference):
+            output = ScopedOutput(("%s test package" % str(inject_require)) if inject_require else "PROJECT",
+                                  self._user_io.out)
+            output.highlight("Installing %s" % reference)
         else:
-            if not isinstance(reference, ConanFileReference):
-                output = ScopedOutput("PROJECT", self._user_io.out)
-                output.highlight("Installing %s" % reference)
-            else:
-                output = ScopedOutput(str(reference), self._user_io.out)
-                output.highlight("Installing package")
-            Printer(self._user_io.out).print_graph(deps_graph, registry)
+            output = ScopedOutput(str(reference), self._user_io.out)
+            output.highlight("Installing package")
+        Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         try:
             if loader._settings.os and detected_os() != loader._settings.os:
