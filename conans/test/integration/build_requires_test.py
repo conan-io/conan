@@ -51,10 +51,26 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 class BuildRequiresTest(unittest.TestCase):
 
+    def test_require_itself(self):
+        client = TestClient()
+        mytool_conanfile = """from conans import ConanFile
+class Tool(ConanFile):
+    def build(self):
+        self.output.info("BUILDING MYTOOL")
+"""
+        myprofile = """
+[build_requires]
+Tool/0.1@lasote/stable
+"""
+        client.save({CONANFILE: mytool_conanfile,
+                     "profile.txt": myprofile})
+        client.run("create Tool/0.1@lasote/stable -pr=profile.txt")
+        self.assertEqual(1, str(client.out).count("BUILDING MYTOOL"))
+
     @parameterized.expand([(requires, ), (requires_range, ), (requirements, ), (override, )])
     def test_build_requires(self, conanfile):
         client = TestClient()
-        client.save({CONANFILE: tool_conanfile}, clean_first=True)
+        client.save({CONANFILE: tool_conanfile})
         client.run("export lasote/stable")
 
         client.save({CONANFILE: conanfile}, clean_first=True)

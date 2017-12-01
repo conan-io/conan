@@ -21,14 +21,14 @@ class ConanLib(ConanFile):
     exports_sources = "*"
 
     def source(self):
-        extra_path = "1/" * 108
+        extra_path = "1/" * 90
         os.makedirs(extra_path)
         myfile = os.path.join(extra_path, "myfile.txt")
         # print("File length ", len(myfile))
         save(myfile, "Hello extra path length")
 
     def build(self):
-        extra_path = "1/" * 108
+        extra_path = "1/" * 90
         myfile = os.path.join(extra_path, "myfile2.txt")
         # print("File length ", len(myfile))
         save(myfile, "Hello2 extra path length")
@@ -43,7 +43,7 @@ class PathLengthLimitTest(unittest.TestCase):
     def remove_test(self):
         short_home = tempfile.mkdtemp(dir=CONAN_TEST_FOLDER)
         client = TestClient()
-        files = {"conanfile.py": base.replace("108", "90"),
+        files = {"conanfile.py": base,
                  "path/"*20 + "file0.txt": "file0 content"}  # shorten to pass appveyor
         client.save(files)
         with environment_append({"CONAN_USER_HOME_SHORT": short_home}):

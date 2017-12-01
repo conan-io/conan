@@ -24,6 +24,8 @@ class BasicBuildTest(unittest.TestCase):
         client.run('build .')
         ld_path = ("LD_LIBRARY_PATH=`pwd`"
                    if not static and not platform.system() == "Windows" else "")
+        if platform.system() == "Darwin":
+            ld_path += ' DYLD_LIBRARY_PATH="%s"' % os.path.join(client.current_folder, 'lib')
         command = os.sep.join([".", "bin", "say_hello"])
         client.runner("%s %s" % (ld_path, command), cwd=client.current_folder)
         msg = "Hello" if lang == 0 else "Hola"

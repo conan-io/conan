@@ -38,9 +38,6 @@ info_text = '''[settings]
     bzip2:shared=False
     zlib:shared=False
 
-[scope]
-    dev=True
-
 [recipe_hash]
     asdasdasd
 
