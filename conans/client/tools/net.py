@@ -9,7 +9,7 @@ from conans.errors import ConanException
 _global_requester = None
 
 
-def get(url, md5='', sha1='', sha256=''):
+def get(url, md5='', sha1='', sha256='', destination="."):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
     filename = os.path.basename(url)
@@ -22,7 +22,7 @@ def get(url, md5='', sha1='', sha256=''):
     if sha256:
         check_sha256(filename, sha256)
 
-    unzip(filename)
+    unzip(filename, destination=destination)
     os.unlink(filename)
 
 
