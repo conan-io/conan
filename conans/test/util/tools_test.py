@@ -134,9 +134,7 @@ class HelloConan(ConanFile):
     def system_package_tool_test(self):
 
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-
             runner = RunnerMock()
-
             # fake os info to linux debian, default sudo
             os_info = OSInfo()
             os_info.is_linux = True
@@ -172,7 +170,7 @@ class HelloConan(ConanFile):
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
-                self.assertEquals(runner.command_called, "sudo apt-get install -y a_package")
+                self.assertEquals(runner.command_called, "sudo apt-get install -y --no-install-recommends a_package")
 
             runner.return_ok = True
             spt.install("a_package", force=False)
@@ -202,7 +200,6 @@ class HelloConan(ConanFile):
             if platform.system() == "Windows" and which("choco.exe"):
                 os_info.is_freebsd = False
                 os_info.is_windows = True
-
                 spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
                 spt.update()
                 self.assertEquals(runner.command_called, "choco outdated")
@@ -225,7 +222,7 @@ class HelloConan(ConanFile):
             os_info.linux_distro = "ubuntu"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "apt-get install -y a_package")
+            self.assertEquals(runner.command_called, "apt-get install -y --no-install-recommends a_package")
 
             spt.update()
             self.assertEquals(runner.command_called, "apt-get update")
@@ -286,13 +283,12 @@ class HelloConan(ConanFile):
 
         packages = ["a_package", "another_package", "yet_another_package"]
         with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
-
             runner = RunnerMultipleMock(["dpkg -s another_package"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertEquals(2, runner.calls)
-
-            runner = RunnerMultipleMock(["sudo apt-get update", "sudo apt-get install -y yet_another_package"])
+            runner = RunnerMultipleMock(["sudo apt-get update",
+                                         "sudo apt-get install -y --no-install-recommends yet_another_package"])
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertEquals(7, runner.calls)
