@@ -85,16 +85,6 @@ HELLO_EXPORT void hello();
                  "hello.h": hello_h,
                  "main.c": '#include "hello.h"\nint main(){\nhello();\nreturn 0;\n}'}
 
-        if platform.system() == "Windows":
-            files["main.c"] = """
-#include "hello.h"
-#include "windows.h"
-int main(){
-  SetErrorMode(GetErrorMode() | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS); // Do not show dialog when dll missing
-  hello();
-  return 0;
-}
-"""
         client.save(files)
         client.run("export conan/stable")
         client.run("install lib/1.0@conan/stable -o lib:shared=True --build missing")
