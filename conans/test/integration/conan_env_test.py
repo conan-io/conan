@@ -90,7 +90,7 @@ HELLO_EXPORT void hello();
 #include "hello.h"
 #include "windows.h"
 int main(){
-  SetErrorMode(SetErrorMode(0) | SEM_NOGPFAULTERRORBOX); // Do not show dialog when dll missing
+  SetErrorMode(GetErrorMode() | SEM_NOGPFAULTERRORBOX | SEM_NOOPENFILEERRORBOX | SEM_FAILCRITICALERRORS); // Do not show dialog when dll missing
   hello();
   return 0;
 }
