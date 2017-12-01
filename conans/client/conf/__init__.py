@@ -14,6 +14,8 @@ MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 default_settings_yml = """
 os:
     Windows:
+    WindowsStore:
+        version: ["8.1", "10.0"]
     Linux:
     Macos:
     Android:
@@ -35,7 +37,10 @@ compiler:
         threads: [None, posix]
         libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
-        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3", "6.4", "7.1", "7.2"]
+        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
+                  "5", "5.1", "5.2", "5.3", "5.4",
+                  "6", "6.1", "6.2", "6.3", "6.4",
+                  "7", "7.1", "7.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW

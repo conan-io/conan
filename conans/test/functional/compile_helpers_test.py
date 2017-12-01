@@ -8,7 +8,6 @@ from conans.client.runner import ConanRunner
 from conans.errors import ConanException
 from conans.model.env_info import DepsEnvInfo
 from conans.model.profile import Profile
-from conans.model.scope import Scopes
 from conans.model.settings import Settings
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestBufferConanOutput, TestClient
@@ -53,7 +52,7 @@ class MockSettings(Settings):
 
     @property
     def os(self):
-        return self._os
+        return MockSetting(self._os)
 
     @property
     def arch(self):
@@ -462,7 +461,6 @@ class ProfilesEnvironmentTest(unittest.TestCase):
 
     def build_with_profile_test(self):
         self._create_profile("scopes_env", {},
-                             {},  # undefined scope do not apply to my packages
                              {"CXX": "/path/tomy/g++_build", "CC": "/path/tomy/gcc_build"})
 
         self.client.save({CONANFILE: conanfile_dep})
@@ -478,12 +476,10 @@ class ProfilesEnvironmentTest(unittest.TestCase):
     def _assert_env_variable_printed(self, name, value):
         self.assertIn("%s=%s" % (name, value), self.client.user_io.out)
 
-    def _create_profile(self, name, settings, scopes=None, env=None):
+    def _create_profile(self, name, settings, env=None):
         env = env or {}
         profile = Profile()
         profile._settings = settings or {}
-        if scopes:
-            profile.scopes = Scopes.from_list(["%s=%s" % (key, value) for key, value in scopes.items()])
         for varname, value in env.items():
             profile.env_values.add(varname, value)
         save(os.path.join(self.client.client_cache.profiles_path, name), "include(default)\n" + profile.dumps())

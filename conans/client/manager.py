@@ -106,7 +106,6 @@ class ConanManager(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
-        self._current_scopes = None
         self._search_manager = search_manager
         self._settings_preprocessor = settings_preprocessor
 
@@ -115,7 +114,7 @@ class ConanManager(object):
         """loads a conanfile for local flow: source, imports, package, build
         """
         profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
-        loader = self.get_loader(profile)
+        loader = self.get_loader(profile, local=True)
         if conanfile_path.endswith(".py"):
             conanfile = loader.load_conan(conanfile_path, output, consumer=True)
         else:
@@ -144,11 +143,18 @@ class ConanManager(object):
 
         return conanfile
 
-    def get_loader(self, profile):
-        self._client_cache.settings.values = profile.settings_values
-        # Settings preprocessor
-        self._settings_preprocessor.preprocess(self._client_cache.settings)
-        return ConanFileLoader(self._runner, self._client_cache.settings, profile)
+    def get_loader(self, profile, local=False):
+        """ When local=True it means that the state is being recovered from installed files
+        conaninfo.txt, conanbuildinfo.txt, and only local methods as build() are being executed.
+        Thus, it is necessary to restore settings from that info, as configure() is not called,
+        being necessary to remove those settings that doesn't have a value
+        """
+        cache_settings = self._client_cache.settings.copy()
+        cache_settings.values = profile.settings_values
+        self._settings_preprocessor.preprocess(cache_settings)
+        if local:
+            cache_settings.remove_undefined()
+        return ConanFileLoader(self._runner, cache_settings, profile)
 
     def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
                version=None):
@@ -338,22 +344,16 @@ class ConanManager(object):
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
         deps_graph = graph_builder.load(conanfile)
 
-        # This line is so the conaninfo stores the correct complete info
-        conanfile.info.scope = profile.scopes
-
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
-        if inject_require:
-            output = ScopedOutput("%s test package" % str(inject_require), self._user_io.out)
-            output.info("Installing dependencies")
+        if not isinstance(reference, ConanFileReference):
+            output = ScopedOutput(("%s test package" % str(inject_require)) if inject_require else "PROJECT",
+                                  self._user_io.out)
+            output.highlight("Installing %s" % reference)
         else:
-            if not isinstance(reference, ConanFileReference):
-                output = ScopedOutput("PROJECT", self._user_io.out)
-                output.highlight("Installing %s" % reference)
-            else:
-                output = ScopedOutput(str(reference), self._user_io.out)
-                output.highlight("Installing package")
-            Printer(self._user_io.out).print_graph(deps_graph, registry)
+            output = ScopedOutput(str(reference), self._user_io.out)
+            output.highlight("Installing package")
+        Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         try:
             if loader._settings.os and detected_os() != loader._settings.os:

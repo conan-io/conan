@@ -5,7 +5,7 @@ import subprocess
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.files import unix_path
-from conans.client.tools.oss import cpu_count
+from conans.client.tools.oss import cpu_count, detected_architecture
 from conans.errors import ConanException
 
 _global_output = None
@@ -40,11 +40,12 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         raise ConanException("Cannot build_sln_command, arch not defined")
     command += "msbuild %s /p:Configuration=%s" % (sln_path, build_type)
     arch = str(arch)
-    if arch in ["x86_64", "x86"]:
-        command += ' /p:Platform='
-        command += '"x64"' if arch == "x86_64" else '"x86"'
-    elif "ARM" in arch.upper():
-        command += ' /p:Platform="ARM"'
+    msvc_arch = {'x86': 'x86',
+                 'x86_64': 'x64',
+                 'armv7': 'ARM',
+                 'armv8': 'ARM64'}.get(arch)
+    if msvc_arch:
+        command += ' /p:Platform="%s"' % msvc_arch
 
     if parallel:
         command += ' /m:%s' % cpu_count()
@@ -84,13 +85,55 @@ def vs_installation_path(version):
     return vs_installation_path._cached[version]
 
 
+def find_windows_10_sdk():
+    """finds valid Windows 10 SDK version which can be passed to vcvarsall.bat (vcvars_command)"""
+    # uses the same method as VCVarsQueryRegistry.bat
+    from six.moves import winreg  # @UnresolvedImport
+    hives = [
+        (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Wow6432Node'),
+        (winreg.HKEY_CURRENT_USER, r'SOFTWARE\Wow6432Node'),
+        (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE'),
+        (winreg.HKEY_CURRENT_USER, r'SOFTWARE')
+    ]
+    for key, subkey in hives:
+        try:
+            hkey = winreg.OpenKey(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey)
+            installation_folder, _ = winreg.QueryValueEx(hkey, 'InstallationFolder')
+            if os.path.isdir(installation_folder):
+                include_dir = os.path.join(installation_folder, 'include')
+                for sdk_version in os.listdir(include_dir):
+                    if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
+                        windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
+                        if os.path.isfile(windows_h):
+                            return sdk_version
+        except EnvironmentError:
+            pass
+        finally:
+            winreg.CloseKey(hkey)
+    return None
+
+
 def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
+    os_setting = settings.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
-    param = "x86" if arch_setting == "x86" else "amd64"
+    # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
+    arch_setting = arch_setting or 'x86_64'
+    if detected_architecture() == 'x86_64':
+        vcvars_arch = {'x86': 'x86',
+                       'x86_64': 'amd64',
+                       'armv7': 'amd64_arm',
+                       'armv8': 'amd64_arm64'}.get(arch_setting)
+    elif detected_architecture() == 'x86':
+        vcvars_arch = {'x86': 'x86',
+                       'x86_64': 'x86_amd64',
+                       'armv7': 'x86_arm',
+                       'armv8': 'x86_arm64'}.get(arch_setting)
+    if not vcvars_arch:
+        raise ConanException('unsupported architecture %s' % arch_setting)
     existing_version = os.environ.get("VisualStudioVersion")
     if existing_version:
         command = "echo Conan:vcvars already set"
@@ -119,7 +162,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                     'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
             command = ('set "VSCMD_START_DIR=%%CD%%" && '
-                       'call "%s" %s' % (vcvars_path, param))
+                       'call "%s" %s' % (vcvars_path, vcvars_arch))
         else:
             try:
                 vs_path = os.environ[env_var]
@@ -129,8 +172,19 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                 _global_output.warn('VS variable %s points to the non-existing path "%s",'
                     'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
-            command = ('call "%s" %s' % (vcvars_path, param))
+            command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
 
+    if os_setting == 'WindowsStore':
+        os_version_setting = settings.get_safe("os.version")
+        if os_version_setting == '8.1':
+            command += ' store 8.1'
+        elif os_version_setting == '10.0':
+            windows_10_sdk = find_windows_10_sdk()
+            if not windows_10_sdk:
+                raise ConanException("cross-compiling for WindowsStore 10 (UWP), but Windows 10 SDK wasn't found")
+            command += ' store ' + windows_10_sdk
+        else:
+            raise ConanException('unsupported Windows Store version %s' % os_version_setting)
     return command
 
 
