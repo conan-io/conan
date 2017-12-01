@@ -153,6 +153,7 @@ class ConanBash(ConanFile):
         if platform.system() != "Windows":
             return
         conanfile = '''
+import os
 from conans import ConanFile, tools
 
 class ConanBash(ConanFile):
@@ -174,13 +175,15 @@ class ConanBash(ConanFile):
 
         conanfile = '''
 from conans import ConanFile, tools
+import os
 
 class ConanBash(ConanFile):
     name = "THEPACKAGE"
     version = "0.1"
 
     def package_info(self):
-        self.env_info.PATH = self.package_folder
+        self.env_info.PATH.append(self.package_folder)
+        tools.save(os.path.join(self.package_folder, "myrun.bat"), 'echo "HELLO PARENT!')
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
@@ -198,13 +201,13 @@ class ConanBash(ConanFile):
     def build(self):
         with tools.environment_append({"MYVAR": "Hello MYVAR"}):
             tools.run_in_windows_bash(self, "echo $MYVAR")
-            tools.run_in_windows_bash(self, 'echo "path: $PATH"')
+            tools.run_in_windows_bash(self, 'myrun.bat')
         '''
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("export lasote/stable")
         client.run("install bash/0.1@lasote/stable --build")
         self.assertIn("Hello MYVAR", client.user_io.out)
-        self.assertIn("path: THEPACKAGE/", client.user_io.out)
+        self.assertIn("HELLO PARENT!", client.user_io.out)
 
     def use_build_virtualenv_test(self):
         if platform.system() != "Linux":
