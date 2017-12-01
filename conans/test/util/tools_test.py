@@ -178,6 +178,7 @@ class HelloConan(ConanFile):
 
             os_info.is_macos = True
             os_info.is_linux = False
+            os_info.is_windows = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
@@ -229,6 +230,7 @@ class HelloConan(ConanFile):
 
             os_info.is_macos = True
             os_info.is_linux = False
+            os_info.is_windows = False
             spt = SystemPackageTool(runner=runner, os_info=os_info)
 
             spt.update()
@@ -238,6 +240,7 @@ class HelloConan(ConanFile):
 
             os_info.is_freebsd = True
             os_info.is_macos = False
+            os_info.is_windows = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
@@ -249,6 +252,7 @@ class HelloConan(ConanFile):
 
             os_info.is_solaris = True
             os_info.is_freebsd = False
+            os_info.is_windows = False
 
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
@@ -396,6 +400,7 @@ compiler:
             def __init__(self):
                 self.command = ""
                 self.output = namedtuple("output", "info")(lambda x: None)
+                self.env = {}
 
             def run(self, command):
                 self.command = command
