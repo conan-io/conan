@@ -43,7 +43,7 @@ class PathLengthLimitTest(unittest.TestCase):
     def remove_test(self):
         short_home = tempfile.mkdtemp(dir=CONAN_TEST_FOLDER)
         client = TestClient()
-        files = {"conanfile.py": base.replace("108", "90"),
+        files = {"conanfile.py": base,
                  "path/"*20 + "file0.txt": "file0 content"}  # shorten to pass appveyor
         client.save(files)
         with environment_append({"CONAN_USER_HOME_SHORT": short_home}):
@@ -61,7 +61,7 @@ class PathLengthLimitTest(unittest.TestCase):
                                  users={"lasote": "mypass"})  # exported users and passwords
         servers = {"default": test_server}
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        files = {"conanfile.py": base.replace("108", "90")}
+        files = {"conanfile.py": base}
         client.save(files)
         client.run("export lasote/channel")
         client.run("install lib/0.1@lasote/channel --build")
@@ -135,7 +135,7 @@ class PathLengthLimitTest(unittest.TestCase):
 
     def basic_test(self):
         client = TestClient()
-        files = {"conanfile.py": base.replace("108", "90")}
+        files = {"conanfile.py": base}
         client.save(files)
         client.run("export user/channel")
         client.run("install lib/0.1@user/channel --build")
