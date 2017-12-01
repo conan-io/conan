@@ -25,11 +25,16 @@ def undefined_value(name):
 
 
 class SettingsItem(object):
+    """ represents a setting value and its child info, which could be:
+    - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
+    - "ANY", as string to accept any value
+    - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
+    """
     def __init__(self, definition, name):
-        self._name = name
-        self._value = None
-        self._definition = {}
+        self._name = name  # settings.compiler
+        self._value = None  # gcc
         if isinstance(definition, dict):
+            self._definition = {}
             # recursive
             for k, v in definition.items():
                 k = str(k)
@@ -234,11 +239,11 @@ class Settings(object):
         Kind of opposite to "validate()" that raises error for not defined settings
         Necessary to recover settings state from conaninfo.txt
         """
-        for field, data in list(self._data.items()):
-            if data.value is None:
-                self._data.pop(field)
+        for name, setting in list(self._data.items()):
+            if setting.value is None:
+                self._data.pop(name)
             else:
-                data.remove_undefined()
+                setting.remove_undefined()
 
     @property
     def fields(self):
