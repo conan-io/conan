@@ -34,12 +34,17 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
     if num_cores <= 1:
         multiprocess = ""
 
+    pip_installs = "pip install -r conans/requirements.txt && " \
+                   "pip install -r conans/requirements_dev.txt && " \
+                   "pip install -r conans/requirements_server.txt && "
+
+    if platform.system() == "Darwin":
+        pip_installs += "pip install -r conans/requirements_osx.txt && "
+
     #  --nocapture
     command = "virtualenv --python \"{pyenv}\" \"{venv_dest}\" && " \
               "{source_cmd} \"{venv_exe}\" && " \
-              "pip install -r conans/requirements.txt && " \
-              "pip install -r conans/requirements_dev.txt && " \
-              "pip install -r conans/requirements_server.txt && " \
+              "{pip_installs} " \
               "python setup.py install && " \
               "conan --version && conan --help && " \
               "nosetests {module_path} {excluded_tags} --verbosity={verbosity} " \
@@ -55,7 +60,8 @@ def run_tests(module_path, pyver, source_folder, tmp_folder,
                                        "venv_exe": venv_exe,
                                        "source_cmd": source_cmd,
                                        "debug_traces": debug_traces,
-                                       "multiprocess": multiprocess})
+                                       "multiprocess": multiprocess,
+                                       "pip_installs": pip_installs})
 
     env = get_environ(tmp_folder)
     env["PYTHONPATH"] = source_folder
