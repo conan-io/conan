@@ -213,9 +213,15 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None):
     env_vars = {"MSYSTEM": "MINGW32" if arch == "x86" else "MINGW64",
                 "MSYS2_PATH_TYPE": "inherit"}
     with environment_append(env_vars):
+        if cwd and  not os.path.isabs(cwd):
+            cwd = os.path.join(os.getcwd(), cwd)
         curdir = unix_path(cwd or os.path.abspath(os.path.curdir))
+        inherited_path = conanfile.env.get("PATH", None)
+        if isinstance(inherited_path, list):
+            inherited_path = unix_path(":".join(inherited_path))
+        hack_path = '&& PATH="%s":$PATH' % inherited_path if inherited_path else ""
         # Needed to change to that dir inside the bash shell
-        to_run = 'cd "%s" && %s ' % (curdir, bashcmd)
+        to_run = 'cd "%s"%s && %s ' % (curdir, hack_path, bashcmd)
         custom_bash_path = os.getenv("CONAN_BASH_PATH", "bash")
         wincmd = '%s --login -c %s' % (custom_bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
