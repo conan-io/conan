@@ -230,6 +230,10 @@ class Settings(object):
             child.validate()
 
     def remove_undefined(self):
+        """ Remove/delete those settings or subsettings that are not defined.
+        Kind of opposite to "validate()" that raises error for not defined settings
+        Necessary to recover settings state from conaninfo.txt
+        """
         for field, data in list(self._data.items()):
             if data.value is None:
                 self._data.pop(field)

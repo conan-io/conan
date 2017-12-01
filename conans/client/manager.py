@@ -144,6 +144,11 @@ class ConanManager(object):
         return conanfile
 
     def get_loader(self, profile, local=False):
+        """ When local=True it means that the state is being recovered from installed files
+        conaninfo.txt, conanbuildinfo.txt, and only local methods as build() are being executed.
+        Thus, it is necessary to restore settings from that info, as configure() is not called,
+        being necessary to remove those settings that doesn't have a value
+        """
         cache_settings = self._client_cache.settings.copy()
         cache_settings.values = profile.settings_values
         self._settings_preprocessor.preprocess(cache_settings)
