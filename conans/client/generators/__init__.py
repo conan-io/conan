@@ -20,6 +20,8 @@ from .virtualenv import VirtualEnvGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 from .boostbuild import BoostBuildGenerator
+import traceback
+from conans.util.env_reader import get_env
 
 
 class _GeneratorManager(object):
@@ -94,6 +96,8 @@ def write_generators(conanfile, path, output):
                     output.info("Generator %s created %s" % (generator_name, generator.filename))
                     save(join(path, generator.filename), content)
             except Exception as e:
+                if get_env("CONAN_VERBOSE_TRACEBACK", False):
+                    output.error(traceback.format_exc())
                 output.error("Generator %s(file:%s) failed\n%s"
                              % (generator_name, generator.filename, str(e)))
                 raise ConanException(e)
