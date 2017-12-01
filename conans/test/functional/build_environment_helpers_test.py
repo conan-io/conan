@@ -1,8 +1,8 @@
 import unittest
 
 from conans import tools
-from conans.client.configure_build_environment import VisualStudioBuildEnvironment
 from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 
 
 class BuildEnvironmentHelpers(unittest.TestCase):
@@ -43,4 +43,3 @@ class BuildEnvironmentHelpers(unittest.TestCase):
                       '/I"/three/include/path" /I/four/include/path /I/five/include/path',
                 "LIB": "/one/lib/path;/two/lib/path;/three/lib/path;/four/lib/path;/five/lib/path",
             })
-æ
