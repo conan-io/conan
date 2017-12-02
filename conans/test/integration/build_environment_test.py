@@ -149,6 +149,66 @@ class ConanBash(ConanFile):
         expected_curdir_base = unix_path(client.client_cache.conan(ConanFileReference.loads("bash/0.1@lasote/stable")))
         self.assertIn(expected_curdir_base, client.user_io.out)
 
+    def run_in_windows_bash_relative_path_test(self):
+        if platform.system() != "Windows":
+            return
+        conanfile = '''
+import os
+from conans import ConanFile, tools
+
+class ConanBash(ConanFile):
+    name = "bash"
+    version = "0.1"
+
+    def build(self):
+        tools.mkdir("relative")
+        tools.run_in_windows_bash(self, "pwd", "relative")
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("create bash/0.1@lasote/stable")
+        self.assertIn("build/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/relative", client.user_io.out)
+
+    def run_in_windows_bash_env_var_test(self):
+        if platform.system() != "Windows":
+            return
+
+        conanfile = '''
+from conans import ConanFile, tools
+import os
+
+class ConanBash(ConanFile):
+    name = "THEPACKAGE"
+    version = "0.1"
+
+    def package_info(self):
+        self.env_info.PATH.append(self.package_folder)
+        tools.save(os.path.join(self.package_folder, "myrun.bat"), 'echo "HELLO PARENT!')
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("create lasote/stable")
+
+        conanfile = '''
+from conans import ConanFile, tools
+
+class ConanBash(ConanFile):
+    name = "bash"
+    version = "0.1"
+    settings = "os", "compiler", "build_type", "arch"
+    requires = "THEPACKAGE/0.1@lasote/stable"
+
+    def build(self):
+        with tools.environment_append({"MYVAR": "Hello MYVAR"}):
+            tools.run_in_windows_bash(self, "echo $MYVAR")
+            tools.run_in_windows_bash(self, 'myrun.bat')
+        '''
+        client.save({CONANFILE: conanfile}, clean_first=True)
+        client.run("export lasote/stable")
+        client.run("install bash/0.1@lasote/stable --build")
+        self.assertIn("Hello MYVAR", client.user_io.out)
+        self.assertIn("HELLO PARENT!", client.user_io.out)
+
     def use_build_virtualenv_test(self):
         if platform.system() != "Linux":
             return
