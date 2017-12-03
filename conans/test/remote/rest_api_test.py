@@ -18,6 +18,7 @@ from conans.test.utils.tools import TestBufferConanOutput
 
 
 @attr('slow')
+@attr('rest_api')
 class RestApiTest(unittest.TestCase):
     '''Open a real server (sockets) to test rest_api function.'''
 
@@ -39,6 +40,7 @@ class RestApiTest(unittest.TestCase):
             # Authenticate user
             token = cls.api.authenticate("private_user", "private_pass")
             cls.api.token = token
+
 
     @classmethod
     def tearDownClass(cls):

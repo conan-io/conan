@@ -126,14 +126,18 @@ class Command(object):
                         gitlab_clang_versions=args.ci_gitlab_clang)
 
     def test(self, *args):
-        """ Runs a test_folder/conanfile.py to test an existing package.
+        """ Test a package, consuming it with a conanfile recipe with a test() method.
+        This command installs the conanfile dependencies (including the tested
+        package), calls a "conan build" to build test apps, and finally executes
+        the test() method.
+        The testing recipe is not a package, does not require name/version,
+        neither define package() or package_info() methods.
         The package to be tested must exist in the local cache or any configured remote.
-        To create and test a binary package for a local directory conanfile.py use the
-        'conan create' command.
+        To create and test a binary package use the 'conan create' command.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
-        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan test '
-                                         'pkg/version@user/channel ')
+        parser.add_argument("path", help='path to the "testing" recipe (conanfile.py) '
+                            'containing a test() method')
         parser.add_argument("reference",
                             help='a full package reference pkg/version@user/channel, of the '
                             'package to be tested')
@@ -287,7 +291,7 @@ class Command(object):
         if args.subcommand == "set":
             try:
                 key, value = args.item.split("=", 1)
-            except:
+            except ValueError:
                 raise ConanException("Please specify key=value")
             return self._conan.config_set(key, value)
         elif args.subcommand == "get":
@@ -556,7 +560,7 @@ class Command(object):
                                               ' are not declared in the recipe (conanfile.py)')
         parser.add_argument("--source-folder", "--source_folder", "-sf", action=OnceArgument,
                             help="local folder containing the sources. Defaulted to --build-folder."
-                                 " A relative path to the current dir can also be specified" )
+                                 " A relative path to the current dir can also be specified")
         parser.add_argument("--build-folder", "--build_folder", "-bf", action=OnceArgument,
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "
@@ -949,7 +953,7 @@ class Command(object):
         elif args.subcommand == "update":
             try:
                 key, value = args.item.split("=", 1)
-            except:
+            except ValueError:
                 raise ConanException("Please specify key=value")
             self._conan.update_profile(profile, key, value)
         elif args.subcommand == "get":
@@ -1055,10 +1059,9 @@ class Command(object):
                 reference = ConanFileReference.loads(pattern)
             except ConanException:
                 if query is not None:
-                    msg = "-q parameter only allowed with a valid recipe reference as search " \
-                          "pattern. e.j conan search " \
-                          "MyPackage/1.2@user/channel -q \"os=Windows\""
-                    raise ConanException(msg)
+                    raise ConanException("-q parameter only allowed with a valid recipe "
+                                         "reference as search pattern. e.g conan search "
+                                         "MyPackage/1.2@user/channel -q \"os=Windows\"")
         return reference
 
     def run(self, *args):
@@ -1122,7 +1125,7 @@ def get_reference_fields(arg_reference):
         name, version = None, None
         try:
             user, channel = arg_reference.split("/")
-        except:
+        except ValueError:
             raise ConanException("Invalid parameter '%s', specify the full reference or "
                                  "user/channel" % arg_reference)
 

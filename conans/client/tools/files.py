@@ -221,11 +221,26 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
     save(pc_file, "\n".join(lines))
 
 
-def unix_path(path):
+MSYS = 'msys'
+CYGWIN = 'cygwin'
+WSL = 'wsl'  # Windows Subsystem for Linux
+SFU = 'sfu'  # Windows Services for UNIX
+
+
+def unix_path(path, path_flavor=MSYS):
     """"Used to translate windows paths to MSYS unix paths like
     c/users/path/to/file. Not working in a regular console or MinGW!"""
     pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
-    return pattern.sub('/\\1/', path).replace('\\', '/').lower()
+    path = pattern.sub('/\\1/', path).replace('\\', '/').lower()
+    if path_flavor == MSYS:
+        return path
+    elif path_flavor == CYGWIN:
+        return '/cygdrive' + path
+    elif path_flavor == WSL:
+        return '/mnt' + path
+    elif path_flavor == SFU:
+        return '/dev/fs' + path[0] + path[1:].capitalize()
+    return None
 
 
 def collect_libs(conanfile, folder="lib"):

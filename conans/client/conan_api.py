@@ -248,7 +248,6 @@ class ConanAPIV1(object):
 
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)
-            scoped_output.highlight("Testing with 'test_package'")
             pt.install_build_and_test(test_conanfile_path, reference, profile,
                                       remote, update, build_modes=build_modes,
                                       manifest_folder=manifest_folder,
@@ -696,19 +695,6 @@ class ConanAPIV1(object):
 Conan = ConanAPIV1
 
 
-def _check_query_parameter_and_get_reference(query, pattern):
-    reference = None
-    if pattern:
-        try:
-            reference = ConanFileReference.loads(pattern)
-        except ConanException:
-            if query is not None:
-                raise ConanException("-q parameter only allowed with a valid recipe "
-                                     "reference as search pattern. e.j conan search "
-                                     "MyPackage/1.2@user/channel -q \"os=Windows\"")
-    return reference
-
-
 def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
     if manifests and manifests_interactive:
         raise ConanException("Do not specify both manifests and "
@@ -736,19 +722,6 @@ def get_conan_runner():
     log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT", True)
     runner = ConanRunner(print_commands_to_output, generate_run_log_file, log_run_to_output)
     return runner
-
-
-def _get_reference(ref, cwd=None):
-    try:
-        reference = ConanFileReference.loads(ref)
-    except:
-        if "@" in ref:
-            raise
-        if not os.path.isabs(ref):
-            reference = os.path.normpath(os.path.join(cwd, ref))
-        else:
-            reference = ref
-    return cwd, reference
 
 
 def migrate_and_get_client_cache(base_folder, out, storage_folder=None):

@@ -25,11 +25,16 @@ def undefined_value(name):
 
 
 class SettingsItem(object):
+    """ represents a setting value and its child info, which could be:
+    - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
+    - "ANY", as string to accept any value
+    - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
+    """
     def __init__(self, definition, name):
-        self._name = name
-        self._value = None
-        self._definition = {}
+        self._name = name  # settings.compiler
+        self._value = None  # gcc
         if isinstance(definition, dict):
+            self._definition = {}
             # recursive
             for k, v in definition.items():
                 k = str(k)
@@ -178,6 +183,10 @@ class SettingsItem(object):
         if isinstance(self._definition, dict):
             self._definition[self._value].validate()
 
+    def remove_undefined(self):
+        if isinstance(self._definition, dict):
+            self._definition[self._value].remove_undefined()
+
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
@@ -224,6 +233,17 @@ class Settings(object):
         for field in self.fields:
             child = self._data[field]
             child.validate()
+
+    def remove_undefined(self):
+        """ Remove/delete those settings or subsettings that are not defined.
+        Kind of opposite to "validate()" that raises error for not defined settings
+        Necessary to recover settings state from conaninfo.txt
+        """
+        for name, setting in list(self._data.items()):
+            if setting.value is None:
+                self._data.pop(name)
+            else:
+                setting.remove_undefined()
 
     @property
     def fields(self):

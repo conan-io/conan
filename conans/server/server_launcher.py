@@ -6,29 +6,13 @@ from conans.server.rest.server import ConanServer
 from conans.server.crypto.jwt.jwt_credentials_manager import JWTCredentialsManager
 from conans.server.crypto.jwt.jwt_updown_manager import JWTUpDownAuthManager
 from conans.server.conf import MIN_CLIENT_COMPATIBLE_VERSION
+from conans.server.plugin_loader import load_authentication_plugin
 from conans.model.version import Version
 from conans.server.migrate import migrate_and_get_server_config
 from conans import __version__ as SERVER_VERSION
 from conans.paths import conan_expand_user, SimplePaths
 from conans.search.search import DiskSearchManager, DiskSearchAdapter
 from conans import SERVER_CAPABILITIES
-
-
-def load_authentication_plugin(server_folder, plugin_name):
-    try:
-        from pluginbase import PluginBase
-        plugin_base = PluginBase(package="plugins/authenticator")
-        plugins_dir = os.path.join(server_folder, "plugins", "authenticator")
-        plugin_source = plugin_base.make_plugin_source(
-                        searchpath=[plugins_dir])
-        auth = plugin_source.load_plugin(plugin_name).get_class()
-        # it is necessary to keep a reference to the plugin, otherwise it is removed
-        # and some imports fail
-        auth.plugin_source = plugin_source
-        return auth
-    except:
-        print("Error loading authenticator plugin '%s'" % plugin_name)
-        raise
 
 
 class ServerLauncher(object):

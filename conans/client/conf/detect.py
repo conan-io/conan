@@ -30,11 +30,12 @@ def _gcc_compiler(output, compiler_exe="gcc"):
         # Since GCC 7.1, -dumpversion return the major version number
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
-        if len(installed_version) == 1:
-            _, out = _execute('%s -dumpfullversion' % compiler_exe)
-            installed_version = re.search("([0-9]\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
+            major = installed_version.split(".")[0]
+            if int(major) >= 5:
+                output.info("gcc>=5, using the major as version")
+                installed_version = major
             return compiler, installed_version
     except:
         return None
