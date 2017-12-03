@@ -1,12 +1,13 @@
 import unittest
 import os
+import platform
+import re
 
 from conans import tools
 from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
 from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference, PackageReference
-import re
 
 
 conanfile_py = """
@@ -109,6 +110,8 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertNotIn("package", output)
 
     def test_short_paths(self):
+        if platform.system() != "Windows":
+            return
         folder = temp_folder(False)
         short_folder = os.path.join(folder, ".cn")
 

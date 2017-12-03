@@ -1,11 +1,12 @@
 import unittest
+import platform
+import os
 
 from conans.client import tools
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import load
-import os
 from conans.test.utils.conanfile import TestConanFile
 from nose_parameterized import parameterized
 
@@ -34,7 +35,7 @@ class TestConan(ConanFile):
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         win_package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
         package_folder = client.client_cache.package(win_package_ref, short_paths=short_paths)
-        if short_paths:
+        if short_paths and platform.system() == "Windows":
             self.assertEqual(load(os.path.join(client.client_cache.package(win_package_ref),
                                                ".conan_link")),
                              package_folder)

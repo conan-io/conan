@@ -1,14 +1,16 @@
 # -*- coding: utf-8 -*-
 import unittest
+import platform
+import zipfile
+import os
+import sys
+
 from conans.client.output import ConanOutput
 from six import StringIO
 from conans.client.rest.uploader_downloader import print_progress
 from conans.test.utils.test_files import temp_folder
 from conans import tools
-import zipfile
-import os
 from conans.util.files import save, load
-import sys
 from conans.test.utils.tools import TestClient
 
 
@@ -80,6 +82,8 @@ class PkgConan(ConanFile):
         self.assertEqual(content, "Hello world!")
 
     def short_paths_unzip_output_test(self):
+        if platform.system() != "Windows":
+            return
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "src/"*40, "example.txt")
         save(file_path, "Hello world!")
