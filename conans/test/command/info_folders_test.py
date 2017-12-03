@@ -1,11 +1,10 @@
 import unittest
 import os
-import platform
 
 from conans import tools
 from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
-from conans.paths import CONANFILE, long_paths_support
+from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference, PackageReference
 import re
 
@@ -121,19 +120,13 @@ class InfoFoldersTest(unittest.TestCase):
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
             output = client.user_io.out
             self.assertIn(os.path.join(base_path, "export"), output)
-            if long_paths_support:
-                self.assertIn(os.path.join(base_path, "source"), output)
-                self.assertIn(os.path.join(base_path, "build"), output)
-                self.assertIn(os.path.join(base_path, "package"), output)
-                self.assertNotIn(short_folder, output)
-            else:
-                self.assertNotIn(os.path.join(base_path, "source"), output)
-                self.assertNotIn(os.path.join(base_path, "build"), output)
-                self.assertNotIn(os.path.join(base_path, "package"), output)
+            self.assertNotIn(os.path.join(base_path, "source"), output)
+            self.assertNotIn(os.path.join(base_path, "build"), output)
+            self.assertNotIn(os.path.join(base_path, "package"), output)
 
-                self.assertIn("source_folder: %s" % short_folder, output)
-                self.assertIn("build_folder: %s" % short_folder, output)
-                self.assertIn("package_folder: %s" % short_folder, output)
+            self.assertIn("source_folder: %s" % short_folder, output)
+            self.assertIn("build_folder: %s" % short_folder, output)
+            self.assertIn("package_folder: %s" % short_folder, output)
 
             # Ensure that the inner folders are not created (that could affect
             # pkg creation flow
@@ -144,8 +137,7 @@ class InfoFoldersTest(unittest.TestCase):
                          client.client_cache.build(pkg_ref, True),
                          client.client_cache.package(pkg_ref, True)):
                 self.assertFalse(os.path.exists(path))
-                if not long_paths_support:  # The parent has been created for .conan_link
-                    self.assertTrue(os.path.exists(os.path.dirname(path)))
+                self.assertTrue(os.path.exists(os.path.dirname(path)))
 
     def test_direct_conanfile(self):
         client = TestClient()
