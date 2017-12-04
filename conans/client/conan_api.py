@@ -173,9 +173,8 @@ class ConanAPIV1(object):
             self._user_io.out.success("File saved: %s" % f)
 
     @api_method
-    def test(self, path, profile_name=None, settings=None, options=None, env=None, remote=None,
-             update=False, user=None, channel=None, name=None,
-             version=None, build_modes=None):
+    def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
+             remote=None, update=False, build_modes=None):
 
         settings = settings or []
         options = options or []
@@ -186,9 +185,9 @@ class ConanAPIV1(object):
 
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
-
+        reference = ConanFileReference.loads(reference)
         pt = PackageTester(self._manager, self._user_io)
-        pt.install_build_and_test(conanfile_abs_path, profile, name, version, user, channel, remote,
+        pt.install_build_and_test(conanfile_abs_path, reference, profile, remote,
                                   update, build_modes=build_modes)
 
     @api_method
@@ -249,8 +248,8 @@ class ConanAPIV1(object):
 
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)
-            pt.install_build_and_test(test_conanfile_path, profile, name, version, user,
-                                      channel, remote, update, build_modes=build_modes,
+            pt.install_build_and_test(test_conanfile_path, reference, profile,
+                                      remote, update, build_modes=build_modes,
                                       manifest_folder=manifest_folder,
                                       manifest_verify=manifest_verify,
                                       manifest_interactive=manifest_interactive)
@@ -418,7 +417,7 @@ class ConanAPIV1(object):
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(reference)
-        except:
+        except ConanException:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
         profile = profile_from_args(profile_name, settings, options, env, build_folder,
@@ -435,7 +434,7 @@ class ConanAPIV1(object):
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(reference)
-        except:
+        except ConanException:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
         profile = profile_from_args(profile_name, settings, options, env, build_folder,
@@ -453,7 +452,7 @@ class ConanAPIV1(object):
         current_path = os.getcwd()
         try:
             reference = ConanFileReference.loads(reference)
-        except:
+        except ConanException:
             reference = os.path.normpath(os.path.join(current_path, reference))
 
         profile = profile_from_args(profile_name, settings, options, env, build_folder,
@@ -696,19 +695,6 @@ class ConanAPIV1(object):
 Conan = ConanAPIV1
 
 
-def _check_query_parameter_and_get_reference(query, pattern):
-    reference = None
-    if pattern:
-        try:
-            reference = ConanFileReference.loads(pattern)
-        except ConanException:
-            if query is not None:
-                raise ConanException("-q parameter only allowed with a valid recipe "
-                                     "reference as search pattern. e.j conan search "
-                                     "MyPackage/1.2@user/channel -q \"os=Windows\"")
-    return reference
-
-
 def _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd):
     if manifests and manifests_interactive:
         raise ConanException("Do not specify both manifests and "
@@ -736,19 +722,6 @@ def get_conan_runner():
     log_run_to_output = get_env("CONAN_LOG_RUN_TO_OUTPUT", True)
     runner = ConanRunner(print_commands_to_output, generate_run_log_file, log_run_to_output)
     return runner
-
-
-def _get_reference(ref, cwd=None):
-    try:
-        reference = ConanFileReference.loads(ref)
-    except:
-        if "@" in ref:
-            raise
-        if not os.path.isabs(ref):
-            reference = os.path.normpath(os.path.join(cwd, ref))
-        else:
-            reference = ref
-    return cwd, reference
 
 
 def migrate_and_get_client_cache(base_folder, out, storage_folder=None):

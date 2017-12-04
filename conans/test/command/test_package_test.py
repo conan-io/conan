@@ -66,11 +66,8 @@ class TestConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        error = client.run("create user/channel", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("The specified version doesn't match with "
-                      "the requirement of the test_package/conanfile.py",
-                      client.user_io.out)
+        client.run("create user/channel")
+        self.assertNotIn("Hello/0.2", client.out)
 
     def other_requirements_test(self):
         test_conanfile = '''
