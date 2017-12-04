@@ -1,7 +1,7 @@
 if not exist "C:\mingw64" appveyor DownloadFile "https://s3-eu-west-1.amazonaws.com/downloads.conan.io/x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z"
 if not exist "C:\mingw64" 7z x x86_64-6.3.0-release-posix-sjlj-rt_v5-rev1.7z -oc:\
 
-set CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.0-win64-x64.zip"
+set CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.2-win64-x64.zip"
 mkdir C:\projects\deps
 SET ORIGINAL_DIR=%CD%
 cd C:\projects\deps
