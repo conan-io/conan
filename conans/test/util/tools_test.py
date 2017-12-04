@@ -441,18 +441,6 @@ class HelloConan(ConanFile):
 """
         client = TestClient()
 
-        # Try specifying the standard
-        files = get_vs_project_files(std="cpp17_2015")
-        files[CONANFILE] = conan_build_vs
-
-        client.save(files)
-        error = client.run('create Hello/1.2.1@lasote/stable -o Hello:cppstd=11 -s compiler="Visual Studio" -s '
-                           'compiler.version=14', ignore_error=True)
-        self.assertTrue(error)
-        client.run('create Hello/1.2.1@lasote/stable -o Hello:cppstd=17 -s compiler="Visual Studio" -s '
-                   'compiler.version=14')
-        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
-
         files = get_vs_project_files()
         files[CONANFILE] = conan_build_vs
 
@@ -476,7 +464,6 @@ class HelloConan(ConanFile):
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
         self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
-
 
     def download_retries_test(self):
         out = TestBufferConanOutput()
