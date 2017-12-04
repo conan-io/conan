@@ -19,8 +19,8 @@ class ConanLib(ConanFile):
     name = "zlib"
     version = "0.1"
     
-    def options(self, config):
-        config.add_shared()
+    def config_options(self):
+        self.add_shared()
 '''
 
         files = {"conanfile.py": zlib}
