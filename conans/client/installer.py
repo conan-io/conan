@@ -1,11 +1,12 @@
 import os
 import time
 import shutil
+import platform
 
 from conans.client import tools
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
-from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME, long_paths_support
+from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
 from conans.util.files import save, rmdir, mkdir, make_read_only
 from conans.model.ref import PackageReference
 from conans.util.log import logger
@@ -100,7 +101,7 @@ class _ConanPackageBuilder(object):
             mkdir(self.build_folder)
             self._conan_file.source_folder = src_folder
         else:
-            if not long_paths_support:
+            if platform.system() == "Windows" and os.getenv("CONAN_USER_HOME_SHORT") != "None":
                 from conans.util.windows import ignore_long_path_files
                 ignore = ignore_long_path_files(src_folder, self.build_folder, self._out)
             else:
