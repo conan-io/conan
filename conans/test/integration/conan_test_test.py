@@ -12,7 +12,6 @@ from conans.paths import CONANFILE
 class ConanTestTest(unittest.TestCase):
 
     def test_partial_reference(self):
-
         # Create two packages to test with the same test
         conanfile = '''
 from conans import ConanFile
@@ -32,29 +31,6 @@ class HelloConan(ConanFile):
             client.save({os.path.join(path, CONANFILE): conanfile_test}, clean_first=True)
             client.run("test %s %s" % (path, test_reference))
 
-        # Now try with no reference in conan test, because we already have it in the requires
-        test('''
-from conans import ConanFile
-
-class HelloTestConan(ConanFile):
-    requires = "Hello/0.1@conan/stable"
-    def test(self):
-        self.output.warn("Tested ok!")
-''', "")
-        self.assertIn("Tested ok!", client.out)
-
-        # Now try having two references and specifing nothing
-        with self.assertRaises(Exception):
-            test('''
-from conans import ConanFile
-
-class HelloTestConan(ConanFile):
-    requires = "Hello/0.1@conan/stable", "other/ref@conan/Stable"
-    def test(self):
-        self.output.warn("Tested ok!")
-''', "")
-        self.assertIn("Cannot deduce the reference to be tested,", client.out)
-
         # Specify a valid name
         test('''
 from conans import ConanFile
@@ -63,21 +39,8 @@ class HelloTestConan(ConanFile):
     requires = "Hello/0.1@conan/stable"
     def test(self):
         self.output.warn("Tested ok!")
-''', "Hello")
+''', "Hello/0.1@conan/stable")
         self.assertIn("Tested ok!", client.out)
-
-        # Specify a wrong name
-        with self.assertRaises(Exception):
-            test('''
-from conans import ConanFile
-
-class HelloTestConan(ConanFile):
-    requires = "Hello/0.1@conan/stable", "other/ref@conan/Stable"
-    def test(self):
-        self.output.warn("Tested ok!")
-''', "badname")
-        self.assertIn("The package name 'badname' doesn't match with any requirement in "
-                      "the testing conanfile.py: Hello, other", client.out)
 
         # Specify a complete reference but not matching with the requires, it's ok, the
         # require could be a tool or whatever
@@ -118,7 +81,7 @@ class HelloTestConan(ConanFile):
 
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
         client.run("export lasote/testing")
-        client.run("test test_package --build missing")
+        client.run("test test_package Hello/0.1@lasote/testing --build missing")
 
     def fail_test_package_test(self):
         client = TestClient()
@@ -147,13 +110,13 @@ class HelloReuseConan(ConanFile):
                      "FindXXX.cmake": "Hello FindCmake",
                      "test/conanfile.py": test_conanfile})
         client.run("create lasote/stable")
-        client.run("test test")
+        client.run("test test Hello/0.1@lasote/stable")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
         client.save({"FindXXX.cmake": "Bye FindCmake"})
-        client.run("test test")  # Test do not rebuild the package
+        client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
         client.run("create lasote/stable")  # create rebuild the package
@@ -239,12 +202,12 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         files["test_package/main.cpp"] = files["main.cpp"]
         client.save(files)
         client.run("create lasote/stable")
-        error = client.run("test test_package -s build_type=Release")
-        self.assertFalse(error)
+        client.run("test test_package Hello0/0.1@lasote/stable -s build_type=Release")
+
         self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.user_io.out)
         self.assertNotIn("WARN: conanenv.txt file not found", client.user_io.out)
         self.assertIn('Hello Hello0', client.user_io.out)
-        error = client.run("test test_package -s Hello0:build_type=Debug -o Hello0:language=1 --build missing")
-        self.assertFalse(error)
+        client.run("test test_package Hello0/0.1@lasote/stable -s Hello0:build_type=Debug "
+                   "-o Hello0:language=1 --build missing")
         self.assertIn('Hola Hello0', client.user_io.out)
         self.assertIn('BUILD_TYPE=>Debug', client.user_io.out)
