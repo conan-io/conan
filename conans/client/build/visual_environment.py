@@ -36,15 +36,16 @@ class VisualStudioBuildEnvironment(object):
 
     def _get_cl_list(self, quotes=True):
         if quotes:
-            ret = ['/I%s' % lib for lib in self.include_paths]
+            ret = ['/I"%s"' % lib for lib in self.include_paths]
         else:
             ret = ['/I%s' % lib for lib in self.include_paths]
         if self.std:
             ret.append(self.std)
 
-            ret.extend(['/D%s' % lib for lib in self.defines])
         if self.runtime:
             ret.append("/%s" % self.runtime)
+
+        ret.extend(['/D%s' % lib for lib in self.defines])
 
         return ret
 

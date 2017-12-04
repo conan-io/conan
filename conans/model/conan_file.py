@@ -1,3 +1,4 @@
+from conans.client.build.compilers_info import available_cppstd_versions, available_cstd_versions
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
@@ -27,19 +28,19 @@ class DynamicOptionsManager(object):
         self.options.add_option("shared", [True, False], default)
 
     def add_cppstd(self, default=None):
-        default = default or "11"
-        if self.settings.get_safe("compiler") == "Visual Studio":
-            self.options.add_option("cppstd", ["11", "14", "17"], default)
-        else:
-            self.options.add_option("cppstd",
-                                    ["98", "11", "14", "17", "98gnu", "11gnu", "14gnu", "17gnu"],
-                                    default)
+        stds = available_cppstd_versions(self.settings.get_safe("compiler"),
+                                         self.settings.get_safe("compiler.version"))
+        # Unresolved issue: With this approach "11" is not a valid value for Visual Studio,
+        # so the creator should do:
+        #  default = 11 if self.settings.compiler != "Visual Studio" else None
+        stds.insert(0, None)
+        self.options.add_option("cppstd", stds, default)
 
     def add_cstd(self, default=None):
-        default = default or "11"
-        if self.settings.get_safe("compiler") != "Visual Studio":
-            self.options.add_option("cppstd",
-                                    ["90", "99", "11", "90gnu", "99gnu", "11gnu"], default)
+        stds = available_cstd_versions(self.settings.get_safe("compiler"),
+                                       self.settings.get_safe("compiler.version"))
+        stds.insert(0, None)
+        self.options.add_option("cstd", stds, default)
 
 
 def create_options(conanfile, settings):

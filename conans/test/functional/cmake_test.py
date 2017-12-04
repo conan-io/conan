@@ -531,6 +531,7 @@ class ConanFileMock(ConanFile):
         if shared is not None:
             self.options = Options(PackageOptions({"shared": ["True", "False"]}))
             self.options.values = OptionsValues([("shared",  shared)])
+            self.options.shared = shared
         else:
             self.options = Options(PackageOptions({}))
 

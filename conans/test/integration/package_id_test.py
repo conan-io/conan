@@ -12,12 +12,13 @@ class PackageIDTest(unittest.TestCase):
         self.client = TestClient()
 
     def _export(self, name, version, package_id_text=None, requires=None,
-                channel=None, default_option_value="off", settings=None):
+                channel=None, default_option_value="off", settings=None, add_stdcpp=False):
         conanfile = TestConanFile(name, version, requires=requires,
                                   options={"an_option": ["on", "off"]},
                                   default_options=[("an_option", "%s" % default_option_value)],
                                   package_id=package_id_text,
-                                  settings=settings)
+                                  settings=settings,
+                                  add_stdcpp=add_stdcpp)
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
         self.client.run("export %s" % (channel or "lasote/stable"))
@@ -214,5 +215,54 @@ class PackageIDTest(unittest.TestCase):
                                 ' -s compiler="Visual Studio" '
                                 ' -s compiler.version=15 -s compiler.toolset=v140',
                                 ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
+
+    def test_standard_version_default_matching(self):
+        self._export("Hello", "1.2.0",
+                     channel="user/testing",
+                     settings='"compiler"',
+                     add_stdcpp=False)
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 --build')
+
+        self._export("Hello", "1.2.0",
+                     channel="user/testing",
+                     settings='"compiler"',
+                     add_stdcpp=True)
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 -o Hello:cppstd=14gnu')  # Default, already built
+
+        # Should NOT have binary available
+        error = self.client.run('install Hello/1.2.0@user/testing'
+                                ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                                ' -s compiler.version=7.2 -o Hello:cppstd=11gnu',
+                                ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
+
+    def test_standard_version_default_non_matching(self):
+        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
+                     channel="user/testing",
+                     settings='"compiler"',
+                     add_stdcpp=False,
+                     )
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 --build')
+
+        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
+                     channel="user/testing",
+                     settings='"compiler"',
+                     add_stdcpp=True,
+                     )
+        error = self.client.run('install Hello/1.2.0@user/testing '
+                                ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                                ' -s compiler.version=7.2 -o Hello:cppstd=14gnu',
+                                ignore_error=True)  # Default
         self.assertTrue(error)
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)

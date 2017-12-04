@@ -27,7 +27,7 @@ class MockDepsCppInfo(object):
 
 class MockConanfile(object):
 
-    def __init__(self, settings, options, runner=None):
+    def __init__(self, settings, options=None, runner=None):
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
         self.runner = runner
@@ -41,7 +41,7 @@ class MockConanfile(object):
 
 class TestConanFile(object):
     def __init__(self, name="Hello", version="0.1", settings=None, requires=None, options=None,
-                 default_options=None, package_id=None):
+                 default_options=None, package_id=None, add_stdcpp=False):
         self.name = name
         self.version = version
         self.settings = settings
@@ -49,6 +49,7 @@ class TestConanFile(object):
         self.options = options
         self.default_options = default_options
         self.package_id = package_id
+        self.add_stdcpp = add_stdcpp
 
     def __repr__(self):
         base = """from conans import ConanFile
@@ -61,13 +62,15 @@ class %sConan(ConanFile):
             base += "    settings = %s\n" % self.settings
         if self.requires:
             base += "    requires = %s\n" % (", ".join('"%s"' % r for r in self.requires))
-        if self.options:
+        if self.options and not self.add_stdcpp:
             base += "    options = %s\n" % str(self.options)
-        if self.default_options:
+        if self.default_options and not self.add_stdcpp:
             if isinstance(self.default_options, str):
                 base += "    default_options = '%s'\n" % str(self.default_options)
             else:
                 base += "    default_options = %s\n" % str(self.default_options)
         if self.package_id:
             base += "    def package_id(self):\n        %s\n" % self.package_id
+        if self.add_stdcpp:
+            base += "\n    @staticmethod\n    def options(config):\n        config.add_cppstd()\n"
         return base

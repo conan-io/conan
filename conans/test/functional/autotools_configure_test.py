@@ -30,7 +30,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
     def test_mocked_methods(self):
 
         runner = RunnerMock()
-        conanfile = MockConanfile(MockSettings({}), MockOptions({}), runner)
+        conanfile = MockConanfile(MockSettings({}), runner=runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.make(make_program="othermake")
         self.assertEquals(runner.command_called, "othermake -j%s" % cpu_count())
@@ -131,7 +131,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86",
                                  "compiler": "gcc",
                                  "compiler.libcxx": "libstdc++"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         self._set_deps_info(conanfile)
 
         be = AutoToolsBuildEnvironment(conanfile)
@@ -149,7 +149,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "gcc",
                                  "compiler.libcxx": "libstdc++"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder',
@@ -166,7 +166,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "clang",
                                  "compiler.libcxx": "libstdc++"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
@@ -183,7 +183,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "clang",
                                  "compiler.libcxx": "libc++"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
@@ -199,7 +199,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "gcc",
                                  "compiler.libcxx": "libstdc++11"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 -s --sysroot=/path/to/folder',
@@ -216,7 +216,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "sun-cc",
                                  "compiler.libcxx": "libCstd"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
@@ -231,7 +231,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "sun-cc",
                                  "compiler.libcxx": "libstdcxx"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
@@ -246,7 +246,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "sun-cc",
                                  "compiler.libcxx": "libstlport"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
@@ -261,7 +261,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "sun-cc",
                                  "compiler.libcxx": "libstdc++"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
@@ -277,7 +277,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "gcc",
                                  "compiler.libcxx": "libstdc++"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         env_vars = {"CFLAGS": "-additionalcflag",
@@ -302,7 +302,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                  "arch": "x86_64",
                                  "compiler": "gcc",
                                  "compiler.libcxx": "libstdc++"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         be = AutoToolsBuildEnvironment(conanfile)
@@ -325,7 +325,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
     def test_previous_env(self):
         settings = MockSettings({"arch": "x86",
                                  "os": "Linux"})
-        conanfile = MockConanfile(settings, MockOptions({}))
+        conanfile = MockConanfile(settings)
 
         with tools.environment_append({"CPPFLAGS": "MyCppFlag"}):
             be = AutoToolsBuildEnvironment(conanfile)
@@ -335,7 +335,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         def get_values(this_os, this_arch, setting_os, setting_arch):
             settings = MockSettings({"arch": setting_arch,
                                      "os": setting_os})
-            conanfile = MockConanfile(settings, MockOptions({}))
+            conanfile = MockConanfile(settings)
             conanfile.settings = settings
             be = AutoToolsBuildEnvironment(conanfile)
             return be._get_host_build_target_flags(this_arch, this_os)

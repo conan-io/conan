@@ -2,6 +2,24 @@
 architecture_dict = {"x86_64": "-m64", "x86": "-m32"}
 
 
+def available_cppstd_versions(compiler, compiler_version):
+    ret = []
+    stds = ["98", "98gnu", "11", "11gnu", "14",  "14gnu", "17", "17gnu"]
+    for stdver in stds:
+        if cppstd_flag(compiler, compiler_version, stdver):
+            ret.append(stdver)
+    return ret
+
+
+def available_cstd_versions(compiler, compiler_version):
+    ret = []
+    stds = ["90", "90gnu", "99", "99gnu", "11", "11gnu"]
+    for stdver in stds:
+        if cstd_flag(compiler, compiler_version, stdver) is not None:
+            ret.append(stdver)
+    return ret
+
+
 def stdlib_flags(compiler, libcxx):
     ret = []
     if compiler and "clang" in compiler:
@@ -57,7 +75,8 @@ def cppstd_default(compiler, compiler_version):
 
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": "98",
-               "apple-clang": "98"}.get(str(compiler), None)
+               "apple-clang": "98",
+               "Visual Studio": _visual_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
 
 
@@ -81,6 +100,12 @@ def _gcc_cstd_default(compiler_version):
     if int(float(compiler_version)) <= 4:
         return "90gnu"
     return "11gnu"
+
+
+def _visual_cppstd_default(compiler_version):
+    if float(compiler_version) >= 14:  # VS 2015 update 3 only
+        return "14"
+    return None
 
 
 def _cstd_visual_studio(_, __):
