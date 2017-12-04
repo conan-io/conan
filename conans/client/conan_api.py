@@ -117,7 +117,9 @@ class ConanAPIV1(object):
         user_io = UserIO(out=out)
 
         try:
-            client_cache = migrate_and_get_client_cache(get_conan_user_home(), out)
+            user_home = get_conan_user_home()
+            client_cache = migrate_and_get_client_cache(user_home, out)
+            sys.path.append(os.path.join(user_home, "python"))
         except Exception as e:
             out.error(str(e))
             raise

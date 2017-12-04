@@ -312,10 +312,11 @@ class TestClient(object):
         self.min_server_compatible_version = Version(str(min_server_compatible_version))
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
+
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
-
+        sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
         search_adapter = DiskSearchAdapter()
         self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
 
