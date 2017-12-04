@@ -35,7 +35,7 @@ def path_shortener(path, short_paths):
     True: Always shorten the path, create link if not existing
     None: Use shorten path only if already exists, not create
     """
-    if short_paths is False:
+    if short_paths is False or os.getenv("CONAN_USER_HOME_SHORT") == "None":
         return path
     link = os.path.join(path, CONAN_LINK)
     if os.path.exists(link):
