@@ -193,7 +193,11 @@ of the cloned repository folder:
 
     #!/usr/bin/env python
     import sys
-    sys.path.append('/home/user/conan') # EDIT!!
+    conan_sources_dir = '/home/user/conan'  # EDIT!!
+
+    sys.path.insert(1, conan_sources_dir)
+    # Or append to sys.path to prioritize a binary installation before the source code one
+    # sys.path.append(conan_sources_dir)
 
     from conans.conan import main
     main(sys.argv[1:])
