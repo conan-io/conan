@@ -224,8 +224,8 @@ class MyLib(ConanFile):
     settings = "arch", "compiler"
     generators = "cmake"
     
-    def options(self, config):
-        config.add_cppstd()
+    def config_options(self):
+        self.add_cppstd()
 
     def build(self):
         cmake = CMake(self)
@@ -249,7 +249,7 @@ target_link_libraries(mylib ${CONAN_LIBS})
 """})
 
         if platform.system() != "Windows":
-            client.run("install . --install-folder=build -o cppstd=98gnu")
+            client.run("install . --install-folder=build -o Mylib:cppstd=98gnu")
             error = client.run("build . --build-folder=build", ignore_error=True)
             self.assertTrue(error)
             self.assertIn("Error in build()", client.out)

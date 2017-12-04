@@ -72,5 +72,5 @@ class %sConan(ConanFile):
         if self.package_id:
             base += "    def package_id(self):\n        %s\n" % self.package_id
         if self.add_stdcpp:
-            base += "\n    @staticmethod\n    def options(config):\n        config.add_cppstd()\n"
+            base += "\n    def config_options(self):\n        self.add_cppstd()\n"
         return base

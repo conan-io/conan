@@ -35,8 +35,8 @@ class BoostConan(ConanFile):
     name = "BoostDbg"
     version = "1.0"
         
-    def options(self, config):
-        config.add_shared()
+    def config_options(self):
+        self.add_shared()
 
     def requirements(self):
         self.requires("zlib/0.1@lasote/testing")
