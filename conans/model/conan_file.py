@@ -11,60 +11,22 @@ from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 
 
-class DynamicOptionsManager(object):
-    """
-    Class to allow the recipe creator to add options and standard options, using even settings
-    to condition the options
-    """
-
-    def __init__(self, options, settings):
-        self.options = options
-        self.settings = settings
-
-    def add_option(self, *args, **kwargs):
-        return self.options.add_option(*args, **kwargs)
-
-    def add_shared(self, default=False):
-        self.options.add_option("shared", [True, False], default)
-
-    def add_cppstd(self, default=None):
-        stds = available_cppstd_versions(self.settings.get_safe("compiler"),
-                                         self.settings.get_safe("compiler.version"))
-        # Unresolved issue: With this approach "11" is not a valid value for Visual Studio,
-        # so the creator should do:
-        #  default = 11 if self.settings.compiler != "Visual Studio" else None
-        stds.insert(0, None)
-        self.options.add_option("cppstd", stds, default)
-
-    def add_cstd(self, default=None):
-        stds = available_cstd_versions(self.settings.get_safe("compiler"),
-                                       self.settings.get_safe("compiler.version"))
-        stds.insert(0, None)
-        self.options.add_option("cstd", stds, default)
-
-
-def create_options(conanfile, settings):
+def create_options(conanfile):
     try:
         options_symbol = getattr(conanfile, "options", None)
-        if callable(options_symbol):
+        package_options = PackageOptions(options_symbol)
+        options = Options(package_options)
 
-            package_options = PackageOptions(None)
-            options = Options(package_options)
-            conanfile.options(DynamicOptionsManager(options, settings))
-        else:
-            package_options = PackageOptions(options_symbol)
-            options = Options(package_options)
-
-            default_options = getattr(conanfile, "default_options", None)
-            if default_options:
-                if isinstance(default_options, (list, tuple)):
-                    default_values = OptionsValues(default_options)
-                elif isinstance(default_options, str):
-                    default_values = OptionsValues.loads(default_options)
-                else:
-                    raise ConanException("Please define your default_options as list or "
-                                         "multiline string")
-                options.values = default_values
+        default_options = getattr(conanfile, "default_options", None)
+        if default_options:
+            if isinstance(default_options, (list, tuple)):
+                default_values = OptionsValues(default_options)
+            elif isinstance(default_options, str):
+                default_values = OptionsValues.loads(default_options)
+            else:
+                raise ConanException("Please define your default_options as list or "
+                                     "multiline string")
+            options.values = default_values
         return options
     except Exception as e:
         raise ConanException("Error while initializing options. %s" % str(e))
@@ -137,7 +99,7 @@ class ConanFile(object):
             self.generators = [self.generators]
 
         # User defined options
-        self.options = create_options(self, settings)
+        self.options = create_options(self)
         self.settings = create_settings(self, settings)
         self.requires = create_requirements(self)
         self.exports = create_exports(self)
@@ -176,6 +138,24 @@ class ConanFile(object):
 
         # Init a description
         self.description = None
+
+    def add_shared(self, default=False):
+        self.options.add_option("shared", [True, False], default)
+
+    def add_cppstd(self, default=None):
+        stds = available_cppstd_versions(self.settings.get_safe("compiler"),
+                                         self.settings.get_safe("compiler.version"))
+        # Unresolved issue: With this approach "11" is not a valid value for Visual Studio,
+        # so the creator should do:
+        #  default = 11 if self.settings.compiler != "Visual Studio" else None
+        stds.insert(0, None)
+        self.options.add_option("cppstd", stds, default)
+
+    def add_cstd(self, default=None):
+        stds = available_cstd_versions(self.settings.get_safe("compiler"),
+                                       self.settings.get_safe("compiler.version"))
+        stds.insert(0, None)
+        self.options.add_option("cstd", stds, default)
 
     @property
     def env(self):

@@ -15,8 +15,9 @@ class TestConan(ConanFile):
     name = "MyLib"
     version = "0.1"
     settings = "compiler"
-    def options(self, config):
-        config.add_cppstd()
+    
+    def config_options(self):
+        self.add_cppstd()
 """
         client.save({CONANFILE: conanfile})
         error = client.run('create user/testing -s compiler="gcc" -s compiler.libcxx="libstdc++11" '
@@ -38,9 +39,8 @@ class TestConan(ConanFile):
     version = "0.1"
     settings = "compiler",
 
-    @staticmethod
-    def options(config):
-        config.add_cppstd(default="11" if config.settings.compiler != "Visual Studio" else None)
+    def config_options(self):
+        self.add_cppstd(default="11" if self.settings.compiler != "Visual Studio" else None)
 
     def build(self):
         self.output.warn("STD=%s" % self.options.cppstd)
