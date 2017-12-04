@@ -428,12 +428,13 @@ class TestClient(object):
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
+        old_path = sys.path[:]
         sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
         try:
             error = command.run(args)
         finally:
-            sys.path.pop()
+            sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
             added_modules = set(sys.modules).difference(old_modules)
