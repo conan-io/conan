@@ -235,6 +235,8 @@ macro(conan_set_libcxx)
 endmacro()
 
 macro(conan_set_std)
+  # Do not warn "Manually-specified variables were not used by the project"
+  set(ignorevar "${CONAN_STD_CXX_FLAG}${CONAN_STD_C_FLAG}${CONAN_CMAKE_CXX_STANDARD}${CONAN_CMAKE_CXX_EXTENSIONS}${CONAN_CMAKE_C_STANDARD}${CONAN_CMAKE_C_EXTENSIONS}") 
   if (CMAKE_VERSION VERSION_LESS "3.1")
     if(CONAN_STD_CXX_FLAG)
       message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
@@ -245,7 +247,6 @@ macro(conan_set_std)
       set(CMAKE_C_FLAGS "${CONAN_STD_C_FLAG} ${CMAKE_C_FLAGS}")
     endif()
   else()
-    set(ignorevar "${CONAN_STD_CXX_FLAG}${CONAN_STD_C_FLAG}") # Do not warn "Manually-specified variables were not used by the project"
     if(CONAN_CMAKE_CXX_STANDARD)
       message(STATUS "Conan setting CPP STANDARD: ${CONAN_CMAKE_CXX_STANDARD} WITH EXTENSIONS ${CONAN_CMAKE_CXX_EXTENSIONS}")
       set(CMAKE_CXX_STANDARD ${CONAN_CMAKE_CXX_STANDARD})
