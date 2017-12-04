@@ -16,7 +16,7 @@ def conan_linter(conanfile_path, out):
     if not apply_lint or apply_lint == "False":
         return
     try:
-        dirname = os.path.dirname(conanfile_path, )
+        dirname = os.path.dirname(conanfile_path)
         sys.path.append(dirname)
         py3_msgs = _lint_py3(conanfile_path)
         if py3_msgs:

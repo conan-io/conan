@@ -63,8 +63,11 @@ def _process_folder(folder, client_cache, output):
                 registry_path = client_cache.registry
                 _handle_remotes(registry_path, os.path.join(root, f), output)
             else:
-                output.info("Copying file %s to %s" % (f, client_cache.conan_folder))
-                shutil.copy(os.path.join(root, f), client_cache.conan_folder)
+                relpath = os.path.relpath(root, folder)
+                target_folder = os.path.join(client_cache.conan_folder, relpath)
+                mkdir(target_folder)
+                output.info("Copying file %s to %s" % (f, target_folder))
+                shutil.copy(os.path.join(root, f), target_folder)
         for d in dirs:
             if d == "profiles":
                 output.info("Installing profiles")
