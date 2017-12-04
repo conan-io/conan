@@ -316,7 +316,7 @@ class TestClient(object):
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
-        sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
+
         search_adapter = DiskSearchAdapter()
         self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
 
@@ -428,11 +428,12 @@ class TestClient(object):
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
-
+        sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
         try:
             error = command.run(args)
         finally:
+            sys.path.pop()
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
             added_modules = set(sys.modules).difference(old_modules)
