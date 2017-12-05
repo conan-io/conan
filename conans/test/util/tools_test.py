@@ -427,10 +427,7 @@ class HelloConan(ConanFile):
     version = "1.2.1"
     exports = "*"
     settings = "os", "build_type", "arch", "compiler"
-    
-    def options(self, config):
-        config.add_cppstd()
-        
+
     def build(self):
         msbuild = MSBuild(self)
         msbuild.build("MyProject.sln")
