@@ -172,8 +172,6 @@ class Command(object):
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
-        parser.add_argument("--werror", action='store_true', default=False,
-                            help='Error instead of warnings for graph inconsistencies')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -187,7 +185,7 @@ class Command(object):
                                   args.build, args.keep_source, args.verify, args.manifests,
                                   args.manifests_interactive, args.remote, args.update,
                                   conan_file_path=args.cwd, name=name, version=version, user=user,
-                                  channel=channel, filename=args.file, werror=args.werror)
+                                  channel=channel, filename=args.file, werror=False)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
@@ -229,8 +227,6 @@ class Command(object):
         parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
-        parser.add_argument("--werror", action='store_true', default=False,
-                            help='Error instead of warnings for graph inconsistencies')
         parser.add_argument("--install-folder", "--install_folder", "-if", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
                                  'files, conaninfo/conanbuildinfo.txt etc.')
@@ -250,7 +246,7 @@ class Command(object):
             return self._conan.install(path=args.path,
                                        settings=args.settings, options=args.options,
                                        env=args.env,
-                                       remote=args.remote, werror=args.werror,
+                                       remote=args.remote, werror=False,
                                        verify=args.verify, manifests=args.manifests,
                                        manifests_interactive=args.manifests_interactive,
                                        build=args.build, profile_name=args.profile,
@@ -261,7 +257,7 @@ class Command(object):
             return self._conan.install_reference(reference, settings=args.settings,
                                                  options=args.options,
                                                  env=args.env,
-                                                 remote=args.remote, werror=args.werror,
+                                                 remote=args.remote, werror=False,
                                                  verify=args.verify, manifests=args.manifests,
                                                  manifests_interactive=args.manifests_interactive,
                                                  build=args.build, profile_name=args.profile,

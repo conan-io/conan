@@ -86,10 +86,7 @@ class ConanOutput(object):
         self.writeln("WARN: " + data, Color.BRIGHT_YELLOW)
 
     def werror(self, data):
-        if self.werror_active:
-            raise ConanException(data)
-        else:
-            self.warn(data)
+        raise ConanException(data)
 
     def error(self, data):
         self.writeln("ERROR: " + data, Color.BRIGHT_RED)
