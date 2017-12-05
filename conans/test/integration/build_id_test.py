@@ -203,13 +203,13 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
 
         client.run('install -s build_type=Release --install-folder=MyInstall')
-        client.run("info --install-folder=MyInstall")  # Re-uses debug from curdir
+        client.run("info --install-folder=MyInstall")  # Re-uses debug from MyInstall folder
         _check()
         self.assertIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
         self.assertNotIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
 
         client.run('install -s build_type=Debug --install-folder=MyInstall')
-        client.run("info --install-folder=MyInstall")  # Re-uses debug from curdir
+        client.run("info --install-folder=MyInstall")  # Re-uses debug from MyInstall folder
         _check()
         self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
         self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
