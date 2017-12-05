@@ -249,6 +249,28 @@ build_type: [ Release]
         with self.assertRaises(ConanException):
             CMake(settings)
 
+    def test_cores_ancient_visual(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "9"
+        settings.compiler.runtime = "MDd"
+        settings.arch = "x86"
+        settings.build_type = None
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        cmake.build()
+        self.assertNotIn("/m", conan_file.command)
+
+        settings.compiler.version = "10"
+        cmake = CMake(conan_file)
+
+        cmake.build()
+        self.assertIn("/m", conan_file.command)
+
     def convenient_functions_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Windows"
