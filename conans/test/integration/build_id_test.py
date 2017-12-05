@@ -214,6 +214,12 @@ class BuildIdTest(unittest.TestCase):
         self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
         self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
 
+        # Both should raise
+        error = client.run("info --install-folder=MyInstall -s build_type=Release",
+                           ignore_error=True)  # Re-uses debug from MyInstall folder
+        self.assertTrue(error)
+        self.assertIn("so specifying profile, settings, options or env is not allowed", client.out)
+
         if python_consumer:
             client.run("export user/channel")
             client.run("info MyTest/0.1@user/channel -s build_type=Debug")

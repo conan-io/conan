@@ -416,17 +416,18 @@ class ConanAPIV1(object):
 
         # If not install_folder we don't look in the curdir if any setting has specified
         if not install_folder and (profile_name or settings or options or env):
+            return profile_from_args(profile_name, settings, options, env=env,
+                                     cwd=cwd, client_cache=self._client_cache)
+
+        install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
+        self._validate_one_settings_source(install_folder, profile_name, settings, options, env)
+        infos_present = existing_info_files(install_folder)
+
+        if not infos_present:
             profile = profile_from_args(profile_name, settings, options, env=env,
                                         cwd=cwd, client_cache=self._client_cache)
         else:
-            install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
-            infos_present = existing_info_files(install_folder)
-
-            if not infos_present:
-                profile = profile_from_args(profile_name, settings, options, env=env,
-                                            cwd=cwd, client_cache=self._client_cache)
-            else:
-                profile = read_conaninfo_profile(install_folder)
+            profile = read_conaninfo_profile(install_folder)
 
         return profile
 

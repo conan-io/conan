@@ -340,8 +340,8 @@ class Command(object):
         parser.add_argument("--install-folder", "-if", action=OnceArgument,
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to "
-                            "current folder. If these files are found in the specified folder, "
-                            "they will be used, then if you specify --profile, -s, -o, --env, "
+                            "current folder, unless --profile, -s or -o is specified. If you"
+                            "specify both install-folder and any setting/option "
                             "it will raise an error.")
         build_help = 'given a build policy (same install command "build" parameter), return an ' \
                      'ordered list of  ' \
