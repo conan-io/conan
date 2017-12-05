@@ -15,6 +15,7 @@ class MSBuild(object):
             command = msvc_build_command(self._conanfile.settings,
                                          project_file, targets=targets,
                                          upgrade_project=upgrade_project,
+
                                          build_type=build_type, arch=arch, parallel=parallel,
                                          force_vcvars=force_vcvars, toolset=toolset)
             return self._conanfile.run(command)

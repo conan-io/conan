@@ -3,38 +3,10 @@ import platform
 import os
 
 from conans.client import join_arguments
-from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
-
-sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
-                            "libstdcxx": "-library=stdcxx4",
-                            "libstlport": "-library=stlport4",
-                            "libstdc++": "-library=stdcpp"}
-
-architecture_dict = {"x86_64": "-m64", "x86": "-m32"}
-
-
-def stdlib_flags(compiler, libcxx):
-    ret = []
-    if compiler and "clang" in compiler:
-        if libcxx == "libc++":
-            ret.append("-stdlib=libc++")
-        else:
-            ret.append("-stdlib=libstdc++")
-    elif compiler == "sun-cc":
-        flag = sun_cc_libcxx_flags_dict.get(libcxx, None)
-        if flag:
-            ret.append(flag)
-    return ret
-
-
-def stdlib_defines(compiler, libcxx):
-    ret = []
-    if compiler == "gcc" or compiler == "clang":  # Maybe clang is using the standard library from g++
-        if libcxx == "libstdc++":
-            ret.append("_GLIBCXX_USE_CXX11_ABI=0")
-        elif str(libcxx) == "libstdc++11":
-            ret.append("_GLIBCXX_USE_CXX11_ABI=1")
-    return ret
+from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
+                          detected_architecture)
+from conans.client.build.compilers_info import (cppstd_flag, cstd_flag, stdlib_flags,
+                                                architecture_dict, stdlib_defines)
 
 
 class AutoToolsBuildEnvironment(object):
@@ -51,7 +23,10 @@ class AutoToolsBuildEnvironment(object):
         self._arch = conanfile.settings.get_safe("arch")
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
+        self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
+        self._cppstd = conanfile.options.get_safe("cppstd")
+        self._cstd = conanfile.options.get_safe("cstd")
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
@@ -68,6 +43,9 @@ class AutoToolsBuildEnvironment(object):
         self.link_flags = self._configure_link_flags()  # TEST!
         # Not declared by default
         self.fpic = None
+
+        self.cppstd_flag = cppstd_flag(self._compiler, self._compiler_version, self._cppstd)
+        self.cstd_flag = cstd_flag(self._compiler, self._compiler_version, self._cppstd)
 
     def _get_host_build_target_flags(self, arch_detected, os_detected):
         """Based on google search for build/host triplets, it could need a lot
@@ -237,8 +215,8 @@ class AutoToolsBuildEnvironment(object):
         if self.fpic:
             tmp_compilation_flags.append("-fPIC")
 
-        cxx_flags = append(tmp_compilation_flags, self.cxx_flags)
-        c_flags = tmp_compilation_flags
+        cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
+        c_flags = append(tmp_compilation_flags, self.cstd_flag)
 
         return ld_flags, cpp_flags, libs, cxx_flags, c_flags
 

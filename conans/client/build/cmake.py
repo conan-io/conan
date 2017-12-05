@@ -14,6 +14,7 @@ from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
+from conans.client.build.compilers_info import cppstd_flag, cstd_flag
 
 
 def _get_env_cmake_system_name():
@@ -39,6 +40,7 @@ class CMake(object):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
 
         self._settings = conanfile.settings
+        self._options = conanfile.options
         self._conanfile = conanfile
 
         self._os = self._settings.get_safe("os")
@@ -49,6 +51,10 @@ class CMake(object):
         self._libcxx = self._settings.get_safe("compiler.libcxx")
         self._runtime = self._settings.get_safe("compiler.runtime")
         self._build_type = self._settings.get_safe("build_type")
+        tmpcppstd = self._options.get_safe("cppstd")
+        self._cppstd = str(tmpcppstd) if tmpcppstd else None
+        tmpcstd = self._options.get_safe("cstd")
+        self._cstd = str(tmpcstd) if tmpcstd else None
 
         self.generator = generator or self._generator()
         self.toolset = self._toolset(toolset)
@@ -233,6 +239,32 @@ class CMake(object):
             return "--config %s" % self._build_type
         return ""
 
+    def _get_standard_vars(self):
+        ret = {}
+        # Standard C++
+        if self._cppstd:
+            if self._cppstd.endswith("gnu"):
+                ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd[:-3]
+                ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "ON"
+            else:
+                ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd
+                ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
+
+            ret["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._compiler, self._compiler_version,
+                                                    self._cppstd)  # CMake < 3.1
+        # Standard C
+        if self._cstd:
+            if self._cstd.endswith("gnu"):
+                ret["CONAN_CMAKE_C_STANDARD"] = self._cstd[:-3]
+                ret["CONAN_CMAKE_C_EXTENSIONS"] = "ON"
+            else:
+                ret["CONAN_CMAKE_C_STANDARD"] = self._cstd
+                ret["CONAN_CMAKE_C_EXTENSIONS"] = "OFF"
+
+            # CMake < 3.1
+            ret["CONAN_STD_C_FLAG"] = cstd_flag(self._compiler, self._compiler_version, self._cstd)
+        return ret
+
     def _get_cmake_definitions(self):
         ret = OrderedDict()
         ret.update(self._build_type_definition())
@@ -245,6 +277,8 @@ class CMake(object):
             ret["CONAN_COMPILER"] = self._compiler
         if self._compiler_version:
             ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
+
+        ret.update(self._get_standard_vars())
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
         if self._os in ("Linux", "FreeBSD", "SunOS"):

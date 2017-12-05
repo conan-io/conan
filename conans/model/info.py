@@ -6,6 +6,7 @@ from conans.model.values import Values
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
 from conans.util.sha import sha1
+from conans.client.build.compilers_info import cppstd_default, cstd_default
 
 
 class RequirementInfo(object):
@@ -249,6 +250,7 @@ class ConanInfo(object):
         result.recipe_hash = None
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
+        result.default_std_matching()
 
         return result
 
@@ -380,3 +382,28 @@ class ConanInfo(object):
         self.settings.compiler.version = self.full_settings.compiler.version
         self.settings.compiler.toolset = self.full_settings.compiler.toolset
 
+    def default_std_matching(self):
+        """
+        If we are building with gcc 7, and we specify cppstd==14gnu, it's the default, so the
+        same as specifying None, packages are the same
+        """
+
+        if self.full_settings.compiler and self.full_settings.compiler.version and \
+           self.full_options.cppstd:
+            default = cppstd_default(str(self.full_settings.compiler),
+                                     str(self.full_settings.compiler.version))
+            if default == str(self.full_options.cppstd):
+                self.options.cppstd = None
+
+        if self.full_settings.compiler and self.full_settings.compiler.version and \
+           self.full_options.cstd:
+            default = cstd_default(str(self.settings.compiler),
+                                   str(self.settings.compiler.version))
+            if default == str(self.settings.compiler.cstd):
+                self.options.cstd = None
+
+    def default_std_non_matching(self):
+        if self.full_options.cppstd:
+            self.options.cppstd = self.full_options.cppstd
+        if self.full_options.cstd:
+            self.options.cstd = self.full_options.cstd

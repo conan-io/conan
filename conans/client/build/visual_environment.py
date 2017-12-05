@@ -1,5 +1,6 @@
 import copy
 import os
+from conans.client.build.compilers_info import cppstd_flag
 
 
 class VisualStudioBuildEnvironment(object):
@@ -23,12 +24,24 @@ class VisualStudioBuildEnvironment(object):
         self.runtime = conanfile.settings.get_safe("compiler.runtime")
         self._settings = conanfile.settings
         self._options = conanfile.options
+        self.std = self._std_cpp()
+
+    def _std_cpp(self):
+        if self._settings.get_safe("compiler") == "Visual Studio" and "cppstd" in self._options:
+            flag = cppstd_flag(self._settings.get_safe("compiler"),
+                               self._settings.get_safe("compiler.version"),
+                               self._options.cppstd)
+            return flag
+        return None
 
     def _get_cl_list(self, quotes=True):
         if quotes:
             ret = ['/I"%s"' % lib for lib in self.include_paths]
         else:
             ret = ['/I%s' % lib for lib in self.include_paths]
+
+        if self.std:
+            ret.append(self.std)
 
         if self.runtime:
             ret.append("/%s" % self.runtime)

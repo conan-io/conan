@@ -1,3 +1,4 @@
+from conans.client.build.compilers_info import available_cppstd_versions, available_cstd_versions
 from conans.model.options import Options, PackageOptions, OptionsValues
 from conans.model.requires import Requirements
 from conans.model.build_info import DepsCppInfo
@@ -12,7 +13,8 @@ from conans.paths import RUN_LOG_NAME
 
 def create_options(conanfile):
     try:
-        package_options = PackageOptions(getattr(conanfile, "options", None))
+        options_symbol = getattr(conanfile, "options", None)
+        package_options = PackageOptions(options_symbol)
         options = Options(package_options)
 
         default_options = getattr(conanfile, "default_options", None)
@@ -98,8 +100,8 @@ class ConanFile(object):
 
         # User defined options
         self.options = create_options(self)
-        self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
+        self.requires = create_requirements(self)
         self.exports = create_exports(self)
         self.exports_sources = create_exports_sources(self)
         # needed variables to pack the project
@@ -136,6 +138,24 @@ class ConanFile(object):
 
         # Init a description
         self.description = None
+
+    def add_shared(self, default=False):
+        self.options.add_option("shared", [True, False], default)
+
+    def add_cppstd(self, default=None):
+        stds = available_cppstd_versions(self.settings.get_safe("compiler"),
+                                         self.settings.get_safe("compiler.version"))
+        # Unresolved issue: With this approach "11" is not a valid value for Visual Studio,
+        # so the creator should do:
+        #  default = 11 if self.settings.compiler != "Visual Studio" else None
+        stds.insert(0, None)
+        self.options.add_option("cppstd", stds, default)
+
+    def add_cstd(self, default=None):
+        stds = available_cstd_versions(self.settings.get_safe("compiler"),
+                                       self.settings.get_safe("compiler.version"))
+        stds.insert(0, None)
+        self.options.add_option("cstd", stds, default)
 
     @property
     def env(self):

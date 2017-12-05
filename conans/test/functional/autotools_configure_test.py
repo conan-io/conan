@@ -5,7 +5,7 @@ from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans import tools
 from conans.client.tools.oss import cpu_count
 from conans.paths import CONANFILE
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
 from conans.test.util.tools_test import RunnerMock
 from conans.test.utils.tools import TestClient
 
@@ -42,6 +42,88 @@ class AutoToolsConfigureTest(unittest.TestCase):
         ab.make(args=["things"])
         things = "'things'" if platform.system() != "Windows" else "things"
         self.assertEquals(runner.command_called, "make %s -j%s" % (things, cpu_count()))
+
+    def test_cppstd(self):
+        # Valid one for GCC
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "7.1"})
+        options = MockOptions({"cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("-std=c++1z", expected)
+
+        # Invalid one for GCC
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "4.9"})
+        options = MockOptions({"cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertNotIn("-std", expected)
+
+        # Valid one for Clang
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "clang",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "4.0"})
+        options = MockOptions({"cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("-std=c++1z", expected)
+
+        # Invalid one for Clang
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "clang",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "3.3"})
+        options = MockOptions({"cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertNotIn("-std=", expected)
+
+        # Visual Activate 11 is useless
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15"})
+        options = MockOptions({"cppstd": "11"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertNotIn("-std=c++", expected)
+
+        # Visual Activate 17 in VS 2017
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15"})
+        options = MockOptions({"cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("/std:c++17", expected)
+
+        # Visual Activate 17 in VS 2015
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "14"})
+        options = MockOptions({"cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("/std:c++latest", expected)
 
     def test_variables(self):
         # GCC 32
@@ -371,7 +453,6 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "arm-apple-darwin")
 
-
     def test_pkg_config_paths(self):
         if platform.system() == "Windows":
             return
@@ -408,6 +489,7 @@ class HelloConan(ConanFile):
     def cross_build_command_test(self):
         runner = RunnerMock()
         conanfile = MockConanfile(MockSettings({}), None, runner)
+
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
         self.assertEquals(runner.command_called, "./configure  ")
