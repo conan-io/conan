@@ -477,7 +477,6 @@ class HelloConan(ConanFile):
         self.assertIn("Debug|x86", client.user_io.out)
         self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
 
-
     def download_retries_test(self):
         out = TestBufferConanOutput()
         set_global_instances(out, requests)

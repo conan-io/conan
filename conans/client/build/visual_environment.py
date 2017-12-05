@@ -39,6 +39,7 @@ class VisualStudioBuildEnvironment(object):
             ret = ['/I"%s"' % lib for lib in self.include_paths]
         else:
             ret = ['/I%s' % lib for lib in self.include_paths]
+
         if self.std:
             ret.append(self.std)
 
