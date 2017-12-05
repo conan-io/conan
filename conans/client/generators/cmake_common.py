@@ -246,6 +246,8 @@ macro(conan_set_rpath)
         #     /usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1197.1.1)
         set(CMAKE_SKIP_RPATH 1)  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
                                  # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
+        # Policy CMP0068
+        set(CMAKE_SKIP_INSTALL_RPATH 1) # In previous versions to 3.9 it is explicitly necessary
     endif()
 endmacro()
 
