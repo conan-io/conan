@@ -8,6 +8,9 @@ class MockSettings(object):
         return self.values.get(value, None)
 
 
+MockOptions = MockSettings
+
+
 class MockDepsCppInfo(object):
 
     def __init__(self):
@@ -24,10 +27,11 @@ class MockDepsCppInfo(object):
 
 class MockConanfile(object):
 
-    def __init__(self, settings, runner=None):
+    def __init__(self, settings, options=None, runner=None):
         self.deps_cpp_info = MockDepsCppInfo()
         self.settings = settings
         self.runner = runner
+        self.options = options or MockOptions({})
         self.generators = []
 
     def run(self, *args):

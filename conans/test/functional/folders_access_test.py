@@ -35,6 +35,8 @@ class AConan(ConanFile):
     copy_source_folder = None
     copy_package_folder = None
     
+    counter_package_calls = 0
+    
     no_copy_source = %(no_copy_source)s
     requires = "parent/1.0@conan/stable"
     running_local_command = %(local_command)s
@@ -80,7 +82,15 @@ class AConan(ConanFile):
         self.copy_build_folder = self.build_folder
         
     def package(self):
-        assert(self.build_folder == os.getcwd()) # Folder where we copy things to destination
+        if self.no_copy_source:
+            # First call with source, second with build
+            if self.counter_package_calls == 0:
+               assert(self.source_folder == os.getcwd())
+               self.counter_package_calls += 1
+            elif self.counter_package_calls == 1:
+               assert(self.build_folder == os.getcwd()) 
+        else:
+            assert(self.build_folder == os.getcwd())
     
         self.assert_in_local_cache()
         self.assert_deps_infos()
