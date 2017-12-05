@@ -411,19 +411,35 @@ class ConanAPIV1(object):
         from conans.client.conf.config_installer import configuration_install
         return configuration_install(item, self._client_cache, self._user_io.out, self._runner)
 
+    def _info_get_profile(self, install_folder, profile_name, settings, options, env):
+        cwd = os.getcwd()
+
+        # If not install_folder we don't look in the curdir if any setting has specified
+        if not install_folder and (profile_name or settings or options or env):
+            profile = profile_from_args(profile_name, settings, options, env=env,
+                                        cwd=cwd, client_cache=self._client_cache)
+        else:
+            install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
+            infos_present = existing_info_files(install_folder)
+
+            if not infos_present:
+                profile = profile_from_args(profile_name, settings, options, env=env,
+                                            cwd=cwd, client_cache=self._client_cache)
+            else:
+                profile = read_conaninfo_profile(install_folder)
+
+        return profile
+
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_name=None, filename=None, remote=None, build_order=None,
-                         check_updates=None, build_folder=None):
-
-        current_path = os.getcwd()
+                         check_updates=None, install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(current_path, reference))
+            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, build_folder,
-                                    self._client_cache)
+        profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         graph = self._manager.info_build_order(reference, profile, filename, build_order,
                                                remote, check_updates)
         return graph
@@ -431,16 +447,13 @@ class ConanAPIV1(object):
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_name=None, filename=None, remote=None,
-                            check_updates=None, build_folder=None):
-
-        current_path = os.getcwd()
+                            check_updates=None, install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(current_path, reference))
+            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, build_folder,
-                                    self._client_cache)
+        profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote,
                                                 check_updates)
         ref_list, project_reference = ret
@@ -449,16 +462,13 @@ class ConanAPIV1(object):
     @api_method
     def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None,
                        profile_name=None, update=False, filename=None,
-                       build_folder=None):
-
-        current_path = os.getcwd()
+                       install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(current_path, reference))
+            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, build_folder,
-                                    self._client_cache)
+        profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         ret = self._manager.info_get_graph(reference=reference,
                                            remote=remote, profile=profile, check_updates=update,
                                            filename=filename)
