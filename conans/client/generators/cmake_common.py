@@ -247,7 +247,8 @@ macro(conan_set_rpath)
         set(CMAKE_SKIP_RPATH 1)  # AVOID RPATH FOR *.dylib, ALL LIBS BETWEEN THEM AND THE EXE
                                  # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
         # Policy CMP0068
-        set(CMAKE_SKIP_INSTALL_RPATH 1) # In previous versions to 3.9 it is explicitly necessary
+        # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect the install_name in OSX
+        cmake_policy(SET CMP0068 OLD)
     endif()
 endmacro()
 
@@ -452,7 +453,7 @@ endmacro()
 
 cmake_macros = """
 macro(conan_basic_setup)
-    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH)
+    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
@@ -469,7 +470,7 @@ macro(conan_basic_setup)
         message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
     endif()
-    if(NOT ARGUMENTS_SKIP_RPATH)
+    if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()

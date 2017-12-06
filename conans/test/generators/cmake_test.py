@@ -97,7 +97,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         # extract the conan_basic_setup macro
         macro = self._extract_macro("conan_basic_setup", aux_cmake_test_setup)
         self.assertEqual("""macro(conan_basic_setup)
-    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH)
+    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
@@ -114,7 +114,8 @@ class CMakeGeneratorTest(unittest.TestCase):
         message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
     endif()
-    if(NOT ARGUMENTS_SKIP_RPATH)
+    if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
+        # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
         message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()

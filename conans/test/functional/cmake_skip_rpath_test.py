@@ -21,7 +21,7 @@ project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8.12)
 
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS SKIP_RPATH)
+conan_basic_setup(TARGETS %s)
 
 IF(APPLE AND CMAKE_SKIP_RPATH)
     MESSAGE(FATAL_ERROR "RPath was not skipped")
@@ -32,31 +32,33 @@ ENDIF()
 class CMakeSkipRpathTest(unittest.TestCase):
 
     def test_skip_flag(self):
-        client = TestClient()
-        client.save({"conanfile.py": conanfile_py})
-        client.run("export lasote/testing")
-        client.save({"conanfile.txt": conanfile,
-                     "CMakeLists.txt": cmake}, clean_first=True)
+        for way_to_skip in ("SKIP_RPATH", "KEEP_RPATHS"):
+            client = TestClient()
+            client.save({"conanfile.py": conanfile_py})
+            client.run("export lasote/testing")
+            client.save({"conanfile.txt": conanfile,
+                         "CMakeLists.txt": cmake % way_to_skip}, clean_first=True)
 
-        client.run('install -g cmake --build')
-        client.runner("cmake .", cwd=client.current_folder)
-        self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.user_io.out)
-        self.assertIn("Build files have been written", client.user_io.out)
+            client.run('install -g cmake --build')
+            client.runner("cmake .", cwd=client.current_folder)
+            self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
+            self.assertIn("Build files have been written", client.out)
 
-        client.save({"conanfile.txt": conanfile,
-                     "CMakeLists.txt": cmake.replace("TARGETS SKIP_RPATH", "SKIP_RPATH")},
-                    clean_first=True)
+            client.save({"conanfile.txt": conanfile,
+                         "CMakeLists.txt": (cmake % way_to_skip).replace("TARGETS", "")},
+                        clean_first=True)
 
-        client.run('install -g cmake --build')
-        client.runner("cmake .", cwd=client.current_folder)
-        self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.user_io.out)
-        self.assertIn("Build files have been written", client.user_io.out)
+            client.run('install -g cmake --build')
+            client.runner("cmake .", cwd=client.current_folder)
+            self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
+            self.assertIn("Build files have been written", client.out)
 
-        client.save({"conanfile.txt": conanfile,
-                     "CMakeLists.txt": cmake.replace("SKIP_RPATH", "")},
-                    clean_first=True)
+            client.save({"conanfile.txt": conanfile,
+                         "CMakeLists.txt": (cmake % "").replace("FATAL_ERROR", "INFO")},
+                        clean_first=True)
 
-        client.run('install -g cmake --build')
-        client.runner("cmake .", cwd=client.current_folder)
-        self.assertIn("Conan: Adjusting default RPATHs Conan policies", client.user_io.out)
-        self.assertIn("Build files have been written", client.user_io.out)
+            client.run('install -g cmake --build')
+            client.runner("cmake .", cwd=client.current_folder)
+            self.assertIn("Conan: Adjusting default RPATHs Conan policies", client.out)
+            self.assertIn("Build files have been written", client.out)
+            self.assertIn("RPath was not skipped", client.out)
