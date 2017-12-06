@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from conans.client import defs_to_string, join_arguments
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
+from conans.model.version import Version
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir
 from conans.tools import cpu_count, args_to_string
@@ -311,7 +312,8 @@ class CMake(object):
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count())
-            elif "Visual Studio" in self.generator:
+            elif "Visual Studio" in self.generator and \
+                    self._compiler_version and Version(self._compiler_version) >= "10":
                 if "--" not in args:
                     args.append("--")
                 args.append("/m:%i" % cpu_count())
