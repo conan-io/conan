@@ -54,6 +54,16 @@ For any suggestion, feature request or question:
 - Try to explain the motivation, what are you trying to do, what is the pain to try to solve.
 - What do you expect from Conan.
 
+We use the following tags to control the state of the issues:
+
+- **bug**: If a bug is confirmed (or looks like one). We have other tags like **enhancement** if
+  it's not a bug but a feature.
+- **fixed**: A fix (or feature) has been merged to develop, so will be fixed in the next release.
+- **closed**: The Conan version contaning the fix or feature has been released.
+
+So, please, even if the bug is solved in develop, do not close the issue, we prefer to keep it open 
+and at **fixed** state to keep the track of all of them.
+
 
 Code of conduct
 ===============
