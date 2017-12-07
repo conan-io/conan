@@ -23,7 +23,7 @@ To contribute:
 2. Create a `feature/xxx` branch from the ``develop`` branch and develop your feature.
 3. Try to keep your branch updated with the ``develop`` branch to avoid conflicts.
 4. Open a pull request, and select ``develop`` as the base branch. Never open a pull request to ``master``
- or ``release/xxx` branches.
+ or ``release/xxx`` branches.
  
  
 The ``conan-io`` organization users will prioritize the Issues and will assign them to a Milestone accordingly. 
