@@ -84,7 +84,7 @@ class VirtualEnvGenerator(Generator):
 
     def _ps1_lines(self, venv_name):
         deactivate_lines = []
-        activate_lines = ["function global:_old_conan_prompt {\"\"}",]
+        activate_lines = ["function global:_old_conan_prompt {\"\"}"]
         activate_lines.append("$function:_old_conan_prompt = $function:prompt")
         activate_lines.append(
             "function global:prompt { write-host \"(%s) \" -nonewline; & $function:_old_conan_prompt }" % venv_name)
