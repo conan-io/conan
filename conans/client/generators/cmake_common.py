@@ -471,6 +471,7 @@ macro(conan_basic_setup)
         conan_define_targets()
     endif()
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
+        # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
         message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
     endif()

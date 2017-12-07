@@ -1,3 +1,4 @@
+import platform
 import unittest
 from conans.test.utils.tools import TestClient
 
@@ -24,7 +25,7 @@ include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS %s)
 
 IF(APPLE AND CMAKE_SKIP_RPATH)
-    MESSAGE(FATAL_ERROR "RPath was not skipped")
+    MESSAGE(FATAL_ERROR "RPath was skipped")
 ENDIF()
 """
 
@@ -57,8 +58,9 @@ class CMakeSkipRpathTest(unittest.TestCase):
                          "CMakeLists.txt": (cmake % "").replace("FATAL_ERROR", "INFO")},
                         clean_first=True)
 
-            client.run('install -g cmake --build')
-            client.runner("cmake .", cwd=client.current_folder)
-            self.assertIn("Conan: Adjusting default RPATHs Conan policies", client.out)
-            self.assertIn("Build files have been written", client.out)
-            self.assertIn("RPath was not skipped", client.out)
+            if platform.system() == "Darwin":
+                client.run('install -g cmake --build')
+                client.runner("cmake .", cwd=client.current_folder)
+                self.assertIn("Conan: Adjusting default RPATHs Conan policies", client.out)
+                self.assertIn("Build files have been written", client.out)
+                self.assertIn("RPath was skipped", client.out)
