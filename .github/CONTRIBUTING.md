@@ -9,7 +9,7 @@ Community
 
 Conan is an Open Source MIT licensed project. 
 
-CMake is maintained and supported by [JFrog](https://www.jfrog.com) and developed in collaboration with a great 
+Conan is maintained and supported by [JFrog](https://www.jfrog.com) and developed in collaboration with a great 
 community of contributors.
 
 
