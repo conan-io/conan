@@ -44,7 +44,6 @@ class ConanOutput(object):
     def __init__(self, stream, color=False):
         self._stream = stream
         self._color = color
-        self.werror_active = False
 
     @property
     def is_terminal(self):
@@ -85,9 +84,6 @@ class ConanOutput(object):
     def warn(self, data):
         self.writeln("WARN: " + data, Color.BRIGHT_YELLOW)
 
-    def werror(self, data):
-        raise ConanException(data)
-
     def error(self, data):
         self.writeln("ERROR: " + data, Color.BRIGHT_RED)
 
@@ -111,7 +107,6 @@ class ScopedOutput(ConanOutput):
         self.scope = scope
         self._stream = output._stream
         self._color = output._color
-        self.werror_active = output.werror_active
 
     def write(self, data, front=None, back=None, newline=False):
         super(ScopedOutput, self).write("%s: " % self.scope, front, back, False)

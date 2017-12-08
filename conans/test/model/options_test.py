@@ -174,7 +174,6 @@ Poco:deps_bundled=True""")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
         output = TestBufferConanOutput()
-        output.werror_active = True
         with self.assertRaises(ConanException):
             self.sut.propagate_upstream(options, down_ref, own_ref, output)
 

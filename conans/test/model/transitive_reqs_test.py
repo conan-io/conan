@@ -429,7 +429,6 @@ class ChatConan(ConanFile):
         self.retriever.conan(say_ref2, say_content2)
         self.retriever.conan(hello_ref, hello_content)
         self.retriever.conan(bye_ref, bye_content2)
-        self.output.werror_active = True
         with self.assertRaisesRegexp(ConanException, "Conflict in Bye/0.2@user/testing"):
             self.root(chat_content)
 

@@ -337,12 +337,12 @@ class DepsGraphBuilder(object):
             else:  # a public node already exist with this name
                 previous_node, closure = previous
                 if previous_node.conan_ref != require.conan_reference:
-                    self._output.werror("Conflict in %s\n"
-                                        "    Requirement %s conflicts with already defined %s\n"
-                                        "    Keeping %s\n"
-                                        "    To change it, override it in your base requirements"
-                                        % (conanref, require.conan_reference,
-                                           previous_node.conan_ref, previous_node.conan_ref))
+                    raise ConanException("Conflict in %s\n"
+                                         "    Requirement %s conflicts with already defined %s\n"
+                                         "    Keeping %s\n"
+                                         "    To change it, override it in your base requirements"
+                                         % (conanref, require.conan_reference,
+                                            previous_node.conan_ref, previous_node.conan_ref))
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 if closure is None:

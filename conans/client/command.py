@@ -185,7 +185,7 @@ class Command(object):
                                   args.build, args.keep_source, args.verify, args.manifests,
                                   args.manifests_interactive, args.remote, args.update,
                                   conan_file_path=args.cwd, name=name, version=version, user=user,
-                                  channel=channel, filename=args.file, werror=False)
+                                  channel=channel, filename=args.file)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
@@ -246,7 +246,7 @@ class Command(object):
             return self._conan.install(path=args.path,
                                        settings=args.settings, options=args.options,
                                        env=args.env,
-                                       remote=args.remote, werror=False,
+                                       remote=args.remote,
                                        verify=args.verify, manifests=args.manifests,
                                        manifests_interactive=args.manifests_interactive,
                                        build=args.build, profile_name=args.profile,
@@ -257,7 +257,7 @@ class Command(object):
             return self._conan.install_reference(reference, settings=args.settings,
                                                  options=args.options,
                                                  env=args.env,
-                                                 remote=args.remote, werror=False,
+                                                 remote=args.remote,
                                                  verify=args.verify, manifests=args.manifests,
                                                  manifests_interactive=args.manifests_interactive,
                                                  build=args.build, profile_name=args.profile,

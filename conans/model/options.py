@@ -112,10 +112,10 @@ class PackageOptionValues(object):
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
-                output.werror("%s tried to change %s option %s:%s to %s\n"
-                              "but it was already assigned to %s by %s"
-                              % (down_ref, own_ref, package_name, name, value,
-                                 modified_value, modified_ref))
+                raise ConanException("%s tried to change %s option %s:%s to %s\n"
+                                     "but it was already assigned to %s by %s"
+                                     % (down_ref, own_ref, package_name, name, value,
+                                        modified_value, modified_ref))
             else:
                 self._modified[name] = (value, down_ref)
                 self._dict[name] = value
@@ -433,9 +433,9 @@ class PackageOptions(object):
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
-                output.werror("%s tried to change %s option %s to %s\n"
-                              "but it was already assigned to %s by %s"
-                              % (down_ref, own_ref, name, value, modified_value, modified_ref))
+                raise ConanException("%s tried to change %s option %s to %s\n"
+                                     "but it was already assigned to %s by %s"
+                                     % (down_ref, own_ref, name, value, modified_value, modified_ref))
             else:
                 if ignore_unknown:
                     if name in self._data:
