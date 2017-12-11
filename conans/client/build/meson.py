@@ -49,9 +49,22 @@ class Meson(object):
                   pkg_config_paths=None):
         args = args or []
         defs = defs or {}
-        pc_paths = os.pathsep.join(pkg_config_paths or [self._conanfile.build_folder])
-        source_dir = source_dir or self._conanfile.source_folder
-        self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder or "."
+
+        def get_dir(folder, origin):
+            if folder:
+                if os.path.isabs(folder):
+                    return folder
+                return os.path.join(origin, folder)
+            return origin
+
+        if pkg_config_paths:
+            pc_paths = os.pathsep.join(get_dir(f, self._conanfile.install_folder)
+                                       for f in pkg_config_paths)
+        else:
+            pc_paths = self._conanfile.install_folder
+
+        source_dir = get_dir(source_dir, self._conanfile.source_folder)
+        self.build_dir = get_dir(build_dir or self.build_dir, self._conanfile.build_folder)
 
         mkdir(self.build_dir)
         build_type = ("--buildtype=%s" % self.build_type if self.build_type else "").lower()

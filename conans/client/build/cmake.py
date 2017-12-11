@@ -284,8 +284,16 @@ class CMake(object):
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None):
         args = args or []
         defs = defs or {}
-        source_dir = source_dir or self._conanfile.source_folder
-        self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+
+        def get_dir(folder, origin):
+            if folder:
+                if os.path.isabs(folder):
+                    return folder
+                return os.path.join(origin, folder)
+            return origin
+
+        source_dir = get_dir(source_dir, self._conanfile.source_folder)
+        self.build_dir = get_dir(build_dir or self.build_dir, self._conanfile.build_folder)
 
         mkdir(self.build_dir)
         arg_list = join_arguments([
