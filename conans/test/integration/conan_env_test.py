@@ -170,7 +170,7 @@ class MyPkg(ConanFile):
         conanfile = """from conans import ConanFile
 import os
 class MyLib(ConanFile):
-    auto_env_inherit = False
+    apply_env = False
     requires = "Pkg/0.1@lasote/testing"
     
     def _test(self):

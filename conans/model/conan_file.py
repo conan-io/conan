@@ -78,7 +78,7 @@ def create_exports_sources(conanfile):
 
 
 def get_env_context_manager(conanfile):
-    return environment_append(conanfile.env) if conanfile.auto_env_inherit else no_op()
+    return environment_append(conanfile.env) if conanfile.apply_env else no_op()
 
 
 class ConanFile(object):
@@ -94,7 +94,7 @@ class ConanFile(object):
     author = None  # Main maintainer/responsible for the package, any format
     build_policy = None
     short_paths = False
-    auto_env_inherit = True  # Apply automatic environment variables from requires deps_env_info
+    apply_env = True  # Apply environment variables from requires deps_env_info and profiles
 
     def __init__(self, output, runner, settings, conanfile_directory, user=None, channel=None):
         # User defined generators
