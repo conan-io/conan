@@ -747,7 +747,7 @@ class Command(object):
                             action='store_true', help='Make a case-sensitive search. '
                                                       'Use it to guarantee case-sensitive '
                             'search in Windows or other case-insensitive filesystems')
-        parser.add_argument('-r', '--remote', help='Remote origin', action=OnceArgument)
+        parser.add_argument('-r', '--remote', help='Remote origin. `all` searches all remotes', action=OnceArgument)
         parser.add_argument('--raw', default=False, action='store_true',
                             help='Print just the list of recipes')
         parser.add_argument('--table', action=OnceArgument,
