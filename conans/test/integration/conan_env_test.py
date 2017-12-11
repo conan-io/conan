@@ -157,6 +157,29 @@ class MyTest(ConanFile):
         client.run("create lasote/testing -e MYVAR=MYVALUE")
         self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
 
+    def deactivate_env_inheritance_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    def package_info(self):
+        self.env_info.SOME_VAR.append("22")
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create Pkg/0.1@lasote/testing")
+
+        conanfile = """from conans import ConanFile
+import os
+class MyLib(ConanFile):
+    auto_env_inherit = False
+    requires = "Pkg/0.1@lasote/testing"
+    def build(self):
+        assert("SOME_VAR" not in os.environ)
+        print(self.deps_env_info["Pkg"])
+        assert(self.deps_env_info["Pkg"].SOME_VAR == ["22"])
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create MyLib/0.1@lasote/testing")
+
     def env_path_order_test(self):
         client = TestClient()
         with tools.environment_append({"SOME_VAR": ["INITIAL VALUE"]}):
