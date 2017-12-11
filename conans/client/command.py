@@ -333,12 +333,22 @@ class Command(object):
         parser.add_argument("--graph", "-g", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
+        parser.add_argument("--install-folder", "-if", action=OnceArgument,
+                            help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
+                            "files (from a previous conan install execution). Defaulted to "
+                            "current folder, unless --profile, -s or -o is specified. If you "
+                            "specify both install-folder and any setting/option "
+                            "it will raise an error.")
         build_help = 'given a build policy (same install command "build" parameter), return an ' \
                      'ordered list of  ' \
                      'packages that would be built from sources in install command (simulation)'
 
         _add_common_install_arguments(parser, build_help=build_help)
         args = parser.parse_args(*args)
+
+        if args.install_folder and (args.profile or args.settings or args.options or args.env):
+            raise ArgumentError(None,
+                                "--install-folder cannot be used together with -s, -o, -e or -pr")
 
         # BUILD ORDER ONLY
         if args.build_order:
@@ -348,7 +358,8 @@ class Command(object):
                                                profile_name=args.profile,
                                                filename=args.file, remote=args.remote,
                                                build_order=args.build_order,
-                                               check_updates=args.update)
+                                               check_updates=args.update,
+                                               install_folder=args.install_folder)
             if args.json:
                 json_arg = True if args.json == "1" else args.json
                 self._outputer.json_build_order(ret, json_arg, os.getcwd())
@@ -363,7 +374,8 @@ class Command(object):
                                                        profile_name=args.profile,
                                                        filename=args.file,
                                                        remote=args.remote,
-                                                       check_updates=args.update)
+                                                       check_updates=args.update,
+                                                       install_folder=args.install_folder)
             self._outputer.nodes_to_build(nodes)
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
@@ -371,7 +383,8 @@ class Command(object):
                                               settings=args.settings,
                                               options=args.options, env=args.env,
                                               profile_name=args.profile, update=args.update,
-                                              filename=args.file)
+                                              filename=args.file,
+                                              install_folder=args.install_folder)
             deps_graph, graph_updates_info, project_reference = data
             only = args.only
             if args.only == ["None"]:
