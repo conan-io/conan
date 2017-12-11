@@ -195,6 +195,11 @@ class MyLib(ConanFile):
         client.save({"conanfile.py": conanfile})
         client.run("create MyLib/0.1@lasote/testing")
 
+        # Now as a build require, should be the same
+        client.save({"conanfile.py": conanfile.replace("requires =", "#requires ="),
+                     "myprofile": "[build_requires]\nPkg/0.1@lasote/testing"})
+        client.run("create MyLib/0.1@lasote/testing --profile ./myprofile")
+
     def env_path_order_test(self):
         client = TestClient()
         with tools.environment_append({"SOME_VAR": ["INITIAL VALUE"]}):
