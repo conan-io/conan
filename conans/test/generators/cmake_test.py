@@ -115,7 +115,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         conan_define_targets()
     endif()
     if(ARGUMENTS_SKIP_RPATH)
-        # Change by "DEPRECATION" or "SEND_ERROR" when we are ready 
+        # Change by "DEPRECATION" or "SEND_ERROR" when we are ready
         message(WARNING "Conan: SKIP_RPATH is deprecated, it has been renamed to KEEP_RPATHS")
     endif()
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
