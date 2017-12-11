@@ -196,7 +196,6 @@ class CMakeTest(unittest.TestCase):
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
               "--config Debug")
 
-
     def deleted_os_test(self):
         partial_settings = """
 os: [Linux]
