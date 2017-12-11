@@ -4,6 +4,7 @@ import shutil
 import platform
 
 from conans.client import tools
+from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
 from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
@@ -17,7 +18,6 @@ from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
 from conans.client.output import ScopedOutput
 from conans.client.source import config_source
-from conans.tools import environment_append
 from conans.util.tracer import log_package_built
 from conans.util.env_reader import get_env
 
@@ -116,7 +116,7 @@ class _ConanPackageBuilder(object):
         """Calls the conanfile's build method"""
         if self._skip_build:
             return
-        with environment_append(self._conan_file.env):
+        with get_env_context_manager(self._conan_file):
             self._build_package()
 
     def package(self):
@@ -140,7 +140,7 @@ class _ConanPackageBuilder(object):
                                                       self._conan_file.short_paths)
         else:
             source_folder = self.build_folder
-        with environment_append(self._conan_file.env):
+        with get_env_context_manager(self._conan_file):
             package_folder = self._client_cache.package(self._package_reference,
                                                         self._conan_file.short_paths)
             install_folder = self.build_folder  # While installing, the infos goes to build folder

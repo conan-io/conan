@@ -7,8 +7,8 @@ from conans import tools
 from conans.client.file_copier import FileCopier, report_copied_files
 from conans.client.output import ScopedOutput
 from conans.errors import ConanException
+from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
-from conans.tools import environment_append
 from conans.util.files import save, md5sum, load
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
@@ -67,7 +67,7 @@ def run_imports(conanfile, dest_folder, output):
     file_importer = _FileImporter(conanfile, dest_folder)
     conanfile.copy = file_importer
     conanfile.imports_folder = dest_folder
-    with environment_append(conanfile.env):
+    with get_env_context_manager(conanfile):
         with tools.chdir(dest_folder):
             conanfile.imports()
     copied_files = file_importer.copied_files
@@ -91,7 +91,7 @@ def run_deploy(conanfile, install_folder, output):
     conanfile.copy_deps = file_importer
     conanfile.copy = file_copier
     conanfile.install_folder = install_folder
-    with environment_append(conanfile.env):
+    with get_env_context_manager(conanfile):
         with tools.chdir(install_folder):
             conanfile.deploy()
 
