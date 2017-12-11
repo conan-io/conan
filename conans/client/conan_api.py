@@ -414,22 +414,14 @@ class ConanAPIV1(object):
     def _info_get_profile(self, install_folder, profile_name, settings, options, env):
         cwd = os.getcwd()
 
-        # If not install_folder we don't look in the curdir if any setting has specified
-        if not install_folder and (profile_name or settings or options or env):
-            return profile_from_args(profile_name, settings, options, env=env,
-                                     cwd=cwd, client_cache=self._client_cache)
+        if install_folder or not (profile_name or settings or options or env):
+            install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
+            self._validate_one_settings_source(install_folder, profile_name, settings, options, env)
+            if existing_info_files(install_folder):
+                return read_conaninfo_profile(install_folder)
 
-        install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
-        self._validate_one_settings_source(install_folder, profile_name, settings, options, env)
-        infos_present = existing_info_files(install_folder)
-
-        if not infos_present:
-            profile = profile_from_args(profile_name, settings, options, env=env,
-                                        cwd=cwd, client_cache=self._client_cache)
-        else:
-            profile = read_conaninfo_profile(install_folder)
-
-        return profile
+        return profile_from_args(profile_name, settings, options, env=env,
+                                 cwd=cwd, client_cache=self._client_cache)
 
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
