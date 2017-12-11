@@ -136,8 +136,8 @@ class Command(object):
         To create and test a binary package use the 'conan create' command.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
-        parser.add_argument("path", help='path to the "testing" recipe (conanfile.py) '
-                            'containing a test() method')
+        parser.add_argument("path", help='path to the "testing" directory containing a '
+                            'conanfile.py with a test() method')
         parser.add_argument("reference",
                             help='a full package reference pkg/version@user/channel, of the '
                             'package to be tested')
