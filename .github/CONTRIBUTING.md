@@ -9,8 +9,7 @@ Community
 
 Conan is an Open Source MIT licensed project. 
 
-Conan is maintained and supported by [JFrog](https://www.jfrog.com) and developed in collaboration with a great 
-community of contributors.
+Conan is developed by the Conan maintainers and a great community of contributors.
 
 
 Dev-flow && Pull Requests
