@@ -248,7 +248,7 @@ macro(conan_set_rpath)
                                  # SHOULD BE ON THE LINKER RESOLVER PATH (./ IS ONE OF THEM)
         # Policy CMP0068
         # We want the old behavior, in CMake >= 3.9 CMAKE_SKIP_RPATH won't affect the install_name in OSX
-        cmake_policy(SET CMP0068 OLD)
+        set(CMAKE_INSTALL_NAME_DIR "")
     endif()
 endmacro()
 
@@ -469,6 +469,10 @@ macro(conan_basic_setup)
     else()
         message(STATUS "Conan: Using cmake targets configuration")
         conan_define_targets()
+    endif()
+    if(ARGUMENTS_SKIP_RPATH)
+        # Change by "DEPRECATION" or "SEND_ERROR" when we are ready
+        message(WARNING "Conan: SKIP_RPATH is deprecated, it has been renamed to KEEP_RPATHS")
     endif()
     if(NOT ARGUMENTS_SKIP_RPATH AND NOT ARGUMENTS_KEEP_RPATHS)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
