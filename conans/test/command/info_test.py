@@ -86,7 +86,7 @@ class MyTest(ConanFile):
         error = client.run("info --install-folder=MyInstall -s build_type=Release",
                            ignore_error=True)  # Re-uses debug from MyInstall folder
         self.assertTrue(error)
-        self.assertIn("so specifying profile, settings, options or env is not allowed", client.out)
+        self.assertIn("--install-folder cannot be used together with -s, -o, -e or -pr", client.out)
 
     def graph_test(self):
         self.client = TestClient()

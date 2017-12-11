@@ -272,14 +272,6 @@ class ConanAPIV1(object):
                 raise ConanException("The specified --install-folder doesn't contain '%s' and '%s' "
                                      "files" % (CONANINFO, BUILD_INFO))
 
-    @staticmethod
-    def _validate_one_settings_source(install_folder, profile_name, settings, options, env):
-        if install_folder and existing_info_files(install_folder) and \
-           (profile_name or settings or options or env):
-            raise ConanException("%s and %s are found, at '%s' folder, so specifying profile, "
-                                 "settings, options or env is not allowed" % (CONANINFO, BUILD_INFO,
-                                                                              install_folder))
-
     @api_method
     def export_pkg(self, path, name, channel, source_folder=None, build_folder=None,
                    install_folder=None, profile_name=None, settings=None, options=None,
@@ -299,7 +291,12 @@ class ConanAPIV1(object):
         source_folder = self._abs_relative_to(source_folder, cwd, default=build_folder)
 
         # Checks that no both settings and info files are specified
-        self._validate_one_settings_source(install_folder, profile_name, settings, options, env)
+        if install_folder and existing_info_files(install_folder) and \
+        (profile_name or settings or options or env):
+            raise ConanException("%s and %s are found, at '%s' folder, so specifying profile, "
+                                 "settings, options or env is not allowed" % (CONANINFO, BUILD_INFO,
+                                                                              install_folder))
+
 
         infos_present = existing_info_files(install_folder)
         if not infos_present:
@@ -415,8 +412,9 @@ class ConanAPIV1(object):
         cwd = os.getcwd()
 
         if install_folder or not (profile_name or settings or options or env):
+            # When not install folder is specified but neither any setting, we try to read the
+            # info from cwd
             install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
-            self._validate_one_settings_source(install_folder, profile_name, settings, options, env)
             if existing_info_files(install_folder):
                 return read_conaninfo_profile(install_folder)
 

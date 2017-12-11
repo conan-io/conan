@@ -350,6 +350,10 @@ class Command(object):
         _add_common_install_arguments(parser, build_help=build_help)
         args = parser.parse_args(*args)
 
+        if args.install_folder and (args.profile or args.settings or args.options or args.env):
+            raise ArgumentError(None,
+                                "--install-folder cannot be used together with -s, -o, -e or -pr")
+
         # BUILD ORDER ONLY
         if args.build_order:
             ret = self._conan.info_build_order(args.reference, settings=args.settings,
