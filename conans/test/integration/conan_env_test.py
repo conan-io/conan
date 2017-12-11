@@ -172,10 +172,25 @@ import os
 class MyLib(ConanFile):
     auto_env_inherit = False
     requires = "Pkg/0.1@lasote/testing"
-    def build(self):
+    
+    def _test(self):
         assert("SOME_VAR" not in os.environ)
-        print(self.deps_env_info["Pkg"])
         assert(self.deps_env_info["Pkg"].SOME_VAR == ["22"])
+    
+    def build(self):
+        self._test()
+        
+    def package(self):
+        self._test()
+        
+    def package_info(self):
+        self._test()
+    
+    def build(self):
+        self._test()
+              
+    def imports(self):
+        self._test()     
 """
         client.save({"conanfile.py": conanfile})
         client.run("create MyLib/0.1@lasote/testing")
