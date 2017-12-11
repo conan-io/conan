@@ -1,6 +1,7 @@
 """ This module is responsible for computing the dependencies (graph) for a given entry
 point, which could be both a user conanfile or an installed one
 """
+from conans.model.conan_file import get_env_context_manager
 from conans.model.requires import Requirements
 from collections import namedtuple
 from conans.model.ref import PackageReference, ConanFileReference
@@ -10,7 +11,6 @@ from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
 from collections import defaultdict
-from conans.tools import environment_append
 
 
 class Node(namedtuple("Node", "conan_ref conanfile")):
@@ -375,7 +375,7 @@ class DepsGraphBuilder(object):
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
-            with environment_append(conanfile.env):
+            with get_env_context_manager(conanfile):
                 if hasattr(conanfile, "config"):
                     if not conanref:
                         output = ScopedOutput(str("PROJECT"), self._output)

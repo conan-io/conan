@@ -24,11 +24,11 @@ from conans.client.require_resolver import RequireResolver
 from conans.client.source import config_source_local
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
+from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO
 from conans.search.search import filter_outdated
-from conans.tools import environment_append
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 
@@ -477,7 +477,7 @@ class ConanManager(object):
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder
             conan_file.install_folder = install_folder
-            with environment_append(conan_file.env):
+            with get_env_context_manager(conan_file):
                 output.highlight("Running build()")
                 with conanfile_exception_formatter(str(conan_file), "build"):
                     conan_file.build()
