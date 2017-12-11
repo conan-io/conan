@@ -271,14 +271,6 @@ class ConanAPIV1(object):
                 raise ConanException("The specified --install-folder doesn't contain '%s' and '%s' "
                                      "files" % (CONANINFO, BUILD_INFO))
 
-    @staticmethod
-    def _validate_one_settings_source(install_folder, profile_name, settings, options, env):
-        if install_folder and existing_info_files(install_folder) and \
-           (profile_name or settings or options or env):
-            raise ConanException("%s and %s are found, at '%s' folder, so specifying profile, "
-                                 "settings, options or env is not allowed" % (CONANINFO, BUILD_INFO,
-                                                                              install_folder))
-
     @api_method
     def export_pkg(self, path, name, channel, source_folder=None, build_folder=None,
                    install_folder=None, profile_name=None, settings=None, options=None,
@@ -298,7 +290,12 @@ class ConanAPIV1(object):
         source_folder = self._abs_relative_to(source_folder, cwd, default=build_folder)
 
         # Checks that no both settings and info files are specified
-        self._validate_one_settings_source(install_folder, profile_name, settings, options, env)
+        if install_folder and existing_info_files(install_folder) and \
+        (profile_name or settings or options or env):
+            raise ConanException("%s and %s are found, at '%s' folder, so specifying profile, "
+                                 "settings, options or env is not allowed" % (CONANINFO, BUILD_INFO,
+                                                                              install_folder))
+
 
         infos_present = existing_info_files(install_folder)
         if not infos_present:
@@ -407,19 +404,29 @@ class ConanAPIV1(object):
         from conans.client.conf.config_installer import configuration_install
         return configuration_install(item, self._client_cache, self._user_io.out, self._runner)
 
+    def _info_get_profile(self, install_folder, profile_name, settings, options, env):
+        cwd = os.getcwd()
+
+        if install_folder or not (profile_name or settings or options or env):
+            # When not install folder is specified but neither any setting, we try to read the
+            # info from cwd
+            install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
+            if existing_info_files(install_folder):
+                return read_conaninfo_profile(install_folder)
+
+        return profile_from_args(profile_name, settings, options, env=env,
+                                 cwd=cwd, client_cache=self._client_cache)
+
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
                          profile_name=None, filename=None, remote=None, build_order=None,
-                         check_updates=None, build_folder=None):
-
-        current_path = os.getcwd()
+                         check_updates=None, install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(current_path, reference))
+            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, build_folder,
-                                    self._client_cache)
+        profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         graph = self._manager.info_build_order(reference, profile, filename, build_order,
                                                remote, check_updates)
         return graph
@@ -427,16 +434,13 @@ class ConanAPIV1(object):
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
                             profile_name=None, filename=None, remote=None,
-                            check_updates=None, build_folder=None):
-
-        current_path = os.getcwd()
+                            check_updates=None, install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(current_path, reference))
+            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, build_folder,
-                                    self._client_cache)
+        profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote,
                                                 check_updates)
         ref_list, project_reference = ret
@@ -445,16 +449,13 @@ class ConanAPIV1(object):
     @api_method
     def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None,
                        profile_name=None, update=False, filename=None,
-                       build_folder=None):
-
-        current_path = os.getcwd()
+                       install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(current_path, reference))
+            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
 
-        profile = profile_from_args(profile_name, settings, options, env, build_folder,
-                                    self._client_cache)
+        profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         ret = self._manager.info_get_graph(reference=reference,
                                            remote=remote, profile=profile, check_updates=update,
                                            filename=filename)
