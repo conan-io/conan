@@ -281,11 +281,23 @@ class CMake(object):
                 ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
         return ret
 
-    def configure(self, args=None, defs=None, source_dir=None, build_dir=None):
+    def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
+                  cache_build_dir=None):
         args = args or []
         defs = defs or {}
-        source_dir = source_dir or self._conanfile.source_folder
-        self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+
+        def get_dir(folder, origin):
+            if folder:
+                if os.path.isabs(folder):
+                    return folder
+                return os.path.join(origin, folder)
+            return origin
+
+        if self._conanfile.in_local_cache:
+            build_dir = cache_build_dir or build_dir
+
+        source_dir = get_dir(source_dir, self._conanfile.source_folder)
+        self.build_dir = get_dir(build_dir or self.build_dir, self._conanfile.build_folder)
 
         mkdir(self.build_dir)
         arg_list = join_arguments([
