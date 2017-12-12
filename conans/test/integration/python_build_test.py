@@ -63,6 +63,41 @@ class ToolsTest(ConanFile):
 """
 
 
+class PythonExtendTest(unittest.TestCase):
+
+    def reuse_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class ToolsTest(ConanFile):
+    exports_sources = "*"
+    def package(self):
+        self.copy("*")
+"""
+        coolconanfile = """from conans import ConanFile
+class MyCoolConanFile(ConanFile):
+    def source(self):
+        self.output.info("My cool source!")
+    def build(self):
+        self.output.info("My cool build!")
+    def package(self):
+        self.output.info("My cool package!")
+    def package_info(self):
+        self.output.info("My cool package_info!")
+"""
+        client.save({"conanfile.py": conanfile,
+                     "coolconanfile.py": coolconanfile})
+        client.run("create MyCool/0.1@user/testing")
+        reuse = """from conans import ConanFile, tools
+from conans.client.python_requires import conan_python_requires
+conan_python_requires(["MyCool/0.1@user/testing"])
+class ToolsTest(MyCoolConanFile):
+    pass
+"""
+
+        client.save({"conanfile.py": reuse}, clean_first=True)
+        client.run("create Pkg/0.1@user/testing")
+        print client.out
+
 class PythonBuildTest(unittest.TestCase):
 
     def reuse_test(self):
