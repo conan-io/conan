@@ -46,7 +46,7 @@ class Meson(object):
         self.definitions.update(self._build_type_definition())
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
-                  pkg_config_paths=None):
+                  pkg_config_paths=None, cache_source_dir=None, cache_build_dir=None):
         args = args or []
         defs = defs or {}
 
@@ -56,6 +56,10 @@ class Meson(object):
                     return folder
                 return os.path.join(origin, folder)
             return origin
+
+        if self._conanfile.in_local_cache:
+            source_dir = cache_source_dir or source_dir
+            build_dir = cache_build_dir or build_dir
 
         if pkg_config_paths:
             pc_paths = os.pathsep.join(get_dir(f, self._conanfile.install_folder)

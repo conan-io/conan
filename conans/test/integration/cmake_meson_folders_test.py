@@ -13,12 +13,14 @@ import os
 class Conan(ConanFile):
     settings = "os", "compiler", "arch", "build_type"
     exports_sources = "src/*"
+    no_copy_sources = True
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="src",
-                        build_dir="build")
+        cmake.configure(cache_source_dir="src",
+                        cache_build_dir="build")
         cmake.build()
         cmake.install()
+
     def package_info(self):
         self.output.info("HEADER %s" % load(os.path.join(self.package_folder, "include/header.h")))
     """
@@ -31,18 +33,13 @@ install(FILES header.h DESTINATION include)
                      "src/CMakeLists.txt": cmake,
                      "src/header.h": "//myheader.h"})
         client.run("create Hello/0.1@lasote/channel")
-        print client.out
         self.assertIn("Hello/0.1@lasote/channel: HEADER //myheader.h", client.out)
         # Now local flow
         build_folder = os.path.join(client.current_folder, "build")
         mkdir(build_folder)
         client.current_folder = build_folder
-        client.run("install . --install_folder=build")
-        print client.out
-        print "=================================="
-        client.run("build .. --build_folder=.. --install_folder=.")
-        print client.out
-        print client.current_folder
-
-
-       
+        client.run("install ..")
+        client.run("build .. --build_folder=. --source_folder=../src")
+        self.assertTrue(os.path.exists(os.path.join(build_folder, "conaninfo.txt")))
+        self.assertTrue(os.path.exists(os.path.join(build_folder, "conanbuildinfo.txt")))
+        self.assertEqual(load(os.path.join(build_folder, "package/include/header.h")), "//myheader.h")
