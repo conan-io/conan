@@ -5,9 +5,7 @@ from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 
 
-tool_conanfile = """
-import os
-from conans import ConanFile
+tool_conanfile = """from conans import ConanFile
 
 class Tool(ConanFile):
     name = "Tool"
@@ -50,6 +48,43 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 
 class BuildRequiresTest(unittest.TestCase):
+
+    def test_transitive(self):
+        client = TestClient()
+        mingw = """from conans import ConanFile
+class Tool(ConanFile):
+    def package_info(self):
+        self.env_info.PATH.append("mymingwpath")
+"""
+        myprofile = """
+[build_requires]
+mingw/0.1@lasote/stable
+"""
+        gtest = """from conans import ConanFile
+import os
+class Gtest(ConanFile):
+    def build(self):
+        self.output.info("GTEST PATH FOR BUILD %s" % os.getenv("PATH"))
+"""
+        app = """from conans import ConanFile
+import os
+class App(ConanFile):
+    build_requires = "gtest/0.1@lasote/stable"
+    def build(self):
+        self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
+"""
+        client.save({CONANFILE: mingw})
+        client.run("create mingw/0.1@lasote/stable")
+        client.save({CONANFILE: gtest})
+        client.run("export gtest/0.1@lasote/stable")
+        client.save({CONANFILE: app,
+                     "myprofile": myprofile})
+        client.run("create app/0.1@lasote/stable --build=missing -pr=myprofile")
+        print client.out
+        self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymingwpath",
+                      client.out)
+        self.assertIn("gtest/0.1@lasote/stable: GTEST PATH FOR BUILD mymingwpath",
+                      client.out)
 
     def test_require_itself(self):
         client = TestClient()

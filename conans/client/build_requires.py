@@ -75,6 +75,7 @@ class BuildRequires(object):
                 package_build_requires.update(build_requires)
 
         # Make sure to remove itself
+        print "installing ", reference, " => ", package_build_requires.keys()
         if isinstance(reference, ConanFileReference):
             package_build_requires.pop(reference.name, None)
 
@@ -100,8 +101,8 @@ class BuildRequires(object):
 
         # Make sure we recursively do not propagate the "*" pattern
         old_build_requires = self._profile_build_requires.copy()
-        self._profile_build_requires.pop("*", None)
-        self._profile_build_requires.pop("&!", None)
+        #self._profile_build_requires.pop("*", None)
+        #self._profile_build_requires.pop("&!", None)
 
         installer.install(deps_graph)
         self._profile_build_requires = old_build_requires  # Restore original values
