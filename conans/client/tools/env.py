@@ -38,3 +38,8 @@ def environment_append(env_vars):
     finally:
         os.environ.clear()
         os.environ.update(old_env)
+
+
+@contextmanager
+def no_op():
+    yield

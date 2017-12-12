@@ -154,8 +154,51 @@ class MyTest(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("test_package -e MYVAR=MYVALUE")
+        client.run("create lasote/testing -e MYVAR=MYVALUE")
         self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
+
+    def deactivate_env_inheritance_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    def package_info(self):
+        self.env_info.SOME_VAR.append("22")
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create Pkg/0.1@lasote/testing")
+
+        conanfile = """from conans import ConanFile
+import os
+class MyLib(ConanFile):
+    apply_env = False
+    requires = "Pkg/0.1@lasote/testing"
+    
+    def _test(self):
+        assert("SOME_VAR" not in os.environ)
+        assert(self.deps_env_info["Pkg"].SOME_VAR == ["22"])
+    
+    def build(self):
+        self._test()
+        
+    def package(self):
+        self._test()
+        
+    def package_info(self):
+        self._test()
+    
+    def build(self):
+        self._test()
+              
+    def imports(self):
+        self._test()     
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create MyLib/0.1@lasote/testing")
+
+        # Now as a build require, should be the same
+        client.save({"conanfile.py": conanfile.replace("requires =", "#requires ="),
+                     "myprofile": "[build_requires]\nPkg/0.1@lasote/testing"})
+        client.run("create MyLib/0.1@lasote/testing --profile ./myprofile")
 
     def env_path_order_test(self):
         client = TestClient()

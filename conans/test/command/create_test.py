@@ -96,7 +96,7 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
         """})
-        error = client.run("create Consumer/0.1@lasote/testing --werror", ignore_error=True)
+        error = client.run("create Consumer/0.1@lasote/testing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
                       client.out)

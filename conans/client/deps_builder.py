@@ -1,6 +1,7 @@
 """ This module is responsible for computing the dependencies (graph) for a given entry
 point, which could be both a user conanfile or an installed one
 """
+from conans.model.conan_file import get_env_context_manager
 from conans.model.requires import Requirements
 from collections import namedtuple
 from conans.model.ref import PackageReference, ConanFileReference
@@ -10,7 +11,6 @@ from conans.client.output import ScopedOutput
 import time
 from conans.util.log import logger
 from collections import defaultdict
-from conans.tools import environment_append
 
 
 class Node(namedtuple("Node", "conan_ref conanfile")):
@@ -337,12 +337,12 @@ class DepsGraphBuilder(object):
             else:  # a public node already exist with this name
                 previous_node, closure = previous
                 if previous_node.conan_ref != require.conan_reference:
-                    self._output.werror("Conflict in %s\n"
-                                        "    Requirement %s conflicts with already defined %s\n"
-                                        "    Keeping %s\n"
-                                        "    To change it, override it in your base requirements"
-                                        % (conanref, require.conan_reference,
-                                           previous_node.conan_ref, previous_node.conan_ref))
+                    raise ConanException("Conflict in %s\n"
+                                         "    Requirement %s conflicts with already defined %s\n"
+                                         "    Keeping %s\n"
+                                         "    To change it, override it in your base requirements"
+                                         % (conanref, require.conan_reference,
+                                            previous_node.conan_ref, previous_node.conan_ref))
                 dep_graph.add_edge(node, previous_node)
                 # RECURSION!
                 if closure is None:
@@ -375,7 +375,7 @@ class DepsGraphBuilder(object):
         param settings: dict of settings values => {"os": "windows"}
         """
         try:
-            with environment_append(conanfile.env):
+            with get_env_context_manager(conanfile):
                 if hasattr(conanfile, "config"):
                     if not conanref:
                         output = ScopedOutput(str("PROJECT"), self._output)
