@@ -24,7 +24,7 @@ class TestConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("test_package lasote/stable")
+        client.run("create lasote/stable")
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
 
@@ -39,8 +39,8 @@ class TestConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("test_package lasote/stable")
-        client.run("test_package lasote/stable --test-only")
+        client.run("create lasote/stable")
+        client.run("test test_package  Hello/0.1@lasote/stable")
         self.assertNotIn("Exporting package recipe", client.out)
         self.assertNotIn("WARN: Forced build from source", client.out)
         self.assertNotIn("Package '5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9' created", client.out)
@@ -48,7 +48,7 @@ class TestConanLib(ConanFile):
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
 
         client.save({"test_package/conanfile.py": test_conanfile}, clean_first=True)
-        client.run("test_package Hello/0.1@lasote/stable --test-only")
+        client.run("test test_package  Hello/0.1@lasote/stable")
         self.assertNotIn("Hello/0.1@lasote/stable: Configuring sources", client.out)
         self.assertNotIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
@@ -66,10 +66,8 @@ class TestConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        error = client.run("test_package", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("package version is '0.1', but test_package/conanfile "
-                      "is requiring version '0.2'", client.user_io.out)
+        client.run("create user/channel")
+        self.assertNotIn("Hello/0.2", client.out)
 
     def other_requirements_test(self):
         test_conanfile = '''
@@ -92,11 +90,11 @@ class ConanLib(ConanFile):
         client.run("install other/0.2@user2/channel2 --build")
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("test_package")
+        client.run("create user/channel")
         self.assertIn("Hello/0.1@user/channel: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@user/channel: Generated conaninfo.txt", client.user_io.out)
 
         # explicit override of user/channel works
-        client.run("test_package lasote/stable")
+        client.run("create lasote/stable")
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)

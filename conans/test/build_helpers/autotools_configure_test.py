@@ -30,7 +30,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
     def test_mocked_methods(self):
 
         runner = RunnerMock()
-        conanfile = MockConanfile(MockSettings({}), runner)
+        conanfile = MockConanfile(MockSettings({}), None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.make(make_program="othermake")
         self.assertEquals(runner.command_called, "othermake -j%s" % cpu_count())
@@ -407,7 +407,7 @@ class HelloConan(ConanFile):
 
     def cross_build_command_test(self):
         runner = RunnerMock()
-        conanfile = MockConanfile(MockSettings({}), runner)
+        conanfile = MockConanfile(MockSettings({}), None, runner)
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
         self.assertEquals(runner.command_called, "./configure  ")

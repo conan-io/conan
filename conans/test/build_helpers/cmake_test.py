@@ -196,7 +196,6 @@ class CMakeTest(unittest.TestCase):
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
               "--config Debug")
 
-
     def deleted_os_test(self):
         partial_settings = """
 os: [Linux]
@@ -248,6 +247,28 @@ build_type: [ Release]
         conan_file.settings = settings
         with self.assertRaises(ConanException):
             CMake(settings)
+
+    def test_cores_ancient_visual(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Windows"
+        settings.compiler = "Visual Studio"
+        settings.compiler.version = "9"
+        settings.compiler.runtime = "MDd"
+        settings.arch = "x86"
+        settings.build_type = None
+
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        cmake = CMake(conan_file)
+
+        cmake.build()
+        self.assertNotIn("/m", conan_file.command)
+
+        settings.compiler.version = "10"
+        cmake = CMake(conan_file)
+
+        cmake.build()
+        self.assertIn("/m", conan_file.command)
 
     def convenient_functions_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -529,6 +550,7 @@ class ConanFileMock(ConanFile):
         self.options = Options(PackageOptions.loads(""))
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = TestBufferConanOutput()
+        self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
 

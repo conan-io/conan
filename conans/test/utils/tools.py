@@ -312,6 +312,7 @@ class TestClient(object):
         self.min_server_compatible_version = Version(str(min_server_compatible_version))
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
+
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
@@ -427,11 +428,13 @@ class TestClient(object):
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
-
+        old_path = sys.path[:]
+        sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
         try:
             error = command.run(args)
         finally:
+            sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
             added_modules = set(sys.modules).difference(old_modules)

@@ -111,19 +111,11 @@ class OptionsTest(unittest.TestCase):
                     "Poco": poco_values,
                     "Hello1": hello1_values}
         down_ref = ConanFileReference.loads("Hello2/0.1@diego/testing")
-        self.sut.propagate_upstream(options2, down_ref, own_ref, output)
-        self.assertIn("""WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option optimized to 2
-but it was already assigned to 4 by Hello0/0.1@diego/testing
-WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option static to True
-but it was already assigned to False by Hello0/0.1@diego/testing
-WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option Boost:static to 2
-but it was already assigned to False by Hello0/0.1@diego/testing
-WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option Boost:thread to Any
-but it was already assigned to True by Hello0/0.1@diego/testing
-WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option Boost:thread.multi to on
-but it was already assigned to off by Hello0/0.1@diego/testing
-WARN: Hello2/0.1@diego/testing tried to change Hello1/0.1@diego/testing option Poco:deps_bundled to What
-but it was already assigned to True by Hello0/0.1@diego/testing""", str(output))
+
+        with self.assertRaisesRegexp(ConanException, "Hello2/0.1@diego/testing tried to change "
+                                     "Hello1/0.1@diego/testing option optimized to 2"):
+            self.sut.propagate_upstream(options2, down_ref, own_ref, output)
+
         self.assertEqual(self.sut.values.dumps(),
                          """optimized=4
 path=NOTDEF
@@ -182,7 +174,6 @@ Poco:deps_bundled=True""")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
         output = TestBufferConanOutput()
-        output.werror_active = True
         with self.assertRaises(ConanException):
             self.sut.propagate_upstream(options, down_ref, own_ref, output)
 

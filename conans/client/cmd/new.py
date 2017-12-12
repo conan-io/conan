@@ -83,7 +83,7 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="%s/src" % self.source_folder)
+        cmake.configure(source_dir="src")
         cmake.build()
 
         # Explicit way:
@@ -112,6 +112,7 @@ class {package_name}Conan(ConanFile):
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    no_copy_source = True
     # No settings/options are necessary, this is header only
 
     def source(self):
@@ -137,7 +138,7 @@ class {package_name}TestConan(ConanFile):
     def build(self):
         cmake = CMake(self)
         # Current dir is "test_package/build/<build_id>" and CMakeLists.txt is in "test_package"
-        cmake.configure(source_dir=self.conanfile_directory, build_dir="./")
+        cmake.configure()
         cmake.build()
 
     def imports(self):
