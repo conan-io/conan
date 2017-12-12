@@ -2,18 +2,20 @@ import unittest
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 import os
+from nose_parameterized import parameterized
 
 
-class CMakeMesonFoldersTest(unittest.TestCase):
+class CMakeFoldersTest(unittest.TestCase):
 
-    def basic_test(self):
+    @parameterized.expand([(True, ), (False, )])
+    def basic_test(self, no_copy_source):
         client = TestClient()
         conanfile = """from conans import ConanFile, CMake, load
 import os
 class Conan(ConanFile):
     settings = "os", "compiler", "arch", "build_type"
     exports_sources = "src/*"
-    no_copy_sources = True
+    no_copy_source = {}
     def build(self):
         cmake = CMake(self)
         cmake.configure(cache_source_dir="src",
@@ -23,7 +25,7 @@ class Conan(ConanFile):
 
     def package_info(self):
         self.output.info("HEADER %s" % load(os.path.join(self.package_folder, "include/header.h")))
-    """
+    """.format(no_copy_source)
         cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
 project(Chat NONE)
 cmake_minimum_required(VERSION 2.8.12)
