@@ -550,6 +550,7 @@ class ConanFileMock(ConanFile):
         self.options = Options(PackageOptions.loads(""))
         self.deps_cpp_info = namedtuple("deps_cpp_info", "sysroot")("/path/to/sysroot")
         self.output = TestBufferConanOutput()
+        self.in_local_cache = False
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
 
