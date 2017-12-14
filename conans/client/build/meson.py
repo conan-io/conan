@@ -66,8 +66,12 @@ class Meson(object):
         else:
             pc_paths = self._conanfile.install_folder
 
-        source_dir = get_dir(source_dir, self._conanfile.source_folder)
-        self.build_dir = get_dir(build_dir or self.build_dir, self._conanfile.build_folder)
+        if os.getcwd() == self._conanfile.build_folder:
+            source_dir = get_dir(source_dir, self._conanfile.source_folder)
+            self.build_dir = get_dir(build_dir or self.build_dir, self._conanfile.build_folder)
+        else:  # Recipe build() has already changed with chdir() the directory, expect relative paths
+            source_dir = source_dir or self._conanfile.source_folder
+            self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
         mkdir(self.build_dir)
         build_type = ("--buildtype=%s" % self.build_type if self.build_type else "").lower()
