@@ -18,11 +18,13 @@ Dev-flow && Pull Requests
 Conan follows the ["GitFlow"](https://datasift.github.io/gitflow/IntroducingGitFlow.html) branching model. 
 To contribute:
 
-1. Fork the [Conan main repository](https://github.com/conan-io/conan).
-2. Create a `feature/xxx` branch from the ``develop`` branch and develop your feature.
-3. Try to keep your branch updated with the ``develop`` branch to avoid conflicts.
-4. Open a pull request, and select ``develop`` as the base branch. Never open a pull request to ``master``
+1. Comment in the corresponding issue that you are doing this. If there is no open issue, we strongly suggest to open one for feedback.
+2. Fork the [Conan main repository](https://github.com/conan-io/conan).
+3. Create a `feature/xxx` branch from the ``develop`` branch and develop your feature.
+4. Try to keep your branch updated with the ``develop`` branch to avoid conflicts.
+5. Open a pull request, and select ``develop`` as the base branch. Never open a pull request to ``master``
  or ``release/xxx`` branches.
+6. Add the text (besides other comments): "Implements #IssueNumber" in the body of the PR, refering to the issue of step 1)
  
  
 The ``conan-io`` organization users will prioritize the Issues and will assign them to a Milestone accordingly. 
@@ -40,7 +42,7 @@ Issues
 If you think you found a bug in Conan:
 
 - Explain the Conan version, Operating System, compiler and any other tool that could be related to the issue.
-- Explain, as detailed as possible, how to reproduce the issue.
+- Explain, as detailed as possible, how to reproduce the issue. Use git repos to contain code/recipes to reproduce issues.
 - Include what you expected to happen, as well as what actually happened.
 - Provide output captures (as text).
 - If it helps, feel free to attach a screenshot or video illustrating the issue.
@@ -61,13 +63,13 @@ We use the following tags to control the state of the issues:
 - **closed**: The Conan version contaning the fix or feature has been released.
 
 So, please, even if the bug is solved in develop, do not close the issue, we prefer to keep it open 
-and at **fixed** state to keep the track of all of them.
+and at **fixed** state to keep track of all of them.
 
 
 Code of conduct
 ===============
 
-Try to be polite, Conan maintainers and contributors are really willing to help, and we enjoy it. You have to understand that:
+Try to be polite, Conan maintainers and contributors are really willing to help, and we enjoy it. Please understand that:
 
 - There are limited resources/time, not all issues/pull requests can be attended as we would like.
 - ``conan-io`` maintainers can tag/close/modify any opened issue.
@@ -76,6 +78,7 @@ Try to be polite, Conan maintainers and contributors are really willing to help,
 - It is very hard to keep the project in good health in terms of technical debt, usability, serviceability, etc. 
   So, if we are not fully sure of a proposed feature or a pull request or we don't have information enough to be 
   sure that it's a good feature for the project, it won't be accepted until we are sure. The community 
-  plays a very important role here, explaining the value of a feature and the needed documentation and use cases.
+  plays a very important role here, explain the value of a feature for the community, and the needed documentation and use cases.
+  Backwards compatibility and not breaking users packages is very important, and won't be done unless there are very good reasons.
 - You should not get bothered if you feel unattended, Conan is an Open Source project, not a commercial product, try
   to explain why you really need what you need, we will try to help you.
