@@ -6,29 +6,43 @@ import os
 
 class MultiGeneratorFilterErrorTest(unittest.TestCase):
 
-    def regression_test(self):
+    def test(self):
         # Possible regression of: https://github.com/conan-io/conan/pull/1719#issuecomment-339137460
+        # https://github.com/conan-io/conan/issues/2149
         client = TestClient()
-        client.save({"conanfile.py": """from conans import ConanFile
-class Pkg(ConanFile):
+        llvm = '''
+from conans import ConanFile
+class ConanLib(ConanFile):
+    generators = "cmake", "visual_studio", "qmake", "ycm"
     exports_sources = "*"
     def package(self):
-        self.copy("*", dst="include")
-""", "header.h": ""})
-        client.run("create Pkg/0.1@user/stable")
-        client.save({"conanfile.txt": "[requires]\nPkg/0.1@user/stable\n"
-                     "[generators]\nycm\ncmake\ntxt\ngcc\n"}, clean_first=True)
-        client.run("install .")
+        self.copy("*")
+    def package_info(self):
+        self.cpp_info.includedirs = ["include", "include/c++/v1"]
+'''
 
-        cmake = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
-        txt = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
-        gcc = load(os.path.join(client.current_folder, "conanbuildinfo.gcc"))
-        ycm = load(os.path.join(client.current_folder, ".ycm_extra_conf.py"))
-        self.assertIn("Pkg/0.1/user/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
-                      cmake)
-        self.assertIn("Pkg/0.1/user/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
-                      txt)
-        self.assertIn("Pkg/0.1/user/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
-                      gcc)
-        self.assertIn("Pkg/0.1/user/stable/package/5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
-                      ycm.replace("\\", "/"))
+        client.save({"conanfile.py": llvm,
+                     "include/file.h": "",
+                     "include/c++/v1/file2.h": ""})
+        client.run("create llvm/5.0@user/channel")
+        test = '''
+from conans import ConanFile
+class ConanLib(ConanFile):
+    def test(self):
+        pass
+'''
+        myprofile = """[build_requires]
+llvm/5.0@user/channel
+"""
+        client.save({"conanfile.py": llvm,
+                     "include/file3.h": "",
+                     "include/c++/v1/file4.h": "",
+                     "test_package/conanfile.py": test,
+                     "myprofile": myprofile}, clean_first=True)
+        client.run("create MyLib/0.1@user/channel -pr=myprofile")
+        content = load(os.path.join(client.current_folder,
+                                    "test_package/build/1ce01a69e728d0cf98d738a3dc17cee00c9010d2"
+                                    "/conanbuildinfo.txt"))
+        self.assertIn(".conan/data/MyLib/0.1/user/channel/package/"
+                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9/include",
+                      content)
