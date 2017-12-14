@@ -435,7 +435,6 @@ class Command(object):
         except ConanException:
             pass
 
-        print(args.source_folder)
         return self._conan.source(args.path, args.source_folder, args.install_folder)
 
     def build(self, *args):
