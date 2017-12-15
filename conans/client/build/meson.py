@@ -46,12 +46,32 @@ class Meson(object):
         self.definitions.update(self._build_type_definition())
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
-                  pkg_config_paths=None):
+                  pkg_config_paths=None, cache_build_dir=None):
         args = args or []
         defs = defs or {}
-        pc_paths = os.pathsep.join(pkg_config_paths or [self._conanfile.build_folder])
-        source_dir = source_dir or self._conanfile.source_folder
-        self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder or "."
+
+        def get_dir(folder, origin):
+            if folder:
+                if os.path.isabs(folder):
+                    return folder
+                return os.path.join(origin, folder)
+            return origin
+
+        if self._conanfile.in_local_cache:
+            build_dir = cache_build_dir or build_dir
+
+        if pkg_config_paths:
+            pc_paths = os.pathsep.join(get_dir(f, self._conanfile.install_folder)
+                                       for f in pkg_config_paths)
+        else:
+            pc_paths = self._conanfile.install_folder
+
+        if os.getcwd() == self._conanfile.build_folder:
+            source_dir = get_dir(source_dir, self._conanfile.source_folder)
+            self.build_dir = get_dir(build_dir or self.build_dir, self._conanfile.build_folder)
+        else:  # Recipe build() has already changed with chdir() the directory, expect relative paths
+            source_dir = source_dir or self._conanfile.source_folder
+            self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
         mkdir(self.build_dir)
         build_type = ("--buildtype=%s" % self.build_type if self.build_type else "").lower()
@@ -79,7 +99,7 @@ class Meson(object):
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
         arg_list = join_arguments([
-            "-C %s" % build_dir,
+            '-C "%s"' % build_dir,
             args_to_string(args),
             args_to_string(targets)
         ])

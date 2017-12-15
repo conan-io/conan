@@ -8,16 +8,60 @@ from future.moves import sys
 from conans.paths import CONANFILE
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestClient
-from conans.util.files import mkdir
+from conans.util.files import mkdir, load
+from nose_parameterized import parameterized
 
 
 class PkgConfigGeneratorTest(unittest.TestCase):
 
-    def test_base(self):
-        pyver = sys.version_info
+    @parameterized.expand([(True, ), (False, )])
+    def basic_test(self, no_copy_source):
 
-        # FIXME: Appveyor is not locating meson in py 3.4
-        if platform.system() == "Windows" and (pyver[0] < 3 or pyver[1] < 5):
+        # meson > py 3.4
+        if sys.version_info[0] < 3 or sys.version_info[1] < 5:
+            return
+
+        client = TestClient()
+        conanfile = """from conans import ConanFile, Meson, load
+import os
+class Conan(ConanFile):
+    settings = "os", "compiler", "arch", "build_type"
+    exports_sources = "src/*"
+    no_copy_source = {}
+    def build(self):
+        meson = Meson(self)
+        meson.configure(source_dir="src",
+                        cache_build_dir="build")
+        meson.build()
+    def package(self):
+        self.copy("*.h", src="src", dst="include")
+
+    def package_info(self):
+        self.output.info("HEADER %s" % load(os.path.join(self.package_folder, "include/header.h")))
+    """.format(no_copy_source)
+        meson = """project('hello', 'cpp', version : '0.1.0',
+		default_options : ['cpp_std=c++11'])
+"""
+        client.save({"conanfile.py": conanfile,
+                     "src/meson.build": meson,
+                     "src/header.h": "//myheader.h"})
+        client.run("create Hello/0.1@lasote/channel")
+        self.assertIn("Hello/0.1@lasote/channel: HEADER //myheader.h", client.out)
+        # Now local flow
+        build_folder = os.path.join(client.current_folder, "build")
+        mkdir(build_folder)
+        client.current_folder = build_folder
+        client.run("install ..")
+        client.run("build ..")
+        client.run("package ..")
+        self.assertTrue(os.path.exists(os.path.join(build_folder, "conaninfo.txt")))
+        self.assertTrue(os.path.exists(os.path.join(build_folder, "conanbuildinfo.txt")))
+        self.assertEqual(load(os.path.join(build_folder, "package/include/header.h")), "//myheader.h")
+
+    def test_base(self):
+
+        # meson > py 3.4
+        if sys.version_info[0] < 3 or sys.version_info[1] < 5:
             return
 
         client = TestClient(path_with_spaces=False)
@@ -27,8 +71,7 @@ class PkgConfigGeneratorTest(unittest.TestCase):
         self._export(client, "LIB_A", ["LIB_B", "LIB_B2"])
 
         consumer = """
-from conans import ConanFile, tools, Meson
-import os
+from conans import ConanFile, Meson
 
 class ConanFileToolsTest(ConanFile):
     generators = "pkg_config"
@@ -39,7 +82,6 @@ class ConanFileToolsTest(ConanFile):
         meson = Meson(self)
         meson.configure()
         meson.build()
-
 """
         meson_build = """
 project('conan_hello', 'c')
@@ -49,7 +91,6 @@ executable('demo', 'main.c', dependencies: [liba])
 
         main_c = """
 #include "helloLIB_A.h"
-
 int main(){
   helloLIB_A();
 }
