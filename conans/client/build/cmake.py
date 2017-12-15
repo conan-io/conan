@@ -52,7 +52,7 @@ class CMake(object):
 
         self.generator = generator or self._generator()
         self.toolset = self._toolset(toolset)
-        self.build_dir = None
+        self.build_dir = self.build_folder = None
         self._cmake_system_name = _get_env_cmake_system_name()
         if self._cmake_system_name is None:  # Not overwritten using environment
             self._cmake_system_name = cmake_system_name
@@ -281,10 +281,9 @@ class CMake(object):
                 ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
         return ret
 
-    def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
-                  cache_build_dir=None):
-        args = args or []
-        defs = defs or {}
+    def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
+        if (source_folder or build_folder) and (source_dir or build_dir):
+            raise ConanException("Use 'build_folder'/'source_folder'")
 
         def get_dir(folder, origin):
             if folder:
@@ -293,15 +292,29 @@ class CMake(object):
                 return os.path.join(origin, folder)
             return origin
 
-        if self._conanfile.in_local_cache:
-            build_dir = cache_build_dir or build_dir
+        if source_dir or build_dir:  # OLD MODE
+            build_ret = build_dir or self._conanfile.build_folder
+            source_ret = source_dir or self._conanfile.source_folder
+        else:
+            build_ret = get_dir(build_folder,
+                                self._conanfile.build_folder) or self._conanfile.build_folder
+            source_ret = get_dir(source_folder,
+                                 self._conanfile.source_folder) or self._conanfile.source_folder
 
-        if os.getcwd() == self._conanfile.build_folder:
-            source_dir = get_dir(source_dir, self._conanfile.source_folder)
-            self.build_dir = get_dir(build_dir or self.build_dir, self._conanfile.build_folder)
-        else:  # Recipe build() has already changed with chdir() the directory, expect relative paths
-            source_dir = source_dir or self._conanfile.source_folder
-            self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
+        if self._conanfile.in_local_cache and cache_build_folder:
+            build_ret = get_dir(cache_build_folder, self._conanfile.build_folder)
+
+        return source_ret, build_ret
+
+    def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
+                  cache_build_folder=None, build_folder=None, source_folder=None):
+        args = args or []
+        defs = defs or {}
+
+        source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
+                                                    source_dir, build_dir,
+                                                    cache_build_folder)
+        self.build_folder = self.build_dir
 
         mkdir(self.build_dir)
         arg_list = join_arguments([
