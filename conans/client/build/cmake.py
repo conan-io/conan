@@ -291,7 +291,7 @@ class CMake(object):
 
     def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
         if (source_folder or build_folder) and (source_dir or build_dir):
-            raise ConanException("Use 'build_folder'/'source_folder'")
+            raise ConanException("Use 'build_folder'/'source_folder' arguments")
 
         def get_dir(folder, origin):
             if folder:
@@ -313,7 +313,8 @@ class CMake(object):
         return source_ret, build_ret
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
-                  cache_build_folder=None, build_folder=None, source_folder=None):
+                  source_folder=None, build_folder=None, cache_build_folder=None):
+        # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         args = args or []
         defs = defs or {}
 
