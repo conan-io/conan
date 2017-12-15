@@ -49,7 +49,9 @@ class CMakeTest(unittest.TestCase):
                    '-DCONAN_COMPILER_VERSION="6.3" ' \
                    '-DCONAN_CXX_FLAGS="-m32" -DCONAN_SHARED_LINKER_FLAGS="-m32" ' \
                    '-DCONAN_C_FLAGS="-m32" -Wno-dev ' % linux_stuff
-        self.assertEquals(conan_file.command, 'cd \'build\'' + base_cmd + '\'../subdir\'')
+        build_expected = quote_var("build")
+        source_expected = quote_var("../subdir")
+        self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
         cmake.configure(build_dir="build")
         build_expected = quote_var("build")
