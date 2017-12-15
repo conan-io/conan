@@ -25,8 +25,8 @@ class Conan(ConanFile):
     no_copy_source = {}
     def build(self):
         meson = Meson(self)
-        meson.configure(source_dir="src",
-                        cache_build_dir="build")
+        meson.configure(source_folder="src",
+                        cache_build_folder="build")
         meson.build()
     def package(self):
         self.copy("*.h", src="src", dst="include")

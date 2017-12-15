@@ -15,4 +15,5 @@ from conans.util.files import load
 COMPLEX_SEARCH_CAPABILITY = "complex_search"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
-__version__ = '0.30.2'
+__version__ = '0.30.3'
+
