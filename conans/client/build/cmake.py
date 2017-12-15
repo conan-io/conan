@@ -52,7 +52,7 @@ class CMake(object):
 
         self.generator = generator or self._generator()
         self.toolset = self._toolset(toolset)
-        self.build_dir = self.build_folder = None
+        self.build_dir = None
         self._cmake_system_name = _get_env_cmake_system_name()
         if self._cmake_system_name is None:  # Not overwritten using environment
             self._cmake_system_name = cmake_system_name
@@ -61,6 +61,14 @@ class CMake(object):
         if build_type and build_type != self._build_type:
             # Call the setter to warn and update the definitions if needed
             self.build_type = build_type
+
+    @property
+    def build_folder(self):
+        return self.build_dir
+
+    @build_folder.setter
+    def build_folder(self, value):
+        self.build_dir = value
 
     @property
     def build_type(self):
@@ -293,13 +301,11 @@ class CMake(object):
             return origin
 
         if source_dir or build_dir:  # OLD MODE
-            build_ret = build_dir or self._conanfile.build_folder
+            build_ret = build_dir or self.build_dir or self._conanfile.build_folder
             source_ret = source_dir or self._conanfile.source_folder
         else:
-            build_ret = get_dir(build_folder,
-                                self._conanfile.build_folder) or self._conanfile.build_folder
-            source_ret = get_dir(source_folder,
-                                 self._conanfile.source_folder) or self._conanfile.source_folder
+            build_ret = get_dir(build_folder, self._conanfile.build_folder)
+            source_ret = get_dir(source_folder, self._conanfile.source_folder)
 
         if self._conanfile.in_local_cache and cache_build_folder:
             build_ret = get_dir(cache_build_folder, self._conanfile.build_folder)
@@ -314,8 +320,6 @@ class CMake(object):
         source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
                                                     source_dir, build_dir,
                                                     cache_build_folder)
-        self.build_folder = self.build_dir
-
         mkdir(self.build_dir)
         arg_list = join_arguments([
             self.command_line,
