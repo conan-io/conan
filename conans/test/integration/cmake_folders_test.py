@@ -26,8 +26,8 @@ class Conan(ConanFile):
     no_copy_source = {}
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="src",
-                        cache_build_dir="build")
+        cmake.configure(source_folder="src",
+                        cache_build_folder="build")
         cmake.build()
         {}
 
