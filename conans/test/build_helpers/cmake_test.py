@@ -40,9 +40,8 @@ class CMakeTest(unittest.TestCase):
         cmake = CMake(conan_file)
         cmake.configure(source_dir="../subdir", build_dir="build")
         linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
-                      '-DCMAKE_SYSROOT="/path/to/sysroot"' if platform.system() == "Linux" else ""
+                      '-DCMAKE_SYSROOT="/path/to/sysroot" ' if platform.system() != "Linux" else ""
         base_cmd = ' && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" %s' \
-                   '-DCMAKE_SYSTEM_NAME="Linux" -DCMAKE_SYSROOT="/path/to/sysroot" ' \
                    '-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" ' \
                    '-DCONAN_COMPILER_VERSION="6.3" ' \
                    '-DCONAN_CXX_FLAGS="-m32" -DCONAN_SHARED_LINKER_FLAGS="-m32" ' \
