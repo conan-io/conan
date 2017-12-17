@@ -107,7 +107,11 @@ class _ConanPackageBuilder(object):
             else:
                 ignore = None
 
-            shutil.copytree(src_folder, self.build_folder, symlinks=True, ignore=ignore)
+            if hasattr(self._conan_file, "copytree"):
+                logger.debug("Utilizing user-provided copytree function")
+                self._conan_file.copytree(src_folder, self.build_folder, symlinks=True, ignore=ignore)
+            else:
+                shutil.copytree(src_folder, self.build_folder, symlinks=True, ignore=ignore)
             logger.debug("Copied to %s", self.build_folder)
             logger.debug("Files copied %s", os.listdir(self.build_folder))
             self._conan_file.source_folder = self.build_folder
