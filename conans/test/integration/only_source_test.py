@@ -104,6 +104,32 @@ class MyPackage(ConanFile):
                       client.user_io.out)
         client.run("upload test/1.9@lasote/stable")
 
+    def user_copytree_test(self):
+        client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
+        conanfile = """
+from conans import ConanFile
+
+class MyPackage(ConanFile):
+    name = "test"
+    version = "1.9"
+    build_policy = 'always'
+
+    def copytree(self, src_folder, build_folder, symlinks=True, ignore=None):
+        import shutil
+        self.output.info("my_copy(src_folder={src_folder}, build_folder={build_folder},"
+                "symlinks={symlinks}, ignore={ignore}".format(**locals()))
+        shutil.copytree(src_folder, build_folder, symlinks, ignore)
+
+    def source(self):
+        pass
+        """
+
+        files = {CONANFILE: conanfile}
+        client.save(files, clean_first=True)
+        client.run("export lasote/stable")
+        client.run("install test/1.9@lasote/stable")
+        self.assertIn("my_copy", client.user_io.out)
+
     def build_policies_in_conanfile_test(self):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
