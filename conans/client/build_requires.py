@@ -88,10 +88,10 @@ class BuildRequires(object):
                       discard=True)
 
     def _install(self, conanfile, reference, build_requires, installer, profile_build_requires, discard=False):
-        if not build_requires:
-            return
         if isinstance(reference, ConanFileReference):
             build_requires.pop(reference.name, None)
+        if not build_requires:
+            return
         if discard:
             profile_build_requires = copy.copy(profile_build_requires)
             profile_build_requires.pop("*", None)
@@ -110,6 +110,5 @@ class BuildRequires(object):
         Printer(self._output).print_graph(deps_graph, self._registry)
         # install them, recursively
         installer.install(deps_graph, profile_build_requires)
-
         _apply_build_requires(deps_graph, conanfile, build_requires)
         self._output.info("Installed build requirements of: %s" % (reference or "PROJECT"))
