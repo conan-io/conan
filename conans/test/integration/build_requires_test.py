@@ -3,6 +3,7 @@ from nose_parameterized.parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
+import os
 
 
 tool_conanfile = """from conans import ConanFile
@@ -80,11 +81,53 @@ class App(ConanFile):
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
         client.run("create app/0.1@lasote/stable --build=missing -pr=myprofile")
-        print client.out
         self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymingwpath",
                       client.out)
         self.assertIn("gtest/0.1@lasote/stable: GTEST PATH FOR BUILD mymingwpath",
                       client.out)
+
+    def test_profile_order(self):
+        client = TestClient()
+        mingw = """from conans import ConanFile
+class Tool(ConanFile):
+    def package_info(self):
+        self.env_info.PATH.append("mymingwpath")
+"""
+        msys = """from conans import ConanFile
+class Tool(ConanFile):
+    def package_info(self):
+        self.env_info.PATH.append("mymsyspath")
+"""
+        myprofile1 = """
+[build_requires]
+mingw/0.1@lasote/stable
+msys/0.1@lasote/stable
+"""
+        myprofile2 = """
+[build_requires]
+msys/0.1@lasote/stable
+mingw/0.1@lasote/stable
+"""
+
+        app = """from conans import ConanFile
+import os
+class App(ConanFile):
+    def build(self):
+        self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
+"""
+        client.save({CONANFILE: mingw})
+        client.run("create mingw/0.1@lasote/stable")
+        client.save({CONANFILE: msys})
+        client.run("create msys/0.1@lasote/stable")
+        client.save({CONANFILE: app,
+                     "myprofile1": myprofile1,
+                     "myprofile2": myprofile2})
+        client.run("create app/0.1@lasote/stable -pr=myprofile1")
+        self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymingwpath%smymsyspath"
+                      % os.pathsep, client.out)
+        client.run("create app/0.1@lasote/stable -pr=myprofile2")
+        self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymsyspath%smymingwpath"
+                      % os.pathsep, client.out)
 
     def test_require_itself(self):
         client = TestClient()
