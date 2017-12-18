@@ -485,13 +485,19 @@ class ConanAPIV1(object):
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None):
         cwd = os.getcwd()
-        conanfile_folder = self._abs_relative_to(path, cwd)
+        path = self._abs_relative_to(path, cwd)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
         install_folder = self._abs_relative_to(install_folder, cwd, default=build_folder)
-        source_folder = self._abs_relative_to(source_folder, cwd, default=conanfile_folder)
-        default_pkg = os.path.join(build_folder, "package")
-        package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg)
-        self._manager.local_package(package_folder, conanfile_folder, build_folder, source_folder,
+        source_folder = self._abs_relative_to(source_folder, cwd, default=cwd)
+        default_pkg_folder = os.path.join(build_folder, "package")
+        package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg_folder)
+
+        path = self._get_conanfile_path_from_dir(path)
+        if path.endswith(".txt"):
+            raise ConanException("A conanfile.py is needed to call 'conan package' "
+                                 "(not valid conanfile.txt)")
+
+        self._manager.local_package(package_folder, path, build_folder, source_folder,
                                     install_folder)
 
     @api_method
@@ -510,7 +516,7 @@ class ConanAPIV1(object):
 
     @staticmethod
     def _abs_relative_to(path, base_relative, default=None):
-        """Gets an absolute path from "path" parameter, prepending base_relative if not abs yet.
+        """Returns an absolute path from "path" parameter, prepending base_relative if not abs yet.
         If path is none, will return the 'default'"""
         if not path:
             return default
@@ -534,6 +540,30 @@ class ConanAPIV1(object):
                 conanfile_path = os.path.join(conanfile_folder, CONANFILE_TXT)
                 raise_if_not_exists(conanfile_path)
         return conanfile_path
+
+    @staticmethod
+    def _get_conanfile_path_from_dir(path):
+        """
+        If path is a directory, apends 'conanfile.py' and returns its path. If not,
+        it checks if path parameter is file and ends with '.py', otherwise it raises an exception
+        
+        :param path: Path to a conanfile.py or directory containing it
+        :return: Conanfile path checked as file ending with '.py'
+        '"""
+
+        def raise_if_not_file(some_path):
+            if not os.path.isfile(some_path):
+                raise ConanException("Conanfile not found: %s" % some_path)
+        
+        def raise_if_not_py(some_path):
+            if not some_path.endswith(".py"):
+                raise ConanException("A conanfile.py is needed (not valid conanfile.txt)")
+
+        if os.path.isdir(path):
+            path = os.path.join(path, CONANFILE)
+
+        raise_if_not_file(path)
+        return path
 
     @api_method
     def imports(self, path, dest=None, filename=None, info_folder=None):
