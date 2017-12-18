@@ -16,6 +16,11 @@ class PkgConfigGeneratorTest(unittest.TestCase):
 
     @parameterized.expand([(True, ), (False, )])
     def basic_test(self, no_copy_source):
+
+        # meson > py 3.4
+        if sys.version_info[0] < 3 or sys.version_info[1] < 5:
+            return
+
         client = TestClient()
         conanfile = """from conans import ConanFile, Meson, load
 import os
@@ -25,8 +30,8 @@ class Conan(ConanFile):
     no_copy_source = {}
     def build(self):
         meson = Meson(self)
-        meson.configure(source_dir="src",
-                        cache_build_dir="build")
+        meson.configure(source_folder="src",
+                        cache_build_folder="build")
         meson.build()
     def package(self):
         self.copy("*.h", src="src", dst="include")
@@ -54,10 +59,9 @@ class Conan(ConanFile):
         self.assertEqual(load(os.path.join(build_folder, "package/include/header.h")), "//myheader.h")
 
     def test_base(self):
-        pyver = sys.version_info
 
-        # FIXME: Appveyor is not locating meson in py 3.4
-        if platform.system() == "Windows" and (pyver[0] < 3 or pyver[1] < 5):
+        # meson > py 3.4
+        if sys.version_info[0] < 3 or sys.version_info[1] < 5:
             return
 
         client = TestClient(path_with_spaces=False)
