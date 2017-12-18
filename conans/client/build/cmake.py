@@ -63,6 +63,14 @@ class CMake(object):
             self.build_type = build_type
 
     @property
+    def build_folder(self):
+        return self.build_dir
+
+    @build_folder.setter
+    def build_folder(self, value):
+        self.build_dir = value
+
+    @property
     def build_type(self):
         return self._build_type
 
@@ -281,10 +289,9 @@ class CMake(object):
                 ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
         return ret
 
-    def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
-                  cache_build_dir=None):
-        args = args or []
-        defs = defs or {}
+    def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
+        if (source_folder or build_folder) and (source_dir or build_dir):
+            raise ConanException("Use 'build_folder'/'source_folder' arguments")
 
         def get_dir(folder, origin):
             if folder:
@@ -293,12 +300,27 @@ class CMake(object):
                 return os.path.join(origin, folder)
             return origin
 
-        if self._conanfile.in_local_cache:
-            build_dir = cache_build_dir or build_dir
+        if source_dir or build_dir:  # OLD MODE
+            build_ret = build_dir or self.build_dir or self._conanfile.build_folder
+            source_ret = source_dir or self._conanfile.source_folder
+        else:
+            build_ret = get_dir(build_folder, self._conanfile.build_folder)
+            source_ret = get_dir(source_folder, self._conanfile.source_folder)
 
-        source_dir = get_dir(source_dir, self._conanfile.source_folder)
-        self.build_dir = get_dir(build_dir or self.build_dir, self._conanfile.build_folder)
+        if self._conanfile.in_local_cache and cache_build_folder:
+            build_ret = get_dir(cache_build_folder, self._conanfile.build_folder)
 
+        return source_ret, build_ret
+
+    def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
+                  source_folder=None, build_folder=None, cache_build_folder=None):
+        # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
+        args = args or []
+        defs = defs or {}
+
+        source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
+                                                    source_dir, build_dir,
+                                                    cache_build_folder)
         mkdir(self.build_dir)
         arg_list = join_arguments([
             self.command_line,
