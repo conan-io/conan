@@ -8,8 +8,8 @@ from conans.paths import CONANFILE, CONANINFO
 from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
-from conans.client.detect import detected_os
-from conans.util.files import load
+from conans.client.conf.detect import detected_os
+from conans.util.files import load, mkdir
 
 
 class InstallTest(unittest.TestCase):
@@ -18,6 +18,21 @@ class InstallTest(unittest.TestCase):
         self.client = TestClient()
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
+
+    def install_package_folder_test(self):
+        # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+import os
+class Pkg(ConanFile):
+    def package_info(self):
+        self.dummy_doesnt_exist_not_break
+        self.output.info("Hello")
+        self.env_info.PATH = os.path.join(self.package_folder, "bin")
+"""})
+        client.run("install .")
+        self.assertNotIn("Hello", client.out)
+        self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
 
     def _create(self, number, version, deps=None, export=True, no_config=False):
         files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config)
@@ -262,11 +277,52 @@ class TestConan(ConanFile):
         client.run("export lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
-        client.run("install .. --build=missing -s os=Windows -c=win_dir")
-        client.run("install .. --build=missing -s os=Macos -c=os_dir")
+        client.run("install . --build=missing -s os=Windows --install-folder=win_dir")
+        client.run("install . --build=missing -s os=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertNotIn("os=Macos", conaninfo)
         conaninfo = load(os.path.join(client.current_folder, "os_dir/conaninfo.txt"))
         self.assertNotIn("os=Windows", conaninfo)
         self.assertIn("os=Macos", conaninfo)
+
+    def install_reference_not_conanbuildinfo_test(self):
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+    settings = "os"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create conan/stable")
+        client.save({}, clean_first=True)
+        client.run("install Hello/0.1@conan/stable")
+        self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))
+
+    def install_with_profile_test(self):
+        # Test for https://github.com/conan-io/conan/pull/2043
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    settings = "os"
+    def requirements(self):
+        self.output.info("PKGOS=%s" % self.settings.os)
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("profile new myprofile")
+        client.run("profile update settings.os=Linux myprofile")
+        client.run("install . -pr=myprofile --build")
+        self.assertIn("PKGOS=Linux", client.out)
+        mkdir(os.path.join(client.current_folder, "myprofile"))
+        client.run("install . -pr=myprofile")
+        client.run("profile new myotherprofile")
+        client.run("profile update settings.os=FreeBSD myotherprofile")
+        client.run("install . -pr=myotherprofile")
+        self.assertIn("PKGOS=FreeBSD", client.out)
+        client.save({"myotherprofile": "Some garbage without sense [garbage]"})
+        client.run("install . -pr=myotherprofile")
+        self.assertIn("PKGOS=FreeBSD", client.out)
+        error = client.run("install . -pr=./myotherprofile", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Error parsing the profile", client.out)

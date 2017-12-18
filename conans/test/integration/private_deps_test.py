@@ -53,10 +53,10 @@ class PrivateDepsTest(unittest.TestCase):
         conanbuildinfo_cmake = load(os.path.join(self.client.current_folder,
                                                  "conanbuildinfo.cmake"))
         conanbuildinfo_cmake = " ".join(conanbuildinfo_cmake.splitlines())
-        self.assertRegexpMatches(conanbuildinfo_cmake, "CONAN_PKG::gf PROPERTY "
-                                 "INTERFACE_LINK_LIBRARIES .+CONAN_PKG::glew\)")
-        self.assertRegexpMatches(conanbuildinfo_cmake, "CONAN_PKG::ImGuiTest PROPERTY "
-                                 "INTERFACE_LINK_LIBRARIES .+CONAN_PKG::glm CONAN_PKG::gf\)")
+        self.assertIn("CONAN_PKG::gf PROPERTY INTERFACE_LINK_LIBRARIES "
+                      "${CONAN_PACKAGE_TARGETS_GF}", conanbuildinfo_cmake)
+        self.assertIn("CONAN_PKG::ImGuiTest PROPERTY INTERFACE_LINK_LIBRARIES "
+                      "${CONAN_PACKAGE_TARGETS_IMGUITEST}", conanbuildinfo_cmake)
 
     def consumer_force_build_test(self):
         """If a conanfile requires another private conanfile, but in the install is forced
@@ -142,7 +142,7 @@ class PrivateDepsTest(unittest.TestCase):
         client.save(files3)
 
         client.run('install --build missing')
-        client.run('build')
+        client.run('build .')
 
         # assert Hello3 only depends on Hello2, and Hello1
         info_path = os.path.join(client.current_folder, BUILD_INFO_CMAKE)
@@ -195,7 +195,7 @@ class PrivateDepsTest(unittest.TestCase):
 
         client2.save(files3)
         client2.run('install -o language=1 --build missing')
-        client2.run('build')
+        client2.run('build .')
         self.assertNotIn("libhello0.a", client2.user_io.out)
         self.assertNotIn("libhello00.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)
@@ -215,7 +215,7 @@ class PrivateDepsTest(unittest.TestCase):
 
         client2.save(files3, clean_first=True)
         client2.run('install -o language=1 --build missing')
-        client2.run('build')
+        client2.run('build .')
         self.assertNotIn("libhello0.a", client2.user_io.out)
         self.assertNotIn("libhello00.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)

@@ -56,12 +56,20 @@ https = None
 # https = http://10.10.1.10:1080
 """
 
+myfuncpy = """def mycooladd(a, b):
+    return a + b
+"""
+
 
 def zipdir(path, zipfilename):
     with zipfile.ZipFile(zipfilename, 'w', zipfile.ZIP_DEFLATED) as z:
         for root, _, files in os.walk(path):
             for f in files:
-                z.write(os.path.join(root, f))
+                file_path = os.path.join(root, f)
+                if file_path == zipfilename:
+                    continue
+                relpath = os.path.relpath(file_path, path)
+                z.write(file_path, relpath)
 
 
 class ConfigInstallTest(unittest.TestCase):
@@ -86,7 +94,9 @@ Other/1.2@user/channel conan-center
                             "profiles/linux": linux_profile,
                             "profiles/windows": win_profile,
                             "config/conan.conf": conan_conf,
-                            "pylintrc": "#Custom pylint"})
+                            "pylintrc": "#Custom pylint",
+                            "python/myfuncs.py": myfuncpy,
+                            "python/__init__.py": ""})
         return folder
 
     def _create_zip(self, zippath=None):
@@ -124,6 +134,24 @@ Other/1.2@user/channel conan-center
         self.assertEqual(conan_conf.get_item("proxies.http"), "http://user:pass@10.10.1.10:3128/")
         self.assertEqual("#Custom pylint",
                          load(os.path.join(self.client.client_cache.conan_folder, "pylintrc")))
+        self.assertEqual("",
+                         load(os.path.join(self.client.client_cache.conan_folder, "python",
+                                           "__init__.py")))
+
+    def reuse_python_test(self):
+        zippath = self._create_zip()
+        self.client.run('config install "%s"' % zippath)
+        conanfile = """from conans import ConanFile
+from myfuncs import mycooladd
+a = mycooladd(1, 2)
+assert a == 3
+class Pkg(ConanFile):
+    def build(self):
+        self.output.info("A is %s" % a)
+"""
+        self.client.save({"conanfile.py": conanfile})
+        self.client.run("create Pkg/0.1@user/testing")
+        self.assertIn("A is 3", self.client.out)
 
     def install_file_test(self):
         """ should install from a file in current dir
@@ -131,6 +159,7 @@ Other/1.2@user/channel conan-center
         zippath = self._create_zip()
         self.client.run('config install "%s"' % zippath)
         self._check(zippath)
+        self.assertTrue(os.path.exists(zippath))
 
     def test_without_profile_folder(self):
         shutil.rmtree(self.client.client_cache.profiles_path)

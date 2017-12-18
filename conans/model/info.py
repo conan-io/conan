@@ -2,7 +2,6 @@ from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference
-from conans.model.scope import Scopes
 from conans.model.values import Values
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
@@ -245,11 +244,12 @@ class ConanInfo(object):
         result.options.clear_indirect()
         result.full_requires = RequirementsList(requires)
         result.requires = RequirementsInfo(requires)
-        result.scope = None
         result.requires.add(indirect_requires)
         result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
         result.env_values = EnvValues()
+        result.vs_toolset_compatible()
+
         return result
 
     @staticmethod
@@ -267,7 +267,6 @@ class ConanInfo(object):
         result.recipe_hash = parser.recipe_hash or None
 
         # TODO: Missing handling paring of requires, but not necessary now
-        result.scope = Scopes.loads(parser.scope)
         result.env_values = EnvValues.loads(parser.env)
         return result
 
@@ -290,9 +289,6 @@ class ConanInfo(object):
         result.append(indent(self.full_requires.dumps()))
         result.append("\n[full_options]")
         result.append(indent(self.full_options.dumps()))
-        result.append("\n[scope]")
-        if self.scope:
-            result.append(indent(self.scope.dumps()))
         result.append("\n[recipe_hash]\n%s" % indent(self.recipe_hash))
         result.append("\n[env]")
         result.append(indent(self.env_values.dumps()))
@@ -359,3 +355,28 @@ class ConanInfo(object):
         self.settings.clear()
         self.options.clear()
         self.requires.unrelated_mode()
+
+    def vs_toolset_compatible(self):
+        """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
+        using Visual Studio 14"""
+
+        toolsets_versions = {
+            "v141": "15",
+            "v140": "14",
+            "v120": "12",
+            "v110": "11",
+            "v100": "10",
+            "v90": "9",
+            "v80": "8"}
+
+        if self.full_settings.compiler == "Visual Studio":
+            toolset = str(self.full_settings.compiler.toolset)
+            if toolset in toolsets_versions:
+                self.settings.compiler.version = toolsets_versions[toolset]
+                self.settings.compiler.toolset = None
+
+    def vs_toolset_incompatible(self):
+        """Will generate different packages for v140 and visual 15 than the visual 14"""
+        self.settings.compiler.version = self.full_settings.compiler.version
+        self.settings.compiler.toolset = self.full_settings.compiler.toolset
+

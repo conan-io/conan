@@ -65,6 +65,15 @@ class UploadTest(unittest.TestCase):
         client = TestClient(servers=self._servers, users={"default": [("lasote", "mypass")]})
         return client
 
+    def pattern_upload_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile})
+        client.run("create user/testing")
+        client.run("upload Hello0/*@user/testing --confirm --all")
+        self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
+        self.assertIn("Uploading conan_package.tgz", client.user_io.out)
+        self.assertIn("Uploading conanfile.py", client.user_io.out)
+
     def corrupt_upload_test(self):
         client = self._client()
 
@@ -144,48 +153,6 @@ class UploadTest(unittest.TestCase):
                          client.out)
         self.assertIn("Recipe is up to date, upload skipped", client.out)
 
-    def upload_modified_package_test(self):
-        client = self._client()
-
-        client.save({"conanfile.py": conanfile,
-                     "hello.cpp": ""})
-        client.run("create frodo/stable")
-        client.run("upload Hello0/1.2.1@frodo/stable --all")
-
-        self.assertIn("Uploading conanmanifest.txt", client.out)
-        self.assertIn("Uploading conanfile.py", client.out)
-        self.assertIn("Uploading conan_sources.tgz", client.out)
-        self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
-                      client.out)
-        self.assertIn("Uploading conaninfo.txt", client.out)
-        self.assertIn("Uploading conan_package.tgz", client.out)
-
-        client2 = self._client()
-        client2.save({"conanfile.py": conanfile,
-                      "hello.cpp": ""})
-        client2.run("create frodo/stable")
-        client2.save({"hello.cpp": "changed!"}, clean_first=True)
-        client2.run("package_files Hello0/1.2.1@frodo/stable -f")
-        client2.run("upload Hello0/1.2.1@frodo/stable --all")
-        self.assertIn("Recipe is up to date, upload skipped", client2.out)
-        self.assertNotIn("Uploading conanfile.py", client2.out)
-        self.assertNotIn("Uploading conan_sources.tgz", client2.out)
-        self.assertNotIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
-                         client2.out)
-        self.assertNotIn("Uploading conaninfo.txt", client2.out)  # conaninfo NOT changed
-        self.assertIn("Uploading conan_package.tgz", client2.out)
-
-        # first client tries to upload again
-        # packages are NOT checked for manifest date, they are always overwritten
-        client.run("upload Hello0/1.2.1@frodo/stable --all")
-        self.assertIn("Recipe is up to date, upload skipped", client.out)
-        self.assertNotIn("Uploading conanfile.py", client.out)
-        self.assertNotIn("Uploading conan_sources.tgz", client.out)
-        self.assertNotIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
-                         client.out)
-        self.assertNotIn("Uploading conaninfo.txt", client.out)  # conaninfo NOT changed
-        self.assertIn("Uploading conan_package.tgz", client.out)
-
     def upload_unmodified_package_test(self):
         client = self._client()
 
@@ -254,3 +221,23 @@ class UploadTest(unittest.TestCase):
         # now it should be on the server
         client.run("search -r default")
         self.assertIn("Hello0/1.2.1@frodo/stable", client.user_io.out)
+
+    def upload_without_sources_test(self):
+        client = self._client()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("create Pkg/0.1@user/testing")
+        client.run("upload * --all --confirm")
+        client2 = self._client()
+        client2.run("install Pkg/0.1@user/testing")
+        client2.run("remote remove default")
+        server2 = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")],
+                             users={"lasote": "mypass"})
+        client2.users = {"server2": [("lasote", "mypass")]}
+        client2.update_servers({"server2": server2})
+        client2.run("upload * --all --confirm -r=server2")
+        self.assertIn("Uploading conanfile.py", client2.out)
+        self.assertIn("Uploading conan_package.tgz", client2.out)

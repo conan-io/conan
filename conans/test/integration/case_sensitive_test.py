@@ -57,15 +57,19 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("export lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
         error = client.run("imports hello0/0.1@lasote/stable", ignore_error=True)
-        self._check(error, client)
+        self.assertTrue(error)
+        # Reference interpreted as a path, so no valid path
+        self.assertIn("Parameter 'path' cannot be a reference", client.out)
 
     def package_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
-        error = client.run("package hello0/0.1@lasote/stable", ignore_error=True)
-        self._check(error, client)
+        error = client.run("export-pkg . hello0/0.1@lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Specified name/version doesn't match with the name/version in "
+                      "the conanfile", client.out)
 
     def copy_test(self):
         client = TestClient()
@@ -73,11 +77,4 @@ class CaseSensitiveTest(unittest.TestCase):
         client.run("export lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
         error = client.run("copy hello0/0.1@lasote/stable otheruser/testing", ignore_error=True)
-        self._check(error, client)
-
-    def source_test(self):
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
-        error = client.run("source hello0/0.1@lasote/stable", ignore_error=True)
         self._check(error, client)

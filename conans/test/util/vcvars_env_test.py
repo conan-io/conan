@@ -81,5 +81,5 @@ class HelloConan(ConanFile):
         files = {}
         files["conanfile.py"] = conanfile
         client.save(files)
-        client.run("build")
+        client.run("build .")
         # print client.user_io.out

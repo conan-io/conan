@@ -92,6 +92,34 @@ class ConanfileToolsTest(unittest.TestCase):
         tmp_dir, file_path, text_file = self._save_files(file_content)
         self._build_and_check(tmp_dir, file_path, text_file, "ONE TWO DOH!")
 
+    def test_patch_new_delete(self):
+        conanfile = base_conanfile + '''
+    def build(self):
+        from conans.tools import load, save
+        save("oldfile", "legacy code")
+        assert(os.path.exists("oldfile"))
+        patch_content = """--- /dev/null
++++ b/newfile
+@@ -0,0 +0,3 @@
++New file!
++New file!
++New file!
+--- a/oldfile
++++ b/dev/null
+@@ -0,1 +0,0 @@
+-legacy code
+"""
+        patch(patch_string=patch_content)
+        self.output.info("NEW FILE=%s" % load("newfile"))
+        self.output.info("OLD FILE=%s" % os.path.exists("oldfile"))
+'''
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("create user/testing")
+        self.assertIn("test/1.9.10@user/testing: NEW FILE=New file!\nNew file!\nNew file!\n",
+                      client.out)
+        self.assertIn("test/1.9.10@user/testing: OLD FILE=False", client.out)
+
     def test_error_patch(self):
         file_content = base_conanfile + '''
     def build(self):
@@ -101,8 +129,8 @@ class ConanfileToolsTest(unittest.TestCase):
 '''
         client = TestClient()
         client.save({"conanfile.py": file_content})
-        client.run("install -g txt")
-        error = client.run("build", ignore_error=True)
+        client.run("install")
+        error = client.run("build .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("patch: error: no patch data found!", client.user_io.out)
         self.assertIn("ERROR: test/1.9.10@PROJECT: Error in build() method, line 12",

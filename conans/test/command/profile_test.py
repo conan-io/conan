@@ -19,6 +19,8 @@ class ProfileTest(unittest.TestCase):
         create_profile(client.client_cache.profiles_path, "profile3")
         create_profile(client.client_cache.profiles_path, "profile1")
         create_profile(client.client_cache.profiles_path, "profile2")
+        # Make sure local folder doesn't interact with profiles
+        os.mkdir(os.path.join(client.current_folder, "profile3"))
         client.run("profile list")
         self.assertEqual(list(["profile1", "profile2", "profile3"]),
                          list(str(client.user_io.out).splitlines()))
@@ -27,15 +29,12 @@ class ProfileTest(unittest.TestCase):
         client = TestClient(default_profile=False)
         create_profile(client.client_cache.profiles_path, "profile1", settings={"os": "Windows"},
                        options=[("MyOption", "32")])
-        create_profile(client.client_cache.profiles_path, "profile2", scopes={"test": True})
         create_profile(client.client_cache.profiles_path, "profile3",
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
         self.assertIn("    os: Windows", client.user_io.out)
         self.assertIn("    MyOption=32", client.user_io.out)
-        client.run("profile show profile2")
-        self.assertIn("    test=True", client.user_io.out)
         client.run("profile show profile3")
         self.assertIn("    CC=/path/tomy/gcc_build", client.user_io.out)
         self.assertIn("    CXX=/path/tomy/g++_build", client.user_io.out)
@@ -77,13 +76,6 @@ class ProfileTest(unittest.TestCase):
         client.run("profile get options.Package:OtherOption ./MyProfile")
         self.assertEquals(client.out, "23\n")
 
-        client.run("profile update scopes.Package:OneScope=True ./MyProfile")
-        self.assertIn("[scopes]\nPackage:OneScope=True", load(pr_path))
-
-        client.run("profile update scopes.Package:OneScope=False ./MyProfile")
-        self.assertIn("[scopes]\nPackage:OneScope=False", load(pr_path))
-        self.assertNotIn("[scopes]\nPackage:OneScope=True", load(pr_path))
-
         client.run("profile update env.OneMyEnv=MYVALUe ./MyProfile")
         self.assertIn("[env]\nOneMyEnv=MYVALUe", load(pr_path))
 
@@ -105,9 +97,6 @@ class ProfileTest(unittest.TestCase):
         self.assertNotIn("Package:MyOption", load(pr_path))
         self.assertIn("Package:OtherOption", load(pr_path))
 
-        client.run("profile remove scopes.Package:OneScope ./MyProfile")
-        self.assertNotIn("OneScope", load(pr_path))
-
         client.run("profile remove env.OneMyEnv ./MyProfile")
         self.assertNotIn("OneMyEnv", load(pr_path))
 
@@ -117,9 +106,6 @@ class ProfileTest(unittest.TestCase):
 
         client.run("profile remove options.foo ./MyProfile", ignore_error=True)
         self.assertIn("Profile key 'options.foo' doesn't exist", client.user_io.out)
-
-        client.run("profile remove scopes.foo ./MyProfile", ignore_error=True)
-        self.assertIn("Profile key 'scopes.foo' doesn't exist", client.user_io.out)
 
         client.run("profile remove env.foo ./MyProfile", ignore_error=True)
         self.assertIn("Profile key 'env.foo' doesn't exist", client.user_io.out)
@@ -132,7 +118,6 @@ class ProfileTest(unittest.TestCase):
         self.assertEquals(load(pr_path), """[build_requires]
 [settings]
 [options]
-[scopes]
 [env]
 """)
 

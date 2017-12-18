@@ -6,6 +6,17 @@ from conans.util.files import load
 
 class GeneratorsTest(unittest.TestCase):
 
+    def test_error(self):
+        base = '''
+[generators]
+unknown
+'''
+        client = TestClient()
+        client.save({"conanfile.txt": base})
+        error = client.run("install --build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Invalid generator 'unknown'. Available types:", client.out)
+
     def test_base(self):
         base = '''
 [generators]

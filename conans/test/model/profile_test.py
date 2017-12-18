@@ -1,13 +1,8 @@
-import os
 import unittest
 
-from conans.client.profile_loader import _load_profile, read_profile
+from conans.client.profile_loader import _load_profile
 from conans.model.profile import Profile
 from collections import OrderedDict
-
-from conans.model.ref import ConanFileReference
-from conans.test.utils.test_files import temp_folder
-from conans.util.files import save
 
 
 class ProfileTest(unittest.TestCase):
@@ -50,6 +45,8 @@ compiler.runtime=MT
     def package_settings_update_test(self):
         prof = '''[settings]
 MyPackage:os=Windows
+
+    # In the previous line there are some spaces
 '''
         np, _ = _load_profile(prof, None, None)
 
@@ -80,7 +77,6 @@ compiler=Visual Studio
 compiler.version=12
 zlib:compiler=gcc
 [options]
-[scopes]
 [env]""".splitlines(), profile.dumps().splitlines())
 
     def apply_test(self):
@@ -93,18 +89,9 @@ zlib:compiler=gcc
         profile.env_values.add("CXX", "path/to/my/compiler/g++")
         profile.env_values.add("CC", "path/to/my/compiler/gcc")
 
-        profile.scopes["p1"]["conaning"] = "True"
-        profile.scopes["p2"]["testing"] = "True"
-
         profile.update_settings(OrderedDict([("compiler.version", "14")]))
 
         self.assertEqual('[build_requires]\n[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
-                         '[options]\n[scopes]\np1:conaning=True\np2:testing=True\n'
-                         '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
-                         profile.dumps())
-
-        profile.update_scopes({"p1": {"new_one": 2}})
-        self.assertEqual('[build_requires]\n[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
-                         '[options]\n[scopes]\np1:new_one=2\np2:testing=True\n'
+                         '[options]\n'
                          '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())

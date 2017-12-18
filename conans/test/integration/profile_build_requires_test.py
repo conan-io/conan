@@ -108,7 +108,7 @@ class BuildRequiresTest(unittest.TestCase):
 
         client.run("install --profile ./profile.txt --build missing")
         self.assertNotIn("Hello World!", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertIn("Hello World!", client.user_io.out)
         self.assertIn("Project: Hello world from python tool!", client.user_io.out)
 
@@ -168,7 +168,7 @@ class TestMyLib(ConanFile):
                      "profile.txt": profile,
                      "profile2.txt": profile2}, clean_first=True)
 
-        client.run("test_package --profile ./profile.txt --build missing")
+        client.run("create lasote/stable --profile ./profile.txt --build missing")
         self.assertEqual(2, str(client.user_io.out).splitlines().count("Hello World!"))
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.user_io.out)
         self.assertIn("MyLib/0.1@lasote/stable test package: Hello world from python tool!",
@@ -213,7 +213,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
                      "test_package/conanfile.py": test_conanfile,
                      "profile.txt": profile_patterns}, clean_first=True)
 
-        client.run("test_package --profile ./profile.txt --build missing")
+        client.run("create lasote/stable --profile=./profile.txt --build=missing")
         self.assertEqual(1, str(client.user_io.out).splitlines().count("Hello World!"))
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.user_io.out)
         self.assertNotIn("Project: Hello world from python tool!", client.user_io.out)
@@ -245,12 +245,12 @@ class MyLib(ConanFile):
         client.run("install -o MyLib:coverage=True --build missing")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertIn("Project: Coverage True", client.user_io.out)
 
         client.save({CONANFILE: conanfile}, clean_first=True)
         client.run("install -o coverage=True")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertIn("Project: Coverage True", client.user_io.out)

@@ -85,10 +85,11 @@ from conans import ConanFile
 class TestConan(ConanFile):
     name = "Hello"
     version = "0.1"
+
+    def package(self):
+        self.copy("*", symlinks=True)
     """
-        client.save({"conanfile.py": conanfile})
-        client.run("export lasote/stable")
-        client.save({}, clean_first=True)
+        client.save({"recipe/conanfile.py": conanfile})
         file1 = os.path.join(client.current_folder, "file1.txt")
         file2 = os.path.join(client.current_folder, "version1/file2.txt")
         file11 = os.path.join(client.current_folder, "file1.txt.1")
@@ -97,7 +98,7 @@ class TestConan(ConanFile):
         os.symlink("file1.txt", file11)
         save(file2, "Hello2")
         os.symlink("version1", latest)
-        client.run("package_files Hello/0.1@lasote/stable")
+        client.run("export-pkg ./recipe Hello/0.1@lasote/stable")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
@@ -121,7 +122,7 @@ class TestConan(ConanFile):
 
         client.run("export lasote/stable")
         client.run("install --build -f=conanfile.txt")
-        client.run("copy Hello/0.1@lasote/stable team/testing")
+        client.run("copy Hello/0.1@lasote/stable team/testing --all")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
         package_ref = PackageReference(conan_ref,

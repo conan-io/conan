@@ -25,11 +25,16 @@ def undefined_value(name):
 
 
 class SettingsItem(object):
+    """ represents a setting value and its child info, which could be:
+    - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
+    - "ANY", as string to accept any value
+    - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
+    """
     def __init__(self, definition, name):
-        self._name = name
-        self._value = None
-        self._definition = {}
+        self._name = name  # settings.compiler
+        self._value = None  # gcc
         if isinstance(definition, dict):
+            self._definition = {}
             # recursive
             for k, v in definition.items():
                 k = str(k)
@@ -52,6 +57,18 @@ class SettingsItem(object):
             result._definition = self._definition[:]
         else:
             result._definition = {k: v.copy() for k, v in self._definition.items()}
+        return result
+
+    def copy_values(self):
+        if self._value is None and "None" not in self._definition:
+            return None
+
+        result = SettingsItem({}, name=self._name)
+        result._value = self._value
+        if self.is_final:
+            result._definition = self._definition[:]
+        else:
+            result._definition = {k: v.copy_values() for k, v in self._definition.items()}
         return result
 
     @property
@@ -166,6 +183,10 @@ class SettingsItem(object):
         if isinstance(self._definition, dict):
             self._definition[self._value].validate()
 
+    def remove_undefined(self):
+        if isinstance(self._definition, dict):
+            self._definition[self._value].remove_undefined()
+
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
@@ -194,6 +215,16 @@ class Settings(object):
             result._data[k] = v.copy()
         return result
 
+    def copy_values(self):
+        """ deepcopy, recursive
+        """
+        result = Settings({}, name=self._name, parent_value=self._parent_value)
+        for k, v in self._data.items():
+            value = v.copy_values()
+            if value is not None:
+                result._data[k] = value
+        return result
+
     @staticmethod
     def loads(text):
         return Settings(yaml.load(text) or {})
@@ -202,6 +233,17 @@ class Settings(object):
         for field in self.fields:
             child = self._data[field]
             child.validate()
+
+    def remove_undefined(self):
+        """ Remove/delete those settings or subsettings that are not defined.
+        Kind of opposite to "validate()" that raises error for not defined settings
+        Necessary to recover settings state from conaninfo.txt
+        """
+        for name, setting in list(self._data.items()):
+            if setting.value is None:
+                self._data.pop(name)
+            else:
+                setting.remove_undefined()
 
     @property
     def fields(self):

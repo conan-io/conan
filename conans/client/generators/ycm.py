@@ -1,5 +1,4 @@
 from conans.model import Generator
-from conans.paths import BUILD_INFO_YCM
 
 
 class YouCompleteMeGenerator(Generator):
@@ -165,7 +164,7 @@ def FlagsForFile( filename, **kwargs ):
 
     @property
     def filename(self):
-        return BUILD_INFO_YCM
+        return '.ycm_extra_conf.py'
 
     @property
     def content(self):
@@ -174,10 +173,7 @@ def FlagsForFile( filename, **kwargs ):
 
         flags = ['-x', 'c++']
         flags.extend(self.deps_build_info.cppflags)
-        flags.extend(self.build_info.cppflags)
         flags.extend(prefixed("-D", self.deps_build_info.defines))
-        flags.extend(prefixed("-D", self.build_info.defines))
-        flags.extend(prefixed("-I", self.build_info.include_paths))
         flags.extend(prefixed("-I", self.deps_build_info.include_paths))
 
         cxx_version = ''
@@ -187,4 +183,4 @@ def FlagsForFile( filename, **kwargs ):
             pass
 
         return self.template.format(default_flags="'" + "', '".join(flags) + "'",
-                cxx_version=cxx_version)
+                                    cxx_version=cxx_version)

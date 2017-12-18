@@ -2,6 +2,7 @@ from conans.util.sha import sha1
 from conans.errors import ConanException
 import yaml
 import six
+import fnmatch
 
 
 _falsey_options = ["false", "none", "0", "off", ""]
@@ -111,10 +112,10 @@ class PackageOptionValues(object):
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
-                output.werror("%s tried to change %s option %s:%s to %s\n"
-                              "but it was already assigned to %s by %s"
-                              % (down_ref, own_ref, package_name, name, value,
-                                 modified_value, modified_ref))
+                raise ConanException("%s tried to change %s option %s:%s to %s\n"
+                                     "but it was already assigned to %s by %s"
+                                     % (down_ref, own_ref, package_name, name, value,
+                                        modified_value, modified_ref))
             else:
                 self._modified[name] = (value, down_ref)
                 self._dict[name] = value
@@ -344,6 +345,9 @@ class PackageOptions(object):
                       for k, v in definition.items()}
         self._modified = {}
 
+    def __contains__(self, option):
+        return str(option) in self._data
+
     @staticmethod
     def loads(text):
         return PackageOptions(yaml.load(text) or {})
@@ -413,7 +417,11 @@ class PackageOptions(object):
             self._check_field(name)
             self._data[name].value = value
 
-    def propagate_upstream(self, package_values, down_ref, own_ref, output):
+    def propagate_upstream(self, package_values, down_ref, own_ref, output, ignore_unknown=False):
+        """ ignore_unknown: do not raise Exception if the given option doesn't exist in this package.
+                            Useful for pattern defined options like "-o *:shared=True", for packages
+                            not defining the "shared" options, they will not fail
+        """
         if not package_values:
             return
 
@@ -425,13 +433,18 @@ class PackageOptions(object):
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
-                output.werror("%s tried to change %s option %s to %s\n"
-                              "but it was already assigned to %s by %s"
-                              % (down_ref, own_ref, name, value, modified_value, modified_ref))
+                raise ConanException("%s tried to change %s option %s to %s\n"
+                                     "but it was already assigned to %s by %s"
+                                     % (down_ref, own_ref, name, value, modified_value, modified_ref))
             else:
-                self._modified[name] = (value, down_ref)
-                self._check_field(name)
-                self._data[name].value = value
+                if ignore_unknown:
+                    if name in self._data:
+                        self._data[name].value = value
+                        self._modified[name] = (value, down_ref)
+                else:
+                    self._check_field(name)
+                    self._data[name].value = value
+                    self._modified[name] = (value, down_ref)
 
 
 class Options(object):
@@ -453,6 +466,9 @@ class Options(object):
 
     def clear(self):
         self._package_options.clear()
+
+    def __contains__(self, option):
+        return option in self._package_options
 
     def __getitem__(self, item):
         return self._deps_package_values.setdefault(item, PackageOptionValues())
@@ -495,7 +511,13 @@ class Options(object):
 
         assert isinstance(down_package_values, dict)
         option_values = down_package_values.get(own_ref.name)
-        self._package_options.propagate_upstream(option_values, down_ref, own_ref, output)
+        self._package_options.propagate_upstream(option_values, down_ref, own_ref, output, ignore_unknown=False)
+        if not option_values:
+            for package_pattern, package_option_values in down_package_values.items():
+                if own_ref.name != package_pattern and fnmatch.fnmatch(own_ref.name, package_pattern):
+                    self._package_options.propagate_upstream(package_option_values, down_ref, own_ref, output,
+                                                             ignore_unknown=True)
+
         for name, option_values in sorted(list(down_package_values.items())):
             if name != own_ref.name:
                 pkg_values = self._deps_package_values.setdefault(name, PackageOptionValues())

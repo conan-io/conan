@@ -6,6 +6,7 @@ import sys
 import os
 from conans.model.version import Version
 from conans.util.log import logger
+from conans.client.tools import which
 
 _global_output = None
 
@@ -100,6 +101,15 @@ class OSInfo(object):
                                  ("centos", "redhat", "fedora", "pidora", "scientific",
                                   "xenserver", "amazon", "oracle", "rhel")
 
+    @property
+    def with_pacman(self):
+        if self.is_linux:
+            return self.linux_distro == "arch"
+        elif self.is_windows and which('uname.exe'):
+            uname = subprocess.check_output(['uname.exe', '-s']).decode()
+            return uname.startswith('MSYS_NT') and which('pacman.exe')
+        return False
+
     @staticmethod
     def get_win_os_version():
         """
@@ -169,6 +179,8 @@ class OSInfo(object):
     def get_osx_version_name(version):
         if not version:
             return None
+        elif version.minor() == "10.13.Z":
+            return "High Sierra"
         elif version.minor() == "10.12.Z":
             return "Sierra"
         elif version.minor() == "10.11.Z":
@@ -216,8 +228,6 @@ def cross_building(settings, self_os=None, self_arch=None):
     os_setting = settings.get_safe("os")
     arch_setting = settings.get_safe("arch")
     platform_os = {"Darwin": "Macos"}.get(self_os, self_os)
-    if self_os == os_setting and self_arch == "x86_64" and arch_setting == "x86":
-        return False  # not really considered cross
 
     if os_setting and platform_os != os_setting:
         return True

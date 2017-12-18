@@ -1,4 +1,5 @@
-from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException, ConanException
+from conans.errors import EXCEPTION_CODE_MAPPING, NotFoundException, ConanException, \
+    AuthenticationException
 from requests.auth import AuthBase, HTTPBasicAuth
 from conans.util.log import logger
 import json
@@ -9,7 +10,7 @@ from conans.util.files import decode_text, md5sum
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
-from conans.model.ref import ConanFileReference, PackageReference
+from conans.model.ref import ConanFileReference
 from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
@@ -241,12 +242,18 @@ class RestApiClient(object):
 
     @handle_return_deserializer()
     def authenticate(self, user, password):
-        '''Sends user + password to get a token'''
+        """Sends user + password to get a token"""
         auth = HTTPBasicAuth(user, password)
         url = "%s/users/authenticate" % self._remote_api_url
         t1 = time.time()
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
                                  verify=self.verify_ssl)
+        if ret.status_code == 401:
+            raise AuthenticationException("Wrong user or password")
+        # Cannot check content-type=text/html, conan server is doing it wrong
+        if not ret.ok or "html>" in str(ret.content):
+            raise ConanException("%s\n\nInvalid server response, check remote URL and "
+                                 "try again" % str(ret.content))
         duration = time.time() - t1
         log_client_rest_api_call(url, "GET", duration, self.custom_headers)
         return ret
