@@ -76,8 +76,8 @@ class MyConan(ConanFile):
         client.save({"include/file.h": "foo",
                      CONANFILE: conanfile_template})
         client.run("install")
-        recipe_folder = client.current_folder
-        client.run('package "%s"' % recipe_folder)
+        path = client.current_folder
+        client.run('package "%s"' % path)
         package_folder = os.path.join(client.current_folder, "package")
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
@@ -85,8 +85,8 @@ class MyConan(ConanFile):
                          sorted(["include", "conaninfo.txt", "conanmanifest.txt"]))
         self.assertEqual(os.listdir(os.path.join(package_folder, "include")), ["file.h"])
 
-    @parameterized.expand([(False, ), (True, )])
-    def local_package_build_test(self, default_folder):
+    @parameterized.expand([(False, False), (True, False), (True, True), (False, True)])
+    def local_package_build_test(self, default_folder, conanfile_path):
         client = TestClient()
         conanfile_template = """
 from conans import ConanFile
@@ -100,21 +100,26 @@ class MyConan(ConanFile):
         client.save({"include/file.h": "foo",
                      "build/lib/mypkg.lib": "mylib",
                      CONANFILE: conanfile_template})
-        recipe_folder = client.current_folder
+        path = client.current_folder
         client.current_folder = os.path.join(client.current_folder, "build")
         client.run("install ..")
 
         if default_folder:
             package_folder = os.path.join(client.current_folder, "package")
-            client.run('package .. --build-folder=.')
+            path = "../conanfile.py" if conanfile_path else ".."
+            client.run('package {0} --build-folder=.'.format(path))
             self.assertEqual(sorted(os.listdir(package_folder)),
                              sorted(["include", "lib", "conaninfo.txt", "conanmanifest.txt"]))
         else:
             package_folder = temp_folder()
             client.current_folder = package_folder
-            build_folder = os.path.join(recipe_folder, "build")
+            build_folder = os.path.join(path, "build")
+
+            if conanfile_path:
+                path = os.path.join(path, "conanfile.py")
+
             client.run('package "{0}" --build_folder="{2}"'
-                       ' --package_folder="{1}"'.format(recipe_folder, package_folder, build_folder))
+                       ' --package_folder="{1}"'.format(path, package_folder, build_folder))
             self.assertEqual(sorted(os.listdir(package_folder)),
                              sorted(["include", "lib", "conaninfo.txt",
                                      "conanmanifest.txt"]))
@@ -139,7 +144,7 @@ class MyConan(ConanFile):
         client.save({"src/include/file.h": "foo",
                      "build/lib/mypkg.lib": "mylib",
                      CONANFILE: conanfile_template})
-        recipe_folder = client.current_folder
+        path = client.current_folder
         client.current_folder = os.path.join(client.current_folder, "build")
         client.run("install ..")
 
@@ -150,7 +155,7 @@ class MyConan(ConanFile):
             package_folder = temp_folder()
             client.run('package "{0}" --build_folder="{0}/build" '
                        '--package_folder="{1}" --source_folder="{0}/src"'.
-                       format(recipe_folder, package_folder))
+                       format(path, package_folder))
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
         self.assertEqual(sorted(os.listdir(package_folder)),
