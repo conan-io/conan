@@ -34,7 +34,7 @@ conanfile_build_new_env = """
 
                 command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(vcvars, self.name, flags))
                 self.run(command)
-        elif tools.os_info.bash_path():
+        elif tools.os_info.bash_path() and (tools.which("aclocal") or tools.which("aclocal.exe")):
             makefile_am = '''
 bin_PROGRAMS = main
 lib_LIBRARIES = libhello{}.a
@@ -64,7 +64,7 @@ AC_OUTPUT
             autotools.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
             autotools.configure()
             autotools.make()
-            self.run("main.exe")
+            self.run("main")
 
         elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
             lang = '-DCONAN_LANGUAGE=%s' % self.options.language

@@ -10,7 +10,7 @@ else{
 	pyvers = ['py27', 'py36']
 }
 
-def module = "\"conans.test_integration conans.test\""
+def module = "\"conans.test\""
 def numcores = "--num_cores=3"
 
 
