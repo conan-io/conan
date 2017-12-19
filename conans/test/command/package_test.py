@@ -30,15 +30,31 @@ class PackageLocalCommandTest(unittest.TestCase):
         client.run("package . --build-folder build2 --install-folder build --package_folder=subdir")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
+        # In current dir subdir with conanfile path
+        prepare_for_package(client)
+        client.run("package ./conanfile.py --build-folder build2 --install-folder build --package_folder=subdir")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
+
         # Default path
         prepare_for_package(client)
         client.run("package . --build-folder build")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build", "package")))
+
+        # Default path with conanfile path
+        prepare_for_package(client)
+        client.run("package ./conanfile.py --build-folder build")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build", "package")))
 
         # Abs path
         prepare_for_package(client)
         pf = os.path.join(client.current_folder, "mypackage/two")
         client.run("package . --build-folder build --package_folder='%s'" % pf)
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
+
+        # Abs path with conanfile path
+        prepare_for_package(client)
+        pf = os.path.join(client.current_folder, "mypackage/two")
+        client.run("package ./conanfile.py --build-folder build --package_folder='%s'" % pf)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
     def package_with_reference_errors_test(self):
