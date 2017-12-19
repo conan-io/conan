@@ -34,7 +34,7 @@ conanfile_build_new_env = """
 
                 command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(vcvars, self.name, flags))
                 self.run(command)
-        elif tools.os_info.bash_path() and (tools.which("aclocal") or tools.which("aclocal.exe")):
+        elif tools.os_info.bash_path() and tools.which("aclocal"):
             makefile_am = '''
 bin_PROGRAMS = main
 lib_LIBRARIES = libhello{}.a
