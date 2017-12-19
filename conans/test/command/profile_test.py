@@ -46,8 +46,8 @@ class ProfileTest(unittest.TestCase):
         pr_path = os.path.join(client.current_folder, "MyProfile")
 
         client.run("profile update settings.os=FakeOS ./MyProfile")
-        self.assertIn("os=FakeOS", load(pr_path))
-        self.assertNotIn("os=Linux", load(pr_path))
+        self.assertIn("\nos=FakeOS", load(pr_path))
+        self.assertNotIn("\nos=Linux", load(pr_path))
 
         client.run("profile get settings.os ./MyProfile")
         self.assertEquals(client.out, "FakeOS\n")
