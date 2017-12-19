@@ -64,7 +64,7 @@ AC_OUTPUT
             autotools.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
             autotools.configure()
             autotools.make()
-            self.run("main")
+            self.run("main.exe" if platform.system == "Windows" else "./main")
 
         elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
             lang = '-DCONAN_LANGUAGE=%s' % self.options.language
