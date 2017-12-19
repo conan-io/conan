@@ -4,6 +4,9 @@ import subprocess
 import sys
 
 import os
+
+from conans.client.tools.files import WSL, MSYS2, CYGWIN
+from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.log import logger
 from conans.client.tools import which
@@ -221,10 +224,48 @@ class OSInfo(object):
         elif version.minor() == "5.11":
             return "Solaris 11"
 
+    @staticmethod
+    def bash_path():
+        if "CONAN_BASH_PATH" not in os.environ:
+            bash_path = None
+            for ext in [".bat", ".exe", ".sh", ""]:
+                bash_path = bash_path or which("bash%s" % ext)
+        else:
+            bash_path = os.getenv("CONAN_BASH_PATH")
+
+        return bash_path
+
+    @staticmethod
+    def uname():
+        if platform.system() != "Windows":
+            raise ConanException("Command only for Windows operating system")
+        custom_bash_path = OSInfo.bash_path()
+        if not custom_bash_path:
+            raise ConanException("bash is not in the path")
+
+        command = '%s -c uname' % custom_bash_path
+        try:
+            ret = subprocess.check_output(command).decode().strip().lower()
+            return ret
+        except:
+            return None
+
+    @staticmethod
+    def detect_windows_subsystem():
+        output = OSInfo.uname()
+        if "cygwin" in output:
+            return CYGWIN
+        elif "msys" in output or "mingw" in output:
+            return MSYS2
+        elif "linux" in output:
+            return WSL
+        else:
+            return None
+
 
 def cross_building(settings, self_os=None, self_arch=None):
-    self_os = self_os or platform.system()
-    self_arch = self_arch or detected_architecture()
+    self_os = self_os or settings.get_safe("build_os") or platform.system()
+    self_arch = self_arch or settings.get_safe("build_arch") or detected_architecture()
     os_setting = settings.get_safe("os")
     arch_setting = settings.get_safe("arch")
     platform_os = {"Darwin": "Macos"}.get(self_os, self_os)

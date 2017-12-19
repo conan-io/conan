@@ -29,8 +29,9 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output):  # @UnusedVariable
+    def __call__(self, command, output, win_bash=False):  # @UnusedVariable
         self.command_called = command
+        self.win_bash = win_bash
         return 0 if self.return_ok else 1
 
 
@@ -401,16 +402,16 @@ compiler:
                 self.output = namedtuple("output", "info")(lambda x: None)
                 self.env = {}
 
-            def run(self, command):
+            def run(self, command, win_bash=False):
                 self.command = command
 
         conanfile = MockConanfile()
         tools.run_in_windows_bash(conanfile, "a_command.bat")
-        self.assertIn("bash --login -c", conanfile.command)
+        self.assertIn("bash.exe --login -c", conanfile.command)
         self.assertIn("^&^& a_command.bat ^", conanfile.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
-            tools.run_in_windows_bash(conanfile, "a_command.bat")
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
             self.assertIn("path\\to\\mybash.exe --login -c", conanfile.command)
 
     def download_retries_test(self):
@@ -464,3 +465,7 @@ compiler:
         # Authorized using headers
         tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
+
+
+    def cross_building_test(self):
+        pass

@@ -7,18 +7,22 @@ from conans.errors import conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
 
 
-def _apply_build_requires(deps_graph, conanfile):
+def _apply_build_requires(deps_graph, conanfile, package_build_requires):
+    """TEMPORARY PATCHED TO ORDER CORRECTLY THE BUILD REQUIRES!!!"""
     requires_nodes = deps_graph.direct_requires()
-    for node in requires_nodes:
-        conan_ref, build_require_conanfile = node
+    for req in package_build_requires:
+        for node in requires_nodes:
+            conan_ref, build_require_conanfile = node
+            if conan_ref.name != req:
+                continue
 
-        conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, conan_ref.name)
-        conanfile.deps_cpp_info.update_deps_cpp_info(build_require_conanfile.deps_cpp_info)
+            conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, conan_ref.name)
+            conanfile.deps_cpp_info.update_deps_cpp_info(build_require_conanfile.deps_cpp_info)
 
-        conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref.name)
-        conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
+            conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref.name)
+            conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
 
-        conanfile.deps_user_info[conan_ref.name] = build_require_conanfile.user_info
+            conanfile.deps_user_info[conan_ref.name] = build_require_conanfile.user_info
 
 
 class _RecipeBuildRequires(OrderedDict):
@@ -87,7 +91,7 @@ class BuildRequires(object):
             build_require_graph = self._install(package_build_requires.values(),
                                                 conanfile.build_requires_options, installer)
 
-            _apply_build_requires(build_require_graph, conanfile)
+            _apply_build_requires(build_require_graph, conanfile, package_build_requires)
             self._output.info("Installed build requirements of: %s" % (str_ref or "PROJECT"))
 
     def _install(self, build_requires_references, build_requires_options, installer):

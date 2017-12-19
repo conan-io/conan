@@ -1,7 +1,10 @@
+import platform
 import sys
 from contextlib import contextmanager
 
 import os
+
+from conans.client.tools.files import which
 
 
 @contextmanager
@@ -43,3 +46,23 @@ def environment_append(env_vars):
 @contextmanager
 def no_op():
     yield
+
+
+@contextmanager
+def remove_from_path(command):
+    curpath = os.getenv("PATH")
+    while 1:
+        with environment_append({"PATH": curpath}):
+            the_command = which(command)
+        if not the_command:
+            break
+        new_path = []
+        if "sysnative" in the_command and platform.system() == "Windows":
+            the_command = the_command.replace("sysnative", "system32")
+        for entry in curpath.split(os.pathsep):
+            if entry.lower() != os.path.dirname(the_command).lower():
+                new_path.append(entry)
+        curpath = os.pathsep.join(new_path)
+
+    with environment_append({"PATH": curpath}):
+        yield
