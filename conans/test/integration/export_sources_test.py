@@ -166,7 +166,12 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports.append("license.txt")
 
         self.assertEqual(scan_folder(self.export_folder), sorted(expected_exports))
-        self.assertFalse(os.path.exists(self.export_sources_folder))
+        if reuploaded and mode == "exports":
+            # In this mode, we know the sources are not required
+            # So the local folder is created, but empty
+            self.assertTrue(os.path.exists(self.export_sources_folder))
+        else:
+            self.assertFalse(os.path.exists(self.export_sources_folder))
 
     def _check_export_uploaded_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":

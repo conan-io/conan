@@ -4,42 +4,15 @@ from os.path import join, normpath
 import platform
 from conans.errors import ConanException
 from conans.util.files import rmdir
-import sys
 
 
-def _check_long_paths_support():
-    if platform.system() != "Windows":
-        return True
-    if sys.version_info < (3, 6):
-        return False
-    from six.moves import winreg
-    try:
-        hKey = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE,
-                              r"SYSTEM\CurrentControlSet\Control\FileSystem")
-        result = winreg.QueryValueEx(hKey, "LongPathsEnabled")
-        key_value = result[0]
-        return key_value == 1
-    except EnvironmentError:
-        return False
-    finally:
-        winreg.CloseKey(hKey)
-    return False
-
-
-long_paths_support = _check_long_paths_support()
-
-if not long_paths_support:
-    from conans.util.windows import path_shortener, rm_conandir
+if platform.system() == "Windows":
+    from conans.util.windows import path_shortener, rm_conandir, conan_expand_user
 else:
     def path_shortener(x, _):
         return x
     conan_expand_user = os.path.expanduser
     rm_conandir = rmdir
-
-if platform.system() == "Windows":
-    from conans.util.windows import conan_expand_user
-else:
-    conan_expand_user = os.path.expanduser
 
 
 EXPORT_FOLDER = "export"
@@ -60,7 +33,6 @@ BUILD_INFO_QMAKE = 'conanbuildinfo.pri'
 BUILD_INFO_QBS = 'conanbuildinfo.qbs'
 BUILD_INFO_VISUAL_STUDIO = 'conanbuildinfo.props'
 BUILD_INFO_XCODE = 'conanbuildinfo.xcconfig'
-BUILD_INFO_YCM = '.ycm_extra_conf.py'
 CONANINFO = "conaninfo.txt"
 CONANENV = "conanenv.txt"
 SYSTEM_REQS = "system_reqs.txt"

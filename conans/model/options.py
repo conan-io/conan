@@ -112,10 +112,10 @@ class PackageOptionValues(object):
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
-                output.werror("%s tried to change %s option %s:%s to %s\n"
-                              "but it was already assigned to %s by %s"
-                              % (down_ref, own_ref, package_name, name, value,
-                                 modified_value, modified_ref))
+                raise ConanException("%s tried to change %s option %s:%s to %s\n"
+                                     "but it was already assigned to %s by %s"
+                                     % (down_ref, own_ref, package_name, name, value,
+                                        modified_value, modified_ref))
             else:
                 self._modified[name] = (value, down_ref)
                 self._dict[name] = value
@@ -345,6 +345,9 @@ class PackageOptions(object):
                       for k, v in definition.items()}
         self._modified = {}
 
+    def __contains__(self, option):
+        return str(option) in self._data
+
     @staticmethod
     def loads(text):
         return PackageOptions(yaml.load(text) or {})
@@ -430,9 +433,9 @@ class PackageOptions(object):
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
-                output.werror("%s tried to change %s option %s to %s\n"
-                              "but it was already assigned to %s by %s"
-                              % (down_ref, own_ref, name, value, modified_value, modified_ref))
+                raise ConanException("%s tried to change %s option %s to %s\n"
+                                     "but it was already assigned to %s by %s"
+                                     % (down_ref, own_ref, name, value, modified_value, modified_ref))
             else:
                 if ignore_unknown:
                     if name in self._data:
@@ -463,6 +466,9 @@ class Options(object):
 
     def clear(self):
         self._package_options.clear()
+
+    def __contains__(self, option):
+        return option in self._package_options
 
     def __getitem__(self, item):
         return self._deps_package_values.setdefault(item, PackageOptionValues())

@@ -1,15 +1,14 @@
-import copy
-
-from conans.model.options import Options, PackageOptions, OptionsValues
-from conans.model.requires import Requirements
-from conans.model.build_info import DepsCppInfo
-from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
-from conans.errors import ConanException
-from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
 
+from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
+from conans.errors import ConanException
+from conans.model.build_info import DepsCppInfo
+from conans.model.env_info import DepsEnvInfo, EnvValues
+from conans.model.options import Options, PackageOptions, OptionsValues
+from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
+from conans.tools import environment_append, no_op
 
 
 def create_options(conanfile):
@@ -78,6 +77,10 @@ def create_exports_sources(conanfile):
         return conanfile.exports_sources
 
 
+def get_env_context_manager(conanfile):
+    return environment_append(conanfile.env) if conanfile.apply_env else no_op()
+
+
 class ConanFile(object):
     """ The base class for all package recipes
     """
@@ -91,6 +94,7 @@ class ConanFile(object):
     author = None  # Main maintainer/responsible for the package, any format
     build_policy = None
     short_paths = False
+    apply_env = True  # Apply environment variables from requires deps_env_info and profiles
 
     def __init__(self, output, runner, settings, conanfile_directory, user=None, channel=None):
         # User defined generators
@@ -125,7 +129,8 @@ class ConanFile(object):
         self._runner = runner
 
         self.conanfile_directory = conanfile_directory
-        self._scope = None
+
+        self.develop = False
 
         # user specified env variables
         self._env_values = EnvValues()  # Updated at runtime, user specified -e
@@ -175,14 +180,6 @@ class ConanFile(object):
         return tools.collect_libs(self, folder=folder)
 
     @property
-    def scope(self):
-        return self._scope
-
-    @scope.setter
-    def scope(self, value):
-        self._scope = value
-
-    @property
     def build_policy_missing(self):
         return self.build_policy == "missing"
 
@@ -215,9 +212,6 @@ class ConanFile(object):
             self.settings.clear()
         This is also the place for conditional requirements
         """
-
-    def imports(self):
-        pass
 
     def build(self):
         self.output.warn("This conanfile has no build step")

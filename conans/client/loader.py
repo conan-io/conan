@@ -26,10 +26,10 @@ class ConanFileLoader(object):
         # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
         self._user_options = profile.options.copy()
-        self._scopes = profile.scopes
 
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
+        self.dev_reference = None
 
     def load_conan(self, conanfile_path, output, consumer=False, reference=None):
         """ loads a ConanFile object from the given file
@@ -62,11 +62,11 @@ class ConanFileLoader(object):
                 self._user_options.descope_options(result.name)
                 result.options.initialize_upstream(self._user_options)
                 self._user_options.clear_unscoped_options()
-                # If this is the consumer project, it has no name
-                result.scope = self._scopes.package_scope()
             else:
-                result.scope = self._scopes.package_scope(result.name)
                 result.in_local_cache = True
+
+            if consumer or (self.dev_reference and self.dev_reference == reference):
+                result.develop = True
 
             return result
         except Exception as e:  # re-raise with file name
@@ -105,7 +105,6 @@ class ConanFileLoader(object):
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)
-        conanfile.scope = self._scopes.package_scope()
         conanfile._env_values.update(self._env_values)
         return conanfile
 
@@ -131,6 +130,5 @@ class ConanFileLoader(object):
             conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []  # remove the default txt generator
-        conanfile.scope = self._scopes.package_scope()
 
         return conanfile

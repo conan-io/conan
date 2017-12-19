@@ -1,0 +1,105 @@
+def slaves = ['Linux', 'Windows', 'Macos']
+
+def pyvers 
+if (env.BRANCH_NAME =~ /(^release.*)|(^master)/) {
+    pyvers = ['py36', 'py27', 'py34']
+}
+else{
+	pyvers = ['py27', 'py36']
+}
+
+def module = "\"conans.test_integration conans.test\""
+def win_tmp_base = "D:\\J\\t\\"
+def runner = ".ci/jenkins/runner.py"
+
+def commit
+
+
+def builders = [:]
+
+for (x in slaves) {
+    def slave = x
+    for (y in pyvers) {
+        def pyver = y
+        builders["${slave} - ${pyver}"] = {
+            node(slave) {
+                stage("${slave} - ${pyver}"){
+                    def vars = checkout scm
+                    commit = vars["GIT_COMMIT"].substring(0, 4)
+                    def workdir = "${commit}/${pyver}"
+
+                    if(slave == "Linux"){
+                        docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
+                            sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api")
+                        }
+                    }
+                    else if(slave == "Windows"){
+                        try{
+                          workdir = "${commit}\\${pyver}"
+                          withEnv(["CONAN_TEST_FOLDER=${win_tmp_base}${workdir}"]){
+                            bat(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} \"${win_tmp_base}${workdir}\" -e rest_api -e windows_ci_excluded")
+                          }
+                        }
+                        finally{
+                          bat(script: "rd /s /q \"${win_tmp_base}${workdir}\"")
+                        }
+                    }
+                    else if(slave == "Macos"){
+                        try{
+                          withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
+                              sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api")
+                          }
+                        }
+                        finally{
+                          sh(script: "rm -rf /tmp/${workdir}")
+                        }
+                    }
+                    //step([$class: 'JUnitResultArchiver', testResults: '**/nosetests.xml'])
+                }
+            }
+        }
+    }
+}
+parallel builders
+
+
+
+
+
+// Run rest_api_test without concurrency between same node
+pyvers = ['py36']
+for (y in pyvers) {
+    builders = [:]
+    def pyver = y
+    builders["Windows Rest API Test"] = {
+        node("Windows"){
+            stage("REST tests Windows ${pyver}"){
+                try{
+                  bat(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} \"${win_tmp_base}${commit}\"")
+                }
+                finally{
+                  bat(script: "rd /s /q \"${win_tmp_base}${commit}\"")
+                }
+            }
+        }
+	}
+	builders["Linux Rest API Test"] = {
+        node("Linux"){
+            stage("REST tests Linux ${pyver}"){
+                docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
+                    sh(script: "python ${runner} conans.test.remote.rest_api_test ${pyver} ${WORKSPACE} /tmp/${commit}")
+                }
+            }
+        }
+	}
+	/*builders["Mac Rest API Test"] = {
+        node("Macos"){
+            stage("REST tests Windows ${pyver}"){
+                withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
+                    sh(script: "tox --workdir /tmp/${commit} -e ${pyver} -- -x conans.test.remote.rest_api_test")
+                }
+            }
+        }
+	}*/ // EXTREMELY SLOW, INVESTIGATE
+	parallel builders
+}

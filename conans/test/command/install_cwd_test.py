@@ -18,6 +18,7 @@ class MyLib(ConanFile):
     version = "0.1"
     exports = "*"
     settings = "os", "compiler", "arch", "build_type"
+    generators = "cmake"
 
     def build(self):
         pass
@@ -30,3 +31,7 @@ class MyLib(ConanFile):
         os.mkdir(os.path.join(self.client.current_folder, "new"))
         self.client.run("install . --install-folder new -g cmake")
         self.assertTrue(os.path.join(self.client.current_folder, "new", "conanbuildinfo.cmake"))
+
+    def install_ref(self):
+        self.client.run("install MyLib/0.1@lasote/stable --build=missing")
+        self.assertEqual(["conanfile.py"], os.listdir(self.client.current_folder))

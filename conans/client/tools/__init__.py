@@ -11,3 +11,5 @@ from .oss import *
 from .system_pm import *
 # noinspection PyUnresolvedReferences
 from .win import *
+# noinspection PyUnresolvedReferences
+from .pkg_config import *

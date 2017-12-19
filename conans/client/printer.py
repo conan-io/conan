@@ -232,10 +232,6 @@ class Printer(object):
                 key = "%s:%s" % (package, name) if package else name
                 envs.append((key, value))
         self._print_profile_section("env", envs, separator='=')
-        scopes = profile.scopes.dumps().splitlines()
-        self._print_colored_line("[scopes]")
-        for scope in scopes:
-            self._print_colored_line(scope, indent=1)
 
     def _print_profile_section(self, name, items, indent=0, separator=": "):
         self._print_colored_line("[%s]" % name, indent=indent)
