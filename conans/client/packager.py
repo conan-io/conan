@@ -40,18 +40,25 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
         conanfile.source_folder = source_folder
         conanfile.build_folder = build_folder
 
+        def recipe_hasmethod(conanfile, method):
+            if method in conanfile.__class__.__dict__:
+                return "function" in str(conanfile.__class__.__dict__[method])
+            else:
+                return False
+
         if source_folder != build_folder:
             conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
             with conanfile_exception_formatter(str(conanfile), "package"):
                 with tools.chdir(source_folder):
                     conanfile.package()
-            conanfile.copy.report(package_output, warn=conanfile.hasattr("package"))
-        conanfile.copy = FileCopier(build_folder, package_folder)
+            warn = recipe_hasmethod(conanfile, "package")
+            conanfile.copy.report(package_output, warn=warn)
 
+        conanfile.copy = FileCopier(build_folder, package_folder)
         with tools.chdir(build_folder):
             with conanfile_exception_formatter(str(conanfile), "package"):
                 conanfile.package()
-        warn = True if conanfile.hasattr("build") and conanfile.hasattr("package") else False
+        warn = recipe_hasmethod(conanfile, "build") and recipe_hasmethod(conanfile, "package")
         conanfile.copy.report(package_output, warn=warn)
     except Exception as e:
         if not local:
