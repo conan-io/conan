@@ -406,7 +406,7 @@ compiler:
                 self.command = command
 
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat")
+        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
         self.assertIn("bash.exe --login -c", conanfile.command)
         self.assertIn("^&^& a_command.bat ^", conanfile.command)
 

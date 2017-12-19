@@ -1,5 +1,5 @@
+from conans.client.build.run_environment import RunEnvironment
 from conans.client.generators.virtualenv import VirtualEnvGenerator
-from conans.client.run_environment import RunEnvironment
 
 
 class VirtualRunEnvGenerator(VirtualEnvGenerator):

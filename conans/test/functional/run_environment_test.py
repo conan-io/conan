@@ -1,6 +1,6 @@
 import unittest
 
-from conans.client.run_environment import RunEnvironment
+from conans.client.build.run_environment import RunEnvironment
 
 
 class CppInfo(object):
