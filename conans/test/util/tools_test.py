@@ -157,24 +157,31 @@ class HelloConan(ConanFile):
             spt.update()
             self.assertEquals(runner.command_called, "sudo yum check-update")
 
+            os_info.linux_distro = "opensuse"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo zypper ref")
+
+            
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "sudo yum install -y a_package")
-
+            
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
                 self.assertEquals(runner.command_called, "sudo apt-get install -y --no-install-recommends a_package")
-
+                
             runner.return_ok = True
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "dpkg -s a_package")
 
+            
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
