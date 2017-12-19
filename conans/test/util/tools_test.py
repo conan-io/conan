@@ -407,7 +407,8 @@ compiler:
 
         conanfile = MockConanfile()
         tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-        self.assertIn("bash.exe --login -c", conanfile.command)
+        self.assertIn("bash", conanfile.command)
+        self.assertIn("--login -c", conanfile.command)
         self.assertIn("^&^& a_command.bat ^", conanfile.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
