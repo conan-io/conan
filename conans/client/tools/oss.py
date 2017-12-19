@@ -110,6 +110,11 @@ class OSInfo(object):
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
+    @property
+    def with_zypper(self):
+        return self.is_linux and self.linux_distro in \
+            ("opensuse", "sles")
+    
     @staticmethod
     def get_win_os_version():
         """
