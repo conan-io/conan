@@ -280,7 +280,7 @@ class ConanInstaller(object):
         self._build_mode = build_mode
         self._built_packages = set()  # To avoid re-building twice the same package reference
 
-    def install(self, deps_graph):
+    def install(self, deps_graph, profile_build_requires):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         t1 = time.time()
@@ -292,7 +292,7 @@ class ConanInstaller(object):
         skip_private_nodes = self._compute_private_nodes(deps_graph)
         logger.debug("Install-Process private %s", (time.time() - t1))
         t1 = time.time()
-        self._build(nodes_by_level, skip_private_nodes, deps_graph)
+        self._build(nodes_by_level, skip_private_nodes, deps_graph, profile_build_requires)
         logger.debug("Install-build %s", (time.time() - t1))
 
     def _compute_private_nodes(self, deps_graph):
@@ -335,7 +335,7 @@ class ConanInstaller(object):
         return [(PackageReference(conan_ref, package_id), conan_file)
                 for conan_ref, package_id, conan_file, build in nodes if build]
 
-    def _build(self, nodes_by_level, skip_private_nodes, deps_graph):
+    def _build(self, nodes_by_level, skip_private_nodes, deps_graph, profile_build_requires):
         """ The build assumes an input of conans ordered by degree, first level
         should be independent from each other, the next-second level should have
         dependencies only to first level conans.
@@ -373,7 +373,7 @@ class ConanInstaller(object):
                 elif self._build_mode.forced(conan_file, conan_ref):
                     output.warn('Forced build from source')
 
-                self._build_requires.install(conan_ref, conan_file, self)
+                self._build_requires.install(conan_ref, conan_file, self, profile_build_requires)
 
                 t1 = time.time()
                 # Assign to node the propagated info
