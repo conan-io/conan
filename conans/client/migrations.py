@@ -45,7 +45,7 @@ class ClientMigrator(Migrator):
             _migrate_lock_files(self.client_cache, self.out)
             old_settings = """
 os:
-    Windows
+    Windows:
     WindowsStore:
         version: ["8.1", "10.0"]
     Linux:

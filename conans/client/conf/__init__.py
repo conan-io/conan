@@ -16,7 +16,7 @@ build_os: [Windows, Linux, Macos]
 build_arch: [x86, x86_64]
 os:
     Windows:
-        subsystem: [None, cygwin, msys2, wsl]
+        subsystem: [None, cygwin, msys, msys2, wsl]
     WindowsStore:
         version: ["8.1", "10.0"]
     Linux:

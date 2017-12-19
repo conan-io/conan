@@ -210,7 +210,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
     subsystem = subsystem or os_info.detect_windows_subsystem()
 
     if not subsystem:
-        raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin or specify a build_require"
+        raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin or specify a build_require "
                              "to apply it.")
 
     if subsystem == MSYS2 and msys_mingw:
