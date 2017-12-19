@@ -293,4 +293,5 @@ def which(filename):
                     trick_path = filepath.replace("system32", "sysnative")
                     if verify(trick_path):
                         return trick_path
+
     return None
