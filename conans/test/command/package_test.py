@@ -129,8 +129,8 @@ class MyConan(ConanFile):
         self.assertEqual(os.listdir(os.path.join(package_folder, "include")), ["file.h"])
         self.assertEqual(os.listdir(os.path.join(package_folder, "lib")), ["mypkg.lib"])
 
-    @parameterized.expand([(False, ), (True, )])
-    def local_package_source_test(self, default_folder):
+    @parameterized.expand([(False, False), (True, False), (True, True), (False, True)])
+    def local_package_source_test(self, default_folder, conanfile_path):
         client = TestClient()
         conanfile_template = """
 from conans import ConanFile
@@ -144,18 +144,24 @@ class MyConan(ConanFile):
         client.save({"src/include/file.h": "foo",
                      "build/lib/mypkg.lib": "mylib",
                      CONANFILE: conanfile_template})
-        path = client.current_folder
+        conanfile_folder = client.current_folder
+        path = conanfile_folder
         client.current_folder = os.path.join(client.current_folder, "build")
         client.run("install ..")
 
         if default_folder:
             package_folder = os.path.join(client.current_folder, "package")
-            client.run('package .. --build_folder=. --source_folder=../src ')
+            path = "../conanfile.py" if conanfile_path else ".."
+            client.run('package {0} --build_folder=. --source_folder=../src'.format(path))
         else:
             package_folder = temp_folder()
-            client.run('package "{0}" --build_folder="{0}/build" '
-                       '--package_folder="{1}" --source_folder="{0}/src"'.
-                       format(path, package_folder))
+
+            if conanfile_path:
+                path = os.path.join(path, "conanfile.py")
+
+            client.run('package "{0}" --build_folder="{1}/build" '
+                       '--package_folder="{2}" --source_folder="{1}/src"'.
+                       format(path, conanfile_folder, package_folder))
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
         self.assertEqual(sorted(os.listdir(package_folder)),
