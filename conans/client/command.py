@@ -504,8 +504,8 @@ class Command(object):
             if "@" in args.path and ConanFileReference.loads(args.path):
                 raise ArgumentError(None,
                                     "'conan package' doesn't accept a reference anymore. "
-                                    " The path parameter should be a folder containing a "
-                                    "conanfile.py file. If you were using the 'conan package' "
+                                    "The path parameter should be a conanfile.py or a folder "
+                                    "containing one. If you were using the 'conan package' "
                                     "command for development purposes we recommend to use "
                                     "the local development commands: 'conan build' + "
                                     "'conan package' and finally 'conan create' to regenerate the "
