@@ -223,13 +223,17 @@ class ConanFile(object):
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, output=True, cwd=None):
-        """ runs such a command in the folder the Conan
-        is defined
-        """
-        retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME),  cwd)
+    def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True):
+        if not win_bash:
+            retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME),  cwd)
+        else:
+            retcode = tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
+                                                msys_mingw=msys_mingw)
+
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
+
+        return retcode
 
     def package_id(self):
         """ modify the conans info, typically to narrow values

@@ -12,8 +12,11 @@ from conans.util.files import load
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
 default_settings_yml = """
+build_os: [Windows, Linux, Macos]
+build_arch: [x86, x86_64]
 os:
     Windows:
+        subsystem: [None, cygwin, msys, msys2, wsl]
     WindowsStore:
         version: ["8.1", "10.0"]
     Linux:

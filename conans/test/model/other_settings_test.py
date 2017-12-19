@@ -71,7 +71,7 @@ class SayConan(ConanFile):
         '''Test wrong values and wrong constraints'''
         self.client.client_cache.default_profile
         default_conf = load(self.client.paths.default_profile_path)
-        new_conf = default_conf.replace("os=", "# os=")
+        new_conf = default_conf.replace("\nos=", "\n# os=")
         save(self.client.paths.default_profile_path, new_conf)
         # MISSING VALUE FOR A SETTING
         content = """
