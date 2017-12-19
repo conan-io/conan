@@ -480,7 +480,7 @@ class Command(object):
         'export-pkg' after a 'build' command.
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("path", help="path to a foler containing a recipe (conanfile.py) "
+        parser.add_argument("path", help="path to a folder containing a recipe (conanfile.py) "
                             "or to a recipe file, e.g., conan package folder/conanfile.py")
         parser.add_argument("--source-folder", "--source_folder", "-sf", action=OnceArgument,
                             help="local folder containing the sources. Defaulted to the directory "
