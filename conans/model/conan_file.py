@@ -174,9 +174,6 @@ class ConanFile(object):
                                      "but self.user is used in conanfile")
         return self._user
 
-    def hasattr(self, attr):
-        return attr in self.__dict__
-
     def collect_libs(self, folder="lib"):
         self.output.warn("Use 'self.collect_libs' is deprecated, "
                          "use tools.collect_libs(self) instead")
