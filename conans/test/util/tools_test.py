@@ -136,7 +136,9 @@ class HelloConan(ConanFile):
             runner = RunnerMock()
             # fake os info to linux debian, default sudo
             os_info = OSInfo()
+            os_info.is_macos = False
             os_info.is_linux = True
+            os_info.is_windows = False
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
