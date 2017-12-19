@@ -45,8 +45,9 @@ class AutoToolsBuildEnvironment(object):
     - LDFLAGS (-L, others like -m64 -m32) linker
     """
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, win_bash=False):
         self._conanfile = conanfile
+        self._win_bash = win_bash
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._arch = conanfile.settings.get_safe("arch")
         self._build_type = conanfile.settings.get_safe("build_type")
@@ -160,14 +161,16 @@ class AutoToolsBuildEnvironment(object):
         with environment_append(pkg_env):
             with environment_append(self.vars):
                 self._conanfile.run("%s/configure %s %s"
-                                    % (configure_dir, args_to_string(args), " ".join(triplet_args)))
+                                    % (configure_dir, args_to_string(args), " ".join(triplet_args)),
+                                    win_bash=self._win_bash)
 
     def make(self, args="", make_program=None):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(self.vars):
             str_args = args_to_string(args)
             cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
-            self._conanfile.run("%s" % join_arguments([make_program, str_args, cpu_count_option]))
+            self._conanfile.run("%s" % join_arguments([make_program, str_args, cpu_count_option]),
+                                win_bash=self._win_bash)
 
     @property
     def _sysroot_flag(self):
