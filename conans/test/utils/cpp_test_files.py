@@ -17,7 +17,7 @@ conanfile_build_new_env = """
         import os
         from conans import VisualStudioBuildEnvironment, AutoToolsBuildEnvironment
         from conans.tools import environment_append, vcvars_command, save
-
+        from conans import tools
 
         if self.settings.compiler == "Visual Studio":
             env_build = VisualStudioBuildEnvironment(self)
@@ -34,7 +34,7 @@ conanfile_build_new_env = """
 
                 command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(vcvars, self.name, flags))
                 self.run(command)
-        elif self.settings.compiler == "gcc" and self.settings.os == "Linux":
+        elif tools.os_info.bash_path() and (tools.which("aclocal") or tools.which("aclocal.exe")):
             makefile_am = '''
 bin_PROGRAMS = main
 lib_LIBRARIES = libhello{}.a
@@ -54,16 +54,20 @@ AC_OUTPUT
 '''
             save("Makefile.am", makefile_am)
             save("configure.ac", configure_ac)
-            self.run("aclocal")
-            self.run("autoconf")
-            self.run("automake --add-missing --foreign")
-
-            env_build = AutoToolsBuildEnvironment(self)
-            env_build.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
-
-            with environment_append(env_build.vars):
-                self.run("./configure")
-                self.run("make")
+            
+            iswin = self.settings.os == "Windows"
+            self.run("aclocal", win_bash=iswin)
+            self.run("autoconf", win_bash=iswin)
+            self.run("automake --add-missing --foreign", win_bash=iswin)
+           
+            autotools = AutoToolsBuildEnvironment(self, win_bash=iswin)
+            autotools.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
+            autotools.configure()
+            autotools.make()
+            env = {"DYLD_LIBRARY_PATH": ".",
+                   "LD_LIBRARY_PATH": "."}
+            with tools.environment_append(env):
+                self.run("main.exe" if platform.system == "Windows" else "./main")
 
         elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
             lang = '-DCONAN_LANGUAGE=%s' % self.options.language
