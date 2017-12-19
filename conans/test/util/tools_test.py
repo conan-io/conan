@@ -160,7 +160,7 @@ class HelloConan(ConanFile):
             os_info.linux_distro = "opensuse"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "sudo zypper ref")
+            self.assertEquals(runner.command_called, "sudo zypper --non-interactive ref")
 
             
             os_info.linux_distro = "redhat"
