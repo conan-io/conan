@@ -31,7 +31,6 @@ for (x in slaves) {
         builders["${slave} - ${pyver}"] = {
             node(slave) {
                 stage("${slave} - ${pyver}"){
-                    def vars
                     def workdir
                     def sourcedir
                     def base_source
