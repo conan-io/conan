@@ -15,6 +15,7 @@ def numcores = "--num_cores=3"
 
 
 def win_tmp_base = "D:/J/t/"
+def rest_tmp_base = "/tmp/"
 def runner = ".ci/jenkins/runner.py"
 
 def commit
@@ -43,7 +44,7 @@ for (x in slaves) {
                         ])
                         commit = vars["GIT_COMMIT"].substring(0, 4)
                         branch = vars["GIT_BRANCH"]
-                        var base_dir = (slave == "Windows") ? win_tmp_base : "/tmp/"
+                        def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
                         workdir = "${base_dir}${commit}/${pyver}"
                         base_source = "${base_dir}source/${commit}"
                         sourcedir = "${base_source}/${pyver}"
