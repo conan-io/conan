@@ -42,7 +42,7 @@ class PackageLocalCommandTest(unittest.TestCase):
 
         # Default path with conanfile path
         prepare_for_package(client)
-        client.run("package ./conanfile.py --build-folder build")
+        client.run("package conanfile.py --build-folder build")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build", "package")))
 
         # Abs path
@@ -54,7 +54,9 @@ class PackageLocalCommandTest(unittest.TestCase):
         # Abs path with conanfile path
         prepare_for_package(client)
         pf = os.path.join(client.current_folder, "mypackage/two")
-        client.run("package ./conanfile.py --build-folder build --package_folder='%s'" % pf)
+        os.rename(os.path.join(client.current_folder, "conanfile.py"),
+                  os.path.join(client.current_folder, "my_conanfile.py"))
+        client.run("package ./my_conanfile.py --build-folder build --package_folder='%s'" % pf)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
     def package_with_reference_errors_test(self):
