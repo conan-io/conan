@@ -135,7 +135,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('- CONAN_REFERENCE: "MyPackage/1.3"', travis)
         self.assertIn('- CONAN_USERNAME: "myuser"', travis)
         self.assertIn('- CONAN_CHANNEL: "testing"', travis)
-        self.assertIn('env: CONAN_GCC_VERSIONS=5.4 CONAN_DOCKER_IMAGE=lasote/conangcc54',
+        self.assertIn('env: CONAN_GCC_VERSIONS=5 CONAN_DOCKER_IMAGE=lasote/conangcc5',
                       travis)
 
         gitlab = load(os.path.join(root, ".gitlab-ci.yml"))
@@ -143,7 +143,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('CONAN_REFERENCE: "MyPackage/1.3"', gitlab)
         self.assertIn('CONAN_USERNAME: "myuser"', gitlab)
         self.assertIn('CONAN_CHANNEL: "testing"', gitlab)
-        self.assertIn('CONAN_GCC_VERSIONS: "5.4"', gitlab)
+        self.assertIn('CONAN_GCC_VERSIONS: "5"', gitlab)
 
     def new_ci_test_partial(self):
         client = TestClient()

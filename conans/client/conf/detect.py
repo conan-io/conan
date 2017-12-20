@@ -214,8 +214,9 @@ def _detect_os_arch(result, output):
                      'amd64': 'x86_64',
                      'aarch64': 'armv8',
                      'sun4v': 'sparc'}
-
-    result.append(("os", detected_os()))
+    the_os = detected_os()
+    result.append(("os", the_os))
+    result.append(("build_os", the_os))
     arch = architectures.get(platform.machine().lower(), platform.machine().lower())
     if arch.startswith('arm'):
         for a in ("armv6", "armv7hf", "armv7", "armv8"):
@@ -226,6 +227,7 @@ def _detect_os_arch(result, output):
             output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                          "Please check your conan.conf and settings.yml files" % arch)
     result.append(("arch", arch))
+    result.append(("build_arch", arch))
 
 
 def detect_defaults_settings(output):
