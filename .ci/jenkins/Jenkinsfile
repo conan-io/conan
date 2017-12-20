@@ -34,7 +34,7 @@ for (x in slaves) {
                     def workdir
                     def sourcedir
                     def base_source
-                    lock('source_code') {
+                    lock('source_code') { // Prepare a clean new directory with the sources
                         vars = checkout([
                            $class: 'GitSCM',
                            branches: scm.branches,
@@ -47,15 +47,23 @@ for (x in slaves) {
                             workdir = "${win_tmp_base}${commit}\\${pyver}"
                             base_source = "${win_tmp_base}source\\${commit}"
                             sourcedir = "${base_source}\\${pyver}"
+                            if(!fileExists sourcedir){ // same commit, same source, no problem
+                                dir(base_source){ // Trick to create the parent
+                                    bat(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
+                                }
+                            }
                         }
                         else{
                             workdir = "/tmp/${commit}/${pyver}"
                             base_source = "/tmp/source/${commit}"
                             sourcedir = "${base_source}/${pyver}"
+                            if(!fileExists sourcedir){ // same commit, same source, no problem
+                                dir(base_source){ // Trick to create the parent
+                                    sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
+                                }
+                            }
                         }
-                        dir(base_source){ // Trick to create the parent
-                            sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
-                        }
+
                     }
 
                     if(slave == "Linux"){
