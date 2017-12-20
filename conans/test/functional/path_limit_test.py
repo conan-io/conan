@@ -217,9 +217,8 @@ class ConanLib(ConanFile):
     generators = "cmake"
 
     def build(self):
-        self.output.info("%s/%s" % (self.conanfile_directory, self.name))
-        # print os.listdir(self.conanfile_directory)
-        path = os.path.join(self.conanfile_directory, self.name)
+        self.output.info("%s/%s" % (self.build_folder, self.name))
+        path = os.path.join(self.build_folder, self.name)
         # print "PATH EXISTS ", os.path.exists(path)
         # print os.listdir(path)
         path = os.path.join(path, "myfile.txt")
