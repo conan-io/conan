@@ -193,24 +193,23 @@ class ConanAPIV1(object):
                                   update, build_modes=build_modes)
 
     @api_method
-    def create(self, profile_name=None, settings=None,
+    def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
+               profile_name=None, settings=None,
                options=None, env=None, test_folder=None, not_export=False,
                build_modes=None,
                keep_source=False, verify=None,
                manifests=None, manifests_interactive=None,
-               remote=None, update=False, conan_file_path=None, filename=None,
-               user=None, channel=None, name=None, version=None):
+               remote=None, update=False):
 
         settings = settings or []
         options = options or []
         env = env or []
 
         cwd = os.getcwd()
-        conanfile_folder = self._abs_relative_to(conan_file_path, cwd, default=cwd)
+        conanfile_path = self._abs_relative_to(conanfile_path, cwd)
 
         if not name or not version:
-            conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename or CONANFILE)
-            conanfile = load_conanfile_class(conanfile_abs_path)
+            conanfile = load_conanfile_class(conanfile_path)
             name, version = conanfile.name, conanfile.version
             if not name or not version:
                 raise ConanException("conanfile.py doesn't declare package name or version")
@@ -220,8 +219,7 @@ class ConanAPIV1(object):
         # Forcing an export!
         if not not_export:
             scoped_output.highlight("Exporting package recipe")
-            self._manager.export(user, channel, conanfile_folder, keep_source=keep_source,
-                                 name=name, version=version, filename=filename)
+            self._manager.export(conanfile_path, name, version, user, channel, keep_source)
 
         if build_modes is None:  # Not specified, force build the tested library
             build_modes = [name]
@@ -234,7 +232,7 @@ class ConanAPIV1(object):
         def get_test_conanfile_path(tf):
             """Searchs in the declared test_folder or in the standard locations"""
             test_folders = [tf] if tf else ["test_package", "test"]
-            base_folder = self._abs_relative_to(conan_file_path, cwd, default=cwd)
+            base_folder = self._abs_relative_to(conanfile_path, cwd, default=cwd)
             for test_folder_name in test_folders:
                 test_folder = os.path.join(base_folder, test_folder_name)
                 test_conanfile_path = os.path.join(test_folder, "conanfile.py")
@@ -291,11 +289,10 @@ class ConanAPIV1(object):
 
         # Checks that no both settings and info files are specified
         if install_folder and existing_info_files(install_folder) and \
-        (profile_name or settings or options or env):
+                (profile_name or settings or options or env):
             raise ConanException("%s and %s are found, at '%s' folder, so specifying profile, "
                                  "settings, options or env is not allowed" % (CONANINFO, BUILD_INFO,
                                                                               install_folder))
-
 
         infos_present = existing_info_files(install_folder)
         if not infos_present:
@@ -304,13 +301,13 @@ class ConanAPIV1(object):
         else:
             profile = read_conaninfo_profile(install_folder)
 
-        conanfile_abs_path = self._get_conanfile_path(path, "conanfile.py")
-        conanfile = load_conanfile_class(conanfile_abs_path)
+        conanfile_path = self._get_conanfile_path(path, "conanfile.py")
+        conanfile = load_conanfile_class(conanfile_path)
         if (name and conanfile.name and conanfile.name != name) or \
            (version and conanfile.version and conanfile.version != version):
             raise ConanException("Specified name/version doesn't match with the "
                                  "name/version in the conanfile")
-        self._manager.export(user, channel, path, name=name, version=version)
+        self._manager.export(conanfile_path, name, version, user, channel)
 
         if not (name and version):
             name = conanfile.name
@@ -559,12 +556,14 @@ class ConanAPIV1(object):
         self._manager.imports_undo(manifest_path)
 
     @api_method
-    def export(self, user, channel, path=None, keep_source=False, filename=None, cwd=None,
-               name=None, version=None):
-        cwd = prepare_cwd(cwd)
-        current_path = os.path.abspath(path or cwd)
-        self._manager.export(user, channel, current_path, keep_source, filename=filename, name=name,
-                             version=version)
+    def export(self, path, name, version, user, channel, keep_source=False):
+        conanfile_path = self._abs_relative_to(path, os.getcwd())
+        if os.path.isdir(conanfile_path):
+            conanfile_path = os.path.join(conanfile_path, CONANFILE)
+        elif not os.path.isfile(path):
+            raise ConanException("Conanfile not found: %s" % path)
+
+        self._manager.export(conanfile_path, name, version, user, channel, keep_source)
 
     @api_method
     def remove(self, pattern, query=None, packages=None, builds=None, src=False, force=False,

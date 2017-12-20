@@ -52,6 +52,10 @@ class OnceArgument(argparse.Action):
         setattr(namespace, self.dest, values)
 
 
+_PATH_HELP = ("path to a folder containing a recipe (conanfile.py) "
+              "or to a recipe file, e.g., conan package folder/conanfile.py")
+
+
 class Command(object):
     """ A single command of the conan application, with all the first level commands.
     Manages the parsing of parameters and delegates functionality in
@@ -562,7 +566,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg .")
-        parser.add_argument("path", help='path to a recipe (conanfile.py). e.j: "." ')
+        parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe (conanfile.py)')
@@ -618,22 +622,19 @@ class Command(object):
         to any remote with the "conan upload" command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
+        parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
-                                              ' are not declared in the recipe')
-        parser.add_argument('--path', '-p', default=None, action=OnceArgument,
-                            help='Optional. Folder with a %s. Default current directory.'
-                            % CONANFILE)
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
+                                              ' are not declared in the recipe (conanfile.py)')
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in the local cache. '
                                  'Use for testing purposes only')
         args = parser.parse_args(*args)
         name, version, user, channel = get_reference_fields(args.reference)
 
-        return self._conan.export(user=user, channel=channel, path=args.path,
-                                  keep_source=args.keep_source, filename=args.file,
-                                  name=name, version=version)
+        return self._conan.export(path=args.path,
+                                  name=name, version=version, user=user, channel=channel,
+                                  keep_source=args.keep_source)
 
     def remove(self, *args):
         """Removes packages or binaries matching pattern from local cache or remote.

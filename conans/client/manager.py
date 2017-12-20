@@ -155,10 +155,9 @@ class ConanManager(object):
             cache_settings.remove_undefined()
         return ConanFileLoader(self._runner, cache_settings, profile)
 
-    def export(self, user, channel, conan_file_path, keep_source=False, filename=None, name=None,
-               version=None):
-        cmd_export(user, channel, conan_file_path, self._user_io.out, self._search_manager,
-                   self._client_cache, keep_source, filename, name, version)
+    def export(self, conanfile_path, name, version, user, channel,  keep_source=False):
+        cmd_export(conanfile_path, name, version, user, channel, keep_source,
+                   self._user_io.out, self._search_manager, self._client_cache)
 
     def export_pkg(self, reference, source_folder, build_folder, install_folder, profile, force):
 
