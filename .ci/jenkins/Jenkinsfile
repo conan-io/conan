@@ -49,7 +49,7 @@ for (x in slaves) {
                             sourcedir = "${base_source}\\${pyver}"
                             if(!fileExists(sourcedir)){ // same commit, same source, no problem
                                 dir(base_source){ // Trick to create the parent
-                                    bat(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
+                                    bat((script: "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}')\"")
                                 }
                             }
                         }
@@ -59,7 +59,7 @@ for (x in slaves) {
                             sourcedir = "${base_source}/${pyver}"
                             if(!fileExists(sourcedir)){ // same commit, same source, no problem
                                 dir(base_source){ // Trick to create the parent
-                                    sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
+                                    sh(script: "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}')\"")
                                 }
                             }
                         }
