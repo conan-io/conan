@@ -493,7 +493,6 @@ class ConanAPIV1(object):
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg_folder)
 
-        path = self._get_conanfile_path_from_dir(path)
         if path.endswith(".txt"):
             raise ConanException("A conanfile.py is needed to call 'conan package' "
                                  "(not valid conanfile.txt)")
