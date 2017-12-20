@@ -14,7 +14,7 @@ def module = "\"conans.test\""
 def numcores = "--num_cores=3"
 
 
-def win_tmp_base = "D:\\J\\t\\"
+def win_tmp_base = "D:/J/t/"
 def runner = ".ci/jenkins/runner.py"
 
 def commit
@@ -44,12 +44,12 @@ for (x in slaves) {
                         commit = vars["GIT_COMMIT"].substring(0, 4)
                         branch = vars["GIT_BRANCH"]
                         if(slave == "Windows"){
-                            workdir = "${win_tmp_base}${commit}\\${pyver}"
-                            base_source = "${win_tmp_base}source\\${commit}"
-                            sourcedir = "${base_source}\\${pyver}"
+                            workdir = "${win_tmp_base}${commit}/${pyver}"
+                            base_source = "${win_tmp_base}source/${commit}"
+                            sourcedir = "${base_source}/${pyver}"
                             if(!fileExists(sourcedir)){ // same commit, same source, no problem
                                 dir(base_source){ // Trick to create the parent
-                                    bat(script: "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}'.replace('\\', '/'))\"")
+                                    bat(script: "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}')\"")
                                 }
                             }
                         }
