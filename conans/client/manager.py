@@ -124,12 +124,11 @@ class ConanManager(object):
 
         return conanfile
 
-    def _load_install_conanfile(self, loader, reference_or_path, conanfile_filename, cwd=None):
+    def _load_install_conanfile(self, loader, reference_or_path, conanfile_filename):
         """loads a conanfile for installation: install, info
-        cwd only used for virtuals, to pass it the current directory and make available the
-        conanfile.conanfile_directory (smell)"""
+        """
         if isinstance(reference_or_path, ConanFileReference):
-            conanfile = loader.load_virtual([reference_or_path], cwd)
+            conanfile = loader.load_virtual([reference_or_path])
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
             try:
@@ -305,7 +304,7 @@ class ConanManager(object):
     def install(self, reference, install_folder, profile, remote=None,
                 build_modes=None, filename=None, update=False,
                 manifest_folder=None, manifest_verify=False, manifest_interactive=False,
-                generators=None, no_imports=False, inject_require=None, cwd=None, install_reference=False):
+                generators=None, no_imports=False, inject_require=None, install_reference=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -322,7 +321,6 @@ class ConanManager(object):
         written
         @param no_imports: Install specified packages but avoid running imports
         @param inject_require: Reference to add as a requirement to the conanfile
-        @param cwd: Only used in case of reference, to get a conanfile_directory to a virtual SMELL
         """
         if generators is not False:
             generators = set(generators) if generators else set()
@@ -338,7 +336,7 @@ class ConanManager(object):
         loader = self.get_loader(profile)
         if not install_reference and isinstance(reference, ConanFileReference):  # is a create
             loader.dev_reference = reference
-        conanfile = self._load_install_conanfile(loader, reference, filename, cwd=cwd)
+        conanfile = self._load_install_conanfile(loader, reference, filename)
         if inject_require:
             self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
@@ -470,7 +468,6 @@ class ConanManager(object):
         try:
             mkdir(build_folder)
             os.chdir(build_folder)
-            conan_file.conanfile_directory = source_folder
             conan_file.build_folder = build_folder
             conan_file.source_folder = source_folder
             conan_file.package_folder = package_folder

@@ -4,7 +4,7 @@ from conans import tools
 from conans.test.utils.tools import TestClient
 import os
 from conans.paths import CONANFILE
-from conans.util.files import load
+from conans.util.files import load, mkdir
 from conans.test.utils.test_files import temp_folder
 from nose_parameterized import parameterized
 
@@ -18,16 +18,18 @@ class PackageLocalCommandTest(unittest.TestCase):
             the_client.save({"src/header.h": "contents"}, clean_first=True)
             the_client.run("new lib/1.0 -s")
 
-            # don't need real build
+            # don't need build method
             tools.replace_in_file(os.path.join(client.current_folder,
-                                               "conanfile.py"), "cmake =",
-                                  "return\n#")
+                                               "conanfile.py"),
+                                               "def build",
+                                               "def skip_build")
             the_client.run("install . --install-folder build")
-            the_client.run("build . --build-folder build2 --install-folder build")
+            mkdir(os.path.join(client.current_folder, "build2"))
 
         # In current dir subdir
         prepare_for_package(client)
         client.run("package . --build-folder build2 --install-folder build --package_folder=subdir")
+        self.assertNotIn("package(): WARN: No files copied!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
         # In current dir subdir with conanfile path
@@ -38,6 +40,7 @@ class PackageLocalCommandTest(unittest.TestCase):
         # Default path
         prepare_for_package(client)
         client.run("package . --build-folder build")
+        self.assertNotIn("package(): WARN: No files copied!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build", "package")))
 
         # Default path with conanfile path
@@ -49,6 +52,7 @@ class PackageLocalCommandTest(unittest.TestCase):
         prepare_for_package(client)
         pf = os.path.join(client.current_folder, "mypackage/two")
         client.run("package . --build-folder build --package_folder='%s'" % pf)
+        self.assertNotIn("package(): WARN: No files copied!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
         # Abs path with conanfile path

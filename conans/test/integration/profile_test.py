@@ -268,7 +268,6 @@ class DefaultNameConan(ConanFile):
 
     def build(self):
         # Print environment vars
-        # self.run('cmake %s %s' % (self.conanfile_directory, cmake.command_line))
         if self.settings.os == "Windows":
             self.run('echo "My var is %ONE_VAR%"')
         else:
