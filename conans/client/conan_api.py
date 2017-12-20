@@ -463,15 +463,16 @@ class ConanAPIV1(object):
         return deps_graph, graph_updates_info, project_reference
 
     @api_method
-    def build(self, path, source_folder=None, package_folder=None, filename=None,
-              build_folder=None, install_folder=None):
+    def build(self, path, source_folder=None, package_folder=None, build_folder=None,
+              install_folder=None):
 
         cwd = os.getcwd()
         path = self._abs_relative_to(path, cwd)
         path = self._get_conanfile_path_from_dir(path)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
         install_folder = self._abs_relative_to(install_folder, cwd, default=build_folder)
-        source_folder = self._abs_relative_to(source_folder, cwd, default=self._get_dir_from_conanfile_path(path))
+        source_folder = self._abs_relative_to(source_folder, cwd,
+                                              default=self._get_dir_from_conanfile_path(path))
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg_folder)
 
