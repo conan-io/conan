@@ -45,7 +45,7 @@ class HelloReuseConan(ConanFile):
     requires = "Hello/0.1@lasote/stable"
 
     def test(self):
-        self.conanfile_directory
+        pass
 """
         self.client.save({"conanfile.py": self.conanfile,
                           "test/conanfile.py": self.test_conanfile})

@@ -38,8 +38,8 @@ class CMakeTest(unittest.TestCase):
         settings.build_type = "Release"
         conan_file = ConanFileMock()
         conan_file.settings = settings
-        conan_file.source_folder = "my_cache_source_folder"
-        conan_file.build_folder = "my_cache_build_folder"
+        conan_file.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
+        conan_file.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
         cmake = CMake(conan_file)
         cmake.configure(source_dir="../subdir", build_dir="build")
         linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
@@ -55,37 +55,37 @@ class CMakeTest(unittest.TestCase):
 
         cmake.configure(build_dir="build")
         build_expected = quote_var("build")
-        source_expected = quote_var("my_cache_source_folder")
+        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
         self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
         cmake.configure()
-        build_expected = quote_var("my_cache_build_folder")
-        source_expected = quote_var("my_cache_source_folder")
+        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder"))
+        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
         self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
         cmake.configure(source_folder="source", build_folder="build")
-        build_expected = quote_var(os.path.join("my_cache_build_folder", "build"))
-        source_expected = quote_var(os.path.join("my_cache_source_folder", "source"))
+        build_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_build_folder", "build")))
+        source_expected = quote_var(os.path.join(os.path.join(self.tempdir, "my_cache_source_folder", "source")))
         self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
         conan_file.in_local_cache = True
         cmake.configure(source_folder="source", build_folder="build",
                         cache_build_folder="rel_only_cache")
-        build_expected = quote_var(os.path.join("my_cache_build_folder", "rel_only_cache"))
-        source_expected = quote_var(os.path.join("my_cache_source_folder", "source"))
+        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
+        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
         self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
         conan_file.in_local_cache = False
         cmake.configure(source_folder="source", build_folder="build",
                         cache_build_folder="rel_only_cache")
-        build_expected = quote_var(os.path.join("my_cache_build_folder", "build"))
-        source_expected = quote_var(os.path.join("my_cache_source_folder", "source"))
+        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "build"))
+        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder", "source"))
         self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
         conan_file.in_local_cache = True
         cmake.configure(build_dir="build", cache_build_folder="rel_only_cache")
-        build_expected = quote_var(os.path.join("my_cache_build_folder", "rel_only_cache"))
-        source_expected = quote_var("my_cache_source_folder")
+        build_expected = quote_var(os.path.join(self.tempdir, "my_cache_build_folder", "rel_only_cache"))
+        source_expected = quote_var(os.path.join(self.tempdir, "my_cache_source_folder"))
         self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
         # Raise mixing
@@ -610,7 +610,6 @@ class ConanFileMock(ConanFile):
     def __init__(self, shared=None):
         self.command = None
         self.path = None
-        self.conanfile_directory = "."
         self.source_folder = self.build_folder = "."
         self.settings = None
         self.options = Options(PackageOptions.loads(""))

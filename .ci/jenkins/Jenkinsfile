@@ -1,3 +1,5 @@
+def nightly = (env.JOB_NAME == "ConanNightly")
+
 def slaves = ['Linux', 'Windows', 'Macos']
 
 def pyvers 
@@ -8,15 +10,20 @@ else{
 	pyvers = ['py27', 'py36']
 }
 
-def module = "\"conans.test_integration conans.test\""
-def win_tmp_base = "D:\\J\\t\\"
+def module = "\"conans.test\""
+def numcores = "--num_cores=3"
+
+
+def win_tmp_base = "D:/J/t/"
+def rest_tmp_base = "/tmp/"
 def runner = ".ci/jenkins/runner.py"
 
 def commit
+def branch
 
 
 def builders = [:]
-
+try{
 for (x in slaves) {
     def slave = x
     for (y in pyvers) {
@@ -24,34 +31,63 @@ for (x in slaves) {
         builders["${slave} - ${pyver}"] = {
             node(slave) {
                 stage("${slave} - ${pyver}"){
-                    def vars = checkout scm
-                    commit = vars["GIT_COMMIT"].substring(0, 4)
-                    def workdir = "${commit}/${pyver}"
+                    def workdir
+                    def sourcedir
+                    def base_source
+                    lock('source_code') { // Prepare a clean new directory with the sources
+                        try{
+                            step ([$class: 'WsCleanup'])
+                        }
+                        catch(e){
+                            echo "Cannot clean WS"
+                        }
+
+                        def vars = checkout scm
+                        commit = vars["GIT_COMMIT"].substring(0, 4)
+                        branch = vars["GIT_BRANCH"]
+                        def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
+                        workdir = "${base_dir}${commit}/${pyver}"
+                        base_source = "${base_dir}source/${commit}"
+                        sourcedir = "${base_source}/${pyver}"
+                        if(!fileExists(sourcedir)){ // same commit, same source, no problem
+                            dir(base_source){ // Trick to create the parent
+                                def cmd = "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}')\""
+                                if (slave == "Windows"){
+                                    bat(script: cmd)
+                                }
+                                else{
+                                    sh(script: cmd)
+                                }
+                            }
+                        }
+                    }
 
                     if(slave == "Linux"){
-                        docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                            sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api")
+                        docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
+                            sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
                         }
                     }
                     else if(slave == "Windows"){
                         try{
-                          workdir = "${commit}\\${pyver}"
-                          withEnv(["CONAN_TEST_FOLDER=${win_tmp_base}${workdir}"]){
-                            bat(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} \"${win_tmp_base}${workdir}\" -e rest_api -e windows_ci_excluded")
+
+                          withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
+                            bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores}")
                           }
                         }
                         finally{
-                          bat(script: "rd /s /q \"${win_tmp_base}${workdir}\"")
+                          bat(script: "rd /s /q \"${workdir}\"")
+                          bat(script: "rd /s /q \"${sourcedir}\"")
                         }
                     }
                     else if(slave == "Macos"){
                         try{
                           withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                              sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api")
+                              sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
                           }
                         }
                         finally{
-                          sh(script: "rm -rf /tmp/${workdir}")
+                          sh(script: "rm -rf ${workdir}")
+                          sh(script: "rm -rf ${sourcedir}")
                         }
                     }
                     //step([$class: 'JUnitResultArchiver', testResults: '**/nosetests.xml'])
@@ -102,4 +138,13 @@ for (y in pyvers) {
         }
 	}*/ // EXTREMELY SLOW, INVESTIGATE
 	parallel builders
+}
+}
+catch(e){
+    if(nightly){
+        def subject = "FAILED: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]'"
+        def summary = "${subject} (${env.BUILD_URL}), Branch: ${branch}"
+        slackSend (color: '#FF0000', message: summary)
+    }
+    throw e
 }
