@@ -52,8 +52,7 @@ class ConanFileLoader(object):
                 user, channel = None, None
 
             # Instance the conanfile
-            result = result(output, self._runner, tmp_settings,
-                            os.path.dirname(conanfile_path), user, channel)
+            result = result(output, self._runner, tmp_settings, user, channel)
 
             # Assign environment
             result._env_values.update(self._env_values)
@@ -83,7 +82,7 @@ class ConanFileLoader(object):
         return conanfile
 
     def _parse_conan_txt(self, contents, path, output):
-        conanfile = ConanFile(output, self._runner, Settings(), path)
+        conanfile = ConanFile(output, self._runner, Settings())
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
@@ -108,11 +107,11 @@ class ConanFileLoader(object):
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, references, cwd, scope_options=True,
+    def load_virtual(self, references, scope_options=True,
                      build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(None, self._runner, self._settings.copy(), conanfile_directory=cwd)
+        conanfile = ConanFile(None, self._runner, self._settings.copy())
         conanfile.settings = self._settings.copy_values()
         # Assign environment
         conanfile._env_values.update(self._env_values)
