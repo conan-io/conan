@@ -47,7 +47,7 @@ for (x in slaves) {
                             workdir = "${win_tmp_base}${commit}\\${pyver}"
                             base_source = "${win_tmp_base}source\\${commit}"
                             sourcedir = "${base_source}\\${pyver}"
-                            if(!fileExists sourcedir){ // same commit, same source, no problem
+                            if(!fileExists(sourcedir)){ // same commit, same source, no problem
                                 dir(base_source){ // Trick to create the parent
                                     bat(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
                                 }
@@ -57,7 +57,7 @@ for (x in slaves) {
                             workdir = "/tmp/${commit}/${pyver}"
                             base_source = "/tmp/source/${commit}"
                             sourcedir = "${base_source}/${pyver}"
-                            if(!fileExists sourcedir){ // same commit, same source, no problem
+                            if(!fileExists(sourcedir)){ // same commit, same source, no problem
                                 dir(base_source){ // Trick to create the parent
                                     sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
                                 }
