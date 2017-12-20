@@ -36,12 +36,8 @@ for (x in slaves) {
                     def sourcedir
                     def base_source
                     lock('source_code') { // Prepare a clean new directory with the sources
-                        vars = checkout([
-                           $class: 'GitSCM',
-                           branches: scm.branches,
-                           extensions: scm.extensions + [[$class: 'WipeWorkspace']],
-                           userRemoteConfigs: scm.userRemoteConfigs
-                        ])
+                        wsCleanup()
+                        def vars = checkout scm
                         commit = vars["GIT_COMMIT"].substring(0, 4)
                         branch = vars["GIT_BRANCH"]
                         def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
