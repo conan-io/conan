@@ -505,6 +505,7 @@ class ConanAPIV1(object):
     def source(self, path, source_folder=None, info_folder=None):
         cwd = os.getcwd()
         path = self._abs_relative_to(path, cwd)
+        path = self._get_conanfile_path_from_dir(path)
         source_folder = self._abs_relative_to(source_folder, cwd, default=cwd)
         info_folder = self._abs_relative_to(info_folder, cwd, default=cwd)
 
@@ -512,8 +513,11 @@ class ConanAPIV1(object):
         if not os.path.exists(info_folder):
             raise ConanException("Specified info-folder doesn't exist")
 
-        conanfile_abs_path = self._get_conanfile_path(path, CONANFILE)
-        self._manager.source(conanfile_abs_path, source_folder, info_folder)
+        if path.endswith(".txt"):
+            raise ConanException("A conanfile.py is needed to call 'conan source' "
+                                 "(not valid conanfile.txt)")
+
+        self._manager.source(path, source_folder, info_folder)
 
     @staticmethod
     def _abs_relative_to(path, base_relative, default=None):

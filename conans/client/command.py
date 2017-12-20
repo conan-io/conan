@@ -409,8 +409,8 @@ class Command(object):
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan source .')
-
+        parser.add_argument("path", help="path to a folder containing a recipe (conanfile.py) "
+                            "or to a recipe file, e.g., conan package folder/conanfile.py")
         parser.add_argument("--source-folder", "--source_folder", "-s", action=OnceArgument,
                             help='Destination directory. Defaulted to current directory')
         parser.add_argument("--install-folder", "-if", action=OnceArgument,
