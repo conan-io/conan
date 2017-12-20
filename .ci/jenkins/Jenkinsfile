@@ -51,7 +51,7 @@ for (x in slaves) {
                             sourcedir = "/tmp/source/${commit}/${pyver}"
                         }
                         dir(sourcedir){ // Trick to create it
-                            sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
+                            sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}/\")'")
                         }
                     }
 
