@@ -467,19 +467,19 @@ class ConanAPIV1(object):
               build_folder=None, install_folder=None):
 
         cwd = os.getcwd()
-        conanfile_folder = self._abs_relative_to(path, cwd)
+        path = self._abs_relative_to(path, cwd)
+        path = self._get_conanfile_path_from_dir(path)
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
         install_folder = self._abs_relative_to(install_folder, cwd, default=build_folder)
-        source_folder = self._abs_relative_to(source_folder, cwd, default=conanfile_folder)
+        source_folder = self._abs_relative_to(source_folder, cwd, default=self._get_dir_from_conanfile_path(path))
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg_folder)
 
-        conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)
-        if conanfile_abs_path.endswith(".txt"):
+        if path.endswith(".txt"):
             raise ConanException("A conanfile.py is needed to call 'conan build' "
                                  "(not valid conanfile.txt)")
 
-        self._manager.build(conanfile_abs_path, source_folder, build_folder, package_folder,
+        self._manager.build(path, source_folder, build_folder, package_folder,
                             install_folder)
 
     @api_method

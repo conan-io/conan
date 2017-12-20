@@ -445,8 +445,8 @@ class Command(object):
         """
 
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
-        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan build .')
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
+        parser.add_argument("path", help="path to a folder containing a recipe (conanfile.py) "
+                            "or to a recipe file, e.g., conan package folder/conanfile.py")
         parser.add_argument("--source-folder", "--source_folder", "-sf", action=OnceArgument,
                             help="local folder containing the sources. Defaulted to the directory "
                                  "of the conanfile. A relative path can also be specified "
