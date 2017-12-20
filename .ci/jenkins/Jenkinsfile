@@ -35,7 +35,13 @@ for (x in slaves) {
                     def sourcedir
                     def base_source
                     lock('source_code') { // Prepare a clean new directory with the sources
-                        step ([$class: 'WsCleanup'])
+                        try{
+                            step ([$class: 'WsCleanup'])
+                        }
+                        catch(e){
+                            echo "Cannot clean WS"
+                        }
+
                         def vars = checkout scm
                         commit = vars["GIT_COMMIT"].substring(0, 4)
                         branch = vars["GIT_BRANCH"]
