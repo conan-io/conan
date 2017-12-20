@@ -363,16 +363,15 @@ class ConanManager(object):
             pass
 
         build_mode = BuildMode(build_modes, self._user_io.out)
-        build_requires = BuildRequires(loader, graph_builder, registry, output,
-                                       profile.build_requires)
+        build_requires = BuildRequires(loader, graph_builder, registry, output)
         installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
                                    build_requires)
 
         # Apply build_requires to consumer conanfile
         if not isinstance(reference, ConanFileReference):
-            build_requires.install("", conanfile, installer)
+            build_requires.install("", conanfile, installer, profile.build_requires)
 
-        installer.install(deps_graph)
+        installer.install(deps_graph, profile.build_requires)
         build_mode.report_matches()
 
         if install_folder:
