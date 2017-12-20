@@ -14,7 +14,8 @@ def module = "\"conans.test\""
 def numcores = "--num_cores=3"
 
 
-def win_tmp_base = "D:\\J\\t\\"
+def win_tmp_base = "D:/J/t/"
+def rest_tmp_base = "/tmp/"
 def runner = ".ci/jenkins/runner.py"
 
 def commit
@@ -30,35 +31,57 @@ for (x in slaves) {
         builders["${slave} - ${pyver}"] = {
             node(slave) {
                 stage("${slave} - ${pyver}"){
-                    def vars = checkout scm
-                    commit = vars["GIT_COMMIT"].substring(0, 4)
-                    branch = vars["GIT_BRANCH"]
-                    def workdir = "${commit}/${pyver}"
+                    def workdir
+                    def sourcedir
+                    def base_source
+                    lock('source_code') { // Prepare a clean new directory with the sources
+                        step ([$class: 'WsCleanup'])
+                        def vars = checkout scm
+                        commit = vars["GIT_COMMIT"].substring(0, 4)
+                        branch = vars["GIT_BRANCH"]
+                        def base_dir = (slave == "Windows") ? win_tmp_base : rest_tmp_base
+                        workdir = "${base_dir}${commit}/${pyver}"
+                        base_source = "${base_dir}source/${commit}"
+                        sourcedir = "${base_source}/${pyver}"
+                        if(!fileExists(sourcedir)){ // same commit, same source, no problem
+                            dir(base_source){ // Trick to create the parent
+                                def cmd = "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}')\""
+                                if (slave == "Windows"){
+                                    bat(script: cmd)
+                                }
+                                else{
+                                    sh(script: cmd)
+                                }
+                            }
+                        }
+                    }
 
                     if(slave == "Linux"){
-                        docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${WORKSPACE}") {
-                            sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api ${numcores}")
+                        docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
+                            sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
                         }
                     }
                     else if(slave == "Windows"){
                         try{
-                          workdir = "${commit}\\${pyver}"
-                          withEnv(["CONAN_TEST_FOLDER=${win_tmp_base}${workdir}"]){
-                            bat(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} \"${win_tmp_base}${workdir}\" -e rest_api -e windows_ci_excluded ${numcores}")
+
+                          withEnv(["CONAN_TEST_FOLDER=${workdir}"]){
+                            bat(script: "python ${runner} ${module} ${pyver} ${sourcedir} \"${workdir}\" -e rest_api -e windows_ci_excluded ${numcores}")
                           }
                         }
                         finally{
-                          bat(script: "rd /s /q \"${win_tmp_base}${workdir}\"")
+                          bat(script: "rd /s /q \"${workdir}\"")
+                          bat(script: "rd /s /q \"${sourcedir}\"")
                         }
                     }
                     else if(slave == "Macos"){
                         try{
                           withEnv(['PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin']) {
-                              sh(script: "python ${runner} ${module} ${pyver} ${WORKSPACE} /tmp/${workdir} -e rest_api ${numcores}")
+                              sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
                           }
                         }
                         finally{
-                          sh(script: "rm -rf /tmp/${workdir}")
+                          sh(script: "rm -rf ${workdir}")
+                          sh(script: "rm -rf ${sourcedir}")
                         }
                     }
                     //step([$class: 'JUnitResultArchiver', testResults: '**/nosetests.xml'])
