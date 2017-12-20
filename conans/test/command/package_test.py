@@ -61,15 +61,6 @@ class PackageLocalCommandTest(unittest.TestCase):
 
     def package_with_path_errors_test(self):
         client = TestClient()
-        client.save({"src/header.h": "contents"}, clean_first=True)
-        client.run("new lib/1.0 -s")
-
-        # don't need real build
-        tools.replace_in_file(os.path.join(client.current_folder,
-                                           "conanfile.py"), "cmake =",
-                              "return\n#")
-        client.run("install . --install-folder build")
-        client.run("build . --build-folder build2 --install-folder build")
         client.save({"conanfile.txt": "contents"}, clean_first=True)
 
         # Path with conanfile.txt
