@@ -15,7 +15,6 @@ class PackageLocalCommandTest(unittest.TestCase):
         client = TestClient()
 
         def prepare_for_package(the_client):
-            the_client.all_output = ""
             the_client.save({"src/header.h": "contents"}, clean_first=True)
             the_client.run("new lib/1.0 -s")
 
@@ -38,20 +37,20 @@ class PackageLocalCommandTest(unittest.TestCase):
         # In current dir subdir
         prepare_for_package(client)
         client.run("package . --build-folder build2 --install-folder build --package_folder=subdir")
-        self.assertTrue("package(): WARN: No files copied!" not in client.all_output)
+        self.assertNotIn("package(): WARN: No files copied!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
         # Default path
         prepare_for_package(client)
         client.run("package . --build-folder build")
-        self.assertTrue("package(): WARN: No files copied!" not in client.all_output)
+        self.assertNotIn("package(): WARN: No files copied!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build", "package")))
 
         # Abs path
         prepare_for_package(client)
         pf = os.path.join(client.current_folder, "mypackage/two")
         client.run("package . --build-folder build --package_folder='%s'" % pf)
-        self.assertTrue("package(): WARN: No files copied!" not in client.all_output)
+        self.assertNotIn("package(): WARN: No files copied!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
     def package_with_reference_errors_test(self):
