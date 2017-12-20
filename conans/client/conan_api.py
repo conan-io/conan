@@ -351,7 +351,7 @@ class ConanAPIV1(object):
                               manifest_verify=manifest_verify,
                               manifest_interactive=manifest_interactive,
                               generators=generators,
-                              cwd=cwd, install_reference=True)
+                              install_reference=True)
 
     @api_method
     def install(self, path="", settings=None, options=None, env=None,

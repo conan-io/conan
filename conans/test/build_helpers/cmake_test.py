@@ -610,7 +610,6 @@ class ConanFileMock(ConanFile):
     def __init__(self, shared=None):
         self.command = None
         self.path = None
-        self.conanfile_directory = "."
         self.source_folder = self.build_folder = "."
         self.settings = None
         self.options = Options(PackageOptions.loads(""))

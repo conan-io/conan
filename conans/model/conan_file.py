@@ -96,7 +96,7 @@ class ConanFile(object):
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
 
-    def __init__(self, output, runner, settings, conanfile_directory, user=None, channel=None):
+    def __init__(self, output, runner, settings, user=None, channel=None):
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
         if isinstance(self.generators, str):
@@ -127,8 +127,6 @@ class ConanFile(object):
         self.output = output
         # something that can run commands, as os.sytem
         self._runner = runner
-
-        self.conanfile_directory = conanfile_directory
 
         self.develop = False
 
