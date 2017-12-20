@@ -518,7 +518,7 @@ class ConanAPIV1(object):
     @staticmethod
     def _abs_relative_to(path, base_relative, default=None):
         """Returns an absolute path from "path" parameter, prepending base_relative if not abs yet.
-        If path is none, returns the 'default'. If path is a file path, returns its dirname."""
+        If path is none, returns the 'default'."""
         if not path:
             return default
         if not os.path.isabs(path):
@@ -572,14 +572,12 @@ class ConanAPIV1(object):
         :return: Conanfile dirname path
         '"""
         if os.path.isfile(path):
-            path = os.path.dirname(path)
+            return os.path.dirname(path)
+
+        if os.path.exists(path):
+            return path
         else:
-            raise ConanException("Path is not a file path: %s" % path)
-
-        if not os.path.isdir(path):
-            raise ConanException("Dir not found: %s" % path)
-
-        return path
+            ConanException("Path not found: %s" % path)
 
     @api_method
     def imports(self, path, dest=None, filename=None, info_folder=None):
