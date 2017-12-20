@@ -344,7 +344,7 @@ class ConanInstaller(object):
 
         for level in inverse:
             level = sorted(level, key=lambda x: x.conan_ref)
-            flat.extend(level)
+            flat.extend(n for n in level if n not in skip_private_nodes)
 
         # Get the nodes in order and if we have to build them
         nodes_to_process = self._get_nodes(nodes_by_level, skip_private_nodes)
