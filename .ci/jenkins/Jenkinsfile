@@ -51,7 +51,7 @@ for (x in slaves) {
                             sourcedir = "/tmp/source/${commit}/${pyver}"
                         }
                         dir("/tmp/source/${commit}"){ // Trick to create the parent
-                            sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}/\", \"${sourcedir}/\")'")
+                            sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
                         }
                     }
 
