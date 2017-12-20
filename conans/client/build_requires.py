@@ -102,7 +102,7 @@ class BuildRequires(object):
                           % ", ".join(str(r) for r in build_requires.values()))
         # clear root package options, they won't match the build-require
         conanfile.build_requires_options.clear_unscoped_options()
-        virtual = self._loader.load_virtual(build_requires.values(), None, scope_options=False,
+        virtual = self._loader.load_virtual(build_requires.values(), scope_options=False,
                                             build_requires_options=conanfile.build_requires_options)
 
         # compute and print the graph of transitive build-requires
