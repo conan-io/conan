@@ -161,7 +161,6 @@ class _ConanPackageBuilder(object):
 
         os.chdir(self.build_folder)
         self._conan_file.build_folder = self.build_folder
-        self._conan_file.conanfile_directory = self.build_folder
         self._conan_file.package_folder = package_folder
         # In local cache, install folder always is build_folder
         self._conan_file.install_folder = self.build_folder
@@ -195,8 +194,6 @@ class _ConanPackageBuilder(object):
                 raise exc
             raise ConanException(exc)
         finally:
-            export_folder = self._client_cache.export(self._conan_ref)
-            self._conan_file.conanfile_directory = export_folder
             # Now remove all files that were imported with imports()
             if not getattr(self._conan_file, "keep_imports", False):
                 for f in copied_files:

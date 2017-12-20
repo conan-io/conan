@@ -104,7 +104,7 @@ class HelloReuseConan(ConanFile):
     requires = "Hello/0.1@lasote/stable"
 
     def test(self):
-        self.conanfile_directory
+        pass
 """
         client.save({"conanfile.py": conanfile,
                      "FindXXX.cmake": "Hello FindCmake",
@@ -123,12 +123,6 @@ class HelloReuseConan(ConanFile):
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
 
-    def _create(self, client, number, version, deps=None, export=True):
-        files = cpp_hello_conan_files(number, version, deps)
-        client.save(files)
-        if export:
-            client.run("export lasote/stable")
-
     def conan_test_test(self):
 
         # With classic requires
@@ -143,7 +137,7 @@ class HelloReuseConan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
+        self.run('cmake "%s" %s' % (self.source_folder, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
     def test(self):
@@ -166,7 +160,7 @@ class HelloReuseConan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
+        self.run('cmake "%s" %s' % (self.source_folder, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
     def test(self):
