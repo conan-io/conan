@@ -136,8 +136,9 @@ class Command(object):
         To create and test a binary package use the 'conan create' command.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
-        parser.add_argument("path", help='path to the "testing" directory containing a '
-                            'conanfile.py with a test() method')
+        parser.add_argument("path", help='path to the "testing" folder containing a recipe '
+                            '(conanfile.py) with a test() method or to a recipe file, '
+                            'e.g. conan test_package/conanfile.py pkg/version@user/channel')
         parser.add_argument("reference",
                             help='a full package reference pkg/version@user/channel, of the '
                             'package to be tested')
@@ -410,7 +411,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
         parser.add_argument("path", help="path to a folder containing a recipe (conanfile.py) "
-                            "or to a recipe file, e.g., conan package folder/conanfile.py")
+                            "or to a recipe file, e.g., conan source folder/conanfile.py")
         parser.add_argument("--source-folder", "--source_folder", "-s", action=OnceArgument,
                             help='Destination directory. Defaulted to current directory')
         parser.add_argument("--install-folder", "-if", action=OnceArgument,
