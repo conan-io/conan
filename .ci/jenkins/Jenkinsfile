@@ -33,6 +33,7 @@ for (x in slaves) {
                     def vars
                     def workdir
                     def sourcedir
+                    def base_source
                     lock('source_code') {
                         vars = checkout([
                            $class: 'GitSCM',
@@ -44,19 +45,21 @@ for (x in slaves) {
                         branch = vars["GIT_BRANCH"]
                         if(slave == "Windows"){
                             workdir = "${win_tmp_base}${commit}\\${pyver}"
-                            sourcedir = "${win_tmp_base}source\\${commit}\\${pyver}"
+                            base_source = "${win_tmp_base}source\\${commit}"
+                            sourcedir = "${base_source}\\${pyver}"
                         }
                         else{
                             workdir = "/tmp/${commit}/${pyver}"
-                            sourcedir = "/tmp/source/${commit}/${pyver}"
+                            base_source = "/tmp/source/${commit}"
+                            sourcedir = "${base_source}/${pyver}"
                         }
-                        dir("/tmp/source/${commit}"){ // Trick to create the parent
+                        dir(base_source){ // Trick to create the parent
                             sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
                         }
                     }
 
                     if(slave == "Linux"){
-                        docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir}") {
+                        docker.image('lasote/conantests').inside("-e CONAN_USER_HOME=${sourcedir} -v${sourcedir}:${sourcedir}") {
                             sh(script: "python ${runner} ${module} ${pyver} ${sourcedir} ${workdir} -e rest_api ${numcores}")
                         }
                     }
