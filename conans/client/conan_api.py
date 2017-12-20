@@ -551,20 +551,15 @@ class ConanAPIV1(object):
         :param path: Path to a conanfile.py or directory containing it
         :return: Conanfile path checked as file ending with '.py'
         '"""
-
-        def raise_if_not_file(some_path):
-            if not os.path.isfile(some_path):
-                raise ConanException("Conanfile not found: %s" % some_path)
-
-        def raise_if_not_py(some_path):
-            if not some_path.endswith(".py"):
-                raise ConanException("A conanfile.py is needed (not valid conanfile.txt)")
-
         if os.path.isdir(path):
             path = os.path.join(path, CONANFILE)
 
-        raise_if_not_file(path)
-        raise_if_not_py(path)
+        if not os.path.isfile(path):
+            raise ConanException("Conanfile not found: %s" % path)
+
+        if not path.endswith(".py"):
+            raise ConanException("A conanfile.py is needed (not valid conanfile.txt)")
+
         return path
 
     @staticmethod
@@ -576,17 +571,14 @@ class ConanAPIV1(object):
         :param path: Path to a conanfile.py
         :return: Conanfile dirname path
         '"""
-
-        def raise_if_not_dir(some_path):
-            if not os.path.isdir(some_path):
-                raise ConanException("Dir not found: %s" % some_path)
-
         if os.path.isfile(path):
             path = os.path.dirname(path)
         else:
             raise ConanException("Path is not a file path: %s" % path)
 
-        raise_if_not_dir(path)
+        if not os.path.isdir(path):
+            raise ConanException("Dir not found: %s" % path)
+
         return path
 
     @api_method
