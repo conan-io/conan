@@ -45,7 +45,7 @@ for (x in slaves) {
                         sourcedir = "${base_source}/${pyver}"
                         if(!fileExists(sourcedir)){ // same commit, same source, no problem
                             dir(base_source){ // Trick to create the parent
-                                var cmd = "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}')\""
+                                def cmd = "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}')\""
                                 if (slave == "Windows"){
                                     bat(script: cmd)
                                 }
