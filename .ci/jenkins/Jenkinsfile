@@ -50,7 +50,7 @@ for (x in slaves) {
                             workdir = "/tmp/${commit}/${pyver}"
                             sourcedir = "/tmp/source/${commit}/${pyver}"
                         }
-                        sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")")
+                        sh(script: "python -c 'import shutil; shutil.copytree(\"${WORKSPACE}\", \"${sourcedir}\")'")
                     }
 
                     if(slave == "Linux"){
