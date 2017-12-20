@@ -148,3 +148,7 @@ catch(e){
     }
     throw e
 }
+
+def subject = "SUCCESS ${env.JOB_NAME}! Another day with a green ${branch}!"
+def summary = "${subject} (${env.BUILD_URL})"
+slackSend (color: '#00FF00', message: summary)
