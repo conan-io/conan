@@ -49,15 +49,17 @@ for (x in slaves) {
                         workdir = "${base_dir}${commit}/${pyver}"
                         base_source = "${base_dir}source/${commit}"
                         sourcedir = "${base_source}/${pyver}"
-                        if(!fileExists(sourcedir)){ // same commit, same source, no problem
-                            dir(base_source){ // Trick to create the parent
-                                def cmd = "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}')\""
-                                if (slave == "Windows"){
-                                    bat(script: cmd)
-                                }
-                                else{
-                                    sh(script: cmd)
-                                }
+                        while(fileExists(sourcedir)){
+                            sourcedir = sourcedir + "_"
+                        }
+
+                        dir(base_source){ // Trick to create the parent
+                            def cmd = "python -c \"import shutil; shutil.copytree('${WORKSPACE}', '${sourcedir}')\""
+                            if (slave == "Windows"){
+                                bat(script: cmd)
+                            }
+                            else{
+                                sh(script: cmd)
                             }
                         }
                     }
