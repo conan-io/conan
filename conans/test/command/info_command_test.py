@@ -63,16 +63,16 @@ class InfoTest(unittest.TestCase):
                                         "H2c/0.1@lu/st"])
 
         # If we install H3 we need to build all except H1b
-        self.clients["H3"].run("info --build missing")
+        self.clients["H3"].run("info . --build missing")
         self.assert_last_line(self.clients["H3"],
                               "H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
 
         # If we install H0 we need to build nothing (current project)
-        self.clients["H0"].run("info --build missing")
+        self.clients["H0"].run("info ./conanfile.py --build missing")
         self.assert_last_line(self.clients["H0"], "")
 
         # If we install H0 we need to build H0
-        self.clients["H1a"].run("info --build missing")
+        self.clients["H1a"].run("info conanfile.py --build missing")
         self.assert_last_line(self.clients["H1a"], "H0/0.1@lu/st")
 
         # If we build and upload H1a and H1c, no more H0 (private) is required
@@ -82,13 +82,13 @@ class InfoTest(unittest.TestCase):
         self.clients["H3"].run("upload H1c/0.1@lu/st --all")
 
         self.clients["H3"].run("remove '*' -f")
-        self.clients["H3"].run("info --build missing")
+        self.clients["H3"].run("info . --build missing")
         self.assert_last_line(self.clients["H3"],
                               "H2a/0.1@lu/st, H2c/0.1@lu/st")
 
         # But if we force to build all, all nodes have to be built
         self.clients["H3"].run("remove '*' -f")
-        self.clients["H3"].run("info --build")
+        self.clients["H3"].run("info ./conanfile.py --build")
         self.assert_last_line(self.clients["H3"],
                               "H0/0.1@lu/st, H1a/0.1@lu/st, H1c/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
 
@@ -103,12 +103,12 @@ class InfoTest(unittest.TestCase):
 
         # Without build outdated the built packages are the same
         self.clients["H3"].run("remove '*' -f")
-        self.clients["H3"].run("info --build missing")
+        self.clients["H3"].run("info conanfile.py --build missing")
         self.assert_last_line(self.clients["H3"],
                               "H2a/0.1@lu/st, H2c/0.1@lu/st")
 
         # But with build outdated we have to build the private H0 (but only once) and H1a
         self.clients["H3"].run("remove '*' -f")
-        self.clients["H3"].run("info --build outdated")
+        self.clients["H3"].run("info . --build outdated")
         self.assert_last_line(self.clients["H3"],
                               "H0/0.1@lu/st, H1a/0.1@lu/st, H2a/0.1@lu/st, H2c/0.1@lu/st")
