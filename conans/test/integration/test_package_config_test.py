@@ -71,9 +71,9 @@ class TestPackageConfigTest(unittest.TestCase):
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): True",
                       client.out)
-        self.assertIn("conan_package/0.1@lasote/stable test package: shared (build): True",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (build): True",
                       client.out)
-        self.assertIn("conan_package/0.1@lasote/stable test package: shared (test): True",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (test): True",
                       client.out)
         self.assertNotIn("False", client.out)
 
@@ -86,9 +86,9 @@ class TestPackageConfigTest(unittest.TestCase):
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): False",
                       client.out)
-        self.assertIn("conan_package/0.1@lasote/stable test package: shared (build): False",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (build): False",
                       client.out)
-        self.assertIn("conan_package/0.1@lasote/stable test package: shared (test): False",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (test): False",
                       client.out)
         self.assertNotIn("True", client.out)
 
@@ -101,9 +101,9 @@ class TestPackageConfigTest(unittest.TestCase):
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): True",
                       client.out)
-        self.assertIn("conan_package/0.1@lasote/stable test package: shared (build): True",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (build): True",
                       client.out)
-        self.assertIn("conan_package/0.1@lasote/stable test package: shared (test): True",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (test): True",
                       client.out)
         self.assertNotIn("False", client.out)
 
@@ -112,8 +112,8 @@ class TestPackageConfigTest(unittest.TestCase):
                       client.out)
         self.assertIn("conan_package/0.1@lasote/stable: shared (configure): False",
                       client.out)
-        self.assertIn("conan_package/0.1@lasote/stable test package: shared (build): False",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (build): False",
                       client.out)
-        self.assertIn("conan_package/0.1@lasote/stable test package: shared (test): False",
+        self.assertIn("conan_package/0.1@lasote/stable (test package): shared (test): False",
                       client.out)
         self.assertNotIn("True", client.out)
