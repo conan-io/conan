@@ -181,7 +181,7 @@ class ConanLib(ConanFile):
 
         # Fix the error and repeat
         client.save({CONANFILE: conanfile.replace("err", "")})
-        client.run("source conanfile.py")
+        client.run("source .")
         self.assertIn("PROJECT: Configuring sources in", client.user_io.out)
         self.assertIn("PROJECT: Running source!", client.user_io.out)
         self.assertEqual("Hello World", load(os.path.join(client.current_folder, "file1.txt")))
