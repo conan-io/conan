@@ -326,3 +326,18 @@ class TestConan(ConanFile):
         error = client.run("install . -pr=./myotherprofile", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Error parsing the profile", client.out)
+
+    def install_with_path_errors_test(self):
+        client = TestClient()
+
+        # Path with wrong conanfile.txt path
+        error = client.run("install not_real_dir/conanfile.txt --install-folder subdir",
+                           ignore_error = True)
+        self.assertTrue(error)
+        self.assertIn("Conanfile not found!", client.out)
+
+        # Path with wrong conanfile.py path
+        error = client.run("install not_real_dir/conanfile.py --install-folder build",
+                           ignore_error = True)
+        self.assertTrue(error)
+        self.assertIn("Conanfile not found!", client.out)

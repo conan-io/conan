@@ -80,18 +80,18 @@ class MyPkg(ConanFile):
 class Pkg(ConanFile):
     pass
         """})
-        client.run("export LibA/0.1@user/channel")
-        client.run("export LibA/0.2@user/channel")
+        client.run("export . LibA/0.1@user/channel")
+        client.run("export . LibA/0.2@user/channel")
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "LibA/0.1@user/channel"
         """})
-        client.run("export LibB/0.1@user/channel")
+        client.run("export . LibB/0.1@user/channel")
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "LibA/0.2@user/channel"
         """})
-        client.run("export LibC/0.1@user/channel")
+        client.run("export . LibC/0.1@user/channel")
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
@@ -142,7 +142,7 @@ class MyPkg(ConanFile):
     name = "Pkg"
     version = "0.1"
 """})
-        client.run("create . lasote/channel --cwd subfolder")
+        client.run("create subfolder lasote/channel")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
@@ -155,7 +155,7 @@ class MyPkg(ConanFile):
     name = "Pkg"
     version = "0.1"
 """})
-        client.run("create . lasote/channel --cwd subfolder --file CustomConanFile.py")
+        client.run("create subfolder/CustomConanFile.py lasote/channel")
         self.assertIn("Pkg/0.1@lasote/channel: Generating the package", client.out)
         client.run("search")
         self.assertIn("Pkg/0.1@lasote/channel", client.out)
@@ -232,7 +232,7 @@ class MyBuildRequire(ConanFile):
     def package_info(self):
         self.env_info.MYVAR="1"
 """})
-        client.run("export conan/stable")
+        client.run("export . conan/stable")
 
         # Create a recipe that will use a profile requiring the build_require
         client.save({"conanfile.py": """from conans import ConanFile

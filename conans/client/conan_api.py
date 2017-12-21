@@ -82,6 +82,97 @@ def prepare_cwd(cwd):
         return os.getcwd()
 
 
+def _get_it(path, cwd, py):
+    if os.path.isabs(path):
+        return path
+    cwd = cwd or os.getcwd()
+    path = os.path.normpath(os.path.join(cwd, path))
+
+    if os.path.isdir(path):  # Can be a folder
+        path = os.path.join(path, "conanfile.py" if py else "conanfile.txt")
+
+    if not os.path.isfile(path):  # Must exist
+        raise ConanException("Conanfile not found: %s" % path)
+
+    if py and not path.endswith(".py"):
+        raise ConanException("A conanfile.py is needed (not valid conanfile.txt)")
+
+    return path
+
+
+def _abs_relative_to(path, base_relative, default=None):
+    """Returns an absolute path from "path" parameter, prepending base_relative if not abs yet.
+    If path is none, returns the 'default'."""
+    if not path:
+        return default
+    if not os.path.isabs(path):
+        return os.path.normpath(os.path.join(base_relative, path))
+    else:
+        return path
+
+
+def _get_conanfile_path(conanfile_folder, the_filename=None):
+    def raise_if_not_exists(some_path):
+        if not os.path.exists(some_path):
+            raise ConanException("Conanfile not found: %s" % some_path)
+
+    if the_filename:
+        conanfile_path = os.path.join(conanfile_folder, the_filename)
+        raise_if_not_exists(conanfile_path)
+    else:
+        conanfile_path = os.path.join(conanfile_folder, CONANFILE)
+        if not os.path.exists(conanfile_path):
+            conanfile_path = os.path.join(conanfile_folder, CONANFILE_TXT)
+            raise_if_not_exists(conanfile_path)
+    return conanfile_path
+
+
+def _get_conanfile_path_from_dir(path):
+    """
+    If path is a directory, apends 'conanfile.py' and returns its path. If not,
+    it checks if path parameter is file and ends with '.py', otherwise it raises an exception
+
+    :param path: Path to a conanfile.py or directory containing it
+    :return: Conanfile path checked as file ending with '.py'
+    '"""
+    if os.path.isdir(path):
+        path = os.path.join(path, CONANFILE)
+
+    if not os.path.isfile(path):
+        raise ConanException("Conanfile not found: %s" % path)
+
+    if not path.endswith(".py"):
+        raise ConanException("A conanfile.py is needed (not valid conanfile.txt)")
+
+    return path
+
+
+def _get_dir_from_conanfile_path(path):
+    """
+    If path is a conanfile path, returns dirname path. If not,
+    it checks if path parameter is dir, otherwise it raises an exception
+
+    :param path: Path to a conanfile.py
+    :return: Conanfile dirname path
+    '"""
+    if os.path.isfile(path):
+        return os.path.dirname(path)
+
+    if os.path.exists(path):
+        return path
+    else:
+        ConanException("Path not found: %s" % path)
+
+
+def _get_conanfile_path2(path):
+    conanfile_path = _abs_relative_to(path, os.getcwd())
+    if os.path.isdir(conanfile_path):
+        conanfile_path = os.path.join(conanfile_path, CONANFILE)
+    elif not os.path.isfile(path):
+        raise ConanException("Conanfile not found: %s" % path)
+    return conanfile_path
+
+
 class ConanAPIV1(object):
 
     @staticmethod
@@ -183,7 +274,7 @@ class ConanAPIV1(object):
         env = env or []
         cwd = os.getcwd()
         base_folder = self._abs_relative_to(path, cwd, default=cwd)
-        conanfile_abs_path = self._get_conanfile_path(base_folder, "conanfile.py")
+        conanfile_abs_path = self._get_conanfile_path_from_dir(base_folder)
 
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
@@ -353,12 +444,11 @@ class ConanAPIV1(object):
     def install(self, path="", settings=None, options=None, env=None,
                 remote=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
-                update=False, generators=None, no_imports=False, filename=None,
-                install_folder=None):
+                update=False, generators=None, no_imports=False, install_folder=None):
 
         cwd = os.getcwd()
         install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
-        conanfile_folder = self._abs_relative_to(path, cwd, default=cwd)
+        path = self._abs_relative_to(path, cwd, default=cwd)
 
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
@@ -366,12 +456,11 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
 
-        self._manager.install(reference=conanfile_folder,
+        self._manager.install(reference=path,
                               install_folder=install_folder,
                               remote=remote,
                               profile=profile,
                               build_modes=build,
-                              filename=filename,
                               update=update,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
@@ -415,67 +504,62 @@ class ConanAPIV1(object):
 
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
-                         profile_name=None, filename=None, remote=None, build_order=None,
-                         check_updates=None, install_folder=None):
+                         profile_name=None, remote=None, build_order=None, check_updates=None,
+                         install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
+            cwd = os.getcwd()
+            reference = self._abs_relative_to(reference, cwd)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
-        graph = self._manager.info_build_order(reference, profile, filename, build_order,
-                                               remote, check_updates)
+        graph = self._manager.info_build_order(reference, profile, build_order, remote, check_updates)
         return graph
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
-                            profile_name=None, filename=None, remote=None,
-                            check_updates=None, install_folder=None):
+                            profile_name=None, remote=None, check_updates=None, install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
+            cwd = os.getcwd()
+            reference = self._abs_relative_to(reference, cwd)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
-        ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote,
+        ret = self._manager.info_nodes_to_build(reference, profile, build_modes, remote,
                                                 check_updates)
         ref_list, project_reference = ret
         return ref_list, project_reference
 
     @api_method
     def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None,
-                       profile_name=None, update=False, filename=None,
-                       install_folder=None):
+                       profile_name=None, update=False, install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
+            cwd = os.getcwd()
+            reference = self._abs_relative_to(reference, cwd)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
-        ret = self._manager.info_get_graph(reference=reference,
-                                           remote=remote, profile=profile, check_updates=update,
-                                           filename=filename)
+        ret = self._manager.info_get_graph(reference=reference, remote=remote, profile=profile,
+                                           check_updates=update)
         deps_graph, graph_updates_info, project_reference = ret
         return deps_graph, graph_updates_info, project_reference
 
     @api_method
-    def build(self, path, source_folder=None, package_folder=None, filename=None,
-              build_folder=None, install_folder=None):
+    def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
+              install_folder=None, cwd=None):
 
-        cwd = os.getcwd()
-        conanfile_folder = self._abs_relative_to(path, cwd)
+        conanfile_path = _get_it(conanfile_path, cwd, py=True)
+
         build_folder = self._abs_relative_to(build_folder, cwd, default=cwd)
         install_folder = self._abs_relative_to(install_folder, cwd, default=build_folder)
-        source_folder = self._abs_relative_to(source_folder, cwd, default=conanfile_folder)
+        source_folder = self._abs_relative_to(source_folder, cwd,
+                                              default=self._get_dir_from_conanfile_path(path))
         default_pkg_folder = os.path.join(build_folder, "package")
         package_folder = self._abs_relative_to(package_folder, cwd, default=default_pkg_folder)
 
-        conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)
-        if conanfile_abs_path.endswith(".txt"):
-            raise ConanException("A conanfile.py is needed to call 'conan build' "
-                                 "(not valid conanfile.txt)")
-
-        self._manager.build(conanfile_abs_path, source_folder, build_folder, package_folder,
+        self._manager.build(conanfile_path, source_folder, build_folder, package_folder,
                             install_folder)
 
     @api_method
@@ -500,6 +584,7 @@ class ConanAPIV1(object):
     def source(self, path, source_folder=None, info_folder=None):
         cwd = os.getcwd()
         path = self._abs_relative_to(path, cwd)
+        path = self._get_conanfile_path_from_dir(path)
         source_folder = self._abs_relative_to(source_folder, cwd, default=cwd)
         info_folder = self._abs_relative_to(info_folder, cwd, default=cwd)
 
@@ -507,79 +592,17 @@ class ConanAPIV1(object):
         if not os.path.exists(info_folder):
             raise ConanException("Specified info-folder doesn't exist")
 
-        conanfile_abs_path = self._get_conanfile_path(path, CONANFILE)
-        self._manager.source(conanfile_abs_path, source_folder, info_folder)
+        if path.endswith(".txt"):
+            raise ConanException("A conanfile.py is needed to call 'conan source' "
+                                 "(not valid conanfile.txt)")
 
-    @staticmethod
-    def _abs_relative_to(path, base_relative, default=None):
-        """Returns an absolute path from "path" parameter, prepending base_relative if not abs yet.
-        If path is none, returns the 'default'."""
-        if not path:
-            return default
-        if not os.path.isabs(path):
-            return os.path.normpath(os.path.join(base_relative, path))
-        else:
-            return path
-
-    @staticmethod
-    def _get_conanfile_path(conanfile_folder, the_filename=None):
-        def raise_if_not_exists(some_path):
-            if not os.path.exists(some_path):
-                raise ConanException("Conanfile not found: %s" % some_path)
-
-        if the_filename:
-            conanfile_path = os.path.join(conanfile_folder, the_filename)
-            raise_if_not_exists(conanfile_path)
-        else:
-            conanfile_path = os.path.join(conanfile_folder, CONANFILE)
-            if not os.path.exists(conanfile_path):
-                conanfile_path = os.path.join(conanfile_folder, CONANFILE_TXT)
-                raise_if_not_exists(conanfile_path)
-        return conanfile_path
-
-    @staticmethod
-    def _get_conanfile_path_from_dir(path):
-        """
-        If path is a directory, apends 'conanfile.py' and returns its path. If not,
-        it checks if path parameter is file and ends with '.py', otherwise it raises an exception
-
-        :param path: Path to a conanfile.py or directory containing it
-        :return: Conanfile path checked as file ending with '.py'
-        '"""
-        if os.path.isdir(path):
-            path = os.path.join(path, CONANFILE)
-
-        if not os.path.isfile(path):
-            raise ConanException("Conanfile not found: %s" % path)
-
-        if not path.endswith(".py"):
-            raise ConanException("A conanfile.py is needed (not valid conanfile.txt)")
-
-        return path
-
-    @staticmethod
-    def _get_dir_from_conanfile_path(path):
-        """
-        If path is a conanfile path, returns dirname path. If not,
-        it checks if path parameter is dir, otherwise it raises an exception
-
-        :param path: Path to a conanfile.py
-        :return: Conanfile dirname path
-        '"""
-        if os.path.isfile(path):
-            return os.path.dirname(path)
-
-        if os.path.exists(path):
-            return path
-        else:
-            ConanException("Path not found: %s" % path)
+        self._manager.source(path, source_folder, info_folder)
 
     @api_method
-    def imports(self, path, dest=None, filename=None, info_folder=None):
+    def imports(self, path, dest=None, info_folder=None):
         """
         :param path: Path to the conanfile
         :param dest: Dir to put the imported files. (Abs path or relative to cwd)
-        :param filename: Alternative name of the conanfile. Default: conanfile.py or conanfile.txt
         :param build_folder: Dir where the conaninfo.txt and conanbuildinfo.txt files are
         :return: None
         """
@@ -589,21 +612,13 @@ class ConanAPIV1(object):
         dest = self._abs_relative_to(dest, cwd, default=cwd)
 
         mkdir(dest)
-        conanfile_abs_path = self._get_conanfile_path(conanfile_folder, filename)
+        conanfile_abs_path = self._get_conanfile_path(conanfile_folder)
         self._manager.imports(conanfile_abs_path, dest, info_folder)
 
     @api_method
     def imports_undo(self, manifest_path):
         manifest_path = self._abs_relative_to(manifest_path, os.getcwd())
         self._manager.imports_undo(manifest_path)
-
-    def _get_conanfile_path2(self, path):
-        conanfile_path = self._abs_relative_to(path, os.getcwd())
-        if os.path.isdir(conanfile_path):
-            conanfile_path = os.path.join(conanfile_path, CONANFILE)
-        elif not os.path.isfile(path):
-            raise ConanException("Conanfile not found: %s" % path)
-        return conanfile_path
 
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False):
