@@ -73,7 +73,7 @@ class SymLinksTest(unittest.TestCase):
 
         self._check(client, ref)
 
-        client.run("install conanfile.py --build")
+        client.run("install conanfile.txt --build")
         self._check(client, ref)
 
     def package_files_test(self):
@@ -122,7 +122,7 @@ class TestConan(ConanFile):
         os.symlink(lib_name, pre_export_link)
 
         client.run("export . lasote/stable")
-        client.run("install conanfile.py --build")
+        client.run("install conanfile.txt --build")
         client.run("copy Hello/0.1@lasote/stable team/testing --all")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
