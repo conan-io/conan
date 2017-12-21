@@ -131,19 +131,10 @@ class ConanManager(object):
             conanfile = loader.load_virtual([reference_or_path])
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
-            try:
-                conan_file_path = ""
-                if reference_or_path.endswith(".txt") or reference_or_path.endswith(".py"):
-                    conan_file_path = reference_or_path
-                else:
-                    conan_file_path = os.path.join(reference_or_path, CONANFILE)
-
-                conanfile = loader.load_conan(conan_file_path, output, consumer=True)
-
-            except Exception:  # Load conanfile.txt
-                conan_path = os.path.join(reference_or_path, CONANFILE_TXT)
-                conanfile = loader.load_conan_txt(conan_path, output)
-
+            if reference_or_path.endswith(".py"):
+                conanfile = loader.load_conan(reference_or_path, output, consumer=True)
+            else:
+                conanfile = loader.load_conan_txt(reference_or_path, output)
         return conanfile
 
     def get_loader(self, profile, local=False):

@@ -465,7 +465,7 @@ class Command(object):
                                  "conanbuildinfo.txt files (from a previous conan install "
                                  "execution). Defaulted to --build-folder")
         args = parser.parse_args(*args)
-        return self._conan.build(path=args.path,
+        return self._conan.build(conanfile_path=args.path,
                                  source_folder=args.source_folder,
                                  package_folder=args.package_folder,
                                  build_folder=args.build_folder,
