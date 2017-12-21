@@ -24,7 +24,7 @@ class TestConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("create lasote/stable")
+        client.run("create . lasote/stable")
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)
 
@@ -39,7 +39,7 @@ class TestConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("create lasote/stable")
+        client.run("create . lasote/stable")
         client.run("test test_package  Hello/0.1@lasote/stable")
         self.assertNotIn("Exporting package recipe", client.out)
         self.assertNotIn("WARN: Forced build from source", client.out)
@@ -66,7 +66,7 @@ class TestConanLib(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("create user/channel")
+        client.run("create . user/channel")
         self.assertNotIn("Hello/0.2", client.out)
 
     def other_requirements_test(self):
@@ -90,11 +90,11 @@ class ConanLib(ConanFile):
         client.run("install other/0.2@user2/channel2 --build")
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("create user/channel")
+        client.run("create . user/channel")
         self.assertIn("Hello/0.1@user/channel: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@user/channel: Generated conaninfo.txt", client.user_io.out)
 
         # explicit override of user/channel works
-        client.run("create lasote/stable")
+        client.run("create . lasote/stable")
         self.assertIn("Hello/0.1@lasote/stable: Configuring sources", client.user_io.out)
         self.assertIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.user_io.out)

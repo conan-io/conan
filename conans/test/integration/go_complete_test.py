@@ -94,7 +94,7 @@ class GoCompleteTest(unittest.TestCase):
                  'hello/helloreverse.txt': reverse}
         files_without_conanfile = set(files.keys()) - set(["conanfile.py"])
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
         # Check compilation ok
         package_ids = self.client.paths.conan_packages(conan_reference)

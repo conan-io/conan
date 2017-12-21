@@ -44,7 +44,7 @@ install(FILES header.h DESTINATION include)
         client.save({"conanfile.py": conanfile,
                      "src/CMakeLists.txt": cmake,
                      "src/header.h": "//myheader.h"})
-        client.run("create Hello/0.1@lasote/channel")
+        client.run("create . Hello/0.1@lasote/channel")
         self.assertIn("Hello/0.1@lasote/channel: HEADER //myheader.h", client.out)
         self.assertIn("-- HEADER CMAKE CONTENTS //myheader.h", client.out)
         # Now local flow

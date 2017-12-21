@@ -181,7 +181,7 @@ class ConanLib(ConanFile):
 '''
         client.save({"conanfile.py": base})
 
-        client.run("create lib/0.1@user/channel")
+        client.run("create . lib/0.1@user/channel")
         package_ref = PackageReference.loads("lib/0.1@user/channel:"
                                              "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         client.run("search")

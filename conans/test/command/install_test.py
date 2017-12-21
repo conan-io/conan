@@ -39,7 +39,7 @@ class Pkg(ConanFile):
 
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
 
     def install_error_never_test(self):
         self._create("Hello0", "0.1", export=False)
@@ -274,7 +274,7 @@ class TestConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
         client.run("install . --build=missing -s os=Windows -s build_os=Windows --install-folder=win_dir")
@@ -295,7 +295,7 @@ class TestConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create conan/stable")
+        client.run("create . conan/stable")
         client.save({}, clean_first=True)
         client.run("install Hello/0.1@conan/stable")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))

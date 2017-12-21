@@ -206,7 +206,7 @@ class ConanAPIV1(object):
         env = env or []
 
         cwd = os.getcwd()
-        conanfile_path = self._abs_relative_to(conanfile_path, cwd)
+        conanfile_path = self._get_conanfile_path2(conanfile_path)
 
         if not name or not version:
             conanfile = load_conanfile_class(conanfile_path)
@@ -261,8 +261,7 @@ class ConanAPIV1(object):
                                   remote=remote,
                                   profile=profile,
                                   build_modes=build_modes,
-                                  update=update,
-                                  filename=filename)
+                                  update=update)
 
     def _validate_can_read_infos(self, install_folder, cwd):
         if install_folder and not existing_info_files(self._abs_relative_to(install_folder, cwd)):
@@ -555,14 +554,17 @@ class ConanAPIV1(object):
         manifest_path = self._abs_relative_to(manifest_path, os.getcwd())
         self._manager.imports_undo(manifest_path)
 
-    @api_method
-    def export(self, path, name, version, user, channel, keep_source=False):
+    def _get_conanfile_path2(self, path):
         conanfile_path = self._abs_relative_to(path, os.getcwd())
         if os.path.isdir(conanfile_path):
             conanfile_path = os.path.join(conanfile_path, CONANFILE)
         elif not os.path.isfile(path):
             raise ConanException("Conanfile not found: %s" % path)
+        return conanfile_path
 
+    @api_method
+    def export(self, path, name, version, user, channel, keep_source=False):
+        conanfile_path = self._get_conanfile_path2(path)
         self._manager.export(conanfile_path, name, version, user, channel, keep_source)
 
     @api_method

@@ -19,7 +19,7 @@ class InfoTest(unittest.TestCase):
         # Not necessary to actually build binaries
         files = cpp_hello_conan_files(name, version, deps, build=False)
         client.save(files, clean_first=True)
-        client.run("export lu/st")
+        client.run("export . lu/st")
         client.run("upload %s/%s@lu/st" % (name, version))
 
     def assert_last_line(self, client, line):

@@ -21,7 +21,7 @@ class InfoTest(unittest.TestCase):
 
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
             expected_output = textwrap.dedent(
                 """\
                 WARN: Conanfile doesn't have 'url'.
@@ -45,7 +45,7 @@ class InfoTest(unittest.TestCase):
 
         self.client.save(files)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
             self.assertNotIn("WARN: Conanfile doesn't have 'url'", self.client.user_io.out)
 
     def install_folder_test(self):

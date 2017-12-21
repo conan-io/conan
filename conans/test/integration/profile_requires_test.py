@@ -208,7 +208,7 @@ class ProfileRequiresTest(unittest.TestCase):
 
     def _export(self, var_conanfile):
         self.client.save({CONANFILE: var_conanfile}, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
     def test_profile_requires(self):
         self._export(build_require_parent)

@@ -75,12 +75,12 @@ class App(ConanFile):
         self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
 """
         client.save({CONANFILE: mingw})
-        client.run("create mingw/0.1@lasote/stable")
+        client.run("create . mingw/0.1@lasote/stable")
         client.save({CONANFILE: gtest})
         client.run("export gtest/0.1@lasote/stable")
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
-        client.run("create app/0.1@lasote/stable --build=missing -pr=myprofile")
+        client.run("create . app/0.1@lasote/stable --build=missing -pr=myprofile")
         self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymingwpath",
                       client.out)
         self.assertIn("gtest/0.1@lasote/stable: GTEST PATH FOR BUILD mymingwpath",
@@ -116,16 +116,16 @@ class App(ConanFile):
         self.output.info("APP PATH FOR BUILD %s" % os.getenv("PATH"))
 """
         client.save({CONANFILE: mingw})
-        client.run("create mingw/0.1@lasote/stable")
+        client.run("create . mingw/0.1@lasote/stable")
         client.save({CONANFILE: msys})
-        client.run("create msys/0.1@lasote/stable")
+        client.run("create . msys/0.1@lasote/stable")
         client.save({CONANFILE: app,
                      "myprofile1": myprofile1,
                      "myprofile2": myprofile2})
-        client.run("create app/0.1@lasote/stable -pr=myprofile1")
+        client.run("create . app/0.1@lasote/stable -pr=myprofile1")
         self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymingwpath%smymsyspath"
                       % os.pathsep, client.out)
-        client.run("create app/0.1@lasote/stable -pr=myprofile2")
+        client.run("create . app/0.1@lasote/stable -pr=myprofile2")
         self.assertIn("app/0.1@lasote/stable: APP PATH FOR BUILD mymsyspath%smymingwpath"
                       % os.pathsep, client.out)
 
@@ -142,17 +142,17 @@ Tool/0.1@lasote/stable
 """
         client.save({CONANFILE: mytool_conanfile,
                      "profile.txt": myprofile})
-        client.run("create Tool/0.1@lasote/stable -pr=profile.txt")
+        client.run("create . Tool/0.1@lasote/stable -pr=profile.txt")
         self.assertEqual(1, str(client.out).count("BUILDING MYTOOL"))
 
     @parameterized.expand([(requires, ), (requires_range, ), (requirements, ), (override, )])
     def test_build_requires(self, conanfile):
         client = TestClient()
         client.save({CONANFILE: tool_conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.run("install MyLib/0.1@lasote/stable --build missing")
         self.assertIn("Tool/0.1@lasote/stable: Generating the package", client.user_io.out)
@@ -166,12 +166,12 @@ Tool/0.1@lasote/stable
     def test_profile_override(self, conanfile):
         client = TestClient()
         client.save({CONANFILE: tool_conanfile2}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.save({CONANFILE: conanfile,
                      "profile.txt": profile,
                      "profile2.txt": profile.replace("0.3", "[>0.2]")}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.run("install MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertNotIn("Tool/0.1", client.user_io.out)
@@ -201,7 +201,7 @@ class package(ConanFile):
     """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         consumer = """from conans import ConanFile
 

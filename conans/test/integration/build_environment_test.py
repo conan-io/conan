@@ -64,7 +64,7 @@ class BuildEnvironmenTest(unittest.TestCase):
             return
         client = TestClient(path_with_spaces=False)
         client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         makefile_am = '''
 bin_PROGRAMS = main

@@ -172,8 +172,8 @@ class AConan(ConanFile):
     pass
 """
         client.save({CONANFILE: conanfile_dep})
-        client.run("create Hello.Pkg/0.1@lasote/testing")
-        client.run("create Hello-Tools/0.1@lasote/testing")
+        client.run("create . Hello.Pkg/0.1@lasote/testing")
+        client.run("create . Hello-Tools/0.1@lasote/testing")
         conanfile_scope_env = """
 from conans import ConanFile
 
@@ -248,7 +248,7 @@ class AConan(ConanFile):
 
 """
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         conanfile = """
 from conans import ConanFile

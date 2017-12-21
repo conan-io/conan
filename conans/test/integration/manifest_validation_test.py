@@ -28,7 +28,7 @@ class ConanFileTest(ConanFile):
         # Export and upload the conanfile
         self.reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
         self.client.save(self.files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
     @parameterized.expand([(True, ), (False, )])
     def test_package_test(self, use_abs_folder):
@@ -56,7 +56,7 @@ class ConsumerFileTest(ConanFile):
 
         self.client.save({"conanfile.py": conanfile,
                           "test_package/conanfile.py": test_conanfile}, clean_first=True)
-        self.client.run("create lasote/stable --manifests%s" % dest)
+        self.client.run("create . lasote/stable --manifests%s" % dest)
         self.assertIn("Chat/0.1@lasote/stable test package: TEST OK", self.client.user_io.out)
         self.assertIn("Installed manifest for 'Chat/0.1@lasote/stable' from local cache",
                       self.client.user_io.out)
@@ -69,7 +69,7 @@ class ConsumerFileTest(ConanFile):
                                                    "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         self.assertTrue(os.path.exists(paths.digestfile_package(package_reference)))
         # now verify
-        self.client.run("create lasote/stable --verify%s" % dest)
+        self.client.run("create . lasote/stable --verify%s" % dest)
         self.assertIn("Manifest for 'Hello/0.1@lasote/stable': OK", self.client.user_io.out)
         self.assertIn("Manifest for '%s': OK" % str(package_reference), self.client.user_io.out)
 
@@ -123,7 +123,7 @@ class ConanFileTest(ConanFile):
 """
         client = TestClient(base_folder=self.client.base_folder)
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         files = {"conanfile.txt": "[requires]\nHello2/0.1@lasote/stable\nHello/0.1@lasote/stable"}
         self.client.save(files)
@@ -182,7 +182,7 @@ class ConanFileTest(ConanFile):
         files = {CONANFILE: conanfile, "data.txt": "MyDataHacked"}
         # Export and upload the conanfile
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("upload %s --all" % str(self.reference))
 
         # now verify, with update
@@ -222,7 +222,7 @@ class ConanFileTest(ConanFile):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
         client.save(self.files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build=missing")
         info = os.path.join(client.paths.package(package_reference), "conaninfo.txt")
         info_content = load(info)

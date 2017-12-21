@@ -45,7 +45,7 @@ class TestConan(ConanFile):
         self.copy("*")
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create Pkg/0.1@user/testing --build=missing")
+        client.run("create . Pkg/0.1@user/testing --build=missing")
         self.assertIn("Pkg/0.1@user/testing package(): Copied 1 '.md' files: LICENSE.md",
                       client.out)
         pkg_ref = PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing"),

@@ -11,7 +11,6 @@ from conans.client.output import Color
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
 from conans.util.files import exception_message_safe
@@ -161,14 +160,10 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.create.__doc__,
                                          prog="conan create")
+        parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
-                                              ' are not declared in the recipe')
-        parser.add_argument('--cwd', '-c', default=None, action=OnceArgument,
-                            help='Optional. Folder with a %s. Default current directory.'
-                            % CONANFILE)
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
-
+                                              ' are not declared in the recipe (conanfile.py)')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
         parser.add_argument("-tf", "--test-folder", "--test_folder", action=OnceArgument,
@@ -184,12 +179,11 @@ class Command(object):
 
         name, version, user, channel = get_reference_fields(args.reference)
 
-        return self._conan.create(args.profile, args.settings, args.options,
+        return self._conan.create(args.path, name, version, user, channel,
+                                  args.profile, args.settings, args.options,
                                   args.env, args.test_folder, args.not_export,
                                   args.build, args.keep_source, args.verify, args.manifests,
-                                  args.manifests_interactive, args.remote, args.update,
-                                  conan_file_path=args.cwd, name=name, version=version, user=user,
-                                  channel=channel, filename=args.file)
+                                  args.manifests_interactive, args.remote, args.update)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.

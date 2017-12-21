@@ -25,7 +25,7 @@ class PrivateDepsTest(unittest.TestCase):
                                       cmake_targets=False)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.client.save(files, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         if upload:
             self.client.run("upload %s" % str(conan_ref))
 
@@ -34,7 +34,7 @@ class PrivateDepsTest(unittest.TestCase):
                                       private_includes=True, build=False,
                                       cmake_targets=True)
         self.client.save(files, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
     def modern_cmake_test(self):
         self._export("glew", "0.1")

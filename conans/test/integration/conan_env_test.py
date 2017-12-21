@@ -154,7 +154,7 @@ class MyTest(ConanFile):
 """
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
-        client.run("create lasote/testing -e MYVAR=MYVALUE")
+        client.run("create . lasote/testing -e MYVAR=MYVALUE")
         self.assertIn("MYVAR==>MYVALUE", client.user_io.out)
 
     def deactivate_env_inheritance_test(self):
@@ -165,7 +165,7 @@ class MyPkg(ConanFile):
         self.env_info.SOME_VAR.append("22")
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create Pkg/0.1@lasote/testing")
+        client.run("create . Pkg/0.1@lasote/testing")
 
         conanfile = """from conans import ConanFile
 import os
@@ -193,12 +193,12 @@ class MyLib(ConanFile):
         self._test()     
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create MyLib/0.1@lasote/testing")
+        client.run("create . MyLib/0.1@lasote/testing")
 
         # Now as a build require, should be the same
         client.save({"conanfile.py": conanfile.replace("requires =", "#requires ="),
                      "myprofile": "[build_requires]\nPkg/0.1@lasote/testing"})
-        client.run("create MyLib/0.1@lasote/testing --profile ./myprofile")
+        client.run("create . MyLib/0.1@lasote/testing --profile ./myprofile")
 
     def env_path_order_test(self):
         client = TestClient()
@@ -212,7 +212,7 @@ class MyPkg(ConanFile):
         self.env_info.SOME_VAR.append("OTHER_VALUE")
 """
             client.save({"conanfile.py": conanfile})
-            client.run("create Pkg/0.1@lasote/testing")
+            client.run("create . Pkg/0.1@lasote/testing")
             self.assertIn("Pkg/0.1@lasote/testing: PKG VARS: INITIAL VALUE", client.out)
 
             conanfile = """from conans import ConanFile
@@ -225,7 +225,7 @@ class MyTest(ConanFile):
         self.env_info.SOME_VAR.extend(["OTHER_VALUE2", "OTHER_VALUE3"])
 """
             client.save({"conanfile.py": conanfile})
-            client.run("create Test/0.1@lasote/testing")
+            client.run("create . Test/0.1@lasote/testing")
             # FIXME: Note that these values are os.pathsep (; or :)
             self.assertIn("Test/0.1@lasote/testing: TEST VARS: OTHER_VALUE%sINITIAL VALUE"
                           % os.pathsep,
@@ -238,12 +238,12 @@ class MyTest(ConanFile):
         self.output.info("PROJECT VARS: %s" % os.getenv("SOME_VAR"))
 """
             client.save({"conanfile.py": conanfile})
-            client.run("create project/0.1@lasote/testing")
+            client.run("create . project/0.1@lasote/testing")
             self.assertIn("project/0.1@lasote/testing: PROJECT VARS: " +
                           os.pathsep.join(["OTHER_VALUE2", "OTHER_VALUE3",
                                            "OTHER_VALUE", "INITIAL VALUE"]),
                           client.out)
-            client.run("create project/0.1@lasote/testing -e SOME_VAR=[WHAT]")
+            client.run("create . project/0.1@lasote/testing -e SOME_VAR=[WHAT]")
             self.assertIn("project/0.1@lasote/testing: PROJECT VARS: " +
                           os.pathsep.join(["WHAT", "OTHER_VALUE2", "OTHER_VALUE3",
                                            "OTHER_VALUE", "INITIAL VALUE"]),
@@ -269,7 +269,7 @@ class HelloConan(ConanFile):
 
 '''
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         reuse = '''[requires]
 Hello/0.1@lasote/stable
@@ -315,13 +315,13 @@ virtualrunenv
         files = cpp_hello_conan_files("Hello0", "1.0", deps=[], build=False)
         files[CONANFILE] = patch_conanfile(files[CONANFILE])
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         files = cpp_hello_conan_files("Hello1", "1.0",
                                       deps=["Hello0/1.0@lasote/stable"], build=False)
         files[CONANFILE] = patch_conanfile(files[CONANFILE])
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         # Both with same settings
         client.run("install Hello1/1.0@lasote/stable --build -s compiler=gcc"
@@ -364,7 +364,7 @@ class HelloConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         reuse = '''
 [requires]
 Hello/0.1@lasote/stable
@@ -404,7 +404,7 @@ class HelloConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         conanfile = '''
 from conans import ConanFile
 
@@ -421,7 +421,7 @@ class HelloConan(ConanFile):
     '''
         files["conanfile.py"] = conanfile
         client.save(files, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello2/0.1@lasote/stable --build "
                    "-g virtualenv -e CPPFLAGS=[OtherFlag=2]")
         ext = "bat" if platform.system() == "Windows" else "sh"
@@ -474,7 +474,7 @@ class Hello2Conan(ConanFile):
         files = dict()
         files["conanfile.py"] = conanfile
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         files = dict()
         files["conanfile.py"] = reuse
@@ -807,7 +807,7 @@ class HelloLib%sConan(ConanFile):
 
 """
             client.save({"conanfile.py": hello_file}, clean_first=True)
-            client.run("export lasote/stable")
+            client.run("export . lasote/stable")
 
 
 reuse = '''

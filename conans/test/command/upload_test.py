@@ -68,7 +68,7 @@ class UploadTest(unittest.TestCase):
     def pattern_upload_test(self):
         client = self._client()
         client.save({"conanfile.py": conanfile})
-        client.run("create user/testing")
+        client.run("create . user/testing")
         client.run("upload Hello0/*@user/testing --confirm --all")
         self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
         self.assertIn("Uploading conan_package.tgz", client.user_io.out)
@@ -79,7 +79,7 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "include/hello.h": ""})
-        client.run("create frodo/stable")
+        client.run("create . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         packages_folder = client.client_cache.packages(ref)
         pkg_id = os.listdir(packages_folder)[0]
@@ -158,7 +158,7 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
-        client.run("create frodo/stable")
+        client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable --all")
 
         client2 = self._client()
@@ -229,7 +229,7 @@ class Pkg(ConanFile):
     pass
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create Pkg/0.1@user/testing")
+        client.run("create . Pkg/0.1@user/testing")
         client.run("upload * --all --confirm")
         client2 = self._client()
         client2.run("install Pkg/0.1@user/testing")

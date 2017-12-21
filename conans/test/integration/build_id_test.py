@@ -76,11 +76,11 @@ class BuildIdTest(unittest.TestCase):
         """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create user/channel")
+        client.run("create . user/channel")
         self.assertIn("Pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Building my code!", client.user_io.out)
         self.assertIn("Packaging Release!", client.user_io.out)
-        client.run("create user/channel -s build_type=Debug")
+        client.run("create . user/channel -s build_type=Debug")
         self.assertNotIn("Pkg/0.1@user/channel: Calling build()", client.out)
         self.assertIn("Packaging Debug!", client.user_io.out)
         self._check_conaninfo(client)

@@ -29,7 +29,7 @@ class TestConan(ConanFile):
         if short_paths:
             conanfile += "    short_paths = True"
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.save({"include/header.h": "//Windows header"})
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
@@ -259,7 +259,7 @@ class TestConan(ConanFile):
         client = TestClient()
         conanfile = TestConanFile()
         client.save({"conanfile.py": str(conanfile)})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello/0.1@lasote/stable --build")
         conanfile = TestConanFile(name="Hello1", requires=["Hello/0.1@lasote/stable"])
         conanfile = str(conanfile) + """    def package_info(self):

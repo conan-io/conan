@@ -16,7 +16,7 @@ class PutPropertiesTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         props_file = client.client_cache.put_headers_path
         self.assertTrue(os.path.exists(props_file))
 
@@ -37,7 +37,7 @@ class PutPropertiesTest(unittest.TestCase):
 
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("upload Hello0/0.1@lasote/stable -c")
 
 
