@@ -140,7 +140,7 @@ class ConanManager(object):
 
                 conanfile = loader.load_conan(conan_file_path, output, consumer=True)
 
-            except NotFoundException:  # Load conanfile.txt
+            except Exception:  # Load conanfile.txt
                 conan_path = os.path.join(reference_or_path, CONANFILE_TXT)
                 conanfile = loader.load_conan_txt(conan_path, output)
 
