@@ -5,6 +5,7 @@ from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.client import defs_to_string, join_arguments
+from conans.client.tools import cross_building
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
@@ -153,10 +154,10 @@ class CMake(object):
             ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
         else:  # detect if we are cross building and the system name and version
-            platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-            if (platform_os != the_os) or os_ver:  # We are cross building
-                if the_os:
-                    ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS", "watchOS"] else the_os
+            if cross_building(self._conanfile.settings):  # We are cross building
+                if the_os:  # the_os is the host (regular setting)
+                    ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS",
+                                                                      "watchOS"] else the_os
                     if os_ver:
                         ret["CMAKE_SYSTEM_VERSION"] = os_ver
                 else:
