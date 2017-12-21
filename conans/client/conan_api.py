@@ -362,7 +362,7 @@ class ConanAPIV1(object):
 
         cwd = os.getcwd()
         install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
-        conanfile_folder = self._abs_relative_to(path, cwd, default=cwd)
+        path = self._abs_relative_to(path, cwd, default=cwd)
 
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
@@ -370,12 +370,11 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
 
-        self._manager.install(reference=conanfile_folder,
+        self._manager.install(reference=path,
                               install_folder=install_folder,
                               remote=remote,
                               profile=profile,
                               build_modes=build,
-                              filename=filename,
                               update=update,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,

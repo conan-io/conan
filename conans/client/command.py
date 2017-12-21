@@ -223,9 +223,9 @@ class Command(object):
 
         """
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
-        parser.add_argument("path", nargs='?', default="",
-                            help='path to a recipe (conanfile.py). e.g., ./my_project/')
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
+        parser.add_argument("path", nargs='?', default="", help="path to a folder containing a recipe"
+                            " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
+                            "./my_project/conanfile.txt")
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("--install-folder", "--install_folder", "-if", action=OnceArgument,
@@ -252,8 +252,7 @@ class Command(object):
                                        manifests_interactive=args.manifests_interactive,
                                        build=args.build, profile_name=args.profile,
                                        update=args.update, generators=args.generator,
-                                       no_imports=args.no_imports, filename=args.file,
-                                       install_folder=args.install_folder)
+                                       no_imports=args.no_imports, install_folder=args.install_folder)
         else:
             return self._conan.install_reference(reference, settings=args.settings,
                                                  options=args.options,
