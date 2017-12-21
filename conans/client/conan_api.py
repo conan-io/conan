@@ -263,8 +263,7 @@ class ConanAPIV1(object):
                                   remote=remote,
                                   profile=profile,
                                   build_modes=build_modes,
-                                  update=update,
-                                  filename=filename)
+                                  update=update)
 
     def _validate_can_read_infos(self, install_folder, cwd):
         if install_folder and not existing_info_files(self._abs_relative_to(install_folder, cwd)):
@@ -357,8 +356,7 @@ class ConanAPIV1(object):
     def install(self, path="", settings=None, options=None, env=None,
                 remote=None, verify=None, manifests=None,
                 manifests_interactive=None, build=None, profile_name=None,
-                update=False, generators=None, no_imports=False, filename=None,
-                install_folder=None):
+                update=False, generators=None, no_imports=False, install_folder=None):
 
         cwd = os.getcwd()
         install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
