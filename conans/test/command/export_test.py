@@ -262,7 +262,6 @@ class ExportTest(unittest.TestCase):
         self.conan_ref = ConanFileReference("Hello0", "0.1", "lasote", "stable")
         self.conan.save(self.files)
         self.conan.run("export . lasote/stable")
-        print self.conan.out
 
     def test_basic(self):
         """ simple registration of a new conans
