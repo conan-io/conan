@@ -132,12 +132,13 @@ class ConanManager(object):
         else:
             output = ScopedOutput("PROJECT", self._user_io.out)
             try:
-                conanfile_path = ""
+                conan_file_path = ""
                 if reference_or_path.endswith(".txt") or reference_or_path.endswith(".py"):
-                    conanfile_path = reference_or_path
+                    conan_file_path = reference_or_path
                 else:
                     conan_file_path = os.path.join(reference_or_path, CONANFILE)
-                    conanfile = loader.load_conan(conan_file_path, output, consumer=True)
+
+                conanfile = loader.load_conan(conan_file_path, output, consumer=True)
 
             except NotFoundException:  # Load conanfile.txt
                 conan_path = os.path.join(reference_or_path, CONANFILE_TXT)
