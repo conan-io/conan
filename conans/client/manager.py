@@ -345,7 +345,7 @@ class ConanManager(object):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
         if not isinstance(reference, ConanFileReference):
-            output = ScopedOutput(("%s test package" % str(inject_require)) if inject_require else "PROJECT",
+            output = ScopedOutput(("%s (test package)" % str(inject_require)) if inject_require else "PROJECT",
                                   self._user_io.out)
             output.highlight("Installing %s" % reference)
         else:
@@ -449,7 +449,7 @@ class ConanManager(object):
 
         try:
             # Append env_vars to execution environment and clear when block code ends
-            output = ScopedOutput(("%s test package" % test) if test else "Project",
+            output = ScopedOutput(("%s (test package)" % test) if test else "Project",
                                   self._user_io.out)
             conan_file = self._load_consumer_conanfile(conanfile_path, install_folder, output,
                                                        deps_info_required=True)
