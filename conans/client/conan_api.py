@@ -416,46 +416,45 @@ class ConanAPIV1(object):
 
     @api_method
     def info_build_order(self, reference, settings=None, options=None, env=None,
-                         profile_name=None, filename=None, remote=None, build_order=None,
-                         check_updates=None, install_folder=None):
+                         profile_name=None, remote=None, build_order=None, check_updates=None,
+                         install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
+            cwd = os.getcwd()
+            reference = self._abs_relative_to(reference, cwd, default=cwd)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
-        graph = self._manager.info_build_order(reference, profile, filename, build_order,
-                                               remote, check_updates)
+        graph = self._manager.info_build_order(reference, profile, build_order, remote, check_updates)
         return graph
 
     @api_method
     def info_nodes_to_build(self, reference, build_modes, settings=None, options=None, env=None,
-                            profile_name=None, filename=None, remote=None,
-                            check_updates=None, install_folder=None):
+                            profile_name=None, remote=None, check_updates=None, install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
+            cwd = os.getcwd()
+            reference = self._abs_relative_to(reference, cwd, default=cwd)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
-        ret = self._manager.info_nodes_to_build(reference, profile, filename, build_modes, remote,
+        ret = self._manager.info_nodes_to_build(reference, profile, build_modes, remote,
                                                 check_updates)
         ref_list, project_reference = ret
         return ref_list, project_reference
 
     @api_method
     def info_get_graph(self, reference, remote=None, settings=None, options=None, env=None,
-                       profile_name=None, update=False, filename=None,
-                       install_folder=None):
+                       profile_name=None, update=False, install_folder=None):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = os.path.normpath(os.path.join(os.getcwd(), reference))
+            cwd = os.getcwd()
+            reference = self._abs_relative_to(reference, cwd, default=cwd)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
-        ret = self._manager.info_get_graph(reference=reference,
-                                           remote=remote, profile=profile, check_updates=update,
-                                           filename=filename)
+        ret = self._manager.info_get_graph(reference=reference, remote=remote, profile=profile,
+                                           check_updates=update)
         deps_graph, graph_updates_info, project_reference = ret
         return deps_graph, graph_updates_info, project_reference
 

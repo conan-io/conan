@@ -225,7 +225,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
         parser.add_argument("path", nargs='?', default="", help="path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
-                            "./my_project/conanfile.txt")
+                            "./my_project/conanfile.txt. It could also be a reference")
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("--install-folder", "--install_folder", "-if", action=OnceArgument,
@@ -310,10 +310,9 @@ class Command(object):
         str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
 
         parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info")
-        parser.add_argument("reference", nargs='?', default="",
-                            help='reference name or path to conanfile file, '
-                            'e.g., MyPackage/1.2@user/channel or ./my_project/')
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
+        parser.add_argument("reference", nargs='?', default="", help="path to a folder containing a recipe"
+                            " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
+                            "./my_project/conanfile.txt. It could also be a reference")
         parser.add_argument("--only", "-n", nargs=1, action=Extender,
                             help='show the specified fields only from: '
                                  '%s or use --paths with options %s. Use --only None to show only '
@@ -352,11 +351,12 @@ class Command(object):
 
         # BUILD ORDER ONLY
         if args.build_order:
-            ret = self._conan.info_build_order(args.reference, settings=args.settings,
+            ret = self._conan.info_build_order(args.reference,
+                                               settings=args.settings,
                                                options=args.options,
                                                env=args.env,
                                                profile_name=args.profile,
-                                               filename=args.file, remote=args.remote,
+                                               remote=args.remote,
                                                build_order=args.build_order,
                                                check_updates=args.update,
                                                install_folder=args.install_folder)
@@ -368,22 +368,26 @@ class Command(object):
 
         # INSTALL SIMULATION, NODES TO INSTALL
         elif args.build is not None:
-            nodes, _ = self._conan.info_nodes_to_build(args.reference, build_modes=args.build,
+            nodes, _ = self._conan.info_nodes_to_build(args.reference,
+                                                       build_modes=args.build,
                                                        settings=args.settings,
-                                                       options=args.options, env=args.env,
+                                                       options=args.options,
+                                                       env=args.env,
                                                        profile_name=args.profile,
-                                                       filename=args.file,
                                                        remote=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
             self._outputer.nodes_to_build(nodes)
+
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
-            data = self._conan.info_get_graph(args.reference, remote=args.remote,
+            data = self._conan.info_get_graph(args.reference,
+                                              remote=args.remote,
                                               settings=args.settings,
-                                              options=args.options, env=args.env,
-                                              profile_name=args.profile, update=args.update,
-                                              filename=args.file,
+                                              options=args.options,
+                                              env=args.env,
+                                              profile_name=args.profile,
+                                              update=args.update,
                                               install_folder=args.install_folder)
             deps_graph, graph_updates_info, project_reference = data
             only = args.only
