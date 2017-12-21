@@ -478,7 +478,8 @@ class Command(object):
         'export-pkg' after a 'build' command.
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan package .')
+        parser.add_argument("path", help="path to a folder containing a recipe (conanfile.py) "
+                            "or to a recipe file, e.g., conan package folder/conanfile.py")
         parser.add_argument("--source-folder", "--source_folder", "-sf", action=OnceArgument,
                             help="local folder containing the sources. Defaulted to the directory "
                                  "of the conanfile. A relative path can also be specified "
@@ -501,8 +502,8 @@ class Command(object):
             if "@" in args.path and ConanFileReference.loads(args.path):
                 raise ArgumentError(None,
                                     "'conan package' doesn't accept a reference anymore. "
-                                    " The path parameter should be a folder containing a "
-                                    "conanfile.py file. If you were using the 'conan package' "
+                                    "The path parameter should be a conanfile.py or a folder "
+                                    "containing one. If you were using the 'conan package' "
                                     "command for development purposes we recommend to use "
                                     "the local development commands: 'conan build' + "
                                     "'conan package' and finally 'conan create' to regenerate the "
@@ -511,9 +512,10 @@ class Command(object):
         except ConanException:
             pass
 
-        return self._conan.package(path=args.path, build_folder=args.build_folder,
-                                   source_folder=args.source_folder,
+        return self._conan.package(path=args.path,
+                                   build_folder=args.build_folder,
                                    package_folder=args.package_folder,
+                                   source_folder=args.source_folder,
                                    install_folder=args.install_folder)
 
     def imports(self, *args):

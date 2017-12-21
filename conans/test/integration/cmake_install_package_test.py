@@ -38,6 +38,7 @@ cmake_minimum_required(VERSION 2.8.12)
                      "test/conanfile.py": test_conanfile,
                      "CMakeLists.txt": cmake,
                      "header.h": "my header h!!"})
+
         client.run("create . user/channel")
-        self.assertIn("Test/0.1@user/channel test package: Content: my header h!!",
+        self.assertIn("Test/0.1@user/channel (test package): Content: my header h!!",
                       client.user_io.out)
