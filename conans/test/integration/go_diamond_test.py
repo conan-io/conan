@@ -21,7 +21,7 @@ class GoDiamondTest(unittest.TestCase):
         files = hello_conan_files(conan_reference=conan_reference, number=number, deps=deps,
                                   lang='go')
         self.conan.save(files, clean_first=True)
-        self.conan.run("export lasote/stable")
+        self.conan.run("export . lasote/stable")
         self.conan.run("upload %s" % str(conan_reference))
 
     def reuse_test(self):
