@@ -345,7 +345,7 @@ class ConanManager(object):
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
 
         if not isinstance(reference, ConanFileReference):
-            output = ScopedOutput(("%s test package" % str(inject_require)) if inject_require else "PROJECT",
+            output = ScopedOutput(("%s (test package)" % str(inject_require)) if inject_require else "PROJECT",
                                   self._user_io.out)
             output.highlight("Installing %s" % reference)
         else:
@@ -427,14 +427,13 @@ class ConanManager(object):
 
         run_imports(conanfile, dest_folder, output)
 
-    def local_package(self, package_folder, recipe_folder, build_folder, source_folder,
+    def local_package(self, package_folder, conanfile_path, build_folder, source_folder,
                       install_folder):
         if package_folder == build_folder:
             raise ConanException("Cannot 'conan package' to the build folder. "
                                  "--build_folder and package folder can't be the same")
         output = ScopedOutput("PROJECT", self._user_io.out)
-        conan_file_path = os.path.join(recipe_folder, CONANFILE)
-        conanfile = self._load_consumer_conanfile(conan_file_path, install_folder, output,
+        conanfile = self._load_consumer_conanfile(conanfile_path, install_folder, output,
                                                   deps_info_required=True)
         packager.create_package(conanfile, source_folder, build_folder, package_folder,
                                 install_folder, output, local=True, copy_info=True)
@@ -449,7 +448,7 @@ class ConanManager(object):
 
         try:
             # Append env_vars to execution environment and clear when block code ends
-            output = ScopedOutput(("%s test package" % test) if test else "Project",
+            output = ScopedOutput(("%s (test package)" % test) if test else "Project",
                                   self._user_io.out)
             conan_file = self._load_consumer_conanfile(conanfile_path, install_folder, output,
                                                        deps_info_required=True)
