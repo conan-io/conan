@@ -41,7 +41,6 @@ class HelloConan(ConanFile):
         client.save(files)
         client.run("export . lasote/stable")
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86_64")
-        print client.out
         self.assertIn("Release|x64", client.user_io.out)
         self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
 
