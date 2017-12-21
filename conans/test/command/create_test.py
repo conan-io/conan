@@ -173,7 +173,7 @@ class MyTest(ConanFile):
 """})
         client.run("create lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: TESTING!!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
 
     def create_test_package_requires(self):
         client = TestClient()
@@ -208,16 +208,16 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_conanfile})
         client.run("create Pkg/0.1@lasote/testing")
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info: include", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() "
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info: include", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
                       "Requires: Other/1.0@user/channel", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() "
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() "
                       "Requires: Pkg/0.1@lasote/testing", client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Other",
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info dep: Other",
                       client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Dep",
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info dep: Dep",
                       client.out)
-        self.assertIn("Pkg/0.1@lasote/testing test package: build() cpp_info dep: Pkg",
+        self.assertIn("Pkg/0.1@lasote/testing (test package): build() cpp_info dep: Pkg",
                       client.out)
 
     def create_with_tests_and_build_requires_test(self):

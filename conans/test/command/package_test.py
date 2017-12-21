@@ -63,6 +63,23 @@ class PackageLocalCommandTest(unittest.TestCase):
         client.run("package ./my_conanfile.py --build-folder build --package_folder='%s'" % pf)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
+    def package_with_path_errors_test(self):
+        client = TestClient()
+        client.save({"conanfile.txt": "contents"}, clean_first=True)
+
+        # Path with conanfile.txt
+        error = client.run("package conanfile.txt --build-folder build2 --install-folder build",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("A conanfile.py is needed (not valid conanfile.txt)", client.out)
+
+        # Path with wrong conanfile path
+        error = client.run("package not_real_dir/conanfile.py --build-folder build2 --install-folder build",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Conanfile not found: %s" % os.path.join(client.current_folder, "not_real_dir",
+                                                               "conanfile.py"), client.out)
+
     def package_with_reference_errors_test(self):
         client = TestClient()
         error = client.run("package MyLib/0.1@lasote/stable", ignore_error=True)

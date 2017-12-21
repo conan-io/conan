@@ -53,7 +53,7 @@ class TestConanLib(ConanFile):
         self.assertNotIn("Hello/0.1@lasote/stable: Configuring sources", client.out)
         self.assertNotIn("Hello/0.1@lasote/stable: Generated conaninfo.txt", client.out)
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.out)
-        self.assertIn("Hello/0.1@lasote/stable test package: Running test()", client.out)
+        self.assertIn("Hello/0.1@lasote/stable (test package): Running test()", client.out)
 
     def wrong_version_test(self):
         test_conanfile = '''
