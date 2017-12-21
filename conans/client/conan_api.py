@@ -72,7 +72,10 @@ def api_method(f):
     return wrapper
 
 
-def _make_abs(path, cwd=None, default=None):
+def _make_abs_path(path, cwd=None, default=None):
+    """convert 'path' to absolute if necessary (could be already absolute)
+    if not defined (empty, or None), will return 'default' one or 'cwd'
+    """
     cwd = cwd or os.getcwd()
     if not path:
         return default or cwd
@@ -81,11 +84,11 @@ def _make_abs(path, cwd=None, default=None):
     return os.path.normpath(os.path.join(cwd, path))
 
 
-def _get_it(path, cwd, py):
+def _get_conanfile_path(path, cwd, py):
     """
     param py= True: Must be .py, False: Must be .txt, None: Try .py, then .txt
     """
-    path = _make_abs(path, cwd)
+    path = _make_abs_path(path, cwd)
 
     if os.path.isdir(path):  # Can be a folder
         if py:
@@ -106,23 +109,6 @@ def _get_it(path, cwd, py):
         raise ConanException("A conanfile.py is needed (not valid conanfile.txt)")
 
     return path
-
-
-def _get_dir_from_conanfile_path(path):
-    """
-    If path is a conanfile path, returns dirname path. If not,
-    it checks if path parameter is dir, otherwise it raises an exception
-
-    :param path: Path to a conanfile.py
-    :return: Conanfile dirname path
-    '"""
-    if os.path.isfile(path):
-        return os.path.dirname(path)
-
-    if os.path.exists(path):
-        return path
-    else:
-        ConanException("Path not found: %s" % path)
 
 
 class ConanAPIV1(object):
@@ -225,7 +211,7 @@ class ConanAPIV1(object):
         options = options or []
         env = env or []
 
-        conanfile_path = _get_it(path, cwd, py=True)
+        conanfile_path = _get_conanfile_path(path, cwd, py=True)
         cwd = cwd or os.getcwd()
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
@@ -248,7 +234,7 @@ class ConanAPIV1(object):
         env = env or []
 
         cwd = cwd or os.getcwd()
-        conanfile_path = _get_it(conanfile_path, cwd, py=True)
+        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
         if not name or not version:
             conanfile = load_conanfile_class(conanfile_path)
@@ -316,13 +302,13 @@ class ConanAPIV1(object):
         cwd = cwd or os.getcwd()
 
         # Checks that info files exists if the install folder is specified
-        if install_folder and not existing_info_files(_make_abs(install_folder, cwd)):
+        if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
             raise ConanException("The specified --install-folder doesn't contain '%s' and '%s' "
                                  "files" % (CONANINFO, BUILD_INFO))
 
-        build_folder = _make_abs(build_folder, cwd)
-        install_folder = _make_abs(install_folder, cwd, default=build_folder)
-        source_folder = _make_abs(source_folder, cwd, default=build_folder)
+        build_folder = _make_abs_path(build_folder, cwd)
+        install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
+        source_folder = _make_abs_path(source_folder, cwd, default=build_folder)
 
         # Checks that no both settings and info files are specified
         if install_folder and existing_info_files(install_folder) and \
@@ -338,7 +324,7 @@ class ConanAPIV1(object):
         else:
             profile = read_conaninfo_profile(install_folder)
 
-        conanfile_path = _get_it(path, cwd, py=True)
+        conanfile_path = _get_conanfile_path(path, cwd, py=True)
         conanfile = load_conanfile_class(conanfile_path)
         if (name and conanfile.name and conanfile.name != name) or \
            (version and conanfile.version and conanfile.version != version):
@@ -367,7 +353,7 @@ class ConanAPIV1(object):
                           update=False, generators=None, install_folder=None, cwd=None):
 
         cwd = cwd or os.getcwd()
-        install_folder = _make_abs(install_folder, cwd)
+        install_folder = _make_abs_path(install_folder, cwd)
 
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
@@ -394,8 +380,8 @@ class ConanAPIV1(object):
                 update=False, generators=None, no_imports=False, install_folder=None, cwd=None):
 
         cwd = cwd or os.getcwd()
-        install_folder = _make_abs(install_folder, cwd)
-        conanfile_path = _get_it(path, cwd, py=None)
+        install_folder = _make_abs_path(install_folder, cwd)
+        conanfile_path = _get_conanfile_path(path, cwd, py=None)
 
         manifests = _parse_manifests_arguments(verify, manifests, manifests_interactive, cwd)
         manifest_folder, manifest_interactive, manifest_verify = manifests
@@ -442,7 +428,7 @@ class ConanAPIV1(object):
         if install_folder or not (profile_name or settings or options or env):
             # When not install folder is specified but neither any setting, we try to read the
             # info from cwd
-            install_folder = _make_abs(install_folder, cwd)
+            install_folder = _make_abs_path(install_folder, cwd)
             if existing_info_files(install_folder):
                 return read_conaninfo_profile(install_folder)
 
@@ -456,7 +442,7 @@ class ConanAPIV1(object):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = _get_it(reference, cwd=None, py=None)
+            reference = _get_conanfile_path(reference, cwd=None, py=None)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         graph = self._manager.info_build_order(reference, profile, build_order, remote, check_updates)
@@ -468,7 +454,7 @@ class ConanAPIV1(object):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = _get_it(reference, cwd=None, py=None)
+            reference = _get_conanfile_path(reference, cwd=None, py=None)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         ret = self._manager.info_nodes_to_build(reference, profile, build_modes, remote,
@@ -482,7 +468,7 @@ class ConanAPIV1(object):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            reference = _get_it(reference, cwd=None, py=None)
+            reference = _get_conanfile_path(reference, cwd=None, py=None)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         ret = self._manager.info_get_graph(reference, remote=remote, profile=profile,
@@ -495,12 +481,12 @@ class ConanAPIV1(object):
               install_folder=None, cwd=None):
 
         cwd = cwd or os.getcwd()
-        conanfile_path = _get_it(conanfile_path, cwd, py=True)
-        build_folder = _make_abs(build_folder, cwd)
-        install_folder = _make_abs(install_folder, cwd, default=build_folder)
-        source_folder = _make_abs(source_folder, cwd, default=os.path.dirname(conanfile_path))
+        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+        build_folder = _make_abs_path(build_folder, cwd)
+        install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
+        source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
         default_pkg_folder = os.path.join(build_folder, "package")
-        package_folder = _make_abs(package_folder, cwd, default=default_pkg_folder)
+        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
         self._manager.build(conanfile_path, source_folder, build_folder, package_folder,
                             install_folder)
@@ -508,12 +494,12 @@ class ConanAPIV1(object):
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):
         cwd = cwd or os.getcwd()
-        conanfile_path = _get_it(path, cwd, py=True)
-        build_folder = _make_abs(build_folder, cwd)
-        install_folder = _make_abs(install_folder, cwd, default=build_folder)
-        source_folder = _make_abs(source_folder, cwd, default=os.path.dirname(conanfile_path))
+        conanfile_path = _get_conanfile_path(path, cwd, py=True)
+        build_folder = _make_abs_path(build_folder, cwd)
+        install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
+        source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
         default_pkg_folder = os.path.join(build_folder, "package")
-        package_folder = _make_abs(package_folder, cwd, default=default_pkg_folder)
+        package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
         self._manager.local_package(package_folder, conanfile_path, build_folder, source_folder,
                                     install_folder)
@@ -521,9 +507,9 @@ class ConanAPIV1(object):
     @api_method
     def source(self, path, source_folder=None, info_folder=None, cwd=None):
         cwd = cwd or os.getcwd()
-        conanfile_path = _get_it(path, cwd, py=True)
-        source_folder = _make_abs(source_folder, cwd)
-        info_folder = _make_abs(info_folder, cwd)
+        conanfile_path = _get_conanfile_path(path, cwd, py=True)
+        source_folder = _make_abs_path(source_folder, cwd)
+        info_folder = _make_abs_path(info_folder, cwd)
 
         mkdir(source_folder)
         if not os.path.exists(info_folder):
@@ -540,22 +526,22 @@ class ConanAPIV1(object):
         :return: None
         """
         cwd = cwd or os.getcwd()
-        info_folder = _make_abs(info_folder, cwd)
-        dest = _make_abs(dest, cwd)
+        info_folder = _make_abs_path(info_folder, cwd)
+        dest = _make_abs_path(dest, cwd)
 
         mkdir(dest)
-        conanfile_abs_path = _get_it(path, cwd, py=None)
+        conanfile_abs_path = _get_conanfile_path(path, cwd, py=None)
         self._manager.imports(conanfile_abs_path, dest, info_folder)
 
     @api_method
     def imports_undo(self, manifest_path):
         cwd = os.getcwd()
-        manifest_path = _make_abs(manifest_path, cwd)
+        manifest_path = _make_abs_path(manifest_path, cwd)
         self._manager.imports_undo(manifest_path)
 
     @api_method
     def export(self, path, name, version, user, channel, keep_source=False, cwd=None):
-        conanfile_path = _get_it(path, cwd, py=True)
+        conanfile_path = _get_conanfile_path(path, cwd, py=True)
         self._manager.export(conanfile_path, name, version, user, channel, keep_source)
 
     @api_method
