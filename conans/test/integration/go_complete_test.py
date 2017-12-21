@@ -129,7 +129,7 @@ class GoCompleteTest(unittest.TestCase):
         files = {'conanfile.py': reuse_conanfile,
                  'src/hello/main.go': main}
         reuse_conan.save(files)
-        reuse_conan.run("install --build missing")
+        reuse_conan.run("install . --build missing")
 
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
                            var_to_add=[('GOPATH', reuse_conan.current_folder), ]):

@@ -42,15 +42,15 @@ class InfoFoldersTest(unittest.TestCase):
 
     def _prepare_deps(self, client):
         client.save({CONANFILE: conanfile_py})
-        client.run("export %s" % self.user_channel)
+        client.run("export . %s" % self.user_channel)
         client.save({CONANFILE: with_deps_path_file}, clean_first=True)
-        client.run("export %s" % self.user_channel)
+        client.run("export . %s" % self.user_channel)
         client.save({'conanfile.txt': deps_txt_file}, clean_first=True)
 
     def test_basic(self):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
-        client.run("export %s" % self.user_channel)
+        client.run("export . %s" % self.user_channel)
         client.run("info %s --paths" % (self.conan_ref))
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         output = client.user_io.out
@@ -100,7 +100,7 @@ class InfoFoldersTest(unittest.TestCase):
     def test_single_field(self):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
-        client.run("export %s" % self.user_channel)
+        client.run("export . %s" % self.user_channel)
         client.run("info %s --paths --only=build_folder" % (self.conan_ref))
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         output = client.user_io.out
@@ -118,7 +118,7 @@ class InfoFoldersTest(unittest.TestCase):
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
             client = TestClient(base_folder=folder)
             client.save({CONANFILE: conanfile_py.replace("False", "True")})
-            client.run("export %s" % self.user_channel)
+            client.run("export . %s" % self.user_channel)
             client.run("info %s --paths" % (self.conan_ref))
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
             output = client.user_io.out

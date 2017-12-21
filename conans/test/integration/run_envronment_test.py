@@ -32,5 +32,5 @@ class HelloConan(ConanFile):
 '''
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install --build missing")
+        client.run("install . --build missing")
         client.run("build .")

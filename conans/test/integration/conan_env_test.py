@@ -86,7 +86,7 @@ HELLO_EXPORT void hello();
                  "main.c": '#include "hello.h"\nint main(){\nhello();\nreturn 0;\n}'}
 
         client.save(files)
-        client.run("export conan/stable")
+        client.run("export . conan/stable")
         client.run("install lib/1.0@conan/stable -o lib:shared=True --build missing")
         client.save({"conanfile.txt": '''
 [requires]
@@ -640,24 +640,24 @@ from conans import ConanFile
 class LibConan(ConanFile):
     name = "libC"
     version = "1.0"
-    
+
     def package_info(self):
         self.env_info.MYVAR = "ValueByLibC"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("export foo/bar")
+        client.run("export . foo/bar")
 
         conanfile = """
 from conans import ConanFile
 class LibConan(ConanFile):
     name = "libD"
     version = "1.0"
-    
+
     def package_info(self):
         self.env_info.MYVAR = "ValueByLibD"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("export foo/bar")
+        client.run("export . foo/bar")
 
         conanfile = """
 import os
@@ -665,18 +665,18 @@ from conans import ConanFile
 class LibConan(ConanFile):
     name = "libB"
     version = "1.0"
-    
+
     def requirements(self):
         if os.environ.get("DEP", None) == "C":
             self.requires.add("libC/1.0@foo/bar")
         else:
             self.requires.add("libD/1.0@foo/bar")
-    
+
     def build_info(self):
         self.output.warn("Value of MYVAR: %s" % os.environ["MYVAR"])
 """
         client.save({"conanfile.py": conanfile})
-        client.run("export foo/bar")
+        client.run("export . foo/bar")
 
         refb = PackageReference.loads("libB/1.0@foo/bar:5fecb9aaf431791c8c06ab146f3451823f982bb8")
 

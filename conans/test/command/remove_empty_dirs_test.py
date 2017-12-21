@@ -24,7 +24,7 @@ class RemoveEmptyDirsTest(unittest.TestCase):
         client.run("export . lasote/stable")
         path = os.path.join(client.storage_folder, "Hello/0.1/lasote/stable")
         self.assertTrue(os.path.exists(path))
-        client.run("export lasote2/stable")
+        client.run("export . lasote2/stable")
         path = os.path.join(client.storage_folder, "Hello/0.1/lasote2/stable")
         self.assertTrue(os.path.exists(path))
         client.run("remove Hello/0.1@lasote/stable -f")

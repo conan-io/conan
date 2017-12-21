@@ -65,13 +65,9 @@ class SymLinksTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
-<<<<<<< HEAD
+
         client.run("export . lasote/stable")
-        client.run("install --build -f=conanfile.txt")
-=======
-        client.run("export lasote/stable")
         client.run("install conanfile.txt --build")
->>>>>>> feature/conan_cmd_path_file
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
@@ -125,13 +121,8 @@ class TestConan(ConanFile):
         pre_export_link = os.path.join(client.current_folder, link_name)
         os.symlink(lib_name, pre_export_link)
 
-<<<<<<< HEAD
         client.run("export . lasote/stable")
-        client.run("install --build -f=conanfile.txt")
-=======
-        client.run("export lasote/stable")
         client.run("install conanfile.py --build")
->>>>>>> feature/conan_cmd_path_file
         client.run("copy Hello/0.1@lasote/stable team/testing --all")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
@@ -162,13 +153,9 @@ class TestConan(ConanFile):
 
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
-<<<<<<< HEAD
+
         client.run("export . lasote/stable")
-        client.run("install --build -f=conanfile.txt")
-=======
-        client.run("export lasote/stable")
         client.run("install conanfile.txt --build")
->>>>>>> feature/conan_cmd_path_file
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 

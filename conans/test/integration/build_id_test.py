@@ -90,12 +90,12 @@ class BuildIdTest(unittest.TestCase):
         client = TestClient()
 
         client.save({"conanfile.py": conanfile})
-        client.run("export user/channel")
+        client.run("export . user/channel")
         if python_consumer:
             client.save({"conanfile.py": consumer_py}, clean_first=True)
         else:
             client.save({"conanfile.txt": consumer}, clean_first=True)
-        client.run('install -s build_type=Debug')
+        client.run('install . -s build_type=Debug')
         self.assertIn("Building package from source as defined by build_policy='missing'",
                       client.user_io.out)
         self.assertIn("Building my code!", client.user_io.out)
@@ -140,7 +140,7 @@ class BuildIdTest(unittest.TestCase):
     def remove_specific_builds_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export user/channel")
+        client.run("export . user/channel")
         client.save({"conanfile.txt": consumer}, clean_first=True)
         client.run('install -s build_type=Debug')
         client.run('install -s build_type=Release')
@@ -167,14 +167,14 @@ class BuildIdTest(unittest.TestCase):
     def info_test(self, python_consumer):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export user/channel")
+        client.run("export . user/channel")
         if python_consumer:
             client.save({"conanfile.py": consumer_py}, clean_first=True)
         else:
             client.save({"conanfile.txt": consumer}, clean_first=True)
-        client.run('install -s build_type=Debug')
-        client.run('install -s build_type=Release')
-        client.run("info")  # Uses release
+        client.run('install . -s build_type=Debug')
+        client.run('install . -s build_type=Release')
+        client.run("info .")  # Uses release
 
         def _check():
             build_ids = str(client.user_io.out).count("BuildID:"
@@ -191,13 +191,13 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
         self.assertNotIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
 
-        client.run("info -s build_type=Debug")
+        client.run("info . -s build_type=Debug")
         _check()
         self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
         self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
 
         if python_consumer:
-            client.run("export user/channel")
+            client.run("export . user/channel")
             client.run("info MyTest/0.1@user/channel -s build_type=Debug")
             _check()
             self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)

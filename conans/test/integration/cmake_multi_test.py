@@ -149,7 +149,7 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "Debug/FindHello.cmake": 'message(STATUS "FIND HELLO DEBUG!")',
                      "Release/FindHello.cmake": 'message(STATUS "FIND HELLO RELEASE!")'})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8)
@@ -188,10 +188,10 @@ class HelloConan(ConanFile):
         client = TestClient()
 
         client.save(multi_config_files("Hello0", test=False), clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("install Hello0/0.1@lasote/testing --build=missing")
         client.save(package_files("Hello1", ["Hello0"]), clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         if platform.system() == "Windows":
             generator = "Visual Studio 14 Win64"

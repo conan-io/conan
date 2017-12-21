@@ -80,7 +80,7 @@ class HelloTestConan(ConanFile):
 '''
 
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("test test_package Hello/0.1@lasote/testing --build missing")
 
     def fail_test_package_test(self):

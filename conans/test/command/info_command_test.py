@@ -98,7 +98,7 @@ class InfoTest(unittest.TestCase):
         conanfile = load(conanfile_path)
         conanfile += "\n# MODIFIED"
         save(conanfile_path, conanfile)
-        self.clients["H1a"].run("export lu/st")
+        self.clients["H1a"].run("export . lu/st")
         self.clients["H1a"].run("upload H1a/0.1@lu/st")  # NOW IS OUTDATED!
 
         # Without build outdated the built packages are the same

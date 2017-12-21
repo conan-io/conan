@@ -20,7 +20,7 @@ class PackageIDTest(unittest.TestCase):
                                   settings=settings)
 
         self.client.save({"conanfile.py": str(conanfile)}, clean_first=True)
-        self.client.run("export %s" % (channel or "lasote/stable"))
+        self.client.run("export . %s" % (channel or "lasote/stable"))
 
     @property
     def conaninfo(self):
@@ -34,7 +34,7 @@ class PackageIDTest(unittest.TestCase):
 
         # Build the dependencies with --build missing
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install --build missing")
+        self.client.run("install . --build missing")
         self.assertIn("Hello2/2.Y.Z", [line.strip() for line in self.conaninfo.splitlines()])
 
         # Now change the Hello version and build it, if we install out requires should not be
@@ -68,7 +68,7 @@ class PackageIDTest(unittest.TestCase):
 
         # Build the dependencies with --build missing
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install --build missing")
+        self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
 
         # If we change the user and channel should not be needed to rebuild
@@ -103,7 +103,7 @@ class PackageIDTest(unittest.TestCase):
 
         # Build the dependencies with --build missing
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install --build missing")
+        self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
 
         # If we change the user and channel should be needed to rebuild
@@ -137,7 +137,7 @@ class PackageIDTest(unittest.TestCase):
 
         # Build the dependencies with --build missing
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install --build missing")
+        self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
 
         # If we change only the package ID from hello (one more defaulted option to True) should affect
@@ -156,7 +156,7 @@ class PackageIDTest(unittest.TestCase):
 
         # Build the dependencies with --build missing
         self.client.save({"conanfile.txt": "[requires]\nHello2/2.3.8@lasote/stable"}, clean_first=True)
-        self.client.run("install --build missing")
+        self.client.run("install . --build missing")
         self.assertIn("Hello2/2.3.8", self.conaninfo)
 
         # If we change even the require, should not affect

@@ -21,15 +21,15 @@ class ImportTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile % "LibA",
                      "LICENSE.txt": "LicenseA"})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         client.save({"conanfile.py": conanfile % "LibB" + "    requires='LibA/0.1@lasote/testing'",
                      "LICENSE.md": "LicenseB"}, clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         client.save({"conanfile.py": conanfile % "LibC" + "    requires='LibB/0.1@lasote/testing'",
                      "license.txt": "LicenseC"}, clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         return client
 
     def repackage_test(self):

@@ -34,7 +34,7 @@ class GoDiamondTest(unittest.TestCase):
         conan_reference = ConanFileReference.loads("hello4/0.2@lasote/stable")
         files3 = hello_conan_files(conan_reference=conan_reference, number=4, deps=[3], lang='go')
         client.save(files3)
-        client.run("install --build missing")
+        client.run("install . --build missing")
         client.run("build .")
 
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
@@ -66,7 +66,7 @@ class GoDiamondTest(unittest.TestCase):
         files3 = hello_conan_files(conan_reference=conan_reference, number=4, deps=[3], lang='go')
         client2.save(files3)
 
-        client2.run("install --build missing")
+        client2.run("install . --build missing")
         command = os.sep.join([".", "bin", "say_hello"])
         with CustomEnvPath(paths_to_add=['$GOPATH/bin'],
                            var_to_add=[('GOPATH', client2.current_folder), ]):

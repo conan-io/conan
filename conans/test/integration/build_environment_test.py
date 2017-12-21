@@ -105,6 +105,6 @@ class ConanReuseLib(ConanFile):
                      "Makefile.am": makefile_am,
                      "configure.ac": configure_ac,
                      "main.cpp": example})
-        client.run("install --build missing")
+        client.run("install . --build missing")
         client.run("build .")
         self.assertIn("15", client.user_io.out)

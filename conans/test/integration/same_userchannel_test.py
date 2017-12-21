@@ -20,7 +20,7 @@ class SayConan(ConanFile):
 """
         for channel in ("lasote/stable", "other/testing"):
             self.client.save({"conanfile.py": conanfile % channel})
-            self.client.run("export %s" % channel)
+            self.client.run("export . %s" % channel)
 
         self.conanfile = """
 from conans import ConanFile

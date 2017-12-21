@@ -54,7 +54,7 @@ class CMakeTargetsTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py,
                      "hello.h": hello})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake,
                      "main.cpp": main}, clean_first=True)
@@ -99,7 +99,7 @@ class CMakeTargetsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile_fr,
                      "hello.h": hello})
 
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake,
                      "main.cpp": main}, clean_first=True)

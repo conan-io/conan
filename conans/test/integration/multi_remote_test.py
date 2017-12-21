@@ -84,7 +84,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable from remote0", client2.user_io.out)
         self.assertIn("Hello1/0.1@lasote/stable from remote1", client2.user_io.out)
         self.assertIn("Hello2/0.1@lasote/stable from remote2", client2.user_io.out)
-        client2.run("info")
+        client2.run("info .")
         self.assertIn("Remote: remote0=http://", client2.user_io.out)
         self.assertIn("Remote: remote1=http://", client2.user_io.out)
         self.assertIn("Remote: remote2=http://", client2.user_io.out)

@@ -332,12 +332,12 @@ class TestConan(ConanFile):
 
         # Path with wrong conanfile.txt path
         error = client.run("install not_real_dir/conanfile.txt --install-folder subdir",
-                           ignore_error = True)
+                           ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Conanfile not found!", client.out)
+        self.assertIn("Conanfile not found", client.out)
 
         # Path with wrong conanfile.py path
         error = client.run("install not_real_dir/conanfile.py --install-folder build",
-                           ignore_error = True)
+                           ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("Conanfile not found!", client.out)
+        self.assertIn("Conanfile not found", client.out)

@@ -105,7 +105,7 @@ class ConanLib(ConanFile):
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export conan/testing")
+        client.run("export . conan/testing")
 
         conanfile = '''
 import os

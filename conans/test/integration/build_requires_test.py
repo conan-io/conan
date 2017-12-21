@@ -77,7 +77,7 @@ class App(ConanFile):
         client.save({CONANFILE: mingw})
         client.run("create . mingw/0.1@lasote/stable")
         client.save({CONANFILE: gtest})
-        client.run("export gtest/0.1@lasote/stable")
+        client.run("export . gtest/0.1@lasote/stable")
         client.save({CONANFILE: app,
                      "myprofile": myprofile})
         client.run("create . app/0.1@lasote/stable --build=missing -pr=myprofile")

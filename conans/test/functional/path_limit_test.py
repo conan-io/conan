@@ -47,7 +47,7 @@ class PathLengthLimitTest(unittest.TestCase):
                  "path/"*20 + "file0.txt": "file0 content"}  # shorten to pass appveyor
         client.save(files)
         with environment_append({"CONAN_USER_HOME_SHORT": short_home}):
-            client.run("export lasote/channel")
+            client.run("export . lasote/channel")
             client.run("install lib/0.1@lasote/channel --build")
             client.run('remove "lib*" -b -p -f')
             client.run("install lib/0.1@lasote/channel --build")
@@ -63,7 +63,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export lasote/channel")
+        client.run("export . lasote/channel")
         client.run("install lib/0.1@lasote/channel --build")
         client.run("upload lib/0.1@lasote/channel --all")
         client.run("remove lib/0.1@lasote/channel -f")
@@ -95,7 +95,7 @@ class PathLengthLimitTest(unittest.TestCase):
         files = {"conanfile.py": base,
                  "path/"*20 + "file0.txt": "file0 content"}
         client.save(files)
-        client.run("export user/channel")
+        client.run("export . user/channel")
         conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
         source_folder = client.client_cache.export_sources(conan_ref)
         if platform.system() == "Windows":
@@ -105,7 +105,7 @@ class PathLengthLimitTest(unittest.TestCase):
                          "file0 content")
         client.run("install lib/0.1@user/channel --build=missing")
         package_ref = PackageReference.loads("lib/0.1@user/channel:"
-                                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")    
+                                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         package_folder = client.client_cache.package(package_ref)
         if platform.system() == "Windows":
             package_folder = load(os.path.join(package_folder, ".conan_link"))
@@ -116,7 +116,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client = TestClient()
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export lasote/channel")
+        client.run("export . lasote/channel")
         client.run("install lib/0.1@lasote/channel --build")
         client.run("copy lib/0.1@lasote/channel memsharded/stable --all")
         client.run("search")
@@ -138,7 +138,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client = TestClient()
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export user/channel")
+        client.run("export . user/channel")
         client.run("install lib/0.1@user/channel --build")
         package_ref = PackageReference.loads("lib/0.1@user/channel:"
                                              "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
@@ -232,7 +232,7 @@ class ConanLib(ConanFile):
         files = {"conanfile.py": base,
                  "lib/myfile.txt": "Hello world!"}
         client.save(files)
-        client.run("export user/channel")
+        client.run("export . user/channel")
         client.run("install lib/0.1@user/channel --build")
         # print client.paths.store
         package_ref = PackageReference.loads("lib/0.1@user/channel:"

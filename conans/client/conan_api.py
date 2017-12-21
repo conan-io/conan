@@ -93,8 +93,10 @@ def _get_it(path, cwd, py):
         elif py is False:
             path = os.path.join(path, "conanfile.txt")
         else:
-            path = os.path.join(path, "conanfile.py")
-            if not os.path.exists(path):
+            path_py = os.path.join(path, "conanfile.py")
+            if os.path.exists(path_py):
+                path = path_py
+            else:
                 path = os.path.join(path, "conanfile.txt")
 
     if not os.path.isfile(path):  # Must exist
@@ -440,7 +442,7 @@ class ConanAPIV1(object):
         if install_folder or not (profile_name or settings or options or env):
             # When not install folder is specified but neither any setting, we try to read the
             # info from cwd
-            install_folder = self._abs_relative_to(install_folder, cwd, default=cwd)
+            install_folder = _make_abs(install_folder, cwd)
             if existing_info_files(install_folder):
                 return read_conaninfo_profile(install_folder)
 
@@ -454,8 +456,7 @@ class ConanAPIV1(object):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            cwd = os.getcwd()
-            reference = self._abs_relative_to(reference, cwd)
+            reference = _get_it(reference, cwd=None, py=None)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         graph = self._manager.info_build_order(reference, profile, build_order, remote, check_updates)
@@ -467,8 +468,7 @@ class ConanAPIV1(object):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            cwd = os.getcwd()
-            reference = self._abs_relative_to(reference, cwd)
+            reference = _get_it(reference, cwd=None, py=None)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         ret = self._manager.info_nodes_to_build(reference, profile, build_modes, remote,
@@ -482,11 +482,10 @@ class ConanAPIV1(object):
         try:
             reference = ConanFileReference.loads(reference)
         except ConanException:
-            cwd = os.getcwd()
-            reference = self._abs_relative_to(reference, cwd)
+            reference = _get_it(reference, cwd=None, py=None)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
-        ret = self._manager.info_get_graph(reference=reference, remote=remote, profile=profile,
+        ret = self._manager.info_get_graph(reference, remote=remote, profile=profile,
                                            check_updates=update)
         deps_graph, graph_updates_info, project_reference = ret
         return deps_graph, graph_updates_info, project_reference
@@ -533,24 +532,25 @@ class ConanAPIV1(object):
         self._manager.source(conanfile_path, source_folder, info_folder)
 
     @api_method
-    def imports(self, path, dest=None, info_folder=None):
+    def imports(self, path, dest=None, info_folder=None, cwd=None):
         """
         :param path: Path to the conanfile
         :param dest: Dir to put the imported files. (Abs path or relative to cwd)
         :param build_folder: Dir where the conaninfo.txt and conanbuildinfo.txt files are
         :return: None
         """
-        cwd = os.getcwd()
-        info_folder = self._abs_relative_to(info_folder, cwd, default=cwd)
-        dest = self._abs_relative_to(dest, cwd, default=cwd)
+        cwd = cwd or os.getcwd()
+        info_folder = _make_abs(info_folder, cwd)
+        dest = _make_abs(dest, cwd)
 
         mkdir(dest)
-        conanfile_abs_path = _get_it(path, kk)
+        conanfile_abs_path = _get_it(path, cwd, py=None)
         self._manager.imports(conanfile_abs_path, dest, info_folder)
 
     @api_method
     def imports_undo(self, manifest_path):
-        manifest_path = self._abs_relative_to(manifest_path, os.getcwd())
+        cwd = os.getcwd()
+        manifest_path = _make_abs(manifest_path, cwd)
         self._manager.imports_undo(manifest_path)
 
     @api_method

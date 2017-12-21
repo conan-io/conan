@@ -88,7 +88,7 @@ class ConanLib(ConanFile):
     version = "0.2"
 """
         client.save({CONANFILE: other_conanfile})
-        client.run("export user2/channel2")
+        client.run("export . user2/channel2")
         client.run("install other/0.2@user2/channel2 --build")
         client.save({CONANFILE: conanfile,
                      "test_package/conanfile.py": test_conanfile})

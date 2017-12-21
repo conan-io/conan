@@ -29,7 +29,7 @@ class ConanFileToolsTest(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "file.h": "myfile.h contents"})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("install Pkg/0.1@lasote/testing --build")
         self.assertIn("Source files: myfile.h contents", client.user_io.out)
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")

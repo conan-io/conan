@@ -151,7 +151,7 @@ class ProfilesEnvironmentTest(unittest.TestCase):
                              {"CXX": "/path/tomy/g++_build", "CC": "/path/tomy/gcc_build"})
 
         self.client.save({CONANFILE: conanfile_dep})
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
 
         self.client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
         self.client.run("install --build=missing --pr scopes_env")

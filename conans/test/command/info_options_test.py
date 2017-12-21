@@ -10,7 +10,7 @@ class InfoOptionsTest(unittest.TestCase):
         client = TestClient()
         client.run('new My-Package/1.3@myuser/testing -t')
         # assert they are correct at least
-        client.run("export myuser/testing")
+        client.run("export . myuser/testing")
         client.run("search")
         self.assertIn("My-Package/1.3@myuser/testing", client.user_io.out)
 
