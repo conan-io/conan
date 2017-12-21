@@ -422,7 +422,7 @@ class ConanAPIV1(object):
             reference = ConanFileReference.loads(reference)
         except ConanException:
             cwd = os.getcwd()
-            reference = self._abs_relative_to(reference, cwd, default=cwd)
+            reference = self._abs_relative_to(reference, cwd)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         graph = self._manager.info_build_order(reference, profile, build_order, remote, check_updates)
@@ -435,7 +435,7 @@ class ConanAPIV1(object):
             reference = ConanFileReference.loads(reference)
         except ConanException:
             cwd = os.getcwd()
-            reference = self._abs_relative_to(reference, cwd, default=cwd)
+            reference = self._abs_relative_to(reference, cwd)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         ret = self._manager.info_nodes_to_build(reference, profile, build_modes, remote,
@@ -450,7 +450,7 @@ class ConanAPIV1(object):
             reference = ConanFileReference.loads(reference)
         except ConanException:
             cwd = os.getcwd()
-            reference = self._abs_relative_to(reference, cwd, default=cwd)
+            reference = self._abs_relative_to(reference, cwd)
 
         profile = self._info_get_profile(install_folder, profile_name, settings, options, env)
         ret = self._manager.info_get_graph(reference=reference, remote=remote, profile=profile,
