@@ -433,7 +433,7 @@ class ConanAPIV1(object):
                 # info from cwd
                 install_folder = _make_abs_path(install_folder, cwd)
                 if existing_info_files(install_folder):
-                    return read_conaninfo_profile(install_folder)
+                    return reference, read_conaninfo_profile(install_folder)
 
         return reference, profile_from_args(profile_name, settings, options, env=env,
                                             cwd=cwd, client_cache=self._client_cache)
