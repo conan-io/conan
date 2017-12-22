@@ -104,6 +104,6 @@ class CMakeTargetsTest(unittest.TestCase):
                      "CMakeLists.txt": cmake,
                      "main.cpp": main}, clean_first=True)
 
-        client.run("install -g cmake")
+        client.run("install . -g cmake")
         bili = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("-framework Foundation", bili)

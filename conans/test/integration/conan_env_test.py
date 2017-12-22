@@ -278,7 +278,7 @@ virtualrunenv
 '''
 
         client.save({"conanfile.txt": reuse}, clean_first=True)
-        client.run("install")
+        client.run("install .")
 
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate_run.%s" % ext)))

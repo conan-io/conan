@@ -173,7 +173,7 @@ class MyLib(ConanFile):
         for settings_line in ('', 'settings="arch"', 'settings="compiler"'):
             client = TestClient()
             client.save({"conanfile.py": conanfile % settings_line})
-            client.run("install")
+            client.run("install .")
             client.run("build .", ignore_error=True)
 
             self.assertIn("You must specify compiler, compiler.version and arch in "
@@ -204,10 +204,10 @@ class MyLib(ConanFile):
 
         self.assertIn("conanbuildinfo.txt file not found", client.user_io.out)
 
-        client.run("install")
+        client.run("install .")
         client.run("build .")
 
         client.save({"conanfile.py": conanfile % "False"}, clean_first=True)
-        client.run("install")
+        client.run("install .")
         client.run("build .")
 

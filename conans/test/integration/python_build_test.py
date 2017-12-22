@@ -160,7 +160,7 @@ class PythonBuildTest(unittest.TestCase):
         client.run("export . lasote/stable")
 
         client.save({CONANFILE: reuse}, clean_first=True)
-        client.run("install")
+        client.run("install .")
         # BUILD_INFO is created by default, remove it to check message
         os.remove(os.path.join(client.current_folder, BUILD_INFO))
         client.run("source .", ignore_error=True)
@@ -228,7 +228,7 @@ class ToolsTest(ConanFile):
             external.external_baz()
 """
         client.save({CONANFILE: reuse})
-        client.run("install --build -e PYTHONPATH=['%s']" % external_dir)
+        client.run("install . --build -e PYTHONPATH=['%s']" % external_dir)
         client.run("build .")
         info = ConanInfo.loads(load(os.path.join(client.current_folder, "conaninfo.txt")))
         pythonpath = info.env_values.env_dicts(None)[1]["PYTHONPATH"]

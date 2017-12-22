@@ -221,7 +221,7 @@ class Command(object):
 
         """
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
-        parser.add_argument("path", nargs='?', default="", help="path to a folder containing a recipe"
+        parser.add_argument("path", help="path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
