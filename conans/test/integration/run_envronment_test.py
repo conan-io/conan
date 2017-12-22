@@ -14,7 +14,7 @@ class RunEnvironmentTest(unittest.TestCase):
                                                     '''self.copy(pattern="*.so", dst="lib", keep_path=False)
         self.copy(pattern="*say_hello*", dst="bin", keep_path=False)''')
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         reuse = '''
 from conans import ConanFile, RunEnvironment, tools
@@ -32,5 +32,5 @@ class HelloConan(ConanFile):
 '''
 
         client.save({"conanfile.py": reuse}, clean_first=True)
-        client.run("install --build missing")
+        client.run("install . --build missing")
         client.run("build .")

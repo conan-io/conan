@@ -24,7 +24,7 @@ class Pkg(ConanFile):
         self.cpp_info.cppflags = ["-some_cpp_compiler_flag"]
         self.cpp_info.cflags = ["-some_c_compiler_flag"]
 """})
-        client.run("export Hello/0.1@lasote/stable")
+        client.run("export . Hello/0.1@lasote/stable")
         conanfile_txt = '''[requires]
 Hello/0.1@lasote/stable # My req comment
 [generators]

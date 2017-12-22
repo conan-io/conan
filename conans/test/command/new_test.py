@@ -18,7 +18,7 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
-        client.run("export myuser/testing")
+        client.run("export . myuser/testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 
@@ -49,7 +49,7 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
-        client.run("export myuser/testing")
+        client.run("export . myuser/testing")
         client.run("search")
         self.assertIn("My-Package/1.3@myuser/testing", client.user_io.out)
 
@@ -65,7 +65,7 @@ class NewTest(unittest.TestCase):
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/CMakeLists.txt")))
         self.assertTrue(os.path.exists(os.path.join(root, "test_package/example.cpp")))
         # assert they are correct at least
-        client.run("export myuser/testing")
+        client.run("export . myuser/testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 
@@ -80,7 +80,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('exports_sources', content)
         self.assertNotIn('source()', content)
         # assert they are correct at least
-        client.run("export myuser/testing")
+        client.run("export . myuser/testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 
@@ -94,7 +94,7 @@ class NewTest(unittest.TestCase):
         self.assertIn('version = "1.3"', content)
         self.assertIn('del self.settings.compiler.libcxx', content)
         # assert they are correct at least
-        client.run("export myuser/testing")
+        client.run("export . myuser/testing")
         client.run("search")
         self.assertIn("MyPackage/1.3@myuser/testing", client.user_io.out)
 

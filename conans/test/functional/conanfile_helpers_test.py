@@ -57,7 +57,7 @@ class ConanFileToolsTest(ConanFile):
 
             client = TestClient()
             client.save(files)
-            client.run("export lasote/testing")
+            client.run("export . lasote/testing")
 
             client2 = TestClient(client.base_folder)
             files = {"a%s.py" % libname: helpers % 2,
@@ -65,7 +65,7 @@ class ConanFileToolsTest(ConanFile):
                      "a%ss/other.py" % libname: other_helper % 2,
                      "conanfile.py": file_content2.format(libname=libname)}
             client2.save(files)
-            client2.run("export lasote/testing")
+            client2.run("export . lasote/testing")
 
             client3 = TestClient(client.base_folder)
             files = {"conanfile.txt": """[requires]

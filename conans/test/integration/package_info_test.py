@@ -34,7 +34,7 @@ class HelloConan(ConanFile):
             requires = "requires = 'Lib%s/1.0@conan/stable'" % index if index > 0 else ""
             conanfile = conanfile_tmp % ("Lib%s" % (index + 1), requires)
             client.save({CONANFILE: conanfile}, clean_first=True)
-            client.run("create conan/stable")
+            client.run("create . conan/stable")
 
         txt = "[requires]\nLib4/1.0@conan/stable"
         client.save({CONANFILE_TXT: txt}, clean_first=True)

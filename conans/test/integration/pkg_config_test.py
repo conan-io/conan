@@ -173,7 +173,7 @@ class LibAConan(ConanFile):
         client.save({"conanfile.py": conanfile_b,
                      "hello.cpp": hello_cpp,
                      "hello.h": hello_h}, clean_first=True)
-        client.run("export conan/stable")
+        client.run("export . conan/stable")
         client.run("install libB/1.0@conan/stable --build missing")
 
         client.save({"conanfile.py": conanfile_a,

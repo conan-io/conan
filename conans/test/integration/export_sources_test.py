@@ -256,7 +256,7 @@ class ExportsSourcesTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/943
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
@@ -280,7 +280,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def export_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self._check_export_folder(mode)
 
         # now build package
@@ -328,7 +328,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def export_upload_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
 
         self.client.run("upload Hello/0.1@lasote/testing")
         self.assertFalse(os.path.exists(self.source_folder))
@@ -359,7 +359,7 @@ class ExportsSourcesTest(unittest.TestCase):
         """
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
@@ -379,7 +379,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def update_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')

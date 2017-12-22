@@ -23,7 +23,7 @@ class CompleteFlowTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
         files["another_export_file.lib"] = "to compress"
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
         self.client.run("upload %s --all" % str(conan_reference))
         self.assertIn("Compressing recipe", self.client.user_io.out)
@@ -44,7 +44,7 @@ class CompleteFlowTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
         files["another_export_file.lib"] = "to compress"
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
         self.client.run("upload %s --all" % str(conan_reference))
         self.assertIn("Compressing recipe", self.client.user_io.out)
@@ -64,7 +64,7 @@ class CompleteFlowTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
         files["lib/another_export_file.lib"] = "to compress"
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
 
         # Upload conans

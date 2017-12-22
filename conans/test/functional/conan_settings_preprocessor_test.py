@@ -24,7 +24,7 @@ class HelloConan(ConanFile):
 
         files = {"conanfile.py": self.conanfile}
         self.client.save(files)
-        self.client.run("export lasote/channel")
+        self.client.run("export . lasote/channel")
 
     def test_runtime_auto(self):
         # Ensure that compiler.runtime is not declared

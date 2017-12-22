@@ -52,7 +52,7 @@ class LibcxxSettingTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": file_content,
                      "CMakeLists.txt": cmakelists})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         if platform.system() == "SunOS":
             client.run('install -s compiler=sun-cc -s compiler.libcxx=libCstd')
@@ -107,7 +107,7 @@ class ConanFileToolsTest(ConanFile):
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertNotIn("libcxx", conaninfo)
 
-        client.run("create lasote/testing -s compiler=gcc -s compiler.version=4.9")
+        client.run("create . lasote/testing -s compiler=gcc -s compiler.version=4.9")
 
         # Now try to reuse the installed package defining libstc++11 for the new package
         newlib_content = '''

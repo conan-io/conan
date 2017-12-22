@@ -18,7 +18,7 @@ class ConanLib(ConanFile):
 
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export user/channel")
+        client.run("export . user/channel")
         base = '''
 from conans import ConanFile
 
@@ -31,7 +31,7 @@ class ConanOtherLib(ConanFile):
 
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export user/channel")
+        client.run("export . user/channel")
 
         self.base_folder = client.base_folder
 
@@ -78,24 +78,23 @@ class DevConanFile(HelloConan2):
         self.assertNotIn("otherlib:otherlib_option=1", conaninfo)
         client.run("build .")
         self.assertIn("MyFlag False", client.user_io.out)
-        client.run("info")
+        client.run("info .")
         self.assertIn("lib/0.1@user/channel", client.user_io.out)
         self.assertNotIn("otherlib/0.2@user/channel", client.user_io.out)
 
-        client.run("install --build --file=conanfile_dev.py")
+        client.run("install conanfile_dev.py --build")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertIn("lib/0.1@user/channel", conaninfo)
         self.assertIn("test_option=2", conaninfo)
         self.assertIn("otherlib/0.2@user/channel", conaninfo)
         self.assertIn("otherlib:otherlib_option=1", conaninfo)
-        client.run("build . -f=conanfile_dev.py")
+        client.run("build ./conanfile_dev.py")
         self.assertIn("MyFlag True", client.user_io.out)
-        client.run("info  -f=conanfile_dev.py")
+        client.run("info conanfile_dev.py")
         self.assertIn("lib/0.1@user/channel", client.user_io.out)
         self.assertIn("otherlib/0.2@user/channel", client.user_io.out)
 
     def test_txt(self):
-
         base = '''[requires]
 lib/0.1@user/channel
 '''
@@ -111,13 +110,13 @@ otherlib:otherlib_option = 1
 
         client = TestClient(self.base_folder)
         client.save(files)
-        client.run("install --build")
+        client.run("install . --build")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertIn("lib/0.1@user/channel", conaninfo)
         self.assertNotIn("otherlib/0.2@user/channel", conaninfo)
         self.assertNotIn("otherlib:otherlib_option=1", conaninfo)
 
-        client.run("install --build --file=conanfile_dev.txt")
+        client.run("install conanfile_dev.txt --build")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertIn("lib/0.1@user/channel", conaninfo)
         self.assertIn("otherlib/0.2@user/channel", conaninfo)

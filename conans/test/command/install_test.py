@@ -40,7 +40,7 @@ class Pkg(ConanFile):
 
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
 
     def install_error_never_test(self):
         self._create("Hello0", "0.1", export=False)
@@ -283,7 +283,7 @@ class TestConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
         client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
@@ -304,7 +304,7 @@ class TestConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create conan/stable")
+        client.run("create . conan/stable")
         client.save({}, clean_first=True)
         client.run("install Hello/0.1@conan/stable")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))
@@ -335,3 +335,18 @@ class TestConan(ConanFile):
         error = client.run("install . -pr=./myotherprofile", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Error parsing the profile", client.out)
+
+    def install_with_path_errors_test(self):
+        client = TestClient()
+
+        # Path with wrong conanfile.txt path
+        error = client.run("install not_real_dir/conanfile.txt --install-folder subdir",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Conanfile not found", client.out)
+
+        # Path with wrong conanfile.py path
+        error = client.run("install not_real_dir/conanfile.py --install-folder build",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Conanfile not found", client.out)
