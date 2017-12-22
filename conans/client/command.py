@@ -11,7 +11,6 @@ from conans.client.output import Color
 
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.paths import CONANFILE
 from conans.util.config_parser import get_bool_from_text
 from conans.util.log import logger
 from conans.util.files import exception_message_safe
@@ -50,6 +49,10 @@ class OnceArgument(argparse.Action):
             msg = '{o} can only be specified once'.format(o=option_string)
             raise argparse.ArgumentError(None, msg)
         setattr(namespace, self.dest, values)
+
+
+_PATH_HELP = ("path to a folder containing a recipe (conanfile.py) "
+              "or to a recipe file, e.g., conan package folder/conanfile.py")
 
 
 class Command(object):
@@ -136,8 +139,9 @@ class Command(object):
         To create and test a binary package use the 'conan create' command.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
-        parser.add_argument("path", help='path to the "testing" directory containing a '
-                            'conanfile.py with a test() method')
+        parser.add_argument("path", help='path to the "testing" folder containing a recipe '
+                            '(conanfile.py) with a test() method or to a recipe file, '
+                            'e.g. conan test_package/conanfile.py pkg/version@user/channel')
         parser.add_argument("reference",
                             help='a full package reference pkg/version@user/channel, of the '
                             'package to be tested')
@@ -157,14 +161,10 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.create.__doc__,
                                          prog="conan create")
+        parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
-                                              ' are not declared in the recipe')
-        parser.add_argument('--cwd', '-c', default=None, action=OnceArgument,
-                            help='Optional. Folder with a %s. Default current directory.'
-                            % CONANFILE)
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
-
+                                              ' are not declared in the recipe (conanfile.py)')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
         parser.add_argument("-tf", "--test-folder", "--test_folder", action=OnceArgument,
@@ -180,12 +180,11 @@ class Command(object):
 
         name, version, user, channel = get_reference_fields(args.reference)
 
-        return self._conan.create(args.profile, args.settings, args.options,
+        return self._conan.create(args.path, name, version, user, channel,
+                                  args.profile, args.settings, args.options,
                                   args.env, args.test_folder, args.not_export,
                                   args.build, args.keep_source, args.verify, args.manifests,
-                                  args.manifests_interactive, args.remote, args.update,
-                                  conan_file_path=args.cwd, name=name, version=version, user=user,
-                                  channel=channel, filename=args.file)
+                                  args.manifests_interactive, args.remote, args.update)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
@@ -222,9 +221,9 @@ class Command(object):
 
         """
         parser = argparse.ArgumentParser(description=self.install.__doc__, prog="conan install")
-        parser.add_argument("path", nargs='?', default="",
-                            help='path to a recipe (conanfile.py). e.g., ./my_project/')
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
+        parser.add_argument("path", nargs='?', default="", help="path to a folder containing a recipe"
+                            " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
+                            "./my_project/conanfile.txt. It could also be a reference")
         parser.add_argument("--generator", "-g", nargs=1, action=Extender,
                             help='Generators to use')
         parser.add_argument("--install-folder", "--install_folder", "-if", action=OnceArgument,
@@ -251,8 +250,7 @@ class Command(object):
                                        manifests_interactive=args.manifests_interactive,
                                        build=args.build, profile_name=args.profile,
                                        update=args.update, generators=args.generator,
-                                       no_imports=args.no_imports, filename=args.file,
-                                       install_folder=args.install_folder)
+                                       no_imports=args.no_imports, install_folder=args.install_folder)
         else:
             return self._conan.install_reference(reference, settings=args.settings,
                                                  options=args.options,
@@ -310,10 +308,9 @@ class Command(object):
         str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
 
         parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info")
-        parser.add_argument("reference", nargs='?', default="",
-                            help='reference name or path to conanfile file, '
-                            'e.g., MyPackage/1.2@user/channel or ./my_project/')
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
+        parser.add_argument("reference", nargs='?', default="", help="path to a folder containing a recipe"
+                            " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
+                            "./my_project/conanfile.txt. It could also be a reference")
         parser.add_argument("--only", "-n", nargs=1, action=Extender,
                             help='show the specified fields only from: '
                                  '%s or use --paths with options %s. Use --only None to show only '
@@ -352,11 +349,12 @@ class Command(object):
 
         # BUILD ORDER ONLY
         if args.build_order:
-            ret = self._conan.info_build_order(args.reference, settings=args.settings,
+            ret = self._conan.info_build_order(args.reference,
+                                               settings=args.settings,
                                                options=args.options,
                                                env=args.env,
                                                profile_name=args.profile,
-                                               filename=args.file, remote=args.remote,
+                                               remote=args.remote,
                                                build_order=args.build_order,
                                                check_updates=args.update,
                                                install_folder=args.install_folder)
@@ -368,22 +366,26 @@ class Command(object):
 
         # INSTALL SIMULATION, NODES TO INSTALL
         elif args.build is not None:
-            nodes, _ = self._conan.info_nodes_to_build(args.reference, build_modes=args.build,
+            nodes, _ = self._conan.info_nodes_to_build(args.reference,
+                                                       build_modes=args.build,
                                                        settings=args.settings,
-                                                       options=args.options, env=args.env,
+                                                       options=args.options,
+                                                       env=args.env,
                                                        profile_name=args.profile,
-                                                       filename=args.file,
                                                        remote=args.remote,
                                                        check_updates=args.update,
                                                        install_folder=args.install_folder)
             self._outputer.nodes_to_build(nodes)
+
         # INFO ABOUT DEPS OF CURRENT PROJECT OR REFERENCE
         else:
-            data = self._conan.info_get_graph(args.reference, remote=args.remote,
+            data = self._conan.info_get_graph(args.reference,
+                                              remote=args.remote,
                                               settings=args.settings,
-                                              options=args.options, env=args.env,
-                                              profile_name=args.profile, update=args.update,
-                                              filename=args.file,
+                                              options=args.options,
+                                              env=args.env,
+                                              profile_name=args.profile,
+                                              update=args.update,
                                               install_folder=args.install_folder)
             deps_graph, graph_updates_info, project_reference = data
             only = args.only
@@ -409,8 +411,7 @@ class Command(object):
             I.e., downloads and unzip the package source.
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
-        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan source .')
-
+        parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("--source-folder", "--source_folder", "-s", action=OnceArgument,
                             help='Destination directory. Defaulted to current directory')
         parser.add_argument("--install-folder", "-if", action=OnceArgument,
@@ -445,8 +446,7 @@ class Command(object):
         """
 
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
-        parser.add_argument("path", help='path to a recipe (conanfile.py), e.g., conan build .')
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
+        parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("--source-folder", "--source_folder", "-sf", action=OnceArgument,
                             help="local folder containing the sources. Defaulted to the directory "
                                  "of the conanfile. A relative path can also be specified "
@@ -465,8 +465,9 @@ class Command(object):
                                  "conanbuildinfo.txt files (from a previous conan install "
                                  "execution). Defaulted to --build-folder")
         args = parser.parse_args(*args)
-        return self._conan.build(path=args.path, source_folder=args.source_folder,
-                                 package_folder=args.package_folder, filename=args.file,
+        return self._conan.build(conanfile_path=args.path,
+                                 source_folder=args.source_folder,
+                                 package_folder=args.package_folder,
                                  build_folder=args.build_folder,
                                  install_folder=args.install_folder)
 
@@ -480,8 +481,7 @@ class Command(object):
         'export-pkg' after a 'build' command.
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
-        parser.add_argument("path", help="path to a folder containing a recipe (conanfile.py) "
-                            "or to a recipe file, e.g., conan package folder/conanfile.py")
+        parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("--source-folder", "--source_folder", "-sf", action=OnceArgument,
                             help="local folder containing the sources. Defaulted to the directory "
                                  "of the conanfile. A relative path can also be specified "
@@ -531,8 +531,6 @@ class Command(object):
                             "With --undo option, this parameter is the folder "
                             "containing the conan_imports_manifest.txt file generated in a previous"
                             "execution. e.j: conan imports ./imported_files --undo ")
-        parser.add_argument("--file", "-f", help="Use another filename, "
-                            "e.g.: conan imports -f=conanfile2.py", action=OnceArgument)
         parser.add_argument("--import-folder", "--import_folder", "-imf", action=OnceArgument,
                             help="Directory to copy the artifacts to. By default it will be the"
                                  " current directory")
@@ -554,7 +552,7 @@ class Command(object):
         except ConanException:
             pass
 
-        return self._conan.imports(args.path, args.import_folder, args.file, args.install_folder)
+        return self._conan.imports(args.path, args.import_folder, args.install_folder)
 
     def export_pkg(self, *args):
         """Exports a recipe & creates a package with given files calling 'package'.
@@ -564,7 +562,7 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
                                          prog="conan export-pkg .")
-        parser.add_argument("path", help='path to a recipe (conanfile.py). e.j: "." ')
+        parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe (conanfile.py)')
@@ -620,22 +618,19 @@ class Command(object):
         to any remote with the "conan upload" command.
         """
         parser = argparse.ArgumentParser(description=self.export.__doc__, prog="conan export")
+        parser.add_argument("path", help=_PATH_HELP)
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
-                                              ' are not declared in the recipe')
-        parser.add_argument('--path', '-p', default=None, action=OnceArgument,
-                            help='Optional. Folder with a %s. Default current directory.'
-                            % CONANFILE)
-        parser.add_argument("--file", "-f", help="specify conanfile filename", action=OnceArgument)
+                                              ' are not declared in the recipe (conanfile.py)')
         parser.add_argument('--keep-source', '-k', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in the local cache. '
                                  'Use for testing purposes only')
         args = parser.parse_args(*args)
         name, version, user, channel = get_reference_fields(args.reference)
 
-        return self._conan.export(user=user, channel=channel, path=args.path,
-                                  keep_source=args.keep_source, filename=args.file,
-                                  name=name, version=version)
+        return self._conan.export(path=args.path,
+                                  name=name, version=version, user=user, channel=channel,
+                                  keep_source=args.keep_source)
 
     def remove(self, *args):
         """Removes packages or binaries matching pattern from local cache or remote.
@@ -982,7 +977,7 @@ class Command(object):
         parser.add_argument('reference', help='package recipe reference')
         parser.add_argument('path',
                             help='Path to the file or directory. If not specified will get the '
-                                 'conafile if only a reference is specified and a conaninfo.txt '
+                                 'conanfile if only a reference is specified and a conaninfo.txt '
                                  'file contents if the package is also specified',
                             default=None, nargs="?")
         parser.add_argument("--package", "-p", default=None, help='package ID',

@@ -36,7 +36,7 @@ class CMakeSkipRpathTest(unittest.TestCase):
         for way_to_skip in ("SKIP_RPATH", "KEEP_RPATHS"):
             client = TestClient()
             client.save({"conanfile.py": conanfile_py})
-            client.run("export lasote/testing")
+            client.run("export . lasote/testing")
             client.save({"conanfile.txt": conanfile,
                          "CMakeLists.txt": cmake % way_to_skip}, clean_first=True)
             client.run('install -g cmake --build')

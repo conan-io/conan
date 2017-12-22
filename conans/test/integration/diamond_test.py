@@ -9,7 +9,6 @@ from conans.util.files import load
 import os
 from conans.paths import BUILD_INFO, CONANFILE, BUILD_INFO_CMAKE
 import platform
-from conans.util.log import logger
 from conans.test.utils.test_files import wait_until_removed
 
 
@@ -46,7 +45,7 @@ class DiamondTester(object):
                                       cmake_targets=cmake_targets)
         conan_ref = ConanFileReference(name, version, "lasote", "stable")
         self.conan.save(files, clean_first=True)
-        self.conan.run("export lasote/stable")
+        self.conan.run("export . lasote/stable")
         self.conan.run("upload %s" % str(conan_ref))
 
     def _check_individual_deps(self, client):
@@ -56,7 +55,7 @@ class DiamondTester(object):
         content = load(build_file)
         cmakebuildinfo = load(os.path.join(client.current_folder, BUILD_INFO_CMAKE))
         self.test_obj.assertIn("set(CONAN_LIBS helloHello3 helloHello1 helloHello2 helloHello0",
-                      cmakebuildinfo)
+                               cmakebuildinfo)
         self.test_obj.assertIn("set(CONAN_DEPENDENCIES Hello3 Hello1 Hello2 Hello0)", cmakebuildinfo)
         deps_cpp_info, _, _ = TXTGenerator.loads(content)
         self.test_obj.assertEqual(len(deps_cpp_info.include_paths), 4)
@@ -114,8 +113,8 @@ class DiamondTester(object):
         command = os.sep.join([".", "bin", "say_hello"])
         client.runner(command, cwd=client.current_folder)
         self.test_obj.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
-                          'Hello Hello2', 'Hello Hello0'],
-                         str(client.user_io.out).splitlines()[-6:])
+                                   'Hello Hello2', 'Hello Hello0'],
+                                  str(client.user_io.out).splitlines()[-6:])
 
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1,
                                        use_cmake=use_cmake, cmake_targets=cmake_targets)
@@ -128,7 +127,7 @@ class DiamondTester(object):
         client.runner(command, cwd=client.current_folder)
         self.test_obj.assertEqual(['Hola Hello4', 'Hola Hello3', 'Hola Hello1', 'Hola Hello0',
                                    'Hola Hello2', 'Hola Hello0'],
-                         str(client.user_io.out).splitlines()[-6:])
+                                  str(client.user_io.out).splitlines()[-6:])
 
         # Try to upload and reuse the binaries
         client.run("upload Hello3/0.1@lasote/stable --all")

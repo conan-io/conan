@@ -64,7 +64,7 @@ class BuildEnvironmenTest(unittest.TestCase):
             return
         client = TestClient(path_with_spaces=False)
         client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         makefile_am = '''
 bin_PROGRAMS = main
@@ -105,6 +105,6 @@ class ConanReuseLib(ConanFile):
                      "Makefile.am": makefile_am,
                      "configure.ac": configure_ac,
                      "main.cpp": example})
-        client.run("install --build missing")
+        client.run("install . --build missing")
         client.run("build .")
         self.assertIn("15", client.user_io.out)

@@ -20,7 +20,7 @@ class MultiRemoteTest(unittest.TestCase):
     def predefine_remote_test(self):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("upload Hello0/0.1@lasote/stable -r=remote0")
         self.client.run("upload Hello0/0.1@lasote/stable -r=remote1")
         self.client.run("upload Hello0/0.1@lasote/stable -r=remote2")
@@ -36,7 +36,7 @@ class MultiRemoteTest(unittest.TestCase):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
 
         self.client.run("info %s" % str(conan_reference))
@@ -66,7 +66,7 @@ class MultiRemoteTest(unittest.TestCase):
             conan_reference = ConanFileReference.loads("Hello%d/0.1@lasote/stable" % i)
             files = cpp_hello_conan_files("Hello%d" % i, "0.1", build=False)
             self.client.save(files)
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
             self.client.run("upload %s -r=remote%d" % (str(conan_reference), i))
 
             self.client.run("info %s" % str(conan_reference))
@@ -84,7 +84,7 @@ class MultiRemoteTest(unittest.TestCase):
         self.assertIn("Hello0/0.1@lasote/stable from remote0", client2.user_io.out)
         self.assertIn("Hello1/0.1@lasote/stable from remote1", client2.user_io.out)
         self.assertIn("Hello2/0.1@lasote/stable from remote2", client2.user_io.out)
-        client2.run("info")
+        client2.run("info .")
         self.assertIn("Remote: remote0=http://", client2.user_io.out)
         self.assertIn("Remote: remote1=http://", client2.user_io.out)
         self.assertIn("Remote: remote2=http://", client2.user_io.out)

@@ -22,9 +22,9 @@ class HelloConan(ConanFile):
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("create conan/stable")
-        client.run("create conan/testing")
-        client.run("create conan/foo")
+        client.run("create . conan/stable")
+        client.run("create . conan/testing")
+        client.run("create . conan/foo")
 
         def test(conanfile_test, test_reference, path=None):
             path = path or "."
@@ -80,7 +80,7 @@ class HelloTestConan(ConanFile):
 '''
 
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("test test_package Hello/0.1@lasote/testing --build missing")
 
     def fail_test_package_test(self):
@@ -109,7 +109,7 @@ class HelloReuseConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "FindXXX.cmake": "Hello FindCmake",
                      "test/conanfile.py": test_conanfile})
-        client.run("create lasote/stable")
+        client.run("create . lasote/stable")
         client.run("test test Hello/0.1@lasote/stable")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
@@ -119,7 +119,7 @@ class HelloReuseConan(ConanFile):
         client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
-        client.run("create lasote/stable")  # create rebuild the package
+        client.run("create . lasote/stable")  # create rebuild the package
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
 
@@ -195,7 +195,7 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         files["test_package/conanfile.py"] = test_conanfile
         files["test_package/main.cpp"] = files["main.cpp"]
         client.save(files)
-        client.run("create lasote/stable")
+        client.run("create . lasote/stable")
         client.run("test test_package Hello0/0.1@lasote/stable -s build_type=Release")
 
         self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.user_io.out)

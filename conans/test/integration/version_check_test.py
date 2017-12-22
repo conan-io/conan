@@ -81,7 +81,7 @@ class VersionCheckTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
 
         tmp_client.save(files)
-        tmp_client.run("export lasote/stable")
+        tmp_client.run("export . lasote/stable")
         errors = tmp_client.run("upload Hello0/0.1@lasote/stable -r normal_server --all")
         errors |= tmp_client.run("upload Hello0/0.1@lasote/stable -r the_last_server --all")
         self.assertFalse(errors)
