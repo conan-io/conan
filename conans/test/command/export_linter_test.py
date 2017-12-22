@@ -22,7 +22,7 @@ class ExportLinterTest(unittest.TestCase):
     def test_basic(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         self._check_linter(client.user_io.out)
 
     def _check_linter(self, output):
@@ -37,7 +37,7 @@ class ExportLinterTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("config set general.recipe_linter=False")
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         self.assertNotIn("ERROR: Py3 incompatibility", client.user_io.out)
         self.assertNotIn("WARN: Linter", client.user_io.out)
 
@@ -50,7 +50,7 @@ indent-string='  '
                      "pylintrc": pylintrc})
         client.run('config set general.pylintrc="%s"'
                    % os.path.join(client.current_folder, "pylintrc"))
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         self.assertIn("Bad indentation. Found 4 spaces, expected 2", client.user_io.out)
 
     def test_dynamic_fields(self):
@@ -62,7 +62,7 @@ class BaseConan(ConanFile):
     version = "1.0"
 """
         client.save({CONANFILE: conanfile_base})
-        client.run("export conan/stable")
+        client.run("export . conan/stable")
 
         conanfile2 = """
 from conans import ConanFile
@@ -74,7 +74,6 @@ class TestConan(ConanFile):
         self.output.info(self.source_folder)
         self.output.info(self.package_folder)
         self.output.info(self.build_folder)
-        self.output.info(self.conanfile_directory)
 
     def package(self):
         self.copy("*")
@@ -89,7 +88,7 @@ class TestConan(ConanFile):
         self.build_requires("baselib/1.0@conan/stable")
 """
         client.save({CONANFILE: conanfile2})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         self.assertNotIn("Linter", client.user_io.out)
         # ensure nothing breaks
         client.run("install Hello/1.2@lasote/stable --build")
@@ -114,14 +113,14 @@ class BaseConan(ConanFile):
             print("I got pikachu!!")
 """
         client.save({CONANFILE: conanfile_base})
-        client.run("export conan/stable")
+        client.run("export . conan/stable")
         self.assertNotIn("Linter", client.user_io.out)
 
     def test_warning_as_errors(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("config set general.pylint_werr=True")
-        error = client.run("export lasote/stable", ignore_error=True)
+        error = client.run("export . lasote/stable", ignore_error=True)
         self.assertTrue(error)
         self._check_linter(client.user_io.out)
         self.assertIn("ERROR: Package recipe has linter errors. Please fix them",

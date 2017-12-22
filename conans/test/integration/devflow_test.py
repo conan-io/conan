@@ -60,7 +60,7 @@ class DevInSourceFlowTest(unittest.TestCase):
                    package_folder)
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../pkg")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
@@ -83,7 +83,7 @@ class DevInSourceFlowTest(unittest.TestCase):
         client.run("package .. --build_folder=.. --package_folder='%s' " % package_folder)
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf='%s' -if=." % package_folder)
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
@@ -174,7 +174,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("package ../../recipe --source_folder=../../src --build_folder=../")
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=../build/package")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")
@@ -197,7 +197,7 @@ class DevOutSourceFlowTest(unittest.TestCase):
         client.run("package .. --build-folder=.. --package_folder='%s'" % package_folder)
         self._assert_pkg(package_folder)
         client.current_folder = repo_folder
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("export-pkg . Pkg/0.1@lasote/testing -bf=./pkg")
 
         ref = ConanFileReference.loads("Pkg/0.1@lasote/testing")

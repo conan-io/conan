@@ -36,6 +36,8 @@ class SystemPackageTool(object):
             return PkgTool()
         elif os_info.is_solaris:
             return PkgUtilTool()
+        elif os_info.with_zypper:
+            return ZypperTool()
         else:
             return NullTool()
 
@@ -171,6 +173,17 @@ class PacManTool(object):
         exit_code = self._runner("pacman -Qi %s" % package_name, None)
         return exit_code == 0
 
+
+class ZypperTool(object):
+    def update(self):
+        _run(self._runner, "%szypper --non-interactive ref" % self._sudo_str)
+
+    def install(self, package_name):
+        _run(self._runner, "%szypper --non-interactive in %s" % (self._sudo_str, package_name))
+
+    def installed(self, package_name):
+        exit_code = self._runner("rpm -q %s" % package_name, None)
+        return exit_code == 0
 
 def _run(runner, command, accepted_returns=None):
     accepted_returns = accepted_returns or [0, ]

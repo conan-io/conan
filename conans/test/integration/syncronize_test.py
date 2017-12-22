@@ -29,7 +29,7 @@ class SynchronizeTest(unittest.TestCase):
         server_conan_path = remote_paths.export(conan_reference)
 
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
         # Upload conan file
         self.client.run("upload %s" % str(conan_reference))
@@ -43,7 +43,7 @@ class SynchronizeTest(unittest.TestCase):
 
         # Now delete local files export and upload and check that they are not in server
         os.remove(os.path.join(self.client.current_folder, "to_be_deleted.txt"))
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
         self.assertTrue(os.path.exists(os.path.join(server_conan_path, EXPORT_TGZ_NAME)))
         tmp = temp_folder()
@@ -56,7 +56,7 @@ class SynchronizeTest(unittest.TestCase):
         files["new_file.lib"] = "new file"
         del files["to_be_deleted.txt"]
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("upload %s" % str(conan_reference))
 
         # Verify all is correct

@@ -17,7 +17,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         self.ref = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
         self.client.run("install Hello0/0.1@lasote/stable --build missing")
         self.client.run("upload  Hello0/0.1@lasote/stable --all")
@@ -31,7 +31,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["conanfile.py"] = files["conanfile.py"] + "\n#Otherline"
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable")
         self.assertIn("Hello0/0.1@lasote/stable: Already installed!", self.client.user_io.out)
         self.assertNotIn("Package is up to date", self.client.user_io.out)
@@ -47,7 +47,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         # and try to install, it will discard the remote package too
         self.client.run("remove Hello0* -f")
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("remote add_ref Hello0/0.1@lasote/stable default")
         self.client.run("install Hello0/0.1@lasote/stable --build outdated")
         self.assertNotIn("Hello0/0.1@lasote/stable: Already installed!", self.client.user_io.out)
@@ -61,7 +61,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
                                 users={"default": [("lasote", "mypass")]})
         files = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], build=False)
         new_client.save(files)
-        new_client.run("export lasote/stable")
+        new_client.run("export . lasote/stable")
         self.assertIn("A new conanfile.py version was exported", new_client.user_io.out)
         # It will retrieve from the remote Hello0 and build Hello1
         new_client.run("install Hello1/0.1@lasote/stable --build missing")
@@ -70,7 +70,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["conanfile.py"] = files["conanfile.py"] + "\n#MODIFIED RECIPE"
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.assertIn("A new conanfile.py version was exported", self.client.user_io.out)
         self.client.run("install Hello0/0.1@lasote/stable --build missing")
         # Upload only the recipe, so the package is outdated in the server
@@ -98,7 +98,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
                                 users={"default": [("lasote", "mypass")]})
         files = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], build=False)
         new_client.save(files)
-        new_client.run("export lasote/stable")
+        new_client.run("export . lasote/stable")
         self.assertIn("A new conanfile.py version was exported", new_client.user_io.out)
         # It will retrieve from the remote Hello0 and build Hello1
         new_client.run("install Hello1/0.1@lasote/stable --build missing")
@@ -107,7 +107,7 @@ class InstallOutdatedPackagesTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         files["conanfile.py"] = files["conanfile.py"] + "\n#MODIFIED RECIPE"
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.assertIn("A new conanfile.py version was exported", self.client.user_io.out)
         self.client.run("install Hello0/0.1@lasote/stable --build missing")
         # Upload only the recipe, so the package is outdated in the server

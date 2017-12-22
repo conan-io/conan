@@ -2,11 +2,13 @@ import os
 import platform
 
 import subprocess
+from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.files import unix_path
-from conans.client.tools.oss import cpu_count, detected_architecture
+from conans.client.tools.files import unix_path, MSYS2, WSL, which
+from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
+from conans.util.files import decode_text
 
 _global_output = None
 
@@ -181,7 +183,8 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
         elif os_version_setting == '10.0':
             windows_10_sdk = find_windows_10_sdk()
             if not windows_10_sdk:
-                raise ConanException("cross-compiling for WindowsStore 10 (UWP), but Windows 10 SDK wasn't found")
+                raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
+                                     "but Windows 10 SDK wasn't found")
             command += ' store ' + windows_10_sdk
         else:
             raise ConanException('unsupported Windows Store version %s' % os_version_setting)
@@ -199,30 +202,63 @@ def escape_windows_cmd(command):
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
-def run_in_windows_bash(conanfile, bashcmd, cwd=None):
-    """ Will run a unix command inside the msys2 environment
-        It requires to have MSYS2 in the path and MinGW
+def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True):
+    """ Will run a unix command inside a bash terminal
+        It requires to have MSYS2, CYGWIN, or WSL
     """
     if platform.system() != "Windows":
         raise ConanException("Command only for Windows operating system")
-    # This needs to be set so that msys2 bash profile will set up the environment correctly.
-    try:
-        arch = conanfile.settings.arch  # Maybe arch doesn't exist
-    except:
-        arch = None
-    env_vars = {"MSYSTEM": "MINGW32" if arch == "x86" else "MINGW64",
-                "MSYS2_PATH_TYPE": "inherit"}
+    subsystem = subsystem or os_info.detect_windows_subsystem()
+
+    if not subsystem:
+        raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin or specify a build_require "
+                             "to apply it.")
+
+    if subsystem == MSYS2 and msys_mingw:
+        # This needs to be set so that msys2 bash profile will set up the environment correctly.
+        env_vars = {"MSYSTEM": "MINGW32" if conanfile.settings.get_safe("arch") == "x86" else "MINGW64",
+                    "MSYS2_PATH_TYPE": "inherit"}
+    else:
+        env_vars = {}
+
     with environment_append(env_vars):
+        hack_path = ""
+        if subsystem != WSL:  # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
+            inherited_path = conanfile.env.get("PATH", None)
+            if isinstance(inherited_path, list):
+                paths = [unix_path(path, path_flavor=subsystem) for path in inherited_path]
+                inherited_path = ":".join(paths)
+            else:
+                inherited_path = unix_path(inherited_path, path_flavor=subsystem)
+            # Put the build_requires and requires path at the first place inside the shell
+            hack_path = ' && PATH="%s:$PATH"' % inherited_path if inherited_path else ""
+
+        # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
             cwd = os.path.join(os.getcwd(), cwd)
-        curdir = unix_path(cwd or os.getcwd())
-        inherited_path = conanfile.env.get("PATH", None)
-        if isinstance(inherited_path, list):
-            inherited_path = unix_path(":".join(inherited_path))
-        hack_path = '&& PATH="%s":$PATH' % inherited_path if inherited_path else ""
-        # Needed to change to that dir inside the bash shell
+        curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_path, bashcmd)
-        custom_bash_path = os.getenv("CONAN_BASH_PATH", "bash")
-        wincmd = '%s --login -c %s' % (custom_bash_path, escape_windows_cmd(to_run))
+        wincmd = '%s --login -c %s' % (os_info.bash_path(), escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
-        conanfile.run(wincmd)
+        return conanfile.run(wincmd, win_bash=False)
+
+def vcvars_dict(*args, **kwargs):
+    cmd = vcvars_command(*args, **kwargs) + " && echo __BEGINS__ && set"
+    ret = decode_text(subprocess.check_output(cmd, shell=True))
+    new_env = {}
+    start_reached = False
+    for line in ret.splitlines():
+        if not start_reached:
+            if "__BEGINS__" in line:
+                start_reached = True
+            continue
+        name_var, value = line.split("=", 1)
+        new_env[name_var] = value
+    return new_env
+
+
+@contextmanager
+def vcvars(*args, **kwargs):
+    new_env = vcvars_dict(*args, **kwargs)
+    with environment_append(new_env):
+        yield

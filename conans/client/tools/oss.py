@@ -4,6 +4,9 @@ import subprocess
 import sys
 
 import os
+
+from conans.client.tools.files import WSL, MSYS2, CYGWIN, MSYS
+from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.log import logger
 from conans.client.tools import which
@@ -110,6 +113,11 @@ class OSInfo(object):
             return uname.startswith('MSYS_NT') and which('pacman.exe')
         return False
 
+    @property
+    def with_zypper(self):
+        return self.is_linux and self.linux_distro in \
+            ("opensuse", "sles")
+    
     @staticmethod
     def get_win_os_version():
         """
@@ -221,20 +229,69 @@ class OSInfo(object):
         elif version.minor() == "5.11":
             return "Solaris 11"
 
+    @staticmethod
+    def bash_path():
+        if os.getenv("CONAN_BASH_PATH"):
+            return os.getenv("CONAN_BASH_PATH")
+        return which("bash")
+
+    @staticmethod
+    def uname(options=None):
+        options = options or ""
+        if platform.system() != "Windows":
+            raise ConanException("Command only for Windows operating system")
+        custom_bash_path = OSInfo.bash_path()
+        if not custom_bash_path:
+            raise ConanException("bash is not in the path")
+
+        command = '%s -c "uname %s"' % (custom_bash_path, options)
+        try:
+            ret = subprocess.check_output(command).decode().strip().lower()
+            return ret
+        except:
+            return None
+
+    @staticmethod
+    def detect_windows_subsystem():
+        output = OSInfo.uname()
+        if "cygwin" in output:
+            return CYGWIN
+        elif "msys" in output or "mingw" in output:
+            output = OSInfo.uname("-or")
+            if output.startswith("2"):
+                return MSYS2
+            elif output.startswith("1"):
+                return MSYS
+            else:
+                return None
+        elif "linux" in output:
+            return WSL
+        else:
+            return None
+
 
 def cross_building(settings, self_os=None, self_arch=None):
-    self_os = self_os or platform.system()
-    self_arch = self_arch or detected_architecture()
-    os_setting = settings.get_safe("os")
-    arch_setting = settings.get_safe("arch")
-    platform_os = {"Darwin": "Macos"}.get(self_os, self_os)
 
-    if os_setting and platform_os != os_setting:
+    ret = get_cross_building_settings(settings, self_os, self_arch)
+    build_os, build_arch, host_os, host_arch = ret
+
+    if host_os is not None and (build_os != host_os):
         return True
-    if arch_setting and self_arch != arch_setting:
+    if host_arch is not None and (build_arch != host_arch):
         return True
 
     return False
+
+
+def get_cross_building_settings(settings, self_os=None, self_arch=None):
+    build_os = self_os or settings.get_safe("os_build") or \
+               {"Darwin": "Macos"}.get(platform.system(), platform.system())
+    build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
+    host_os = settings.get_safe("os")
+    host_arch = settings.get_safe("arch")
+
+    return build_os, build_arch, host_os, host_arch
+
 
 try:
     os_info = OSInfo()

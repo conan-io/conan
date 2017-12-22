@@ -12,7 +12,7 @@ class VersionRangesConflictTest(unittest.TestCase):
         def add(name, version, requires=None):
             conanfile = TestConanFile(name, version, requires=requires)
             self.client.save({CONANFILE: str(conanfile)})
-            self.client.run("export user/testing")
+            self.client.run("export . user/testing")
         add("MyPkg1", "0.1.0")
         add("MyPkg1", "0.2.0")
         add("MyPkg2", "0.1", ["MyPkg1/[~0.1]@user/testing"])

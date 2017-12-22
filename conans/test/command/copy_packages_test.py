@@ -13,7 +13,7 @@ class Pkg(ConanFile):
     settings = "os"
 """
         client.save({"conanfile.py": conanfile})
-        client.run("export Hello0/0.1@lasote/stable")
+        client.run("export . Hello0/0.1@lasote/stable")
         client.run("install Hello0/0.1@lasote/stable -s os=Windows --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Linux --build missing")
         client.run("install Hello0/0.1@lasote/stable -s os=Macos --build missing")

@@ -18,25 +18,18 @@ from conans.client.cmd.export_linter import conan_linter
 from conans.model.ref import ConanFileReference
 
 
-def cmd_export(user, channel, conan_file_path, output, search_manager, client_cache,
-               keep_source=False, filename=None, name=None, version=None):
+def cmd_export(conanfile_path, name, version, user, channel, keep_source,
+               output, search_manager, client_cache):
     """ Export the recipe
     param conanfile_path: the original source directory of the user containing a
                        conanfile.py
     param user: user under this package will be exported
     param channel: string (stable, testing,...)
     """
-    assert conan_file_path
-    logger.debug("Exporting %s" % conan_file_path)
+    logger.debug("Exporting %s" % conanfile_path)
 
-    src_folder = conan_file_path
-    conanfile_name = filename or CONANFILE
-    conan_file_path = os.path.join(conan_file_path, conanfile_name)
-    if ((os.path.exists(conan_file_path) and conanfile_name not in os.listdir(src_folder)) or
-            (conanfile_name != "conanfile.py" and conanfile_name.lower() == "conanfile.py")):
-        raise ConanException("Wrong '%s' case" % conanfile_name)
-    conan_linter(conan_file_path, output)
-    conanfile = _load_export_conanfile(conan_file_path, output, name, version)
+    conan_linter(conanfile_path, output)
+    conanfile = _load_export_conanfile(conanfile_path, output, name, version)
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition
@@ -47,8 +40,7 @@ def cmd_export(user, channel, conan_file_path, output, search_manager, client_ca
                              % (conan_ref_str, " ".join(str(s) for s in refs)))
     output = ScopedOutput(str(conan_ref), output)
     with client_cache.conanfile_write_lock(conan_ref):
-        _export_conanfile(output, client_cache, conanfile, src_folder, conan_ref, keep_source,
-                          filename)
+        _export_conanfile(conanfile_path, output, client_cache, conanfile, conan_ref, keep_source)
 
 
 def _load_export_conanfile(conanfile_path, output, name, version):
@@ -88,12 +80,12 @@ def _load_export_conanfile(conanfile_path, output, name, version):
     return conanfile
 
 
-def _export_conanfile(output, paths, conanfile, origin_folder, conan_ref, keep_source, filename):
+def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
     destination_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(destination_folder, exports_source_folder)
-    _execute_export(conanfile, origin_folder, destination_folder, exports_source_folder,
-                    output, filename)
+    _execute_export(conanfile_path, conanfile, destination_folder, exports_source_folder,
+                    output)
 
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)
 
@@ -149,8 +141,10 @@ def _init_export_folder(destination_folder, destination_src_folder):
     return previous_digest
 
 
-def _execute_export(conanfile, origin_folder, destination_folder, destination_source_folder,
-                    output, filename=None):
+def _execute_export(conanfile_path, conanfile, destination_folder,
+                    destination_source_folder, output):
+
+    origin_folder = os.path.dirname(conanfile_path)
 
     def classify_patterns(patterns):
         patterns = patterns or []
@@ -179,5 +173,5 @@ def _execute_export(conanfile, origin_folder, destination_folder, destination_so
     package_output = ScopedOutput("%s export" % output.scope, output)
     copier.report(package_output)
 
-    shutil.copy2(os.path.join(origin_folder, filename or CONANFILE),
+    shutil.copy2(conanfile_path,
                  os.path.join(destination_folder, CONANFILE))

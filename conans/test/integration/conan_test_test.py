@@ -22,9 +22,9 @@ class HelloConan(ConanFile):
 '''
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("create conan/stable")
-        client.run("create conan/testing")
-        client.run("create conan/foo")
+        client.run("create . conan/stable")
+        client.run("create . conan/testing")
+        client.run("create . conan/foo")
 
         def test(conanfile_test, test_reference, path=None):
             path = path or "."
@@ -80,7 +80,7 @@ class HelloTestConan(ConanFile):
 '''
 
         client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_package})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("test test_package Hello/0.1@lasote/testing --build missing")
 
     def fail_test_package_test(self):
@@ -104,12 +104,12 @@ class HelloReuseConan(ConanFile):
     requires = "Hello/0.1@lasote/stable"
 
     def test(self):
-        self.conanfile_directory
+        pass
 """
         client.save({"conanfile.py": conanfile,
                      "FindXXX.cmake": "Hello FindCmake",
                      "test/conanfile.py": test_conanfile})
-        client.run("create lasote/stable")
+        client.run("create . lasote/stable")
         client.run("test test Hello/0.1@lasote/stable")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
@@ -119,15 +119,9 @@ class HelloReuseConan(ConanFile):
         client.run("test test Hello/0.1@lasote/stable")  # Test do not rebuild the package
         self.assertEqual("Hello FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
-        client.run("create lasote/stable")  # create rebuild the package
+        client.run("create . lasote/stable")  # create rebuild the package
         self.assertEqual("Bye FindCmake",
                          load(os.path.join(client.paths.package(ref), "FindXXX.cmake")))
-
-    def _create(self, client, number, version, deps=None, export=True):
-        files = cpp_hello_conan_files(number, version, deps)
-        client.save(files)
-        if export:
-            client.run("export lasote/stable")
 
     def conan_test_test(self):
 
@@ -143,7 +137,7 @@ class HelloReuseConan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
+        self.run('cmake "%s" %s' % (self.source_folder, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
     def test(self):
@@ -166,7 +160,7 @@ class HelloReuseConan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        self.run('cmake "%s" %s' % (self.conanfile_directory, cmake.command_line))
+        self.run('cmake "%s" %s' % (self.source_folder, cmake.command_line))
         self.run("cmake --build . %s" % cmake.build_config)
 
     def test(self):
@@ -201,7 +195,7 @@ TARGET_LINK_LIBRARIES(greet ${CONAN_LIBS})
         files["test_package/conanfile.py"] = test_conanfile
         files["test_package/main.cpp"] = files["main.cpp"]
         client.save(files)
-        client.run("create lasote/stable")
+        client.run("create . lasote/stable")
         client.run("test test_package Hello0/0.1@lasote/stable -s build_type=Release")
 
         self.assertNotIn("WARN: conanbuildinfo.txt file not found", client.user_io.out)

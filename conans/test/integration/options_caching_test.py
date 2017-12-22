@@ -20,7 +20,7 @@ class EqualerrorConan(ConanFile):
         self.output.warn("OPTION %s" % self.options.opt)
 '''
         client.save({"conanfile.py": conanfile})
-        client.run("export user/testing")
+        client.run("export . user/testing")
         conanfile = '''
 [requires]
 equal/1.0.0@user/testing
@@ -44,7 +44,7 @@ class ConanLib(ConanFile):
 '''
 
         client.save({"conanfile.py": zlib})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         project = """[requires]
 zlib/0.1@lasote/testing

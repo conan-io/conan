@@ -371,7 +371,6 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "arm-apple-darwin")
 
-
     def test_pkg_config_paths(self):
         if platform.system() == "Windows":
             return
@@ -393,16 +392,16 @@ class HelloConan(ConanFile):
 """
 
         client.save({CONANFILE: conanfile % ("'txt'", "")})
-        client.run("create conan/testing")
+        client.run("create . conan/testing")
         self.assertNotIn("PKG_CONFIG_PATH=", client.out)
 
         client.save({CONANFILE: conanfile % ("'pkg_config'", "")})
-        client.run("create conan/testing")
+        client.run("create . conan/testing")
         self.assertIn("PKG_CONFIG_PATH=%s" % client.client_cache.conan_folder, client.out)
 
         client.save({CONANFILE: conanfile % ("'pkg_config'",
                                              "pkg_config_paths=['/tmp/hello', '/tmp/foo']")})
-        client.run("create conan/testing")
+        client.run("create . conan/testing")
         self.assertIn("PKG_CONFIG_PATH=/tmp/hello:/tmp/foo", client.out)
 
     def cross_build_command_test(self):

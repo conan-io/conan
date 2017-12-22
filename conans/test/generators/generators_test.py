@@ -65,7 +65,7 @@ Pkg/0.1@lasote/testing
 qmake
     '''
         client.save({"conanfile.py": dep})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": base}, clean_first=True)
         client.run("install --build")
 

@@ -41,12 +41,14 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
-
-        if old_version < Version("0.30"):
+        if old_version < Version("1.0"):
             _migrate_lock_files(self.client_cache, self.out)
+            _add_build_cross_settings(self.client_cache, self.out)
             old_settings = """
 os:
     Windows:
+    WindowsStore:
+        version: ["8.1", "10.0"]
     Linux:
     Macos:
     Android:
@@ -68,13 +70,17 @@ compiler:
         threads: [None, posix]
         libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
-        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9", "5.1", "5.2", "5.3", "5.4", "6.1", "6.2", "6.3", "6.4", "7.1", "7.2"]
+        version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
+                  "5", "5.1", "5.2", "5.3", "5.4",
+                  "6", "6.1", "6.2", "6.3", "6.4",
+                  "7", "7.1", "7.2"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
+        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp, v140, v140_xp, v140_clang_c2, LLVM-vs2014, LLVM-vs2014_xp, v141, v141_xp, v141_clang_c2]  
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0"]
         libcxx: [libstdc++, libstdc++11, libc++]
@@ -99,6 +105,18 @@ build_type: [None, Debug, Release]
 
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.client_cache, self.out)
+
+
+def _add_build_cross_settings(client_cache, out):
+    out.warn("Migration: Adding `os_build` and `arch_build` to default settings")
+    try:
+        default_profile = client_cache.default_profile
+        default_profile.settings["arch_build"] = default_profile.settings["arch"]
+        default_profile.settings["os_build"] = default_profile.settings["os"]
+        save(client_cache.default_profile_path, default_profile.dumps())
+    except Exception:
+        out.error("Something went wrong adding 'os_build' and 'arch_build' to your default."
+                  " You can add it manually adjusting them with the same value as 'os' and 'arch'")
 
 
 def _migrate_lock_files(client_cache, out):

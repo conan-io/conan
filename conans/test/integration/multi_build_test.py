@@ -14,7 +14,7 @@ class CollectLibsTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "0.1", collect_libs=True)
         client = TestClient()
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.run("install %s --build missing" % str(conan_reference))
 
