@@ -3,17 +3,17 @@ Conan
 
 A distributed, open source, package manager.
 
-+------------------------+-------------------------+----------------------+-----------------------+
-| **master (linux/osx)** | **develop (linux/osx)** | **master (windows)** | **develop** (windows) |
-+========================+=========================+======================+=======================+
-| |Build Status1|        | |Build Status2|         | |Build status3|      | |Build status4|       |
-+------------------------+-------------------------+----------------------+-----------------------+
++------------------------+-------------------------+
+| **master**             | **develop**             |
++========================+=========================+
+| |Build Status Master|  | |Build Status Develop|  |
++------------------------+-------------------------+
 
-+------------------------+---------------------------+--------------------------------------------------+
-| **Coverage develop**   | **Coverage master**       | **Coverage graph**                               |
-+========================+===========================+==================================================+
-| |Develop coverage|     | |Master coverage|         |      |Coverage graph|                            |
-+------------------------+---------------------------+--------------------------------------------------+
++------------------------+---------------------------+---------------------------------------------+
+| **Coverage master**    | **Coverage develop**      | **Coverage graph**                          |
++========================+===========================+=============================================+
+| |Master coverage|      | |Develop coverage|        | |Coverage graph|                            |
++------------------------+---------------------------+---------------------------------------------+
 
 
 
@@ -230,22 +230,23 @@ License
 
 `MIT LICENSE <./LICENSE.md>`__
 
-.. |Build Status1| image:: https://travis-ci.org/conan-io/conan.svg?branch=master
-   :target: https://travis-ci.org/conan-io/conan
-.. |Build Status2| image:: https://travis-ci.org/conan-io/conan.svg?branch=develop
-   :target: https://travis-ci.org/conan-io/conan
-.. |Build status3| image:: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/master?svg=true
-   :target: https://ci.appveyor.com/project/ConanCIintegration/conan/branch/master
-.. |Build status4| image:: https://ci.appveyor.com/api/projects/status/dae0ple27akmpgj4/branch/develop?svg=true
-   :target: https://ci.appveyor.com/project/ConanCIintegration/conan/branch/develop
-.. _`pip docs`: https://pip.pypa.io/en/stable/installing/
-.. _`brew homepage`: http://brew.sh/
-.. |Develop coverage| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graph/badge.svg
-   :target: https://codecov.io/gh/conan-io/conan/branch/develop
+.. |Build Status Master| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/master
+   :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/master
+
+.. |Build Status Develop| image:: https://conan-ci.jfrog.info/buildStatus/icon?job=ConanTestSuite/develop
+   :target: https://conan-ci.jfrog.info/job/ConanTestSuite/job/develop
+
 .. |Master coverage| image:: https://codecov.io/gh/conan-io/conan/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/conan-io/conan/branch/master
+
+.. |Develop coverage| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graph/badge.svg
+   :target: https://codecov.io/gh/conan-io/conan/branch/develop
+
 .. |Coverage graph| image:: https://codecov.io/gh/conan-io/conan/branch/develop/graphs/tree.svg
    :height: 50px
    :width: 50 px
    :alt: Conan develop coverage
 
+.. _`pip docs`: https://pip.pypa.io/en/stable/installing/
+
+.. _`brew homepage`: http://brew.sh/
