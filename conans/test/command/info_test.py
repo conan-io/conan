@@ -378,7 +378,7 @@ class MyTest(ConanFile):
         self.assertIn("ERROR: Exiting with code: 2", self.client.out)
 
         self.client.run("info not_real_path", ignore_error=True)
-        self.assertIn("ERROR: Conanfile not found!", self.client.out)
+        self.assertIn("ERROR: Conanfile not found", self.client.out)
 
         self.client.run("info conanfile.txt", ignore_error=True)
-        self.assertIn("ERROR: Conanfile not found!", self.client.out)
+        self.assertIn("ERROR: Conanfile not found", self.client.out)
