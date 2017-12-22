@@ -121,7 +121,7 @@ class {name}Conan(ConanFile):
     default_options = '''language={language}
                         static= {static}'''
     requires = ({requires})
-    settings = "os", "compiler", "arch"
+    settings = {settings}
     generators = "cmake", "gcc"
     exports = '*'
 
@@ -315,7 +315,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
                           pure_c=False, config=True, build=True, collect_libs=False,
                           use_cmake=True, cmake_targets=False, no_copy_source=False,
-                          use_additional_infos=0):
+                          use_additional_infos=0, settings=None):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -329,6 +329,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
          "Hello 3", that depends both in Hello4 and Hello7.
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7"""
     assert deps is None or isinstance(deps, list)
+    settings = (settings or '"os", "compiler", "arch"')
 
     code_deps = []
     requires = []
@@ -366,7 +367,8 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                           static=static,
                                           libcxx_remove=libcxx_remove,
                                           build=build_env,
-                                          additional_info=res)
+                                          additional_info=res,
+                                          settings=settings)
 
     if no_copy_source:
         conanfile = conanfile.replace("exports = '*'", """exports = '*'

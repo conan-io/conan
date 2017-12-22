@@ -371,7 +371,6 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "arm-apple-darwin")
 
-
     def test_pkg_config_paths(self):
         if platform.system() == "Windows":
             return
