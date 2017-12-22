@@ -121,7 +121,7 @@ class ProfileTest(unittest.TestCase):
     @parameterized.expand([("", ), ("./local_profiles/", ), (temp_folder() + "/", )])
     def install_with_missing_profile_test(self, path):
         self.client.save({CONANFILE: conanfile_scope_env})
-        error = self.client.run('install -pr "%sscopes_env"' % path, ignore_error=True)
+        error = self.client.run('install . -pr "%sscopes_env"' % path, ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Profile not found:", self.client.out)
         self.assertIn("scopes_env", self.client.out)

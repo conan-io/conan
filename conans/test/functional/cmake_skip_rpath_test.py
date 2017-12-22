@@ -39,7 +39,7 @@ class CMakeSkipRpathTest(unittest.TestCase):
             client.run("export . lasote/testing")
             client.save({"conanfile.txt": conanfile,
                          "CMakeLists.txt": cmake % way_to_skip}, clean_first=True)
-            client.run('install -g cmake --build')
+            client.run('install . -g cmake --build')
             client.runner("cmake .", cwd=client.current_folder)
             self.assertNotIn("Conan: Adjusting default RPATHs Conan policies", client.out)
             self.assertIn("Build files have been written", client.out)

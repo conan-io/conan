@@ -59,7 +59,7 @@ class CMakeTargetsTest(unittest.TestCase):
                      "CMakeLists.txt": cmake,
                      "main.cpp": main}, clean_first=True)
 
-        client.run('install -g cmake')
+        client.run('install . -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
         self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)
         self.assertNotIn("', skipping the version check...", client.user_io.out)

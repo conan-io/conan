@@ -118,7 +118,7 @@ class TestConan(ConanFile):
                          client.out)  # --bare include a now mandatory package() method!
 
         self.assertIn("Copied 1 '.a' files: libmycoollib.a", client.out)
-        self._consume(client, settings + ". -g cmake")
+        self._consume(client, settings + " . -g cmake")
 
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_HELLO mycoollib)", cmakeinfo)

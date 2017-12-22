@@ -83,7 +83,7 @@ class ConanLib(ConanFile):
         self.client.run("export . lasote/stable")
 
         self.client.current_folder = temp_folder()
-        self.client.run("install . Say/0.1@lasote/stable --build=missing")
+        self.client.run("install Say/0.1@lasote/stable --build=missing")
         for filename, content in [("file1.txt", "Hello"), ("file2.txt", "World")]:
             filecontent = load(os.path.join(dst_global_folder, filename))
             self.assertTrue(content, filecontent)

@@ -68,7 +68,7 @@ class LibcxxSettingTest(unittest.TestCase):
             self.assertIn("-library=stlport4", client.out)
 
         else:
-            client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++ ')
+            client.run('install . -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++ ')
             client.run('build .')
             self.assertIn("-stdlib=libstdc++", client.out)
             self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=0", client.out)
@@ -98,7 +98,7 @@ class ConanFileToolsTest(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         # Also check that it not fails the config method with Visual Studio, because of the lack of libcxx
-        client.run('install -s compiler="Visual Studio" -s compiler.version=14')
+        client.run('install . -s compiler="Visual Studio" -s compiler.version=14')
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
 
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))

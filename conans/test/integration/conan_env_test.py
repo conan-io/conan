@@ -379,7 +379,7 @@ CXXFLAGS=-fPIC -DPIC
 '''
         files = {"conanfile.txt": reuse, "myprofile": profile}
         client.save(files, clean_first=True)
-        client.run("install --profile ./myprofile --build missing")
+        client.run("install . --profile ./myprofile --build missing")
 
         with tools.chdir(client.current_folder):
             if platform.system() != "Windows":

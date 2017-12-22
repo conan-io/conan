@@ -102,7 +102,7 @@ class BuildIdTest(unittest.TestCase):
         self.assertIn("Packaging Debug!", client.user_io.out)
         content = load(os.path.join(client.current_folder, "file1.txt"))
         self.assertEqual("Debug file1", content)
-        client.run('install -s build_type=Release')
+        client.run('install . -s build_type=Release')
         self.assertNotIn("Building my code!", client.user_io.out)
         self.assertIn("Packaging Release!", client.user_io.out)
         content = load(os.path.join(client.current_folder, "file1.txt"))
@@ -142,8 +142,8 @@ class BuildIdTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile})
         client.run("export . user/channel")
         client.save({"conanfile.txt": consumer}, clean_first=True)
-        client.run('install -s build_type=Debug')
-        client.run('install -s build_type=Release')
+        client.run('install . -s build_type=Debug')
+        client.run('install . -s build_type=Release')
         ref = ConanFileReference.loads("Pkg/0.1@user/channel")
 
         def _check_builds():

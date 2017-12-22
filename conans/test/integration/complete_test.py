@@ -83,7 +83,7 @@ class CompleteFlowTest(unittest.TestCase):
         conan_reference = ConanFileReference.loads("Hello1/0.2@lasote/stable")
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         client3.save(files3)
-        client3.run('install')
+        client3.run('install .')
         client3.run('build .')
         command = os.sep.join([".", "bin", "say_hello"])
         client3.runner(command, cwd=client3.current_folder)

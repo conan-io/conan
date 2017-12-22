@@ -28,7 +28,7 @@ class CollectLibsTest(unittest.TestCase):
 
         # reusing the binary already in cache
         client.save(files3, clean_first=True)
-        client.run('install')
+        client.run('install .')
         client.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])
