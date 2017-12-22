@@ -66,13 +66,13 @@ class SymLinksTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
         client.run("export lasote/stable")
-        client.run("install --build -f=conanfile.txt")
+        client.run("install conanfile.txt --build")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
         self._check(client, ref)
 
-        client.run("install --build -f=conanfile.txt")
+        client.run("install conanfile.py --build")
         self._check(client, ref)
 
     def package_files_test(self):
@@ -121,7 +121,7 @@ class TestConan(ConanFile):
         os.symlink(lib_name, pre_export_link)
 
         client.run("export lasote/stable")
-        client.run("install --build -f=conanfile.txt")
+        client.run("install conanfile.py --build")
         client.run("copy Hello/0.1@lasote/stable team/testing --all")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
@@ -153,7 +153,7 @@ class TestConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
         client.run("export lasote/stable")
-        client.run("install --build -f=conanfile.txt")
+        client.run("install conanfile.txt --build")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
