@@ -308,7 +308,7 @@ class Command(object):
         str_only_options = ", ".join(['"%s"' % field for field in info_only_options])
 
         parser = argparse.ArgumentParser(description=self.info.__doc__, prog="conan info")
-        parser.add_argument("reference", nargs='?', default="", help="path to a folder containing a recipe"
+        parser.add_argument("reference", help="path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
         parser.add_argument("--only", "-n", nargs=1, action=Extender,

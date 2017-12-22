@@ -370,3 +370,15 @@ class MyTest(ConanFile):
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, "
                       "LibF/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
+
+    def wrong_path_parameter_test(self):
+        self.client = TestClient()
+
+        self.client.run("info", ignore_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+
+        self.client.run("info not_real_path", ignore_error=True)
+        self.assertIn("ERROR: Conanfile not found!", self.client.out)
+
+        self.client.run("info conanfile.txt", ignore_error=True)
+        self.assertIn("ERROR: Conanfile not found!", self.client.out)
