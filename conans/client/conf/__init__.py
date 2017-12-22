@@ -12,8 +12,21 @@ from conans.util.files import load
 MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 
 default_settings_yml = """
+# Only for cross building, 'os_build/arch_build' is the system that runs Conan
+os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
+arch_build: [x86, x86_64]
+
+# Only for building cross compilation tools, 'os_target/arch_target' is the system for
+# which the tools generate code
+os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
+arch_target: [x86, x86_64]
+
+# Rest of the settings are "host" settings:
+# - For native building/cross building: Where the library/program will run.
+# - For building cross compilation tools: Where the cross compiler will run.
 os:
     Windows:
+        subsystem: [None, cygwin, msys, msys2, wsl]
     WindowsStore:
         version: ["8.1", "10.0"]
     Linux:

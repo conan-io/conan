@@ -71,7 +71,7 @@ class SayConan(ConanFile):
         '''Test wrong values and wrong constraints'''
         self.client.client_cache.default_profile
         default_conf = load(self.client.paths.default_profile_path)
-        new_conf = default_conf.replace("os=", "# os=")
+        new_conf = default_conf.replace("\nos=", "\n# os=")
         save(self.client.paths.default_profile_path, new_conf)
         # MISSING VALUE FOR A SETTING
         content = """
@@ -84,7 +84,7 @@ class SayConan(ConanFile):
 """
 
         self.client.save({CONANFILE: content})
-        self.client.run("install --build missing", ignore_error=True)
+        self.client.run("install . --build missing", ignore_error=True)
         self.assertIn(str(undefined_value("settings.os")), str(self.client.user_io.out))
 
     def invalid_settings_test2(self):
@@ -130,7 +130,7 @@ class SayConan(ConanFile):
 """
 
         self.client.save({CONANFILE: content})
-        self.client.run("install --build missing", ignore_error=True)
+        self.client.run("install . --build missing", ignore_error=True)
         self.assertIn("invalid' is not defined",
                       str(self.client.user_io.out))
 
@@ -171,7 +171,7 @@ class SayConan(ConanFile):
     settings = None
 """
         self.client.save({CONANFILE: content})
-        self.client.run("install --build missing")
+        self.client.run("install . --build missing")
         self.assertIn('Generated conaninfo.txt', str(self.client.user_io.out))
         conan_info = ConanInfo.loads(load(os.path.join(self.client.current_folder, CONANINFO)))
         self.assertEquals(conan_info.settings.dumps(), "")
@@ -186,7 +186,7 @@ class SayConan(ConanFile):
     settings = {}
 """
         self.client.save({CONANFILE: content})
-        self.client.run("install --build missing")
+        self.client.run("install . --build missing")
         self.assertIn('Generated conaninfo.txt', str(self.client.user_io.out))
         conan_info = ConanInfo.loads(load(os.path.join(self.client.current_folder, CONANINFO)))
         self.assertEquals(conan_info.settings.dumps(), "")

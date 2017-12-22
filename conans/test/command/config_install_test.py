@@ -150,7 +150,7 @@ class Pkg(ConanFile):
         self.output.info("A is %s" % a)
 """
         self.client.save({"conanfile.py": conanfile})
-        self.client.run("create Pkg/0.1@user/testing")
+        self.client.run("create . Pkg/0.1@user/testing")
         self.assertIn("A is 3", self.client.out)
 
     def install_file_test(self):

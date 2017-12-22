@@ -24,11 +24,12 @@ class WhichTest(unittest.TestCase):
 
     def test_which_positive(self):
         tmp_dir = temp_folder()
-        fullname = os.path.join(tmp_dir, 'example.sh')
+        ext = ".sh" if platform.system() != "Windows" else ".bat"
+        fullname = os.path.join(tmp_dir, 'example%s' % ext)
         self._touch(fullname)
         self._add_executable_bit(fullname)
         with tools.environment_append({'PATH': tmp_dir}):
-            self.assertEqual(tools.which('example.sh'), fullname)
+            self.assertEqual(tools.which('example').lower(), fullname.lower())
 
     def test_which_negative(self):
         tmp_dir = temp_folder()

@@ -46,7 +46,7 @@ class ProfileTest(unittest.TestCase):
 
     def bad_syntax_test(self):
         self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
         profile = '''
         [settings
@@ -134,7 +134,7 @@ class ProfileTest(unittest.TestCase):
                        env=[("A_VAR", "A_VALUE")], package_env={"Hello0": [("OTHER_VAR", "2")]})
 
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr envs")
         self._assert_env_variable_printed("A_VAR", "A_VALUE")
         self._assert_env_variable_printed("OTHER_VAR", "2")
@@ -173,7 +173,7 @@ class ProfileTest(unittest.TestCase):
                               "compiler.libcxx", "#compiler.libcxx", strict=False)
 
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install --build missing -pr vs_12_86")
         info = load(os.path.join(self.client.current_folder, "conaninfo.txt"))
         for setting, value in profile_settings.items():
@@ -245,7 +245,7 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.client_cache.profiles_path, "scopes_env", settings={},
                        env=[("CXX", "/path/tomy/g++"), ("CC", "/path/tomy/gcc")])
         self.client.save({CONANFILE: conanfile_scope_env})
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install Hello0/0.1@lasote/stable --build missing -pr scopes_env")
 
         self._assert_env_variable_printed("CC", "/path/tomy/gcc")
@@ -268,7 +268,6 @@ class DefaultNameConan(ConanFile):
 
     def build(self):
         # Print environment vars
-        # self.run('cmake %s %s' % (self.conanfile_directory, cmake.command_line))
         if self.settings.os == "Windows":
             self.run('echo "My var is %ONE_VAR%"')
         else:
@@ -285,7 +284,7 @@ class DefaultNameConan(ConanFile):
                        env=[("ONE_VAR", "ONE_VALUE")])
 
         self.client.save(files)
-        self.client.run("create lasote/stable --profile scopes_env")
+        self.client.run("create . lasote/stable --profile scopes_env")
 
         self._assert_env_variable_printed("ONE_VAR", "ONE_VALUE")
         self.assertIn("My var is ONE_VALUE", str(self.client.user_io.out))
@@ -295,13 +294,13 @@ class DefaultNameConan(ConanFile):
                        package_env={"DefaultName": [("ONE_VAR", "IN_TEST_PACKAGE")],
                                     "Hello0": [("ONE_VAR", "PACKAGE VALUE")]})
 
-        self.client.run("create lasote/stable --profile scopes_env2")
+        self.client.run("create . lasote/stable --profile scopes_env2")
 
         self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
         self.assertIn("My var is IN_TEST_PACKAGE", str(self.client.user_io.out))
 
         # Try now overriding some variables with command line
-        self.client.run("create lasote/stable --profile scopes_env2 "
+        self.client.run("create . lasote/stable --profile scopes_env2 "
                         "-e DefaultName:ONE_VAR=InTestPackageOverride "
                         "-e Hello0:ONE_VAR=PackageValueOverride ")
 
@@ -309,7 +308,7 @@ class DefaultNameConan(ConanFile):
         self.assertIn("My var is InTestPackageOverride", str(self.client.user_io.out))
 
         # A global setting in command line won't override a scoped package variable
-        self.client.run("create lasote/stable --profile scopes_env2 -e ONE_VAR=AnotherValue")
+        self.client.run("create . lasote/stable --profile scopes_env2 -e ONE_VAR=AnotherValue")
         self._assert_env_variable_printed("ONE_VAR", "PACKAGE VALUE")
 
     def _assert_env_variable_printed(self, name, value):
@@ -331,7 +330,7 @@ class WinRequireDefaultNameConan(ConanFile):
 
         files = {"conanfile.py": winreq_conanfile}
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
         # Now require the first recipe depending on OS=windows
         conanfile = '''from conans.model.conan_file import ConanFile
@@ -349,7 +348,7 @@ class DefaultNameConan(ConanFile):
 '''
         files = {"conanfile.py": conanfile}
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
         # Create a profile that doesn't activate the require
         create_profile(self.client.client_cache.profiles_path, "scopes_env",

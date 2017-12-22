@@ -22,25 +22,6 @@ from conans.util.tracer import log_package_built
 from conans.util.env_reader import get_env
 
 
-def _init_package_info(deps_graph, paths):
-    for node in deps_graph.nodes:
-        conan_ref, conan_file = node
-        if conan_ref:
-            package_id = conan_file.info.package_id()
-            package_reference = PackageReference(conan_ref, package_id)
-            package_folder = paths.package(package_reference, conan_file.short_paths)
-            conan_file.package_folder = package_folder
-            conan_file.cpp_info = CppInfo(package_folder)
-        else:
-            conan_file.cpp_info = CppInfo("")
-
-        conan_file.cpp_info.version = conan_file.version
-        conan_file.cpp_info.description = conan_file.description
-
-        conan_file.env_info = EnvInfo()
-        conan_file.user_info = UserInfo()
-
-
 def build_id(conan_file):
     if hasattr(conan_file, "build_id"):
         # construct new ConanInfo
@@ -161,7 +142,6 @@ class _ConanPackageBuilder(object):
 
         os.chdir(self.build_folder)
         self._conan_file.build_folder = self.build_folder
-        self._conan_file.conanfile_directory = self.build_folder
         self._conan_file.package_folder = package_folder
         # In local cache, install folder always is build_folder
         self._conan_file.install_folder = self.build_folder
@@ -195,8 +175,6 @@ class _ConanPackageBuilder(object):
                 raise exc
             raise ConanException(exc)
         finally:
-            export_folder = self._client_cache.export(self._conan_ref)
-            self._conan_file.conanfile_directory = export_folder
             # Now remove all files that were imported with imports()
             if not getattr(self._conan_file, "keep_imports", False):
                 for f in copied_files:
@@ -258,10 +236,20 @@ def call_system_requirements(conanfile, output):
 
 
 def call_package_info(conanfile, package_folder):
+    conanfile.cpp_info = CppInfo(package_folder)
+    conanfile.cpp_info.version = conanfile.version
+    conanfile.cpp_info.description = conanfile.description
+    conanfile.env_info = EnvInfo()
+    conanfile.user_info = UserInfo()
+
+    # Get deps_cpp_info from upstream nodes
+    public_deps = [name for name, req in conanfile.requires.items() if not req.private]
+    conanfile.cpp_info.public_deps = public_deps
     # Once the node is build, execute package info, so it has access to the
     # package folder and artifacts
     with tools.chdir(package_folder):
         with conanfile_exception_formatter(str(conanfile), "package_info"):
+            conanfile.package_folder = package_folder
             conanfile.source_folder = None
             conanfile.build_folder = None
             conanfile.install_folder = None
@@ -280,11 +268,10 @@ class ConanInstaller(object):
         self._build_mode = build_mode
         self._built_packages = set()  # To avoid re-building twice the same package reference
 
-    def install(self, deps_graph):
+    def install(self, deps_graph, profile_build_requires):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         t1 = time.time()
-        _init_package_info(deps_graph, self._client_cache)
         # order by levels and propagate exports as download imports
         nodes_by_level = deps_graph.by_levels()
         logger.debug("Install-Process buildinfo %s", (time.time() - t1))
@@ -292,7 +279,7 @@ class ConanInstaller(object):
         skip_private_nodes = self._compute_private_nodes(deps_graph)
         logger.debug("Install-Process private %s", (time.time() - t1))
         t1 = time.time()
-        self._build(nodes_by_level, skip_private_nodes, deps_graph)
+        self._build(nodes_by_level, skip_private_nodes, deps_graph, profile_build_requires)
         logger.debug("Install-build %s", (time.time() - t1))
 
     def _compute_private_nodes(self, deps_graph):
@@ -335,7 +322,7 @@ class ConanInstaller(object):
         return [(PackageReference(conan_ref, package_id), conan_file)
                 for conan_ref, package_id, conan_file, build in nodes if build]
 
-    def _build(self, nodes_by_level, skip_private_nodes, deps_graph):
+    def _build(self, nodes_by_level, skip_private_nodes, deps_graph, profile_build_requires):
         """ The build assumes an input of conans ordered by degree, first level
         should be independent from each other, the next-second level should have
         dependencies only to first level conans.
@@ -354,7 +341,7 @@ class ConanInstaller(object):
 
         for level in inverse:
             level = sorted(level, key=lambda x: x.conan_ref)
-            flat.extend(level)
+            flat.extend(n for n in level if n not in skip_private_nodes)
 
         # Get the nodes in order and if we have to build them
         nodes_to_process = self._get_nodes(nodes_by_level, skip_private_nodes)
@@ -373,12 +360,11 @@ class ConanInstaller(object):
                 elif self._build_mode.forced(conan_file, conan_ref):
                     output.warn('Forced build from source')
 
-                self._build_requires.install(conan_ref, conan_file, self)
+                self._build_requires.install(conan_ref, conan_file, self, profile_build_requires)
 
                 t1 = time.time()
                 # Assign to node the propagated info
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
-
                 builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)
                 with self._client_cache.conanfile_write_lock(conan_ref):
                     self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
@@ -447,8 +433,6 @@ class ConanInstaller(object):
     def _propagate_info(conan_file, conan_ref, flat, deps_graph):
         # Get deps_cpp_info from upstream nodes
         node_order = deps_graph.ordered_closure((conan_ref, conan_file), flat)
-        public_deps = [name for name, req in conan_file.requires.items() if not req.private]
-        conan_file.cpp_info.public_deps = public_deps
         for n in node_order:
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)

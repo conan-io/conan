@@ -19,7 +19,7 @@ class Package{number}Conan(ConanFile):
             files = {"conanfile.py": content}
 
             client.save(files, clean_first=True)
-            client.run("export lasote/stable")
+            client.run("export . lasote/stable")
 
         client.run("install Package3/0.1@lasote/stable --build", ignore_error=True)
         self.assertIn("ERROR: Loop detected: Package3/0.1@lasote/stable->"

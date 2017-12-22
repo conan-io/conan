@@ -60,7 +60,7 @@ class CMakeFlagsTest(unittest.TestCase):
     def flags_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake}, clean_first=True)
 
@@ -73,9 +73,9 @@ class CMakeFlagsTest(unittest.TestCase):
     def transitive_flags_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.py": chatconanfile_py}, clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": conanfile.replace("Hello", "Chat"),
                      "CMakeLists.txt": cmake}, clean_first=True)
 
@@ -89,7 +89,7 @@ class CMakeFlagsTest(unittest.TestCase):
     def targets_flags_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         cmake_targets = cmake.replace("conan_basic_setup()",
                                       "conan_basic_setup(TARGETS)\n"
                                       "get_target_property(HELLO_FLAGS CONAN_PKG::Hello"
@@ -111,7 +111,7 @@ class CMakeFlagsTest(unittest.TestCase):
         client.save({"conanfile.py": conanfile_py.replace('version = "0.1"',
                                                           'version = "0.1"\n'
                                                           '    settings = "compiler"')})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         cmake_targets = cmake.replace("conan_basic_setup()",
                                       "conan_basic_setup(TARGETS)\n"
                                       "get_target_property(HELLO_FLAGS CONAN_PKG::Hello"
@@ -132,9 +132,9 @@ class CMakeFlagsTest(unittest.TestCase):
     def transitive_targets_flags_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile_py})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.py": chatconanfile_py}, clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         cmake_targets = cmake.replace("conan_basic_setup()",
                                       "conan_basic_setup(TARGETS)\n"
                                       "get_target_property(HELLO_FLAGS CONAN_PKG::Hello"

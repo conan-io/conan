@@ -20,7 +20,7 @@ class CompleteFlowTest(unittest.TestCase):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
 
         self.assertIn("Hello0/0.1@lasote/stable package(): Copied 1 '.h' files: helloHello0.h",

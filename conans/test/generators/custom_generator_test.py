@@ -78,14 +78,14 @@ class CustomGeneratorTest(unittest.TestCase):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("upload %s" % str(conan_reference))
 
         gen_reference = ConanFileReference.loads("MyCustomGen/0.2@lasote/stable")
         files = {CONANFILE: generator}
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("upload %s" % str(gen_reference))
 
         # Test local, no retrieval
@@ -109,7 +109,7 @@ class CustomGeneratorTest(unittest.TestCase):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = {CONANFILE: generator_multi}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("upload %s" % str(gen_reference))
 
         # Test local, no retrieval

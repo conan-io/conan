@@ -24,7 +24,7 @@ class ConanLib(ConanFile):
         client.save({"conanfile.py": llvm,
                      "include/file.h": "",
                      "include/c++/v1/file2.h": ""})
-        client.run("create llvm/5.0@user/channel")
+        client.run("create . llvm/5.0@user/channel")
         test = '''
 from conans import ConanFile
 class ConanLib(ConanFile):
@@ -39,7 +39,7 @@ llvm/5.0@user/channel
                      "include/c++/v1/file4.h": "",
                      "test_package/conanfile.py": test,
                      "myprofile": myprofile}, clean_first=True)
-        client.run("create MyLib/0.1@user/channel -pr=myprofile")
+        client.run("create . MyLib/0.1@user/channel -pr=myprofile")
         content = load(os.path.join(client.current_folder,
                                     "test_package/build/1ce01a69e728d0cf98d738a3dc17cee00c9010d2"
                                     "/conanbuildinfo.txt"))

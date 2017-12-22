@@ -332,9 +332,9 @@ class TestClient(object):
         # Enforcing VS 2015, even if VS2017 is auto detected
         if default_profile:
             profile = self.client_cache.default_profile
-            if profile.settings.get("compiler.version") == "15":
-                profile.settings["compiler.version"] = "14"
-                save(self.client_cache.default_profile_path, profile.dumps())
+        #     if profile.settings.get("compiler.version") == "15":
+        #         profile.settings["compiler.version"] = "14"
+        #         save(self.client_cache.default_profile_path, profile.dumps())
 
     def update_servers(self, servers):
         self.servers = servers or {}
