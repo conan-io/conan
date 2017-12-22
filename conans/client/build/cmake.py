@@ -6,6 +6,7 @@ from contextlib import contextmanager
 
 from conans.client import defs_to_string, join_arguments
 from conans.client.tools import cross_building
+from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
@@ -155,13 +156,15 @@ class CMake(object):
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
         else:  # detect if we are cross building and the system name and version
             if cross_building(self._conanfile.settings):  # We are cross building
-                if the_os:  # the_os is the host (regular setting)
-                    ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS",
-                                                                      "watchOS"] else the_os
-                    if os_ver:
-                        ret["CMAKE_SYSTEM_VERSION"] = os_ver
-                else:
-                    ret["CMAKE_SYSTEM_NAME"] = "Generic"
+                build_os, _, host_os, _ = get_cross_building_settings(self._conanfile.settings)
+                if host_os != build_os:
+                    if the_os:  # the_os is the host (regular setting)
+                        ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS",
+                                                                          "watchOS"] else the_os
+                        if os_ver:
+                            ret["CMAKE_SYSTEM_VERSION"] = os_ver
+                    else:
+                        ret["CMAKE_SYSTEM_NAME"] = "Generic"
 
         if ret:  # If enabled cross compile
             for env_var in ["CONAN_CMAKE_SYSTEM_PROCESSOR",
