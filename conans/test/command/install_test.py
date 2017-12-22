@@ -34,8 +34,9 @@ class Pkg(ConanFile):
         self.assertNotIn("Hello", client.out)
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
 
-    def _create(self, number, version, deps=None, export=True, no_config=False):
-        files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config)
+    def _create(self, number, version, deps=None, export=True, no_config=False, settings=None):
+        files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config,
+                                      settings=settings)
 
         self.client.save(files, clean_first=True)
         if export:
@@ -259,6 +260,14 @@ class Pkg(ConanFile):
                       conan_info.full_requires.dumps())
 
     def cross_platform_msg_test(self):
+        # Explicit with os_build and os_arch settings
+        message = "Cross-platform from 'Linux' to 'Windows'"
+        self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
+        self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
+                        ignore_error=True)
+        self.assertIn(message, self.client.user_io.out)
+
+        # Implicit detection when not available (retrocompatibility)
         bad_os = "Linux" if platform.system() != "Linux" else "Macos"
         message = "Cross-platform from '%s' to '%s'" % (detected_os(), bad_os)
         self._create("Hello0", "0.1")
@@ -277,8 +286,8 @@ class TestConan(ConanFile):
         client.run("export . lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
-        client.run("install . --build=missing -s os=Windows -s build_os=Windows --install-folder=win_dir")
-        client.run("install . --build=missing -s os=Macos -s build_os=Macos --install-folder=os_dir")
+        client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
+        client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertNotIn("os=Macos", conaninfo)

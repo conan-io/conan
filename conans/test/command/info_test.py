@@ -310,14 +310,14 @@ class MyTest(ConanFile):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("info . -bo=Hello0/0.1@lasote/stable")
+        self.client.run("info ./conanfile.py -bo=Hello0/0.1@lasote/stable")
         self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
                       self.client.user_io.out)
 
-        self.client.run("info . -bo=Hello1/0.1@lasote/stable")
+        self.client.run("info conanfile.py -bo=Hello1/0.1@lasote/stable")
         self.assertIn("[Hello1/0.1@lasote/stable]", self.client.user_io.out)
 
-        self.client.run("info . -bo=Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
+        self.client.run("info ./ -bo=Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
         self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
                       self.client.user_io.out)
 

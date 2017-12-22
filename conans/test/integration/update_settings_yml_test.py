@@ -28,8 +28,8 @@ class ConanFileToolsTest(ConanFile):
         prev_settings = """
 os: [Windows, Linux, Macos, Android, FreeBSD, SunOS]
 arch: [x86, x86_64, armv6, armv7, armv7hf, armv8, sparc, sparcv9]
-build_os: [Windows, Linux, Macos, Android, FreeBSD, SunOS]
-build_arch: [x86, x86_64, armv6, armv7, armv7hf, armv8, sparc, sparcv9]
+os_build: [Windows, Linux, Macos, Android, FreeBSD, SunOS]
+arch_build: [x86, x86_64, armv6, armv7, armv7hf, armv8, sparc, sparcv9]
 
 compiler:
     sun-cc:

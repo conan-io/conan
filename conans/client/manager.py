@@ -6,7 +6,6 @@ from conans.client import packager
 from conans.client.build_requires import BuildRequires
 from conans.client.client_cache import ClientCache
 from conans.client.cmd.export import cmd_export
-from conans.client.conf.detect import detected_os
 from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
@@ -22,6 +21,7 @@ from conans.client.remote_registry import RemoteRegistry
 from conans.client.remover import ConanRemover
 from conans.client.require_resolver import RequireResolver
 from conans.client.source import config_source_local
+from conans.client.tools import cross_building, get_cross_building_settings
 from conans.client.userio import UserIO
 from conans.errors import NotFoundException, ConanException, conanfile_exception_formatter
 from conans.model.conan_file import get_env_context_manager
@@ -346,8 +346,9 @@ class ConanManager(object):
         Printer(self._user_io.out).print_graph(deps_graph, registry)
 
         try:
-            if loader._settings.os and detected_os() != loader._settings.os:
-                message = "Cross-platform from '%s' to '%s'" % (detected_os(), loader._settings.os)
+            if cross_building(loader._settings):
+                build_os, _, host_os, _ = get_cross_building_settings(loader._settings)
+                message = "Cross-platform from '%s' to '%s'" % (build_os, host_os)
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
             pass

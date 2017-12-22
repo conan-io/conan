@@ -513,7 +513,8 @@ class ConanAPIV1(object):
         """
         :param path: Path to the conanfile
         :param dest: Dir to put the imported files. (Abs path or relative to cwd)
-        :param build_folder: Dir where the conaninfo.txt and conanbuildinfo.txt files are
+        :param info_folder: Dir where the conaninfo.txt and conanbuildinfo.txt files are
+        :param cwd: Current working directory
         :return: None
         """
         cwd = cwd or os.getcwd()

@@ -43,6 +43,7 @@ class ClientMigrator(Migrator):
             return
         if old_version < Version("1.0"):
             _migrate_lock_files(self.client_cache, self.out)
+            _add_build_cross_settings(self.client_cache, self.out)
             old_settings = """
 os:
     Windows:
@@ -104,6 +105,18 @@ build_type: [None, Debug, Release]
 
                 self.out.warn("Migration: export_source cache new layout")
                 migrate_c_src_export_source(self.client_cache, self.out)
+
+
+def _add_build_cross_settings(client_cache, out):
+    out.warn("Migration: Adding `os_build` and `arch_build` to default settings")
+    try:
+        default_profile = client_cache.default_profile
+        default_profile.settings["arch_build"] = default_profile.settings["arch"]
+        default_profile.settings["os_build"] = default_profile.settings["os"]
+        save(client_cache.default_profile_path, default_profile.dumps())
+    except Exception:
+        out.error("Something went wrong adding 'os_build' and 'arch_build' to your default."
+                  " You can add it manually adjusting them with the same value as 'os' and 'arch'")
 
 
 def _migrate_lock_files(client_cache, out):

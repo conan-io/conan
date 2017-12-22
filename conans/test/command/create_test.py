@@ -65,7 +65,7 @@ class MyPkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing", client.out)
 
         # Create with only user will raise an error because of no name/version
-        error = client.run("create . lasote/testing", ignore_error=True)
+        error = client.run("create conanfile.py lasote/testing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("conanfile.py doesn't declare package name or version", client.out)
         # Same with only user, (default testing)
@@ -81,12 +81,12 @@ class Pkg(ConanFile):
     pass
         """})
         client.run("export . LibA/0.1@user/channel")
-        client.run("export . LibA/0.2@user/channel")
+        client.run("export conanfile.py LibA/0.2@user/channel")
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "LibA/0.1@user/channel"
         """})
-        client.run("export . LibB/0.1@user/channel")
+        client.run("export ./ LibB/0.1@user/channel")
         client.save({"conanfile.py": """from conans import ConanFile
 class Pkg(ConanFile):
     requires = "LibA/0.2@user/channel"
@@ -96,7 +96,7 @@ class Pkg(ConanFile):
 class Pkg(ConanFile):
     requires = "LibB/0.1@user/channel", "LibC/0.1@user/channel"
         """})
-        error = client.run("create . Consumer/0.1@lasote/testing", ignore_error=True)
+        error = client.run("create ./conanfile.py Consumer/0.1@lasote/testing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Conflict in LibC/0.1@user/channel",
                       client.out)
@@ -111,7 +111,7 @@ class TestConan(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("create . Hello/1.2@lasote/stable")
-        error = client.run("create . Pkg/1.2@lasote/stable", ignore_error=True)
+        error = client.run("create ./ Pkg/1.2@lasote/stable", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Package recipe exported with name Pkg!=Hello", client.out)
         error = client.run("create . Hello/1.1@lasote/stable", ignore_error=True)
