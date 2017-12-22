@@ -271,18 +271,27 @@ class OSInfo(object):
 
 
 def cross_building(settings, self_os=None, self_arch=None):
-    self_os = self_os or settings.get_safe("build_os") or platform.system()
-    self_arch = self_arch or settings.get_safe("build_arch") or detected_architecture()
-    os_setting = settings.get_safe("os")
-    arch_setting = settings.get_safe("arch")
-    platform_os = {"Darwin": "Macos"}.get(self_os, self_os)
 
-    if os_setting and platform_os != os_setting:
+    ret = get_cross_building_settings(settings, self_os, self_arch)
+    build_os, build_arch, host_os, host_arch = ret
+
+    if host_os is not None and (build_os != host_os):
         return True
-    if arch_setting and self_arch != arch_setting:
+    if host_arch is not None and (build_arch != host_arch):
         return True
 
     return False
+
+
+def get_cross_building_settings(settings, self_os=None, self_arch=None):
+    build_os = self_os or settings.get_safe("os_build") or \
+               {"Darwin": "Macos"}.get(platform.system(), platform.system())
+    build_arch = self_arch or settings.get_safe("arch_build") or detected_architecture()
+    host_os = settings.get_safe("os")
+    host_arch = settings.get_safe("arch")
+
+    return build_os, build_arch, host_os, host_arch
+
 
 try:
     os_info = OSInfo()

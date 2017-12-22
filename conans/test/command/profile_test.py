@@ -85,7 +85,7 @@ class ProfileTest(unittest.TestCase):
         # Now try the remove
 
         client.run("profile remove settings.os ./MyProfile")
-        client.run("profile remove settings.build_os ./MyProfile")
+        client.run("profile remove settings.os_build ./MyProfile")
         self.assertNotIn("os=", load(pr_path))
 
         client.run("profile remove settings.compiler.version ./MyProfile")

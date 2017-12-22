@@ -183,7 +183,8 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
         elif os_version_setting == '10.0':
             windows_10_sdk = find_windows_10_sdk()
             if not windows_10_sdk:
-                raise ConanException("cross-compiling for WindowsStore 10 (UWP), but Windows 10 SDK wasn't found")
+                raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
+                                     "but Windows 10 SDK wasn't found")
             command += ' store ' + windows_10_sdk
         else:
             raise ConanException('unsupported Windows Store version %s' % os_version_setting)
