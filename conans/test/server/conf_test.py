@@ -16,6 +16,8 @@ jwt_expire_minutes: 121
 disk_storage_path: %s
 ssl_enabled: true
 port: 9220
+host_name: localhost
+public_port: 12345
 
 
 [write_permissions]
@@ -80,6 +82,9 @@ text=value
         self.assertEquals(config.read_permissions, [("*/*@*/*", "*"),
                                                     ("openssl/2.0.1@lasote/testing", "pepe")])
         self.assertEquals(config.users, {"lasote": "defaultpass", "pepe": "pepepass"})
+        self.assertEquals(config.host_name, "localhost")
+        self.assertEquals(config.public_port, 12345)
+        self.assertEquals(config.public_url, "https://localhost:12345/v1")
 
         # Now check with environments
         tmp_storage = temp_folder()
@@ -89,6 +94,8 @@ text=value
         self.environ["CONAN_SSL_ENABLED"] = "False"
         self.environ["CONAN_SERVER_PORT"] = "1233"
         self.environ["CONAN_SERVER_USERS"] = "lasote:lasotepass,pepe2:pepepass2"
+        self.environ["CONAN_HOST_NAME"] = "remotehost"
+        self.environ["CONAN_SERVER_PUBLIC_PORT"] = "33333"
 
         config = ConanServerConfigParser(self.file_path, environment=self.environ)
         self.assertEquals(config.jwt_secret,  "newkey")
@@ -100,3 +107,6 @@ text=value
         self.assertEquals(config.read_permissions, [("*/*@*/*", "*"),
                                                     ("openssl/2.0.1@lasote/testing", "pepe")])
         self.assertEquals(config.users, {"lasote": "lasotepass", "pepe2": "pepepass2"})
+        self.assertEquals(config.host_name, "remotehost")
+        self.assertEquals(config.public_port, 33333)
+        self.assertEquals(config.public_url, "http://remotehost:33333/v1")
