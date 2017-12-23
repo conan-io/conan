@@ -278,7 +278,7 @@ virtualrunenv
 '''
 
         client.save({"conanfile.txt": reuse}, clean_first=True)
-        client.run("install")
+        client.run("install .")
 
         ext = "bat" if platform.system() == "Windows" else "sh"
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "activate_run.%s" % ext)))
@@ -379,7 +379,7 @@ CXXFLAGS=-fPIC -DPIC
 '''
         files = {"conanfile.txt": reuse, "myprofile": profile}
         client.save(files, clean_first=True)
-        client.run("install --profile ./myprofile --build missing")
+        client.run("install . --profile ./myprofile --build missing")
 
         with tools.chdir(client.current_folder):
             if platform.system() != "Windows":

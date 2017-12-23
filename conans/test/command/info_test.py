@@ -65,18 +65,18 @@ class MyTest(ConanFile):
         self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
         self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
 
-        client.run('install -s build_type=Debug')
+        client.run('install . -s build_type=Debug')
         client.run("info .")  # Re-uses debug from curdir
         self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
         self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
 
-        client.run('install -s build_type=Release --install-folder=MyInstall')
+        client.run('install . -s build_type=Release --install-folder=MyInstall')
         client.run("info . --install-folder=MyInstall")  # Re-uses debug from MyInstall folder
 
         self.assertIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
         self.assertNotIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
 
-        client.run('install -s build_type=Debug --install-folder=MyInstall')
+        client.run('install . -s build_type=Debug --install-folder=MyInstall')
         client.run("info . --install-folder=MyInstall")  # Re-uses debug from MyInstall folder
 
         self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
@@ -370,3 +370,15 @@ class MyTest(ConanFile):
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, "
                       "LibF/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
+
+    def wrong_path_parameter_test(self):
+        self.client = TestClient()
+
+        self.client.run("info", ignore_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+
+        self.client.run("info not_real_path", ignore_error=True)
+        self.assertIn("ERROR: Conanfile not found", self.client.out)
+
+        self.client.run("info conanfile.txt", ignore_error=True)
+        self.assertIn("ERROR: Conanfile not found", self.client.out)

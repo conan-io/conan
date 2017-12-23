@@ -62,7 +62,7 @@ class AConan(ConanFile):
         assert(hasattr(self, "package_folder"))
 """
         client.save({CONANFILE: conanfile_user_info}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
         client.run("build ./conanfile.py")
 
     def build_test(self):
@@ -73,7 +73,7 @@ class AConan(ConanFile):
         client.run("export . lasote/testing")
 
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
 
         client.save({"my_conanfile.py": conanfile_scope_env})
         client.run("build ./my_conanfile.py")
@@ -186,7 +186,7 @@ class AConan(ConanFile):
         self.output.info("HELLO ROOT PATH: %s" % self.deps_cpp_info["Hello-Tools"].rootpath)
 """
         client.save({CONANFILE: conanfile_scope_env}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install conanfile.py --build=missing")
         client.run("build .")
 
         self.assertIn("Hello.Pkg/0.1/lasote/testing", client.out)
@@ -213,7 +213,7 @@ cmake_minimum_required(VERSION 2.8.12)
         client.save({CONANFILE: conanfile,
                      "CMakeLists.txt": cmake,
                      "header.h": "my header h!!"})
-        client.run("install")
+        client.run("install .")
         client.run("build .")  # Won't fail, by default the package_folder is build_folder/package
         header = load(os.path.join(client.current_folder, "package/include/header.h"))
         self.assertEqual(header, "my header h!!")
