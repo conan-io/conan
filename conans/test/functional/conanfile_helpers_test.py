@@ -72,7 +72,7 @@ class ConanFileToolsTest(ConanFile):
                                         test/1.9@lasote/testing\n
                                         test2/2.3@lasote/testing"""}
             client3.save(files)
-            client3.run("install --build")
+            client3.run("install . --build")
             # print client3.user_io.out
             self.assertIn("Building 1!", client3.user_io.out)
             self.assertIn("Source 1!", client3.user_io.out)

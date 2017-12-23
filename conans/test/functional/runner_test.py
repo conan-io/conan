@@ -12,7 +12,7 @@ class RunnerTest(unittest.TestCase):
         test_folder = os.path.join(client.current_folder, "test_folder")
         self.assertFalse(os.path.exists(test_folder))
         client.save(files)
-        client.run("install")
+        client.run("install .")
         client.run("build .")
         return client
 
@@ -118,7 +118,7 @@ class ConanFileToolsTest(ConanFile):
         test_folder = os.path.join(client.current_folder, "child_folder", "test_folder")
         self.assertFalse(os.path.exists(test_folder))
         client.save(files)
-        client.run("install")
+        client.run("install .")
         client.run("build .")
         self.assertTrue(os.path.exists(test_folder))
 
@@ -140,7 +140,7 @@ class ConanFileToolsTest(ConanFile):
         test_folder = os.path.join(client.current_folder, "child_folder", "test_folder")
         self.assertFalse(os.path.exists(test_folder))
         client.save(files)
-        client.run("install")
+        client.run("install .")
         error = client.run("build .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Error while executing 'mkdir test_folder'", client.user_io.out)
