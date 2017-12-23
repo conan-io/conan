@@ -106,7 +106,7 @@ class BuildRequiresTest(unittest.TestCase):
         client.save({CONANFILE: lib_conanfile,
                      "profile.txt": profile}, clean_first=True)
 
-        client.run("install --profile ./profile.txt --build missing")
+        client.run("install . --profile ./profile.txt --build missing")
         self.assertNotIn("Hello World!", client.user_io.out)
         client.run("build .")
         self.assertIn("Hello World!", client.user_io.out)
@@ -119,16 +119,16 @@ class BuildRequiresTest(unittest.TestCase):
         client.save({CONANFILE: lib_conanfile,
                      "profile.txt": profile}, clean_first=True)
 
-        error = client.run("install --profile ./profile.txt", ignore_error=True)
+        error = client.run("install . --profile ./profile.txt", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Missing prebuilt package for 'PythonTool/0.1@lasote/stable'",
                       client.user_io.out)
-        error = client.run("install --profile ./profile.txt --build=PythonTool",
+        error = client.run("install . --profile ./profile.txt --build=PythonTool",
                            ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'",
                       client.user_io.out)
-        client.run("install --profile ./profile.txt --build=*Tool")
+        client.run("install . --profile ./profile.txt --build=*Tool")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [Tool/0.1@lasote/stable, PythonTool/0.1@lasote/stable]",
                       client.user_io.out)
@@ -137,7 +137,7 @@ class BuildRequiresTest(unittest.TestCase):
 
         # now remove packages, ensure --build=missing also creates them
         client.run('remove "*" -p -f')
-        client.run("install --profile ./profile.txt --build=missing")
+        client.run("install . --profile ./profile.txt --build=missing")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [Tool/0.1@lasote/stable, PythonTool/0.1@lasote/stable]",
                       client.user_io.out)
@@ -242,14 +242,14 @@ class MyLib(ConanFile):
         self.output.info("Coverage %s" % self.options.coverage)
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("install -o MyLib:coverage=True --build missing")
+        client.run("install . -o MyLib:coverage=True --build missing")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
         client.run("build .")
         self.assertIn("Project: Coverage True", client.user_io.out)
 
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("install -o coverage=True")
+        client.run("install . -o coverage=True")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
         client.run("build .")

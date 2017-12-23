@@ -66,7 +66,7 @@ class TestConan(ConanFile):
         self.output.info("IMPORTED FOLDERS: %s " % sorted(os.listdir(self.imports_folder)))
 """
         client.save({"conanfile.py": testconanfile}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
         self.assertIn("IMPORTED FOLDERS: [", client.user_io.out)
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibA/LICENSE.txt")),
                          "LicenseA")
@@ -84,7 +84,7 @@ LibC/0.1@lasote/testing
 ., license* -> licenses @ folder=True, ignore_case=True, excludes=*.md # comment
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibA/LICENSE.txt")),
                          "LicenseA")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder,

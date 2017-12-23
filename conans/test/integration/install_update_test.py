@@ -24,7 +24,7 @@ class InstallUpdateTest(unittest.TestCase):
         files1 = cpp_hello_conan_files("Hello1", "1.0", build=False,
                                        deps=["Hello0/1.0@lasote/stable"])
         self.client.save(files1, clean_first=True)
-        self.client.run("install --build")
+        self.client.run("install . --build")
         self.client.run("upload Hello0/1.0@lasote/stable --all")
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
@@ -51,7 +51,7 @@ class InstallUpdateTest(unittest.TestCase):
 
         # back to the consumer, try to update
         self.client.save(files1, clean_first=True)
-        self.client.run("install --update")
+        self.client.run("install . --update")
         self.assertIn("ERROR: Current conanfile is newer than myremote's one",
                       self.client.user_io.out)
         failed_update_timestamps = timestamps()
@@ -64,7 +64,7 @@ class InstallUpdateTest(unittest.TestCase):
             lines[0] = "123"
             save(manifest_file, "\n".join(lines))
 
-        self.client.run("install --update")
+        self.client.run("install . --update")
         update_timestamps = timestamps()
         self.assertEqual(update_timestamps, initial_timestamps)
 

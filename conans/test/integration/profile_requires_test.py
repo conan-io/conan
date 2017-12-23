@@ -227,4 +227,4 @@ cmake
 gcc
 """
         self.client.save({"profile.txt": profile, "conanfile.txt": reuse}, clean_first=True)
-        self.client.run("install --profile ./profile.txt --build missing")
+        self.client.run("install . --profile ./profile.txt --build missing")
