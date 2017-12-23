@@ -82,9 +82,12 @@ class ConanServerConfigParser(ConfigParser):
 
     @property
     def ssl_enabled(self):
-        ssl_enabled = self._get_conf_server_string("ssl_enabled").lower()
-        return ssl_enabled == "true" or \
-               ssl_enabled == "1"
+        try:
+            ssl_enabled = self._get_conf_server_string("ssl_enabled").lower()
+            return ssl_enabled == "true" or \
+                   ssl_enabled == "1"
+        except ConanException:
+            return None
 
     @property
     def port(self):
@@ -99,13 +102,26 @@ class ConanServerConfigParser(ConfigParser):
 
     @property
     def host_name(self):
-        return self._get_conf_server_string("host_name")
+        try:
+            return self._get_conf_server_string("host_name")
+        except ConanException:
+            return None
 
     @property
     def public_url(self):
-        protocol = "https" if self.ssl_enabled else "http"
-        port = ":%s" % self.public_port if self.public_port != 80 else ""
-        return "%s://%s%s/v1" % (protocol, self.host_name, port)
+        host_name = self.host_name
+        ssl_enabled = self.ssl_enabled
+        protocol_version = "v1"
+        if host_name is None and ssl_enabled is None:
+            # No hostname and ssl config means that the transfer and the
+            # logical endpoint are the same and a realtive URL is sufficient
+            return protocol_version
+        elif host_name is None or ssl_enabled is None:
+            raise ConanException("'host_name' and 'ssl_enable' have to be defined together.")
+        else:
+            protocol = "https" if ssl_enabled else "http"
+            port = ":%s" % self.public_port if self.public_port != 80 else ""
+            return "%s://%s%s/%s" % (protocol, host_name, port, protocol_version)
 
     @property
     def disk_storage_path(self):
