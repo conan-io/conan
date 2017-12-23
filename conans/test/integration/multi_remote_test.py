@@ -80,7 +80,7 @@ class MultiRemoteTest(unittest.TestCase):
                                                              "Hello2/0.1@lasote/stable"])
         files["conanfile.py"] = files["conanfile.py"].replace("def build(", "def build2(")
         client2.save(files)
-        client2.run("install --build=missing")
+        client2.run("install . --build=missing")
         self.assertIn("Hello0/0.1@lasote/stable from remote0", client2.user_io.out)
         self.assertIn("Hello1/0.1@lasote/stable from remote1", client2.user_io.out)
         self.assertIn("Hello2/0.1@lasote/stable from remote2", client2.user_io.out)

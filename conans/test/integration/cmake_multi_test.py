@@ -207,8 +207,8 @@ class HelloConan(ConanFile):
             client.save({"conanfile.txt": conanfile,
                          "CMakeLists.txt": cmake_file,
                          "main.cpp": main}, clean_first=True)
-            client.run('install -s build_type=Debug %s --build=missing' % debug_install)
-            client.run('install -s build_type=Release %s --build=missing' % release_install)
+            client.run('install . -s build_type=Debug %s --build=missing' % debug_install)
+            client.run('install . -s build_type=Release %s --build=missing' % release_install)
 
             client.runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
             self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)

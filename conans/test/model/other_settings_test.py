@@ -22,12 +22,12 @@ class SayConan(ConanFile):
     settings = "os"
 """
         self.client.save({CONANFILE: content})
-        self.client.run("install -s os=Windows --build missing")
+        self.client.run("install . -s os=Windows --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = ConanInfo.loads(load(os.path.join(self.client.current_folder, CONANINFO)))
         self.assertEquals(conan_info.settings.os, "Windows")
 
-        self.client.run("install -s os=Linux --build missing")
+        self.client.run("install . -s os=Linux --build missing")
         # Now read the conaninfo and verify that settings applied is only os and value is windows
         conan_info = ConanInfo.loads(load(os.path.join(self.client.current_folder, CONANINFO)))
         self.assertEquals(conan_info.settings.os, "Linux")
@@ -44,7 +44,7 @@ class SayConan(ConanFile):
     settings = "os", "arch"
 """
         self.client.save({CONANFILE: content})
-        self.client.run("install -s os=Windows --build missing")
+        self.client.run("install . -s os=Windows --build missing")
         conan_info = ConanInfo.loads(load(os.path.join(self.client.current_folder, CONANINFO)))
         self.assertEquals(conan_info.settings.os,  "Windows")
         self.assertEquals(conan_info.settings.fields, ["arch", "os"])
@@ -62,7 +62,7 @@ class SayConan(ConanFile):
     settings = {"os": ["Windows"], "arch": ["x86", "x86_64", "sparc", "sparcv9"]}
 """
         self.client.save({CONANFILE: content})
-        self.client.run("install -s os=Windows --build missing")
+        self.client.run("install . -s os=Windows --build missing")
         conan_info = ConanInfo.loads(load(os.path.join(self.client.current_folder, CONANINFO)))
         self.assertEquals(conan_info.settings.os,  "Windows")
         self.assertEquals(conan_info.settings.fields, ["arch", "os"])
@@ -99,7 +99,7 @@ class SayConan(ConanFile):
 """
 
         self.client.save({CONANFILE: content})
-        self.client.run("install -s compiler=gcc -s compiler.version=4.8 --build missing", ignore_error=True)
+        self.client.run("install . -s compiler=gcc -s compiler.version=4.8 --build missing", ignore_error=True)
         self.assertIn(bad_value_msg("settings.compiler", "gcc", ["Visual Studio"]),
                       str(self.client.user_io.out))
 
@@ -115,7 +115,7 @@ class SayConan(ConanFile):
 """
 
         self.client.save({CONANFILE: content})
-        self.client.run("install -s compiler=gcc -s compiler.version=4.8 --build missing", ignore_error=True)
+        self.client.run("install . -s compiler=gcc -s compiler.version=4.8 --build missing", ignore_error=True)
         self.assertIn(bad_value_msg("settings.compiler", "gcc", ["Visual Studio"]),
                       str(self.client.user_io.out))
 
@@ -146,7 +146,7 @@ class SayConan(ConanFile):
 """
 
         self.client.save({CONANFILE: content})
-        self.client.run("install -s os=ChromeOS --build missing", ignore_error=True)
+        self.client.run("install . -s os=ChromeOS --build missing", ignore_error=True)
         self.assertIn(bad_value_msg("settings.os", "ChromeOS",
                                     ['Android', 'Arduino', 'FreeBSD', 'Linux', 'Macos', 'SunOS', 'Windows',
                                      'WindowsStore', 'iOS', 'tvOS', 'watchOS']),
@@ -158,7 +158,7 @@ class SayConan(ConanFile):
                                 "Windows:%s    ChromeOS:%s" % (os.linesep, os.linesep))
 
         save(self.client.paths.settings_path, config)
-        self.client.run("install -s os=ChromeOS --build missing")
+        self.client.run("install . -s os=ChromeOS --build missing")
         self.assertIn('Generated conaninfo.txt', str(self.client.user_io.out))
 
         # Settings is None
