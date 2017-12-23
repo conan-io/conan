@@ -11,7 +11,7 @@ import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
-from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
+from six.moves.urllib.parse import urlsplit, parse_qs, urlencode, urlparse, urljoin
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
 from conans.model.info import ConanInfo
@@ -432,6 +432,14 @@ class RestApiClient(object):
             dedup = True
         return auth, dedup
 
+    def complete_url(self, url):
+        """ Ensures that an url is absulute by completing relative urls with
+        the remote url. urls that are already absolute are not modified.
+        """
+        if bool(urlparse(url).netloc):
+            return url
+        return urljoin(self.remote_url, url)
+
     def download_files(self, file_urls, output=None):
         """
         :param: file_urls is a dict with {filename: url}
@@ -442,6 +450,7 @@ class RestApiClient(object):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
+            resource_url = self.complete_url(resource_url)
             if output:
                 output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
@@ -461,6 +470,7 @@ class RestApiClient(object):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
+            resource_url = self.complete_url(resource_url)
             if output:
                 output.writeln("Downloading %s" % filename)
             auth, _ = self._file_server_capabilities(resource_url)
@@ -478,6 +488,7 @@ class RestApiClient(object):
         # Take advantage of filenames ordering, so that conan_package.tgz and conan_export.tgz
         # can be < conanfile, conaninfo, and sent always the last, so smaller files go first
         for filename, resource_url in sorted(file_urls.items(), reverse=True):
+            resource_url = self.complete_url(resource_url)
             output.rewrite_line("Uploading %s" % filename)
             auth, dedup = self._file_server_capabilities(resource_url)
             try:
@@ -537,6 +548,6 @@ class RestApiClient(object):
         else:
             downloader = Downloader(self.requester, None, self.verify_ssl)
             auth, _ = self._file_server_capabilities(urls[path])
-            content = downloader.download(urls[path], auth=auth)
+            content = downloader.download(self.complete_url(urls[path]), auth=auth)
 
             return decode_text(content)
