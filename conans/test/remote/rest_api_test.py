@@ -49,6 +49,32 @@ class RestApiTest(unittest.TestCase):
     def tearDown(self):
         RestApiTest.server.clean()
 
+    def relative_url_completion_test(self):
+        api = RestApiClient(TestBufferConanOutput(), requester=requests)
+
+        # test absolute urls
+        self.assertEquals(api.complete_url("http://host"), "http://host")
+        self.assertEquals(api.complete_url("http://host:1234"), "http://host:1234")
+        self.assertEquals(api.complete_url("https://host"), "https://host")
+        self.assertEquals(api.complete_url("https://host:1234"), "https://host:1234")
+
+        # test relative urls
+        api.remote_url = "http://host"
+        self.assertEquals(api.complete_url("v1/path_to_file.txt"), "http://host/v1/path_to_file.txt")
+
+        api.remote_url = "http://host:1234"
+        self.assertEquals(api.complete_url("v1/path_to_file.txt"), "http://host:1234/v1/path_to_file.txt")
+
+        api.remote_url = "https://host"
+        self.assertEquals(api.complete_url("v1/path_to_file.txt"), "https://host/v1/path_to_file.txt")
+
+        api.remote_url = "https://host:1234"
+        self.assertEquals(api.complete_url("v1/path_to_file.txt"), "https://host:1234/v1/path_to_file.txt")
+
+        # test relative urls with subdirectory
+        api.remote_url = "https://host:1234/subdir/"
+        self.assertEquals(api.complete_url("v1/path_to_file.txt"), "https://host:1234/subdir/v1/path_to_file.txt")
+
     def server_info_test(self):
         check, version, capabilities = self.api.server_info()
         self.assertEquals(version, "0.16.0")
