@@ -38,7 +38,7 @@ class CollectLibsTest(unittest.TestCase):
 
         # rebuilding the binary in cache
         client.run('remove "*" -p -f')
-        client.run('install --build')
+        client.run('install . --build')
         client.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])

@@ -42,7 +42,7 @@ os=Windows
         self.assertNotIn("'42' is not a valid 'settings.compiler.version' value", client.user_io.out)
 
         with tools.environment_append({"CONAN_ENV_COMPILER_VERSION": "14"}):
-            client.run('install')
+            client.run('install .')
 
         self.assertIsNone(os.environ.get("CONAN_ENV_COMPILER_VERSION"))
 
@@ -82,4 +82,3 @@ os=Windows
             expected["compiler.version"] = "14"
 
             self.assertEquals(cache.default_profile.settings, expected)
-

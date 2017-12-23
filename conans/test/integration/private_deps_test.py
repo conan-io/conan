@@ -120,7 +120,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertIn("There are no packages for pattern 'Hello1/0.1@lasote/stable'",
                       self.client.user_io.out)
 
-        self.client.run('install --build missing')
+        self.client.run('install . --build missing')
         self.assertNotIn("Hello0/0.1@lasote/stable: Generating the package",
                          self.client.user_io.out)
         self.assertNotIn("Hello1/0.1@lasote/stable: Generating the package",

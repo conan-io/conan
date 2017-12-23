@@ -90,7 +90,7 @@ class CompleteFlowTest(unittest.TestCase):
         self.assertIn("Hello Hello1", client3.user_io.out)
         self.assertIn("Hello Hello0", client3.user_io.out)
 
-        client3.run('install -o language=1 --build missing')
+        client3.run('install . -o language=1 --build missing')
         time.sleep(1)
         client3.run('build .')
 
