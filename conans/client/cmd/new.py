@@ -29,7 +29,7 @@ conan_basic_setup()''')
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="%s/hello" % self.source_folder)
+        cmake.configure(source_folder="hello")
         cmake.build()
 
         # Explicit way:
@@ -83,7 +83,7 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="src")
+        cmake.configure(source_folder="src")
         cmake.build()
 
         # Explicit way:

@@ -64,7 +64,7 @@ class CMakeFlagsTest(unittest.TestCase):
         client.save({"conanfile.txt": conanfile,
                      "CMakeLists.txt": cmake}, clean_first=True)
 
-        client.run('install -g cmake')
+        client.run('install . -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2"))
@@ -79,7 +79,7 @@ class CMakeFlagsTest(unittest.TestCase):
         client.save({"conanfile.txt": conanfile.replace("Hello", "Chat"),
                      "CMakeLists.txt": cmake}, clean_first=True)
 
-        client.run('install -g cmake')
+        client.run('install . -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2"))
@@ -98,7 +98,7 @@ class CMakeFlagsTest(unittest.TestCase):
                      "CMakeLists.txt": cmake_targets},
                     clean_first=True)
 
-        client.run('install -g cmake')
+        client.run('install . -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
@@ -120,7 +120,7 @@ class CMakeFlagsTest(unittest.TestCase):
                      "CMakeLists.txt": cmake_targets},
                     clean_first=True)
 
-        client.run('install -g cmake')
+        client.run('install . -g cmake')
         client.runner("cmake . -DCONAN_CXX_FLAGS=CmdCXXFlag", cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
@@ -145,7 +145,7 @@ class CMakeFlagsTest(unittest.TestCase):
                      "CMakeLists.txt": cmake_targets},
                     clean_first=True)
 
-        client.run('install -g cmake')
+        client.run('install . -g cmake')
         client.runner("cmake .", cwd=client.current_folder)
 
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
@@ -173,7 +173,7 @@ class MyLib(ConanFile):
         for settings_line in ('', 'settings="arch"', 'settings="compiler"'):
             client = TestClient()
             client.save({"conanfile.py": conanfile % settings_line})
-            client.run("install")
+            client.run("install .")
             client.run("build .", ignore_error=True)
 
             self.assertIn("You must specify compiler, compiler.version and arch in "
@@ -204,10 +204,10 @@ class MyLib(ConanFile):
 
         self.assertIn("conanbuildinfo.txt file not found", client.user_io.out)
 
-        client.run("install")
+        client.run("install .")
         client.run("build .")
 
         client.save({"conanfile.py": conanfile % "False"}, clean_first=True)
-        client.run("install")
+        client.run("install .")
         client.run("build .")
 

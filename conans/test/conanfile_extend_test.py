@@ -70,7 +70,7 @@ class DevConanFile(HelloConan2):
 
         client = TestClient(self.base_folder)
         client.save(files)
-        client.run("install --build")
+        client.run("install . --build")
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertIn("lib/0.1@user/channel", conaninfo)
         self.assertIn("test_option=2", conaninfo)

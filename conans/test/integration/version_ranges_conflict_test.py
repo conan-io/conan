@@ -19,7 +19,7 @@ class VersionRangesConflictTest(unittest.TestCase):
         add("MyPkg3", "0.1", ["MyPkg1/[~0.2]@user/testing", "MyPkg2/[~0.1]@user/testing"])
 
     def werror_fail_test(self):
-        error = self.client.run("install --build", ignore_error=True)
+        error = self.client.run("install . --build", ignore_error=True)
         self.assertTrue(error)
         self.assertNotIn("WARN: Version range '~0.1' required", self.client.user_io.out)
         self.assertIn("ERROR: Version range '~0.1' required by 'MyPkg2/0.1@user/testing' "
