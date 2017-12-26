@@ -86,7 +86,8 @@ class MyTest(ConanFile):
         error = client.run("info . --install-folder=MyInstall -s build_type=Release",
                            ignore_error=True)  # Re-uses debug from MyInstall folder
         self.assertTrue(error)
-        self.assertIn("--install-folder cannot be used together with -s, -o, -e or -pr", client.out)
+        self.assertIn("--install - folder / --install_folder / -if cannot be used together with "
+                      "--settings / -s, --options / -o, --env / -e or --profile / -pr", client.out)
 
     def graph_test(self):
         self.client = TestClient()
@@ -207,7 +208,7 @@ class MyTest(ConanFile):
 
         self.client.run("info . --paths --only=bad", ignore_error=True)
         self.assertIn("Invalid --only value", self.client.user_io.out)
-        self.assertIn("with --path specified, allowed values:", self.client.user_io.out)
+        self.assertIn("with --paths specified. Allowed values:", self.client.user_io.out)
 
     def test_cwd(self):
         self.client = TestClient()

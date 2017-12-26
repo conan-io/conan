@@ -330,7 +330,7 @@ class Command(object):
         parser.add_argument("--graph", "-g", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
-        parser.add_argument("--install-folder", "-if", action=OnceArgument,
+        parser.add_argument("--install-folder", "--install_folder", "-if", action=OnceArgument,
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to "
                             "current folder, unless --profile, -s or -o is specified. If you "
@@ -344,8 +344,12 @@ class Command(object):
         args = parser.parse_args(*args)
 
         if args.install_folder and (args.profile or args.settings or args.options or args.env):
-            raise ArgumentError(None,
-                                "--install-folder cannot be used together with -s, -o, -e or -pr")
+            raise ArgumentError(None, "%s cannot be used together with %s, %s, %s or %s"
+                                      % (_get_option_string(parser, "--install-folder"),
+                                         _get_option_string(parser, "-s"),
+                                         _get_option_string(parser, "-o"),
+                                         _get_option_string(parser, "-e"),
+                                         _get_option_string(parser, "-pr")))
 
         # BUILD ORDER ONLY
         if args.build_order:
@@ -392,7 +396,7 @@ class Command(object):
             if args.only == ["None"]:
                 only = []
             if only and args.paths and (set(only) - set(path_only_options)):
-                raise ConanException("Invalid --only value '%s' with --path specified, allowed "
+                raise ConanException("Invalid --only value '%s' with --paths specified. Allowed "
                                      "values: [%s]." % (only, str_path_only_options))
             elif only and not args.paths and (set(only) - set(info_only_options)):
                 raise ConanException("Invalid --only value '%s', allowed values: [%s].\n"
@@ -667,10 +671,14 @@ class Command(object):
         reference = self._check_query_parameter_and_get_reference(args.pattern, args.query)
 
         if args.packages is not None and args.query:
-            raise ConanException("'-q' and '-p' parameters can't be used at the same time")
+            raise ConanException("Cannot specify both %s and %s at the same time" %
+                                 (_get_option_string(parser, "-q"),
+                                  _get_option_string(parser, "-p")))
 
         if args.builds is not None and args.query:
-            raise ConanException("'-q' and '-b' parameters can't be used at the same time")
+            raise ConanException("Cannot specify both %s and %s at the same time" %
+                                 (_get_option_string(parser, "-q"),
+                                  _get_option_string(parser, "-b")))
 
         return self._conan.remove(pattern=reference or args.pattern, query=args.query,
                                   packages=args.packages, builds=args.builds, src=args.src,
@@ -696,8 +704,11 @@ class Command(object):
                             default=False,
                             help='Override destination packages and the package recipe')
         args = parser.parse_args(*args)
+
         if args.all and args.package:
-            raise ConanException("Cannot specify both --all and --package")
+            raise ConanException("Cannot specify both %s and %s at the same time" %
+                                 (_get_option_string(parser, "--all"),
+                                  _get_option_string(parser, "--package")))
 
         return self._conan.copy(reference=args.reference, user_channel=args.user_channel,
                                 force=args.force,
@@ -1173,6 +1184,17 @@ def _add_common_install_arguments(parser, build_help):
                         nargs=1, action=Extender)
     if build_help:
         parser.add_argument("--build", "-b", action=Extender, nargs="*", help=build_help)
+
+def _get_option_string(parser, option):
+    """ Returns a string with all the option names in the parser for the 'option'.
+    e.g "--install-folder/--install_folder/-if"
+
+    :param parser: parser to extract the option from
+    :param option: String with parser option. e.g. "--install_folder"
+    :return: formatted string with all option names like ""--option_name/--option-name/-on"
+    """
+
+    return '/'.join(parser._get_option_tuples(option)[0][0].option_strings)
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:
