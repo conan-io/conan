@@ -34,7 +34,7 @@ class CaseSensitiveTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello1", "0.1", deps=["hello0/0.1@lasote/stable"],
                                       build=False)
         client.save(files)
-        error = client.run("install", ignore_error=True)
+        error = client.run("install .", ignore_error=True)
         self._check(error, client)
 
     def _check(self, error, client):

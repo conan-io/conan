@@ -98,7 +98,7 @@ class MyConan(ConanFile):
 """
         client.save({"include/file.h": "foo",
                      CONANFILE: conanfile_template})
-        client.run("install")
+        client.run("install .")
         path = client.current_folder
         client.run('package "%s"' % path)
         package_folder = os.path.join(client.current_folder, "package")

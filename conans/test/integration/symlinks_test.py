@@ -162,5 +162,5 @@ class TestConan(ConanFile):
         client.run("upload Hello/0.1@lasote/stable --all")
         client.run('remove "*" -f')
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
-        client.run("install")
+        client.run("install conanfile.txt")
         self._check(client, ref, build=False)
