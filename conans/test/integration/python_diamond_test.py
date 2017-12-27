@@ -12,7 +12,7 @@ class PythonDiamondTest(unittest.TestCase):
     def _export_upload(self, name, version=None, deps=None):
         files = py_hello_conan_files(name, version, deps)
         self.client.save(files, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
     def reuse_test(self):
         self._export_upload("Hello0", "0.1")

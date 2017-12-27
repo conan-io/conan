@@ -21,15 +21,15 @@ class ImportTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile % "LibA",
                      "LICENSE.txt": "LicenseA"})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         client.save({"conanfile.py": conanfile % "LibB" + "    requires='LibA/0.1@lasote/testing'",
                      "LICENSE.md": "LicenseB"}, clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         client.save({"conanfile.py": conanfile % "LibC" + "    requires='LibB/0.1@lasote/testing'",
                      "license.txt": "LicenseC"}, clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         return client
 
     def repackage_test(self):
@@ -45,7 +45,7 @@ class TestConan(ConanFile):
         self.copy("*")
 """
         client.save({"conanfile.py": conanfile}, clean_first=True)
-        client.run("create Pkg/0.1@user/testing --build=missing")
+        client.run("create . Pkg/0.1@user/testing --build=missing")
         self.assertIn("Pkg/0.1@user/testing package(): Copied 1 '.md' files: LICENSE.md",
                       client.out)
         pkg_ref = PackageReference(ConanFileReference.loads("Pkg/0.1@user/testing"),
@@ -66,7 +66,7 @@ class TestConan(ConanFile):
         self.output.info("IMPORTED FOLDERS: %s " % sorted(os.listdir(self.imports_folder)))
 """
         client.save({"conanfile.py": testconanfile}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
         self.assertIn("IMPORTED FOLDERS: [", client.user_io.out)
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibA/LICENSE.txt")),
                          "LicenseA")
@@ -84,7 +84,7 @@ LibC/0.1@lasote/testing
 ., license* -> licenses @ folder=True, ignore_case=True, excludes=*.md # comment
 """
         client.save({"conanfile.txt": conanfile}, clean_first=True)
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibA/LICENSE.txt")),
                          "LicenseA")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder,

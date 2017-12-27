@@ -74,7 +74,7 @@ class Profile(object):
                 if "." not in name:
                     if name in self.settings and self.settings[name] != value:
                         for cur_name, _ in self.settings.items():
-                            if cur_name.startswith(name):
+                            if cur_name.startswith("%s." % name):
                                 del res[cur_name]
             # Now merge the new values
             res.update(new_settings)

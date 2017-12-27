@@ -24,7 +24,7 @@ class TestConan(ConanFile):
     version = "0.%s"
     """ % i
             client.save({"conanfile.py": conanfile})
-            client.run("export lasote/channel")
+            client.run("export . lasote/channel")
 
         client.run("alias Hello/0.X@lasote/channel Hello/0.1@lasote/channel")
         conanfile_chat = """from conans import ConanFile
@@ -35,10 +35,10 @@ class TestConan(ConanFile):
     requires = "Hello/0.X@lasote/channel"
     """
         client.save({"conanfile.py": conanfile_chat}, clean_first=True)
-        client.run("export lasote/channel")
+        client.run("export . lasote/channel")
         client.save({"conanfile.txt": "[requires]\nChat/1.0@lasote/channel"}, clean_first=True)
 
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
 
         self.assertIn("Hello/0.1@lasote/channel from local", client.user_io.out)
         self.assertNotIn("Hello/0.X", client.user_io.out)
@@ -49,11 +49,11 @@ class TestConan(ConanFile):
         client.run('upload "*" --all --confirm')
         client.run('remove "*" -f')
 
-        client.run("install")
+        client.run("install .")
         self.assertIn("Hello/0.1@lasote/channel from default", client.user_io.out)
         self.assertNotIn("Hello/0.X@lasote/channel from", client.user_io.out)
 
         client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")
-        client.run("install --build=missing")
+        client.run("install . --build=missing")
         self.assertIn("Hello/0.2", client.user_io.out)
         self.assertNotIn("Hello/0.1", client.user_io.out)

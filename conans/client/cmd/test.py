@@ -23,7 +23,7 @@ class PackageTester(object):
         if build_modes is None:
             build_modes = ["never"]
         self._manager.install(inject_require=reference,
-                              reference=base_folder,
+                              reference=conanfile_abs_path,
                               install_folder=build_folder,
                               remote=remote,
                               profile=profile,

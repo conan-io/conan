@@ -30,7 +30,7 @@ class DevelopTest(unittest.TestCase):
     def develop_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create Pkg/0.1@user/testing")
+        client.run("create . Pkg/0.1@user/testing")
         self.assertIn("Develop requirements!", client.out)
         self.assertIn("Develop source!", client.out)
         self.assertIn("Develop build!", client.out)
@@ -46,7 +46,7 @@ class Pkg(ConanFile):
     requires = "Pkg/0.1@user/testing"
 """
         client.save({"conanfile.py": consumer})
-        client.run("create Other/1.0@user/testing")
+        client.run("create . Other/1.0@user/testing")
         self.assertNotIn("Develop", client.out)
 
     def local_commands_test(self):

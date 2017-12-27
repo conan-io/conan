@@ -29,8 +29,9 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output):  # @UnusedVariable
+    def __call__(self, command, output, win_bash=False):  # @UnusedVariable
         self.command_called = command
+        self.win_bash = win_bash
         return 0 if self.return_ok else 1
 
 
@@ -85,7 +86,7 @@ class HelloConan(ConanFile):
         """
         client.save({"conanfile.py": conanfile})
 
-        client.run("install")
+        client.run("install .")
         client.run("build .")
 
         # Not test the real commmand get_command if it's setting the module global vars
@@ -136,7 +137,9 @@ class HelloConan(ConanFile):
             runner = RunnerMock()
             # fake os info to linux debian, default sudo
             os_info = OSInfo()
+            os_info.is_macos = False
             os_info.is_linux = True
+            os_info.is_windows = False
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
@@ -157,24 +160,31 @@ class HelloConan(ConanFile):
             spt.update()
             self.assertEquals(runner.command_called, "sudo yum check-update")
 
+            os_info.linux_distro = "opensuse"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo zypper --non-interactive ref")
+
+            
             os_info.linux_distro = "redhat"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "rpm -q a_package")
             spt.install("a_package", force=True)
             self.assertEquals(runner.command_called, "sudo yum install -y a_package")
-
+            
             os_info.linux_distro = "debian"
             spt = SystemPackageTool(runner=runner, os_info=os_info)
             with self.assertRaises(ConanException):
                 runner.return_ok = False
                 spt.install("a_package")
                 self.assertEquals(runner.command_called, "sudo apt-get install -y --no-install-recommends a_package")
-
+                
             runner.return_ok = True
             spt.install("a_package", force=False)
             self.assertEquals(runner.command_called, "dpkg -s a_package")
 
+            
             os_info.is_macos = True
             os_info.is_linux = False
             os_info.is_windows = False
@@ -401,16 +411,17 @@ compiler:
                 self.output = namedtuple("output", "info")(lambda x: None)
                 self.env = {}
 
-            def run(self, command):
+            def run(self, command, win_bash=False):
                 self.command = command
 
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat")
-        self.assertIn("bash --login -c", conanfile.command)
+        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
+        self.assertIn("bash", conanfile.command)
+        self.assertIn("--login -c", conanfile.command)
         self.assertIn("^&^& a_command.bat ^", conanfile.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
-            tools.run_in_windows_bash(conanfile, "a_command.bat")
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
             self.assertIn("path\\to\\mybash.exe --login -c", conanfile.command)
 
     def download_retries_test(self):

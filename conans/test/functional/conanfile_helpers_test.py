@@ -57,7 +57,7 @@ class ConanFileToolsTest(ConanFile):
 
             client = TestClient()
             client.save(files)
-            client.run("export lasote/testing")
+            client.run("export . lasote/testing")
 
             client2 = TestClient(client.base_folder)
             files = {"a%s.py" % libname: helpers % 2,
@@ -65,14 +65,14 @@ class ConanFileToolsTest(ConanFile):
                      "a%ss/other.py" % libname: other_helper % 2,
                      "conanfile.py": file_content2.format(libname=libname)}
             client2.save(files)
-            client2.run("export lasote/testing")
+            client2.run("export . lasote/testing")
 
             client3 = TestClient(client.base_folder)
             files = {"conanfile.txt": """[requires]
                                         test/1.9@lasote/testing\n
                                         test2/2.3@lasote/testing"""}
             client3.save(files)
-            client3.run("install --build")
+            client3.run("install . --build")
             # print client3.user_io.out
             self.assertIn("Building 1!", client3.user_io.out)
             self.assertIn("Source 1!", client3.user_io.out)

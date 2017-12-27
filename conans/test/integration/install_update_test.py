@@ -20,11 +20,11 @@ class InstallUpdateTest(unittest.TestCase):
         files0 = cpp_hello_conan_files("Hello0", "1.0", build=False)
         files0["conanfile.py"] = files0["conanfile.py"].replace("settings = ", "# settings = ")
         self.client.save(files0)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         files1 = cpp_hello_conan_files("Hello1", "1.0", build=False,
                                        deps=["Hello0/1.0@lasote/stable"])
         self.client.save(files1, clean_first=True)
-        self.client.run("install --build")
+        self.client.run("install . --build")
         self.client.run("upload Hello0/1.0@lasote/stable --all")
 
         ref = ConanFileReference.loads("Hello0/1.0@lasote/stable")
@@ -44,14 +44,14 @@ class InstallUpdateTest(unittest.TestCase):
         # Change and rebuild package
         files0["helloHello0.h"] = files0["helloHello0.h"] + " // useless comment"
         self.client.save(files0, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install Hello0/1.0@lasote/stable --build")
         rebuild_timestamps = timestamps()
         self.assertNotEqual(rebuild_timestamps, initial_timestamps)
 
         # back to the consumer, try to update
         self.client.save(files1, clean_first=True)
-        self.client.run("install --update")
+        self.client.run("install . --update")
         self.assertIn("ERROR: Current conanfile is newer than myremote's one",
                       self.client.user_io.out)
         failed_update_timestamps = timestamps()
@@ -64,7 +64,7 @@ class InstallUpdateTest(unittest.TestCase):
             lines[0] = "123"
             save(manifest_file, "\n".join(lines))
 
-        self.client.run("install --update")
+        self.client.run("install . --update")
         update_timestamps = timestamps()
         self.assertEqual(update_timestamps, initial_timestamps)
 
@@ -72,7 +72,7 @@ class InstallUpdateTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "1.0", build=False)
 
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install Hello0/1.0@lasote/stable --build")
         self.client.run("upload Hello0/1.0@lasote/stable --all")
 
@@ -82,7 +82,7 @@ class InstallUpdateTest(unittest.TestCase):
         files["helloHello0.h"] = "//EMPTY!"
         self.client.save(files, clean_first=True)
         sleep(1)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install Hello0/1.0@lasote/stable --build")
         self.client.run("upload Hello0/1.0@lasote/stable --all")
 
@@ -108,7 +108,7 @@ class ConanLib(ConanFile):
 '''
             client.save({"conanfile.py": base,
                          "header.h": header_content})
-            client.run("create Pkg/0.1@lasote/channel")
+            client.run("create . Pkg/0.1@lasote/channel")
             client.run("upload * --confirm")
             return client
 

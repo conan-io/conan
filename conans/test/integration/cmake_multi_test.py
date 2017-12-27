@@ -149,7 +149,7 @@ class HelloConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "Debug/FindHello.cmake": 'message(STATUS "FIND HELLO DEBUG!")',
                      "Release/FindHello.cmake": 'message(STATUS "FIND HELLO RELEASE!")'})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         cmake = """set(CMAKE_CXX_COMPILER_WORKS 1)
 project(MyHello CXX)
 cmake_minimum_required(VERSION 2.8)
@@ -188,10 +188,10 @@ class HelloConan(ConanFile):
         client = TestClient()
 
         client.save(multi_config_files("Hello0", test=False), clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.run("install Hello0/0.1@lasote/testing --build=missing")
         client.save(package_files("Hello1", ["Hello0"]), clean_first=True)
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         if platform.system() == "Windows":
             generator = "Visual Studio 14 Win64"
@@ -207,8 +207,8 @@ class HelloConan(ConanFile):
             client.save({"conanfile.txt": conanfile,
                          "CMakeLists.txt": cmake_file,
                          "main.cpp": main}, clean_first=True)
-            client.run('install -s build_type=Debug %s --build=missing' % debug_install)
-            client.run('install -s build_type=Release %s --build=missing' % release_install)
+            client.run('install . -s build_type=Debug %s --build=missing' % debug_install)
+            client.run('install . -s build_type=Release %s --build=missing' % release_install)
 
             client.runner('cmake . -G "%s"' % generator, cwd=client.current_folder)
             self.assertNotIn("WARN: Unknown compiler '", client.user_io.out)

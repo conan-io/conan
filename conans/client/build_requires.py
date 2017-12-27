@@ -7,19 +7,24 @@ from conans.errors import conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
 
 
-def _apply_build_requires(deps_graph, conanfile):
+def _apply_build_requires(deps_graph, conanfile, package_build_requires):
     requires_nodes = deps_graph.direct_requires()
+    requires_nodes_dict = {}
     for node in requires_nodes:
-        conan_ref, build_require_conanfile = node
+        requires_nodes_dict[node.conan_ref.name] = node.conanfile
 
-        conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, conan_ref.name)
+    build_requires = []
+    for package_name in package_build_requires:
+        build_requires.append((package_name, requires_nodes_dict[package_name]))
+
+    for package_name, build_require_conanfile in build_requires:
+        conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, package_name)
         conanfile.deps_cpp_info.update_deps_cpp_info(build_require_conanfile.deps_cpp_info)
 
-        conanfile.deps_env_info.update(build_require_conanfile.env_info, conan_ref.name)
+        conanfile.deps_env_info.update(build_require_conanfile.env_info, package_name)
         conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
 
-        conanfile.deps_user_info[conan_ref.name] = build_require_conanfile.user_info
-
+        conanfile.deps_user_info[package_name] = build_require_conanfile.user_info
 
 class _RecipeBuildRequires(OrderedDict):
     def __init__(self, conanfile):
@@ -47,13 +52,11 @@ class _RecipeBuildRequires(OrderedDict):
 
 
 class BuildRequires(object):
-    def __init__(self, loader, graph_builder, registry, output, profile_build_requires):
+    def __init__(self, loader, graph_builder, registry, output):
         self._loader = loader
         self._graph_builder = graph_builder
         self._output = output
         self._registry = registry
-        # Do not alter the original
-        self._profile_build_requires = copy.copy(profile_build_requires)
 
     @staticmethod
     def _get_recipe_build_requires(conanfile):
@@ -64,45 +67,48 @@ class BuildRequires(object):
 
         return conanfile.build_requires
 
-    def install(self, reference, conanfile, installer):
+    def install(self, reference, conanfile, installer, profile_build_requires):
         str_ref = str(reference)
         package_build_requires = self._get_recipe_build_requires(conanfile)
 
-        for pattern, build_requires in self._profile_build_requires.items():
+        new_profile_build_requires = OrderedDict()
+        for pattern, build_requires in profile_build_requires.items():
             if ((not str_ref and pattern == "&") or
                     (str_ref and pattern == "&!") or
                     fnmatch.fnmatch(str_ref, pattern)):
-                package_build_requires.update(build_requires)
+                        for build_require in build_requires:
+                            if build_require.name in package_build_requires:  # Override existing
+                                package_build_requires[build_require.name] = build_require
+                            else:  # Profile one
+                                new_profile_build_requires[build_require.name] = build_require
 
-        # Make sure to remove itself
+        self._install(conanfile, reference, package_build_requires, installer, profile_build_requires)
+        self._install(conanfile, reference, new_profile_build_requires, installer, profile_build_requires,
+                      discard=True)
+
+    def _install(self, conanfile, reference, build_requires, installer, profile_build_requires, discard=False):
         if isinstance(reference, ConanFileReference):
-            package_build_requires.pop(reference.name, None)
+            build_requires.pop(reference.name, None)
+        if not build_requires:
+            return
+        if discard:
+            profile_build_requires = copy.copy(profile_build_requires)
+            profile_build_requires.pop("*", None)
+            profile_build_requires.pop("&!", None)
 
-        if package_build_requires:
-            self._output.info("Installing build requirements of: %s" % (str_ref or "PROJECT"))
-            self._output.info("Build requires: [%s]"
-                              % ", ".join(str(r) for r in package_build_requires.values()))
-            # clear root package options, they won't match the build-require
-            conanfile.build_requires_options.clear_unscoped_options()
-            build_require_graph = self._install(package_build_requires.values(),
-                                                conanfile.build_requires_options, installer)
+        reference = str(reference)
+        self._output.info("Installing build requirements of: %s" % (reference or "PROJECT"))
+        self._output.info("Build requires: [%s]"
+                          % ", ".join(str(r) for r in build_requires.values()))
+        # clear root package options, they won't match the build-require
+        conanfile.build_requires_options.clear_unscoped_options()
+        virtual = self._loader.load_virtual(build_requires.values(), scope_options=False,
+                                            build_requires_options=conanfile.build_requires_options)
 
-            _apply_build_requires(build_require_graph, conanfile)
-            self._output.info("Installed build requirements of: %s" % (str_ref or "PROJECT"))
-
-    def _install(self, build_requires_references, build_requires_options, installer):
-        # No need current path
-        conanfile = self._loader.load_virtual(build_requires_references, None, scope_options=False,
-                                              build_requires_options=build_requires_options)
         # compute and print the graph of transitive build-requires
-        deps_graph = self._graph_builder.load(conanfile)
+        deps_graph = self._graph_builder.load(virtual)
         Printer(self._output).print_graph(deps_graph, self._registry)
-
-        # Make sure we recursively do not propagate the "*" pattern
-        old_build_requires = self._profile_build_requires.copy()
-        self._profile_build_requires.pop("*", None)
-        self._profile_build_requires.pop("&!", None)
-
-        installer.install(deps_graph)
-        self._profile_build_requires = old_build_requires  # Restore original values
-        return deps_graph
+        # install them, recursively
+        installer.install(deps_graph, profile_build_requires)
+        _apply_build_requires(deps_graph, conanfile, build_requires)
+        self._output.info("Installed build requirements of: %s" % (reference or "PROJECT"))

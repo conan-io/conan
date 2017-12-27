@@ -56,7 +56,7 @@ class RemoteManagerTest(unittest.TestCase):
         client = TestClient()
         files = cpp_hello_conan_files("Hello0", "0.1")
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("upload Hello0/0.1@lasote/stable", ignore_error=True)
         self.assertIn("ERROR: No default remote defined", client.user_io.out)
 

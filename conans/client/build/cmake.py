@@ -5,6 +5,8 @@ from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.client import defs_to_string, join_arguments
+from conans.client.tools import cross_building
+from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
 from conans.model.version import Version
@@ -61,6 +63,14 @@ class CMake(object):
         if build_type and build_type != self._build_type:
             # Call the setter to warn and update the definitions if needed
             self.build_type = build_type
+
+    @property
+    def build_folder(self):
+        return self.build_dir
+
+    @build_folder.setter
+    def build_folder(self, value):
+        self.build_dir = value
 
     @property
     def build_type(self):
@@ -145,14 +155,16 @@ class CMake(object):
             ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
         else:  # detect if we are cross building and the system name and version
-            platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-            if (platform_os != the_os) or os_ver:  # We are cross building
-                if the_os:
-                    ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS", "watchOS"] else the_os
-                    if os_ver:
-                        ret["CMAKE_SYSTEM_VERSION"] = os_ver
-                else:
-                    ret["CMAKE_SYSTEM_NAME"] = "Generic"
+            if cross_building(self._conanfile.settings):  # We are cross building
+                build_os, _, host_os, _ = get_cross_building_settings(self._conanfile.settings)
+                if host_os != build_os:
+                    if the_os:  # the_os is the host (regular setting)
+                        ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS",
+                                                                          "watchOS"] else the_os
+                        if os_ver:
+                            ret["CMAKE_SYSTEM_VERSION"] = os_ver
+                    else:
+                        ret["CMAKE_SYSTEM_NAME"] = "Generic"
 
         if ret:  # If enabled cross compile
             for env_var in ["CONAN_CMAKE_SYSTEM_PROCESSOR",
@@ -281,12 +293,38 @@ class CMake(object):
                 ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
         return ret
 
-    def configure(self, args=None, defs=None, source_dir=None, build_dir=None):
+    def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
+        if (source_folder or build_folder) and (source_dir or build_dir):
+            raise ConanException("Use 'build_folder'/'source_folder' arguments")
+
+        def get_dir(folder, origin):
+            if folder:
+                if os.path.isabs(folder):
+                    return folder
+                return os.path.join(origin, folder)
+            return origin
+
+        if source_dir or build_dir:  # OLD MODE
+            build_ret = build_dir or self.build_dir or self._conanfile.build_folder
+            source_ret = source_dir or self._conanfile.source_folder
+        else:
+            build_ret = get_dir(build_folder, self._conanfile.build_folder)
+            source_ret = get_dir(source_folder, self._conanfile.source_folder)
+
+        if self._conanfile.in_local_cache and cache_build_folder:
+            build_ret = get_dir(cache_build_folder, self._conanfile.build_folder)
+
+        return source_ret, build_ret
+
+    def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
+                  source_folder=None, build_folder=None, cache_build_folder=None):
+        # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         args = args or []
         defs = defs or {}
-        source_dir = source_dir or self._conanfile.source_folder
-        self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
+        source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
+                                                    source_dir, build_dir,
+                                                    cache_build_folder)
         mkdir(self.build_dir)
         arg_list = join_arguments([
             self.command_line,
