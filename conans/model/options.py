@@ -441,9 +441,9 @@ class PackageOptions(object):
                     if name in self._data:
                         self._data[name].value = value
                         self._modified[name] = (value, down_ref)
-                else:
+                    else:
                         output.warn("%s tried to change %s option %s which is not available"
-                                    % (down_ref, own_ref, name))
+                                        % (down_ref, own_ref, name))
                 else:
                     self._check_field(name)
                     self._data[name].value = value
