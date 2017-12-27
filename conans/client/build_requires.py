@@ -13,9 +13,13 @@ def _apply_build_requires(deps_graph, conanfile, package_build_requires):
     for node in requires_nodes:
         requires_nodes_dict[node.conan_ref.name] = node.conanfile
 
+    # To guarantee that we respect the order given by the user, not the one imposed by the graph
     build_requires = []
     for package_name in package_build_requires:
-        build_requires.append((package_name, requires_nodes_dict[package_name]))
+        try:
+            build_requires.append((package_name, requires_nodes_dict[package_name]))
+        except KeyError:
+            pass
 
     for package_name, build_require_conanfile in build_requires:
         conanfile.deps_cpp_info.update(build_require_conanfile.cpp_info, package_name)
@@ -25,6 +29,7 @@ def _apply_build_requires(deps_graph, conanfile, package_build_requires):
         conanfile.deps_env_info.update_deps_env_info(build_require_conanfile.deps_env_info)
 
         conanfile.deps_user_info[package_name] = build_require_conanfile.user_info
+
 
 class _RecipeBuildRequires(OrderedDict):
     def __init__(self, conanfile):
