@@ -70,8 +70,9 @@ class DiamondTester(object):
             self.test_obj.assertIn("set(CONAN_INCLUDE_DIRS_%s " % dep.upper(), content)
             self.test_obj.assertIn("set(CONAN_LIBS_%s hello%s)" % (dep.upper(), dep), content)
 
-    def test(self, install="install", use_cmake=True, cmake_targets=False):
+    def test(self, install=None, use_cmake=True, cmake_targets=False):
 
+        install = install or "install ."
         if not use_cmake and platform.system() == "SunOS":
             return  # If is using sun-cc the gcc generator doesn't work
 
@@ -99,7 +100,7 @@ class DiamondTester(object):
         files3[CONANFILE] = content
         client.save(files3)
 
-        client.run("%s . --build missing" % install)
+        client.run("%s --build missing" % install)
         if use_cmake:
             if cmake_targets:
                 self.test_obj.assertIn("Conan: Using cmake targets configuration", client.user_io.out)
@@ -121,7 +122,7 @@ class DiamondTester(object):
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         wait_until_removed(client.current_folder)
         client.save(files3)
-        client.run("%s . --build missing" % install)
+        client.run("%s --build missing" % install)
         client.run("build .")
 
         client.runner(command, cwd=client.current_folder)
@@ -144,7 +145,7 @@ class DiamondTester(object):
                                        use_cmake=use_cmake, cmake_targets=cmake_targets)
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         client2.save(files3)
-        client2.run("%s . --build missing" % install)
+        client2.run("%s --build missing" % install)
         client2.run("build .")
 
         self.test_obj.assertNotIn("libhello0.a", client2.user_io.out)
@@ -153,15 +154,15 @@ class DiamondTester(object):
         self.test_obj.assertNotIn("libhello3.a", client2.user_io.out)
         client2.runner(command, cwd=client2.current_folder)
         self.test_obj.assertEqual(['Hello Hello4', 'Hello Hello3', 'Hello Hello1', 'Hello Hello0',
-                          'Hello Hello2', 'Hello Hello0'],
-                         str(client2.user_io.out).splitlines()[-6:])
+                                   'Hello Hello2', 'Hello Hello0'],
+                                  str(client2.user_io.out).splitlines()[-6:])
 
         files3 = cpp_hello_conan_files("Hello4", "0.1", ["Hello3/0.1@lasote/stable"], language=1,
                                        use_cmake=use_cmake, cmake_targets=cmake_targets)
         files3[CONANFILE] = files3[CONANFILE].replace("generators =", 'generators = "txt",')
         wait_until_removed(client2.current_folder)
         client2.save(files3)
-        client2.run("%s . --build missing" % install)
+        client2.run("%s --build missing" % install)
         client2.run("build .")
         self.test_obj.assertNotIn("libhello0.a", client2.user_io.out)
         self.test_obj.assertNotIn("libhello1.a", client2.user_io.out)
