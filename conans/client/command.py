@@ -79,7 +79,7 @@ class Command(object):
                             help='Create test_package skeleton to test package')
         parser.add_argument("-i", "--header", action='store_true', default=False,
                             help='Create a headers only package template')
-        parser.add_argument("-c", "--pure-c", "--pure_c", action='store_true', default=False,
+        parser.add_argument("-c", "--pure-c", action='store_true', default=False,
                             help='Create a C language package only package, '
                                  'deleting "self.settings.compiler.libcxx" setting '
                                  'in the configure method')
@@ -90,30 +90,30 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() method'
                             'Useful in combination with "export-pkg" command')
-        parser.add_argument("-cis", "--ci-shared", "--ci_shared", action='store_true',
+        parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
                             help='Package will have a "shared" option to be used in CI')
-        parser.add_argument("-cilg", "--ci-travis-gcc", "--ci_travis_gcc", action='store_true',
+        parser.add_argument("-cilg", "--ci-travis-gcc", action='store_true',
                             default=False,
                             help='Generate travis-ci files for linux gcc')
-        parser.add_argument("-cilc", "--ci-travis-clang", "--ci_travis_clang", action='store_true',
+        parser.add_argument("-cilc", "--ci-travis-clang", action='store_true',
                             default=False,
                             help='Generate travis-ci files for linux clang')
-        parser.add_argument("-cio", "--ci-travis-osx", "--ci_travis_osx", action='store_true',
+        parser.add_argument("-cio", "--ci-travis-osx", action='store_true',
                             default=False,
                             help='Generate travis-ci files for OSX apple-clang')
-        parser.add_argument("-ciw", "--ci-appveyor-win", "--ci_appveyor_win", action='store_true',
+        parser.add_argument("-ciw", "--ci-appveyor-win", action='store_true',
                             default=False, help='Generate appveyor files for Appveyor '
                                                 'Visual Studio')
-        parser.add_argument("-ciglg", "--ci-gitlab-gcc", "--ci_gitlab_gcc", action='store_true',
+        parser.add_argument("-ciglg", "--ci-gitlab-gcc", action='store_true',
                             default=False,
                             help='Generate GitLab files for linux gcc')
-        parser.add_argument("-ciglc", "--ci-gitlab-clang", "--ci_gitlab_clang", action='store_true',
+        parser.add_argument("-ciglc", "--ci-gitlab-clang", action='store_true',
                             default=False,
                             help='Generate GitLab files for linux clang')
         parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
                             help='Generate a .gitignore with the known patterns to excluded')
-        parser.add_argument("-ciu", "--ci-upload-url", "--ci_upload_url",
+        parser.add_argument("-ciu", "--ci-upload-url",
                             help='Define URL of the repository to upload')
 
         args = parser.parse_args(*args)
@@ -148,8 +148,8 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
         args = parser.parse_args(*args)
-        return self._conan.test(args.path, args.reference, args.profile, args.settings, args.options,
-                                args.env, args.remote, args.update,
+        return self._conan.test(args.path, args.reference, args.profile, args.settings,
+                                args.options, args.env, args.remote, args.update,
                                 build_modes=args.build)
 
     def create(self, *args):
