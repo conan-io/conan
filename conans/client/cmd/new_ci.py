@@ -111,7 +111,6 @@ environment:
     CONAN_USERNAME: "{user}"
     CONAN_LOGIN_USERNAME: "{user}"
     CONAN_CHANNEL: "{channel}"
-    VS150COMNTOOLS: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\Common7\\Tools\\"
     {upload}
     matrix:
 {configs}
