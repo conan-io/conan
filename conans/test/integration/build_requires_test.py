@@ -50,7 +50,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 class BuildRequiresTest(unittest.TestCase):
 
-    def test_transitive2(self):
+    def test_dependents(self):
         client = TestClient()
         boost = """from conans import ConanFile
 class Boost(ConanFile):
