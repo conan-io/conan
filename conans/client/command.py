@@ -985,7 +985,7 @@ class Command(object):
                             action=OnceArgument)
         parser.add_argument("-r", "--remote", help='Get from this specific remote',
                             action=OnceArgument)
-        parser.add_argument("-r", "--raw", help='Do not decorate the text', default=False,
+        parser.add_argument("-raw", "--raw", help='Do not decorate the text', default=False,
                             action='store_true')
         args = parser.parse_args(*args)
 
