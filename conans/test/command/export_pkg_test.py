@@ -173,7 +173,7 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "rootfile.lib": "contents",
                      "build/lib/hello.lib": "My Lib"})
-        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build_folder=build")
+        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
         package_folder = client.client_cache.package(package_ref)
@@ -202,8 +202,8 @@ class TestConan(ConanFile):
                      "build/libs/what": "",
                      "build/lib/hello.lib": "My Lib",
                      "build/lib/bye.txt": ""})
-        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build_folder=build "
-                   "--source_folder=src")
+        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build "
+                   "--source-folder=src")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
         package_folder = client.client_cache.package(package_ref)
