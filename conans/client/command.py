@@ -79,7 +79,7 @@ class Command(object):
                             help='Create test_package skeleton to test package')
         parser.add_argument("-i", "--header", action='store_true', default=False,
                             help='Create a headers only package template')
-        parser.add_argument("-c", "--pure-c", "--pure_c", action='store_true', default=False,
+        parser.add_argument("-c", "--pure-c", action='store_true', default=False,
                             help='Create a C language package only package, '
                                  'deleting "self.settings.compiler.libcxx" setting '
                                  'in the configure method')
@@ -90,30 +90,30 @@ class Command(object):
         parser.add_argument("-b", "--bare", action='store_true', default=False,
                             help='Create the minimum package recipe, without build() method'
                             'Useful in combination with "export-pkg" command')
-        parser.add_argument("-cis", "--ci-shared", "--ci_shared", action='store_true',
+        parser.add_argument("-cis", "--ci-shared", action='store_true',
                             default=False,
                             help='Package will have a "shared" option to be used in CI')
-        parser.add_argument("-cilg", "--ci-travis-gcc", "--ci_travis_gcc", action='store_true',
+        parser.add_argument("-cilg", "--ci-travis-gcc", action='store_true',
                             default=False,
                             help='Generate travis-ci files for linux gcc')
-        parser.add_argument("-cilc", "--ci-travis-clang", "--ci_travis_clang", action='store_true',
+        parser.add_argument("-cilc", "--ci-travis-clang", action='store_true',
                             default=False,
                             help='Generate travis-ci files for linux clang')
-        parser.add_argument("-cio", "--ci-travis-osx", "--ci_travis_osx", action='store_true',
+        parser.add_argument("-cio", "--ci-travis-osx", action='store_true',
                             default=False,
                             help='Generate travis-ci files for OSX apple-clang')
-        parser.add_argument("-ciw", "--ci-appveyor-win", "--ci_appveyor_win", action='store_true',
+        parser.add_argument("-ciw", "--ci-appveyor-win", action='store_true',
                             default=False, help='Generate appveyor files for Appveyor '
                                                 'Visual Studio')
-        parser.add_argument("-ciglg", "--ci-gitlab-gcc", "--ci_gitlab_gcc", action='store_true',
+        parser.add_argument("-ciglg", "--ci-gitlab-gcc", action='store_true',
                             default=False,
                             help='Generate GitLab files for linux gcc')
-        parser.add_argument("-ciglc", "--ci-gitlab-clang", "--ci_gitlab_clang", action='store_true',
+        parser.add_argument("-ciglc", "--ci-gitlab-clang", action='store_true',
                             default=False,
                             help='Generate GitLab files for linux clang')
         parser.add_argument("-gi", "--gitignore", action='store_true', default=False,
                             help='Generate a .gitignore with the known patterns to excluded')
-        parser.add_argument("-ciu", "--ci-upload-url", "--ci_upload_url",
+        parser.add_argument("-ciu", "--ci-upload-url",
                             help='Define URL of the repository to upload')
 
         args = parser.parse_args(*args)
@@ -148,8 +148,8 @@ class Command(object):
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
         args = parser.parse_args(*args)
-        return self._conan.test(args.path, args.reference, args.profile, args.settings, args.options,
-                                args.env, args.remote, args.update,
+        return self._conan.test(args.path, args.reference, args.profile, args.settings,
+                                args.options, args.env, args.remote, args.update,
                                 build_modes=args.build)
 
     def create(self, *args):
@@ -167,9 +167,9 @@ class Command(object):
                                               ' are not declared in the recipe (conanfile.py)')
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
-        parser.add_argument("-tf", "--test-folder", "--test_folder", action=OnceArgument,
+        parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                             help='alternative test folder name, by default is "test_package"')
-        parser.add_argument('--keep-source', '-k', default=False, action='store_true',
+        parser.add_argument('-k', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
 
@@ -198,7 +198,7 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.download.__doc__, prog="conan download")
         parser.add_argument("reference",
                             help='package recipe reference e.g., MyPackage/1.2@user/channel')
-        parser.add_argument("--package", "-p", nargs=1, action=Extender,
+        parser.add_argument("-p", "--package", nargs=1, action=Extender,
                             help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("-r", "--remote", help='look in the specified remote server',
                             action=OnceArgument)
@@ -224,9 +224,9 @@ class Command(object):
         parser.add_argument("path", help="path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
-        parser.add_argument("--generator", "-g", nargs=1, action=Extender,
+        parser.add_argument("-g", "--generator", nargs=1, action=Extender,
                             help='Generators to use')
-        parser.add_argument("--install-folder", "--install_folder", "-if", action=OnceArgument,
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help='Use this directory as the directory where to put the generator'
                                  'files, conaninfo/conanbuildinfo.txt etc.')
 
@@ -250,7 +250,8 @@ class Command(object):
                                        manifests_interactive=args.manifests_interactive,
                                        build=args.build, profile_name=args.profile,
                                        update=args.update, generators=args.generator,
-                                       no_imports=args.no_imports, install_folder=args.install_folder)
+                                       no_imports=args.no_imports,
+                                       install_folder=args.install_folder)
         else:
             return self._conan.install_reference(reference, settings=args.settings,
                                                  options=args.options,
@@ -311,26 +312,26 @@ class Command(object):
         parser.add_argument("reference", help="path to a folder containing a recipe"
                             " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
                             "./my_project/conanfile.txt. It could also be a reference")
-        parser.add_argument("--only", "-n", nargs=1, action=Extender,
+        parser.add_argument("-n", "--only", nargs=1, action=Extender,
                             help='show the specified fields only from: '
                                  '%s or use --paths with options %s. Use --only None to show only '
                                  'references.'
                                  % (str_only_options, str_path_only_options))
         parser.add_argument("--paths", action='store_true', default=False,
                             help='Show package paths in local cache')
-        parser.add_argument("--package-filter", "--package_filter", nargs='?',
+        parser.add_argument("--package-filter", nargs='?',
                             help='print information only for packages that match the filter'
                                  'e.g., MyPackage/1.2@user/channel or MyPackage*')
-        parser.add_argument("--build-order", "--build_order", "-bo",
+        parser.add_argument("-bo", "--build-order",
                             help='given a modified reference, return an ordered list to build (CI)',
                             nargs=1, action=Extender)
-        parser.add_argument("--json", "-j", nargs='?', const="1", type=str,
+        parser.add_argument("-j", "--json", nargs='?', const="1", type=str,
                             help='Only with --build_order option, return the information in a json.'
                                  ' e.j --json=/path/to/filename.json or --json to output the json')
-        parser.add_argument("--graph", "-g", action=OnceArgument,
+        parser.add_argument("-g", "--graph", action=OnceArgument,
                             help='Creates file with project dependencies graph. It will generate '
                             'a DOT or HTML file depending on the filename extension')
-        parser.add_argument("--install-folder", "-if", action=OnceArgument,
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to "
                             "current folder, unless --profile, -s or -o is specified. If you "
@@ -412,9 +413,9 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.source.__doc__, prog="conan source")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("--source-folder", "--source_folder", "-s", action=OnceArgument,
+        parser.add_argument("-sf", "--source-folder", action=OnceArgument,
                             help='Destination directory. Defaulted to current directory')
-        parser.add_argument("--install-folder", "-if", action=OnceArgument,
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help="Optional. Local folder containing the conaninfo.txt and "
                             "conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to the "
@@ -447,20 +448,20 @@ class Command(object):
 
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("--source-folder", "--source_folder", "-sf", action=OnceArgument,
+        parser.add_argument("-sf", "--source-folder", action=OnceArgument,
                             help="local folder containing the sources. Defaulted to the directory "
                                  "of the conanfile. A relative path can also be specified "
                                  "(relative to the current directory)")
-        parser.add_argument("--build-folder", "--build_folder", "-bf", action=OnceArgument,
+        parser.add_argument("-bf", "--build-folder", action=OnceArgument,
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "
                                  "(relative to the current directory)")
-        parser.add_argument("--package-folder", "--package_folder", "-pf", action=OnceArgument,
+        parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="folder to install the package (when the build system or build() "
                                  "method does it). Defaulted to the '{build_folder}/package' folder"
                                  ". A relative path can be specified, relative to the current "
                                  " folder. Also an absolute path is allowed.")
-        parser.add_argument("--install-folder", "--install_folder", "-if", action=OnceArgument,
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help="Optional. Local folder containing the conaninfo.txt and "
                                  "conanbuildinfo.txt files (from a previous conan install "
                                  "execution). Defaulted to --build-folder")
@@ -482,20 +483,20 @@ class Command(object):
         """
         parser = argparse.ArgumentParser(description=self.package.__doc__, prog="conan package")
         parser.add_argument("path", help=_PATH_HELP)
-        parser.add_argument("--source-folder", "--source_folder", "-sf", action=OnceArgument,
+        parser.add_argument("-sf", "--source-folder", action=OnceArgument,
                             help="local folder containing the sources. Defaulted to the directory "
                                  "of the conanfile. A relative path can also be specified "
                                  "(relative to the current directory)")
-        parser.add_argument("--build-folder", "--build_folder", "-bf", action=OnceArgument,
+        parser.add_argument("-bf", "--build-folder", action=OnceArgument,
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "
                                  "(relative to the current directory)")
-        parser.add_argument("--package-folder", "--package_folder", "-pf", action=OnceArgument,
+        parser.add_argument("-pf", "--package-folder", action=OnceArgument,
                             help="folder to install the package. Defaulted to the "
                                  "'{build_folder}/package' folder. A relative path can be specified"
                                  " (relative to the current directory). Also an absolute path"
                                  " is allowed.")
-        parser.add_argument("--install-folder", "--install_folder", "-if", action=OnceArgument,
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help="Optional. Local folder containing the conaninfo.txt and "
                                  "conanbuildinfo.txt files (from a previous conan install "
                                  "execution). Defaulted to --build-folder ")
@@ -531,10 +532,10 @@ class Command(object):
                             "With --undo option, this parameter is the folder "
                             "containing the conan_imports_manifest.txt file generated in a previous"
                             "execution. e.j: conan imports ./imported_files --undo ")
-        parser.add_argument("--import-folder", "--import_folder", "-imf", action=OnceArgument,
+        parser.add_argument("-imf", "--import-folder", action=OnceArgument,
                             help="Directory to copy the artifacts to. By default it will be the"
                                  " current directory")
-        parser.add_argument("--install-folder", "--install_folder", "-if", action=OnceArgument,
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                                  "files (from a previous conan install execution)")
         parser.add_argument("-u", "--undo", default=False, action="store_true",
@@ -566,28 +567,28 @@ class Command(object):
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe (conanfile.py)')
-        parser.add_argument("--source-folder", "--source_folder", "-sf", action=OnceArgument,
+        parser.add_argument("-sf", "--source-folder", action=OnceArgument,
                             help="local folder containing the sources. Defaulted to --build-folder."
                                  " A relative path to the current dir can also be specified")
-        parser.add_argument("--build-folder", "--build_folder", "-bf", action=OnceArgument,
+        parser.add_argument("-bf", "--build-folder", action=OnceArgument,
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "
                                  "(relative to the current directory)")
-        parser.add_argument("--install-folder", "-if", action=OnceArgument,
+        parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to "
                             "--build-folder. If these files are found in the specified folder, "
                             "they will be used, then if you specify --profile, -s, -o, --env, "
                             "it will raise an error.")
-        parser.add_argument("--profile", "-pr", action=OnceArgument,
+        parser.add_argument("-pr", "--profile", action=OnceArgument,
                             help='Profile for this package')
-        parser.add_argument("--options", "-o",
+        parser.add_argument("-o", "--options",
                             help='Define options values, e.g., -o Pkg:with_qt=true',
                             nargs=1, action=Extender)
-        parser.add_argument("--settings", "-s",
+        parser.add_argument("-s", "--settings",
                             help='Define settings values, e.g., -s compiler=gcc',
                             nargs=1, action=Extender)
-        parser.add_argument("--env", "-e",
+        parser.add_argument("-e", "--env",
                             help='Environment variables that will be set during the package build, '
                                  '-e CXX=/usr/bin/clang++',
                             nargs=1, action=Extender)
@@ -622,7 +623,7 @@ class Command(object):
         parser.add_argument("reference", help='user/channel, or a full package reference'
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe (conanfile.py)')
-        parser.add_argument('--keep-source', '-k', default=False, action='store_true',
+        parser.add_argument('-k', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in the local cache. '
                                  'Use for testing purposes only')
         args = parser.parse_args(*args)
@@ -661,7 +662,7 @@ class Command(object):
                                  'has to be a package recipe '
                                  'reference: MyPackage/1.2'
                                  '@user/channel')
-        parser.add_argument("--outdated", "-o", help="Remove only outdated from recipe packages",
+        parser.add_argument("-o", "--outdated", help="Remove only outdated from recipe packages",
                             default=False, action="store_true")
         args = parser.parse_args(*args)
         reference = self._check_query_parameter_and_get_reference(args.pattern, args.query)
@@ -687,7 +688,7 @@ class Command(object):
         parser.add_argument("user_channel", default="",
                             help='Destination user/channel. '
                             'e.g., lasote/testing')
-        parser.add_argument("--package", "-p", nargs=1, action=Extender,
+        parser.add_argument("-p", "--package", nargs=1, action=Extender,
                             help='copy specified package ID')
         parser.add_argument("--all", action='store_true',
                             default=False,
@@ -714,7 +715,7 @@ class Command(object):
         parser.add_argument("name", nargs='?', default=None,
                             help='Username you want to use. '
                                  'If no name is provided it will show the current user.')
-        parser.add_argument("--remote", "-r", help='look in the specified remote server',
+        parser.add_argument("-r", "--remote", help='look in the specified remote server',
                             action=OnceArgument)
         parser.add_argument('-c', '--clean', default=False,
                             action='store_true', help='Remove user and tokens for all remotes')
@@ -807,13 +808,13 @@ class Command(object):
         parser.add_argument('pattern', help='Pattern or package recipe reference, '
                                             'e.g., "openssl/*", "MyPackage/1.2@user/channel"')
         # TODO: packageparser.add_argument('package', help='user name')
-        parser.add_argument("--package", "-p", default=None, help='package ID to upload',
+        parser.add_argument("-p", "--package", default=None, help='package ID to upload',
                             action=OnceArgument)
-        parser.add_argument("--remote", "-r", help='upload to this specific remote',
+        parser.add_argument("-r", "--remote", help='upload to this specific remote',
                             action=OnceArgument)
         parser.add_argument("--all", action='store_true',
                             default=False, help='Upload both package recipe and packages')
-        parser.add_argument("--skip-upload", "--skip_upload", action='store_true',
+        parser.add_argument("--skip-upload", action='store_true',
                             default=False, help='Do not upload anything, just run '
                                                 'the checks and the compression.')
         parser.add_argument("--force", action='store_true',
@@ -822,14 +823,14 @@ class Command(object):
         parser.add_argument("--check", action='store_true',
                             default=False,
                             help='Perform an integrity check, using the manifests, before upload')
-        parser.add_argument('--confirm', '-c', default=False,
+        parser.add_argument('-c', '--confirm', default=False,
                             action='store_true',
                             help='If pattern is given upload all matching recipes without '
                                  'confirmation')
         parser.add_argument('--retry', default=2, type=int,
                             help='In case of fail retries to upload again the specified times',
                             action=OnceArgument)
-        parser.add_argument('--retry-wait', '--retry_wait', default=5, type=int,
+        parser.add_argument('--retry-wait', default=5, type=int,
                             help='Waits specified seconds before retry again',
                             action=OnceArgument)
 
@@ -849,18 +850,18 @@ class Command(object):
         # create the parser for the "a" command
         subparsers.add_parser('list', help='list current remotes')
         parser_add = subparsers.add_parser('add', help='add a remote')
-        parser_add.add_argument('remote',  help='name of the remote')
-        parser_add.add_argument('url',  help='url of the remote')
+        parser_add.add_argument('remote', help='name of the remote')
+        parser_add.add_argument('url', help='url of the remote')
         parser_add.add_argument('verify_ssl',
                                 help='Verify SSL certificated. Default True',
                                 default="True", nargs="?")
         parser_add.add_argument("-i", "--insert", nargs="?", const=0, type=int,
                                 help="insert remote at specific index", action=OnceArgument)
         parser_rm = subparsers.add_parser('remove', help='remove a remote')
-        parser_rm.add_argument('remote',  help='name of the remote')
+        parser_rm.add_argument('remote', help='name of the remote')
         parser_upd = subparsers.add_parser('update', help='update the remote url')
-        parser_upd.add_argument('remote',  help='name of the remote')
-        parser_upd.add_argument('url',  help='url')
+        parser_upd.add_argument('remote', help='name of the remote')
+        parser_upd.add_argument('url', help='url')
         parser_upd.add_argument('verify_ssl',
                                 help='Verify SSL certificated. Default True',
                                 default="True", nargs="?")
@@ -872,15 +873,15 @@ class Command(object):
                               help='list the package recipes and its associated remotes')
         parser_padd = subparsers.add_parser('add_ref',
                                             help="associate a recipe's reference to a remote")
-        parser_padd.add_argument('reference',  help='package recipe reference')
-        parser_padd.add_argument('remote',  help='name of the remote')
+        parser_padd.add_argument('reference', help='package recipe reference')
+        parser_padd.add_argument('remote', help='name of the remote')
         parser_prm = subparsers.add_parser('remove_ref',
                                            help="dissociate a recipe's reference and its remote")
-        parser_prm.add_argument('reference',  help='package recipe reference')
+        parser_prm.add_argument('reference', help='package recipe reference')
         parser_pupd = subparsers.add_parser('update_ref', help="update the remote associated "
                                             "with a package recipe")
-        parser_pupd.add_argument('reference',  help='package recipe reference')
-        parser_pupd.add_argument('remote',  help='name of the remote')
+        parser_pupd.add_argument('reference', help='package recipe reference')
+        parser_pupd.add_argument('remote', help='name of the remote')
         args = parser.parse_args(*args)
 
         reference = args.reference if hasattr(args, 'reference') else None
@@ -980,11 +981,11 @@ class Command(object):
                                  'conanfile if only a reference is specified and a conaninfo.txt '
                                  'file contents if the package is also specified',
                             default=None, nargs="?")
-        parser.add_argument("--package", "-p", default=None, help='package ID',
+        parser.add_argument("-p", "--package", default=None, help='package ID',
                             action=OnceArgument)
-        parser.add_argument("--remote", "-r", help='Get from this specific remote',
+        parser.add_argument("-r", "--remote", help='Get from this specific remote',
                             action=OnceArgument)
-        parser.add_argument("--raw", "-raw", help='Do not decorate the text', default=False,
+        parser.add_argument("-raw", "--raw", help='Do not decorate the text', default=False,
                             action='store_true')
         args = parser.parse_args(*args)
 
@@ -1138,41 +1139,41 @@ def get_reference_fields(arg_reference):
 
 
 def _add_manifests_arguments(parser):
-    parser.add_argument("--manifests", "-m", const=default_manifest_folder, nargs="?",
+    parser.add_argument("-m", "--manifests", const=default_manifest_folder, nargs="?",
                         help='Install dependencies manifests in folder for later verify.'
                              ' Default folder is .conan_manifests, but can be changed',
                         action=OnceArgument)
-    parser.add_argument("--manifests-interactive", "-mi", const=default_manifest_folder,
+    parser.add_argument("-mi", "--manifests-interactive", const=default_manifest_folder,
                         nargs="?",
                         help='Install dependencies manifests in folder for later verify, '
                              'asking user for confirmation. '
                              'Default folder is .conan_manifests, but can be changed',
                         action=OnceArgument)
-    parser.add_argument("--verify", "-v", const=default_manifest_folder, nargs="?",
+    parser.add_argument("-v", "--verify", const=default_manifest_folder, nargs="?",
                         help='Verify dependencies manifests against stored ones',
                         action=OnceArgument)
 
 
 def _add_common_install_arguments(parser, build_help):
-    parser.add_argument("--update", "-u", action='store_true', default=False,
+    parser.add_argument("-u", "--update", action='store_true', default=False,
                         help="check updates exist from upstream remotes")
-    parser.add_argument("--profile", "-pr", default=None, action=OnceArgument,
+    parser.add_argument("-pr", "--profile", default=None, action=OnceArgument,
                         help='Apply the specified profile to the install command')
     parser.add_argument("-r", "--remote", help='look in the specified remote server',
                         action=OnceArgument)
-    parser.add_argument("--options", "-o",
+    parser.add_argument("-o", "--options",
                         help='Define options values, e.g., -o Pkg:with_qt=true',
                         nargs=1, action=Extender)
-    parser.add_argument("--settings", "-s",
+    parser.add_argument("-s", "--settings",
                         help='Settings to build the package, overwriting the defaults. e.g., '
                              '-s compiler=gcc',
                         nargs=1, action=Extender)
-    parser.add_argument("--env", "-e",
+    parser.add_argument("-e", "--env",
                         help='Environment variables that will be set during the package build, '
                              '-e CXX=/usr/bin/clang++',
                         nargs=1, action=Extender)
     if build_help:
-        parser.add_argument("--build", "-b", action=Extender, nargs="*", help=build_help)
+        parser.add_argument("-b", "--build", action=Extender, nargs="*", help=build_help)
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:

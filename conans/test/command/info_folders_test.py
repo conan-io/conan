@@ -79,7 +79,7 @@ class InfoFoldersTest(unittest.TestCase):
     def test_deps_specific_information(self):
         client = TestClient()
         self._prepare_deps(client)
-        client.run("info . --paths --only package_folder --package_filter MyPackage/*")
+        client.run("info . --paths --only package_folder --package-filter MyPackage/*")
         output = client.user_io.out
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
@@ -87,7 +87,7 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertNotIn("build", output)
         self.assertNotIn("MyPackage2", output)
 
-        client.run("info . --paths --only package_folder --package_filter MyPackage*")
+        client.run("info . --paths --only package_folder --package-filter MyPackage*")
         output = client.user_io.out
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")

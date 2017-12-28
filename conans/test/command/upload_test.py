@@ -195,7 +195,7 @@ class UploadTest(unittest.TestCase):
         client.save(files)
         client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build=missing")
-        client.run("upload Hello0/1.2.1@frodo/stable -r default --all --skip_upload")
+        client.run("upload Hello0/1.2.1@frodo/stable -r default --all --skip-upload")
 
         # dry run should not upload
         self.assertNotIn("Uploading conan_package.tgz", client.user_io.out)
