@@ -147,7 +147,7 @@ class UploadTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("upload Hello* --confirm --retry_wait=0")
+        client.run("upload Hello* --confirm --retry-wait=0")
         self.assertIn("Can't connect because of the evil mock", client.user_io.out)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
 
@@ -156,7 +156,7 @@ class UploadTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
         client.run("export . frodo/stable")
-        client.run("upload Hello* --confirm --retry 1 --retry_wait=1", ignore_error=True)
+        client.run("upload Hello* --confirm --retry 1 --retry-wait=1", ignore_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
         self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
                       "conanmanifest.txt. [Remote: default]", client.user_io.out)
