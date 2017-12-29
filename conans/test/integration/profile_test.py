@@ -47,7 +47,7 @@ class ProfileTest(unittest.TestCase):
     def base_profile_generated_test(self):
         """we are testing that the default profile is created (when not existing, fresh install)
          even when you run a create with a profile"""
-        client = TestClient(default_profile=False)
+        client = TestClient()
         client.save({CONANFILE: conanfile_scope_env,
                           "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
         client.run("create . conan/testing --profile myprofile")
