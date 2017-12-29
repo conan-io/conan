@@ -44,6 +44,14 @@ class ProfileTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    def base_profile_generated_test(self):
+        """we are testing that the default profile is created (when not existing, fresh install)
+         even when you run a create with a profile"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile_scope_env,
+                          "myprofile": "include(default)\n[settings]\nbuild_type=Debug"})
+        client.run("create . conan/testing --profile myprofile")
+
     def bad_syntax_test(self):
         self.client.save({CONANFILE: conanfile_scope_env})
         self.client.run("export . lasote/stable")
@@ -169,6 +177,7 @@ class ProfileTest(unittest.TestCase):
         create_profile(self.client.client_cache.profiles_path, "vs_12_86",
                        settings=profile_settings, package_settings={})
 
+        self.client.client_cache.default_profile # Creates default
         tools.replace_in_file(self.client.client_cache.default_profile_path,
                               "compiler.libcxx", "#compiler.libcxx", strict=False)
 
