@@ -106,7 +106,7 @@ class PrivateDepsTest(unittest.TestCase):
                                                    ],
                             build=False, upload=False)
 
-        self.client.run('install --build missing')
+        self.client.run('install . --build missing')
         self.assertIn("Hello0/0.1@lasote/stable: Generating the package", self.client.user_io.out)
         self.assertIn("Hello1/0.1@lasote/stable: Generating the package", self.client.user_io.out)
         self.assertIn("Hello2/0.1@lasote/stable: Generating the package", self.client.user_io.out)
@@ -120,7 +120,7 @@ class PrivateDepsTest(unittest.TestCase):
         self.assertIn("There are no packages for pattern 'Hello1/0.1@lasote/stable'",
                       self.client.user_io.out)
 
-        self.client.run('install --build missing')
+        self.client.run('install . --build missing')
         self.assertNotIn("Hello0/0.1@lasote/stable: Generating the package",
                          self.client.user_io.out)
         self.assertNotIn("Hello1/0.1@lasote/stable: Generating the package",
@@ -177,7 +177,7 @@ class PrivateDepsTest(unittest.TestCase):
                                        language=1)
 
         client2.save(files3, clean_first=True)
-        client2.run('install -o language=1 --build missing')
+        client2.run('install . -o language=1 --build missing')
         client2.run('build .')
         self.assertNotIn("libhello0.a", client2.user_io.out)
         self.assertNotIn("libhello1.a", client2.user_io.out)
