@@ -39,7 +39,7 @@ class InLocalCacheTest(unittest.TestCase):
         pack_folder = os.path.join(client.current_folder, "package")
         os.mkdir(pack_folder)
         client.current_folder = pack_folder
-        client.run("package .. --build_folder ..")
+        client.run("package .. --build-folder ..")
         self.assertIn("package() IN LOCAL CACHE=> False", client.user_io.out)
 
         # Confirm that we have the flag depending on the recipe too

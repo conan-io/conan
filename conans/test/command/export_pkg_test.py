@@ -43,7 +43,7 @@ class TestConan(ConanFile):
             self.assertEqual(client.client_cache.package(win_package_ref), package_folder)
         self.assertEqual(load(os.path.join(package_folder, "include/header.h")),
                          "//Windows header")
-        self._consume(client, "-s os=Windows")
+        self._consume(client, ". -s os=Windows")
         self.assertIn("Hello/0.1@lasote/stable:3475bd55b91ae904ac96fde0f106a136ab951a5e",
                       client.user_io.out)
 
@@ -118,7 +118,7 @@ class TestConan(ConanFile):
                          client.out)  # --bare include a now mandatory package() method!
 
         self.assertIn("Copied 1 '.a' files: libmycoollib.a", client.out)
-        self._consume(client, settings + " -g cmake")
+        self._consume(client, settings + " . -g cmake")
 
         cmakeinfo = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         self.assertIn("set(CONAN_LIBS_HELLO mycoollib)", cmakeinfo)
@@ -173,7 +173,7 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "rootfile.lib": "contents",
                      "build/lib/hello.lib": "My Lib"})
-        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build_folder=build")
+        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
         package_folder = client.client_cache.package(package_ref)
@@ -202,8 +202,8 @@ class TestConan(ConanFile):
                      "build/libs/what": "",
                      "build/lib/hello.lib": "My Lib",
                      "build/lib/bye.txt": ""})
-        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build_folder=build "
-                   "--source_folder=src")
+        client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build "
+                   "--source-folder=src")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
         package_folder = client.client_cache.package(package_ref)
@@ -281,7 +281,7 @@ class TestConan(ConanFile):
     settings = "os"
 """
         client.save({CONANFILE: consumer}, clean_first=True)
-        client.run("install -g cmake")
+        client.run("install conanfile.py -g cmake")
         self.assertIn("Hello/0.1@lasote/stable: Already installed!", client.user_io.out)
         self.assertIn("Hello1/0.1@lasote/stable: Already installed!", client.user_io.out)
 

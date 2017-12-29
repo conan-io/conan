@@ -50,6 +50,38 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 class BuildRequiresTest(unittest.TestCase):
 
+    def test_dependents(self):
+        client = TestClient()
+        boost = """from conans import ConanFile
+class Boost(ConanFile):
+    def package_info(self):
+        self.env_info.PATH.append("myboostpath")
+"""
+        client.save({CONANFILE: boost})
+        client.run("create . Boost/1.0@user/channel")
+        other = """from conans import ConanFile
+import os
+class Other(ConanFile):
+    requires = "Boost/1.0@user/channel"
+    def build(self):
+        self.output.info("OTHER PATH FOR BUILD %s" % os.getenv("PATH"))
+    def package_info(self):
+        self.env_info.PATH.append("myotherpath")
+"""
+        client.save({CONANFILE: other})
+        client.run("create . Other/1.0@user/channel")
+        lib = """from conans import ConanFile
+import os
+class Lib(ConanFile):
+    build_requires = "Boost/1.0@user/channel", "Other/1.0@user/channel"
+    def build(self):
+        self.output.info("LIB PATH FOR BUILD %s" % os.getenv("PATH"))
+"""
+        client.save({CONANFILE: lib})
+        client.run("create . Lib/1.0@user/channel")
+        self.assertIn("LIB PATH FOR BUILD myotherpath%smyboostpath" % os.pathsep,
+                      client.out)
+
     def test_transitive(self):
         client = TestClient()
         mingw = """from conans import ConanFile
@@ -212,5 +244,5 @@ class package(ConanFile):
     build_requires  = "first/0.0.0@lasote/stable"
 """
         client.save({"conanfile.py": consumer})
-        client.run("install --build=missing -o Pkg:someoption=3")
+        client.run("install . --build=missing -o Pkg:someoption=3")
         self.assertIn("first/0.0.0@lasote/stable: Coverage: True", client.user_io.out)

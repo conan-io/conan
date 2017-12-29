@@ -28,13 +28,13 @@ class PackageLocalCommandTest(unittest.TestCase):
 
         # In current dir subdir
         prepare_for_package(client)
-        client.run("package . --build-folder build2 --install-folder build --package_folder=subdir")
+        client.run("package . --build-folder build2 --install-folder build --package-folder=subdir")
         self.assertNotIn("package(): WARN: No files copied!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
         # In current dir subdir with conanfile path
         prepare_for_package(client)
-        client.run("package ./conanfile.py --build-folder build2 --install-folder build --package_folder=subdir")
+        client.run("package ./conanfile.py --build-folder build2 --install-folder build --package-folder=subdir")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "subdir")))
 
         # Default path
@@ -51,7 +51,7 @@ class PackageLocalCommandTest(unittest.TestCase):
         # Abs path
         prepare_for_package(client)
         pf = os.path.join(client.current_folder, "mypackage/two")
-        client.run("package . --build-folder build --package_folder='%s'" % pf)
+        client.run("package . --build-folder build --package-folder='%s'" % pf)
         self.assertNotIn("package(): WARN: No files copied!", client.out)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
@@ -60,7 +60,7 @@ class PackageLocalCommandTest(unittest.TestCase):
         pf = os.path.join(client.current_folder, "mypackage/two")
         os.rename(os.path.join(client.current_folder, "conanfile.py"),
                   os.path.join(client.current_folder, "my_conanfile.py"))
-        client.run("package ./my_conanfile.py --build-folder build --package_folder='%s'" % pf)
+        client.run("package ./my_conanfile.py --build-folder build --package-folder='%s'" % pf)
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "mypackage", "two")))
 
     def package_with_path_errors_test(self):
@@ -98,7 +98,7 @@ class MyConan(ConanFile):
 """
         client.save({"include/file.h": "foo",
                      CONANFILE: conanfile_template})
-        client.run("install")
+        client.run("install .")
         path = client.current_folder
         client.run('package "%s"' % path)
         package_folder = os.path.join(client.current_folder, "package")
@@ -141,8 +141,8 @@ class MyConan(ConanFile):
             if conanfile_path:
                 path = os.path.join(path, "conanfile.py")
 
-            client.run('package "{0}" --build_folder="{2}"'
-                       ' --package_folder="{1}"'.format(path, package_folder, build_folder))
+            client.run('package "{0}" --build-folder="{2}"'
+                       ' --package-folder="{1}"'.format(path, package_folder, build_folder))
             self.assertEqual(sorted(os.listdir(package_folder)),
                              sorted(["include", "lib", "conaninfo.txt",
                                      "conanmanifest.txt"]))
@@ -175,15 +175,15 @@ class MyConan(ConanFile):
         if default_folder:
             package_folder = os.path.join(client.current_folder, "package")
             path = "../conanfile.py" if conanfile_path else ".."
-            client.run('package {0} --build_folder=. --source_folder=../src'.format(path))
+            client.run('package {0} --build-folder=. --source-folder=../src'.format(path))
         else:
             package_folder = temp_folder()
 
             if conanfile_path:
                 path = os.path.join(path, "conanfile.py")
 
-            client.run('package "{0}" --build_folder="{1}/build" '
-                       '--package_folder="{2}" --source_folder="{1}/src"'.
+            client.run('package "{0}" --build-folder="{1}/build" '
+                       '--package-folder="{2}" --source-folder="{1}/src"'.
                        format(path, conanfile_folder, package_folder))
         content = load(os.path.join(package_folder, "include/file.h"))
         self.assertEqual(content, "foo")
