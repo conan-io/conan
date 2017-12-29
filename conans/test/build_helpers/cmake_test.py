@@ -180,9 +180,9 @@ class CMakeTest(unittest.TestCase):
 
         settings.compiler = "gcc"
         settings.compiler.version = "4.8"
-        check('-G "MinGW Makefiles" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="4.8" -Wno-dev',
-              "")
+        generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
+              '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="4.8" -Wno-dev' % generator, "")
 
         settings.os = "Linux"
         settings.arch = "x86"
@@ -363,7 +363,7 @@ build_type: [ Release]
 
         cmake.configure()
 
-        self.assertEqual('cd {0} && cmake -G "Unix Makefiles" '
+        self.assertEqual('cd {0} && cmake -G "MinGW Makefiles" '
                          '{1} -DCONAN_EXPORTED="1"'
                          ' -DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="5.4" '
                          '-Wno-dev {0}'.format(dot_dir, cross),
@@ -396,7 +396,7 @@ build_type: [ Release]
         else:
             escaped_args = "'--foo \"bar\"' -DSHARED=\"True\" '/source'"
 
-        self.assertEqual('cd %s && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug" '
+        self.assertEqual('cd %s && cmake -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE="Debug" '
                          '%s -DCONAN_EXPORTED="1" '
                          '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="5.4" '
                          '-Wno-dev %s' % (tempdir, cross, escaped_args),
