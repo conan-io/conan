@@ -52,7 +52,7 @@ class ClientCache(SimplePaths):
     def conanfile_write_lock(self, conan_ref):
         if self._no_locks():
             return NoLock()
-        return WriteLock(os.path.join(self.conan(conan_ref), "rw"), conan_ref,
+        return WriteLock(self.conan(conan_ref), conan_ref,
                          self._output)
 
     def package_lock(self, package_ref):
