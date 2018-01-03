@@ -368,5 +368,11 @@ def verify_gpg_sig(data_file, pubkey,sig_file=None,delete_after=True):
         if delete_result.status != 'ok':
             ConanOutput(sys.stdout).warn("couldn't cleanup GPG keyring")
 
-    return verify_result.valid
+    if not verify_result.valid:
+        raise ConanException("""GPG signature verification failed for file: %s
+                                using pubkey with fingerprint : %s. 
+                                status message is: %s 
+                                """ % (data_file,fingerprint,verify_result.status))
+
+    
 
