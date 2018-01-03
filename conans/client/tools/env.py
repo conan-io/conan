@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import os
 
 from conans.client.tools.files import which
+from conans.errors import ConanException
 
 
 @contextmanager
@@ -52,7 +53,7 @@ def no_op():
 def remove_from_path(command):
     curpath = os.getenv("PATH")
     first_it = True
-    while 1:
+    for n in range(200):
         if not first_it:
             with environment_append({"PATH": curpath}):
                 the_command = which(command)
@@ -75,6 +76,11 @@ def remove_from_path(command):
                     new_path.append(entry)
 
         curpath = os.pathsep.join(new_path)
+
+    if n >= 199:
+        raise ConanException("Error in tools.remove_from_path!! couldn't remove the tool %s "
+                             "from the path after 200 attempts, this is a Conan client bug, please open an issue at: "
+                             "https://github.com/conan-io/conan" % command)
 
     with environment_append({"PATH": curpath}):
         yield
