@@ -26,7 +26,7 @@ def _get_env_cmake_system_name():
 class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
-                 parallel=True, build_type=None, toolset=None):
+                 parallel=True, build_type=None, toolset=None, make_program=None):
         """
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
         :param generator: Generator name to use or none to autodetect
@@ -63,6 +63,10 @@ class CMake(object):
         if build_type and build_type != self._build_type:
             # Call the setter to warn and update the definitions if needed
             self.build_type = build_type
+
+        make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program
+        if make_program:
+            self.definitions["CMAKE_MAKE_PROGRAM"] = os.environ["CONAN_MAKE_PROGRAM"]
 
     @property
     def build_folder(self):
@@ -318,10 +322,11 @@ class CMake(object):
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   source_folder=None, build_folder=None, cache_build_folder=None):
+
+
         # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         args = args or []
         defs = defs or {}
-
         source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
                                                     source_dir, build_dir,
                                                     cache_build_folder)
