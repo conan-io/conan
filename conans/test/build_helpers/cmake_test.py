@@ -44,13 +44,15 @@ class CMakeTest(unittest.TestCase):
         cmake.configure(source_dir="../subdir", build_dir="build")
         linux_stuff = '-DCMAKE_SYSTEM_NAME="Linux" ' \
                       '-DCMAKE_SYSROOT="/path/to/sysroot" ' if platform.system() != "Linux" else ""
-        base_cmd = ' && cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Release" %s' \
+        generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
+        base_cmd = ' && cmake -G "%s" -DCMAKE_BUILD_TYPE="Release" %s' \
                    '-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" ' \
                    '-DCONAN_COMPILER_VERSION="6.3" ' \
                    '-DCONAN_CXX_FLAGS="-m32" -DCONAN_SHARED_LINKER_FLAGS="-m32" ' \
-                   '-DCONAN_C_FLAGS="-m32" -Wno-dev ' % linux_stuff
+                   '-DCONAN_C_FLAGS="-m32" -Wno-dev ' % (generator, linux_stuff)
         build_expected = quote_var("build")
         source_expected = quote_var("../subdir")
+
         self.assertEquals(conan_file.command, 'cd %s' % build_expected + base_cmd + source_expected)
 
         cmake.configure(build_dir="build")
@@ -186,66 +188,66 @@ class CMakeTest(unittest.TestCase):
 
         settings.os = "Linux"
         settings.arch = "x86"
-        check('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug"'
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m32" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev',
+              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev' % generator,
               "")
 
         settings.arch = "x86_64"
-        check('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug"'
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev',
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator,
               "")
 
         settings.os = "FreeBSD"
         settings.compiler = "clang"
         settings.compiler.version = "3.8"
         settings.arch = "x86"
-        check('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug"'
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="clang" '
               '-DCONAN_COMPILER_VERSION="3.8" -DCONAN_CXX_FLAGS="-m32" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev',
+              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev' % generator,
               "")
 
         settings.arch = "x86_64"
-        check('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug"'
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="clang" '
               '-DCONAN_COMPILER_VERSION="3.8" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev',
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator,
               "")
 
         settings.os = "SunOS"
         settings.compiler = "sun-cc"
         settings.compiler.version = "5.10"
         settings.arch = "x86"
-        check('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug"'
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m32" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev',
+              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev' % generator,
               "")
 
         settings.arch = "x86_64"
-        check('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug"'
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
               ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev',
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator,
               "")
 
         settings.arch = "sparc"
 
-        check('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
               '-DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m32" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev',
+              '-DCONAN_SHARED_LINKER_FLAGS="-m32" -DCONAN_C_FLAGS="-m32" -Wno-dev' % generator,
               "")
 
         settings.arch = "sparcv9"
-        check('-G "Unix Makefiles" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
               '-DCONAN_COMPILER="sun-cc" '
               '-DCONAN_COMPILER_VERSION="5.10" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev',
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator,
               "")
 
         settings.compiler = "Visual Studio"
@@ -280,10 +282,11 @@ build_type: [ Release]
         conan_file.settings = settings
 
         cmake = CMake(conan_file)
+        generator = "Unix" if platform.system() != "Windows" else "MinGW"
         cross = "-DCMAKE_SYSTEM_NAME=\"Linux\" -DCMAKE_SYSROOT=\"/path/to/sysroot\" " if platform.system() != "Linux" else ""
-        self.assertEqual('-G "Unix Makefiles" %s-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
+        self.assertEqual('-G "%s Makefiles" %s-DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
                          '-DCONAN_COMPILER_VERSION="4.9" -DCONAN_CXX_FLAGS="-m64" '
-                         '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % cross,
+                         '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % (generator, cross),
                          cmake.command_line)
 
     def test_sysroot(self):
