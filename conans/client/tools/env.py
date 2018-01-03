@@ -63,16 +63,17 @@ def remove_from_path(command):
         if not the_command:
             break
         new_path = []
-        the_command2 = ""
-        if "sysnative" in the_command and platform.system() == "Windows":
-            the_command2 = the_command.replace("sysnative", "system32")
-        for entry in curpath.split(os.pathsep):
-            if platform.system() == "Windows":
-                entry = entry.lower()
-                the_command = the_command.lower()
-                the_command2 = the_command2.lower()
-            if entry != os.path.dirname(the_command2) and entry != os.path.dirname(the_command):
-                new_path.append(entry)
+        if platform.system() == "Windows":
+            the_command2 = the_command.replace("sysnative", "system32") if "sysnative" in the_command else ""
+            for entry in curpath.split(os.pathsep):
+                if entry.lower() != os.path.dirname(the_command2.lower()) and \
+                   entry.lower() != os.path.dirname(the_command.lower()):
+                    new_path.append(entry)
+        else:
+            for entry in curpath.split(os.pathsep):
+                if entry != os.path.dirname(the_command):
+                    new_path.append(entry)
+
         curpath = os.pathsep.join(new_path)
 
     with environment_append({"PATH": curpath}):
