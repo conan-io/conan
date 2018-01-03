@@ -37,14 +37,12 @@ class DiskRemover(object):
         self.remove_packages(conan_ref)
         self._remove(self._paths.export(conan_ref), conan_ref, "export folder")
         self._remove(self._paths.export_sources(conan_ref), conan_ref, "export_source folder")
-        conan_ref_dir = self._paths.conan(conan_ref)
-        self._remove(conan_ref_dir, conan_ref)
-        try:
-            dir_name, channel = os.path.split(conan_ref_dir)
-            os.remove(os.path.join(dir_name, "%s.count" % channel))
-            os.remove(os.path.join(dir_name, "%s.count.lock" % channel))
-        except OSError:
-            pass
+        self._remove(self._paths.conan(conan_ref), conan_ref)
+        for f in self._paths.conanfile_lock_files(conan_ref):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
     def remove_src(self, conan_ref):
         self._remove(self._paths.source(conan_ref), conan_ref, "src folder")
