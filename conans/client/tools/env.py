@@ -76,8 +76,7 @@ def remove_from_path(command):
                     new_path.append(entry)
 
         curpath = os.pathsep.join(new_path)
-
-    if n >= 199:
+    else:
         raise ConanException("Error in tools.remove_from_path!! couldn't remove the tool %s "
                              "from the path after 200 attempts, this is a Conan client bug, please open an issue at: "
                              "https://github.com/conan-io/conan" % command)
