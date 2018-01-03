@@ -11,16 +11,22 @@ from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import load, save, _generic_algorithm_sum
 
-import gnupg
-from gnupg._util import find_encodings
+from psutil import NoSuchProcess
+
+try:
+    import gnupg
+    from gnupg._util import find_encodings
 
 #create a GPG object. If gpg not available on the system, catch the error
 #and the method will fail later
-try:
     _gpg = gnupg.GPG()
 except RuntimeError as err:
     _gpg = None
     _gpg_error = err.args[0]
+#this is a failiure mode which appears on Windows sometimes instead of runtime
+except NoSuchProcess:
+    _gpg = None
+    _gpg_error = "NoSuchProcess error raised. Probably gpg is not installed"
 
 
 #this is a "monkey-patch" which fixes python-gnupg for binary file 
