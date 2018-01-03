@@ -191,6 +191,40 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     return command
 
 
+def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=True):
+    cmd = vcvars_command(settings, arch=arch,
+                         compiler_version=compiler_version, force=force) + " && echo __BEGINS__ && set"
+    ret = decode_text(subprocess.check_output(cmd, shell=True))
+    new_env = {}
+    start_reached = False
+    for line in ret.splitlines():
+        if not start_reached:
+            if "__BEGINS__" in line:
+                start_reached = True
+            continue
+        name_var, value = line.split("=", 1)
+        new_env[name_var] = value
+
+    if filter_known_paths:
+        def relevant_path(path):
+            path = path.replace("\\", "/").lower()
+            keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/"
+            return any(word in path for word in keywords)
+
+        path = new_env.get("PATH", "").split(";")
+        path = [entry for entry in path if relevant_path(entry)]
+        new_env["PATH"] = ";".join(path)
+
+    return new_env
+
+
+@contextmanager
+def vcvars(*args, **kwargs):
+    new_env = vcvars_dict(*args, **kwargs)
+    with environment_append(new_env):
+        yield
+
+
 def escape_windows_cmd(command):
     """ To use in a regular windows cmd.exe
         1. Adds escapes so the argument can be unpacked by CommandLineToArgvW()
@@ -202,10 +236,11 @@ def escape_windows_cmd(command):
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
-def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True):
+def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None):
     """ Will run a unix command inside a bash terminal
         It requires to have MSYS2, CYGWIN, or WSL
     """
+    env = env or {}
     if platform.system() != "Windows":
         raise ConanException("Command only for Windows operating system")
     subsystem = subsystem or os_info.detect_windows_subsystem()
@@ -222,7 +257,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         env_vars = {}
 
     with environment_append(env_vars):
-        hack_path = ""
+        hack_env = ""
         if subsystem != WSL:  # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
             inherited_path = conanfile.env.get("PATH", None)
             if isinstance(inherited_path, list):
@@ -230,35 +265,24 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
                 inherited_path = ":".join(paths)
             else:
                 inherited_path = unix_path(inherited_path, path_flavor=subsystem)
+
+            if "PATH" in env:
+                tmp = unix_path(env["PATH"].replace(";", ":"), path_flavor=subsystem)
+                inherited_path = "%s:%s" % (tmp, inherited_path) if inherited_path else tmp
+
             # Put the build_requires and requires path at the first place inside the shell
-            hack_path = ' && PATH="%s:$PATH"' % inherited_path if inherited_path else ""
+            hack_env = ' && PATH="%s:$PATH"' % inherited_path if inherited_path else ""
+
+        for var_name, value in env.items():
+            if var_name == "PATH":
+                continue
+            hack_env += ' && %s=%s' % (var_name, value)
 
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
             cwd = os.path.join(os.getcwd(), cwd)
         curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
-        to_run = 'cd "%s"%s && %s ' % (curdir, hack_path, bashcmd)
+        to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         wincmd = '%s --login -c %s' % (os_info.bash_path(), escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         return conanfile.run(wincmd, win_bash=False)
-
-def vcvars_dict(*args, **kwargs):
-    cmd = vcvars_command(*args, **kwargs) + " && echo __BEGINS__ && set"
-    ret = decode_text(subprocess.check_output(cmd, shell=True))
-    new_env = {}
-    start_reached = False
-    for line in ret.splitlines():
-        if not start_reached:
-            if "__BEGINS__" in line:
-                start_reached = True
-            continue
-        name_var, value = line.split("=", 1)
-        new_env[name_var] = value
-    return new_env
-
-
-@contextmanager
-def vcvars(*args, **kwargs):
-    new_env = vcvars_dict(*args, **kwargs)
-    with environment_append(new_env):
-        yield
