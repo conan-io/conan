@@ -11,6 +11,33 @@ from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import load, save, _generic_algorithm_sum
 
+import gnupg
+from gnupg._util import find_encodings
+
+#create a GPG object. If gpg not available on the system, catch the error
+#and the method will fail later
+try:
+    _gpg = gnupg.GPG()
+except RuntimeError as err:
+    _gpg = None
+    _gpg_error = err.args[0]
+
+
+#this is a "monkey-patch" which fixes python-gnupg for binary file 
+#comparisons in python 3. It has been submitted upstream at 
+# https://github.com/isislovecruft/python-gnupg/pull/218
+def fixed_binary(data):
+    coder = find_encodings()
+    if isinstance(data, str):
+        encoded = coder.encode(data)[0]
+    else:
+        encoded = data
+    return encoded    
+
+if sys.version_info.major == 3:
+    gnupg._util.binary = fixed_binary
+
+
 
 _global_output = None
 
@@ -295,3 +322,51 @@ def which(filename):
                         return trick_path
 
     return None
+
+
+def verify_gpg_sig(data_file, pubkey,sig_file=None,delete_after=True):
+    """ verify a supplied GPG signature for a file.
+        
+        data_file: filename of the data to verify, e.g. "awesome-lib-v1.tar.gz"
+        
+        pubkey: either a filename or key fingerprint / keyid of the public key
+        e.g. "developer_pubkey.txt" or "0B8DA90F"
+        
+        sig_file: file name of detached signature, e.g. 
+        "awesome-lib-v1.tar.gz.sig" or "awesome-lib-v1.tar.gz.asc"
+        if not provided, assume a signature is present in the file itself
+    
+        
+    """
+    if not _gpg:
+        raise ConanException("pygnupg was unable to find GPG binary. Reported error was: %s"
+                             % _gpg_error)
+
+    #import pubkey from a file
+    if os.path.isfile(pubkey):
+        with open(pubkey, "r") as f:
+            import_key_result = _gpg.import_keys(f.read())
+    else:
+        import_key_result = _gpg.recv_keys(pubkey)
+
+    #check if key was imported correctly
+    fingerprint = import_key_result.results[0]["fingerprint"]
+    if fingerprint is None:
+        raise ConanException("failed to import public key from file")
+
+    try:
+        with open(data_file,"rb") as f:
+            
+            if sig_file is None:
+                verify_result = _gpg.verify_file(f)
+            else:
+                verify_result = _gpg.verify_file(f,sig_file=sig_file)
+                
+    finally:
+        #cleanup 
+        delete_result = _gpg.delete_keys(fingerprint)
+        if delete_result.status != 'ok':
+            ConanOutput(sys.stdout).warn("couldn't cleanup GPG keyring")
+
+    return verify_result.valid
+
