@@ -51,16 +51,27 @@ def no_op():
 @contextmanager
 def remove_from_path(command):
     curpath = os.getenv("PATH")
+    first_it = True
     while 1:
-        with environment_append({"PATH": curpath}):
+        if not first_it:
+            with environment_append({"PATH": curpath}):
+                the_command = which(command)
+        else:
             the_command = which(command)
+            first_it = False
+
         if not the_command:
             break
         new_path = []
+        the_command2 = ""
         if "sysnative" in the_command and platform.system() == "Windows":
-            the_command = the_command.replace("sysnative", "system32")
+            the_command2 = the_command.replace("sysnative", "system32")
         for entry in curpath.split(os.pathsep):
-            if entry != os.path.dirname(the_command):
+            if platform.system() == "Windows":
+                entry = entry.lower()
+                the_command = the_command.lower()
+                the_command2 = the_command2.lower()
+            if entry != os.path.dirname(the_command2) and entry != os.path.dirname(the_command):
                 new_path.append(entry)
         curpath = os.pathsep.join(new_path)
 
