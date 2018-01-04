@@ -249,6 +249,7 @@ class ConanInfo(object):
         result.recipe_hash = None
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
+        result.discard_build_settings()
 
         return result
 
@@ -380,3 +381,14 @@ class ConanInfo(object):
         self.settings.compiler.version = self.full_settings.compiler.version
         self.settings.compiler.toolset = self.full_settings.compiler.toolset
 
+    def discard_build_settings(self):
+        # When os is defined, os_build is irrelevant for the consumer.
+        # only when os_build is alone (installers, etc) it has to be present in the package_id
+        if self.full_settings.os and self.full_settings.os_build:
+            self.settings.os_build = None
+        if self.full_settings.arch and self.full_settings.arch_build:
+            self.settings.arch_build = None
+
+    def include_build_settings(self):
+        self.settings.os_build = self.full_settings.os_build
+        self.settings.arch_build = self.full_settings.arch_build

@@ -165,7 +165,7 @@ class ConanManager(object):
                                   manifest_manager=None)
 
         loader = self.get_loader(profile)
-        conanfile = loader.load_virtual([reference], None)
+        conanfile = loader.load_virtual([reference], scope_options=True)
         if install_folder and existing_info_files(install_folder):
             _load_deps_info(install_folder, conanfile, required=True)
 
