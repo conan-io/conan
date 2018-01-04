@@ -11,6 +11,20 @@ from conans.util.files import load
 
 class InfoTest(unittest.TestCase):
 
+    def failed_info_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "Pkg/1.0.x@user/testing"
+"""
+        client.save({"conanfile.py": conanfile})
+        error = client.run("info .", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Pkg/1.0.x@user/testing: Not found in local cache", client.out)
+        client.run("search")
+        self.assertIn("There are no packages", client.out)
+        self.assertNotIn("Pkg/1.0.x@user/testing", client.out)
+
     def _create(self, number, version, deps=None, deps_dev=None, export=True):
         files = cpp_hello_conan_files(number, version, deps, build=False)
         files[CONANFILE] = files[CONANFILE].replace("config(", "configure(")
