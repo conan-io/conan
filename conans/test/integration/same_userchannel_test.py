@@ -68,7 +68,7 @@ class HelloReuseConan(ConanFile):
         error = self.client.run("install .", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Hello/0.1@PROJECT: Error in requirements() method, line 10", self.client.out)
-        self.assertIn("ConanException: CONAN_CHANNEL environment variable not defined, but self.user is used",
+        self.assertIn("ConanException: CONAN_USERNAME environment variable not defined, but self.user is used",
                       self.client.out)
 
         os.environ["CONAN_USERNAME"] = "lasote"
