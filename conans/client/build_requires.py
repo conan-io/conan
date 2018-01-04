@@ -5,6 +5,7 @@ from collections import OrderedDict
 from conans.client.printer import Printer
 from conans.errors import conanfile_exception_formatter
 from conans.model.ref import ConanFileReference
+from conans.model.conan_file import get_env_context_manager
 
 
 def _apply_build_requires(deps_graph, conanfile, package_build_requires):
@@ -67,8 +68,9 @@ class BuildRequires(object):
     def _get_recipe_build_requires(conanfile):
         conanfile.build_requires = _RecipeBuildRequires(conanfile)
         if hasattr(conanfile, "build_requirements"):
-            with conanfile_exception_formatter(str(conanfile), "build_requirements"):
-                conanfile.build_requirements()
+            with get_env_context_manager(conanfile):
+                with conanfile_exception_formatter(str(conanfile), "build_requirements"):
+                    conanfile.build_requirements()
 
         return conanfile.build_requires
 
