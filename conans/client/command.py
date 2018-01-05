@@ -598,7 +598,7 @@ class Command(object):
         args = parser.parse_args(*args)
         name, version, user, channel = get_reference_fields(args.reference)
 
-        return self._conan.export_pkg(path=args.path,
+        return self._conan.export_pkg(conanfile_path=args.path,
                                       name=name,
                                       version=version,
                                       source_folder=args.source_folder,
