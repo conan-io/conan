@@ -568,8 +568,9 @@ class Command(object):
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe (conanfile.py)')
         parser.add_argument("-sf", "--source-folder", action=OnceArgument,
-                            help="local folder containing the sources. Defaulted to --build-folder."
-                                 " A relative path to the current dir can also be specified")
+                            help="local folder containing the sources. Defaulted to the directory "
+                                 "of the conanfile. A relative path can also be specified "
+                                 "(relative to the current directory)")
         parser.add_argument("-bf", "--build-folder", action=OnceArgument,
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "
@@ -598,7 +599,7 @@ class Command(object):
         args = parser.parse_args(*args)
         name, version, user, channel = get_reference_fields(args.reference)
 
-        return self._conan.export_pkg(path=args.path,
+        return self._conan.export_pkg(conanfile_path=args.path,
                                       name=name,
                                       version=version,
                                       source_folder=args.source_folder,
