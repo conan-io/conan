@@ -15,8 +15,6 @@ from psutil import NoSuchProcess
 
 try:
     import gnupg
-    from gnupg._util import find_encodings
-
 #create a GPG object. If gpg not available on the system, catch the error
 #and the method will fail later
     _gpg = gnupg.GPG()
@@ -27,21 +25,6 @@ except RuntimeError as err:
 except NoSuchProcess:
     _gpg = None
     _gpg_error = "NoSuchProcess error raised. Probably gpg is not installed"
-
-
-#this is a "monkey-patch" which fixes python-gnupg for binary file 
-#comparisons in python 3. It has been submitted upstream at 
-# https://github.com/isislovecruft/python-gnupg/pull/218
-def fixed_binary(data):
-    coder = find_encodings()
-    if isinstance(data, str):
-        encoded = coder.encode(data)[0]
-    else:
-        encoded = data
-    return encoded    
-
-if sys.version_info.major == 3:
-    gnupg._util.binary = fixed_binary
 
 
 
@@ -361,6 +344,23 @@ def verify_gpg_sig(data_file, pubkey,sig_file=None,delete_after=True):
         raise ConanException("failed to import public key from file")
 
     try:
+        if sig_file is None:
+            with open(data_file,"rb") as f:
+                verify_result = _gpg.verify_file(f)
+        else:
+            with open(sig_file,"rb") as f:
+                verify_result = _gpg.verify_file(f,sig_file)
+                
+    finally:
+        #cleanup 
+        delete_result = _gpg.delete_keys(fingerprint)
+        if delete_result.status != 'ok':
+            ConanOutput(sys.stdout).warn("couldn't cleanup GPG keyring")
+
+    
+
+
+    try:
         with open(data_file,"rb") as f:
             
             if sig_file is None:
@@ -381,4 +381,9 @@ def verify_gpg_sig(data_file, pubkey,sig_file=None,delete_after=True):
                                 """ % (data_file,fingerprint,verify_result.status))
 
     
+if __name__ == "__main__":
+    import os
+    os.chdir("/home/weatherill/Software/pcre-conan")
+
+    result = verify_gpg_sig("pcre-8.41.tar.gz", "Public-key", "pcre-8.41.tar.gz.sig")
 
