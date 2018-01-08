@@ -3,13 +3,13 @@ import sys
 import os
 from conans.client.output import ConanOutput
 from conans.client.rest.uploader_downloader import Downloader
-from conans.client.tools.files import unzip, check_md5, check_sha1, check_sha256
+from conans.client.tools.files import unzip, check_md5, check_sha1, check_sha256, verify_gpg_sig
 from conans.errors import ConanException
 
 _global_requester = None
 
 
-def get(url, md5='', sha1='', sha256='', destination="."):
+def get(url, md5='', sha1='', sha256='', gpg_signature='', gpg_pubkey='', destination="."):
     """ high level downloader + unzipper + (optional hash checker) + delete temporary zip
     """
     filename = os.path.basename(url)
@@ -21,6 +21,12 @@ def get(url, md5='', sha1='', sha256='', destination="."):
         check_sha1(filename, sha1)
     if sha256:
         check_sha256(filename, sha256)
+    
+    if gpg_signature and gpg_pubkey:
+        verify_gpg_sig(filename,gpg_pubkey,gpg_signature)
+    
+    elif gpg_signature or gpg_pubkey:
+        raise ConanException("must provide both gpg_signature and gpg_pubkey")
 
     unzip(filename, destination=destination)
     os.unlink(filename)
