@@ -46,6 +46,9 @@ class ConanRunner(object):
     def _pipe_os_call(self, command, stream_output, log_handler, cwd):
 
         try:
+            # piping both stdout, stderr and then later only reading one will hang the process
+            # if the other fills the pip. So piping stdout, and redirecting stderr to stdour,
+            # so both are merged and use just a single get_stream_lines() call
             proc = Popen(command, shell=True, stdout=PIPE, stderr=STDOUT, cwd=cwd)
         except Exception as e:
             raise ConanException("Error while executing '%s'\n\t%s" % (command, str(e)))
