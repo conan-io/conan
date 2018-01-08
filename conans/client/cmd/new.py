@@ -128,7 +128,7 @@ class {package_name}Conan(ConanFile):
 """
 
 
-test_conanfile = """from conans import ConanFile, CMake
+test_conanfile = """from conans import ConanFile, CMake, tools
 import os
 
 class {package_name}TestConan(ConanFile):
@@ -147,8 +147,9 @@ class {package_name}TestConan(ConanFile):
         self.copy('*.so*', dst='bin', src='lib')
 
     def test(self):
-        os.chdir("bin")
-        self.run(".%sexample" % os.sep)
+        if not tools.cross_building(self.settings):
+            os.chdir("bin")
+            self.run(".%sexample" % os.sep)
 """
 
 test_cmake = """project(PackageTest CXX)
