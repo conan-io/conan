@@ -219,8 +219,7 @@ class Printer(object):
 
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
-        self._print_profile_section("settings", profile.settings.items())
-
+        self._print_profile_section("settings", profile.settings.items(), separator="=")
         self._print_profile_section("options", profile.options.as_list(), separator="=")
         self._print_profile_section("build_requires", [(key, ", ".join(str(val) for val in values))
                                                        for key, values in

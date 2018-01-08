@@ -100,7 +100,7 @@ class VersionCheckTest(unittest.TestCase):
                                  ignore_error=True)
         self.assertIn("Your conan's client version is deprecated for the current remote (v10). "
                       "Upgrade conan client.", self.client.user_io.out)
-        self.assertFalse(errors)  # No Errors! because it finds the package in the second remote
+        self.assertTrue(errors)  # Errors! because it fails in the first remote
 
     def _get_server(self, server_version, min_client_compatible_version):
         server_version = str(server_version)

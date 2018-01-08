@@ -209,38 +209,32 @@ class TestConan(ConanFile):
         self.assertEqual(os.listdir(lib), ["hello.lib"])
         self.assertEqual(load(os.path.join(lib, "hello.lib")), "My Lib")
 
-    def test_no_source_folder(self):
+    def test_default_source_folder(self):
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
+        conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
-    settings = "os"
 
     def package(self):
+        self.copy("*.h", src="src", dst="include")
         self.copy("*.lib", dst="lib", keep_path=False)
 """
         client.save({CONANFILE: conanfile,
-                     "rootfile.lib": "contents",
+                     "src/header.h": "contents",
                      "build/lib/hello.lib": "My Lib"})
         client.run("export-pkg . Hello/0.1@lasote/stable -s os=Windows --build-folder=build")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
-        package_ref = PackageReference(conan_ref, "3475bd55b91ae904ac96fde0f106a136ab951a5e")
+        package_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         package_folder = client.client_cache.package(package_ref)
-        rootfile_path = os.path.join(package_folder, "lib", "rootfile.lib")
-        self.assertFalse(os.path.exists(rootfile_path))
+        header = os.path.join(package_folder, "include/header.h")
+        self.assertTrue(os.path.exists(header))
 
         hello_path = os.path.join(package_folder, "lib", "hello.lib")
         self.assertTrue(os.path.exists(hello_path))
 
     def test_build_source_folders(self):
         client = TestClient()
-        conanfile = """
-from conans import ConanFile
+        conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
-    name = "Hello"
-    version = "0.1"
     settings = "os"
 
     def package(self):
