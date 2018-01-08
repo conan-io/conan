@@ -210,6 +210,9 @@ class ConanManager(object):
         if not package:  # Search the reference first, and raise if it doesn't exist
             raise ConanException("'%s' not found in remote" % str(reference))
 
+        # First of all download package recipe
+        remote_proxy.get_recipe(reference)
+
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
         else:
@@ -347,8 +350,8 @@ class ConanManager(object):
 
         try:
             if cross_building(loader._settings):
-                build_os, _, host_os, _ = get_cross_building_settings(loader._settings)
-                message = "Cross-platform from '%s' to '%s'" % (build_os, host_os)
+                b_os, b_arch, h_os, h_arch = get_cross_building_settings(loader._settings)
+                message = "Cross-build from '%s:%s' to '%s:%s'" % (b_os, b_arch, h_os, h_arch)
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
             pass
