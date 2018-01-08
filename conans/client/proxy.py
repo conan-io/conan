@@ -221,11 +221,7 @@ class ConanProxy(object):
             logger.debug("Trying with remote %s" % remote.name)
             try:
                 return _retrieve_from_remote(remote)
-            # If exception continue with the next
-            except (ConanOutdatedClient, ConanConnectionError) as exc:
-                output.warn(str(exc))
-                if remote == remotes[-1]:  # Last element not found
-                    raise ConanConnectionError("All remotes failed")
+            # If not found continue with the next, else raise
             except NotFoundException as exc:
                 if remote == remotes[-1]:  # Last element not found
                     logger.debug("Not found in any remote, raising...%s" % exc)
