@@ -261,7 +261,7 @@ class Pkg(ConanFile):
 
     def cross_platform_msg_test(self):
         # Explicit with os_build and os_arch settings
-        message = "Cross-platform from 'Linux' to 'Windows'"
+        message = "Cross-build from 'Linux:x86_64' to 'Windows:x86_64'"
         self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
         self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
                         ignore_error=True)
@@ -269,7 +269,7 @@ class Pkg(ConanFile):
 
         # Implicit detection when not available (retrocompatibility)
         bad_os = "Linux" if platform.system() != "Linux" else "Macos"
-        message = "Cross-platform from '%s' to '%s'" % (detected_os(), bad_os)
+        message = "Cross-build from '%s:x86_64' to '%s:x86_64'" % (detected_os(), bad_os)
         self._create("Hello0", "0.1")
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, ignore_error=True)
         self.assertIn(message, self.client.user_io.out)

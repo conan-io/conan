@@ -9,6 +9,20 @@ from conans.util.files import load
 
 class ProfileTest(unittest.TestCase):
 
+    def reuse_output_test(self):
+        client = TestClient()
+        client.run("profile new myprofile --detect")
+        client.run("profile update options.Pkg:myoption=123 myprofile")
+        client.run("profile update env.Pkg2:myenv=123 myprofile")
+        client.run("profile show myprofile")
+        self.assertIn("Pkg:myoption=123", client.out)
+        self.assertIn("Pkg2:myenv=123", client.out)
+        profile = str(client.out).splitlines()[2:]
+        client.save({"conanfile.txt": "",
+                     "mylocalprofile": "\n".join(profile)})
+        client.run("install . -pr=mylocalprofile")
+        self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
+
     def empty_test(self):
         client = TestClient()
         client.run("profile list")
@@ -33,7 +47,7 @@ class ProfileTest(unittest.TestCase):
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
-        self.assertIn("    os: Windows", client.user_io.out)
+        self.assertIn("    os=Windows", client.user_io.out)
         self.assertIn("    MyOption=32", client.user_io.out)
         client.run("profile show profile3")
         self.assertIn("    CC=/path/tomy/gcc_build", client.user_io.out)
