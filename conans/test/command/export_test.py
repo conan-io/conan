@@ -6,7 +6,6 @@ from conans.model.ref import ConanFileReference
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.tools import TestClient
-import platform
 import stat
 from nose_parameterized import parameterized
 
