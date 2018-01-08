@@ -292,7 +292,7 @@ class ConanAPIV1(object):
                                   update=update)
 
     @api_method
-    def export_pkg(self, path, name, channel, source_folder=None, build_folder=None,
+    def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
                    install_folder=None, profile_name=None, settings=None, options=None,
                    env=None, force=False, user=None, version=None, cwd=None):
 
@@ -306,9 +306,10 @@ class ConanAPIV1(object):
             raise ConanException("The specified --install-folder doesn't contain '%s' and '%s' "
                                  "files" % (CONANINFO, BUILD_INFO))
 
+        conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
-        source_folder = _make_abs_path(source_folder, cwd, default=build_folder)
+        source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
 
         # Checks that no both settings and info files are specified
         if install_folder and existing_info_files(install_folder) and \
@@ -324,7 +325,6 @@ class ConanAPIV1(object):
         else:
             profile = read_conaninfo_profile(install_folder)
 
-        conanfile_path = _get_conanfile_path(path, cwd, py=True)
         conanfile = load_conanfile_class(conanfile_path)
         if (name and conanfile.name and conanfile.name != name) or \
            (version and conanfile.version and conanfile.version != version):
