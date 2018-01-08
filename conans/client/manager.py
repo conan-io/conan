@@ -210,6 +210,9 @@ class ConanManager(object):
         if not package:  # Search the reference first, and raise if it doesn't exist
             raise ConanException("'%s' not found in remote" % str(reference))
 
+        # First of all download package recipe
+        remote_proxy.get_recipe(reference)
+
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
         else:
