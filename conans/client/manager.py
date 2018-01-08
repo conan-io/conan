@@ -350,8 +350,8 @@ class ConanManager(object):
 
         try:
             if cross_building(loader._settings):
-                build_os, _, host_os, _ = get_cross_building_settings(loader._settings)
-                message = "Cross-platform from '%s' to '%s'" % (build_os, host_os)
+                b_os, b_arch, h_os, h_arch = get_cross_building_settings(loader._settings)
+                message = "Cross-build from '%s:%s' to '%s:%s'" % (b_os, b_arch, h_os, h_arch)
                 self._user_io.out.writeln(message, Color.BRIGHT_MAGENTA)
         except ConanException:  # Setting os doesn't exist
             pass
