@@ -331,17 +331,26 @@ def verify_gpg_sig(data_file, pubkey,sig_file=None,delete_after=True):
         raise ConanException("pygnupg was unable to find GPG binary. Reported error was: %s"
                              % _gpg_error)
 
-    #import pubkey from a file
     if os.path.isfile(pubkey):
+        #import pubkey from a file
         with open(pubkey, "r") as f:
             import_key_result = _gpg.import_keys(f.read())
-    else:
+    elif len(pubkey) ==8 or len(pubkey) == 40:
+        #this is a fingerprint or keyid
         import_key_result = _gpg.recv_keys(pubkey)
+    else:
+        #this is a GPG public key ascii-armored in a string
+        import_key_result = _gpg.import_keys(pubkey)
+        
 
     #check if key was imported correctly
-    fingerprint = import_key_result.results[0]["fingerprint"]
-    if fingerprint is None:
-        raise ConanException("failed to import public key from file")
+    if "problem" in import_key_result.results[0]:
+        raise ConanException("failed to import public key from file: %s "
+                             % import_key_result.problem_reason[
+                                     import_key_result.results[0]["problem"]])
+            
+    fingerprint = import_key_result.fingerprints[0]
+    
 
     try:
         if sig_file is None:
@@ -349,24 +358,7 @@ def verify_gpg_sig(data_file, pubkey,sig_file=None,delete_after=True):
                 verify_result = _gpg.verify_file(f)
         else:
             with open(sig_file,"rb") as f:
-                verify_result = _gpg.verify_file(f,sig_file)
-                
-    finally:
-        #cleanup 
-        delete_result = _gpg.delete_keys(fingerprint)
-        if delete_result.status != 'ok':
-            ConanOutput(sys.stdout).warn("couldn't cleanup GPG keyring")
-
-    
-
-
-    try:
-        with open(data_file,"rb") as f:
-            
-            if sig_file is None:
-                verify_result = _gpg.verify_file(f)
-            else:
-                verify_result = _gpg.verify_file(f,sig_file=sig_file)
+                verify_result = _gpg.verify_file(f,data_file)
                 
     finally:
         #cleanup 

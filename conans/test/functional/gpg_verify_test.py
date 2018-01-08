@@ -133,7 +133,8 @@ def generate_test_data(basename):
     outfiles.append(basename + ".tar.gz")
     
     #import private key
-    _gpg = gnupg.GPG(gnupghome="./keys")
+#    _gpg = gnupg.GPG(gnupghome="./keys")
+    _gpg = gnupg.GPG()
     _gpg.import_keys(GPG_PRIVATE_KEY)    
     _gpg.import_keys(GPG_PUBLIC_KEY)
     
@@ -185,9 +186,14 @@ class GPGVerifyTest(unittest.TestCase):
         
         #if we got to here without throwing, verification completed
 
-    def testIncorrectVerifyFile(self):
+    def testIncorrectSignatureVerifyFile(self):
         with self.assertRaises(ConanException):
             verify_gpg_sig(data_file=self._data_file,pubkey=GPG_PUBLIC_KEY,
+                           sig_file=self._data_file)
+            
+    def testIncorrectPubkeyVerifyFile(self):
+        with self.assertRaises(ConanException):
+            verify_gpg_sig(data_file=self._data_file,pubkey="public",
                            sig_file=self._sig_file)
 
 
