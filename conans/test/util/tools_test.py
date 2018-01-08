@@ -409,7 +409,7 @@ compiler:
             def __init__(self):
                 self.command = ""
                 self.output = namedtuple("output", "info")(lambda x: None)
-                self.env = {}
+                self.env = {"PATH": "/path/to/somewhere"}
 
             def run(self, command, win_bash=False):
                 self.command = command
@@ -423,6 +423,13 @@ compiler:
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
             self.assertIn("path\\to\\mybash.exe --login -c", conanfile.command)
+
+        # try to append more env vars
+        conanfile = MockConanfile()
+        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", env={"PATH": "/other/path",
+                                                                                       "MYVAR": "34"})
+        self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
+                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile.command)
 
     def download_retries_test(self):
         out = TestBufferConanOutput()

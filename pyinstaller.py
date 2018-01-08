@@ -7,11 +7,10 @@ from distutils import dir_util
 
 
 def _install_pyinstaller(pyinstaller_path):
-    subprocess.call("pip install pyinstaller")
+    subprocess.call("pip install pyinstaller", shell=True)
     # try to install pyinstaller if not installed
     if not os.path.exists(pyinstaller_path):
         os.mkdir(pyinstaller_path)
-        
 
 def _run_bin(pyinstaller_path):
     # run the binary to test if working
@@ -28,7 +27,7 @@ def pyinstall(source_folder):
     _install_pyinstaller(pyinstaller_path)
     tmpdir = os.getcwd()
     command = "pyinstaller" # "python pyinstaller.py"
-    
+
     try:
         shutil.rmtree(os.path.join(pyinstaller_path))
     except Exception as e:
@@ -40,13 +39,13 @@ def pyinstall(source_folder):
     hidden = "--hidden-import=glob --hidden-import=pylint.reporters.text"
     if platform.system() != "Windows":
         hidden += " --hidden-import=setuptools.msvc"
-    
+
     if not os.path.exists(pyinstaller_path):
         os.mkdir(pyinstaller_path)
     subprocess.call('%s -y -p %s --console %s %s'
                     % (command, source_folder, conan_path, hidden),
                     cwd=pyinstaller_path, shell=True)
-    
+
     _run_bin(pyinstaller_path)
 
     subprocess.call('%s -y -p %s --console %s'
