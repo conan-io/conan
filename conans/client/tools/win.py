@@ -71,7 +71,7 @@ def vs_installation_path(version):
         output = vswhere(legacy_=True)
 
         for installation in output:
-            if installation["installationVersion"].startswith(("%d" % int(version))):
+            if installation["installationVersion"].startswith(("%d." % int(version))):
                 vs_path = installation["installationPath"]
 
         # Remember to cache result
@@ -85,7 +85,7 @@ def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), v
     # 'version' option only works if Visual Studio 2017 is installed:
     # https://github.com/Microsoft/vswhere/issues/91
 
-    if legacy and (products or requires):
+    if legacy_ and (products_ or requires_):
         raise ConanException("The \"legacy\" parameter cannot be specified with either the "
                              "\"products\" or \"requires\" parameter")
 
@@ -110,21 +110,21 @@ def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), v
     if prerelease_:
         arguments.append("-prerelease")
 
-    if products:
+    if products_:
         arguments.append("-products")
 
-        for product in products:
+        for product in products_:
             arguments.append(product)
 
     if requires_:
         arguments.append("-requires")
 
-        for require in requires:
+        for require in requires_:
             arguments.append(require)
 
     if version_:
         arguments.append("-version")
-        arguments.append(version)
+        arguments.append(version_)
 
     if latest_:
         arguments.append("-latest")
@@ -157,14 +157,18 @@ def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), v
     vswhere_out_list = list()
     temp_dict = dict()
 
+    # If output is a list of dictionaries
     if ": " in vswhere_out:
+        # Split in different dictionaties looking for a blank line separation
         for installation in re.split("\n\s{1,}", vswhere_out):
             for line in installation.splitlines():
                 key = line.split(":", 1)[0].strip()
                 value = line.split(":", 1)[1].strip()
                 temp_dict[key] = value
 
+            # Make a copy of the temporal dictionary to store it in the list
             vswhere_out_list.append(dict(temp_dict))
+            # Clear the copied dict content to start with new one
             temp_dict.clear()
         return vswhere_out_list
 
