@@ -6,7 +6,7 @@ import subprocess
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.files import unix_path, MSYS2, WSL, which
+from conans.client.tools.files import unix_path, MSYS2, WSL
 from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
 from conans.util.files import decode_text
@@ -68,8 +68,8 @@ def vs_installation_path(version):
 
     if version not in vs_installation_path._cached:
         vs_path = None
-        output_legacy = json.loads(vswhere(legacy_=True, format_="json"))
-        output_products = json.loads(vswhere(products_=["*"], format_="json"))
+        output_legacy = json.loads(vswhere(legacy=True, format_="json"))
+        output_products = json.loads(vswhere(products=["*"], format_="json"))
         output = output_legacy + output_products
 
         for installation in output:
@@ -82,16 +82,16 @@ def vs_installation_path(version):
     return vs_installation_path._cached[version]
 
 
-def vswhere(all_=False, prerelease_=False, products_=None, requires_=None, version_="",
-            latest_=False, legacy_=False, format_="", property_="", nologo_=True):
+def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
+            legacy=False, format_="", property_="", nologo=True):
 
     # 'version' option only works if Visual Studio 2017 is installed:
     # https://github.com/Microsoft/vswhere/issues/91
 
-    products_ = list() if products_ is None else products_
-    requires_ = list() if requires_ is None else requires_
+    products = list() if products is None else products
+    requires = list() if requires is None else requires
 
-    if legacy_ and (products_ or requires_):
+    if legacy and (products or requires):
         raise ConanException("The \"legacy\" parameter cannot be specified with either the "
                              "\"products\" or \"requires\" parameter")
 
@@ -113,27 +113,27 @@ def vswhere(all_=False, prerelease_=False, products_=None, requires_=None, versi
     if all_:
         arguments.append("-all")
 
-    if prerelease_:
+    if prerelease:
         arguments.append("-prerelease")
 
-    if products_:
+    if products:
         arguments.append("-products")
-        arguments.extend(products_)
+        arguments.extend(products)
 
-    if requires_:
+    if requires:
         arguments.append("-requires")
 
-        for require in requires_:
+        for require in requires:
             arguments.append(require)
 
-    if len(version_) is not 0:
+    if len(version) is not 0:
         arguments.append("-version")
-        arguments.append(version_)
+        arguments.append(version)
 
-    if latest_:
+    if latest:
         arguments.append("-latest")
 
-    if legacy_:
+    if legacy:
         arguments.append("-legacy")
 
     if format_ in ["json", "text", "value", "xml"]:
@@ -144,7 +144,7 @@ def vswhere(all_=False, prerelease_=False, products_=None, requires_=None, versi
         arguments.append("-property")
         arguments.append(property_)
 
-    if nologo_:
+    if nologo:
         arguments.append("-nologo")
 
     try:
