@@ -164,12 +164,12 @@ class AutoToolsBuildEnvironment(object):
                                     % (configure_dir, args_to_string(args), " ".join(triplet_args)),
                                     win_bash=self._win_bash)
 
-    def make(self, args="", make_program=None):
+    def make(self, args="", make_program=None, target=None):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(self.vars):
             str_args = args_to_string(args)
             cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
-            self._conanfile.run("%s" % join_arguments([make_program, str_args, cpu_count_option]),
+            self._conanfile.run("%s" % join_arguments([make_program, target, str_args, cpu_count_option]),
                                 win_bash=self._win_bash)
 
     @property
