@@ -81,11 +81,15 @@ def vs_installation_path(version):
 
     return vs_installation_path._cached[version]
 
-def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), version_="",
+
+def vswhere(all_=False, prerelease_=False, products_=None, requires_=None, version_="",
             latest_=False, legacy_=False, format_="", property_="", nologo_=True):
 
     # 'version' option only works if Visual Studio 2017 is installed:
     # https://github.com/Microsoft/vswhere/issues/91
+
+    products_ = list() if products_ is None else products_
+    requires_ = list() if requires_ is None else requires_
 
     if legacy_ and (products_ or requires_):
         raise ConanException("The \"legacy\" parameter cannot be specified with either the "
@@ -114,9 +118,7 @@ def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), v
 
     if products_:
         arguments.append("-products")
-
-        for product in products_:
-            arguments.append(product)
+        arguments.extend(products_)
 
     if requires_:
         arguments.append("-requires")
