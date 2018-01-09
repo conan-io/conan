@@ -1,6 +1,6 @@
+import json
 import os
 import platform
-import re
 
 import subprocess
 from contextlib import contextmanager
@@ -68,7 +68,9 @@ def vs_installation_path(version):
 
     if version not in vs_installation_path._cached:
         vs_path = None
-        output = vswhere(legacy_=True)
+        output_legacy = json.loads(vswhere(legacy_=True, format_="json"))
+        output_products = json.loads(vswhere(products_=["*"], format_="json"))
+        output = output_legacy + output_products
 
         for installation in output:
             if installation["installationVersion"].startswith(("%d." % int(version))):
@@ -79,8 +81,8 @@ def vs_installation_path(version):
 
     return vs_installation_path._cached[version]
 
-def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), version_=None,
-            latest_=False, legacy_=False, format_=list(), property_=list(), nologo_=True):
+def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), version_="",
+            latest_=False, legacy_=False, format_="", property_="", nologo_=True):
 
     # 'version' option only works if Visual Studio 2017 is installed:
     # https://github.com/Microsoft/vswhere/issues/91
@@ -122,7 +124,7 @@ def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), v
         for require in requires_:
             arguments.append(require)
 
-    if version_:
+    if len(version_) is not 0:
         arguments.append("-version")
         arguments.append(version_)
 
@@ -132,18 +134,13 @@ def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), v
     if legacy_:
         arguments.append("-legacy")
 
-    if len(format_) is not 0:
+    if format_ in ["json", "text", "value", "xml"]:
         arguments.append("-format")
-
-        for form in format_:
-            if form in ["json", "text", "value", "xml"]:
-                arguments.append(form)
+        arguments.append(format_)
 
     if len(property_) is not 0:
         arguments.append("-property")
-
-        for prop in property_:
-            arguments.append(prop)
+        arguments.append(property_)
 
     if nologo_:
         arguments.append("-nologo")
@@ -153,24 +150,6 @@ def vswhere(all_=False, prerelease_=False, products_=list(), requires_=list(), v
         vswhere_out = output.decode().strip()
     except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
-
-    vswhere_out_list = list()
-    temp_dict = dict()
-
-    # If output is a list of dictionaries
-    if ": " in vswhere_out:
-        # Split in different dictionaties looking for a blank line separation
-        for installation in re.split("\n\s{1,}", vswhere_out):
-            for line in installation.splitlines():
-                key = line.split(":", 1)[0].strip()
-                value = line.split(":", 1)[1].strip()
-                temp_dict[key] = value
-
-            # Make a copy of the temporal dictionary to store it in the list
-            vswhere_out_list.append(dict(temp_dict))
-            # Clear the copied dict content to start with new one
-            temp_dict.clear()
-        return vswhere_out_list
 
     return vswhere_out
 
