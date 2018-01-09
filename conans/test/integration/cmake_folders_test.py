@@ -44,7 +44,7 @@ install(FILES header.h DESTINATION include)
         client.save({"conanfile.py": conanfile,
                      "src/CMakeLists.txt": cmake,
                      "src/header.h": "//myheader.h"})
-        client.run("create Hello/0.1@lasote/channel")
+        client.run("create . Hello/0.1@lasote/channel")
         self.assertIn("Hello/0.1@lasote/channel: HEADER //myheader.h", client.out)
         self.assertIn("-- HEADER CMAKE CONTENTS //myheader.h", client.out)
         # Now local flow
@@ -52,10 +52,10 @@ install(FILES header.h DESTINATION include)
         mkdir(build_folder)
         client.current_folder = build_folder
         client.run("install ..")
-        client.run("build ..")  # same as --build_folder=. --source_folder=..
+        client.run("build ..")  # same as --build-folder=. --source-folder=..
         self.assertIn("-- HEADER CMAKE CONTENTS //myheader.h", client.out)
         if not cmake_install:
-            client.run("package ..")  # same as --build_folder=. --source_folder=..
+            client.run("package ..")  # same as --build-folder=. --source-folder=..
         self.assertTrue(os.path.exists(os.path.join(build_folder, "conaninfo.txt")))
         self.assertTrue(os.path.exists(os.path.join(build_folder, "conanbuildinfo.txt")))
         self.assertEqual(load(os.path.join(build_folder, "package/include/header.h")), "//myheader.h")

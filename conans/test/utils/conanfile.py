@@ -34,9 +34,10 @@ class MockConanfile(object):
         self.options = options or MockOptions({})
         self.generators = []
 
-    def run(self, *args):
+    def run(self, *args, **kwargs):
         if self.runner:
-            self.runner(*args, output=None)
+            kwargs["output"] = None
+            self.runner(*args, **kwargs)
 
 
 class TestConanFile(object):

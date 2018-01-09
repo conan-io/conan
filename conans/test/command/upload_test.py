@@ -68,7 +68,7 @@ class UploadTest(unittest.TestCase):
     def pattern_upload_test(self):
         client = self._client()
         client.save({"conanfile.py": conanfile})
-        client.run("create user/testing")
+        client.run("create . user/testing")
         client.run("upload Hello0/*@user/testing --confirm --all")
         self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
         self.assertIn("Uploading conan_package.tgz", client.user_io.out)
@@ -79,7 +79,7 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "include/hello.h": ""})
-        client.run("create frodo/stable")
+        client.run("create . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         packages_folder = client.client_cache.packages(ref)
         pkg_id = os.listdir(packages_folder)[0]
@@ -97,7 +97,7 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
-        client.run("export frodo/stable")
+        client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable")
         self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
@@ -107,7 +107,7 @@ class UploadTest(unittest.TestCase):
 
         client2.save({"conanfile.py": conanfile,
                      "hello.cpp": "//comamend"})
-        client2.run("export frodo/stable")
+        client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         manifest = client2.client_cache.load_manifest(ref)
         manifest.time += 10
@@ -127,7 +127,7 @@ class UploadTest(unittest.TestCase):
 
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
+        client.run("export . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable")
         self.assertIn("Uploading conanmanifest.txt", client.user_io.out)
         self.assertIn("Uploaded conan recipe 'Hello0/1.2.1@frodo/stable' to 'default'",
@@ -135,7 +135,7 @@ class UploadTest(unittest.TestCase):
 
         client2 = self._client()
         client2.save(files)
-        client2.run("export frodo/stable")
+        client2.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         manifest = client2.client_cache.load_manifest(ref)
         manifest.time += 10
@@ -158,13 +158,13 @@ class UploadTest(unittest.TestCase):
 
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
-        client.run("create frodo/stable")
+        client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable --all")
 
         client2 = self._client()
         client2.save({"conanfile.py": conanfile,
                       "hello.cpp": ""})
-        client2.run("create frodo/stable")
+        client2.run("create . frodo/stable")
         client2.run("upload Hello0/1.2.1@frodo/stable --all")
         self.assertIn("Recipe is up to date, upload skipped", client2.out)
         self.assertNotIn("Uploading conanfile.py", client2.out)
@@ -193,9 +193,9 @@ class UploadTest(unittest.TestCase):
 
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
+        client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build=missing")
-        client.run("upload Hello0/1.2.1@frodo/stable -r default --all --skip_upload")
+        client.run("upload Hello0/1.2.1@frodo/stable -r default --all --skip-upload")
 
         # dry run should not upload
         self.assertNotIn("Uploading conan_package.tgz", client.user_io.out)
@@ -229,7 +229,7 @@ class Pkg(ConanFile):
     pass
 """
         client.save({"conanfile.py": conanfile})
-        client.run("create Pkg/0.1@user/testing")
+        client.run("create . Pkg/0.1@user/testing")
         client.run("upload * --all --confirm")
         client2 = self._client()
         client2.run("install Pkg/0.1@user/testing")

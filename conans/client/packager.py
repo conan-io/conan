@@ -6,7 +6,6 @@ from conans.util.files import mkdir, save, rmdir
 from conans.util.log import logger
 from conans.paths import CONANINFO, CONAN_MANIFEST
 from conans.errors import ConanException, ConanExceptionInUserConanfileMethod, conanfile_exception_formatter
-from conans.model.build_info import DEFAULT_RES, DEFAULT_BIN, DEFAULT_LIB, DEFAULT_INCLUDE
 from conans.model.manifest import FileTreeManifest
 from conans.client.output import ScopedOutput
 from conans.client.file_copier import FileCopier
@@ -23,16 +22,6 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
     output.info("Generating the package")
     output.info("Package folder %s" % (package_folder))
 
-    def wrap(dst_folder):
-        def new_method(pattern, src=""):
-            conanfile.copy(pattern, dst_folder, src)
-        return new_method
-
-    # FIXME: Deprecate these methods. Not documented. Confusing. Rely on LINTER
-    conanfile.copy_headers = wrap(DEFAULT_INCLUDE)
-    conanfile.copy_libs = wrap(DEFAULT_LIB)
-    conanfile.copy_bins = wrap(DEFAULT_BIN)
-    conanfile.copy_res = wrap(DEFAULT_RES)
     try:
         package_output = ScopedOutput("%s package()" % output.scope, output)
         output.highlight("Calling package()")
@@ -40,18 +29,23 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
         conanfile.source_folder = source_folder
         conanfile.build_folder = build_folder
 
+        def recipe_has(conanfile, attribute):
+            return attribute in conanfile.__class__.__dict__
+
         if source_folder != build_folder:
             conanfile.copy = FileCopier(source_folder, package_folder, build_folder)
             with conanfile_exception_formatter(str(conanfile), "package"):
                 with tools.chdir(source_folder):
                     conanfile.package()
-            conanfile.copy.report(package_output, warn=True)
-        conanfile.copy = FileCopier(build_folder, package_folder)
+            warn = recipe_has(conanfile, "package")
+            conanfile.copy.report(package_output, warn=warn)
 
+        conanfile.copy = FileCopier(build_folder, package_folder)
         with tools.chdir(build_folder):
             with conanfile_exception_formatter(str(conanfile), "package"):
                 conanfile.package()
-        conanfile.copy.report(package_output, warn=True)
+        warn = recipe_has(conanfile, "build") and recipe_has(conanfile, "package")
+        conanfile.copy.report(package_output, warn=warn)
     except Exception as e:
         if not local:
             os.chdir(build_folder)

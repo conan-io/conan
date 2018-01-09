@@ -34,24 +34,25 @@ class Pkg(ConanFile):
         self.assertNotIn("Hello", client.out)
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
 
-    def _create(self, number, version, deps=None, export=True, no_config=False):
-        files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config)
+    def _create(self, number, version, deps=None, export=True, no_config=False, settings=None):
+        files = cpp_hello_conan_files(number, version, deps, build=False, config=not no_config,
+                                      settings=settings)
 
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
 
     def install_error_never_test(self):
         self._create("Hello0", "0.1", export=False)
-        error = self.client.run("install --build never --build missing", ignore_error=True)
+        error = self.client.run("install . --build never --build missing", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: --build=never not compatible with other options",
                       self.client.user_io.out)
-        error = self.client.run("install --build never --build Hello", ignore_error=True)
+        error = self.client.run("install conanfile.py --build never --build Hello", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: --build=never not compatible with other options",
                       self.client.user_io.out)
-        error = self.client.run("install --build never --build outdated", ignore_error=True)
+        error = self.client.run("install ./conanfile.py --build never --build outdated", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: --build=never not compatible with other options",
                       self.client.user_io.out)
@@ -60,9 +61,9 @@ class Pkg(ConanFile):
         self._create("Hello0", "0.1")
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
-        self.client.run("install %s --build=missing" % (self.settings))
+        self.client.run("install . %s --build=missing" % (self.settings))
 
-        self.client.run("install %s --build=missing --build Hello1" % (self.settings))
+        self.client.run("install . %s --build=missing --build Hello1" % (self.settings))
         self.assertIn("Hello0/0.1@lasote/stable: Already installed!",
                       self.client.user_io.out)
         self.assertIn("Hello1/0.1@lasote/stable: WARN: Forced build from source",
@@ -85,13 +86,13 @@ class Pkg(ConanFile):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("install %s --build=missing" % self.settings)
+        self.client.run("install . %s --build=missing" % self.settings)
 
-        self.client.run("install %s --build=Bye" % self.settings)
+        self.client.run("install ./ %s --build=Bye" % self.settings)
         self.assertIn("No package matching 'Bye' pattern", self.client.user_io.out)
 
         for package in ["Hello0", "Hello1"]:
-            self.client.run("install %s --build=%s" % (self.settings, package))
+            self.client.run("install . %s --build=%s" % (self.settings, package))
             self.assertNotIn("No package matching", self.client.user_io.out)
 
     def reuse_test(self):
@@ -104,7 +105,7 @@ class Pkg(ConanFile):
                                (1, "8b964e421a5b7e48b7bc19b94782672be126be8b",
                                    "3eeab577a3134fa3afdcd82881751789ec48e08f")]:
 
-            self.client.run("install -o language=%d %s --build missing" % (lang, self.settings))
+            self.client.run("install . -o language=%d %s --build missing" % (lang, self.settings))
             info_path = os.path.join(self.client.current_folder, CONANINFO)
             conan_info = ConanInfo.load_file(info_path)
             self.assertEqual("arch=x86\n"
@@ -133,7 +134,7 @@ class Pkg(ConanFile):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False, no_config=True)
 
-        self.client.run("install -o Hello2:language=1 -o Hello1:language=0 -o Hello0:language=1 %s"
+        self.client.run("install conanfile.py -o Hello2:language=1 -o Hello1:language=0 -o Hello0:language=1 %s"
                         " --build missing" % self.settings)
         info_path = os.path.join(self.client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
@@ -158,7 +159,7 @@ class Pkg(ConanFile):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"], no_config=True)
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False, no_config=True)
 
-        self.client.run("install -o language=0 -o Hello1:language=1 -o Hello0:language=0 %s "
+        self.client.run("install . -o language=0 -o Hello1:language=1 -o Hello0:language=0 %s "
                         "--build missing" % self.settings)
         info_path = os.path.join(self.client.current_folder, CONANINFO)
 
@@ -195,7 +196,7 @@ class Pkg(ConanFile):
         """
         self.client.save(files, clean_first=True)
 
-        self.client.run("install %s --build missing" % self.settings)
+        self.client.run("install . %s --build missing" % self.settings)
         info_path = os.path.join(self.client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("", conan_info.options.dumps())
@@ -226,7 +227,7 @@ class Pkg(ConanFile):
         """}
         client.save(files)
 
-        client.run("install %s --build missing" % self.settings)
+        client.run("install conanfile.txt %s --build missing" % self.settings)
         info_path = os.path.join(client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("", conan_info.options.dumps())
@@ -241,7 +242,7 @@ class Pkg(ConanFile):
         Hello0:language=0
         """}
         client.save(files)
-        client.run("install %s --build missing" % self.settings)
+        client.run("install . %s --build missing" % self.settings)
 
         info_path = os.path.join(client.current_folder, CONANINFO)
         conan_info = ConanInfo.load_file(info_path)
@@ -251,7 +252,7 @@ class Pkg(ConanFile):
 
         # it is necessary to clean the cached conaninfo
         client.save(files, clean_first=True)
-        client.run("install %s --build missing" % self.settings)
+        client.run("install ./conanfile.txt %s --build missing" % self.settings)
         conan_info = ConanInfo.load_file(info_path)
         self.assertEqual("", conan_info.options.dumps())
         self.assertIn("Hello0:language=0", conan_info.full_options.dumps())
@@ -259,8 +260,16 @@ class Pkg(ConanFile):
                       conan_info.full_requires.dumps())
 
     def cross_platform_msg_test(self):
+        # Explicit with os_build and os_arch settings
+        message = "Cross-build from 'Linux:x86_64' to 'Windows:x86_64'"
+        self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
+        self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
+                        ignore_error=True)
+        self.assertIn(message, self.client.user_io.out)
+
+        # Implicit detection when not available (retrocompatibility)
         bad_os = "Linux" if platform.system() != "Linux" else "Macos"
-        message = "Cross-platform from '%s' to '%s'" % (detected_os(), bad_os)
+        message = "Cross-build from '%s:x86_64' to '%s:x86_64'" % (detected_os(), bad_os)
         self._create("Hello0", "0.1")
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, ignore_error=True)
         self.assertIn(message, self.client.user_io.out)
@@ -274,11 +283,11 @@ class TestConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
-        client.run("install . --build=missing -s os=Windows --install-folder=win_dir")
-        client.run("install . --build=missing -s os=Macos --install-folder=os_dir")
+        client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
+        client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
         self.assertNotIn("os=Macos", conaninfo)
@@ -295,7 +304,7 @@ class TestConan(ConanFile):
 """
         client = TestClient()
         client.save({"conanfile.py": conanfile})
-        client.run("create conan/stable")
+        client.run("create . conan/stable")
         client.save({}, clean_first=True)
         client.run("install Hello/0.1@conan/stable")
         self.assertFalse(os.path.exists(os.path.join(client.current_folder, "conanbuildinfo.txt")))
@@ -326,3 +335,23 @@ class TestConan(ConanFile):
         error = client.run("install . -pr=./myotherprofile", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Error parsing the profile", client.out)
+
+    def install_with_path_errors_test(self):
+        client = TestClient()
+
+        # Install without path param not allowed
+        error = client.run("install", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Exiting with code: 2", client.out)
+
+        # Path with wrong conanfile.txt path
+        error = client.run("install not_real_dir/conanfile.txt --install-folder subdir",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Conanfile not found", client.out)
+
+        # Path with wrong conanfile.py path
+        error = client.run("install not_real_dir/conanfile.py --install-folder build",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Conanfile not found", client.out)

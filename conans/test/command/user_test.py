@@ -82,7 +82,7 @@ class ConanLib(ConanFile):
 
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("upload lib/0.1@lasote/stable")
         client.run("user")
         self.assertIn("Current 'default' user: lasote", client.user_io.out)

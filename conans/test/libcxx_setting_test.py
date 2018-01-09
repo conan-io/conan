@@ -52,10 +52,10 @@ class LibcxxSettingTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": file_content,
                      "CMakeLists.txt": cmakelists})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
 
         if platform.system() == "SunOS":
-            client.run('install -s compiler=sun-cc -s compiler.libcxx=libCstd')
+            client.run('install . -s compiler=sun-cc -s compiler.libcxx=libCstd')
             client.run('build .')
             self.assertIn("-library=Cstd", client.out)
 
@@ -63,22 +63,22 @@ class LibcxxSettingTest(unittest.TestCase):
             client.run('build .')
             self.assertIn("-library=stdcxx4", client.out)
 
-            client.run('install -s compiler=sun-cc -s compiler.libcxx=libstlport')
+            client.run('install . -s compiler=sun-cc -s compiler.libcxx=libstlport')
             client.run('build .')
             self.assertIn("-library=stlport4", client.out)
 
         else:
-            client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++ ')
+            client.run('install . -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++ ')
             client.run('build .')
             self.assertIn("-stdlib=libstdc++", client.out)
             self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=0", client.out)
 
-            client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++11')
+            client.run('install . -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libstdc++11')
             client.run('build .')
             self.assertIn("-stdlib=libstdc++", client.out)
             self.assertIn("Found Define: _GLIBCXX_USE_CXX11_ABI=1", client.out)
 
-            client.run('install -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libc++')
+            client.run('install . -s compiler=clang -s compiler.version=3.3 -s compiler.libcxx=libc++')
             client.run('build .')
             self.assertIn("-stdlib=libc++", client.out)
             self.assertNotIn("Found Define: _GLIBCXX_USE_CXX11", client.out)
@@ -98,16 +98,16 @@ class ConanFileToolsTest(ConanFile):
         client = TestClient()
         client.save({"conanfile.py": conanfile})
         # Also check that it not fails the config method with Visual Studio, because of the lack of libcxx
-        client.run('install -s compiler="Visual Studio" -s compiler.version=14')
+        client.run('install . -s compiler="Visual Studio" -s compiler.version=14')
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
 
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertNotIn("libcxx", conaninfo)
-        client.run('install -s compiler=gcc -s compiler.version=4.9')
+        client.run('install . -s compiler=gcc -s compiler.version=4.9')
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertNotIn("libcxx", conaninfo)
 
-        client.run("create lasote/testing -s compiler=gcc -s compiler.version=4.9")
+        client.run("create . lasote/testing -s compiler=gcc -s compiler.version=4.9")
 
         # Now try to reuse the installed package defining libstc++11 for the new package
         newlib_content = '''
@@ -119,13 +119,13 @@ class ConanFileToolsTest(ConanFile):
     '''
 
         client.save({"conanfile.py": newlib_content})
-        client.run('install -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=4.9')
+        client.run('install . -s compiler=gcc -s compiler.libcxx=libstdc++11 -s compiler.version=4.9')
         # Package is found and everything is ok
         self.assertIn("test/1.9@lasote/testing: Already installed!", client.out)
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
         conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
         self.assertIn("libcxx", conaninfo)
-        client.run('install -s compiler=gcc -s compiler.libcxx=libstdc++ -s compiler.version=4.9')
+        client.run('install . -s compiler=gcc -s compiler.libcxx=libstdc++ -s compiler.version=4.9')
         # Package is found and everything is ok
         self.assertIn("test/1.9@lasote/testing: Already installed!", client.out)
         self.assertIn("PROJECT: Generated conaninfo.txt", client.out)

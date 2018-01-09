@@ -221,24 +221,31 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
     save(pc_file, "\n".join(lines))
 
 
+MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
 WSL = 'wsl'  # Windows Subsystem for Linux
 SFU = 'sfu'  # Windows Services for UNIX
 
 
-def unix_path(path, path_flavor=MSYS):
+def unix_path(path, path_flavor=None):
     """"Used to translate windows paths to MSYS unix paths like
     c/users/path/to/file. Not working in a regular console or MinGW!"""
+    if not path:
+        return None
+    from conans.client.tools.oss import os_info
+    path_flavor = path_flavor or os_info.detect_windows_subsystem() or MSYS2
+    path = path.replace(":/", ":\\")
     pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
-    path = pattern.sub('/\\1/', path).replace('\\', '/').lower()
-    if path_flavor == MSYS:
-        return path
+    path = pattern.sub('/\\1/', path).replace('\\', '/')
+    if path_flavor in (MSYS, MSYS2):
+        return path.lower()
     elif path_flavor == CYGWIN:
-        return '/cygdrive' + path
+        return '/cygdrive' + path.lower()
     elif path_flavor == WSL:
-        return '/mnt' + path
+        return '/mnt' + path[0:2].lower() + path[2:]
     elif path_flavor == SFU:
+        path = path.lower()
         return '/dev/fs' + path[0] + path[1:].capitalize()
     return None
 
@@ -263,8 +270,28 @@ def collect_libs(conanfile, folder="lib"):
 
 def which(filename):
     """ same affect as posix which command or shutil.which from python3 """
-    for path in os.environ["PATH"].split(os.pathsep):
-        fullname = os.path.join(path, filename)
-        if os.path.exists(fullname) and os.access(fullname, os.X_OK):
+    def verify(filepath):
+        if os.path.exists(filepath) and os.access(filepath, os.X_OK):
             return os.path.join(path, filename)
+        return None
+
+    def _get_possible_filenames(filename):
+        extensions_win = os.getenv("PATHEXT", ".COM;.EXE;.BAT;.CMD").split(";") if not "." in filename else []
+        extensions = [".sh"] if platform.system() != "Windows" else extensions_win
+        extensions.insert(1, "")  # No extension
+        return ["%s%s" % (filename, entry.lower()) for entry in extensions]
+
+    possible_names = _get_possible_filenames(filename)
+    for path in os.environ["PATH"].split(os.pathsep):
+        for name in possible_names:
+            filepath = os.path.abspath(os.path.join(path, name))
+            if verify(filepath):
+                return filepath
+            if platform.system() == "Windows":
+                filepath = filepath.lower()
+                if "system32" in filepath:  # python return False for os.path.exists of exes in System32 but with SysNative
+                    trick_path = filepath.replace("system32", "sysnative")
+                    if verify(trick_path):
+                        return trick_path
+
     return None

@@ -13,7 +13,7 @@ class {package_name}Conan(ConanFile):
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os", "compiler", "build_type", "arch", "os_build", "arch_build"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
     generators = "cmake"
@@ -29,7 +29,7 @@ conan_basic_setup()''')
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="%s/hello" % self.source_folder)
+        cmake.configure(source_folder="hello")
         cmake.build()
 
         # Explicit way:
@@ -54,7 +54,7 @@ from conans import tools
 class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os", "compiler", "build_type", "arch", "os_build", "arch_build"
     description = "<Description of {package_name} here>"
     url = "None"
     license = "None"
@@ -75,7 +75,7 @@ class {package_name}Conan(ConanFile):
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os", "compiler", "build_type", "arch", "os_build", "arch_build"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
     generators = "cmake"
@@ -83,7 +83,7 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="src")
+        cmake.configure(source_folder="src")
         cmake.build()
 
         # Explicit way:
@@ -128,11 +128,11 @@ class {package_name}Conan(ConanFile):
 """
 
 
-test_conanfile = """from conans import ConanFile, CMake
+test_conanfile = """from conans import ConanFile, CMake, tools
 import os
 
 class {package_name}TestConan(ConanFile):
-    settings = "os", "compiler", "build_type", "arch"
+    settings = "os", "compiler", "build_type", "arch", "os_build", "arch_build"
     generators = "cmake"
 
     def build(self):
@@ -147,8 +147,9 @@ class {package_name}TestConan(ConanFile):
         self.copy('*.so*', dst='bin', src='lib')
 
     def test(self):
-        os.chdir("bin")
-        self.run(".%sexample" % os.sep)
+        if not tools.cross_building(self.settings):
+            os.chdir("bin")
+            self.run(".%sexample" % os.sep)
 """
 
 test_cmake = """project(PackageTest CXX)

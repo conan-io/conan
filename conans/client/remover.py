@@ -38,6 +38,11 @@ class DiskRemover(object):
         self._remove(self._paths.export(conan_ref), conan_ref, "export folder")
         self._remove(self._paths.export_sources(conan_ref), conan_ref, "export_source folder")
         self._remove(self._paths.conan(conan_ref), conan_ref)
+        for f in self._paths.conanfile_lock_files(conan_ref):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
     def remove_src(self, conan_ref):
         self._remove(self._paths.source(conan_ref), conan_ref, "src folder")
