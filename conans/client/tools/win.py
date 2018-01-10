@@ -283,6 +283,6 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
             cwd = os.path.join(os.getcwd(), cwd)
         curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
-        wincmd = '%s --login -c %s' % (os_info.bash_path(), escape_windows_cmd(to_run))
+        wincmd = '"%s" --login -c %s' % (os_info.bash_path(), escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         return conanfile.run(wincmd, win_bash=False)
