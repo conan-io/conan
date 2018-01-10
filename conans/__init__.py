@@ -15,4 +15,4 @@ from conans.util.files import load
 COMPLEX_SEARCH_CAPABILITY = "complex_search"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
-__version__ = '1.0.0-beta.5'
+__version__ = '1.0.0'
