@@ -376,10 +376,23 @@ function(conan_check_compiler)
         set(CROSS_BUILDING 1)
     endif()
 
+    # If using VS, verify toolset
+    if (CONAN_COMPILER STREQUAL "Visual Studio")
+        if (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "LLVM" OR
+            CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang")
+            set(EXPECTED_CMAKE_CXX_COMPILER_ID "Clang")
+        else()
+            set(EXPECTED_CMAKE_CXX_COMPILER_ID "MSVC")
+        endif()
+
+        if (NOT CMAKE_CXX_COMPILER_ID MATCHES ${EXPECTED_CMAKE_CXX_COMPILER_ID})
+            message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}'. Toolset specifies compiler as '${EXPECTED_CMAKE_CXX_COMPILER_ID}' "
+                                "but CMake detected '${CMAKE_CXX_COMPILER_ID}'")
+        endif()
+
     # Avoid checks when cross compiling, apple-clang crashes because its APPLE but not apple-clang
     # Actually CMake is detecting "clang" when you are using apple-clang, only if CMP0025 is set to NEW will detect apple-clang
-    if( (CONAN_COMPILER STREQUAL "Visual Studio" AND NOT CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR
-        (CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
+    elseif((CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
         (CONAN_COMPILER STREQUAL "apple-clang" AND NOT CROSS_BUILDING AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
         (CONAN_COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR
         (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
