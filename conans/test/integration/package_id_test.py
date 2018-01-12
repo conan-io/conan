@@ -14,6 +14,21 @@ class PackageIDTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    def cross_build_settings_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    settings = "os", "arch", "compiler", "os_build", "arch_build"
+        """
+        client.save({"conanfile.py": conanfile})
+        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=15 -s compiler.runtime=MD '
+                   '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
+        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+        self.assertNotIn("compiler.toolset=None", conaninfo)
+        self.assertNotIn("os_build=None", conaninfo)
+        self.assertNotIn("arch_build=None", conaninfo)
+
     def _export(self, name, version, package_id_text=None, requires=None,
                 channel=None, default_option_value="off", settings=None):
         conanfile = TestConanFile(name, version, requires=requires,
