@@ -303,6 +303,8 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
 
         curdir = unix_path(get_cased_path(cwd or os.getcwd()), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
-        wincmd = '"%s" --login -c %s' % (os_info.bash_path(), escape_windows_cmd(to_run))
+        bash_path = os_info.bash_path()
+        bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
+        wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         return conanfile.run(wincmd, win_bash=False)
