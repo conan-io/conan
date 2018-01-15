@@ -5,6 +5,7 @@ import sys
 
 import os
 
+from conans.client.tools.env import environment_append
 from conans.client.tools.files import WSL, MSYS2, CYGWIN, MSYS
 from conans.errors import ConanException
 from conans.model.version import Version
@@ -237,23 +238,26 @@ class OSInfo(object):
 
     @staticmethod
     def uname(options=None):
-        options = options or ""
+        options = " %s" % options if options else ""
         if platform.system() != "Windows":
             raise ConanException("Command only for Windows operating system")
         custom_bash_path = OSInfo.bash_path()
         if not custom_bash_path:
             raise ConanException("bash is not in the path")
 
-        command = '%s -c "uname %s"' % (custom_bash_path, options)
+        command = '"%s" -c "uname%s"' % (custom_bash_path, options)
         try:
-            ret = subprocess.check_output(command).decode().strip().lower()
-            return ret
-        except:
+            with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
+                ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
+                return ret
+        except Exception:
             return None
 
     @staticmethod
     def detect_windows_subsystem():
         output = OSInfo.uname()
+        if not output:
+            return None
         if "cygwin" in output:
             return CYGWIN
         elif "msys" in output or "mingw" in output:

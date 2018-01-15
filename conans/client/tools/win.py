@@ -236,6 +236,20 @@ def escape_windows_cmd(command):
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
+def _get_cased_path(name):
+    import glob
+    dirs = name.split('\\')
+    # disk letter
+    test_name = [dirs[0].upper()]
+    for d in dirs[1:]:
+        test_name += ["%s[%s]" % (d[:-1], d[-1])]
+    res = glob.glob('\\'.join(test_name))
+    if not res:
+        # File not found
+        return None
+    return res[0]
+
+
 def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None):
     """ Will run a unix command inside a bash terminal
         It requires to have MSYS2, CYGWIN, or WSL
@@ -281,8 +295,9 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
             cwd = os.path.join(os.getcwd(), cwd)
-        curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
+
+        curdir = unix_path(_get_cased_path(cwd or os.getcwd()), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
-        wincmd = '""%s" --login -c %s"' % (os_info.bash_path(), escape_windows_cmd(to_run))
+        wincmd = '"%s" --login -c %s' % (os_info.bash_path(), escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         return conanfile.run(wincmd, win_bash=False)
