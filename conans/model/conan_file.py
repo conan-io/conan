@@ -1,6 +1,8 @@
 import os
+from contextlib import contextmanager
 
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
+from conans.client.tools.env import pythonpath
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo, EnvValues
@@ -77,8 +79,15 @@ def create_exports_sources(conanfile):
         return conanfile.exports_sources
 
 
+@contextmanager
+def _env_and_python(conanfile):
+    with environment_append(conanfile.env):
+        with pythonpath(conanfile):
+            yield
+
+
 def get_env_context_manager(conanfile):
-    return environment_append(conanfile.env) if conanfile.apply_env else no_op()
+    return _env_and_python(conanfile) if conanfile.apply_env else no_op()
 
 
 class ConanFile(object):

@@ -50,9 +50,8 @@ class MyLib(ConanFile):
 
     def build(self):
         self.run("mytool")
-        with tools.pythonpath(self):
-            import mypythontool
-            self.output.info(mypythontool.tool_hello_world())
+        import mypythontool
+        self.output.info(mypythontool.tool_hello_world())
 """
 
 profile = """
@@ -157,9 +156,9 @@ class TestMyLib(ConanFile):
 
     def build(self):
         self.run("mytool")
-        with tools.pythonpath(self):
-            import mypythontool
-            self.output.info(mypythontool.tool_hello_world())
+        import mypythontool
+        self.output.info(mypythontool.tool_hello_world())
+
     def test(self):
         pass
         """
@@ -199,9 +198,8 @@ class MyLib(ConanFile):
     version = "0.1"
 
     def build(self):
-        with tools.pythonpath(self):
-            import mypythontool
-            self.output.info(mypythontool.tool_hello_world())
+        import mypythontool
+        self.output.info(mypythontool.tool_hello_world())
 """
         profile_patterns = """
 [build_requires]
