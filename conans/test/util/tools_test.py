@@ -422,7 +422,11 @@ compiler:
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
             tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
-            self.assertIn('"path\\to\\mybash.exe" --login -c', conanfile.command)
+            self.assertIn('path\\to\\mybash.exe --login -c', conanfile.command)
+
+        with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
+            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile.command)
 
         # try to append more env vars
         conanfile = MockConanfile()
