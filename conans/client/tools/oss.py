@@ -247,6 +247,7 @@ class OSInfo(object):
 
         command = '"%s" -c "uname%s"' % (custom_bash_path, options)
         try:
+            # the uname executable is many times located in the same folder as bash.exe
             with environment_append({"PATH": [os.path.dirname(custom_bash_path)]}):
                 ret = subprocess.check_output(command, shell=True, ).decode().strip().lower()
                 return ret

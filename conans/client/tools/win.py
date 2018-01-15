@@ -1,3 +1,4 @@
+import glob
 import os
 import platform
 
@@ -236,13 +237,17 @@ def escape_windows_cmd(command):
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
-def _get_cased_path(name):
-    import glob
+def get_cased_path(name):
+    if platform.system() != "Windows":
+        return name
+    if not os.path.isabs(name):
+        raise ConanException("get_cased_path requires an absolute path")
     dirs = name.split('\\')
     # disk letter
     test_name = [dirs[0].upper()]
     for d in dirs[1:]:
-        test_name += ["%s[%s]" % (d[:-1], d[-1])]
+        test_name += ["%s[%s]" % (d[:-1], d[-1])]  # This brackets do the trick to match cased
+
     res = glob.glob('\\'.join(test_name))
     if not res:
         # File not found
@@ -296,7 +301,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         if cwd and not os.path.isabs(cwd):
             cwd = os.path.join(os.getcwd(), cwd)
 
-        curdir = unix_path(_get_cased_path(cwd or os.getcwd()), path_flavor=subsystem)
+        curdir = unix_path(get_cased_path(cwd or os.getcwd()), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         wincmd = '"%s" --login -c %s' % (os_info.bash_path(), escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
