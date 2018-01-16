@@ -209,7 +209,7 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
     if filter_known_paths:
         def relevant_path(path):
             path = path.replace("\\", "/").lower()
-            keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/"
+            keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/", "system32", "windows"
             return any(word in path for word in keywords)
 
         path = new_env.get("PATH", "").split(";")
