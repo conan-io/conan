@@ -441,9 +441,9 @@ class Command(object):
 
     def build(self, *args):
         """ Calls your local conanfile.py 'build()' method.
-        The recipe will be built in the local directory specified by --build_folder,
-        reading the sources from --source_folder. If you are using a build helper, like CMake(), the
-        --package_folder will be configured as destination folder for the install step.
+        The recipe will be built in the local directory specified by --build-folder,
+        reading the sources from --source-folder. If you are using a build helper, like CMake(), the
+        --package-folder will be configured as destination folder for the install step.
         """
 
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
@@ -476,7 +476,7 @@ class Command(object):
         """ Calls your local conanfile.py 'package()' method.
 
         This command works locally, in the user space, and it will copy artifacts from the
-        --build_folder and --source_folder folder to the --package_folder one.
+        --build-folder and --source-folder folder to the --package-folder one.
 
         It won't create a new package in the local cache, if you want to do it, use 'create' or use
         'export-pkg' after a 'build' command.
@@ -557,8 +557,8 @@ class Command(object):
 
     def export_pkg(self, *args):
         """Exports a recipe & creates a package with given files calling 'package'.
-           It executes the package() method applied to the local folders '--source_folder' and
-           '--build_folder' and creates a new package in the local cache for the specified
+           It executes the package() method applied to the local folders '--source-folder' and
+           '--build-folder' and creates a new package in the local cache for the specified
            'reference' and for the specified '--settings', '--options' and or '--profile'.
         """
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
