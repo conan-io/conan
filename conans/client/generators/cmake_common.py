@@ -381,6 +381,8 @@ function(conan_check_compiler)
         if (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "LLVM" OR
             CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang")
             set(EXPECTED_CMAKE_CXX_COMPILER_ID "Clang")
+        elseif (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "Intel")
+            set(EXPECTED_CMAKE_CXX_COMPILER_ID "Intel")
         else()
             set(EXPECTED_CMAKE_CXX_COMPILER_ID "MSVC")
         endif()

@@ -9,6 +9,7 @@ from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
+from conans.client.output import Color
 
 
 def create_options(conanfile):
@@ -106,6 +107,18 @@ class ConanFile(object):
         self.options = create_options(self)
         self.requires = create_requirements(self)
         self.settings = create_settings(self, settings)
+        try:
+            if self.settings.os_build and self.settings.os:
+                output.writeln("*"*60, front=Color.BRIGHT_RED)
+                output.writeln("  This package defines both 'os' and 'os_build' ",
+                               front=Color.BRIGHT_RED)
+                output.writeln("  Please use 'os' for libraries and 'os_build'",
+                               front=Color.BRIGHT_RED)
+                output.writeln("  only for build-requires used for cross-building",
+                               front=Color.BRIGHT_RED)
+                output.writeln("*"*60, front=Color.BRIGHT_RED)
+        except ConanException:
+            pass
         self.exports = create_exports(self)
         self.exports_sources = create_exports_sources(self)
         # needed variables to pack the project
