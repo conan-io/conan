@@ -49,11 +49,8 @@ class RemoteManager(object):
         log_recipe_upload(conan_reference, duration, the_files, remote)
         if ret:
             msg = "Uploaded conan recipe '%s' to '%s'" % (str(conan_reference), remote.name)
-            # FIXME: server dependent
-            if remote.url == "https://server.conan.io":
-                msg += ": https://www.conan.io/source/%s" % "/".join(conan_reference)
-            else:
-                msg += ": %s" % remote.url
+            url = remote.url.replace("https://api.bintray.com/conan", "https://bintray.com")
+            msg += ": %s" % url
         else:
             msg = "Recipe is up to date, upload skipped"
         self._output.info(msg)
