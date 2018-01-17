@@ -1,8 +1,27 @@
 import unittest
 from conans.test.utils.tools import TestClient
+from conans.util.files import mkdir
+import os
 
 
 class RemoveSubsettingTest(unittest.TestCase):
+
+    def remove_setting_test(self):
+        # https://github.com/conan-io/conan/issues/2327
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    settings = "os", "build_type"
+    def configure(self):
+        del self.settings.build_type
+"""
+        client.save({"conanfile.py": conanfile})
+        build_folder = os.path.join(client.current_folder, "build")
+        mkdir(build_folder)
+        client.current_folder = build_folder
+        client.run("install ..")
+        # This raised an error because build_type wasn't defined
+        client.run("build ..")
 
     def remove_subsetting_test(self):
         # https://github.com/conan-io/conan/issues/2049
