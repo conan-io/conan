@@ -44,6 +44,24 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertEquals(runner.command_called, "make %s -j%s" % (things, cpu_count()))
 
     def test_variables(self):
+        # Visual Studio
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "14",
+                                 "compiler.runtime": "MD"})
+        conanfile = MockConanfile(settings)
+        self._set_deps_info(conanfile)
+
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = {'CFLAGS': 'a_c_flag  --sysroot=/path/to/folder',
+                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
+                    'CXXFLAGS': 'a_c_flag  --sysroot=/path/to/folder a_cpp_flag',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag  --sysroot=/path/to/folder -Lone/lib/path',
+                    'LIBS': '-lonelib -ltwolib'}
+
+        self.assertEquals(be.vars, expected)
+
         # GCC 32
         settings = MockSettings({"build_type": "Release",
                                  "arch": "x86",

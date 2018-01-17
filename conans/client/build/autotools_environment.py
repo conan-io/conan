@@ -188,7 +188,7 @@ class AutoToolsBuildEnvironment(object):
     def _configure_flags(self):
         ret = copy.copy(self._deps_cpp_info.cflags)
         ret.append(self._architecture_flag)
-        if self._build_type == "Debug":
+        if self._build_type == "Debug" and str(self._compiler) in ['gcc', 'clang', 'apple-clang', 'sun-cc']:
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
             # Remove all symbol table and relocation information from the executable.
@@ -216,7 +216,9 @@ class AutoToolsBuildEnvironment(object):
 
     @property
     def _architecture_flag(self):
-        return architecture_dict.get(self._arch, "")
+        if str(self._compiler) in ['gcc', 'clang', 'apple-clang', 'sun-cc']:
+            return architecture_dict.get(self._arch, "")
+        return ""
 
     def _get_vars(self):
         def append(*args):
