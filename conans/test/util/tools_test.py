@@ -70,6 +70,30 @@ class ToolsTest(unittest.TestCase):
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEquals(tools.cpu_count(), 34)
 
+    def test_collect_libs(self):
+        tmp_dir = temp_folder()
+        os.mkdir(os.path.join(tmp_dir, "lib"))
+
+        def path_to_lib(name):
+            return os.path.join(os.path.join(tmp_dir, "lib", name))
+
+        save(path_to_lib("libmything1.lib"), "fake")
+        save(path_to_lib("libmything2.so"), "fake")
+        save(path_to_lib("libmything3.so.1.60.0"), "fake")
+        save(path_to_lib("libmything4.dylib"), "fake")
+        save(path_to_lib("libmything5.dylib.1.60.0"), "fake")
+        save(path_to_lib("libmything6.a"), "fake")
+        save(path_to_lib("mything7.a"), "fake")
+
+        class MockConanfile(object):
+            def __init__(self):
+                self.package_folder = tmp_dir
+                self.output = namedtuple("output", "info")(lambda x: None)
+
+        ret = tools.collect_libs(MockConanfile())
+        self.assertEquals(set(['libmything1', 'mything2', 'mything3',
+                               'mything4', 'mything5', 'mything6', 'mything7']), set(ret))
+
     def test_global_tools_overrided(self):
         client = TestClient()
 

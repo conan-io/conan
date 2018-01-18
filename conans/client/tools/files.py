@@ -258,6 +258,7 @@ def _path_equals(path1, path2):
         path2 = path2.lower().replace("sysnative", "system32")
     return path1 == path2
 
+
 def collect_libs(conanfile, folder="lib"):
     if not conanfile.package_folder:
         return []
@@ -269,10 +270,16 @@ def collect_libs(conanfile, folder="lib"):
     result = []
     for f in files:
         name, ext = os.path.splitext(f)
-        if ext in (".so", ".lib", ".a", ".dylib"):
-            if ext != ".lib" and name.startswith("lib"):
-                name = name[3:]
-            result.append(name)
+        if ext in (".so", ".lib", ".a", ".dylib") or ".so." in name or ".dylib." in name:
+            if ".so." in name:
+                name = name.split(".so.")[0]
+            elif ".dylib." in name:
+                name = name.split(".dylib.")[0]
+
+        if ext != ".lib" and name.startswith("lib"):
+            name = name[3:]
+
+        result.append(name)
     return result
 
 
