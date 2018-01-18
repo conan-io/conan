@@ -279,7 +279,8 @@ def collect_libs(conanfile, folder="lib"):
         if ext != ".lib" and name.startswith("lib"):
             name = name[3:]
 
-        result.append(name)
+        if not name in result:
+            result.append(name)
     return result
 
 
