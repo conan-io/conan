@@ -999,9 +999,13 @@ class Command(object):
         return
 
     def alias(self, *args):
-        """ Creates and exports an 'alias recipe'.
+        """Creates and exports an 'alias package recipe'. An "alias" package is a
+        symbolic name (reference) for another package (target). When some
+        package depends on an alias, the target one will be retrieved and used
+        instead, so the alias reference, the symbolic name, does not appear
+        in the final dependency graph.
         """
-        parser = argparse.ArgumentParser(description=self.upload.__doc__,
+        parser = argparse.ArgumentParser(description=self.alias.__doc__,
                                          prog="conan alias")
         parser.add_argument('reference', help='Alias reference. e.j: mylib/1.X@user/channel')
         parser.add_argument('target', help='Target reference. e.j: mylib/1.12@user/channel')
