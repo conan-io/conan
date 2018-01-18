@@ -6,6 +6,23 @@ import os
 
 class RemoveSubsettingTest(unittest.TestCase):
 
+    def remove_options_test(self):
+        # https://github.com/conan-io/conan/issues/2327
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    options = {"opt1": [True, False], "opt2": [True, False]}
+    default_options = "opt1=True", "opt2=False"
+    def config_options(self):
+        del self.options.opt2
+"""
+        client.save({"conanfile.py": conanfile})
+        build_folder = os.path.join(client.current_folder, "build")
+        mkdir(build_folder)
+        client.current_folder = build_folder
+        client.run("install ..")
+        client.run("build ..")
+
     def remove_setting_test(self):
         # https://github.com/conan-io/conan/issues/2327
         client = TestClient()
