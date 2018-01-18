@@ -40,6 +40,33 @@ class Pkg(ConanFile):
         # This raised an error because build_type wasn't defined
         client.run("build ..")
 
+    def remove_runtime_test(self):
+        # https://github.com/conan-io/conan/issues/2327
+        client = TestClient()
+        conanfile = """from conans import ConanFile, CMake
+class Pkg(ConanFile):
+    settings = "os", "compiler", "arch"
+    def configure(self):
+        del self.settings.compiler.runtime
+    def build(self):
+        try:
+            self.settings.compiler.runtime
+        except Exception as e:
+            self.output.info(str(e))
+        cmake = CMake(self)
+        self.output.info(cmake.command_line)
+"""
+        client.save({"conanfile.py": conanfile})
+        build_folder = os.path.join(client.current_folder, "build")
+        mkdir(build_folder)
+        client.current_folder = build_folder
+        client.run('install .. -s os=Windows -s compiler="Visual Studio" -s arch=x86')
+        # This raised an error because build_type wasn't defined
+        client.run("build ..")
+        self.assertIn("'settings.compiler.runtime' doesn't exist for 'Visual Studio'", client.out)
+        self.assertNotIn("CONAN_LINK_RUNTIME", client.out)
+        self.assertIn('-DCONAN_COMPILER="Visual Studio"', client.out)
+
     def remove_subsetting_test(self):
         # https://github.com/conan-io/conan/issues/2049
         client = TestClient()
