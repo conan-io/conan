@@ -179,6 +179,12 @@ class Printer(object):
 
         if not raw:
             self._out.info("Existing package recipes:\n")
+            if isinstance(references, dict):
+                for remote, refs in references.items():
+                    self._print_colored_line("Remote '%s':" % str(remote), indent=0)
+                    for conan_ref in sorted(refs):
+                        self._print_colored_line(str(conan_ref), indent=1)
+                return
             for conan_ref in sorted(references):
                 self._print_colored_line(str(conan_ref), indent=0)
         else:
