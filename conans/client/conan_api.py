@@ -25,7 +25,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
-from conans.search.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
@@ -161,8 +161,7 @@ class ConanAPIV1(object):
             remote_manager = instance_remote_manager(client_cache)
 
             # Get a search manager
-            search_adapter = DiskSearchAdapter()
-            search_manager = DiskSearchManager(client_cache, search_adapter)
+            search_manager = DiskSearchManager(client_cache)
 
             # Settings preprocessor
             conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
@@ -579,7 +578,7 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         uploader = CmdUpload(self._client_cache, self._user_io, self._manager._remote_manager,
-                             self._manager._search_manager, remote)
+                             remote)
         return uploader.upload(pattern, package, all_packages, force, confirm, retry,
                                retry_wait, skip_upload, integrity_check)
 

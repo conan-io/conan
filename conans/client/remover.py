@@ -117,8 +117,7 @@ class ConanRemover(object):
         if has_remote and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
-        searcher = self._remote_proxy if has_remote else self._search_manager
-        references = searcher.search(pattern)
+        references = self._search_manager.search(pattern)
         if not references:
             self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
             return
@@ -129,7 +128,7 @@ class ConanRemover(object):
             package_ids = package_ids_filter
             if packages_query or outdated:
                 # search packages
-                packages = searcher.search_packages(reference, packages_query)
+                packages = self._search_manager.search_packages(reference, packages_query)
                 if outdated:
                     if has_remote:
                         recipe_hash = self._remote_proxy.get_conan_digest(reference).summary_hash
