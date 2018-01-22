@@ -65,7 +65,7 @@ class RequireResolver(object):
 
     def _resolve_local(self, search_ref, version_range):
         if self._local_search:
-            local_found = self._local_search.search(search_ref)
+            local_found = self._local_search.search_recipes(search_ref)
             if local_found:
                 resolved_version = self._resolve_version(version_range, local_found)
                 if resolved_version:

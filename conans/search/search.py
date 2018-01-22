@@ -133,7 +133,6 @@ class DiskSearchManager(SearchManagerABC):
         self._adapter = disk_search_adapter or DiskSearchAdapter()
 
     def search_recipes(self, pattern=None, ignorecase=True):
-
         # Conan references in main storage
         if pattern:
             if isinstance(pattern, ConanFileReference):

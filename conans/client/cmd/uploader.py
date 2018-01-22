@@ -60,7 +60,7 @@ class CmdUpload(object):
             references = [ref, ]
             confirm = True
         else:
-            references = self._cache_search.search(pattern)
+            references = self._cache_search.search_recipes(pattern)
 
         if not references:
             raise NotFoundException("No packages found matching pattern '%s'" % pattern)

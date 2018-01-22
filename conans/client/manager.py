@@ -30,8 +30,6 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
-from conans.search.search import DiskSearchManager
-from conans.client.remote_manager import RemoteManager
 
 
 class BuildMode(object):
@@ -198,7 +196,7 @@ class ConanManager(object):
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     install_folder, package_output, local=True)
 
-    def download(self, reference, package_ids, remote=None):
+    def download(self, reference, package_ids, remote):
         """ Download conanfile and specified packages to local repository
         @param reference: ConanFileReference
         @param package_ids: Package ids or empty for download all
@@ -206,8 +204,8 @@ class ConanManager(object):
         """
         assert(isinstance(reference, ConanFileReference))
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-
-        package = self._remote_manager.search(reference, None)
+        remote, _ = remote_proxy._get_remote()
+        package = self._remote_manager.search_recipes(remote, reference, None)
         if not package:  # Search the reference first, and raise if it doesn't exist
             raise ConanException("'%s' not found in remote" % str(reference))
 
@@ -219,7 +217,7 @@ class ConanManager(object):
         else:
             self._user_io.out.info("Getting the complete package list "
                                    "from '%s'..." % str(reference))
-            packages_props = self._remote_manager.search_packages(reference, None)
+            packages_props = self._remote_manager.search_packages(remote, reference, None)
             if not packages_props:
                 output = ScopedOutput(str(reference), self._user_io.out)
                 output.warn("No remote binary packages found in remote")
@@ -496,12 +494,8 @@ class ConanManager(object):
         @param packages_query: Only if src is a reference. Query settings and options
         """
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-        if not remote:
-            search_manager = DiskSearchManager()
-        else:
-            search_manager = self._remote_manager
-        remover = ConanRemover(self._client_cache, search_manager, self._user_io, remote_proxy)
-        remover.remove(pattern, src, build_ids, package_ids_filter, force=force,
+        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, remote_proxy)
+        remover.remove(pattern, remote, src, build_ids, package_ids_filter, force=force,
                        packages_query=packages_query, outdated=outdated)
 
     def user(self, remote=None, name=None, password=None):
