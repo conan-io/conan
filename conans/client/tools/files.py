@@ -323,7 +323,8 @@ def which(filename):
     return None
 
 
-def verify_gpg_sig(data_file, pubkey, sig_file=None, delete_after=True):
+def verify_gpg_sig(data_file, pubkey, sig_file=None, delete_after=True,
+                   keyserver=None):
     """ verify a supplied GPG signature for a file.
 
         data_file: filename of the data to verify, e.g. "awesome-lib-v1.tar.gz"
@@ -335,11 +336,15 @@ def verify_gpg_sig(data_file, pubkey, sig_file=None, delete_after=True):
         "awesome-lib-v1.tar.gz.sig" or "awesome-lib-v1.tar.gz.asc"
         if not provided, assume a signature is present in the file itself
 
+        keyserver: address of the keyserver to retrieve public key from. 
+        keys.gnupg.net is used if none is given
 
     """
     if not _GPG:
         raise ConanException("pygnupg was unable to find GPG binary. Reported error was: %s"
                              % _GPG_ERROR)
+
+    keyserver = "keys.gnupg.net" if keyserver is None else keyserver
 
     if os.path.isfile(pubkey):
         #import pubkey from a file
@@ -347,17 +352,18 @@ def verify_gpg_sig(data_file, pubkey, sig_file=None, delete_after=True):
             import_key_result = _GPG.import_keys(f.read())
     elif len(pubkey) == 8 or len(pubkey) == 40:
         #this is a fingerprint or keyid
-        import_key_result = _GPG.recv_keys(pubkey)
+        import_key_result = _GPG.recv_keys(keyserver,pubkey)
     else:
         #this is a GPG public key ascii-armored in a string
         import_key_result = _GPG.import_keys(pubkey)
 
 
     #check if key was imported correctly
+
     if "problem" in import_key_result.results[0]:
         raise ConanException("failed to import public key from file: %s "
                              % import_key_result.problem_reason[
-                                 import_key_result.results[0]["problem"]])
+                            import_key_result.results[0]["problem"]])
 
     fingerprint = import_key_result.fingerprints[0]
 
