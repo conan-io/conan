@@ -7,18 +7,20 @@ Created on Wed Jan  3 15:39:35 2018
 """
 
 import unittest
-import gnupg
 import tarfile
 import os
+
+import gnupg
+
 from conans.errors import ConanException
 
 
 from conans.tools import verify_gpg_sig
 
-passphrase = "test_key"
-test_message_contents = "test message"
+PASSPHRASE = "test_key"
+TEST_MESSAGE_CONTENTS = "test message"
 
-fingerprint = "9CA0A9A040F911A9468706DABAE58647546E350C"
+FINGERPRINT = "9CA0A9A040F911A9468706DABAE58647546E350C"
 
 GPG_PUBLIC_KEY = """
 -----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -118,54 +120,54 @@ qL7yzZr/qpkNLbp2djiZw3erAtxgRVUTMYrVF1OSkg==
 
 def _generate_gpg_data(basename):
     outfiles = []
-    
+
     #create text file
     with open(basename + ".txt", "w") as f:
-        f.write(test_message_contents)
+        f.write(TEST_MESSAGE_CONTENTS)
         f.write('\n')
-    
+
     outfiles.append(basename+".txt")
-    
+
     #create binary file
     with tarfile.TarFile(basename + ".tar.gz", "w") as f:
         f.add(basename+".txt")
-    
+
     outfiles.append(basename + ".tar.gz")
-    
+
     #import private key
 #    _gpg = gnupg.GPG(gnupghome="./keys")
     _gpg = gnupg.GPG()
     print(gnupg.__file__)
-    _gpg.import_keys(GPG_PRIVATE_KEY)    
+    _gpg.import_keys(GPG_PRIVATE_KEY)
     _gpg.import_keys(GPG_PUBLIC_KEY)
-    
-    
-    if len(_gpg.list_keys(keys=fingerprint)) == 0:
+
+
+    if _gpg.list_keys(keys=FINGERPRINT):
         raise RuntimeError("importing GPG keys failed")
 
 
     #sign binary file detached signature
-    with open(basename + ".tar.gz","rb") as f:
-        signed = _gpg.sign_file(f,keyid=fingerprint[-8:],passphrase=passphrase,
-                                detach=True,binary=True,
-                                output=basename+".tar.gz.sig")
-    
+    with open(basename + ".tar.gz", "rb") as f:
+        signed = _gpg.sign_file(f, keyid=FINGERPRINT[-8:],
+                                passphrase=PASSPHRASE, detach=True,
+                                binary=True, output=basename+".tar.gz.sig")
+
     if not signed:
         raise RuntimeError("failed to sign test data")
-    
+
     outfiles.append(basename + ".tar.gz.sig")
 
 
 
     #delete private and public keys
-    deleted_priv = _gpg.delete_keys(fingerprint, secret=True)
+    deleted_priv = _gpg.delete_keys(FINGERPRINT, secret=True)
     if not deleted_priv:
-        raise RuntimeError("failed to delete private key: %s" 
+        raise RuntimeError("failed to delete private key: %s"
                            % deleted_priv.status)
 
-    deleted_pub = _gpg.delete_keys(fingerprint)
+    deleted_pub = _gpg.delete_keys(FINGERPRINT)
     if not deleted_pub:
-        raise RuntimeError("failed to delete public key: %s " 
+        raise RuntimeError("failed to delete public key: %s "
                            % deleted_pub.status)
 
     return outfiles, _gpg
@@ -177,26 +179,24 @@ class GPGVerifyTest(unittest.TestCase):
         self._data_files, self._gpg = _generate_gpg_data("gpg_test_data")
         self._data_file = "gpg_test_data.tar.gz"
         self._sig_file = "gpg_test_data.tar.gz.sig"
-    
-    
-    def tearDown(self):        
-        map(os.remove,self._data_files)
+
+
+    def tearDown(self):
+        map(os.remove, self._data_files)
 
     def testCorrectVerifyFile(self):
         verify_gpg_sig(data_file=self._data_file, pubkey=GPG_PUBLIC_KEY,
                        sig_file=self._sig_file)
-        
+
         #if we got to here without throwing, verification completed
 
     def testIncorrectSignatureVerifyFile(self):
         with self.assertRaises(ConanException):
-            verify_gpg_sig(data_file=self._data_file,pubkey=GPG_PUBLIC_KEY,
+            verify_gpg_sig(data_file=self._data_file, pubkey=GPG_PUBLIC_KEY,
                            sig_file=self._data_file)
-            
+
     def testIncorrectPubkeyVerifyFile(self):
         with self.assertRaises(ConanException):
-            verify_gpg_sig(data_file=self._data_file,pubkey="public",
+            verify_gpg_sig(data_file=self._data_file, pubkey="public",
                            sig_file=self._sig_file)
-
-
-
+            
