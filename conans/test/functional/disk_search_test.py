@@ -43,7 +43,7 @@ class SearchTest(unittest.TestCase):
             reg1 = "%s/%s" % (root_folder, EXPORT_FOLDER)
             os.makedirs(reg1)
 
-        recipes = self.search_manager.search("opencv/*@lasote/testing")
+        recipes = self.search_manager.search_recipes("opencv/*@lasote/testing")
         self.assertEqual(recipes, refs)
 
     def case_insensitive_test(self):
@@ -66,15 +66,15 @@ class SearchTest(unittest.TestCase):
         search_adapter = DiskSearchAdapter()
         search_manager = DiskSearchManager(self.paths, search_adapter)
 
-        reg_conans = sorted([str(_reg) for _reg in search_manager.search("*")])
+        reg_conans = sorted([str(_reg) for _reg in search_manager.search_recipes("*")])
         self.assertEqual(reg_conans, [str(conan_ref5),
                                       str(conan_ref3),
                                       str(conan_ref2),
                                       str(conan_ref4)])
 
-        reg_conans = sorted([str(_reg) for _reg in search_manager.search(pattern="sdl*")])
+        reg_conans = sorted([str(_reg) for _reg in search_manager.search_recipes(pattern="sdl*")])
         self.assertEqual(reg_conans, [str(conan_ref5), str(conan_ref2), str(conan_ref4)])
 
         # Case sensitive search
-        self.assertEqual(str(search_manager.search(pattern="SDL*", ignorecase=False)[0]),
+        self.assertEqual(str(search_manager.search_recipes(pattern="SDL*", ignorecase=False)[0]),
                          str(conan_ref5))

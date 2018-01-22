@@ -34,7 +34,7 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition
-    refs = DiskSearchManager(client_cache).search(conan_ref_str, ignorecase=True)
+    refs = DiskSearchManager(client_cache).search_recipes(conan_ref_str, ignorecase=True)
     if refs and conan_ref not in refs:
         raise ConanException("Cannot export package with same name but different case\n"
                              "You exported '%s' but already existing '%s'"

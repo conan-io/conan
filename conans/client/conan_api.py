@@ -36,6 +36,7 @@ from conans.tools import set_global_instances
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
+from conans.client.cmd.search import Search
 
 
 default_manifest_folder = '.conan_manifests'
@@ -176,6 +177,7 @@ class ConanAPIV1(object):
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
+        self._remote_manager = remote_manager
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
                                      settings_preprocessor)
         # Patch the tools module with a good requester and user_io
@@ -550,7 +552,7 @@ class ConanAPIV1(object):
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._manager._remote_manager, force=force)
+                 self._user_io, self._remote_manager, force=force)
 
     @api_method
     def user(self, name=None, clean=False, remote=None, password=None):
@@ -563,21 +565,21 @@ class ConanAPIV1(object):
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
-        refs = self._manager.search_recipes(pattern, remote, ignorecase=not case_sensitive)
-        return refs
+        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        return search.search_recipes(pattern, remote, case_sensitive)
 
     @api_method
     def search_packages(self, reference, query=None, remote=None, outdated=False):
-        ret = self._manager.search_packages(reference, remote, packages_query=query,
-                                            outdated=outdated)
-        return ret
+        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        return search.search_packages(reference, remote, query=query,
+                                      outdated=outdated)
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all_packages=False, force=False,
                confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        uploader = CmdUpload(self._client_cache, self._user_io, self._manager._remote_manager,
+        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
                              remote)
         return uploader.upload(pattern, package, all_packages, force, confirm, retry,
                                retry_wait, skip_upload, integrity_check)
