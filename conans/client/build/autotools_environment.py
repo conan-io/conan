@@ -4,6 +4,8 @@ import os
 
 from conans.client import join_arguments
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
+from conans.client.tools.win import unix_path
+from conans.client.tools.oss import OSInfo
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
                             "libstdcxx": "-library=stdcxx4",
@@ -48,6 +50,7 @@ class AutoToolsBuildEnvironment(object):
     def __init__(self, conanfile, win_bash=False):
         self._conanfile = conanfile
         self._win_bash = win_bash
+        self.subsystem = OSInfo().detect_windows_subsystem() if self._win_bash else None
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._arch = conanfile.settings.get_safe("arch")
         self._build_type = conanfile.settings.get_safe("build_type")
@@ -160,9 +163,16 @@ class AutoToolsBuildEnvironment(object):
 
         with environment_append(pkg_env):
             with environment_append(self.vars):
-                self._conanfile.run("%s/configure %s %s"
+                configure_dir = self._adjust_path(configure_dir)
+                self._conanfile.run('%s/configure %s %s'
                                     % (configure_dir, args_to_string(args), " ".join(triplet_args)),
-                                    win_bash=self._win_bash)
+                                    win_bash=self._win_bash,
+                                    subsystem=self.subsystem)
+
+    def _adjust_path(self, path):
+        if self._win_bash:
+            path = unix_path(path, path_flavor=self.subsystem)
+        return '"%s"' % path if " " in path else path
 
     def make(self, args="", make_program=None):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
@@ -170,11 +180,11 @@ class AutoToolsBuildEnvironment(object):
             str_args = args_to_string(args)
             cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
             self._conanfile.run("%s" % join_arguments([make_program, str_args, cpu_count_option]),
-                                win_bash=self._win_bash)
+                                win_bash=self._win_bash, subsystem=self.subsystem)
 
     @property
     def _sysroot_flag(self):
-        return "--sysroot=%s" % self._deps_cpp_info.sysroot if self._deps_cpp_info.sysroot else None
+        return "--sysroot=%s" % self._adjust_path(self._deps_cpp_info.sysroot) if self._deps_cpp_info.sysroot else None
 
     def _configure_link_flags(self):
         """Not the -L"""
@@ -229,8 +239,8 @@ class AutoToolsBuildEnvironment(object):
                         ret.append(arg)
             return ret
 
-        lib_paths = ['-L%s' % x.replace("\\", "/") for x in self.library_paths]
-        include_paths = ['-I%s' % x.replace("\\", "/") for x in self.include_paths]
+        lib_paths = ['-L%s' % self._adjust_path(x.replace("\\", "/")) for x in self.library_paths]
+        include_paths = ['-I%s' % self._adjust_path(x.replace("\\", "/")) for x in self.include_paths]
 
         ld_flags = append(self.link_flags, lib_paths)
         cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])

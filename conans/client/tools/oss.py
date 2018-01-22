@@ -6,7 +6,6 @@ import sys
 import os
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.files import WSL, MSYS2, CYGWIN, MSYS
 from conans.errors import ConanException
 from conans.model.version import Version
 from conans.util.log import logger
@@ -256,6 +255,7 @@ class OSInfo(object):
 
     @staticmethod
     def detect_windows_subsystem():
+        from conans.client.tools.win import CYGWIN, MSYS2, MSYS, WSL
         output = OSInfo.uname()
         if not output:
             return None
