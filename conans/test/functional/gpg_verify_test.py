@@ -13,7 +13,7 @@ import os
 from conans.errors import ConanException
 
 
-from conans.client.tools.files import verify_gpg_sig
+from conans.tools import verify_gpg_sig
 
 passphrase = "test_key"
 test_message_contents = "test message"
@@ -116,7 +116,7 @@ qL7yzZr/qpkNLbp2djiZw3erAtxgRVUTMYrVF1OSkg==
 """
 
 
-def generate_test_data(basename):
+def _generate_gpg_data(basename):
     outfiles = []
     
     #create text file
@@ -135,17 +135,17 @@ def generate_test_data(basename):
     #import private key
 #    _gpg = gnupg.GPG(gnupghome="./keys")
     _gpg = gnupg.GPG()
+    print(gnupg.__file__)
     _gpg.import_keys(GPG_PRIVATE_KEY)    
     _gpg.import_keys(GPG_PUBLIC_KEY)
     
-    outfiles.append("./keys")
     
     if len(_gpg.list_keys(keys=fingerprint)) == 0:
         raise RuntimeError("importing GPG keys failed")
 
 
     #sign binary file detached signature
-    with open(basename + ".tar.gz") as f:
+    with open(basename + ".tar.gz","rb") as f:
         signed = _gpg.sign_file(f,keyid=fingerprint[-8:],passphrase=passphrase,
                                 detach=True,binary=True,
                                 output=basename+".tar.gz.sig")
@@ -154,6 +154,8 @@ def generate_test_data(basename):
         raise RuntimeError("failed to sign test data")
     
     outfiles.append(basename + ".tar.gz.sig")
+
+
 
     #delete private and public keys
     deleted_priv = _gpg.delete_keys(fingerprint, secret=True)
@@ -172,7 +174,7 @@ def generate_test_data(basename):
 
 class GPGVerifyTest(unittest.TestCase):
     def setUp(self):
-        self._data_files, self._gpg = generate_test_data("gpg_test_data")
+        self._data_files, self._gpg = _generate_gpg_data("gpg_test_data")
         self._data_file = "gpg_test_data.tar.gz"
         self._sig_file = "gpg_test_data.tar.gz.sig"
     
@@ -197,5 +199,4 @@ class GPGVerifyTest(unittest.TestCase):
                            sig_file=self._sig_file)
 
 
-if __name__ == "__main__":
-    unittest.main()
+

@@ -11,22 +11,18 @@ from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import load, save, _generic_algorithm_sum
 
-from psutil import NoSuchProcess
 
 try:
     import gnupg
 #create a GPG object. If gpg not available on the system, catch the error
 #and the method will fail later
-    _gpg = gnupg.GPG()
-except RuntimeError as err:
+    if platform.system() == "Windows":
+        _gpg = gnupg.GPG(gpgbinary="gpg.exe")
+    else:
+        _gpg = gnupg.GPG()
+except OSError as err:
     _gpg = None
     _gpg_error = err.args[0]
-#this is a failiure mode which appears on Windows sometimes instead of runtime
-except NoSuchProcess:
-    _gpg = None
-    _gpg_error = "NoSuchProcess error raised. Probably gpg is not installed"
-
-
 
 _global_output = None
 
@@ -369,10 +365,10 @@ def verify_gpg_sig(data_file, pubkey,sig_file=None,delete_after=True):
                 verify_result = _gpg.verify_file(f,data_file)
                 
     finally:
-        #cleanup 
-        delete_result = _gpg.delete_keys(fingerprint)
-        if delete_result.status != 'ok':
-            ConanOutput(sys.stdout).warn("couldn't cleanup GPG keyring")
+        if delete_after:
+            delete_result = _gpg.delete_keys(fingerprint)
+            if delete_result.status != 'ok':
+                ConanOutput(sys.stdout).warn("couldn't cleanup GPG keyring")
 
     if not verify_result.valid:
         raise ConanException("""GPG signature verification failed for file: %s
@@ -381,9 +377,3 @@ def verify_gpg_sig(data_file, pubkey,sig_file=None,delete_after=True):
                                 """ % (data_file,fingerprint,verify_result.status))
 
     
-if __name__ == "__main__":
-    import os
-    os.chdir("/home/weatherill/Software/pcre-conan")
-
-    result = verify_gpg_sig("pcre-8.41.tar.gz", "Public-key", "pcre-8.41.tar.gz.sig")
-

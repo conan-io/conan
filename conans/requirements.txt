@@ -11,4 +11,4 @@ pylint>=1.8.1, <1.9.0
 future==0.16.0
 pygments>=2.0, <3.0
 astroid>=1.6, <1.7
-gnupg>=2.3.1
+python-gnupg>=0.4.1
