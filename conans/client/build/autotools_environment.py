@@ -174,7 +174,10 @@ class AutoToolsBuildEnvironment(object):
 
     @property
     def _sysroot_flag(self):
-        return "--sysroot=%s" % self._deps_cpp_info.sysroot if self._deps_cpp_info.sysroot else None
+        if self._compiler == 'Visual Studio':
+            return None
+        else:
+            return "--sysroot=%s" % self._deps_cpp_info.sysroot if self._deps_cpp_info.sysroot else None
 
     def _configure_link_flags(self):
         """Not the -L"""
@@ -231,15 +234,21 @@ class AutoToolsBuildEnvironment(object):
                         ret.append(arg)
             return ret
 
-        lib_paths = ['-L%s' % x.replace("\\", "/") for x in self.library_paths]
-        include_paths = ['-I%s' % x.replace("\\", "/") for x in self.include_paths]
+        if self._compiler == 'Visual Studio':
+            lib_paths = ['/LIBPATH:%s' % x.replace("/", "\\") for x in self.library_paths]
+            include_paths = ['-I%s' % x.replace("/", "\\") for x in self.include_paths]
+            libs = [lib for lib in self.libs]
+        else:
+            lib_paths = ['-L%s' % x.replace("\\", "/") for x in self.library_paths]
+            include_paths = ['-I%s' % x.replace("\\", "/") for x in self.include_paths]
+            libs = ['-l%s' % lib for lib in self.libs]
 
         ld_flags = append(self.link_flags, lib_paths)
+
         cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])
-        libs = ['-l%s' % lib for lib in self.libs]
 
         tmp_compilation_flags = copy.copy(self.flags)
-        if self.fpic:
+        if self.fpic and not self._compiler == 'Visual Studio':
             tmp_compilation_flags.append("-fPIC")
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags)

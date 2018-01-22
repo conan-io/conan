@@ -54,11 +54,11 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
 
         be = AutoToolsBuildEnvironment(conanfile)
-        expected = {'CFLAGS': 'a_c_flag  --sysroot=/path/to/folder',
-                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
-                    'CXXFLAGS': 'a_c_flag  --sysroot=/path/to/folder a_cpp_flag',
-                    'LDFLAGS': 'shared_link_flag exe_link_flag  --sysroot=/path/to/folder -Lone/lib/path',
-                    'LIBS': '-lonelib -ltwolib'}
+        expected = {'CFLAGS': 'a_c_flag',
+                    'CPPFLAGS': '-Ipath\\includes -Iother\\include\\path -Donedefinition -Dtwodefinition',
+                    'CXXFLAGS': 'a_c_flag  a_cpp_flag',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag  /LIBPATH:one\\lib\\path',
+                    'LIBS': 'onelib twolib'}
 
         self.assertEquals(be.vars, expected)
 
