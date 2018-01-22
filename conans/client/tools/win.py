@@ -267,7 +267,9 @@ def unix_path(path, path_flavor=None):
     if not path:
         return None
     from conans.client.tools.oss import os_info
-    path = get_cased_path(path)
+    cased = get_cased_path(path)
+    if cased:  # if the path do not exists we cannot guess the case, keep it
+        path = cased
     path_flavor = path_flavor or os_info.detect_windows_subsystem() or MSYS2
     path = path.replace(":/", ":\\")
     pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
