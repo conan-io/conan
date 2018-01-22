@@ -78,6 +78,28 @@ def create_exports_sources(conanfile):
         return conanfile.exports_sources
 
 
+def create_export_linters(conanfile):
+    if not hasattr(conanfile, "export_linters"):
+        []
+    
+    else:
+        if isinstance(conanfile.export_linters, str):
+            return (conanfile.export_linters, )
+        return conanfile.export_linters
+        
+def create_install_linters(conanfile):
+    if not hasattr(conanfile, "install_linters"):
+        []
+    
+    else:
+        if isinstance(conanfile.install_linters, str):
+            return (conanfile.install_linters, )
+        return conanfile.install_linters
+        
+    
+
+
+
 def get_env_context_manager(conanfile):
     return environment_append(conanfile.env) if conanfile.apply_env else no_op()
 
@@ -153,6 +175,13 @@ class ConanFile(object):
 
         # Init a description
         self.description = None
+        
+        #export linters
+        self.export_linters = create_export_linters(self)
+        
+        #import linters
+        self.install_linters = create_install_linters(self)
+        
 
     @property
     def env(self):

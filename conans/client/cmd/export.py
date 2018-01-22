@@ -16,7 +16,7 @@ from conans.model.conan_file import create_exports, create_exports_sources
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.cmd.export_linter import conan_linter
 from conans.model.ref import ConanFileReference
-
+from conans.client.linters.linters_base import global_registered_linters
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,
                output, search_manager, client_cache):
@@ -30,6 +30,17 @@ def cmd_export(conanfile_path, name, version, user, channel, keep_source,
 
     conan_linter(conanfile_path, output)
     conanfile = _load_export_conanfile(conanfile_path, output, name, version)
+    #run requested linters
+    for linter in conanfile.export_linters:
+        if linter not in global_registered_linters["export"]:
+            output.error("no export linter named %s found" % linter)
+        
+        output.highlight("running linter: %s" % linter)
+        lt_instance = global_registered_linters["export"][linter](conanfile,output)
+        lt_instance.do_check()
+            
+    
+    
     conan_ref = ConanFileReference(conanfile.name, conanfile.version, user, channel)
     conan_ref_str = str(conan_ref)
     # Maybe a platform check could be added, but depends on disk partition
