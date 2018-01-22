@@ -3,6 +3,7 @@ import logging
 import re
 import os
 import sys
+import tempfile
 
 from contextlib import contextmanager
 from patch import fromfile, fromstring
@@ -16,10 +17,15 @@ try:
     import gnupg
 #create a GPG object. If gpg not available on the system, catch the error
 #and the method will fail later
+    
+    _GPG_HOME_DIR = tempfile.mkdtemp(suffix="_conan_gpg")
+    
     if platform.system() == "Windows":
-        _GPG = gnupg.GPG(gpgbinary="gpg.exe")
+        _GPG = gnupg.GPG(gpgbinary="gpg.exe", gnupghome=_GPG_HOME_DIR)
     else:
-        _GPG = gnupg.GPG()
+        _GPG = gnupg.GPG(gnupghome=_GPG_HOME_DIR)
+        
+    
 except OSError as err:
     _GPG = None
     _GPG_ERROR = err.args[0]

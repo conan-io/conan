@@ -9,6 +9,8 @@ Created on Wed Jan  3 15:39:35 2018
 import unittest
 import tarfile
 import os
+import tempfile
+import platform
 
 import gnupg
 
@@ -121,6 +123,7 @@ qL7yzZr/qpkNLbp2djiZw3erAtxgRVUTMYrVF1OSkg==
 def _generate_gpg_data(basename):
     outfiles = []
 
+
     #create text file
     with open(basename + ".txt", "w") as f:
         f.write(TEST_MESSAGE_CONTENTS)
@@ -136,7 +139,11 @@ def _generate_gpg_data(basename):
 
     #import private key
 #    _gpg = gnupg.GPG(gnupghome="./keys")
-    _gpg = gnupg.GPG()
+    
+    gpgbinary = "gpg.exe" if platform.system() == "Windows" else "gpg"
+    gpghome = tempfile.mkdtemp()
+    
+    _gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gpghome)
     print(gnupg.__file__)
     _gpg.import_keys(GPG_PRIVATE_KEY)
     _gpg.import_keys(GPG_PUBLIC_KEY)
