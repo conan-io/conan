@@ -250,6 +250,14 @@ def unix_path(path, path_flavor=None):
     return None
 
 
+def _path_equals(path1, path2):
+    path1 = os.path.normpath(path1)
+    path2 = os.path.normpath(path2)
+    if platform.system() == "Windows":
+        path1 = path1.lower().replace("sysnative", "system32")
+        path2 = path2.lower().replace("sysnative", "system32")
+    return path1 == path2
+
 def collect_libs(conanfile, folder="lib"):
     if not conanfile.package_folder:
         return []

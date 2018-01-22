@@ -360,6 +360,8 @@ class ConanInfo(object):
     def vs_toolset_compatible(self):
         """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
         using Visual Studio 14"""
+        if self.full_settings.compiler != "Visual Studio":
+            return
 
         toolsets_versions = {
             "v141": "15",
@@ -370,14 +372,16 @@ class ConanInfo(object):
             "v90": "9",
             "v80": "8"}
 
-        if self.full_settings.compiler == "Visual Studio":
-            toolset = str(self.full_settings.compiler.toolset)
-            if toolset in toolsets_versions:
-                self.settings.compiler.version = toolsets_versions[toolset]
-                self.settings.compiler.toolset = None
+        toolset = str(self.full_settings.compiler.toolset)
+        version = toolsets_versions.get(toolset)
+        if version is not None:
+            self.settings.compiler.version = version
+            del self.settings.compiler.toolset
 
     def vs_toolset_incompatible(self):
         """Will generate different packages for v140 and visual 15 than the visual 14"""
+        if self.full_settings.compiler != "Visual Studio":
+            return
         self.settings.compiler.version = self.full_settings.compiler.version
         self.settings.compiler.toolset = self.full_settings.compiler.toolset
 
@@ -385,9 +389,9 @@ class ConanInfo(object):
         # When os is defined, os_build is irrelevant for the consumer.
         # only when os_build is alone (installers, etc) it has to be present in the package_id
         if self.full_settings.os and self.full_settings.os_build:
-            self.settings.os_build = None
+            del self.settings.os_build
         if self.full_settings.arch and self.full_settings.arch_build:
-            self.settings.arch_build = None
+            del self.settings.arch_build
 
     def include_build_settings(self):
         self.settings.os_build = self.full_settings.os_build

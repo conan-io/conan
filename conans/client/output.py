@@ -2,7 +2,6 @@ from colorama import Fore, Style
 import six
 from conans.util.files import decode_text
 from conans.util.env_reader import get_env
-from conans.errors import ConanException
 
 
 class Color(object):
