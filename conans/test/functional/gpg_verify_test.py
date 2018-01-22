@@ -142,7 +142,7 @@ def _generate_gpg_data(basename):
     _gpg.import_keys(GPG_PUBLIC_KEY)
 
 
-    if _gpg.list_keys(keys=FINGERPRINT):
+    if not _gpg.list_keys(keys=FINGERPRINT):
         raise RuntimeError("importing GPG keys failed")
 
 
