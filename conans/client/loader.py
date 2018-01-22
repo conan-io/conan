@@ -31,7 +31,7 @@ class ConanFileLoader(object):
         self._env_values = profile.env_values
         self.dev_reference = None
 
-    def load_conan(self, conanfile_path, output, consumer=False, reference=None):
+    def load_conan(self, conanfile_path, output, consumer=False, reference=None, local=False):
         """ loads a ConanFile object from the given file
         """
         result = load_conanfile_class(conanfile_path)
@@ -52,7 +52,7 @@ class ConanFileLoader(object):
                 user, channel = None, None
 
             # Instance the conanfile
-            result = result(output, self._runner, tmp_settings, user, channel)
+            result = result(output, self._runner, tmp_settings, user, channel, local)
 
             # Assign environment
             result._env_values.update(self._env_values)
