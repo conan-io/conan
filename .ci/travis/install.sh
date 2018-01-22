@@ -11,6 +11,9 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     brew install ninja
     brew install meson
 
+    #for testing gpg sig validation
+    brew install gnupg
+
     if which pyenv > /dev/null; then
         eval "$(pyenv init -)"
     fi
@@ -51,6 +54,9 @@ else
     unzip ninja-linux.zip
     sudo mv ninja /usr/bin/ninja
     rm ninja-linux.zip
+
+    #GPG for testing gnupg sig verification
+    sudo apt-get install gnupg2
 
     # Will fail if no python3 available
     pip3 install meson || true

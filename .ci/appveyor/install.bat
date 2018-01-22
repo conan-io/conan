@@ -22,3 +22,5 @@ SET CONAN_LOGGING_LEVEL=10
 C:/Python35/Scripts/pip.exe install meson
 choco install pkgconfiglite -y
 choco install ninja -y
+
+choco install gpg4win-vanilla -y
