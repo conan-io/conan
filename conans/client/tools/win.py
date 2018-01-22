@@ -241,7 +241,7 @@ def get_cased_path(name):
     if platform.system() != "Windows":
         return name
     if not os.path.isabs(name):
-        raise ConanException("get_cased_path requires an absolute path")
+        name = os.path.abspath(name)
     dirs = name.split('\\')
     # disk letter
     test_name = [dirs[0].upper()]
@@ -267,9 +267,10 @@ def unix_path(path, path_flavor=None):
     if not path:
         return None
     from conans.client.tools.oss import os_info
-    cased = get_cased_path(path)
-    if cased:  # if the path do not exists we cannot guess the case, keep it
-        path = cased
+
+    if os.path.exists(path):
+        path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
+
     path_flavor = path_flavor or os_info.detect_windows_subsystem() or MSYS2
     path = path.replace(":/", ":\\")
     pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
