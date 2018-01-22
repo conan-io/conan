@@ -1,12 +1,12 @@
 import glob
 import os
 import platform
+import re
 
 import subprocess
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.files import unix_path, MSYS2, WSL, which
 from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
 from conans.util.files import decode_text
@@ -254,6 +254,35 @@ def get_cased_path(name):
         return None
     return res[0]
 
+MSYS2 = 'msys2'
+MSYS = 'msys'
+CYGWIN = 'cygwin'
+WSL = 'wsl'  # Windows Subsystem for Linux
+SFU = 'sfu'  # Windows Services for UNIX
+
+
+def unix_path(path, path_flavor=None):
+    """"Used to translate windows paths to MSYS unix paths like
+    c/users/path/to/file. Not working in a regular console or MinGW!"""
+    if not path:
+        return None
+    from conans.client.tools.oss import os_info
+    path = get_cased_path(path)
+    path_flavor = path_flavor or os_info.detect_windows_subsystem() or MSYS2
+    path = path.replace(":/", ":\\")
+    pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
+    path = pattern.sub('/\\1/', path).replace('\\', '/')
+    if path_flavor in (MSYS, MSYS2):
+        return path.lower()
+    elif path_flavor == CYGWIN:
+        return '/cygdrive' + path.lower()
+    elif path_flavor == WSL:
+        return '/mnt' + path[0:2].lower() + path[2:]
+    elif path_flavor == SFU:
+        path = path.lower()
+        return '/dev/fs' + path[0] + path[1:].capitalize()
+    return None
+
 
 def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None):
     """ Will run a unix command inside a bash terminal
@@ -301,7 +330,7 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         if cwd and not os.path.isabs(cwd):
             cwd = os.path.join(os.getcwd(), cwd)
 
-        curdir = unix_path(get_cased_path(cwd or os.getcwd()), path_flavor=subsystem)
+        curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
         bash_path = os_info.bash_path()
         bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
