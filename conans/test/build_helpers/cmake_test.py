@@ -183,8 +183,10 @@ class CMakeTest(unittest.TestCase):
         settings.compiler = "gcc"
         settings.compiler.version = "4.8"
         generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="4.8" -Wno-dev' % generator, "")
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
+              '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
+              '-Wno-dev' % generator, "")
 
         settings.os = "Linux"
         settings.arch = "x86"
