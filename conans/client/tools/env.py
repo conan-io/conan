@@ -1,4 +1,3 @@
-import platform
 import sys
 from contextlib import contextmanager
 

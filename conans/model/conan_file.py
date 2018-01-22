@@ -97,7 +97,7 @@ class ConanFile(object):
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
 
-    def __init__(self, output, runner, settings, user=None, channel=None):
+    def __init__(self, output, runner, settings, user=None, channel=None, local=None):
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
         if isinstance(self.generators, str):
@@ -106,7 +106,7 @@ class ConanFile(object):
         # User defined options
         self.options = create_options(self)
         self.requires = create_requirements(self)
-        self.settings = create_settings(self, settings)
+        self.settings = create_settings(self, settings) if not local else settings
         try:
             if self.settings.os_build and self.settings.os:
                 output.writeln("*"*60, front=Color.BRIGHT_RED)
