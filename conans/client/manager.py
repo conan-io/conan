@@ -493,7 +493,19 @@ class ConanManager(object):
 
         return adapter
 
+    def search_recipes_all(self, pattern, ignorecase):
+        reg = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        references = {}
+        for remote in reg.remotes:
+            remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote.name)
+            result = remote_proxy.search(pattern, ignorecase)
+            if result:
+                references[remote.name] = result
+        return references
+
     def search_recipes(self, pattern, remote, ignorecase):
+        if remote == 'all':
+            return self.search_recipes_all(pattern, ignorecase)
         references = self._get_search_adapter(remote).search(pattern, ignorecase)
         return references
 
