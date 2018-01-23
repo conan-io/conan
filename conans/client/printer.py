@@ -33,7 +33,7 @@ class Printer(object):
             if not ref:
                 continue
             remote = registry.get_ref(ref)
-            from_text = "from local" if not remote else "from %s" % remote.name
+            from_text = "from local cache" if not remote else "from '%s'" % remote.name
             self._out.writeln("    %s %s" % (repr(ref), from_text), Color.BRIGHT_CYAN)
         self._out.writeln("Packages", Color.BRIGHT_YELLOW)
         for node in sorted(deps_graph.nodes):
@@ -173,7 +173,7 @@ class Printer(object):
         """
         if not references and not raw:
             warn_msg = "There are no packages"
-            pattern_msg = " matching the %s pattern" % pattern
+            pattern_msg = " matching the '%s' pattern" % pattern
             self._out.info(warn_msg + pattern_msg if pattern else warn_msg)
             return
 
