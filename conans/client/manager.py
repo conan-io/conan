@@ -116,7 +116,7 @@ class ConanManager(object):
         profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
         loader = self.get_loader(profile, local=True)
         if conanfile_path.endswith(".py"):
-            conanfile = loader.load_conan(conanfile_path, output, consumer=True)
+            conanfile = loader.load_conan(conanfile_path, output, consumer=True, local=True)
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
         if deps_info_required is not None:
@@ -145,9 +145,10 @@ class ConanManager(object):
         """
         cache_settings = self._client_cache.settings.copy()
         cache_settings.values = profile.settings_values
-        self._settings_preprocessor.preprocess(cache_settings)
         if local:
             cache_settings.remove_undefined()
+        else:
+            self._settings_preprocessor.preprocess(cache_settings)
         return ConanFileLoader(self._runner, cache_settings, profile)
 
     def export(self, conanfile_path, name, version, user, channel,  keep_source=False):
@@ -427,7 +428,7 @@ class ConanManager(object):
                       install_folder):
         if package_folder == build_folder:
             raise ConanException("Cannot 'conan package' to the build folder. "
-                                 "--build_folder and package folder can't be the same")
+                                 "--build-folder and package folder can't be the same")
         output = ScopedOutput("PROJECT", self._user_io.out)
         conanfile = self._load_consumer_conanfile(conanfile_path, install_folder, output,
                                                   deps_info_required=True)
