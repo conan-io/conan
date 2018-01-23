@@ -1,8 +1,71 @@
 import unittest
 from conans.test.utils.tools import TestClient
+from conans.util.files import mkdir
+import os
 
 
 class RemoveSubsettingTest(unittest.TestCase):
+
+    def remove_options_test(self):
+        # https://github.com/conan-io/conan/issues/2327
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    options = {"opt1": [True, False], "opt2": [True, False]}
+    default_options = "opt1=True", "opt2=False"
+    def config_options(self):
+        del self.options.opt2
+"""
+        client.save({"conanfile.py": conanfile})
+        build_folder = os.path.join(client.current_folder, "build")
+        mkdir(build_folder)
+        client.current_folder = build_folder
+        client.run("install ..")
+        client.run("build ..")
+
+    def remove_setting_test(self):
+        # https://github.com/conan-io/conan/issues/2327
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    settings = "os", "build_type"
+    def configure(self):
+        del self.settings.build_type
+"""
+        client.save({"conanfile.py": conanfile})
+        build_folder = os.path.join(client.current_folder, "build")
+        mkdir(build_folder)
+        client.current_folder = build_folder
+        client.run("install ..")
+        # This raised an error because build_type wasn't defined
+        client.run("build ..")
+
+    def remove_runtime_test(self):
+        # https://github.com/conan-io/conan/issues/2327
+        client = TestClient()
+        conanfile = """from conans import ConanFile, CMake
+class Pkg(ConanFile):
+    settings = "os", "compiler", "arch"
+    def configure(self):
+        del self.settings.compiler.runtime
+    def build(self):
+        try:
+            self.settings.compiler.runtime
+        except Exception as e:
+            self.output.info(str(e))
+        cmake = CMake(self)
+        self.output.info(cmake.command_line)
+"""
+        client.save({"conanfile.py": conanfile})
+        build_folder = os.path.join(client.current_folder, "build")
+        mkdir(build_folder)
+        client.current_folder = build_folder
+        client.run('install .. -s os=Windows -s compiler="Visual Studio" -s compiler.version=15 -s arch=x86')
+        # This raised an error because build_type wasn't defined
+        client.run("build ..")
+        self.assertIn("'settings.compiler.runtime' doesn't exist for 'Visual Studio'", client.out)
+        self.assertNotIn("CONAN_LINK_RUNTIME", client.out)
+        self.assertIn('-DCONAN_COMPILER="Visual Studio"', client.out)
 
     def remove_subsetting_test(self):
         # https://github.com/conan-io/conan/issues/2049
