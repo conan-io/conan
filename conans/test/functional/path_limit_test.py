@@ -123,7 +123,7 @@ class PathLengthLimitTest(unittest.TestCase):
         self.assertIn("lib/0.1@lasote/channel", client.user_io.out)
         self.assertIn("lib/0.1@memsharded/stable", client.user_io.out)
         client.run("search lib/0.1@lasote/channel")
-        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
+        self.assertIn("Package ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
         client.run("search lib/0.1@memsharded/stable")
         self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
 
@@ -145,7 +145,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client.run("search")
         self.assertIn("lib/0.1@user/channel", client.user_io.out)
         client.run("search lib/0.1@user/channel")
-        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
+        self.assertIn("Package ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
 
         package_folder = client.client_cache.package(package_ref, short_paths=None)
         file1 = load(os.path.join(package_folder, "myfile.txt"))
@@ -187,7 +187,7 @@ class ConanLib(ConanFile):
         client.run("search")
         self.assertIn("lib/0.1@user/channel", client.user_io.out)
         client.run("search lib/0.1@user/channel")
-        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
+        self.assertIn("Package ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
 
         if platform.system() == "Windows":
             conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
