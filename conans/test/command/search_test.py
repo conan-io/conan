@@ -145,13 +145,19 @@ class SearchTest(unittest.TestCase):
         os.rmdir(self.servers["search_able"].paths.store)
         shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
         self.client.run("search Hello* -r=all")
-        for remote in ("local", "search_able"):
-            expected = """Remote '{}':
+
+        def check():
+            for remote in ("local", "search_able"):
+                expected = """Remote '{}':
 Hello/1.4.10@fenix/testing
 Hello/1.4.11@fenix/testing
 Hello/1.4.12@fenix/testing
 helloTest/1.4.10@fenix/stable""".format(remote)
-            self.assertIn(expected, self.client.out)
+                self.assertIn(expected, self.client.out)
+
+        check()
+        self.client.run("search Hello* -r=all --raw")
+        check()
 
     def recipe_search_test(self):
         self.client.run("search Hello*")
