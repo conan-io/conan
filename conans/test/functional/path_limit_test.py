@@ -125,7 +125,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client.run("search lib/0.1@lasote/channel")
         self.assertIn("Package ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
         client.run("search lib/0.1@memsharded/stable")
-        self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
+        self.assertIn("Package ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
 
         conan_ref = ConanFileReference.loads("lib/0.1@lasote/channel")
         package_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")

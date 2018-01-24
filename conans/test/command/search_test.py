@@ -373,7 +373,7 @@ class SearchTest(unittest.TestCase):
         # One package will be outdated from recipe and another don't
         self.assertEquals("""Existing packages for recipe Hello/1.4.10@fenix/testing:
 
-    Package_ID: LinuxPackageSHA
+    Package ID: LinuxPackageSHA
         [options]
             use_Qt: False
         [settings]
@@ -388,7 +388,7 @@ class SearchTest(unittest.TestCase):
             OpenSSL/2.10@lasote/testing:2222
         Outdated from recipe: False
 
-    Package_ID: PlatformIndependantSHA
+    Package ID: PlatformIndependantSHA
         [options]
             use_Qt: True
         [settings]
