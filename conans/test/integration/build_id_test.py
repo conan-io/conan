@@ -257,11 +257,11 @@ class BuildIdTest(unittest.TestCase):
 
         if python_consumer:
             client.run("export . user/channel")
-            client.run("info MyTest/0.1@user/channel -s build_type=Debug")
+            client.run("info MyTest/0.1@user/channel -s os=Windows -s build_type=Debug")
             _check()
             self.assertNotIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
             self.assertIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
-            client.run("info MyTest/0.1@user/channel -s build_type=Release")
+            client.run("info MyTest/0.1@user/channel -s os=Windows -s build_type=Release")
             _check()
             self.assertIn("ID: ab2e9f86b4109980930cdc685f4a320b359e7bb4", client.out)
             self.assertNotIn("ID: f3989dcba0ab50dc5ed9b40ede202bdd7b421f09", client.out)
