@@ -172,6 +172,9 @@ class Command(object):
         parser.add_argument('-k', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
+        parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
+                            help='Optional. Do not remove the build folder in local cache. '
+                                 'Use for testing purposes only')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -183,8 +186,9 @@ class Command(object):
         return self._conan.create(args.path, name, version, user, channel,
                                   args.profile, args.settings, args.options,
                                   args.env, args.test_folder, args.not_export,
-                                  args.build, args.keep_source, args.verify, args.manifests,
-                                  args.manifests_interactive, args.remote, args.update)
+                                  args.build, args.keep_source, args.keep_build, args.verify,
+                                  args.manifests, args.manifests_interactive,
+                                  args.remote, args.update)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.

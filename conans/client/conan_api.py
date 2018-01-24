@@ -225,7 +225,7 @@ class ConanAPIV1(object):
                profile_name=None, settings=None,
                options=None, env=None, test_folder=None, not_export=False,
                build_modes=None,
-               keep_source=False, verify=None,
+               keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote=None, update=False, cwd=None):
 
@@ -244,6 +244,9 @@ class ConanAPIV1(object):
 
         reference = ConanFileReference(name, version, user, channel)
         scoped_output = ScopedOutput(str(reference), self._user_io.out)
+        # Make sure keep_source is set for keep_build
+        if keep_build:
+            keep_source = True
         # Forcing an export!
         if not not_export:
             scoped_output.highlight("Exporting package recipe")
@@ -279,7 +282,8 @@ class ConanAPIV1(object):
                                       remote, update, build_modes=build_modes,
                                       manifest_folder=manifest_folder,
                                       manifest_verify=manifest_verify,
-                                      manifest_interactive=manifest_interactive)
+                                      manifest_interactive=manifest_interactive,
+                                      keep_build=keep_build)
         else:
             self._manager.install(reference=reference,
                                   install_folder=None,  # Not output anything
@@ -289,7 +293,8 @@ class ConanAPIV1(object):
                                   remote=remote,
                                   profile=profile,
                                   build_modes=build_modes,
-                                  update=update)
+                                  update=update,
+                                  keep_build=keep_build)
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
