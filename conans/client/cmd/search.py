@@ -16,12 +16,16 @@ class Search(object):
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
         if remote == 'all':
-            references = {}
-            for remote in registry.remotes:
-                result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
-                if result:
-                    references[remote.name] = result
-            return references
+            remotes = registry.remotes
+            # We have to check if there is a remote called "all"
+            # Deprecate: 2.0 can remove this check
+            if 'all' not in (r.name for r in remotes):
+                references = {}
+                for remote in remotes:
+                    result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
+                    if result:
+                        references[remote.name] = result
+                return references
         # single remote
         remote = registry.remote(remote)
         return self._remote_manager.search_recipes(remote, pattern, ignorecase)
