@@ -188,7 +188,13 @@ class Printer(object):
                 for conan_ref in sorted(references):
                     self._print_colored_line(str(conan_ref), indent=0)
         else:
-            self._out.writeln("\n".join([str(ref) for ref in references]))
+            if isinstance(references, dict):
+                for remote, refs in references.items():
+                    self._out.writeln("Remote '%s':" % str(remote))
+                    for conan_ref in sorted(refs):
+                        self._out.writeln(str(conan_ref))
+            else:
+                self._out.writeln("\n".join([str(ref) for ref in references]))
 
     def print_search_packages(self, packages_props, reference, recipe_hash, packages_query):
         if not packages_props:
