@@ -197,7 +197,7 @@ class Printer(object):
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         # Each package
         for package_id, properties in sorted(packages_props.items()):
-            self._print_colored_line("Package_ID", package_id, 1)
+            self._print_colored_line("Package ID", package_id, 1)
             for section in ("options", "settings", "full_requires"):
                 attrs = properties.get(section, [])
                 if attrs:
@@ -214,7 +214,7 @@ class Printer(object):
             # Always compare outdated with local recipe, simplification,
             # if a remote check is needed install recipe first
             if recipe_hash:
-                self._print_colored_line("outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
+                self._print_colored_line("Outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
             self._out.writeln("")
 
     def print_profile(self, name, profile):
