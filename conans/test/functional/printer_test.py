@@ -36,7 +36,13 @@ class CConan(ConanFile):
     name = "ccc"
     version = "0.1"
     requires = "bbb/0.1@lasote/channel"
+    exports = "txt_file.txt"
+
 """
+
+txt_file = """
+    example file
+    """
 
 class PrinterTest(unittest.TestCase):
 
@@ -47,7 +53,8 @@ class PrinterTest(unittest.TestCase):
         self.client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         files = {"conanfile_libA.py": conanfile_libA,
                  "conanfile_libB.py": conanfile_libB,
-                 "conanfile_libC.py": conanfile_libC
+                 "conanfile_libC.py": conanfile_libC,
+                 "txt_file.txt": txt_file
                 }
         self.client.save(files)
         self.client.run("export conanfile_libA.py lasote/channel")
@@ -58,73 +65,85 @@ class PrinterTest(unittest.TestCase):
         self.client.run("remove -f bbb/0.1@lasote/channel")
         self.client.run("export conanfile_libC.py lasote/channel")
 
-    def print_graph_test(self):
-        self.client.run("install ccc/0.1@lasote/channel",
-                   ignore_error=True) #Ignore ERROR: Missing prebuilt package
-        self.assertIn("aaa/0.1@lasote/channel from 'default'", self.client.out)
-        self.assertIn("bbb/0.1@lasote/channel from 'default'", self.client.out)
-        self.assertIn("ccc/0.1@lasote/channel from local cache", self.client.out)
+    # def print_graph_test(self):
+    #     self.client.run("install ccc/0.1@lasote/channel",
+    #                ignore_error=True) #Ignore ERROR: Missing prebuilt package
+    #     self.assertIn("aaa/0.1@lasote/channel from 'default'", self.client.out)
+    #     self.assertIn("bbb/0.1@lasote/channel from 'default'", self.client.out)
+    #     self.assertIn("ccc/0.1@lasote/channel from local cache", self.client.out)
 
-    def print_info_test(self):
-        self.client.run("info aaa/0.1@lasote/channel")
+    # def print_info_test(self):
+    #     self.client.run("info aaa/0.1@lasote/channel")
 
-        aaa_header_output = """aaa/0.1@lasote/channel
-    ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
-    BuildID: None
-    Remote: default=http://"""
-        aaa_require_output = """Required by:
-        None"""
-        self.assertIn(aaa_header_output, self.client.out)
-        self.assertIn(aaa_require_output, self.client.out)
+    #     aaa_header_output = """aaa/0.1@lasote/channel
+    # ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9
+    # BuildID: None
+    # Remote: default=http://"""
+    #     aaa_require_output = """Required by:
+    #     None"""
+    #     self.assertIn(aaa_header_output, self.client.out)
+    #     self.assertIn(aaa_require_output, self.client.out)
 
-        self.client.run("info bbb/0.1@lasote/channel")
+    #     self.client.run("info bbb/0.1@lasote/channel")
 
-        aaa_require_output = """Required by:
-        bbb/0.1@lasote/channel"""
-        bbb_header_output = """bbb/0.1@lasote/channel
-    ID: 05ee4abde05ceb090f7e3a61dd0444da30515355
-    BuildID: None
-    Remote: default=http://"""
-        bbb_require_output = """Required by:
-        None
-    Requires:
-        aaa/0.1@lasote/channel"""
-        self.assertIn(aaa_require_output, self.client.out)
-        self.assertIn(bbb_header_output, self.client.out)
-        self.assertIn(bbb_require_output, self.client.out)
+    #     aaa_require_output = """Required by:
+    #     bbb/0.1@lasote/channel"""
+    #     bbb_header_output = """bbb/0.1@lasote/channel
+    # ID: 05ee4abde05ceb090f7e3a61dd0444da30515355
+    # BuildID: None
+    # Remote: default=http://"""
+    #     bbb_require_output = """Required by:
+    #     None
+    # Requires:
+    #     aaa/0.1@lasote/channel"""
+    #     self.assertIn(aaa_require_output, self.client.out)
+    #     self.assertIn(bbb_header_output, self.client.out)
+    #     self.assertIn(bbb_require_output, self.client.out)
 
-        self.client.run("info ccc/0.1@lasote/channel")
+    #     self.client.run("info ccc/0.1@lasote/channel")
 
-        bbb_require_output = """Required by:
-        ccc/0.1@lasote/channel
-    Requires:
-        aaa/0.1@lasote/channel"""
-        ccc_header_output = """ccc/0.1@lasote/channel
-    ID: 981e05a6766d23b321ba61cd8d473ca507fcfbdc
-    BuildID: None
-    Remote: None"""
-        ccc_require_output = """Required by:
-        None
-    Requires:
-        bbb/0.1@lasote/channel"""
-        self.assertIn(bbb_require_output, self.client.out)
-        self.assertIn(ccc_header_output, self.client.out)
-        self.assertIn(ccc_require_output, self.client.out)
+    #     bbb_require_output = """Required by:
+    #     ccc/0.1@lasote/channel
+    # Requires:
+    #     aaa/0.1@lasote/channel"""
+    #     ccc_header_output = """ccc/0.1@lasote/channel
+    # ID: 981e05a6766d23b321ba61cd8d473ca507fcfbdc
+    # BuildID: None
+    # Remote: None"""
+    #     ccc_require_output = """Required by:
+    #     None
+    # Requires:
+    #     bbb/0.1@lasote/channel"""
+    #     self.assertIn(bbb_require_output, self.client.out)
+    #     self.assertIn(ccc_header_output, self.client.out)
+    #     self.assertIn(ccc_require_output, self.client.out)
 
-    def print_search_recipes_test(self):
-        self.client.run("search wrong_pattern*")
-        self.assertIn("There are no packages matching the 'wrong_pattern*' pattern",
-                      self.client.out)
+    # def print_search_recipes_test(self):
+    #     self.client.run("search wrong_pattern*")
+    #     self.assertIn("There are no packages matching the 'wrong_pattern*' pattern",
+    #                   self.client.out)
 
-        self.client.run("search ccc*")
-        self.assertIn("Existing package recipes:", self.client.out)
-        self.assertIn("ccc/0.1@lasote/channel", self.client.out)
+    #     self.client.run("search ccc*")
+    #     self.assertIn("Existing package recipes:", self.client.out)
+    #     self.assertIn("ccc/0.1@lasote/channel", self.client.out)
 
     def print_search_packages_test(self):
-        "There are no packages for reference"
-        "There are no packages for pattern"
-        "Existing packages for recipe"
-        "outdated from recipe:"
+        self.client.run("search ccc/0.1@lasote/channel")
+        self.assertIn("There are no packages for pattern 'ccc/0.1@lasote/channel'", self.client.out)
+
+        self.client.run("search ccc/0.1@lasote/channel -q os=Windows")
+        self.assertIn("There are no packages for reference 'ccc/0.1@lasote/channel' matching the "
+                      "query 'os=Windows'", self.client.out)
+
+        self.client.run("install ccc/0.1@lasote/channel --build")
+        self.client.run("search ccc/0.1@lasote/channel")
+        self.assertIn("Existing packages for recipe ccc/0.1@lasote/channel:", self.client.out)
+        self.assertIn("Package ID: 981e05a6766d23b321ba61cd8d473ca507fcfbdc", self.client.out)
+        self.assertIn("aaa/0.1@lasote/channel:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9",
+                       self.client.out)
+        self.assertIn("bbb/0.1@lasote/channel:05ee4abde05ceb090f7e3a61dd0444da30515355",
+                       self.client.out)
+        self.assertIn("Outdated from recipe: False", self.client.out)
 
     def print_profile(self):
         pass
