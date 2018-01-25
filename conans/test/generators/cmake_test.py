@@ -44,7 +44,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def variables_cmake_multi_user_vars_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x: x), None)
+        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x, raise_missing_value: x), None)
         conanfile.deps_user_info["LIB1"].myvar = "myvalue"
         conanfile.deps_user_info["LIB1"].myvar2 = "myvalue2"
         conanfile.deps_user_info["lib2"].MYVAR2 = "myvalue4"
@@ -57,7 +57,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def variables_cmake_multi_user_vars_escape_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x: x), None)
+        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x, raise_missing_value: x), None)
         conanfile.deps_user_info["FOO"].myvar = 'my"value"'
         conanfile.deps_user_info["FOO"].myvar2 = 'my${value}'
         conanfile.deps_user_info["FOO"].myvar3 = 'my\\value'
