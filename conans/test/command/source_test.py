@@ -8,6 +8,17 @@ import os
 
 class SourceTest(unittest.TestCase):
 
+    def source_warning_os_build_test(self):
+        # https://github.com/conan-io/conan/issues/2368
+        conanfile = '''from conans import ConanFile
+class ConanLib(ConanFile):
+    pass
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("source .")
+        self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
+
     def source_reference_test(self):
         client = TestClient()
         error = client.run("source lib/1.0@conan/stable", ignore_error=True)
