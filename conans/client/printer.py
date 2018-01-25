@@ -197,7 +197,7 @@ class Printer(object):
         self._out.info("Existing packages for recipe %s:\n" % str(reference))
         # Each package
         for package_id, properties in sorted(packages_props.items()):
-            self._print_colored_line("Package ID", package_id, 1)
+            self._print_colored_line("Package_ID", package_id, 1)
             for section in ("options", "settings", "full_requires"):
                 attrs = properties.get(section, [])
                 if attrs:
