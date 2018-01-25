@@ -99,7 +99,7 @@ class TestConan(ConanFile):
         client.run('remove "*" -f')
 
         client.run("install .")
-        self.assertIn("Hello/0.1@lasote/channel from default", client.user_io.out)
+        self.assertIn("Hello/0.1@lasote/channel from 'default'", client.user_io.out)
         self.assertNotIn("Hello/0.X@lasote/channel from", client.user_io.out)
 
         client.run("alias Hello/0.X@lasote/channel Hello/0.2@lasote/channel")

@@ -238,7 +238,7 @@ class SearchTest(unittest.TestCase):
         shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
         self.client.run("remove Hello* -f")
         self.client.run('search Hello/1.4.10@fenix/testing -q "compiler=gcc AND compiler.libcxx=libstdc++11" -r local')
-        self.assertIn("outdated from recipe: False", self.client.user_io.out)
+        self.assertIn("Outdated from recipe: False", self.client.user_io.out)
         self.assertIn("LinuxPackageSHA", self.client.user_io.out)
         self.assertNotIn("PlatformIndependantSHA", self.client.user_io.out)
         self.assertNotIn("WindowsPackageSHA", self.client.user_io.out)
@@ -386,7 +386,7 @@ class SearchTest(unittest.TestCase):
             Hello2/0.1@lasote/stable:11111
             HelloInfo1/0.45@fenix/testing:33333
             OpenSSL/2.10@lasote/testing:2222
-        outdated from recipe: False
+        Outdated from recipe: False
 
     Package_ID: PlatformIndependantSHA
         [options]
@@ -396,7 +396,7 @@ class SearchTest(unittest.TestCase):
             compiler: gcc
             compiler.libcxx: libstdc++
             compiler.version: 4.3
-        outdated from recipe: True
+        Outdated from recipe: True
 
 """, self.client.user_io.out)
 
