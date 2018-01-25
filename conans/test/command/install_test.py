@@ -287,6 +287,8 @@ class TestConan(ConanFile):
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
         client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
+        self.assertIn("Hello/0.1@lasote/stable from local cache\n",
+                      client.out) # Test "from local cache" output message
         client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
