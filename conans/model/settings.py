@@ -315,7 +315,7 @@ class Settings(object):
         assert isinstance(vals, Values)
         self.values_list = vals.as_list()
 
-    def constraint(self, constraint_def, raise_missing_value=True):
+    def constraint(self, constraint_def, raise_undefined_field=True):
         """ allows to restrict a given Settings object with the input of another Settings object
         1. The other Settings object MUST be exclusively a subset of the former.
            No additions allowed
@@ -360,12 +360,10 @@ class Settings(object):
             config_item.remove(values_to_remove)
 
         # Sanity check for input constraint wrong fields
-        for field in constraint_def:
-            if field not in self._data:
-                if raise_missing_value:
+        if raise_undefined_field:
+            for field in constraint_def:
+                if field not in self._data:
                     raise undefined_field(self._name, field, self.fields)
-                else:
-                    fields_to_remove.append(field)
 
         # remove settings not defined in the constraint
         self.remove(fields_to_remove)

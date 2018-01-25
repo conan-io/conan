@@ -54,7 +54,7 @@ def create_settings(conanfile, settings, local):
         if isinstance(defined_settings, str):
             defined_settings = [defined_settings]
         current = defined_settings or {}
-        settings.constraint(current, raise_missing_value=not local)
+        settings.constraint(current, raise_undefined_field=not local)
         return settings
     except Exception as e:
         raise ConanException("Error while initializing settings. %s" % str(e))
