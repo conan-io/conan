@@ -31,27 +31,21 @@ class Profile(object):
         return result
 
     def dumps(self):
-        def indent(text):
-            if not text:
-                return ""
-            return '\n'.join("    " + line for line in text.splitlines())
-
-        result = ["[settings]"]
+        result = ["[build_requires]"]
+        for pattern, req_list in self.build_requires.items():
+            result.append("%s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
+        result.append("[settings]")
         for name, value in self.settings.items():
-            result.append("    %s=%s" % (name, value))
+            result.append("%s=%s" % (name, value))
         for package, values in self.package_settings.items():
             for name, value in values.items():
-                result.append("    %s:%s=%s" % (package, name, value))
+                result.append("%s:%s=%s" % (package, name, value))
 
         result.append("[options]")
-        result.append(indent(self.options.dumps()))
-
-        result.append("[build_requires]")
-        for pattern, req_list in self.build_requires.items():
-            result.append("    %s: %s" % (pattern, ", ".join(str(r) for r in req_list)))
+        result.append(self.options.dumps())
 
         result.append("[env]")
-        result.append(indent(self.env_values.dumps()))
+        result.append(self.env_values.dumps())
 
         return "\n".join(result).replace("\n\n", "\n")
 

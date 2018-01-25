@@ -152,7 +152,6 @@ def _load_profile(text, profile_path, default_folder):
         doc = ConfigParser(profile_parser.profile_text,
                            allowed_fields=["build_requires", "settings", "env",
                                            "scopes", "options"])
-                                           # Deprecate 2.0: scopes
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
