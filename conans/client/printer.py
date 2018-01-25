@@ -233,11 +233,11 @@ class Printer(object):
         self._print_profile_section("env", envs, separator='=')
 
     def _print_profile_section(self, name, items, indent=0, separator=": "):
-        self._print_colored_line("[%s]" % name, indent=indent)
+        self._print_colored_line("[%s]" % name, indent=indent, color=Color.BRIGHT_RED)
         for key, value in items:
-            self._print_colored_line(key, value=str(value), indent=indent+1, separator=separator)
+            self._print_colored_line(key, value=str(value), indent=0, separator=separator)
 
-    def _print_colored_line(self, text, value=None, indent=0, separator=": "):
+    def _print_colored_line(self, text, value=None, indent=0, separator=": ", color=None):
         """ Print a colored line depending on its indentation level
             Attributes:
                 text: string line
@@ -247,8 +247,8 @@ class Printer(object):
         text = text.strip()
         if not text:
             return
-
-        text_color = Printer.INDENT_COLOR.get(indent, Color.BRIGHT_WHITE)
+        
+        text_color = Printer.INDENT_COLOR.get(indent, Color.BRIGHT_WHITE) if not color else color
         indent_text = ' ' * Printer.INDENT_SPACES * indent
         if value is not None:
             value_color = Color.BRIGHT_WHITE
