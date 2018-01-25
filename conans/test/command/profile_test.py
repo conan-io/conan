@@ -47,7 +47,7 @@ class ProfileTest(unittest.TestCase):
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
-        self.assertIn("os=Windows", client.user_io.out)
+        self.assertIn("[settings]\nos=Windows", client.user_io.out)
         self.assertIn("MyOption=32", client.user_io.out)
         client.run("profile show profile3")
         self.assertIn("CC=/path/tomy/gcc_build", client.user_io.out)
