@@ -130,9 +130,9 @@ class ProfileTest(unittest.TestCase):
         client.run("profile new ./MyProfile")
         pr_path = os.path.join(client.current_folder, "MyProfile")
         self.assertTrue(os.path.exists(pr_path))
-        self.assertEquals(load(pr_path), """[settings]
+        self.assertEquals(load(pr_path), """[build_requires]
+[settings]
 [options]
-[build_requires]
 [env]
 """)
 
@@ -140,10 +140,6 @@ class ProfileTest(unittest.TestCase):
         pr_path = os.path.join(client.current_folder, "MyProfile2")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "MyProfile2")))
         self.assertIn("os=", load(pr_path))
-
-        #Test new detected profile is generated with same order & identation as $ conan profile show
-        client.run("profile show ./MyProfile2")
-        self.assertIn(load(pr_path), client.out)
 
         client.run("profile new ./MyProfile2 --detect", ignore_error=True)
         self.assertIn("Profile already exists", client.user_io.out)
