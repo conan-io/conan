@@ -116,12 +116,12 @@ class ConanManager(object):
         profile = read_conaninfo_profile(info_folder) or self._client_cache.default_profile
         loader = self.get_loader(profile, local=True)
         if conanfile_path.endswith(".py"):
-            conanfile = loader.load_conan(conanfile_path, output, consumer=True, local=True)
+            local = True if deps_info_required else None
+            conanfile = loader.load_conan(conanfile_path, output, consumer=True, local=local)
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
-        if deps_info_required is not None:
-            _load_deps_info(info_folder, conanfile, required=deps_info_required)
 
+        _load_deps_info(info_folder, conanfile, required=deps_info_required)
         return conanfile
 
     def _load_install_conanfile(self, loader, reference_or_path):
