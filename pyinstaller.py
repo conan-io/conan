@@ -58,16 +58,18 @@ VSVersionInfo(
       StringTable(
         u'000004b0',
         [StringStruct(u'Comments', u'This executable was created with pyinstaller'),
-        StringStruct(u'CompanyName', u'JFrog                                                       '),
-        StringStruct(u'FileDescription', u'Conan C, C++ Open Source Package Manager                '),
-        StringStruct(u'FileVersion', u'{version}               '),
-        StringStruct(u'LegalCopyright', u'Copyright 2018 JFrog                                     '),
-        StringStruct(u'ProductName', u'Conan                                                       '),
-        StringStruct(u'ProductVersion', u'{version}                                            ')])
+        StringStruct(u'CompanyName', u'JFrog'),
+        StringStruct(u'FileDescription', u'Conan C, C++ Open Source Package Manager'),
+        StringStruct(u'FileVersion', u'{version}'),
+        StringStruct(u'LegalCopyright', u'Copyright 2018 JFrog'),
+        StringStruct(u'ProductName', u'Conan'),
+        StringStruct(u'ProductVersion', u'{version}')])
       ]),
     VarFileInfo([VarStruct(u'Translation', [0, 1200])])
   ]
 )"""
+    if "-" in version:
+        version, _ = version.split("-")
     version_tuple = tuple([int(v) for v in version.split(".")] + [0])
     return template.format(version=version, version_tuple=version_tuple)
 
