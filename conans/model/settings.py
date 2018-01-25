@@ -315,11 +315,18 @@ class Settings(object):
         assert isinstance(vals, Values)
         self.values_list = vals.as_list()
 
-    def constraint(self, constraint_def):
+    def constraint(self, constraint_def, raise_missing_value=True):
         """ allows to restrict a given Settings object with the input of another Settings object
         1. The other Settings object MUST be exclusively a subset of the former.
            No additions allowed
         2. If the other defines {"compiler": None} means to keep the full specification
+
+        :param raise_missing_value:
+
+                When True: will raise when a value for a declared setting is not defined
+                When False: will remove the setting if it has not a value for it
+                            (local methods reading from a conaninfo.txt with already removed settings)
+
         """
         if isinstance(constraint_def, (list, tuple, set)):
             constraint_def = {str(k): None for k in constraint_def or []}
@@ -355,7 +362,10 @@ class Settings(object):
         # Sanity check for input constraint wrong fields
         for field in constraint_def:
             if field not in self._data:
-                raise undefined_field(self._name, field, self.fields)
+                if raise_missing_value:
+                    raise undefined_field(self._name, field, self.fields)
+                else:
+                    fields_to_remove.append(field)
 
         # remove settings not defined in the constraint
         self.remove(fields_to_remove)
