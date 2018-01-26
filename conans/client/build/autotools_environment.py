@@ -174,12 +174,12 @@ class AutoToolsBuildEnvironment(object):
             path = unix_path(path, path_flavor=self.subsystem)
         return '"%s"' % path if " " in path else path
 
-    def make(self, args="", make_program=None):
+    def make(self, args="", make_program=None, target=None):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(self.vars):
             str_args = args_to_string(args)
             cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
-            self._conanfile.run("%s" % join_arguments([make_program, str_args, cpu_count_option]),
+            self._conanfile.run("%s" % join_arguments([make_program, target, str_args, cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)
 
     @property
