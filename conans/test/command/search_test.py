@@ -139,6 +139,26 @@ class SearchTest(unittest.TestCase):
                           },
                          self.client.paths.store)
 
+    def recipe_search_all_test(self):
+        os.rmdir(self.servers["local"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["local"].paths.store)
+        os.rmdir(self.servers["search_able"].paths.store)
+        shutil.copytree(self.client.paths.store, self.servers["search_able"].paths.store)
+        self.client.run("search Hello* -r=all")
+
+        def check():
+            for remote in ("local", "search_able"):
+                expected = """Remote '{}':
+Hello/1.4.10@fenix/testing
+Hello/1.4.11@fenix/testing
+Hello/1.4.12@fenix/testing
+helloTest/1.4.10@fenix/stable""".format(remote)
+                self.assertIn(expected, self.client.out)
+
+        check()
+        self.client.run("search Hello* -r=all --raw")
+        check()
+
     def recipe_search_test(self):
         self.client.run("search Hello*")
         self.assertEquals("Existing package recipes:\n\n"
