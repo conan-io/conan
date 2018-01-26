@@ -6,6 +6,7 @@ from conans.model.ref import PackageReference, ConanFileReference
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.proxy import ConanProxy
+from conans.search.search import DiskSearchManager
 
 
 def _is_a_reference(ref):
@@ -19,11 +20,11 @@ def _is_a_reference(ref):
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, search_manager, remote):
+    def __init__(self, client_cache, user_io, remote_manager, remote):
         self._client_cache = client_cache
         self._user_io = user_io
         self._remote_proxy = ConanProxy(self._client_cache, self._user_io, remote_manager, remote)
-        self._search_manager = search_manager
+        self._cache_search = DiskSearchManager(self._client_cache)
 
     def upload(self, conan_reference_or_pattern, package_id=None, all_packages=None,
                force=False, confirm=False, retry=0, retry_wait=0, skip_upload=False,
@@ -59,7 +60,7 @@ class CmdUpload(object):
             references = [ref, ]
             confirm = True
         else:
-            references = self._search_manager.search(pattern)
+            references = self._cache_search.search_recipes(pattern)
 
         if not references:
             raise NotFoundException("No packages found matching pattern '%s'" % pattern)
