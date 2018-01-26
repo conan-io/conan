@@ -52,7 +52,8 @@ class _ConanPackageBuilder(object):
                                                      self._conan_file.short_paths)
 
     def prepare_build(self):
-        if os.path.exists(self.build_folder) and hasattr(self._conan_file, "build_id"):
+        if self.build_reference != self._package_reference and \
+              os.path.exists(self.build_folder) and hasattr(self._conan_file, "build_id"):
             self._skip_build = True
             return
 
