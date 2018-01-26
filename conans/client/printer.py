@@ -247,7 +247,7 @@ class Printer(object):
         text = text.strip()
         if not text:
             return
-        
+
         text_color = Printer.INDENT_COLOR.get(indent, Color.BRIGHT_WHITE) if not color else color
         indent_text = ' ' * Printer.INDENT_SPACES * indent
         if value is not None:
