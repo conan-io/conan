@@ -300,7 +300,7 @@ class ConanManager(object):
     def install(self, reference, install_folder, profile, remote=None, build_modes=None,
                 update=False, manifest_folder=None, manifest_verify=False,
                 manifest_interactive=False, generators=None, no_imports=False, inject_require=None,
-                install_reference=False):
+                install_reference=False, keep_build=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
         @param install_folder: where the output files will be saved
@@ -365,7 +365,7 @@ class ConanManager(object):
         if not isinstance(reference, ConanFileReference):
             build_requires.install("", conanfile, installer, profile.build_requires)
 
-        installer.install(deps_graph, profile.build_requires)
+        installer.install(deps_graph, profile.build_requires, keep_build)
         build_mode.report_matches()
 
         if install_folder:
