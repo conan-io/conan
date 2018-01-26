@@ -1,6 +1,6 @@
 import fnmatch
 import os
-from collections import OrderedDict, Counter
+from collections import Counter
 
 from conans.client import packager
 from conans.client.build_requires import BuildRequires
@@ -28,7 +28,6 @@ from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO
-from conans.search.search import filter_outdated
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 
@@ -153,7 +152,7 @@ class ConanManager(object):
 
     def export(self, conanfile_path, name, version, user, channel,  keep_source=False):
         cmd_export(conanfile_path, name, version, user, channel, keep_source,
-                   self._user_io.out, self._search_manager, self._client_cache)
+                   self._user_io.out, self._client_cache)
 
     def export_pkg(self, reference, source_folder, build_folder, install_folder, profile, force):
 
@@ -198,7 +197,7 @@ class ConanManager(object):
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     install_folder, package_output, local=True)
 
-    def download(self, reference, package_ids, remote=None):
+    def download(self, reference, package_ids, remote):
         """ Download conanfile and specified packages to local repository
         @param reference: ConanFileReference
         @param package_ids: Package ids or empty for download all
@@ -206,8 +205,8 @@ class ConanManager(object):
         """
         assert(isinstance(reference, ConanFileReference))
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-
-        package = remote_proxy.search(reference, None)
+        remote, _ = remote_proxy._get_remote()
+        package = self._remote_manager.search_recipes(remote, reference, None)
         if not package:  # Search the reference first, and raise if it doesn't exist
             raise ConanException("'%s' not found in remote" % str(reference))
 
@@ -219,7 +218,7 @@ class ConanManager(object):
         else:
             self._user_io.out.info("Getting the complete package list "
                                    "from '%s'..." % str(reference))
-            packages_props = remote_proxy.search_packages(reference, None)
+            packages_props = self._remote_manager.search_packages(remote, reference, None)
             if not packages_props:
                 output = ScopedOutput(str(reference), self._user_io.out)
                 output.warn("No remote binary packages found in remote")
@@ -484,46 +483,6 @@ class ConanManager(object):
             trace = traceback.format_exc().split('\n')
             raise ConanException("Unable to build it successfully\n%s" % '\n'.join(trace[3:]))
 
-    def _get_search_adapter(self, remote):
-        if remote:
-            remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-            adapter = remote_proxy
-        else:
-            adapter = self._search_manager
-
-        return adapter
-
-    def search_recipes(self, pattern, remote, ignorecase):
-        references = self._get_search_adapter(remote).search(pattern, ignorecase)
-        return references
-
-    def search_packages(self, reference=None, remote=None, packages_query=None, outdated=False):
-        """ Return the single information saved in conan.vars about all the packages
-            or the packages which match with a pattern
-
-            Attributes:
-                pattern = string to match packages
-                remote = search on another origin to get packages info
-                packages_pattern = String query with binary
-                                   packages properties: "arch=x86 AND os=Windows"
-        """
-        packages_props = self._get_search_adapter(remote).search_packages(reference, packages_query)
-        ordered_packages = OrderedDict(sorted(packages_props.items()))
-        if remote:
-            remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-            remote = remote_proxy.registry.remote(remote)
-            manifest = self._remote_manager.get_conan_digest(reference, remote)
-            recipe_hash = manifest.summary_hash
-        else:
-            try:
-                recipe_hash = self._client_cache.load_manifest(reference).summary_hash
-            except IOError:  # It could not exist in local
-                recipe_hash = None
-        if outdated and recipe_hash:
-            ordered_packages = filter_outdated(ordered_packages, recipe_hash)
-
-        return ordered_packages, reference, recipe_hash, packages_query
-
     def remove(self, pattern, src=False, build_ids=None, package_ids_filter=None, force=False,
                remote=None, packages_query=None, outdated=False):
         """ Remove conans and/or packages
@@ -536,9 +495,8 @@ class ConanManager(object):
         @param packages_query: Only if src is a reference. Query settings and options
         """
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-        remover = ConanRemover(self._client_cache, self._search_manager, self._user_io,
-                               remote_proxy)
-        remover.remove(pattern, src, build_ids, package_ids_filter, force=force,
+        remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, remote_proxy)
+        remover.remove(pattern, remote, src, build_ids, package_ids_filter, force=force,
                        packages_query=packages_query, outdated=outdated)
 
     def user(self, remote=None, name=None, password=None):
