@@ -11,9 +11,6 @@ if [[ "$(uname -s)" == 'Darwin' ]]; then
     brew install ninja
     brew install meson
 
-    #for testing gpg sig validation
-    brew install gnupg
-
     if which pyenv > /dev/null; then
         eval "$(pyenv init -)"
     fi
