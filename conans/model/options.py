@@ -58,6 +58,12 @@ class PackageOptionValues(object):
         self._dict = {}  # {option_name: PackageOptionValue}
         self._modified = {}
 
+    def __bool__(self):
+        return bool(self._dict)
+
+    def __nonzero__(self):
+        return self.__bool__()
+
     def __getattr__(self, attr):
         if attr not in self._dict:
             return None
@@ -99,7 +105,7 @@ class PackageOptionValues(object):
     def remove(self, option_name):
         del self._dict[option_name]
 
-    def propagate_upstream(self, down_package_values, down_ref, own_ref, output, package_name):
+    def propagate_upstream(self, down_package_values, down_ref, own_ref, package_name):
         if not down_package_values:
             return
 
@@ -172,8 +178,9 @@ class OptionsValues(object):
             pkg_values.update(package_values)
 
     def scope_options(self, name):
-        self._reqs_options.setdefault(name, PackageOptionValues()).update(self._package_values)
-        self._package_values = PackageOptionValues()
+        if self._package_values:
+            self._reqs_options.setdefault(name, PackageOptionValues()).update(self._package_values)
+            self._package_values = PackageOptionValues()
 
     def descope_options(self, name):
         package_values = self._reqs_options.pop(name, None)
@@ -417,7 +424,7 @@ class PackageOptions(object):
             self._check_field(name)
             self._data[name].value = value
 
-    def propagate_upstream(self, package_values, down_ref, own_ref, output, ignore_unknown=False):
+    def propagate_upstream(self, package_values, down_ref, own_ref, ignore_unknown=False):
         """ ignore_unknown: do not raise Exception if the given option doesn't exist in this package.
                             Useful for pattern defined options like "-o *:shared=True", for packages
                             not defining the "shared" options, they will not fail
@@ -503,25 +510,27 @@ class Options(object):
         for k, v in v._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
-    def propagate_upstream(self, down_package_values, down_ref, own_ref, output):
+    def propagate_upstream(self, down_package_values, down_ref, own_ref):
         """ used to propagate from downstream the options to the upper requirements
         """
         if not down_package_values:
             return
 
         assert isinstance(down_package_values, dict)
-        option_values = down_package_values.get(own_ref.name)
-        self._package_options.propagate_upstream(option_values, down_ref, own_ref, output, ignore_unknown=False)
-        if not option_values:
-            for package_pattern, package_option_values in down_package_values.items():
-                if own_ref.name != package_pattern and fnmatch.fnmatch(own_ref.name, package_pattern):
-                    self._package_options.propagate_upstream(package_option_values, down_ref, own_ref, output,
-                                                             ignore_unknown=True)
+        option_values = PackageOptionValues()
+        for package_pattern, package_option_values in down_package_values.items():
+            if own_ref.name != package_pattern and fnmatch.fnmatch(own_ref.name, package_pattern):
+                option_values.update(package_option_values)
+        down_options = down_package_values.get(own_ref.name)
+        if down_options is not None:
+            option_values.update(down_options)
+
+        self._package_options.propagate_upstream(option_values, down_ref, own_ref, ignore_unknown=False)
 
         for name, option_values in sorted(list(down_package_values.items())):
             if name != own_ref.name:
                 pkg_values = self._deps_package_values.setdefault(name, PackageOptionValues())
-                pkg_values.propagate_upstream(option_values, down_ref, own_ref, output, name)
+                pkg_values.propagate_upstream(option_values, down_ref, own_ref, name)
 
     def initialize_upstream(self, user_values):
         """ used to propagate from downstream the options to the upper requirements
