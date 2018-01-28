@@ -89,7 +89,7 @@ class OptionsTest(unittest.TestCase):
         down_ref = ConanFileReference.loads("Hello0/0.1@diego/testing")
         own_ref = ConanFileReference.loads("Hello1/0.1@diego/testing")
         output = TestBufferConanOutput()
-        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "4"),
                                                      ("path", "NOTDEF"),
                                                      ("static", "False"),
@@ -114,7 +114,7 @@ class OptionsTest(unittest.TestCase):
 
         with self.assertRaisesRegexp(ConanException, "Hello2/0.1@diego/testing tried to change "
                                      "Hello1/0.1@diego/testing option optimized to 2"):
-            self.sut.propagate_upstream(options2, down_ref, own_ref, output)
+            self.sut.propagate_upstream(options2, down_ref, own_ref)
 
         self.assertEqual(self.sut.values.dumps(),
                          """optimized=4
@@ -134,7 +134,7 @@ Poco:deps_bundled=True""")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
         output = TestBufferConanOutput()
-        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "FuzzBuzz"),
                                                      ("static", "False"),
@@ -154,7 +154,7 @@ Poco:deps_bundled=True""")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
         output = TestBufferConanOutput()
-        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "2"),
                                                      ("path", "FuzzBuzz"),
                                                      ("static", "False"),
@@ -175,7 +175,7 @@ Poco:deps_bundled=True""")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
         output = TestBufferConanOutput()
         with self.assertRaises(ConanException):
-            self.sut.propagate_upstream(options, down_ref, own_ref, output)
+            self.sut.propagate_upstream(options, down_ref, own_ref)
 
     def all_positive_test(self):
         boost_values = PackageOptionValues()
@@ -186,7 +186,7 @@ Poco:deps_bundled=True""")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
         output = TestBufferConanOutput()
-        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "FuzzBuzz"),
                                                      ("static", "False"),
@@ -202,7 +202,7 @@ Poco:deps_bundled=True""")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         output = TestBufferConanOutput()
-        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "NOTDEF"),
                                                      ("static", "True"),
@@ -217,7 +217,7 @@ Poco:deps_bundled=True""")
         down_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         output = TestBufferConanOutput()
-        self.sut.propagate_upstream(options, down_ref, own_ref, output)
+        self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "NOTDEF"),
                                                      ("static", "True"),
