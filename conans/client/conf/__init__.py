@@ -14,7 +14,7 @@ MIN_SERVER_COMPATIBLE_VERSION = '0.12.0'
 default_settings_yml = """
 # Only for cross building, 'os_build/arch_build' is the system that runs Conan
 os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
-arch_build: [x86, x86_64]
+arch_build: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
 
 # Only for building cross compilation tools, 'os_target/arch_target' is the system for
 # which the tools generate code
