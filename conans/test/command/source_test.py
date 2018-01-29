@@ -1,5 +1,4 @@
 import unittest
-from conans.errors import ConanException
 from conans.paths import CONANFILE, BUILD_INFO
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
@@ -7,6 +6,17 @@ import os
 
 
 class SourceTest(unittest.TestCase):
+
+    def source_warning_os_build_test(self):
+        # https://github.com/conan-io/conan/issues/2368
+        conanfile = '''from conans import ConanFile
+class ConanLib(ConanFile):
+    pass
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("source .")
+        self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
 
     def source_reference_test(self):
         client = TestClient()
@@ -122,7 +132,7 @@ class ConanLib(ConanFile):
         self.output.info("MYVAR=%s" % self.deps_env_info["Hello"].MYVAR)
         self.output.info("OTHERVAR=%s" % self.deps_user_info["Hello"].OTHERVAR)
         self.output.info("CURDIR=%s" % os.getcwd())
-        
+
 '''
         # First, failing source()
         client.save({CONANFILE: conanfile}, clean_first=True)
