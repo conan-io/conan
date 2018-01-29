@@ -1,12 +1,13 @@
+import glob
 import json
 import os
 import platform
+import re
 
 import subprocess
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.files import unix_path, MSYS2, WSL
 from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
 from conans.util.files import decode_text
@@ -277,7 +278,7 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
     if filter_known_paths:
         def relevant_path(path):
             path = path.replace("\\", "/").lower()
-            keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/"
+            keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/", "system32", "windows"
             return any(word in path for word in keywords)
 
         path = new_env.get("PATH", "").split(";")
@@ -303,6 +304,56 @@ def escape_windows_cmd(command):
     """
     quoted_arg = subprocess.list2cmdline([command])
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
+
+
+def get_cased_path(name):
+    if platform.system() != "Windows":
+        return name
+    if not os.path.isabs(name):
+        name = os.path.abspath(name)
+    dirs = name.split('\\')
+    # disk letter
+    test_name = [dirs[0].upper()]
+    for d in dirs[1:]:
+        test_name += ["%s[%s]" % (d[:-1], d[-1])]  # This brackets do the trick to match cased
+
+    res = glob.glob('\\'.join(test_name))
+    if not res:
+        # File not found
+        return None
+    return res[0]
+
+MSYS2 = 'msys2'
+MSYS = 'msys'
+CYGWIN = 'cygwin'
+WSL = 'wsl'  # Windows Subsystem for Linux
+SFU = 'sfu'  # Windows Services for UNIX
+
+
+def unix_path(path, path_flavor=None):
+    """"Used to translate windows paths to MSYS unix paths like
+    c/users/path/to/file. Not working in a regular console or MinGW!"""
+    if not path:
+        return None
+    from conans.client.tools.oss import os_info
+
+    if os.path.exists(path):
+        path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
+
+    path_flavor = path_flavor or os_info.detect_windows_subsystem() or MSYS2
+    path = path.replace(":/", ":\\")
+    pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
+    path = pattern.sub('/\\1/', path).replace('\\', '/')
+    if path_flavor in (MSYS, MSYS2):
+        return path.lower()
+    elif path_flavor == CYGWIN:
+        return '/cygdrive' + path.lower()
+    elif path_flavor == WSL:
+        return '/mnt' + path[0:2].lower() + path[2:]
+    elif path_flavor == SFU:
+        path = path.lower()
+        return '/dev/fs' + path[0] + path[1:].capitalize()
+    return None
 
 
 def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None):
@@ -350,8 +401,11 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
             cwd = os.path.join(os.getcwd(), cwd)
+
         curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
-        wincmd = '%s --login -c %s' % (os_info.bash_path(), escape_windows_cmd(to_run))
+        bash_path = os_info.bash_path()
+        bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
+        wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         return conanfile.run(wincmd, win_bash=False)
