@@ -447,7 +447,7 @@ class PackageOptions(object):
                                      "but it was already assigned to %s by %s"
                                      % (down_ref, own_ref, name, value, modified_value, modified_ref))
             else:
-                if name in pattern_options:
+                if name in pattern_options:  # If it is a pattern-matched option, should check field
                     if name in self._data:
                         self._data[name].value = value
                         self._modified[name] = (value, down_ref)
@@ -521,16 +521,21 @@ class Options(object):
 
         assert isinstance(down_package_values, dict)
         option_values = PackageOptionValues()
+        # First step is to accumulate all matching patterns, in sorted()=alphabetical order
+        # except the exact match
         for package_pattern, package_option_values in down_package_values.items():
             if own_ref.name != package_pattern and fnmatch.fnmatch(own_ref.name, package_pattern):
                 option_values.update(package_option_values)
+        # These are pattern options, shouldn't rais if not existing
         pattern_options = option_values.keys()
+        # Now, update with the exact match, that has higher priority
         down_options = down_package_values.get(own_ref.name)
         if down_options is not None:
             option_values.update(down_options)
 
         self._package_options.propagate_upstream(option_values, down_ref, own_ref, pattern_options=pattern_options)
 
+        # Upstream propagation to deps
         for name, option_values in sorted(list(down_package_values.items())):
             if name != own_ref.name:
                 pkg_values = self._deps_package_values.setdefault(name, PackageOptionValues())
