@@ -2,7 +2,6 @@ import unittest
 from conans.model.options import OptionsValues, PackageOptions, Options, PackageOptionValues,\
     option_undefined_msg
 from conans.model.ref import ConanFileReference
-from conans.test.utils.tools import TestBufferConanOutput
 from conans.errors import ConanException
 
 
@@ -88,7 +87,6 @@ class OptionsTest(unittest.TestCase):
                    "Hello1": hello1_values}
         down_ref = ConanFileReference.loads("Hello0/0.1@diego/testing")
         own_ref = ConanFileReference.loads("Hello1/0.1@diego/testing")
-        output = TestBufferConanOutput()
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "4"),
                                                      ("path", "NOTDEF"),
@@ -133,7 +131,6 @@ Poco:deps_bundled=True""")
         options = {"Boost.*": boost_values}
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
-        output = TestBufferConanOutput()
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "FuzzBuzz"),
@@ -153,7 +150,6 @@ Poco:deps_bundled=True""")
                    "*": boost_values2}
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
-        output = TestBufferConanOutput()
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "2"),
                                                      ("path", "FuzzBuzz"),
@@ -173,9 +169,12 @@ Poco:deps_bundled=True""")
                    "*": boost_values2}
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
-        output = TestBufferConanOutput()
-        with self.assertRaises(ConanException):
-            self.sut.propagate_upstream(options, down_ref, own_ref)
+        self.sut.propagate_upstream(options, down_ref, own_ref)
+        self.assertEqual(self.sut.values.as_list(), [('optimized', '2'),
+                                                     ('path', 'NOTDEF'),
+                                                     ('static', 'True'),
+                                                     ('*:optimized', '2'),
+                                                     ('Boost.*:optimized', '4')])
 
     def all_positive_test(self):
         boost_values = PackageOptionValues()
@@ -185,7 +184,6 @@ Poco:deps_bundled=True""")
         options = {"*": boost_values}
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
-        output = TestBufferConanOutput()
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "FuzzBuzz"),
@@ -201,7 +199,6 @@ Poco:deps_bundled=True""")
         options = {"Boost.*": boost_values}
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
-        output = TestBufferConanOutput()
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "NOTDEF"),
@@ -216,7 +213,6 @@ Poco:deps_bundled=True""")
         options = {"OpenSSL.*": boost_values}
         down_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
-        output = TestBufferConanOutput()
         self.sut.propagate_upstream(options, down_ref, own_ref)
         self.assertEqual(self.sut.values.as_list(), [("optimized", "3"),
                                                      ("path", "NOTDEF"),
