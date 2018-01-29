@@ -1,4 +1,4 @@
-from conans.errors import ConanException, ConanConnectionError
+from conans.errors import ConanException, ConanConnectionError, NotFoundException
 from conans.util.log import logger
 import traceback
 from conans.util.files import save, sha1sum, exception_message_safe, to_file_bytes, mkdir
@@ -132,7 +132,9 @@ class Downloader(object):
         ret = bytearray()
         response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth, headers)
         if not response.ok:  # Do not retry if not found or whatever controlled error
-            raise ConanException("Error %d downloading file %s" % (response.status_code, url))
+            if response.status_code == 404:
+                raise NotFoundException("Not found: %s" % url)
+            raise RemoteServerException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
             total_length = response.headers.get('content-length')
