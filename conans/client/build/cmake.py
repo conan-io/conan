@@ -347,7 +347,7 @@ class CMake(object):
             args = ["--target", target] + args
 
         if self.parallel:
-            if "Makefiles" in self.generator:
+            if "Makefiles" in self.generator and "NMake" not in self.generator:
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count())

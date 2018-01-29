@@ -500,7 +500,7 @@ build_type: [ Release]
         cmake.generator = "NMake Makefiles"
         cmake.test()
         self.assertEqual('cmake --build '
-                         '%s' % CMakeTest.scape('. --target test -- -j%i' % cpu_count()),
+                         '%s' % CMakeTest.scape('. --target test'),
                          conan_file.command)
 
     def test_clean_sh_path(self):
