@@ -1107,8 +1107,6 @@ class Command(object):
             errors = exc.code
         except ConanException as exc:
             errors = True
-            import traceback
-            print(traceback.format_exc())
             msg = exception_message_safe(exc)
             self._user_io.out.error(msg)
         except Exception as exc:
