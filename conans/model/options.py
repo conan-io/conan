@@ -527,13 +527,14 @@ class Options(object):
         option_values = PackageOptionValues()
         # First step is to accumulate all matching patterns, in sorted()=alphabetical order
         # except the exact match
-        down_options = down_package_values.pop(own_ref.name, None)
+
         for package_pattern, package_option_values in sorted(down_package_values.items()):
-            if fnmatch.fnmatch(own_ref.name, package_pattern):
+            if own_ref.name != package_pattern and fnmatch.fnmatch(own_ref.name, package_pattern):
                 option_values.update(package_option_values)
         # These are pattern options, shouldn't raise if not existing
         pattern_options = list(option_values.keys())
         # Now, update with the exact match, that has higher priority
+        down_options = down_package_values.get(own_ref.name)
         if down_options is not None:
             option_values.update(down_options)
 
