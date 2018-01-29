@@ -1,8 +1,12 @@
+import os
 import unittest
 
 from conans.client.profile_loader import _load_profile
 from conans.model.profile import Profile
 from collections import OrderedDict
+
+from conans.test.utils.test_files import temp_folder
+from conans.util.files import save
 
 
 class ProfileTest(unittest.TestCase):
@@ -20,6 +24,14 @@ os=Windows
         self.assertEquals(new_profile.settings,
                           OrderedDict([("os", "Windows"), ("OTHER", "2"),
                                        ("compiler", "2"), ("compiler.version", "3")]))
+
+    def env_vars_test_inheritance(self):
+        tmp_dir = temp_folder()
+        p1 = '''[env]\nVAR=1'''
+        p2 = '''include(p1)\n[env]\nVAR=2'''
+        save(os.path.join(tmp_dir, "p1"), p1)
+        new_profile, _ = _load_profile(p2, tmp_dir, tmp_dir)
+        self.assertEquals(new_profile.env_values.data[None]["VAR"], "2")
 
     def profile_subsettings_update_test(self):
         prof = '''[settings]
@@ -91,7 +103,8 @@ zlib:compiler=gcc
 
         profile.update_settings(OrderedDict([("compiler.version", "14")]))
 
-        self.assertEqual('[build_requires]\n[settings]\narch=x86_64\ncompiler=Visual Studio\ncompiler.version=14\n'
+        self.assertEqual('[build_requires]\n[settings]\narch=x86_64\ncompiler=Visual Studio'
+                         '\ncompiler.version=14\n'
                          '[options]\n'
                          '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())
