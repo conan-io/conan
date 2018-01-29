@@ -12,7 +12,7 @@ class PackageTester(object):
 
     def install_build_and_test(self, conanfile_abs_path, reference, profile,
                                remote, update, build_modes=None, manifest_folder=None,
-                               manifest_verify=False, manifest_interactive=False,):
+                               manifest_verify=False, manifest_interactive=False, keep_build=False):
         """
         Installs the reference (specified by the parameters or extracted from the test conanfile)
         and builds the test_package/conanfile.py running the test() method.
@@ -31,7 +31,8 @@ class PackageTester(object):
                               build_modes=build_modes,
                               manifest_folder=manifest_folder,
                               manifest_verify=manifest_verify,
-                              manifest_interactive=manifest_interactive)
+                              manifest_interactive=manifest_interactive,
+                              keep_build=keep_build)
         self._manager.build(conanfile_abs_path, base_folder, build_folder, package_folder=None,
                             install_folder=build_folder, test=str(reference))
 
