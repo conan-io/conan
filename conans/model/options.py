@@ -453,7 +453,7 @@ class PackageOptions(object):
                         self._data[name].value = value
                         self._modified[name] = (value, down_ref)
                 else:
-                    self._check_field(name)
+                    self._ensure_exists(name)
                     self._data[name].value = value
                     self._modified[name] = (value, down_ref)
 
