@@ -33,7 +33,7 @@ class Printer(object):
             if not ref:
                 continue
             remote = registry.get_ref(ref)
-            from_text = "from local" if not remote else "from %s" % remote.name
+            from_text = "from local cache" if not remote else "from '%s'" % remote.name
             self._out.writeln("    %s %s" % (repr(ref), from_text), Color.BRIGHT_CYAN)
         self._out.writeln("Packages", Color.BRIGHT_YELLOW)
         for node in sorted(deps_graph.nodes):
@@ -173,16 +173,28 @@ class Printer(object):
         """
         if not references and not raw:
             warn_msg = "There are no packages"
-            pattern_msg = " matching the %s pattern" % pattern
+            pattern_msg = " matching the '%s' pattern" % pattern
             self._out.info(warn_msg + pattern_msg if pattern else warn_msg)
             return
 
         if not raw:
             self._out.info("Existing package recipes:\n")
-            for conan_ref in sorted(references):
-                self._print_colored_line(str(conan_ref), indent=0)
+            if isinstance(references, dict):
+                for remote, refs in references.items():
+                    self._out.highlight("Remote '%s':" % str(remote))
+                    for conan_ref in sorted(refs):
+                        self._print_colored_line(str(conan_ref), indent=0)
+            else:
+                for conan_ref in sorted(references):
+                    self._print_colored_line(str(conan_ref), indent=0)
         else:
-            self._out.writeln("\n".join([str(ref) for ref in references]))
+            if isinstance(references, dict):
+                for remote, refs in references.items():
+                    self._out.writeln("Remote '%s':" % str(remote))
+                    for conan_ref in sorted(refs):
+                        self._out.writeln(str(conan_ref))
+            else:
+                self._out.writeln("\n".join([str(ref) for ref in references]))
 
     def print_search_packages(self, packages_props, reference, recipe_hash, packages_query):
         if not packages_props:
@@ -214,7 +226,7 @@ class Printer(object):
             # Always compare outdated with local recipe, simplification,
             # if a remote check is needed install recipe first
             if recipe_hash:
-                self._print_colored_line("outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
+                self._print_colored_line("Outdated from recipe: %s" % (recipe_hash != package_recipe_hash), indent=2)
             self._out.writeln("")
 
     def print_profile(self, name, profile):
