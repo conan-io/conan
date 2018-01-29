@@ -29,6 +29,17 @@ class Pkg(ConanFile):
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("PATCH: this is my patch", client.out)
 
+    def source_warning_os_build_test(self):
+        # https://github.com/conan-io/conan/issues/2368
+        conanfile = '''from conans import ConanFile
+class ConanLib(ConanFile):
+    pass
+'''
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("source .")
+        self.assertNotIn("This package defines both 'os' and 'os_build'", client.out)
+
     def source_reference_test(self):
         client = TestClient()
         error = client.run("source lib/1.0@conan/stable", ignore_error=True)
@@ -143,6 +154,7 @@ class ConanLib(ConanFile):
         self.output.info("MYVAR=%s" % self.deps_env_info["Hello"].MYVAR)
         self.output.info("OTHERVAR=%s" % self.deps_user_info["Hello"].OTHERVAR)
         self.output.info("CURDIR=%s" % os.getcwd())
+
 '''
         # First, failing source()
         client.save({CONANFILE: conanfile}, clean_first=True)
