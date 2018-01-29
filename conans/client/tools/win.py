@@ -93,8 +93,8 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     requires = list() if requires is None else requires
 
     if legacy and (products or requires):
-        raise ConanException("The \"legacy\" parameter cannot be specified with either the "
-                             "\"products\" or \"requires\" parameter")
+        raise ConanException("The 'legacy' parameter cannot be specified with either the "
+                             "'products' or 'requires' parameter")
 
     program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
 
@@ -123,9 +123,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     if requires:
         arguments.append("-requires")
-
-        for require in requires:
-            arguments.append(require)
+        arguments.extend(requires)
 
     if len(version) is not 0:
         arguments.append("-version")
@@ -140,6 +138,8 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     if format_ in ["json", "text", "value", "xml"]:
         arguments.append("-format")
         arguments.append(format_)
+    else:
+        raise ConanException("vswhere error: Unsupported format: %s" % format_)
 
     if len(property_) is not 0:
         arguments.append("-property")
