@@ -447,7 +447,7 @@ compiler:
 
         # Not found error
         self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
-        with self.assertRaisesRegexp(ConanException, "Error 404 downloading file"):
+        with self.assertRaisesRegexp(ConanException, "Not found: "):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            retry=3, retry_wait=0)
