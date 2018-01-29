@@ -531,7 +531,7 @@ class Options(object):
             if own_ref.name != package_pattern and fnmatch.fnmatch(own_ref.name, package_pattern):
                 option_values.update(package_option_values)
         # These are pattern options, shouldn't rais if not existing
-        pattern_options = option_values.keys()
+        pattern_options = list(option_values.keys())
         # Now, update with the exact match, that has higher priority
         down_options = down_package_values.get(own_ref.name)
         if down_options is not None:
