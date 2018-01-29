@@ -29,6 +29,7 @@ class DepsCppTXT(object):
         self.bin_paths = "\n".join(p.replace("\\", "/")
                                    for p in cpp_info.bin_paths)
         self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
+        self.sysroot = cpp_info.sysroot
 
 
 class TXTGenerator(Generator):
@@ -105,8 +106,9 @@ class TXTGenerator(Generator):
                 if len(tokens) == 2:
                     dep = tokens[1]
                     dep_cpp_info = result._dependencies.setdefault(dep, CppInfo(root_folder=""))
-                    if field == "rootpath":
+                    if field == "rootpath" or field == "sysroot":
                         lines = lines[0]
+                        print "LINES ", lines
                     item_to_apply = dep_cpp_info
                 else:
                     item_to_apply = result
@@ -133,7 +135,8 @@ class TXTGenerator(Generator):
                     '[cppflags{dep}{config}]\n{deps.cppflags}\n\n'
                     '[cflags{dep}{config}]\n{deps.cflags}\n\n'
                     '[sharedlinkflags{dep}{config}]\n{deps.sharedlinkflags}\n\n'
-                    '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n')
+                    '[exelinkflags{dep}{config}]\n{deps.exelinkflags}\n\n'
+                    '[sysroot{dep}{config}]\n{deps.sysroot}\n\n')
 
         sections = []
         deps = DepsCppTXT(self.deps_build_info)
