@@ -380,25 +380,25 @@ class PackageOptions(object):
     def clear(self):
         self._data = {}
 
-    def _check_field(self, field):
+    def _ensure_exists(self, field):
         if field not in self._data:
             raise ConanException(option_not_exist_msg(field, list(self._data.keys())))
 
     def __getattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        self._check_field(field)
+        self._ensure_exists(field)
         return self._data[field]
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        self._check_field(field)
+        self._ensure_exists(field)
         del self._data[field]
 
     def __setattr__(self, field, value):
         if field[0] == "_" or field.startswith("values"):
             return super(PackageOptions, self).__setattr__(field, value)
 
-        self._check_field(field)
+        self._ensure_exists(field)
         self._data[field].value = value
 
     @property
@@ -424,13 +424,14 @@ class PackageOptions(object):
     def values(self, vals):
         assert isinstance(vals, PackageOptionValues)
         for (name, value) in vals.items():
-            self._check_field(name)
+            self._ensure_exists(name)
             self._data[name].value = value
 
     def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
-        """ ignore_unknown: do not raise Exception if the given option doesn't exist in this package.
-                            Useful for pattern defined options like "-o *:shared=True", for packages
-                            not defining the "shared" options, they will not fail
+        """
+        :param: package_values: PackageOptionValues({"shared": "True"}
+        :param: pattern_options: Keys from the "package_values" e.j ["shared"] that shouldn't raise
+                                 if they are not existing options for the current object
         """
         if not package_values:
             return
@@ -515,6 +516,9 @@ class Options(object):
 
     def propagate_upstream(self, down_package_values, down_ref, own_ref):
         """ used to propagate from downstream the options to the upper requirements
+        :param: down_package_values => {"*": PackageOptionValues({"shared": "True"})}
+        :param: down_ref
+        :param: own_ref: Reference of the current package => ConanFileReference
         """
         if not down_package_values:
             return
@@ -533,7 +537,8 @@ class Options(object):
         if down_options is not None:
             option_values.update(down_options)
 
-        self._package_options.propagate_upstream(option_values, down_ref, own_ref, pattern_options=pattern_options)
+        self._package_options.propagate_upstream(option_values, down_ref, own_ref,
+                                                 pattern_options=pattern_options)
 
         # Upstream propagation to deps
         for name, option_values in sorted(list(down_package_values.items())):
