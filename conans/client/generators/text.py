@@ -29,7 +29,7 @@ class DepsCppTXT(object):
         self.bin_paths = "\n".join(p.replace("\\", "/")
                                    for p in cpp_info.bin_paths)
         self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
-        self.sysroot = cpp_info.sysroot
+        self.sysroot = "%s" % cpp_info.sysroot.replace("\\", "/") if cpp_info.sysroot else ""
 
 
 class TXTGenerator(Generator):
@@ -106,11 +106,12 @@ class TXTGenerator(Generator):
                 if len(tokens) == 2:
                     dep = tokens[1]
                     dep_cpp_info = result._dependencies.setdefault(dep, CppInfo(root_folder=""))
-                    if field == "rootpath" or field == "sysroot":
+                    if field in ["rootpath", "sysroot"]:
                         lines = lines[0]
-                        print "LINES ", lines
                     item_to_apply = dep_cpp_info
                 else:
+                    if field == "sysroot":
+                        lines = lines[0]
                     item_to_apply = result
                 if config:
                     config_deps = getattr(item_to_apply, config)
@@ -148,6 +149,7 @@ class TXTGenerator(Generator):
             all_flags = template.format(dep="", deps=deps, config=":" + config)
             sections.append(all_flags)
 
+        # Makes no sense to have an accumulated rootpath
         template_deps = template + '[rootpath{dep}]\n{deps.rootpath}\n\n'
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
