@@ -118,16 +118,34 @@ class HelloConan(ConanFile):
         self.assertEquals(os.getenv("Z", None), None)
 
     def system_package_tool_fail_when_not_0_returned_test(self):
+        def get_update_command_for_linux():
+            """
+            Returns package manager update command line executed by conan in current Linux
+            distribution
+
+            :return: string with command line literal
+            """
+            os_info = OSInfo()
+            if os_info.with_apt:
+                return "sudo apt-get update"
+            elif os_info.with_yum:
+                return "sudo yum check-update"
+            elif os_info.with_zypper:
+                return "sudo zypper --non-interactive ref"
+            elif os_info.with_pacman:
+                return "sudo pacman -Syyu --noconfirm"
+
+        platform_update_error_msg = {
+            "Linux": "Command '{0}' failed".format(get_update_command_for_linux()),
+            "Darwin": "Command 'brew update' failed",
+            "Windows": "Command 'choco outdated' failed",
+        }
+
         runner = RunnerMock(return_ok=False)
         spt = SystemPackageTool(runner=runner)
-        platforms = {"Linux": "sudo apt-get update", "Darwin": "brew update"}
-        if platform.system() in platforms:
-            msg = "Command '%s' failed" % platforms[platform.system()]
+        if platform.system() in  platform_update_error_msg:
+            msg =  platform_update_error_msg[platform.system()]
             with self.assertRaisesRegexp(ConanException, msg):
-                spt.update()
-        elif platform.system() == "Windows" and which("choco.exe"):
-            spt = SystemPackageTool(runner=runner, tool=ChocolateyTool())
-            with self.assertRaisesRegexp(ConanException, "Command 'choco outdated' failed"):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
