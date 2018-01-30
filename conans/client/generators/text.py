@@ -84,7 +84,6 @@ class TXTGenerator(Generator):
     def _loads_cpp_info(text):
         pattern = re.compile(r"^\[([a-zA-Z0-9._:-]+)\]([^\[]+)", re.MULTILINE)
         result = DepsCppInfo()
-        not_list_fields = ["rootpath", "sysroot"]
 
         try:
             for m in pattern.finditer(text):
@@ -107,11 +106,11 @@ class TXTGenerator(Generator):
                 if len(tokens) == 2:
                     dep = tokens[1]
                     dep_cpp_info = result._dependencies.setdefault(dep, CppInfo(root_folder=""))
-                    if field in not_list_fields:
+                    if field in ["rootpath", "sysroot"]:
                         lines = lines[0]
                     item_to_apply = dep_cpp_info
                 else:
-                    if field in not_list_fields:
+                    if field == "sysroot":
                         lines = lines[0]
                     item_to_apply = result
                 if config:
@@ -150,6 +149,7 @@ class TXTGenerator(Generator):
             all_flags = template.format(dep="", deps=deps, config=":" + config)
             sections.append(all_flags)
 
+        # Makes no sense to have an accumulated rootpath
         template_deps = template + '[rootpath{dep}]\n{deps.rootpath}\n\n'
 
         for dep_name, dep_cpp_info in self.deps_build_info.dependencies:
