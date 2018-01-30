@@ -144,7 +144,9 @@ class HelloConan(ConanFile):
         }
 
         runner = RunnerMock(return_ok=False)
-        spt = SystemPackageTool(runner=runner)
+        pkg_tool = ChocolateyTool() if which("choco.exe") else None
+        spt = SystemPackageTool(runner=runner, tool=pkg_tool)
+
         msg = platform_update_error_msg.get(platform.system(), None)
         if msg is not None:
             with self.assertRaisesRegexp(ConanException, msg):
