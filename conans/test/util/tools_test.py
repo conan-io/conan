@@ -123,7 +123,7 @@ class HelloConan(ConanFile):
             Returns package manager update command line executed by conan in current Linux
             distribution
 
-            :return: string with command line literal
+            :return: string with command line literal or None if not supported
             """
             os_info = OSInfo()
             if os_info.with_apt:
@@ -134,17 +134,19 @@ class HelloConan(ConanFile):
                 return "sudo zypper --non-interactive ref"
             elif os_info.with_pacman:
                 return "sudo pacman -Syyu --noconfirm"
+            else:
+                return None
 
         platform_update_error_msg = {
             "Linux": "Command '{0}' failed".format(get_update_command_for_linux()),
             "Darwin": "Command 'brew update' failed",
-            "Windows": "Command 'choco outdated' failed",
+            "Windows": "Command 'choco outdated' failed" if which("choco.exe") else None,
         }
 
         runner = RunnerMock(return_ok=False)
         spt = SystemPackageTool(runner=runner)
-        if platform.system() in  platform_update_error_msg:
-            msg =  platform_update_error_msg[platform.system()]
+        msg = platform_update_error_msg.get(platform.system(), None)
+        if msg is not None:
             with self.assertRaisesRegexp(ConanException, msg):
                 spt.update()
         else:
