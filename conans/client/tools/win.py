@@ -230,7 +230,7 @@ def find_windows_10_sdk():
     return None
 
 
-def vcvars_command(settings, arch=None, compiler_version=None, force=False):
+def vcvars_command(settings, arch=None, compiler_version=None, compiler_preference=None, force=False):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     os_setting = settings.get_safe("os")
@@ -265,7 +265,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
             else:
                 _global_output.warn(message)
     else:
-        vs_path = vs_installation_path(str(compiler_version))
+        vs_path = vs_installation_path(str(compiler_version), preference=compiler_preference)
 
         if not vs_path or not os.path.isdir(vs_path):
             _global_output.warn("VS non-existing installation")
