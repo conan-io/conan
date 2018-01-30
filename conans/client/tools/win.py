@@ -271,7 +271,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
             _global_output.warn("VS non-existing installation")
         else:
             vcvars_path = ""
-            if compiler_version > 14:
+            if int(compiler_version) > 14:
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
             else:
                 vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
