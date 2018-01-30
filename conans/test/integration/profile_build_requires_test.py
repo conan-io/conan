@@ -71,6 +71,49 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 class BuildRequiresTest(unittest.TestCase):
 
+    def duplicated_build_requires_test(self):
+        client = TestClient()
+        build_require = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": build_require})
+        client.run("create . build_require/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . MyLib/0.1@user/testing")
+        profile = """[build_requires]
+build_require/0.1@user/testing
+"""
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "MyLib/0.1@user/testing"
+"""
+        test_conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def test(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile,
+                     "test_package/conanfile.py": test_conanfile,
+                     "myprofile": profile})
+        client.run("create . Pkg/0.1@user/testing -pr=myprofile --build=missing")
+        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing (test package): "
+                                               "Installing build requirements of: PROJECT"), 1)
+        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing (test package): "
+                                               "Build requires: [build_require/0.1@user/testing]"), 1)
+        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing: Installing build "
+                                               "requirements of: Pkg/0.1@user/testing"), 1)
+        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing: Build requires: "
+                                               "[build_require/0.1@user/testing]"), 1)
+        self.assertEqual(str(client.out).count("MyLib/0.1@user/testing: Installing build "
+                                               "requirements of: MyLib/0.1@user/testing"), 1)
+        self.assertEqual(str(client.out).count("MyLib/0.1@user/testing: Build requires: "
+                                               "[build_require/0.1@user/testing]"), 1)
+
     def _create(self, client):
         name = "mytool.bat" if platform.system() == "Windows" else "mytool"
         client.save({CONANFILE: tool_conanfile,
