@@ -79,32 +79,37 @@ def vs_installation_path(version, preference=None):
                 vs_installation_path._cached[version] = None
 
     # Try with vswhere()
-    output_legacy = json.loads(vswhere(legacy=True, format_="json"), object_pairs_hook=OrderedDict)
-    output_products = json.loads(vswhere(products=["*"], format_="json"), object_pairs_hook=OrderedDict)
-    output = list(output_legacy + output_products)
-
-    # remove repeated products
-    seenProducts = list()
-    for product in output:
-        if product not in seenProducts:
-            seenProducts.append(product)
+    try:
+        output_legacy = json.loads(vswhere(legacy=True, format_="json"), object_pairs_hook=OrderedDict)
+        output_products = json.loads(vswhere(products=["*"], format_="json"), object_pairs_hook=OrderedDict)
+        output = list(output_legacy + output_products)
+    except ConanException:
+        pass
 
     vs_paths = list()
-    # Append products with "productId" by order of preference
-    for product_type in preference:
+
+    if output:
+        # remove repeated products
+        seenProducts = list()
+        for product in output:
+            if product not in seenProducts:
+                seenProducts.append(product)
+
+        # Append products with "productId" by order of preference
+        for product_type in preference:
+            for product in seenProducts:
+                product = dict(product)
+                if product["installationVersion"].startswith(("%d." % int(version))) and "productId" in product:
+                    if product_type in product["productId"]:
+                        vs_paths.append(product["installationPath"])
+
+        # Append products without "productId" (Legacy installations)
         for product in seenProducts:
             product = dict(product)
-            if product["installationVersion"].startswith(("%d." % int(version))) and "productId" in product:
-                if product_type in product["productId"]:
-                    vs_paths.append(product["installationPath"])
+            if product["installationVersion"].startswith(("%d." % int(version))) and "productId" not in product:
+                vs_paths.append(product["installationPath"])
 
-    # Append products without "productId" (Legacy installations)
-    for product in seenProducts:
-        product = dict(product)
-        if product["installationVersion"].startswith(("%d." % int(version))) and "productId" not in product:
-            vs_paths.append(product["installationPath"])
-
-    # If vswhere does not find anything, try with vs_comntools()
+    # If vswhere does not find anything or not available, try with vs_comntools()
     if not len(vs_paths):
         vs_path = vs_comntools(version)
 

@@ -3,12 +3,14 @@ import platform
 import unittest
 
 from collections import namedtuple
+from six import StringIO
 
 from conans.client.client_cache import CONAN_CONF
 
 from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
+from conans.client.output import ConanOutput
 
 from conans.errors import ConanException
 from conans.model.settings import Settings
@@ -377,7 +379,6 @@ class HelloConan(ConanFile):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     def vcvars_constrained_test(self):
-
         text = """os: [Windows]
 compiler:
     Visual Studio:
@@ -389,10 +390,15 @@ compiler:
         with self.assertRaisesRegexp(ConanException,
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings)
+
+        import requests
+        new_out = StringIO()
+        tools.set_global_instances(ConanOutput(new_out), requests)
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
             cmd = tools.vcvars_command(settings)
-            self.assertIn("vcvarsall.bat", cmd)
+            self.assertIn("VS non-existing installation", new_out.getvalue())
+
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 with self.assertRaisesRegexp(ConanException,
                                              "Error, Visual environment already set to 12"):
