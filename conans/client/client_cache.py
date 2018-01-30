@@ -142,7 +142,8 @@ class ClientCache(SimplePaths):
                 self._default_profile.update_settings(tmp)
                 save(self.default_profile_path, self._default_profile.dumps())
             else:
-                self._default_profile, _ = read_profile(self.default_profile_path, None, None)
+                self._default_profile, _ = read_profile(self.default_profile_path, os.getcwd(),
+                                                        self.profiles_path)
 
             # Mix profile settings with environment
             mixed_settings = _mix_settings_with_env(self._default_profile.settings)
