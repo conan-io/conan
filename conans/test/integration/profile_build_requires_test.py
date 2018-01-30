@@ -4,7 +4,6 @@ import os
 
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
-from conans.client.cmd.new import test_conanfile
 
 
 tool_conanfile = """
