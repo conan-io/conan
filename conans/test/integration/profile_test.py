@@ -13,7 +13,6 @@ from nose_parameterized import parameterized
 
 
 conanfile_scope_env = """
-import platform
 from conans import ConanFile
 
 class AConan(ConanFile):
@@ -263,6 +262,21 @@ class ProfileTest(unittest.TestCase):
         # The env variable shouldn't persist after install command
         self.assertFalse(os.environ.get("CC", None) == "/path/tomy/gcc")
         self.assertFalse(os.environ.get("CXX", None) == "/path/tomy/g++")
+
+    def default_including_another_profile_test(self):
+        p1 = "include(p2)\n[env]\nA_VAR=1"
+        p2 = "include(default)\n[env]\nA_VAR=2"
+        self.client.client_cache.conan_config  # Create the default conf
+        self.client.client_cache.default_profile  # Create default profile
+        save(os.path.join(self.client.client_cache.profiles_path, "p1"), p1)
+        save(os.path.join(self.client.client_cache.profiles_path, "p2"), p2)
+        # Change default profile to p1 => p2 => default
+        tools.replace_in_file(self.client.client_cache.conan_conf_path,
+                              "default_profile = default",
+                              "default_profile = p1")
+        self.client.save({CONANFILE: conanfile_scope_env})
+        self.client.run("create . user/testing")
+        self._assert_env_variable_printed("A_VAR", "1")
 
     def test_package_test(self):
         test_conanfile = '''from conans.model.conan_file import ConanFile

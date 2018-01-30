@@ -217,7 +217,12 @@ def _apply_inner_profile(doc, base_profile):
     if doc.options:
         base_profile.options.update(OptionsValues.loads(doc.options))
 
-    base_profile.env_values.update(EnvValues.loads(doc.env))
+    # The env vars from the current profile (read in doc)
+    # are updated with the included profiles (base_profile)
+    # the current env values has priority
+    current_env_values = EnvValues.loads(doc.env)
+    current_env_values.update(base_profile.env_values)
+    base_profile.env_values = current_env_values
 
 
 def profile_from_args(profile, settings, options, env, cwd, client_cache):

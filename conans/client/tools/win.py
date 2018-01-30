@@ -293,7 +293,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     return command
 
 
-def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=True):
+def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False):
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force) + " && echo __BEGINS__ && set"
     ret = decode_text(subprocess.check_output(cmd, shell=True))
