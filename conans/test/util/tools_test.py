@@ -118,27 +118,25 @@ class HelloConan(ConanFile):
         self.assertEquals(os.getenv("Z", None), None)
 
     def system_package_tool_fail_when_not_0_returned_test(self):
-        def get_update_command_for_linux():
+        def get_linux_error_message():
             """
-            Returns package manager update command line executed by conan in current Linux
-            distribution
-
-            :return: string with command line literal or None if not supported
+            Get error message for Linux platform if distro is supported, None otherwise
             """
             os_info = OSInfo()
+            update_command = None
             if os_info.with_apt:
-                return "sudo apt-get update"
+                update_command = "sudo apt-get update"
             elif os_info.with_yum:
-                return "sudo yum check-update"
+                update_command = "sudo yum check-update"
             elif os_info.with_zypper:
-                return "sudo zypper --non-interactive ref"
+                update_command = "sudo zypper --non-interactive ref"
             elif os_info.with_pacman:
-                return "sudo pacman -Syyu --noconfirm"
-            else:
-                return None
+                update_command = "sudo pacman -Syyu --noconfirm"
+
+            return "Command '{0}' failed".format(update_command) if update_command is not None else None
 
         platform_update_error_msg = {
-            "Linux": "Command '{0}' failed".format(get_update_command_for_linux()),
+            "Linux": get_linux_error_message(),
             "Darwin": "Command 'brew update' failed",
             "Windows": "Command 'choco outdated' failed" if which("choco.exe") else None,
         }
