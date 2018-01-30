@@ -75,6 +75,13 @@ class Pkg(ConanFile):
         client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
         self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
         self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence of alphabetical pattern, opposite order
+        client.run("create . Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
         # Prevalence and override of alphabetical pattern
         client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
         self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
