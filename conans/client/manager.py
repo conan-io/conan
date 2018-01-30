@@ -118,8 +118,8 @@ class ConanManager(object):
             conanfile = loader.load_conan(conanfile_path, output, consumer=True, local=True)
         else:
             conanfile = loader.load_conan_txt(conanfile_path, output)
-        if deps_info_required is not None:
-            _load_deps_info(info_folder, conanfile, required=deps_info_required)
+
+        _load_deps_info(info_folder, conanfile, required=deps_info_required)
 
         return conanfile
 
@@ -357,13 +357,13 @@ class ConanManager(object):
             pass
 
         build_mode = BuildMode(build_modes, self._user_io.out)
-        build_requires = BuildRequires(loader, graph_builder, registry, output)
+        build_requires = BuildRequires(loader, graph_builder, registry)
         installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
                                    build_requires)
 
         # Apply build_requires to consumer conanfile
         if not isinstance(reference, ConanFileReference):
-            build_requires.install("", conanfile, installer, profile.build_requires)
+            build_requires.install("", conanfile, installer, profile.build_requires, output)
 
         installer.install(deps_graph, profile.build_requires, keep_build)
         build_mode.report_matches()
