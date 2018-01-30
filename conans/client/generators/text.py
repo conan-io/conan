@@ -29,7 +29,7 @@ class DepsCppTXT(object):
         self.bin_paths = "\n".join(p.replace("\\", "/")
                                    for p in cpp_info.bin_paths)
         self.rootpath = "%s" % cpp_info.rootpath.replace("\\", "/")
-        self.sysroot = cpp_info.sysroot
+        self.sysroot = "%s" % cpp_info.sysroot.replace("\\", "/") if cpp_info.sysroot else ""
 
 
 class TXTGenerator(Generator):
