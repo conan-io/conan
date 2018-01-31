@@ -168,7 +168,8 @@ class Command(object):
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
-                            help='alternative test folder name, by default is "test_package"')
+                            help='alternative test folder name, by default is "test_package". '
+                                 '"None" if test stage needs to be disabled')
         parser.add_argument('-k', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
