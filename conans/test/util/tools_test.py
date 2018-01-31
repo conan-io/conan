@@ -396,7 +396,7 @@ compiler:
         tools.set_global_instances(ConanOutput(new_out), requests)
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
-            cmd = tools.vcvars_command(settings)
+            tools.vcvars_command(settings)
             self.assertIn("VS non-existing installation", new_out.getvalue())
 
             with tools.environment_append({"VisualStudioVersion": "12"}):

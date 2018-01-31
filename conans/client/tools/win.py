@@ -79,6 +79,7 @@ def vs_installation_path(version, preference=None):
                 vs_installation_path._cached[version] = None
 
     # Try with vswhere()
+    output = None
     try:
         output_legacy = json.loads(vswhere(legacy=True, format_="json"), object_pairs_hook=OrderedDict)
         output_products = json.loads(vswhere(products=["*"], format_="json"), object_pairs_hook=OrderedDict)
