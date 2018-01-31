@@ -268,7 +268,12 @@ class ConanAPIV1(object):
                                     cwd, self._client_cache)
 
         def get_test_conanfile_path(tf):
-            """Searchs in the declared test_folder or in the standard locations"""
+            """Searches in the declared test_folder or in the standard locations"""
+
+            if tf is False:
+                # Look up for testing conanfile can be disabled if tf (test folder) is False
+                return None
+
             test_folders = [tf] if tf else ["test_package", "test"]
             base_folder = os.path.dirname(conanfile_path)
             for test_folder_name in test_folders:
@@ -281,10 +286,7 @@ class ConanAPIV1(object):
                     raise ConanException("test folder '%s' not available, "
                                          "or it doesn't have a conanfile.py" % tf)
 
-        test_conanfile_path = None
-        if test_folder is not False:
-            # If test is not disabled look for folders
-            test_conanfile_path = get_test_conanfile_path(test_folder)
+        test_conanfile_path = get_test_conanfile_path(test_folder)
 
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)
