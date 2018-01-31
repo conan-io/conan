@@ -31,7 +31,7 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
+    def __call__(self, command, output, win_bash=False, subsystem=None): # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
@@ -397,7 +397,8 @@ compiler:
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
             tools.vcvars_command(settings)
-            self.assertIn("VS non-existing installation", new_out.getvalue())
+            if platform.system() != "Windows":
+                self.assertIn("VS non-existing installation", new_out.getvalue())
 
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 with self.assertRaisesRegexp(ConanException,
