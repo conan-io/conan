@@ -168,7 +168,8 @@ class Command(object):
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
-                            help='alternative test folder name, by default is "test_package"')
+                            help='alternative test folder name, by default is "test_package". '
+                                 '"None" if test stage needs to be disabled')
         parser.add_argument('-k', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
@@ -182,6 +183,10 @@ class Command(object):
         args = parser.parse_args(*args)
 
         name, version, user, channel = get_reference_fields(args.reference)
+
+        if args.test_folder == "None":
+            # Now if parameter --test-folder=None (string None) we have to skip tests
+            args.test_folder = False
 
         return self._conan.create(args.path, name, version, user, channel,
                                   args.profile, args.settings, args.options,
