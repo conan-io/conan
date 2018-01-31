@@ -258,6 +258,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, compiler_preferen
     if not vcvars_arch:
         raise ConanException('unsupported architecture %s' % arch_setting)
 
+    command = ""
     existing_version = os.environ.get("VisualStudioVersion")
 
     if existing_version:
