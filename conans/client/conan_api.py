@@ -229,7 +229,13 @@ class ConanAPIV1(object):
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote=None, update=False, cwd=None):
+        """
+        API method to create a conan package
 
+        :param test_folder: default None   - looks for default 'test' or 'test_package' folder),
+                                    string - test_folder path
+                                    False  - disabling tests
+        """
         settings = settings or []
         options = options or []
         env = env or []
@@ -275,7 +281,10 @@ class ConanAPIV1(object):
                     raise ConanException("test folder '%s' not available, "
                                          "or it doesn't have a conanfile.py" % tf)
 
-        test_conanfile_path = get_test_conanfile_path(test_folder)
+        test_conanfile_path = None
+        if test_folder is not False:
+            # If test is not disabled look for folders
+            test_conanfile_path = get_test_conanfile_path(test_folder)
 
         if test_conanfile_path:
             pt = PackageTester(self._manager, self._user_io)

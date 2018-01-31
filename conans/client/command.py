@@ -183,6 +183,10 @@ class Command(object):
 
         name, version, user, channel = get_reference_fields(args.reference)
 
+        if args.test_folder == "None":
+            # Now if parameter --test-folder=None (string None) we have to skip tests
+            args.test_folder = False
+
         return self._conan.create(args.path, name, version, user, channel,
                                   args.profile, args.settings, args.options,
                                   args.env, args.test_folder, args.not_export,
