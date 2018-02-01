@@ -170,7 +170,7 @@ Poco:deps_bundled=True""")
         own_ref = ConanFileReference.loads("Boost.Assert/0.1@diego/testing")
         down_ref = ConanFileReference.loads("Consumer/0.1@diego/testing")
         self.sut.propagate_upstream(options, down_ref, own_ref)
-        self.assertEqual(self.sut.values.as_list(), [('optimized', '2'),
+        self.assertEqual(self.sut.values.as_list(), [('optimized', '4'),
                                                      ('path', 'NOTDEF'),
                                                      ('static', 'True'),
                                                      ('*:optimized', '2'),

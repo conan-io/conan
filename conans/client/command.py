@@ -168,9 +168,13 @@ class Command(object):
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
-                            help='alternative test folder name, by default is "test_package"')
+                            help='alternative test folder name, by default is "test_package". '
+                                 '"None" if test stage needs to be disabled')
         parser.add_argument('-k', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
+                                 'Use for testing purposes only')
+        parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
+                            help='Optional. Do not remove the build folder in local cache. '
                                  'Use for testing purposes only')
 
         _add_manifests_arguments(parser)
@@ -180,11 +184,16 @@ class Command(object):
 
         name, version, user, channel = get_reference_fields(args.reference)
 
+        if args.test_folder == "None":
+            # Now if parameter --test-folder=None (string None) we have to skip tests
+            args.test_folder = False
+
         return self._conan.create(args.path, name, version, user, channel,
                                   args.profile, args.settings, args.options,
                                   args.env, args.test_folder, args.not_export,
-                                  args.build, args.keep_source, args.verify, args.manifests,
-                                  args.manifests_interactive, args.remote, args.update)
+                                  args.build, args.keep_source, args.keep_build, args.verify,
+                                  args.manifests, args.manifests_interactive,
+                                  args.remote, args.update)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
@@ -748,7 +757,7 @@ class Command(object):
                             action='store_true', help='Make a case-sensitive search. '
                                                       'Use it to guarantee case-sensitive '
                             'search in Windows or other case-insensitive filesystems')
-        parser.add_argument('-r', '--remote', help='Remote origin', action=OnceArgument)
+        parser.add_argument('-r', '--remote', help='Remote origin. `all` searches all remotes', action=OnceArgument)
         parser.add_argument('--raw', default=False, action='store_true',
                             help='Print just the list of recipes')
         parser.add_argument('--table', action=OnceArgument,

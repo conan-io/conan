@@ -75,6 +75,13 @@ class Pkg(ConanFile):
         client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
         self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
         self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence of alphabetical pattern, opposite order
+        client.run("create . Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
         # Prevalence and override of alphabetical pattern
         client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
         self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
@@ -351,6 +358,8 @@ class TestConan(ConanFile):
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
         client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
+        self.assertIn("Hello/0.1@lasote/stable from local cache\n",
+                      client.out) # Test "from local cache" output message
         client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)

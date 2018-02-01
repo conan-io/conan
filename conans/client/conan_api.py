@@ -25,7 +25,7 @@ from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
 from conans.model.version import Version
 from conans.paths import get_conan_user_home, CONANINFO, BUILD_INFO
-from conans.search.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager
 from conans.util.env_reader import get_env
 from conans.util.files import save_files, exception_message_safe, mkdir
 from conans.util.log import configure_logger
@@ -36,6 +36,7 @@ from conans.tools import set_global_instances
 from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
+from conans.client.cmd.search import Search
 
 
 default_manifest_folder = '.conan_manifests'
@@ -161,8 +162,7 @@ class ConanAPIV1(object):
             remote_manager = instance_remote_manager(client_cache)
 
             # Get a search manager
-            search_adapter = DiskSearchAdapter()
-            search_manager = DiskSearchManager(client_cache, search_adapter)
+            search_manager = DiskSearchManager(client_cache)
 
             # Settings preprocessor
             conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
@@ -177,6 +177,7 @@ class ConanAPIV1(object):
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
+        self._remote_manager = remote_manager
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
                                      settings_preprocessor)
         # Patch the tools module with a good requester and user_io
@@ -225,10 +226,16 @@ class ConanAPIV1(object):
                profile_name=None, settings=None,
                options=None, env=None, test_folder=None, not_export=False,
                build_modes=None,
-               keep_source=False, verify=None,
+               keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote=None, update=False, cwd=None):
+        """
+        API method to create a conan package
 
+        :param test_folder: default None   - looks for default 'test' or 'test_package' folder),
+                                    string - test_folder path
+                                    False  - disabling tests
+        """
         settings = settings or []
         options = options or []
         env = env or []
@@ -244,6 +251,9 @@ class ConanAPIV1(object):
 
         reference = ConanFileReference(name, version, user, channel)
         scoped_output = ScopedOutput(str(reference), self._user_io.out)
+        # Make sure keep_source is set for keep_build
+        if keep_build:
+            keep_source = True
         # Forcing an export!
         if not not_export:
             scoped_output.highlight("Exporting package recipe")
@@ -258,7 +268,12 @@ class ConanAPIV1(object):
                                     cwd, self._client_cache)
 
         def get_test_conanfile_path(tf):
-            """Searchs in the declared test_folder or in the standard locations"""
+            """Searches in the declared test_folder or in the standard locations"""
+
+            if tf is False:
+                # Look up for testing conanfile can be disabled if tf (test folder) is False
+                return None
+
             test_folders = [tf] if tf else ["test_package", "test"]
             base_folder = os.path.dirname(conanfile_path)
             for test_folder_name in test_folders:
@@ -279,7 +294,8 @@ class ConanAPIV1(object):
                                       remote, update, build_modes=build_modes,
                                       manifest_folder=manifest_folder,
                                       manifest_verify=manifest_verify,
-                                      manifest_interactive=manifest_interactive)
+                                      manifest_interactive=manifest_interactive,
+                                      keep_build=keep_build)
         else:
             self._manager.install(reference=reference,
                                   install_folder=None,  # Not output anything
@@ -289,7 +305,8 @@ class ConanAPIV1(object):
                                   remote=remote,
                                   profile=profile,
                                   build_modes=build_modes,
-                                  update=update)
+                                  update=update,
+                                  keep_build=keep_build)
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
@@ -551,7 +568,7 @@ class ConanAPIV1(object):
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._manager._remote_manager, force=force)
+                 self._user_io, self._remote_manager, force=force)
 
     @api_method
     def user(self, name=None, clean=False, remote=None, password=None):
@@ -564,22 +581,22 @@ class ConanAPIV1(object):
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
-        refs = self._manager.search_recipes(pattern, remote, ignorecase=not case_sensitive)
-        return refs
+        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        return search.search_recipes(pattern, remote, case_sensitive)
 
     @api_method
     def search_packages(self, reference, query=None, remote=None, outdated=False):
-        ret = self._manager.search_packages(reference, remote, packages_query=query,
-                                            outdated=outdated)
-        return ret
+        search = Search(self._client_cache, self._remote_manager, self._user_io)
+        return search.search_packages(reference, remote, query=query,
+                                      outdated=outdated)
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all_packages=False, force=False,
                confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        uploader = CmdUpload(self._client_cache, self._user_io, self._manager._remote_manager,
-                             self._manager._search_manager, remote)
+        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
+                             remote)
         return uploader.upload(pattern, package, all_packages, force, confirm, retry,
                                retry_wait, skip_upload, integrity_check)
 
