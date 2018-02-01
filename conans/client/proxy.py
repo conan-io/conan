@@ -1,18 +1,17 @@
+import os
+
+from conans.client.loader_parse import load_conanfile_class
 from conans.client.local_file_getter import get_path
 from conans.client.output import ScopedOutput
-from conans.util.files import rmdir, mkdir
-from conans.model.ref import PackageReference
-from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
-
-
 from conans.client.remote_registry import RemoteRegistry
-from conans.util.log import logger
-import os
-from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.client.remover import DiskRemover
+from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
+from conans.model.ref import PackageReference
+from conans.paths import EXPORT_SOURCES_TGZ_NAME
+from conans.util.files import rmdir, mkdir
+from conans.util.log import logger
 from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
-from conans.client.loader_parse import load_conanfile_class
 
 
 class ConanProxy(object):
