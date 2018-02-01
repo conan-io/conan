@@ -2,8 +2,9 @@ from conans.client.local_file_getter import get_path
 from conans.client.output import ScopedOutput
 from conans.util.files import rmdir, mkdir
 from conans.model.ref import PackageReference
-from conans.errors import (ConanException, ConanConnectionError,
-                           NotFoundException, NoRemoteAvailable)
+from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
+
+
 from conans.client.remote_registry import RemoteRegistry
 from conans.util.log import logger
 import os
@@ -322,24 +323,16 @@ class ConanProxy(object):
             self._registry.set_ref(package_ref.conan, remote)
         return result
 
-    def search(self, pattern=None, ignorecase=True):
-        remote, _ = self._get_remote()
-        return self._remote_manager.search(remote, pattern, ignorecase)
-
     def search_remotes(self, pattern=None, ignorecase=True):
         if self._remote_name:
             remote = self._registry.remote(self._remote_name)
-            search_result = self._remote_manager.search(remote, pattern, ignorecase)
+            search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
             return search_result
 
         for remote in self._registry.remotes:
-            search_result = self._remote_manager.search(remote, pattern, ignorecase)
+            search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
             if search_result:
                 return search_result
-
-    def search_packages(self, reference, query):
-        remote, _ = self._get_remote()
-        return self._remote_manager.search_packages(remote, reference, query)
 
     def remove(self, conan_ref):
         if not self._remote_name:

@@ -47,12 +47,12 @@ class ProfileTest(unittest.TestCase):
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
-        self.assertIn("    os=Windows", client.user_io.out)
-        self.assertIn("    MyOption=32", client.user_io.out)
+        self.assertIn("[settings]\nos=Windows", client.user_io.out)
+        self.assertIn("MyOption=32", client.user_io.out)
         client.run("profile show profile3")
-        self.assertIn("    CC=/path/tomy/gcc_build", client.user_io.out)
-        self.assertIn("    CXX=/path/tomy/g++_build", client.user_io.out)
-        self.assertIn("    package:VAR=value", client.user_io.out)
+        self.assertIn("CC=/path/tomy/gcc_build", client.user_io.out)
+        self.assertIn("CXX=/path/tomy/g++_build", client.user_io.out)
+        self.assertIn("package:VAR=value", client.user_io.out)
 
     def profile_update_and_get_test(self):
         client = TestClient()
@@ -130,9 +130,9 @@ class ProfileTest(unittest.TestCase):
         client.run("profile new ./MyProfile")
         pr_path = os.path.join(client.current_folder, "MyProfile")
         self.assertTrue(os.path.exists(pr_path))
-        self.assertEquals(load(pr_path), """[build_requires]
-[settings]
+        self.assertEquals(load(pr_path), """[settings]
 [options]
+[build_requires]
 [env]
 """)
 
