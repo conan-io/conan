@@ -16,8 +16,4 @@ COMPLEX_SEARCH_CAPABILITY = "complex_search"
 SERVER_CAPABILITIES = [COMPLEX_SEARCH_CAPABILITY, ]
 
 
-<<<<<<< HEAD
 __version__ = '1.1.0-dev'
-=======
-__version__ = '1.0.4'
->>>>>>> d0ffa809d0d05e76d74ebdc041f29dd4e13f4150
