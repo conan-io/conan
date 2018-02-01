@@ -1,11 +1,12 @@
-from conans.errors import ConanException, ConanConnectionError, NotFoundException
-from conans.util.log import logger
-import traceback
-from conans.util.files import save, sha1sum, exception_message_safe, to_file_bytes, mkdir
 import os
 import time
-from conans.util.tracer import log_download
+import traceback
+
 import conans.tools
+from conans.errors import ConanException, ConanConnectionError, NotFoundException
+from conans.util.files import save, sha1sum, exception_message_safe, to_file_bytes, mkdir
+from conans.util.log import logger
+from conans.util.tracer import log_download
 
 
 class Uploader(object):
