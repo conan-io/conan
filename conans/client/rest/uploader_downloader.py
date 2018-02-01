@@ -134,7 +134,7 @@ class Downloader(object):
         if not response.ok:  # Do not retry if not found or whatever controlled error
             if response.status_code == 404:
                 raise NotFoundException("Not found: %s" % url)
-            raise RemoteServerException("Error %d downloading file %s" % (response.status_code, url))
+            raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
             total_length = response.headers.get('content-length')

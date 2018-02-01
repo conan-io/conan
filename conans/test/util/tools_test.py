@@ -10,7 +10,7 @@ from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
@@ -467,7 +467,7 @@ compiler:
 
         # Not found error
         self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
-        with self.assertRaisesRegexp(ConanException, "Not found: "):
+        with self.assertRaisesRegexp(NotFoundException, "Not found: "):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            retry=3, retry_wait=0)
