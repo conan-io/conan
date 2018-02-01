@@ -46,6 +46,10 @@ class AConan(ConanFile):
             assert(self.in_local_cache == False)
    
     def source(self):
+        self.source_folder
+        self.build_folder
+        self.package_folder
+
         assert(self.source_folder == os.getcwd())
         self.assert_in_local_cache()
         
@@ -66,6 +70,11 @@ class AConan(ConanFile):
         assert(self.deps_env_info["parent"].MyEnvVar == "MyEnvVarValue")
 
     def build(self):
+        self.source_folder
+        self.install_folder
+        self.build_folder
+        self.package_folder
+
         assert(self.build_folder == os.getcwd())
         
         self.assert_in_local_cache()
@@ -82,6 +91,11 @@ class AConan(ConanFile):
         self.copy_build_folder = self.build_folder
         
     def package(self):
+        self.source_folder
+        self.install_folder
+        self.build_folder
+        self.package_folder
+
         if self.no_copy_source:
             # First call with source, second with build
             if self.counter_package_calls == 0:
