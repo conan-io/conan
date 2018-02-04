@@ -1,6 +1,5 @@
 import platform
 import logging
-import re
 import os
 import sys
 
@@ -219,36 +218,6 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
         else:
             lines.append(line)
     save(pc_file, "\n".join(lines))
-
-
-MSYS2 = 'msys2'
-MSYS = 'msys'
-CYGWIN = 'cygwin'
-WSL = 'wsl'  # Windows Subsystem for Linux
-SFU = 'sfu'  # Windows Services for UNIX
-
-
-def unix_path(path, path_flavor=None):
-    """"Used to translate windows paths to MSYS unix paths like
-    c/users/path/to/file. Not working in a regular console or MinGW!"""
-    if not path:
-        return None
-    from conans.client.tools.oss import os_info
-    path_flavor = path_flavor or os_info.detect_windows_subsystem() or MSYS2
-    path = path.replace(":/", ":\\")
-    pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
-    path = pattern.sub('/\\1/', path).replace('\\', '/')
-    if path_flavor in (MSYS, MSYS2):
-        return path.lower()
-    elif path_flavor == CYGWIN:
-        return '/cygdrive' + path.lower()
-    elif path_flavor == WSL:
-        return '/mnt' + path[0:2].lower() + path[2:]
-    elif path_flavor == SFU:
-        path = path.lower()
-        return '/dev/fs' + path[0] + path[1:].capitalize()
-    return None
-
 
 def _path_equals(path1, path2):
     path1 = os.path.normpath(path1)

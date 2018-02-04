@@ -437,3 +437,15 @@ class HelloConan(ConanFile):
 
         ab.configure(target="i686-apple-darwin")
         self.assertEquals(runner.command_called, "./configure  --target=i686-apple-darwin")
+
+
+    def test_make_targets(self):
+        runner = RunnerMock()
+        conanfile = MockConanfile(MockSettings({}),None,runner)
+        
+        ab = AutoToolsBuildEnvironment(conanfile)
+        ab.configure()
+        
+        ab.make(target="install")
+        self.assertEquals(runner.command_called,"make install -j%s" % cpu_count())        
+
