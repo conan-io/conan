@@ -1,7 +1,7 @@
-from conans.client.build.autotools_environment import architecture_dict, stdlib_flags, \
-    stdlib_defines
+from conans.client.build.autotools_environment import stdlib_flags, stdlib_defines
 from conans.model import Generator
 from conans.paths import BUILD_INFO_GCC
+from conans.tools import architecture_flags
 import platform
 
 
@@ -31,7 +31,7 @@ class GCCGenerator(Generator):
         if self._deps_build_info.sysroot:
             flags.append("--sysroot=%s" % self._deps_build_info.sysroot)
         arch = self.conanfile.settings.get_safe("arch")
-        flags.append(architecture_dict.get(arch, ""))
+        flags.append(' '.join(architecture_flags(arch=arch).cflags))
 
         build_type = self.conanfile.settings.get_safe("build_type")
         if build_type == "Release":
