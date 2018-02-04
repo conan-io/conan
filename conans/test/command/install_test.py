@@ -438,11 +438,18 @@ class Pkg(ConanFile):
 """
         client.save({"conanfile.py": conanfile})
         client.run("export . Hello/0.1@lasote/stable")
-        client.run("remote add_ref  Hello/0.1@lasote/stable default")
+        client.run("remote add_ref Hello/0.1@lasote/stable default")
         conan_reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
         rmdir(os.path.join(client.client_cache.conan(conan_reference)))
 
         error = client.run("install Hello/0.1@lasote/stable", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Hello/0.1@lasote/stable was not found in remote 'default'",
+                      client.out)
+
+        # If it was associated, it has to be desasociated
+        client.run("remote remove_ref Hello/0.1@lasote/stable")
+        error = client.run("install Hello/0.1@lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
                       client.out)
