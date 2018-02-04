@@ -4,39 +4,17 @@ import os
 
 from conans.client import join_arguments
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
+from conans.tools import architecture_flags, libcxx_flags
 from conans.client.tools.win import unix_path
 from conans.client.tools.oss import OSInfo
 
-sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
-                            "libstdcxx": "-library=stdcxx4",
-                            "libstlport": "-library=stlport4",
-                            "libstdc++": "-library=stdcpp"}
-
-architecture_dict = {"x86_64": "-m64", "x86": "-m32"}
-
 
 def stdlib_flags(compiler, libcxx):
-    ret = []
-    if compiler and "clang" in compiler:
-        if libcxx == "libc++":
-            ret.append("-stdlib=libc++")
-        else:
-            ret.append("-stdlib=libstdc++")
-    elif compiler == "sun-cc":
-        flag = sun_cc_libcxx_flags_dict.get(libcxx, None)
-        if flag:
-            ret.append(flag)
-    return ret
+    return libcxx_flags(compiler=compiler, libcxx=libcxx).cxxflags
 
 
 def stdlib_defines(compiler, libcxx):
-    ret = []
-    if compiler == "gcc" or compiler == "clang":  # Maybe clang is using the standard library from g++
-        if libcxx == "libstdc++":
-            ret.append("_GLIBCXX_USE_CXX11_ABI=0")
-        elif str(libcxx) == "libstdc++11":
-            ret.append("_GLIBCXX_USE_CXX11_ABI=1")
-    return ret
+    return libcxx_flags(compiler=compiler, libcxx=libcxx).defines
 
 
 class AutoToolsBuildEnvironment(object):
@@ -229,9 +207,7 @@ class AutoToolsBuildEnvironment(object):
 
     @property
     def _architecture_flag(self):
-        if str(self._compiler) in ['gcc', 'clang', 'apple-clang', 'sun-cc']:
-            return architecture_dict.get(self._arch, "")
-        return ""
+        return ' '.join(architecture_flags(compiler=self._compiler, arch=self._arch).cflags)
 
     def _get_vars(self):
         def append(*args):
