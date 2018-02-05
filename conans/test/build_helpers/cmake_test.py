@@ -26,6 +26,13 @@ class CMakeTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
+    def cmake_generator_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator"}):
+            cmake = CMake(conan_file)
+            self.assertIn('-G "My CMake Generator"', cmake.command_line)
+
     def folders_test(self):
         def quote_var(var):
             return "'%s'" % var if platform.system() != "Windows" else var
@@ -183,8 +190,10 @@ class CMakeTest(unittest.TestCase):
         settings.compiler = "gcc"
         settings.compiler.version = "4.8"
         generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
-              '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="4.8" -Wno-dev' % generator, "")
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
+              '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
+              '-Wno-dev' % generator, "")
 
         settings.os = "Linux"
         settings.arch = "x86"
@@ -500,7 +509,7 @@ build_type: [ Release]
         cmake.generator = "NMake Makefiles"
         cmake.test()
         self.assertEqual('cmake --build '
-                         '%s' % CMakeTest.scape('. --target test -- -j%i' % cpu_count()),
+                         '%s' % CMakeTest.scape('. --target test'),
                          conan_file.command)
 
     def test_clean_sh_path(self):

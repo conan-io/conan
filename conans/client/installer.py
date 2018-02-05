@@ -366,7 +366,8 @@ class ConanInstaller(object):
                         output.warn('Forced build from source')
 
                 if not skip_build:
-                    self._build_requires.install(conan_ref, conan_file, self, profile_build_requires)
+                    self._build_requires.install(conan_ref, conan_file, self,
+                                                 profile_build_requires, output)
 
                 t1 = time.time()
                 # Assign to node the propagated info
