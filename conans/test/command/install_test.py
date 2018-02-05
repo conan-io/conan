@@ -19,6 +19,77 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
+    def install_transitive_pattern_test(self):
+        # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    options = {"shared": [True, False, "header"]}
+    default_options = "shared=False"
+    def package_info(self):
+        self.output.info("PKG OPTION: %s" % self.options.shared)
+"""})
+        client.run("create . Pkg/0.1@user/testing -o shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "Pkg/0.1@user/testing"
+    options = {"shared": [True, False, "header"]}
+    default_options = "shared=False"
+    def package_info(self):
+        self.output.info("PKG2 OPTION: %s" % self.options.shared)
+"""})
+
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: True", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: True", client.out)
+        # Priority of non-scoped options
+        client.run("create . Pkg2/0.1@user/testing -o shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence of exact named option
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg2:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence of exact named option reverse
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header --build=missing")
+        self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: True", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: True", client.out)
+        # Prevalence of alphabetical pattern
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence of alphabetical pattern, opposite order
+        client.run("create . Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence and override of alphabetical pattern
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+
     def install_package_folder_test(self):
         # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
         client = TestClient()

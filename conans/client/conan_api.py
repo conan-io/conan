@@ -229,7 +229,13 @@ class ConanAPIV1(object):
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
                remote=None, update=False, cwd=None):
+        """
+        API method to create a conan package
 
+        :param test_folder: default None   - looks for default 'test' or 'test_package' folder),
+                                    string - test_folder path
+                                    False  - disabling tests
+        """
         settings = settings or []
         options = options or []
         env = env or []
@@ -262,7 +268,12 @@ class ConanAPIV1(object):
                                     cwd, self._client_cache)
 
         def get_test_conanfile_path(tf):
-            """Searchs in the declared test_folder or in the standard locations"""
+            """Searches in the declared test_folder or in the standard locations"""
+
+            if tf is False:
+                # Look up for testing conanfile can be disabled if tf (test folder) is False
+                return None
+
             test_folders = [tf] if tf else ["test_package", "test"]
             base_folder = os.path.dirname(conanfile_path)
             for test_folder_name in test_folders:
