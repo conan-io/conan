@@ -27,6 +27,7 @@ def create_package(conanfile, source_folder, build_folder, package_folder, insta
         output.highlight("Calling package()")
         conanfile.package_folder = package_folder
         conanfile.source_folder = source_folder
+        conanfile.install_folder = install_folder
         conanfile.build_folder = build_folder
 
         def recipe_has(conanfile, attribute):

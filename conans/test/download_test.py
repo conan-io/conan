@@ -27,39 +27,41 @@ class DownloadTest(unittest.TestCase):
     def test_returns_on_failures(self):
         test_server = TestServer([("*/*@*/*", "*")], [("*/*@*/*", "*")])
         servers = {"default": test_server}
-        client2 = TestClient(servers=servers)
-        client2.init_dynamic_vars()
-
-        conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
-        package_ref = PackageReference(conan_ref, "123123123")
 
         class Response(object):
             ok = None
             status_code = None
             charset = None
             text = ""
+            headers = {}
 
             def __init__(self, ok, status_code):
                 self.ok = ok
                 self.status_code = status_code
 
         class BuggyRequester(object):
+
+            def __init__(self, *args, **kwargs):
+                pass
+
             def get(self, *args, **kwargs):
                 return Response(False, 404)
 
-        client2.remote_manager._remote_client._rest_client.requester = BuggyRequester()
+        client2 = TestClient(servers=servers, requester_class=BuggyRequester)
+        conan_ref = ConanFileReference.loads("Hello/1.2.1@frodo/stable")
+        package_ref = PackageReference(conan_ref, "123123123")
         installer = ConanProxy(client2.paths, client2.user_io, client2.remote_manager, "default")
 
-        with self.assertRaises(NotFoundException) as exc:
+        with self.assertRaises(NotFoundException):
             installer.get_recipe(conan_ref)
 
         self.assertFalse(installer.package_available(package_ref, False, True))
 
-        class BuggyRequester2(object):
+        class BuggyRequester2(BuggyRequester):
             def get(self, *args, **kwargs):
                 return Response(False, 500)
 
-        client2.remote_manager._remote_client._rest_client.requester = BuggyRequester2()
+        client2 = TestClient(servers=servers, requester_class=BuggyRequester2)
         installer = ConanProxy(client2.paths, client2.user_io, client2.remote_manager, "default")
 
         try:
@@ -75,7 +77,6 @@ class DownloadTest(unittest.TestCase):
             self.assertFalse(True)  # Shouldn't capture here
         except ConanException:
             pass
-
 
     def complete_test(self):
         """ basic installation of a new conans
