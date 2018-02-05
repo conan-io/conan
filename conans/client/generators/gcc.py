@@ -1,7 +1,7 @@
 from conans.client.build.autotools_environment import stdlib_flags, stdlib_defines
 from conans.model import Generator
 from conans.paths import BUILD_INFO_GCC
-from conans.tools import architecture_flags
+from conans.client.build.compiler_flags import architecture_flags
 import platform
 
 
