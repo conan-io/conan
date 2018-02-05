@@ -259,7 +259,7 @@ class CMake(object):
             ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
-        if self._os in ("Linux", "FreeBSD", "SunOS"):
+        if self._compiler in ("gcc", "clang", "apple-clang", "sun-cc"):
             if self._arch == "x86" or self._arch == "sparc":
                 ret["CONAN_CXX_FLAGS"] = "-m32"
                 ret["CONAN_SHARED_LINKER_FLAGS"] = "-m32"
