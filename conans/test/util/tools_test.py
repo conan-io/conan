@@ -71,6 +71,62 @@ class ToolsTest(unittest.TestCase):
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEquals(tools.cpu_count(), 34)
 
+    def get_env_unit_test(self):
+        """
+        Unit tests tools.get_env
+        """
+        # Test default
+        self.assertIsNone(
+            tools.get_env("NOT_DEFINED", environment={}),
+            None
+        )
+        # Test defined default
+        self.assertEqual(
+            tools.get_env("NOT_DEFINED_KEY", default="random_default", environment={}),
+            "random_default"
+        )
+        # Test return defined string
+        self.assertEqual(
+            tools.get_env("FROM_STR", default="", environment={"FROM_STR": "test_string_value"}),
+            "test_string_value"
+        )
+        # Test boolean conversion
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "1"}),
+            True
+        )
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": "0"}),
+            False
+        )
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "True"}),
+            True
+        )
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": ""}),
+            False
+        )
+        # Test int conversion
+        self.assertEqual(
+            tools.get_env("TO_INT", default=2, environment={"TO_INT": "1"}),
+            1
+        )
+        # Test float conversion
+        self.assertEqual(
+            tools.get_env("TO_FLOAT", default=2.0, environment={"TO_FLOAT": "1"}),
+            1.0
+        ),
+        # Test list conversion
+        self.assertEqual(
+            tools.get_env("TO_LIST", default=[], environment={"TO_LIST": "1,2,3"}),
+            ["1", "2", "3"]
+        )
+        self.assertEqual(
+            tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED": " 1 , 2 , 3 "}),
+            [" 1 ", " 2 ", " 3 "]
+        )
+
     def test_global_tools_overrided(self):
         client = TestClient()
 
