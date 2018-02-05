@@ -927,32 +927,35 @@ class Command(object):
         '.conan/profiles' folder, in the same way as the '--profile' install argument.
         """
         parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers = parser.add_subparsers(dest='subcommand')
 
         # create the parser for the "profile" command
-        subparsers.add_parser('list', help='list current profiles')
-        parser_show = subparsers.add_parser('show', help='show the values defined for a profile.'
-                                                         ' Can be a path (relative or absolute) to'
-                                                         ' a profile file in  any location.')
-        parser_show.add_argument('profile',  help='name of the profile')
+        subparsers.add_parser('list', help='List current profiles')
+        parser_show = subparsers.add_parser('show', help='Show the values defined for a profile')
+        parser_show.add_argument('profile',  help="name of the profile in the '.conan/profiles' "
+                                                  "folder or path to a profile file")
 
         parser_new = subparsers.add_parser('new', help='Creates a new empty profile')
-        parser_new.add_argument('profile',  help='name of the profile')
+        parser_new.add_argument('profile',  help="name for the profile in the '.conan/profiles' "
+                                                  "folder or path and name for a profile file")
         parser_new.add_argument("--detect", action='store_true',
                                 default=False,
                                 help='Autodetect settings and fill [settings] section')
 
-        parser_update = subparsers.add_parser('update', help='Update a profile')
+        parser_update = subparsers.add_parser('update', help='Update a profile with desired value')
         parser_update.add_argument('item', help='key="value to set", e.j: settings.compiler=gcc')
-        parser_update.add_argument('profile',  help='name of the profile')
+        parser_update.add_argument('profile',  help="name of the profile in the '.conan/profiles' "
+                                                    "folder or path to a profile file")
 
         parser_get = subparsers.add_parser('get', help='Get a profile key')
-        parser_get.add_argument('item', help='key="value to get", e.j: settings.compiler')
-        parser_get.add_argument('profile',  help='name of the profile')
+        parser_get.add_argument('item', help='key of the value to get, e.g: settings.compiler')
+        parser_get.add_argument('profile',  help="name of the profile in the '.conan/profiles' "
+                                                  "folder or path to a profile file")
 
         parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
-        parser_remove.add_argument('item', help='key", e.j: settings.compiler')
-        parser_remove.add_argument('profile',  help='name of the profile')
+        parser_remove.add_argument('item', help='key, e.g: settings.compiler')
+        parser_remove.add_argument('profile',  help="name of the profile in the '.conan/profiles' "
+                                                    "folder or path to a profile file")
 
         args = parser.parse_args(*args)
 
