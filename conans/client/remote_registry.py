@@ -1,5 +1,5 @@
 import os
-from conans.errors import ConanException
+from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.files import load, save
 from collections import OrderedDict, namedtuple
 import fasteners
@@ -78,7 +78,7 @@ class RemoteRegistry(object):
         try:
             return self.remotes[0]
         except:
-            raise ConanException("No default remote defined in %s" % self._filename)
+            raise NoRemoteAvailable("No default remote defined in %s" % self._filename)
 
     @property
     def remotes(self):
@@ -98,8 +98,8 @@ class RemoteRegistry(object):
             try:
                 return Remote(name, remotes[name][0], remotes[name][1])
             except KeyError:
-                raise ConanException("No remote '%s' defined in remotes in file %s"
-                                     % (name, self._filename))
+                raise NoRemoteAvailable("No remote '%s' defined in remotes in file %s"
+                                        % (name, self._filename))
 
     def get_ref(self, conan_reference):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
