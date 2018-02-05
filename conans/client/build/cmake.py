@@ -15,6 +15,7 @@ from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
+from conans.client.build.compiler_flags import architecture_flags
 
 
 def _get_env_cmake_system_name():
@@ -283,7 +284,7 @@ class CMake(object):
             ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
-        arch_flags = tools.architecture_flags(compiler=self._compiler, arch=self._arch)
+        arch_flags = architecture_flags(compiler=self._compiler, arch=self._arch)
         ret = add_cmake_flags(ret, 'CONAN_CXX_FLAGS', arch_flags.cxxflags)
         ret = add_cmake_flags(ret, 'CONAN_SHARED_LINKER_FLAGS', arch_flags.ldflags)
         ret = add_cmake_flags(ret, 'CONAN_C_FLAGS', arch_flags.cflags)

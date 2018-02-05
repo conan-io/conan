@@ -4,7 +4,7 @@ import os
 
 from conans.client import join_arguments
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
-from conans.tools import architecture_flags, libcxx_flags
+from conans.client.build.compiler_flags import architecture_flags, libcxx_flags
 from conans.client.tools.win import unix_path
 from conans.client.tools.oss import OSInfo
 
