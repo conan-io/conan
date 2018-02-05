@@ -810,7 +810,7 @@ class Command(object):
             If you use the --retry option you can specify how many times should conan try to upload
             the packages in case of failure. The default is 2.
             With --retry_wait you can specify the seconds to wait between upload attempts.
-            If no remote is specified, the first configured remote (by default conan.io, use
+            If no remote is specified, the first configured remote (by default conan-center, use
             'conan remote list' to list the remotes) will be used.
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
