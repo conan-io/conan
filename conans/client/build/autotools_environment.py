@@ -9,14 +9,6 @@ from conans.client.tools.win import unix_path
 from conans.client.tools.oss import OSInfo
 
 
-def stdlib_flags(compiler, libcxx):
-    return libcxx_flags(compiler=compiler, libcxx=libcxx).cxxflags
-
-
-def stdlib_defines(compiler, libcxx):
-    return libcxx_flags(compiler=compiler, libcxx=libcxx).defines
-
-
 class AutoToolsBuildEnvironment(object):
     """
     - CPPFLAGS (C-PreProcesor-Flags NOT related with c++) (-I -D)
@@ -190,7 +182,7 @@ class AutoToolsBuildEnvironment(object):
 
     def _configure_cxx_flags(self):
         ret = copy.copy(self._deps_cpp_info.cppflags)
-        ret.extend(stdlib_flags(self._compiler, self._libcxx))
+        ret.extend(libcxx_flags(compiler=self._compiler, libcxx=self._libcxx).cxxflags)
         return ret
 
     def _configure_defines(self):
@@ -202,7 +194,7 @@ class AutoToolsBuildEnvironment(object):
             ret.append("NDEBUG")
 
         # CXX11 ABI
-        ret.extend(stdlib_defines(self._compiler, self._libcxx))
+        ret.extend(libcxx_flags(compiler=self._compiler, libcxx=self._libcxx).defines)
         return ret
 
     @property
