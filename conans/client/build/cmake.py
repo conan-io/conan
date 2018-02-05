@@ -67,7 +67,12 @@ class CMake(object):
 
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program
         if make_program:
-            self.definitions["CMAKE_MAKE_PROGRAM"] = os.environ["CONAN_MAKE_PROGRAM"]
+            if not tools.which(make_program):
+                self._conanfile.output.warn("The specified make program '%s' cannot be found"
+                                            "and will be ignored" % make_program)
+            else:
+                self._conanfile.output.info("Using '%s' as CMAKE_MAKE_PROGRAM" % make_program)
+                self.definitions["CMAKE_MAKE_PROGRAM"] = make_program
 
     @property
     def build_folder(self):
