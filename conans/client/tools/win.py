@@ -69,8 +69,8 @@ def vs_installation_path(version):
 
     if version not in vs_installation_path._cached:
         vs_path = None
-        output_legacy = json.loads(vswhere(legacy=True, format_="json"))
-        output_products = json.loads(vswhere(products=["*"], format_="json"))
+        output_legacy = vswhere(legacy=True)
+        output_products = vswhere(products=["*"])
         output = output_legacy + output_products
 
         for installation in output:
@@ -84,7 +84,7 @@ def vs_installation_path(version):
 
 
 def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
-            legacy=False, format_="", property_="", nologo=True):
+            legacy=False, property_="", nologo=True):
 
     # 'version' option only works if Visual Studio 2017 is installed:
     # https://github.com/Microsoft/vswhere/issues/91
@@ -110,6 +110,10 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     arguments = list()
     arguments.append(vswhere_path)
+    
+    # Output json format
+    arguments.append("-format")
+    arguments.append("json")
 
     if all_:
         arguments.append("-all")
@@ -135,12 +139,6 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     if legacy:
         arguments.append("-legacy")
 
-    if format_ in ["json", "text", "value", "xml"]:
-        arguments.append("-format")
-        arguments.append(format_)
-    else:
-        raise ConanException("vswhere error: Unsupported format: %s" % format_)
-
     if len(property_) is not 0:
         arguments.append("-property")
         arguments.append(property_)
@@ -154,7 +152,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
-    return vswhere_out
+    return json.loads(vswhere_out)
 
 
 def find_windows_10_sdk():
