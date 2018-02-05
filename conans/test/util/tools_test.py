@@ -127,6 +127,27 @@ class ToolsTest(unittest.TestCase):
             [" 1 ", " 2 ", " 3 "]
         )
 
+    def test_get_env_in_conanfile(self):
+        """
+        Test get_env is available and working in conanfile
+        """
+        client = TestClient()
+
+        conanfile = """from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def build(self):
+        assert(tools.get_env("CONAN_RUN_TESTS", default=False) is True)
+        """
+        client.save({"conanfile.py": conanfile})
+
+        with tools.environment_append({"CONAN_RUN_TESTS": "1"}):
+            client.run("install .")
+            client.run("build .")
+
     def test_global_tools_overrided(self):
         client = TestClient()
 
