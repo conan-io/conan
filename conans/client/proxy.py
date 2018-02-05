@@ -1,17 +1,17 @@
+import os
+
+from conans.client.loader_parse import load_conanfile_class
 from conans.client.local_file_getter import get_path
 from conans.client.output import ScopedOutput
-from conans.util.files import rmdir, mkdir
-from conans.model.ref import PackageReference
-from conans.errors import (ConanException, ConanConnectionError, ConanOutdatedClient,
-                           NotFoundException)
 from conans.client.remote_registry import RemoteRegistry
-from conans.util.log import logger
-import os
-from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.client.remover import DiskRemover
+from conans.errors import (ConanException, NotFoundException, NoRemoteAvailable)
+from conans.model.ref import PackageReference
+from conans.paths import EXPORT_SOURCES_TGZ_NAME
+from conans.util.files import rmdir, mkdir
+from conans.util.log import logger
 from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
-from conans.client.loader_parse import load_conanfile_class
 
 
 class ConanProxy(object):
@@ -48,8 +48,8 @@ class ConanProxy(object):
         if not os.path.exists(package_folder):
             try:
                 remote_info = self.get_package_info(package_ref)
-            except ConanException:
-                return False  # Not local nor remote
+            except (NotFoundException, NoRemoteAvailable):  # 404 or no remote
+                return False
 
         # Maybe we have the package (locally or in remote) but it's outdated
         if check_outdated:
@@ -88,10 +88,9 @@ class ConanProxy(object):
                                 rmdir(package_folder)
                         else:
                             output.warn("Current package is newer than remote upstream one")
-                except ConanException:
+                except NotFoundException:
                     pass
 
-        installed = False
         local_package = os.path.exists(package_folder)
         if local_package:
             output.success('Already installed!')
@@ -188,7 +187,7 @@ class ConanProxy(object):
                 upstream_manifest = self.get_conan_digest(conan_reference)
                 if upstream_manifest != read_manifest:
                     return 1 if upstream_manifest.time > read_manifest.time else -1
-            except ConanException:
+            except (NotFoundException, NoRemoteAvailable):  # 404
                 pass
 
         return 0
@@ -323,24 +322,16 @@ class ConanProxy(object):
             self._registry.set_ref(package_ref.conan, remote)
         return result
 
-    def search(self, pattern=None, ignorecase=True):
-        remote, _ = self._get_remote()
-        return self._remote_manager.search(remote, pattern, ignorecase)
-
     def search_remotes(self, pattern=None, ignorecase=True):
         if self._remote_name:
             remote = self._registry.remote(self._remote_name)
-            search_result = self._remote_manager.search(remote, pattern, ignorecase)
+            search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
             return search_result
 
         for remote in self._registry.remotes:
-            search_result = self._remote_manager.search(remote, pattern, ignorecase)
+            search_result = self._remote_manager.search_recipes(remote, pattern, ignorecase)
             if search_result:
                 return search_result
-
-    def search_packages(self, reference, query):
-        remote, _ = self._get_remote()
-        return self._remote_manager.search_packages(remote, reference, query)
 
     def remove(self, conan_ref):
         if not self._remote_name:
@@ -396,9 +387,7 @@ class ConanProxy(object):
             self._remote_manager.get_package(package_ref, package_folder, remote)
             output.success('Package installed %s' % package_id)
             return True
-        except ConanConnectionError:
-            raise  # This shouldn't be skipped
-        except ConanException as e:
+        except NotFoundException as e:
             output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
             return False
 

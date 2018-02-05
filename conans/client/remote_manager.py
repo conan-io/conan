@@ -215,7 +215,7 @@ class RemoteManager(object):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
 
-    def search(self, remote, pattern=None, ignorecase=True):
+    def search_recipes(self, remote, pattern=None, ignorecase=True):
         """
         Search exported conans information from remotes
 
