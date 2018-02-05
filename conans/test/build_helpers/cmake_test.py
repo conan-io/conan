@@ -26,6 +26,13 @@ class CMakeTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
+    def cmake_generator_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+        with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator"}):
+            cmake = CMake(conan_file)
+            self.assertIn('-G "My CMake Generator"', cmake.command_line)
+
     def folders_test(self):
         def quote_var(var):
             return "'%s'" % var if platform.system() != "Windows" else var

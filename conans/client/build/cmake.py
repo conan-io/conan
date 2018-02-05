@@ -92,13 +92,12 @@ class CMake(object):
         return defs_to_string(self.definitions)
 
     def _generator(self):
+        if "CONAN_CMAKE_GENERATOR" in os.environ:
+            return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if not self._compiler or not self._compiler_version or not self._arch:
             raise ConanException("You must specify compiler, compiler.version and arch in "
                                  "your settings to use a CMake generator")
-
-        if "CONAN_CMAKE_GENERATOR" in os.environ:
-            return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if self._compiler == "Visual Studio":
             _visuals = {'8': '8 2005',
