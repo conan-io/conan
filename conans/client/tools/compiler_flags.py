@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-class CompilerFlags:
+class CompilerFlags(object):
     def __init__(self, cflags=None, cxxflags=None, ldflags=None, defines=None):
         self._cflags = cflags if cflags else []
         self._cxxflags = cxxflags if cxxflags else []
@@ -40,7 +40,7 @@ def architecture_flags(compiler=None, arch=None):
     """
     returns flags specific to the target architecture and compiler
     """
-    if str(compiler) in ['gcc', 'clang', 'sun-cc']:
+    if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
         if str(arch) in ['x86_64', 'sparcv9']:
             return CompilerFlags(cflags=['-m64'], cxxflags=['-m64'], ldflags=['-m64'])
         elif str(arch) in ['x86', 'sparc']:

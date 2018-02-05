@@ -262,9 +262,9 @@ class CMake(object):
             """
             appends compiler linker flags (if already present), or just sets
             """
-            if len(flags):
+            if flags:
                 joint_flags = ' '.join(flags)
-                if name not in cmake_flags.keys():
+                if name not in cmake_flags:
                     cmake_flags[name] = joint_flags
                 else:
                     cmake_flags[name] = ' ' + joint_flags
