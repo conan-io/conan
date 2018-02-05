@@ -69,13 +69,13 @@ def vs_installation_path(version):
 
     if version not in vs_installation_path._cached:
         vs_path = None
-        output_legacy = vswhere(legacy=True)
-        output_products = vswhere(products=["*"])
-        output = output_legacy + output_products
+        legacy_products = vswhere(legacy=True)
+        all_products = vswhere(products=["*"])
+        products = legacy_products + all_products
 
-        for installation in output:
-            if installation["installationVersion"].startswith(("%d." % int(version))):
-                vs_path = installation["installationPath"]
+        for product in products:
+            if product["installationVersion"].startswith(("%d." % int(version))):
+                vs_path = product["installationPath"]
 
         # Remember to cache result
         vs_installation_path._cached[version] = vs_path
