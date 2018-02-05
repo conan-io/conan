@@ -1,7 +1,6 @@
-from conans.client.build.autotools_environment import stdlib_flags, stdlib_defines
 from conans.model import Generator
 from conans.paths import BUILD_INFO_GCC
-from conans.client.build.compiler_flags import architecture_flags
+from conans.client.build.compiler_flags import architecture_flags, libcxx_flags
 import platform
 
 
@@ -50,8 +49,9 @@ class GCCGenerator(Generator):
 
         lib_flags = []
         if libcxx:
-            lib_flags.extend(["-D%s" % define for define in stdlib_defines(compiler, libcxx)])
-            lib_flags.extend(stdlib_flags(compiler, libcxx))
+            stdlib_flags = libcxx_flags(compiler=compiler, libcxx=libcxx)
+            lib_flags.extend(["-D%s" % define for define in stdlib_flags.defines])
+            lib_flags.extend(stdlib_flags.cxxflags)
 
         return lib_flags
 
