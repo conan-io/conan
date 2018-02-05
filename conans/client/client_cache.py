@@ -46,14 +46,17 @@ class ClientCache(SimplePaths):
     def conanfile_read_lock(self, conan_ref):
         if self._no_locks():
             return NoLock()
-        return ReadLock(os.path.join(self.conan(conan_ref), "rw"), conan_ref,
-                        self._output)
+        return ReadLock(self.conan(conan_ref), conan_ref, self._output)
 
     def conanfile_write_lock(self, conan_ref):
         if self._no_locks():
             return NoLock()
-        return WriteLock(os.path.join(self.conan(conan_ref), "rw"), conan_ref,
-                         self._output)
+        return WriteLock(self.conan(conan_ref), conan_ref, self._output)
+
+    def conanfile_lock_files(self, conan_ref):
+        if self._no_locks():
+            return ()
+        return WriteLock(self.conan(conan_ref), conan_ref, self._output).files
 
     def package_lock(self, package_ref):
         if self._no_locks():
@@ -139,7 +142,8 @@ class ClientCache(SimplePaths):
                 self._default_profile.update_settings(tmp)
                 save(self.default_profile_path, self._default_profile.dumps())
             else:
-                self._default_profile, _ = read_profile(self.default_profile_path, None, None)
+                self._default_profile, _ = read_profile(self.default_profile_path, os.getcwd(),
+                                                        self.profiles_path)
 
             # Mix profile settings with environment
             mixed_settings = _mix_settings_with_env(self._default_profile.settings)

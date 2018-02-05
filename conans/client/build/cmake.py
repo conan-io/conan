@@ -2,7 +2,6 @@ import os
 import platform
 
 from collections import OrderedDict
-from contextlib import contextmanager
 
 from conans.client import defs_to_string, join_arguments
 from conans.client.tools import cross_building
@@ -44,6 +43,8 @@ class CMake(object):
         self._conanfile = conanfile
 
         self._os = self._settings.get_safe("os")
+        self._os_build, _, self._os_host, _ = get_cross_building_settings(self._settings)
+
         self._compiler = self._settings.get_safe("compiler")
         self._compiler_version = self._settings.get_safe("compiler.version")
         self._arch = self._settings.get_safe("arch")
@@ -95,13 +96,12 @@ class CMake(object):
         return defs_to_string(self.definitions)
 
     def _generator(self):
+        if "CONAN_CMAKE_GENERATOR" in os.environ:
+            return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if not self._compiler or not self._compiler_version or not self._arch:
             raise ConanException("You must specify compiler, compiler.version and arch in "
                                  "your settings to use a CMake generator")
-
-        if "CONAN_CMAKE_GENERATOR" in os.environ:
-            return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if self._compiler == "Visual Studio":
             _visuals = {'8': '8 2005',
@@ -120,7 +120,8 @@ class CMake(object):
             else:
                 return base
 
-        if self._os == "Windows":
+        # The generator depends on the build machine, not the target
+        if self._os_build == "Windows":
             return "MinGW Makefiles"  # it is valid only under Windows
 
         return "Unix Makefiles"
@@ -160,8 +161,7 @@ class CMake(object):
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
         else:  # detect if we are cross building and the system name and version
             if cross_building(self._conanfile.settings):  # We are cross building
-                build_os, _, host_os, _ = get_cross_building_settings(self._conanfile.settings)
-                if host_os != build_os:
+                if self._os != self._os_build:
                     if the_os:  # the_os is the host (regular setting)
                         ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS",
                                                                           "watchOS"] else the_os
@@ -263,7 +263,7 @@ class CMake(object):
             ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
-        if self._os in ("Linux", "FreeBSD", "SunOS"):
+        if self._compiler in ("gcc", "clang", "apple-clang", "sun-cc"):
             if self._arch == "x86" or self._arch == "sparc":
                 ret["CONAN_CXX_FLAGS"] = "-m32"
                 ret["CONAN_SHARED_LINKER_FLAGS"] = "-m32"
@@ -339,7 +339,7 @@ class CMake(object):
         ])
         command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
         if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
-            with clean_sh_from_path():
+            with tools.remove_from_path("sh"):
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)
@@ -351,7 +351,7 @@ class CMake(object):
             args = ["--target", target] + args
 
         if self.parallel:
-            if "Makefiles" in self.generator:
+            if "Makefiles" in self.generator and "NMake" not in self.generator:
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count())
@@ -392,13 +392,3 @@ class CMake(object):
     @verbose.setter
     def verbose(self, value):
         self.definitions["CMAKE_VERBOSE_MAKEFILE"] = "ON" if value else "OFF"
-
-
-@contextmanager
-def clean_sh_from_path():
-    new_path = []
-    for path_entry in os.environ.get("PATH", "").split(os.pathsep):
-        if not os.path.exists(os.path.join(path_entry, "sh.exe")):
-            new_path.append(path_entry)
-    with tools.environment_append({"PATH": os.pathsep.join(new_path)}):
-        yield
