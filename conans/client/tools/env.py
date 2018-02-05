@@ -1,10 +1,10 @@
-import platform
 import sys
 from contextlib import contextmanager
 
 import os
 
-from conans.client.tools.files import which
+from conans.client.tools.files import which, _path_equals
+from conans.errors import ConanException
 
 
 @contextmanager
@@ -51,18 +51,28 @@ def no_op():
 @contextmanager
 def remove_from_path(command):
     curpath = os.getenv("PATH")
-    while 1:
-        with environment_append({"PATH": curpath}):
+    first_it = True
+    for n in range(30):
+        if not first_it:
+            with environment_append({"PATH": curpath}):
+                the_command = which(command)
+        else:
             the_command = which(command)
+            first_it = False
+
         if not the_command:
             break
         new_path = []
-        if "sysnative" in the_command and platform.system() == "Windows":
-            the_command = the_command.replace("sysnative", "system32")
         for entry in curpath.split(os.pathsep):
-            if entry != os.path.dirname(the_command):
+            if not _path_equals(entry, os.path.dirname(the_command)):
                 new_path.append(entry)
+
         curpath = os.pathsep.join(new_path)
+    else:
+
+        raise ConanException("Error in tools.remove_from_path!! couldn't remove the tool '%s' "
+                             "from the path after 30 attempts, still found in '%s' this is a Conan client bug, please open an issue at: "
+                             "https://github.com/conan-io/conan\n\nPATH=%s" % (command, the_command, os.getenv("PATH")))
 
     with environment_append({"PATH": curpath}):
         yield

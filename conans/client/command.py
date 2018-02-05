@@ -168,9 +168,13 @@ class Command(object):
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
-                            help='alternative test folder name, by default is "test_package"')
+                            help='alternative test folder name, by default is "test_package". '
+                                 '"None" if test stage needs to be disabled')
         parser.add_argument('-k', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
+                                 'Use for testing purposes only')
+        parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
+                            help='Optional. Do not remove the build folder in local cache. '
                                  'Use for testing purposes only')
 
         _add_manifests_arguments(parser)
@@ -180,11 +184,16 @@ class Command(object):
 
         name, version, user, channel = get_reference_fields(args.reference)
 
+        if args.test_folder == "None":
+            # Now if parameter --test-folder=None (string None) we have to skip tests
+            args.test_folder = False
+
         return self._conan.create(args.path, name, version, user, channel,
                                   args.profile, args.settings, args.options,
                                   args.env, args.test_folder, args.not_export,
-                                  args.build, args.keep_source, args.verify, args.manifests,
-                                  args.manifests_interactive, args.remote, args.update)
+                                  args.build, args.keep_source, args.keep_build, args.verify,
+                                  args.manifests, args.manifests_interactive,
+                                  args.remote, args.update)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
@@ -441,9 +450,9 @@ class Command(object):
 
     def build(self, *args):
         """ Calls your local conanfile.py 'build()' method.
-        The recipe will be built in the local directory specified by --build_folder,
-        reading the sources from --source_folder. If you are using a build helper, like CMake(), the
-        --package_folder will be configured as destination folder for the install step.
+        The recipe will be built in the local directory specified by --build-folder,
+        reading the sources from --source-folder. If you are using a build helper, like CMake(), the
+        --package-folder will be configured as destination folder for the install step.
         """
 
         parser = argparse.ArgumentParser(description=self.build.__doc__, prog="conan build")
@@ -476,7 +485,7 @@ class Command(object):
         """ Calls your local conanfile.py 'package()' method.
 
         This command works locally, in the user space, and it will copy artifacts from the
-        --build_folder and --source_folder folder to the --package_folder one.
+        --build-folder and --source-folder folder to the --package-folder one.
 
         It won't create a new package in the local cache, if you want to do it, use 'create' or use
         'export-pkg' after a 'build' command.
@@ -557,8 +566,8 @@ class Command(object):
 
     def export_pkg(self, *args):
         """Exports a recipe & creates a package with given files calling 'package'.
-           It executes the package() method applied to the local folders '--source_folder' and
-           '--build_folder' and creates a new package in the local cache for the specified
+           It executes the package() method applied to the local folders '--source-folder' and
+           '--build-folder' and creates a new package in the local cache for the specified
            'reference' and for the specified '--settings', '--options' and or '--profile'.
         """
         parser = argparse.ArgumentParser(description=self.export_pkg.__doc__,
@@ -568,8 +577,9 @@ class Command(object):
                                               ' (Pkg/version@user/channel), if name and version '
                                               ' are not declared in the recipe (conanfile.py)')
         parser.add_argument("-sf", "--source-folder", action=OnceArgument,
-                            help="local folder containing the sources. Defaulted to --build-folder."
-                                 " A relative path to the current dir can also be specified")
+                            help="local folder containing the sources. Defaulted to the directory "
+                                 "of the conanfile. A relative path can also be specified "
+                                 "(relative to the current directory)")
         parser.add_argument("-bf", "--build-folder", action=OnceArgument,
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "
@@ -598,7 +608,7 @@ class Command(object):
         args = parser.parse_args(*args)
         name, version, user, channel = get_reference_fields(args.reference)
 
-        return self._conan.export_pkg(path=args.path,
+        return self._conan.export_pkg(conanfile_path=args.path,
                                       name=name,
                                       version=version,
                                       source_folder=args.source_folder,
@@ -747,7 +757,7 @@ class Command(object):
                             action='store_true', help='Make a case-sensitive search. '
                                                       'Use it to guarantee case-sensitive '
                             'search in Windows or other case-insensitive filesystems')
-        parser.add_argument('-r', '--remote', help='Remote origin', action=OnceArgument)
+        parser.add_argument('-r', '--remote', help='Remote origin. `all` searches all remotes', action=OnceArgument)
         parser.add_argument('--raw', default=False, action='store_true',
                             help='Print just the list of recipes')
         parser.add_argument('--table', action=OnceArgument,
@@ -998,9 +1008,13 @@ class Command(object):
         return
 
     def alias(self, *args):
-        """ Creates and exports an 'alias recipe'.
+        """Creates and exports an 'alias package recipe'. An "alias" package is a
+        symbolic name (reference) for another package (target). When some
+        package depends on an alias, the target one will be retrieved and used
+        instead, so the alias reference, the symbolic name, does not appear
+        in the final dependency graph.
         """
-        parser = argparse.ArgumentParser(description=self.upload.__doc__,
+        parser = argparse.ArgumentParser(description=self.alias.__doc__,
                                          prog="conan alias")
         parser.add_argument('reference', help='Alias reference. e.j: mylib/1.X@user/channel')
         parser.add_argument('target', help='Target reference. e.j: mylib/1.12@user/channel')

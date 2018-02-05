@@ -110,7 +110,7 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         return conan_path
 
-    def search(self, pattern):
+    def search_recipes(self, pattern):
         from fnmatch import translate
         pattern = translate(pattern)
         pattern = re.compile(pattern)

@@ -91,3 +91,29 @@ LibC/0.1@lasote/testing
                                                      "licenses/LibB/LICENSE.md")))
         self.assertEqual(load(os.path.join(client.current_folder, "licenses/LibC/license.txt")),
                          "LicenseC")
+
+    def conanfile_txt_multi_excludes_test(self):
+        # https://github.com/conan-io/conan/issues/2293
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    exports_sources = "*"
+    def package(self):
+        self.copy("*.dll", dst="bin")
+"""
+        client.save({"conanfile.py": conanfile,
+                     "a.dll": "",
+                     "Foo/b.dll": "",
+                     "Baz/b.dll": ""})
+        client.run("create . Pkg/0.1@user/testing")
+
+        conanfile = """[requires]
+Pkg/0.1@user/testing
+[imports]
+bin, *.dll ->  @ excludes=Foo/*.dll Baz/*.dll
+"""
+        client.save({"conanfile.txt": conanfile}, clean_first=True)
+        client.run("install . --build=missing")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "a.dll")))
+        self.assertFalse(os.path.exists(os.path.join(client.current_folder, "Foo/b.dll")))
+        self.assertFalse(os.path.exists(os.path.join(client.current_folder, "Baz/b.dll")))

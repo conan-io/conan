@@ -1,6 +1,8 @@
 import os
+from contextlib import contextmanager
 
 from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
+from conans.client.tools.env import pythonpath
 from conans.errors import ConanException
 from conans.model.build_info import DepsCppInfo
 from conans.model.env_info import DepsEnvInfo, EnvValues
@@ -9,6 +11,7 @@ from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
 from conans.tools import environment_append, no_op
+from conans.client.output import Color
 
 
 def create_options(conanfile):
@@ -47,13 +50,13 @@ def create_requirements(conanfile):
         raise ConanException("Error while initializing requirements. %s" % str(e))
 
 
-def create_settings(conanfile, settings):
+def create_settings(conanfile, settings, local):
     try:
         defined_settings = getattr(conanfile, "settings", None)
         if isinstance(defined_settings, str):
             defined_settings = [defined_settings]
         current = defined_settings or {}
-        settings.constraint(current)
+        settings.constraint(current, raise_undefined_field=not local)
         return settings
     except Exception as e:
         raise ConanException("Error while initializing settings. %s" % str(e))
@@ -77,8 +80,19 @@ def create_exports_sources(conanfile):
         return conanfile.exports_sources
 
 
-def get_env_context_manager(conanfile):
-    return environment_append(conanfile.env) if conanfile.apply_env else no_op()
+@contextmanager
+def _env_and_python(conanfile):
+    with environment_append(conanfile.env):
+        with pythonpath(conanfile):
+            yield
+
+
+def get_env_context_manager(conanfile, without_python=False):
+    if not conanfile.apply_env:
+        return no_op()
+    if without_python:
+        return environment_append(conanfile.env)
+    return _env_and_python(conanfile)
 
 
 class ConanFile(object):
@@ -96,7 +110,7 @@ class ConanFile(object):
     short_paths = False
     apply_env = True  # Apply environment variables from requires deps_env_info and profiles
 
-    def __init__(self, output, runner, settings, user=None, channel=None):
+    def __init__(self, output, runner, settings, user=None, channel=None, local=None):
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
         if isinstance(self.generators, str):
@@ -105,7 +119,19 @@ class ConanFile(object):
         # User defined options
         self.options = create_options(self)
         self.requires = create_requirements(self)
-        self.settings = create_settings(self, settings)
+        self.settings = create_settings(self, settings, local)
+        try:
+            if self.settings.os_build and self.settings.os:
+                output.writeln("*"*60, front=Color.BRIGHT_RED)
+                output.writeln("  This package defines both 'os' and 'os_build' ",
+                               front=Color.BRIGHT_RED)
+                output.writeln("  Please use 'os' for libraries and 'os_build'",
+                               front=Color.BRIGHT_RED)
+                output.writeln("  only for build-requires used for cross-building",
+                               front=Color.BRIGHT_RED)
+                output.writeln("*"*60, front=Color.BRIGHT_RED)
+        except ConanException:
+            pass
         self.exports = create_exports(self)
         self.exports_sources = create_exports_sources(self)
         # needed variables to pack the project

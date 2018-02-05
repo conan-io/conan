@@ -19,6 +19,77 @@ class InstallTest(unittest.TestCase):
         self.settings = ("-s os=Windows -s compiler='Visual Studio' -s compiler.version=12 "
                          "-s arch=x86 -s compiler.runtime=MD")
 
+    def install_transitive_pattern_test(self):
+        # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    options = {"shared": [True, False, "header"]}
+    default_options = "shared=False"
+    def package_info(self):
+        self.output.info("PKG OPTION: %s" % self.options.shared)
+"""})
+        client.run("create . Pkg/0.1@user/testing -o shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        client.save({"conanfile.py": """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "Pkg/0.1@user/testing"
+    options = {"shared": [True, False, "header"]}
+    default_options = "shared=False"
+    def package_info(self):
+        self.output.info("PKG2 OPTION: %s" % self.options.shared)
+"""})
+
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: True", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: True", client.out)
+        # Priority of non-scoped options
+        client.run("create . Pkg2/0.1@user/testing -o shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence of exact named option
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg2:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence of exact named option reverse
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header --build=missing")
+        self.assertIn("Pkg/0.1@user/testing: Calling build()", client.out)
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: True", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: True", client.out)
+        # Prevalence of alphabetical pattern
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg2*:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence of alphabetical pattern, opposite order
+        client.run("create . Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o Pkg2*:shared=header -o *:shared=True")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: True", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        # Prevalence and override of alphabetical pattern
+        client.run("create . Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+        client.run("install Pkg2/0.1@user/testing -o *:shared=True -o Pkg*:shared=header")
+        self.assertIn("Pkg/0.1@user/testing: PKG OPTION: header", client.out)
+        self.assertIn("Pkg2/0.1@user/testing: PKG2 OPTION: header", client.out)
+
     def install_package_folder_test(self):
         # Make sure a simple conan install doesn't fire package_info() so self.package_folder breaks
         client = TestClient()
@@ -261,7 +332,7 @@ class Pkg(ConanFile):
 
     def cross_platform_msg_test(self):
         # Explicit with os_build and os_arch settings
-        message = "Cross-platform from 'Linux' to 'Windows'"
+        message = "Cross-build from 'Linux:x86_64' to 'Windows:x86_64'"
         self._create("Hello0", "0.1", settings='"os_build", "os", "arch_build", "arch", "compiler"')
         self.client.run("install Hello0/0.1@lasote/stable -s os_build=Linux -s os=Windows",
                         ignore_error=True)
@@ -269,7 +340,7 @@ class Pkg(ConanFile):
 
         # Implicit detection when not available (retrocompatibility)
         bad_os = "Linux" if platform.system() != "Linux" else "Macos"
-        message = "Cross-platform from '%s' to '%s'" % (detected_os(), bad_os)
+        message = "Cross-build from '%s:x86_64' to '%s:x86_64'" % (detected_os(), bad_os)
         self._create("Hello0", "0.1")
         self.client.run("install Hello0/0.1@lasote/stable -s os=%s" % bad_os, ignore_error=True)
         self.assertIn(message, self.client.user_io.out)
@@ -287,6 +358,8 @@ class TestConan(ConanFile):
         client.save({"conanfile.txt": "[requires]\nHello/0.1@lasote/stable"}, clean_first=True)
 
         client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
+        self.assertIn("Hello/0.1@lasote/stable from local cache\n",
+                      client.out) # Test "from local cache" output message
         client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)

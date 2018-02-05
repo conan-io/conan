@@ -9,13 +9,27 @@ from conans.util.files import load
 
 class ProfileTest(unittest.TestCase):
 
+    def reuse_output_test(self):
+        client = TestClient()
+        client.run("profile new myprofile --detect")
+        client.run("profile update options.Pkg:myoption=123 myprofile")
+        client.run("profile update env.Pkg2:myenv=123 myprofile")
+        client.run("profile show myprofile")
+        self.assertIn("Pkg:myoption=123", client.out)
+        self.assertIn("Pkg2:myenv=123", client.out)
+        profile = str(client.out).splitlines()[2:]
+        client.save({"conanfile.txt": "",
+                     "mylocalprofile": "\n".join(profile)})
+        client.run("install . -pr=mylocalprofile")
+        self.assertIn("PROJECT: Generated conaninfo.txt", client.out)
+
     def empty_test(self):
-        client = TestClient(default_profile=False)
+        client = TestClient()
         client.run("profile list")
         self.assertIn("No profiles defined", client.user_io.out)
 
     def list_test(self):
-        client = TestClient(default_profile=False)
+        client = TestClient()
         create_profile(client.client_cache.profiles_path, "profile3")
         create_profile(client.client_cache.profiles_path, "profile1")
         create_profile(client.client_cache.profiles_path, "profile2")
@@ -26,19 +40,19 @@ class ProfileTest(unittest.TestCase):
                          list(str(client.user_io.out).splitlines()))
 
     def show_test(self):
-        client = TestClient(default_profile=False)
+        client = TestClient()
         create_profile(client.client_cache.profiles_path, "profile1", settings={"os": "Windows"},
                        options=[("MyOption", "32")])
         create_profile(client.client_cache.profiles_path, "profile3",
                        env=[("package:VAR", "value"), ("CXX", "/path/tomy/g++_build"),
                             ("CC", "/path/tomy/gcc_build")])
         client.run("profile show profile1")
-        self.assertIn("    os: Windows", client.user_io.out)
-        self.assertIn("    MyOption=32", client.user_io.out)
+        self.assertIn("[settings]\nos=Windows", client.user_io.out)
+        self.assertIn("MyOption=32", client.user_io.out)
         client.run("profile show profile3")
-        self.assertIn("    CC=/path/tomy/gcc_build", client.user_io.out)
-        self.assertIn("    CXX=/path/tomy/g++_build", client.user_io.out)
-        self.assertIn("    package:VAR=value", client.user_io.out)
+        self.assertIn("CC=/path/tomy/gcc_build", client.user_io.out)
+        self.assertIn("CXX=/path/tomy/g++_build", client.user_io.out)
+        self.assertIn("package:VAR=value", client.user_io.out)
 
     def profile_update_and_get_test(self):
         client = TestClient()
@@ -116,9 +130,9 @@ class ProfileTest(unittest.TestCase):
         client.run("profile new ./MyProfile")
         pr_path = os.path.join(client.current_folder, "MyProfile")
         self.assertTrue(os.path.exists(pr_path))
-        self.assertEquals(load(pr_path), """[build_requires]
-[settings]
+        self.assertEquals(load(pr_path), """[settings]
 [options]
+[build_requires]
 [env]
 """)
 

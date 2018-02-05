@@ -1,4 +1,7 @@
 import unittest
+
+from conans.model.info import ConanInfo
+from conans.model.ref import ConanFileReference, PackageReference
 from conans.test.utils.tools import TestClient
 from conans.util.files import load
 from conans.paths import CONANINFO
@@ -10,6 +13,21 @@ class PackageIDTest(unittest.TestCase):
 
     def setUp(self):
         self.client = TestClient()
+
+    def cross_build_settings_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    settings = "os", "arch", "compiler", "os_build", "arch_build"
+        """
+        client.save({"conanfile.py": conanfile})
+        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=15 -s compiler.runtime=MD '
+                   '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
+        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+        self.assertNotIn("compiler.toolset=None", conaninfo)
+        self.assertNotIn("os_build=None", conaninfo)
+        self.assertNotIn("arch_build=None", conaninfo)
 
     def _export(self, name, version, package_id_text=None, requires=None,
                 channel=None, default_option_value="off", settings=None):
@@ -216,3 +234,77 @@ class PackageIDTest(unittest.TestCase):
                                 ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
+
+    def test_build_settings(self):
+
+        def install_and_get_info(package_id_text):
+            self.client.run("remove * -f")
+            self._export("Hello", "1.2.0", package_id_text=package_id_text,
+                         channel="user/testing",
+                         settings='"os", "os_build", "arch", "arch_build"')
+            self.client.run('install Hello/1.2.0@user/testing '
+                            ' -s os="Windows" '
+                            ' -s os_build="Linux"'
+                            ' -s arch="x86_64"'
+                            ' -s arch_build="x86"'
+                            ' --build missing')
+
+            ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
+            pkg = os.listdir(self.client.client_cache.packages(ref))
+            pid = PackageReference(ref, pkg[0])
+            pkg_folder = self.client.client_cache.package(pid)
+            return ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
+
+        info = install_and_get_info(None)  # Default
+
+        self.assertEquals(str(info.settings.os_build), "None")
+        self.assertEquals(str(info.settings.arch_build), "None")
+
+        # Package has to be present with only os and arch settings
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s os="Windows" '
+                        ' -s arch="x86_64"')
+
+        # Even with wrong build settings
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s os="Windows" '
+                        ' -s arch="x86_64"'
+                        ' -s os_build="Macos"'
+                        ' -s arch_build="x86_64"')
+
+        # take into account build
+        info = install_and_get_info("self.info.include_build_settings()")
+        self.assertEquals(str(info.settings.os_build), "Linux")
+        self.assertEquals(str(info.settings.arch_build), "x86")
+
+        # Now the build settings matter
+        err = self.client.run('install Hello/1.2.0@user/testing '
+                              ' -s os="Windows" '
+                              ' -s arch="x86_64"'
+                              ' -s os_build="Macos"'
+                              ' -s arch_build="x86_64"', ignore_error=True)
+        self.assertTrue(err)
+        self.assertIn("Can't find", self.client.out)
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s os="Windows" '
+                        ' -s arch="x86_64"'
+                        ' -s os_build="Linux"'
+                        ' -s arch_build="x86"')
+
+        # Now only settings for build
+        self.client.run("remove * -f")
+        self._export("Hello", "1.2.0",
+                     channel="user/testing",
+                     settings='"os_build", "arch_build"')
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s os_build="Linux"'
+                        ' -s arch_build="x86"'
+                        ' --build missing')
+        ref = ConanFileReference.loads("Hello/1.2.0@user/testing")
+        pkg = os.listdir(self.client.client_cache.packages(ref))
+        pid = PackageReference(ref, pkg[0])
+        pkg_folder = self.client.client_cache.package(pid)
+        info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
+        self.assertEquals(str(info.settings.os_build), "Linux")
+        self.assertEquals(str(info.settings.arch_build), "x86")
