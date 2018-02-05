@@ -79,20 +79,20 @@ def vs_installation_path(version, preference=None):
                 vs_installation_path._cached[version] = None
 
     # Try with vswhere()
-    output = None
+    products = None
     try:
-        output_legacy =vswhere(legacy=True)
-        output_products = vswhere(products=["*"])
-        output = list(output_legacy + output_products)
+        legacy_products =vswhere(legacy=True)
+        all_products = vswhere(products=["*"])
+        products = list(legacy_products + all_products)
     except ConanException:
         pass
 
     vs_paths = list()
 
-    if output:
+    if products:
         # remove repeated products
         seenProducts = list()
-        for product in output:
+        for product in products:
             if product not in seenProducts:
                 seenProducts.append(product)
 
