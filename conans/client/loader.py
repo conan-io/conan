@@ -97,9 +97,7 @@ class ConanFileLoader(object):
             conanfile.requires.add(requirement_text)
         for build_requirement_text in parser.build_requirements:
             ConanFileReference.loads(build_requirement_text)
-            if not hasattr(conanfile, "build_requires"):
-                conanfile.build_requires = []
-            conanfile.build_requires.append(build_requirement_text)
+            conanfile.build_requires.add(build_requirement_text)
 
         conanfile.generators = parser.generators
 
