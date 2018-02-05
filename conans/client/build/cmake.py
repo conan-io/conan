@@ -92,13 +92,12 @@ class CMake(object):
         return defs_to_string(self.definitions)
 
     def _generator(self):
+        if "CONAN_CMAKE_GENERATOR" in os.environ:
+            return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if not self._compiler or not self._compiler_version or not self._arch:
             raise ConanException("You must specify compiler, compiler.version and arch in "
                                  "your settings to use a CMake generator")
-
-        if "CONAN_CMAKE_GENERATOR" in os.environ:
-            return os.environ["CONAN_CMAKE_GENERATOR"]
 
         if self._compiler == "Visual Studio":
             _visuals = {'8': '8 2005',
@@ -260,7 +259,7 @@ class CMake(object):
             ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
-        if self._os in ("Linux", "FreeBSD", "SunOS"):
+        if self._compiler in ("gcc", "clang", "apple-clang", "sun-cc"):
             if self._arch == "x86" or self._arch == "sparc":
                 ret["CONAN_CXX_FLAGS"] = "-m32"
                 ret["CONAN_SHARED_LINKER_FLAGS"] = "-m32"
