@@ -140,7 +140,9 @@ class HelloConan(ConanFile):
     version = "0.1"
 
     def build(self):
-        assert(tools.get_env("CONAN_RUN_TESTS", default=False) == True)
+        run_tests = tools.get_env("CONAN_RUN_TESTS", default=False)
+        print("test_get_env_in_conafile CONAN_RUN_TESTS=%r" % run_tests)
+        assert(run_tests == True)
         """
         client.save({"conanfile.py": conanfile})
 
