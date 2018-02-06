@@ -6,17 +6,11 @@
         get_env('CONAN_SSL_ENABLED', False) => Will autotransform ENV CONAN_SSL_ENABLED to boolean
 
 """
+import os
 
 
-def get_env(env_key, default=None, environment=None):
+def get_env(env_key, default=None, environment=os.environ):
     """Get the env variable associated with env_key"""
-
-    if environment is None:
-        # Explicit import to avoid any problem caching environ from os module
-        # if import is declared outside. It's a problem launching tests in parallel
-        import os
-        environment = os.environ
-
     env_var = environment.get(env_key, default)
     if env_var != default:
         if isinstance(default, str):
