@@ -69,6 +69,9 @@ def vs_installation_path(version, preference=None):
     if not preference:
         preference = [var.lstrip().rstrip() for var in get_env("CONAN_VS_INSTALLATION_PREFERENCE",
                                                                list())]
+    
+    if not preference:
+        preference = ["Enterprise", "Professional", "Community", "BuildTools"]
 
     if not hasattr(vs_installation_path, "_cached"):
         vs_installation_path._cached = dict()
@@ -113,7 +116,7 @@ def vs_installation_path(version, preference=None):
                 vs_paths.append(product["installationPath"])
 
     # If vswhere does not find anything or not available, try with vs_comntools()
-    if not len(vs_paths):
+    if not vs_paths:
         vs_path = vs_comntools(version)
 
         if vs_path:
