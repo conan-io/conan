@@ -11,6 +11,7 @@ from collections import OrderedDict
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
+from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 
 _global_output = None
@@ -66,7 +67,9 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
 
 def vs_installation_path(version, preference=None):
 
-    preference = ["Enterprise", "Professional", "Community", "BuildTools"] if not preference else preference
+    if not preference:
+        preference = [var.lstrip().rstrip() for var in get_env("CONAN_VS_INSTALLATION_PREFERENCE",
+                                                               list())]
 
     if not hasattr(vs_installation_path, "_cached"):
         vs_installation_path._cached = dict()
@@ -234,7 +237,7 @@ def find_windows_10_sdk():
     return None
 
 
-def vcvars_command(settings, arch=None, compiler_version=None, compiler_preference=None, force=False):
+def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
     os_setting = settings.get_safe("os")
@@ -270,7 +273,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, compiler_preferen
             else:
                 _global_output.warn(message)
     else:
-        vs_path = vs_installation_path(str(compiler_version), preference=compiler_preference)
+        vs_path = vs_installation_path(str(compiler_version))
 
         if not vs_path or not os.path.isdir(vs_path):
             _global_output.warn("VS non-existing installation")
