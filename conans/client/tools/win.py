@@ -6,7 +6,6 @@ import re
 
 import subprocess
 from contextlib import contextmanager
-from collections import OrderedDict
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import cpu_count, detected_architecture, os_info
