@@ -4,7 +4,8 @@ import os
 
 from conans.client import join_arguments
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
-from conans.client.build.compiler_flags import architecture_flags, libcxx_flags
+from conans.client.build.compiler_flags import architecture_flags, libcxx_flags, pic_flags, \
+    format_libraries, format_library_paths, format_defines, sysroot_flags, format_include_paths, build_type_flags
 from conans.client.tools.win import unix_path
 from conans.client.tools.oss import OSInfo
 
@@ -152,32 +153,21 @@ class AutoToolsBuildEnvironment(object):
             self._conanfile.run("%s" % join_arguments([make_program, target, str_args, cpu_count_option]),
                                 win_bash=self._win_bash, subsystem=self.subsystem)
 
-    @property
-    def _sysroot_flag(self):
-        if self._compiler == 'Visual Studio':
-            return None
-        else:
-            return "--sysroot=%s" % self._adjust_path(self._deps_cpp_info.sysroot) if self._deps_cpp_info.sysroot else None
-
     def _configure_link_flags(self):
         """Not the -L"""
         ret = copy.copy(self._deps_cpp_info.sharedlinkflags)
         ret.extend(self._deps_cpp_info.exelinkflags)
         ret.append(self._architecture_flag)
-        if self._sysroot_flag:
-            ret.append(self._sysroot_flag)
+        ret.extend(sysroot_flags(self._deps_cpp_info.sysroot, win_bash=self._win_bash, subsystem=self.subsystem,
+                                 compiler=self._compiler).ldflags)
         return ret
 
     def _configure_flags(self):
         ret = copy.copy(self._deps_cpp_info.cflags)
         ret.append(self._architecture_flag)
-        if self._build_type == "Debug" and str(self._compiler) in ['gcc', 'clang', 'apple-clang', 'sun-cc']:
-            ret.append("-g")  # default debug information
-        elif self._build_type == "Release" and self._compiler == "gcc":
-            # Remove all symbol table and relocation information from the executable.
-            ret.append("-s")
-        if self._sysroot_flag:
-            ret.append(self._sysroot_flag)
+        ret.extend(build_type_flags(compiler=self._compiler, build_type=self._build_type).cflags)
+        ret.extend(sysroot_flags(self._deps_cpp_info.sysroot, win_bash=self._win_bash, subsystem=self.subsystem,
+                                 compiler=self._compiler).cflags)
         return ret
 
     def _configure_cxx_flags(self):
@@ -190,8 +180,7 @@ class AutoToolsBuildEnvironment(object):
         ret = copy.copy(self._deps_cpp_info.defines)
 
         # Debug definition for GCC
-        if self._build_type == "Release" and self._compiler == "gcc":
-            ret.append("NDEBUG")
+        ret.extend(build_type_flags(compiler=self._compiler, build_type=self._build_type).defines)
 
         # CXX11 ABI
         ret.extend(libcxx_flags(compiler=self._compiler, libcxx=self._libcxx).defines)
@@ -212,22 +201,18 @@ class AutoToolsBuildEnvironment(object):
                         ret.append(arg)
             return ret
 
-        if self._compiler == 'Visual Studio':
-            lib_paths = ['/LIBPATH:%s' % x.replace("/", "\\") for x in self.library_paths]
-            include_paths = ['-I%s' % x.replace("/", "\\") for x in self.include_paths]
-            libs = [lib for lib in self.libs]
-        else:
-            lib_paths = ['-L%s' % self._adjust_path(x.replace("\\", "/")) for x in self.library_paths]
-            include_paths = ['-I%s' % self._adjust_path(x.replace("\\", "/")) for x in self.include_paths]
-            libs = ['-l%s' % lib for lib in self.libs]
+        lib_paths = format_library_paths(self.library_paths, win_bash=self._win_bash, subsystem=self.subsystem,
+                                         compiler=self._compiler)
+        include_paths = format_include_paths(self.include_paths, win_bash=self._win_bash, subsystem=self.subsystem,
+                                             compiler=self._compiler)
 
         ld_flags = append(self.link_flags, lib_paths)
-
-        cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])
+        cpp_flags = append(include_paths, format_defines(self.defines))
+        libs = format_libraries(self.libs, compiler=self._compiler)
 
         tmp_compilation_flags = copy.copy(self.flags)
-        if self.fpic and not self._compiler == 'Visual Studio':
-            tmp_compilation_flags.append("-fPIC")
+        if self.fpic:
+            tmp_compilation_flags.extend(pic_flags(self._compiler).cflags)
 
         cxx_flags = append(tmp_compilation_flags, self.cxx_flags)
         c_flags = tmp_compilation_flags
