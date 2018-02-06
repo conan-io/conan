@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+import platform
+from nose.plugins.attrib import attr
 
 from conans.client.build.compiler_flags import architecture_flags, libcxx_flags, pic_flags, CompilerFlags, \
     adjust_path, sysroot_flags, format_defines, format_include_paths, format_library_paths, format_libraries, \
@@ -194,9 +196,16 @@ class CompilerFlagsTest(unittest.TestCase):
     def test_adjust_path(self):
         self.assertEquals('home/www', adjust_path('home\\www'))
         self.assertEquals('home/www', adjust_path('home\\www', compiler='gcc'))
-        self.assertEquals('home\\www', adjust_path('home/www', compiler='Visual Studio'))
+
         self.assertEquals('"home/www root"', adjust_path('home\\www root'))
         self.assertEquals('"home/www root"', adjust_path('home\\www root', compiler='gcc'))
+
+    @attr('visual_studio')
+    def test_adjust_path_visual_studio(self):
+        # NOTE : test cannot be run on *nix systems, as adjust_path uses tools.unix_path which is Windows-only
+        if platform.system() != "Windows":
+            return
+        self.assertEquals('home\\www', adjust_path('home/www', compiler='Visual Studio'))
         self.assertEquals('"home\\www root"', adjust_path('home/www root', compiler='Visual Studio'))
         self.assertEquals('home/www', adjust_path('home\\www', compiler='Visual Studio', win_bash=True))
         self.assertEquals('home/www', adjust_path('home/www', compiler='Visual Studio', win_bash=True))
