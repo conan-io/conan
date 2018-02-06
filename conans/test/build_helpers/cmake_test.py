@@ -1,5 +1,6 @@
 import os
 import shutil
+import stat
 import sys
 import unittest
 import platform
@@ -32,6 +33,33 @@ class CMakeTest(unittest.TestCase):
         with tools.environment_append({"CONAN_CMAKE_GENERATOR": "My CMake Generator"}):
             cmake = CMake(conan_file)
             self.assertIn('-G "My CMake Generator"', cmake.command_line)
+
+    def cmake_make_program_test(self):
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Linux"
+        settings.compiler = "gcc"
+        settings.compiler.version = "6.3"
+        settings.arch = "x86"
+        settings.build_type = "Release"
+        conan_file = ConanFileMock()
+        conan_file.settings = settings
+        conan_file.source_folder = os.path.join(self.tempdir, "my_cache_source_folder")
+        conan_file.build_folder = os.path.join(self.tempdir, "my_cache_build_folder")
+
+        # Existing make
+        make_path = os.path.join(self.tempdir, "make")
+        save(make_path, "")
+        st = os.stat(make_path)
+        os.chmod(make_path, st.st_mode | stat.S_IEXEC)
+        with tools.environment_append({"CONAN_MAKE_PROGRAM": make_path}):
+            cmake = CMake(conan_file)
+            self.assertEquals(cmake.definitions["CMAKE_MAKE_PROGRAM"], make_path)
+
+        # Not existing make
+        with tools.environment_append({"CONAN_MAKE_PROGRAM": "fake_path/make"}):
+            cmake = CMake(conan_file)
+            self.assertNotIn("CMAKE_MAKE_PROGRAM", cmake.definitions)
+            self.assertIn("The specified make program 'fake_path/make' cannot be found", conan_file.output)
 
     def folders_test(self):
         def quote_var(var):
