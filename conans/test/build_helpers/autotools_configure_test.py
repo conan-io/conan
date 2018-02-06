@@ -57,11 +57,10 @@ class AutoToolsConfigureTest(unittest.TestCase):
         expected = {'CFLAGS': 'a_c_flag',
                     'CPPFLAGS': '-Ipath\\includes -Iother\\include\\path -Donedefinition -Dtwodefinition',
                     'CXXFLAGS': 'a_c_flag  a_cpp_flag',
-                    'LDFLAGS': 'shared_link_flag exe_link_flag  /LIBPATH:one\\lib\\path',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag  -LIBPATH:one\\lib\\path',
                     'LIBS': 'onelib twolib'}
 
         self.assertEquals(be.vars, expected)
-
         # GCC 32
         settings = MockSettings({"build_type": "Release",
                                  "arch": "x86",
