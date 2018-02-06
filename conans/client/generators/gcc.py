@@ -19,7 +19,7 @@ class GCCGenerator(Generator):
         flags.extend(['-I"%s"' % x.replace("\\", "/") for x in self._deps_build_info.include_paths])
         rpath_separator = "," if platform.system() == "Darwin" else "="
         flags.extend(['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/")) 
-                      for x in self._deps_build_info.lib_paths]) # rpaths
+                      for x in self._deps_build_info.lib_paths])  # rpaths
         flags.extend(['-L"%s"' % x.replace("\\", "/") for x in self._deps_build_info.lib_paths])
         flags.extend(["-l%s" % x for x in self._deps_build_info.libs])
         flags.extend(self._deps_build_info.cppflags)
