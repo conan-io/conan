@@ -1,4 +1,5 @@
 import glob
+import json
 import os
 import platform
 import re
@@ -68,24 +69,90 @@ def vs_installation_path(version):
 
     if version not in vs_installation_path._cached:
         vs_path = None
-        program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
-        if program_files:
-            vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
-                                        "vswhere.exe")
-            if os.path.isfile(vswhere_path):
-                version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
-                try:
-                    output = subprocess.check_output([vswhere_path, "-version", version_range,
-                                                      "-legacy", "-property", "installationPath"])
-                    vs_path = output.decode().strip()
-                    _global_output.info("vswhere detected VS %s in %s" % (version, vs_path))
-                except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
-                    _global_output.error("vswhere error: %s" % str(e))
+        legacy_products = vswhere(legacy=True)
+        all_products = vswhere(products=["*"])
+        products = legacy_products + all_products
+
+        for product in products:
+            if product["installationVersion"].startswith(("%d." % int(version))):
+                vs_path = product["installationPath"]
 
         # Remember to cache result
         vs_installation_path._cached[version] = vs_path
 
     return vs_installation_path._cached[version]
+
+
+def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
+            legacy=False, property_="", nologo=True):
+
+    # 'version' option only works if Visual Studio 2017 is installed:
+    # https://github.com/Microsoft/vswhere/issues/91
+
+    products = list() if products is None else products
+    requires = list() if requires is None else requires
+
+    if legacy and (products or requires):
+        raise ConanException("The 'legacy' parameter cannot be specified with either the "
+                             "'products' or 'requires' parameter")
+
+    program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
+
+    vswhere_path = ""
+
+    if program_files:
+        vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
+                                    "vswhere.exe")
+        if not os.path.isfile(vswhere_path):
+            raise ConanException("Cannot locate 'vswhere'")
+    else:
+        raise ConanException("Cannot locate 'Program Files'/'Program Files (x86)' directory")
+
+    arguments = list()
+    arguments.append(vswhere_path)
+    
+    # Output json format
+    arguments.append("-format")
+    arguments.append("json")
+
+    if all_:
+        arguments.append("-all")
+
+    if prerelease:
+        arguments.append("-prerelease")
+
+    if products:
+        arguments.append("-products")
+        arguments.extend(products)
+
+    if requires:
+        arguments.append("-requires")
+        arguments.extend(requires)
+
+    if len(version) is not 0:
+        arguments.append("-version")
+        arguments.append(version)
+
+    if latest:
+        arguments.append("-latest")
+
+    if legacy:
+        arguments.append("-legacy")
+
+    if len(property_) is not 0:
+        arguments.append("-property")
+        arguments.append(property_)
+
+    if nologo:
+        arguments.append("-nologo")
+
+    try:
+        output = subprocess.check_output(arguments)
+        vswhere_out = output.decode().strip()
+    except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
+        raise ConanException("vswhere error: %s" % str(e))
+
+    return json.loads(vswhere_out)
 
 
 def find_windows_10_sdk():
