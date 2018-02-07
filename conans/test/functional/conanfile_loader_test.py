@@ -123,8 +123,8 @@ OpenCV2:other_option=Cosa""")
         requirements = Requirements()
         requirements.add("OpenCV/2.4.10@phil/stable")
         requirements.add("OpenCV2/2.4.10@phil/stable")
-        build_requirements = Requirements()
-        build_requirements.add("MyPkg/1.0.0@phil/stable")
+        build_requirements = []
+        build_requirements.append("MyPkg/1.0.0@phil/stable")
 
         self.assertEquals(ret.requires, requirements)
         self.assertEquals(ret.build_requires, build_requirements)
