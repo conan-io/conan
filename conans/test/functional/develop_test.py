@@ -49,6 +49,34 @@ class Pkg(ConanFile):
         client.run("create . Other/1.0@user/testing")
         self.assertNotIn("Develop", client.out)
 
+    def develop_test_test(self):
+        client = TestClient()
+        test_conanfile = """from conans import ConanFile
+class Test(ConanFile):
+    def test(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile,
+                     "test_package/conanfile.py": test_conanfile})
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("Develop requirements!", client.out)
+        self.assertIn("Develop source!", client.out)
+        self.assertIn("Develop build!", client.out)
+        self.assertIn("Develop package!", client.out)
+        self.assertIn("Develop package_info!", client.out)
+        self.assertIn("Develop package_id!", client.out)
+
+        client.run("install Pkg/0.1@user/testing --build")
+        self.assertNotIn("Develop", client.out)
+
+        consumer = """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "Pkg/0.1@user/testing"
+"""
+        client.save({"conanfile.py": consumer})
+        client.run("create . Other/1.0@user/testing")
+        self.assertNotIn("Develop", client.out)
+
     def local_commands_test(self):
         client = TestClient()
         client.save({"conanfile.py": conanfile})

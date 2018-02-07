@@ -80,6 +80,59 @@ class MyPkg(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
 
+    def partial_keep_build_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    exports_sources = "*.h"
+    def source(self):
+        self.output.info("mysource!!")
+    def build(self):
+        self.output.info("mybuild!!")
+    def package(self):
+        self.output.info("mypackage!!")
+        self.copy("*.h")
+"""
+        test_conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    def test(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile,
+                     "header.h": "",
+                     "test_package/conanfile.py": test_conanfile})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+        # keep the source
+        client.save({"conanfile.py": conanfile + " "})
+        client.run("create . Pkg/0.1@lasote/testing --keep-source")
+        self.assertIn("A new conanfile.py version was exported", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+        # keep build
+        client.run("create . Pkg/0.1@lasote/testing --keep-build")
+        self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+
+        # Changes in the recipe again
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing --keep-build")
+        # The source folder is removed, but not necessary, as it will reuse build
+        self.assertNotIn("Pkg/0.1@lasote/testing: Removing 'source' folder", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+
     def keep_build_error_test(self):
         client = TestClient()
         conanfile = """from conans import ConanFile
