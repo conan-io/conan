@@ -329,8 +329,11 @@ class ConanManager(object):
                                   update=update, manifest_manager=manifest_manager)
 
         loader = self.get_loader(profile)
-        if not install_reference and isinstance(reference, ConanFileReference):  # is a create
-            loader.dev_reference = reference
+        if not install_reference:
+            if isinstance(reference, ConanFileReference):  # is a create
+                loader.dev_reference = reference
+            elif inject_require:
+                loader.dev_reference = inject_require
         conanfile = self._load_install_conanfile(loader, reference)
         if inject_require:
             self._inject_require(conanfile, inject_require)
