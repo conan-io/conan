@@ -50,22 +50,6 @@ def create_requirements(conanfile):
         raise ConanException("Error while initializing requirements. %s" % str(e))
 
 
-def create_build_requirements(conanfile):
-    try:
-        # Actual build requirements of this package
-        if not hasattr(conanfile, "build_requires"):
-            return Requirements()
-        else:
-            if not conanfile.build_requires:
-                return Requirements()
-            if isinstance(conanfile.build_requires, tuple):
-                return Requirements(*conanfile.build_requires)
-            else:
-                return Requirements(conanfile.build_requires, )
-    except Exception as e:
-        raise ConanException("Error while initializing build_requirements. %s" % str(e))
-
-
 def create_settings(conanfile, settings, local):
     try:
         defined_settings = getattr(conanfile, "settings", None)
@@ -135,7 +119,6 @@ class ConanFile(object):
         # User defined options
         self.options = create_options(self)
         self.requires = create_requirements(self)
-        self.build_requires = create_build_requirements(self)
         self.settings = create_settings(self, settings, local)
         try:
             if self.settings.os_build and self.settings.os:
