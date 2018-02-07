@@ -3,6 +3,7 @@ import platform
 import re
 from subprocess import Popen, PIPE, STDOUT
 
+from conans.client.output import Color
 from conans.model.version import Version
 from conans.tools import vs_installation_path
 
@@ -186,6 +187,23 @@ def _detect_compiler_version(result, output):
             result.append(("compiler.libcxx", "libc++"))
         elif compiler == "gcc":
             result.append(("compiler.libcxx", "libstdc++"))
+            if Version(version) >= Version("5.1"):
+
+                msg = """
+Conan detected a GCC version > 5 but has adjusted the 'compiler.libcxx' setting to
+'libstdc++' for backwards compatibility.
+Your compiler is likely using the new CXX11 ABI by default (libstdc++11).
+
+If you want Conan to use the new ABI, edit the default profile at:
+
+    ~/.conan/profiles/default
+
+adjusting 'compiler.libcxx=libstdc++11'
+"""
+                output.writeln("\n************************* WARNING: GCC OLD ABI COMPATIBILITY "
+                               "***********************\n %s\n************************************"
+                               "************************************************\n\n\n" % msg,
+                               Color.BRIGHT_RED)
         elif compiler == "cc":
             if platform.system() == "SunOS":
                 result.append(("compiler.libstdcxx", "libstdcxx4"))
