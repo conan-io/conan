@@ -18,6 +18,7 @@ class SConsGenerator(Generator):
                     '        "CCFLAGS"     : {info.cflags},\n'
                     '        "SHLINKFLAGS" : {info.sharedlinkflags},\n'
                     '        "LINKFLAGS"   : {info.exelinkflags},\n'
+                    '        "VERSION"     : "{info.version}",\n'
                     '    }},\n')
 
         sections = []
