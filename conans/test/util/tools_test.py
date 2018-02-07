@@ -12,7 +12,7 @@ from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
 from conans.client.output import ConanOutput
 
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
@@ -120,16 +120,36 @@ class HelloConan(ConanFile):
         self.assertEquals(os.getenv("Z", None), None)
 
     def system_package_tool_fail_when_not_0_returned_test(self):
+        def get_linux_error_message():
+            """
+            Get error message for Linux platform if distro is supported, None otherwise
+            """
+            os_info = OSInfo()
+            update_command = None
+            if os_info.with_apt:
+                update_command = "sudo apt-get update"
+            elif os_info.with_yum:
+                update_command = "sudo yum check-update"
+            elif os_info.with_zypper:
+                update_command = "sudo zypper --non-interactive ref"
+            elif os_info.with_pacman:
+                update_command = "sudo pacman -Syyu --noconfirm"
+
+            return "Command '{0}' failed".format(update_command) if update_command is not None else None
+
+        platform_update_error_msg = {
+            "Linux": get_linux_error_message(),
+            "Darwin": "Command 'brew update' failed",
+            "Windows": "Command 'choco outdated' failed" if which("choco.exe") else None,
+        }
+
         runner = RunnerMock(return_ok=False)
-        spt = SystemPackageTool(runner=runner)
-        platforms = {"Linux": "sudo apt-get update", "Darwin": "brew update"}
-        if platform.system() in platforms:
-            msg = "Command '%s' failed" % platforms[platform.system()]
+        pkg_tool = ChocolateyTool() if which("choco.exe") else None
+        spt = SystemPackageTool(runner=runner, tool=pkg_tool)
+
+        msg = platform_update_error_msg.get(platform.system(), None)
+        if msg is not None:
             with self.assertRaisesRegexp(ConanException, msg):
-                spt.update()
-        elif platform.system() == "Windows" and which("choco.exe"):
-            spt = SystemPackageTool(runner=runner, tool=ChocolateyTool())
-            with self.assertRaisesRegexp(ConanException, "Command 'choco outdated' failed"):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
@@ -454,7 +474,7 @@ compiler:
 
         # Not found error
         self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
-        with self.assertRaisesRegexp(ConanException, "Error 404 downloading file"):
+        with self.assertRaisesRegexp(NotFoundException, "Not found: "):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            retry=3, retry_wait=0)

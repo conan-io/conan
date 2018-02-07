@@ -15,8 +15,7 @@ class {name}Conan(ConanFile):
     build_policy = "missing"
 
     def build(self):
-        with tools.pythonpath(self):
-            pass
+        pass
 {build}
 
     def package(self):
@@ -77,8 +76,8 @@ def py_hello_conan_files(name, version, deps=None):
     requires = ", ".join('"%s"' % r for r in requires)
     deps_names = [str(n).split("/", 1)[0] for n in deps or []]
     if deps:
-        build = "\n".join(["            from hello%s import hello as h%s\n"
-                           "            h%s.build_helper(self)" % (i, i, i) for i in deps_names])
+        build = "\n".join(["        from hello%s import hello as h%s\n"
+                           "        h%s.build_helper(self)" % (i, i, i) for i in deps_names])
     else:
         build = ""
     conanfile = conanfile_template.format(name=name, version=version, requires=requires,

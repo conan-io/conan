@@ -91,7 +91,6 @@ class MyPkg(ConanFile):
         self.assertTrue(error)
         self.assertIn("ERROR: --keep-build specified, but build folder not found", client.out)
 
-
     def create_test(self):
         client = TestClient()
         client.save({"conanfile.py": """
@@ -233,6 +232,25 @@ class MyTest(ConanFile):
         client.run("create . lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
+
+    def create_skip_test_package_test(self):
+        """
+        Skip the test package stage if explicitly disabled with --test-folder=None
+        """
+        # https://github.com/conan-io/conan/issues/2355
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+""", "test_package/conanfile.py": """from conans import ConanFile
+class MyTest(ConanFile):
+    def test(self):
+        self.output.info("TESTING!!!")
+"""})
+        client.run("create . lasote/testing --test-folder=None")
+        self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
 
     def create_test_package_requires(self):
         client = TestClient()

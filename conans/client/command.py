@@ -168,7 +168,8 @@ class Command(object):
         parser.add_argument("-ne", "--not-export", default=False, action='store_true',
                             help='Do not export the conanfile')
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
-                            help='alternative test folder name, by default is "test_package"')
+                            help='alternative test folder name, by default is "test_package". '
+                                 '"None" if test stage needs to be disabled')
         parser.add_argument('-k', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
@@ -182,6 +183,10 @@ class Command(object):
         args = parser.parse_args(*args)
 
         name, version, user, channel = get_reference_fields(args.reference)
+
+        if args.test_folder == "None":
+            # Now if parameter --test-folder=None (string None) we have to skip tests
+            args.test_folder = False
 
         return self._conan.create(args.path, name, version, user, channel,
                                   args.profile, args.settings, args.options,
@@ -805,7 +810,7 @@ class Command(object):
             If you use the --retry option you can specify how many times should conan try to upload
             the packages in case of failure. The default is 2.
             With --retry_wait you can specify the seconds to wait between upload attempts.
-            If no remote is specified, the first configured remote (by default conan.io, use
+            If no remote is specified, the first configured remote (by default conan-center, use
             'conan remote list' to list the remotes) will be used.
         """
         parser = argparse.ArgumentParser(description=self.upload.__doc__,
@@ -922,32 +927,35 @@ class Command(object):
         '.conan/profiles' folder, in the same way as the '--profile' install argument.
         """
         parser = argparse.ArgumentParser(description=self.profile.__doc__, prog="conan profile")
-        subparsers = parser.add_subparsers(dest='subcommand', help='sub-command help')
+        subparsers = parser.add_subparsers(dest='subcommand')
 
         # create the parser for the "profile" command
-        subparsers.add_parser('list', help='list current profiles')
-        parser_show = subparsers.add_parser('show', help='show the values defined for a profile.'
-                                                         ' Can be a path (relative or absolute) to'
-                                                         ' a profile file in  any location.')
-        parser_show.add_argument('profile',  help='name of the profile')
+        subparsers.add_parser('list', help='List current profiles')
+        parser_show = subparsers.add_parser('show', help='Show the values defined for a profile')
+        parser_show.add_argument('profile',  help="name of the profile in the '.conan/profiles' "
+                                                  "folder or path to a profile file")
 
         parser_new = subparsers.add_parser('new', help='Creates a new empty profile')
-        parser_new.add_argument('profile',  help='name of the profile')
+        parser_new.add_argument('profile',  help="name for the profile in the '.conan/profiles' "
+                                                  "folder or path and name for a profile file")
         parser_new.add_argument("--detect", action='store_true',
                                 default=False,
                                 help='Autodetect settings and fill [settings] section')
 
-        parser_update = subparsers.add_parser('update', help='Update a profile')
+        parser_update = subparsers.add_parser('update', help='Update a profile with desired value')
         parser_update.add_argument('item', help='key="value to set", e.j: settings.compiler=gcc')
-        parser_update.add_argument('profile',  help='name of the profile')
+        parser_update.add_argument('profile',  help="name of the profile in the '.conan/profiles' "
+                                                    "folder or path to a profile file")
 
         parser_get = subparsers.add_parser('get', help='Get a profile key')
-        parser_get.add_argument('item', help='key="value to get", e.j: settings.compiler')
-        parser_get.add_argument('profile',  help='name of the profile')
+        parser_get.add_argument('item', help='key of the value to get, e.g: settings.compiler')
+        parser_get.add_argument('profile',  help="name of the profile in the '.conan/profiles' "
+                                                  "folder or path to a profile file")
 
         parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
-        parser_remove.add_argument('item', help='key", e.j: settings.compiler')
-        parser_remove.add_argument('profile',  help='name of the profile')
+        parser_remove.add_argument('item', help='key, e.g: settings.compiler')
+        parser_remove.add_argument('profile',  help="name of the profile in the '.conan/profiles' "
+                                                    "folder or path to a profile file")
 
         args = parser.parse_args(*args)
 
