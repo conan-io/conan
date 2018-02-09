@@ -245,3 +245,25 @@ class Pkg(ConanFile):
         self.assertIsNone(_remove_credentials(None))
         self.assertEqual(_remove_credentials(''), '')
         self.assertEqual(_remove_credentials([]), [])
+
+    def remove_credentials_config_installer_test(self):
+        """ Functional test to check credentials are not displayed in output but are still present
+        in conan configuration
+        # https://github.com/conan-io/conan/issues/2324
+        """
+        fake_url_with_credentials = "http://test_user:test_password@myfakeurl.com/myconf.zip"
+        fake_url_without_credentials = "http://myfakeurl.com/myconf.zip"
+
+        def my_download(obj, url, filename, **kwargs):  # @UnusedVariable
+            self.assertEqual(url, fake_url_with_credentials)
+            self._create_zip(filename)
+
+        with patch.object(Downloader, 'download', new=my_download):
+            self.client.run("config install %s" % (fake_url_with_credentials,))
+
+            # Check credentials are not displayed in output
+            self.assertNotIn(fake_url_with_credentials, self.client.out)
+            self.assertIn(fake_url_without_credentials, self.client.out)
+
+            # Check credentials still stored in configuration
+            self._check(fake_url_with_credentials)
