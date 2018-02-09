@@ -238,7 +238,7 @@ class ConanManager(object):
 
     def _get_graph_builder(self, loader, update, remote_proxy):
         local_search = self._search_manager
-        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy, local_first=not update)
+        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy, update=update)
         graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         return graph_builder
 
