@@ -1226,11 +1226,11 @@ def main(args):
 
         def ctrl_c_handler(_, __):
             print('You pressed Ctrl+C!')
-            sys.exit(0)
+            sys.exit(-1)
 
         def ctrl_break_handler(_, __):
             print('You pressed Ctrl+Break!')
-            sys.exit(0)
+            sys.exit(-2)
 
         signal.signal(signal.SIGINT, ctrl_c_handler)
         if sys.platform == 'win32':
