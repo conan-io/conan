@@ -2,14 +2,14 @@ import unittest
 import platform
 import os
 
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO
 from conans.model.info import ConanInfo
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.paths import CONANFILE_TXT
 from conans.client.conf.detect import detected_os
-from conans.util.files import load, mkdir
+from conans.util.files import load, mkdir, rmdir
 
 
 class InstallTest(unittest.TestCase):
@@ -359,7 +359,7 @@ class TestConan(ConanFile):
 
         client.run("install . --build=missing -s os=Windows -s os_build=Windows --install-folder=win_dir")
         self.assertIn("Hello/0.1@lasote/stable from local cache\n",
-                      client.out) # Test "from local cache" output message
+                      client.out)  # Test "from local cache" output message
         client.run("install . --build=missing -s os=Macos -s os_build=Macos --install-folder=os_dir")
         conaninfo = load(os.path.join(client.current_folder, "win_dir/conaninfo.txt"))
         self.assertIn("os=Windows", conaninfo)
@@ -428,3 +428,28 @@ class TestConan(ConanFile):
                            ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Conanfile not found", client.out)
+
+    def install_broken_reference_test(self):
+        client = TestClient(servers={"default": TestServer()},
+                            users={"default": [("lasote", "mypass")]})
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . Hello/0.1@lasote/stable")
+        client.run("remote add_ref Hello/0.1@lasote/stable default")
+        conan_reference = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        rmdir(os.path.join(client.client_cache.conan(conan_reference)))
+
+        error = client.run("install Hello/0.1@lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Hello/0.1@lasote/stable was not found in remote 'default'",
+                      client.out)
+
+        # If it was associated, it has to be desasociated
+        client.run("remote remove_ref Hello/0.1@lasote/stable")
+        error = client.run("install Hello/0.1@lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
+                      client.out)
