@@ -1,10 +1,34 @@
 import os
-from conans.tools import unzip
 import shutil
+
+try:
+    # urlparse was moved to urllib in python 3
+    from urllib.parse import urlparse
+except ImportError:
+    # location for python 2
+    from urlparse import urlparse
+
+from conans.tools import unzip
 from conans.util.files import rmdir, mkdir
 from conans.client.remote_registry import RemoteRegistry
 from conans import tools
 from conans.errors import ConanException
+
+
+def _remove_credentials(resource):
+    """
+    Remove credentials from resource url/file path
+
+    :param resource: url or file path
+    :return: resource with credentials removed if present
+    """
+    parsed_url = urlparse(resource)
+    if parsed_url.password is not None:
+        # Remove from netloc credentials, format <username>:<password>@<host>:<port>
+        # see https://tools.ietf.org/html/rfc1738#section-3.1
+        new_netloc = ''.join(parsed_url.netloc.rsplit("@", 1)[1:])
+        return parsed_url._replace(netloc=new_netloc).geturl()
+    return resource
 
 
 def _handle_remotes(registry_path, remote_file, output):
@@ -78,7 +102,7 @@ def _process_folder(folder, client_cache, output):
 
 
 def _process_download(item, client_cache, output, tmp_folder):
-    output.info("Trying to download  %s" % item)
+    output.info("Trying to download  %s" % _remove_credentials(item))
     zippath = os.path.join(tmp_folder, "config.zip")
     tools.download(item, zippath, out=output)
     _process_zip_file(zippath, client_cache, output, tmp_folder, remove=True)
