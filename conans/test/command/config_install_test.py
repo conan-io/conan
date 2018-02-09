@@ -10,6 +10,7 @@ from mock import patch
 from conans.client.rest.uploader_downloader import Downloader
 from conans import tools
 from conans.client.conf import ConanClientConfigParser
+from conans.client.conf.config_installer import _remove_credentials
 import shutil
 
 
@@ -214,3 +215,33 @@ class Pkg(ConanFile):
         error = self.client.run("config install", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Called config install without arguments", self.client.out)
+
+    def removed_credentials_from_url_unit_test(self):
+        """
+        Unit tests to remove credentials in netloc from url when using basic auth
+        # https://github.com/conan-io/conan/issues/2324
+        """
+        url_without_credentials = r"https://server.com/resource.zip"
+        url_with_credentials = r"https://test_username:test_password_123@server.com/resource.zip"
+
+        # Check url is the same when not using credentials
+        self.assertEqual(_remove_credentials(url_without_credentials), url_without_credentials)
+
+        # Check credentials has been removed from url
+        self.assertEqual(_remove_credentials(url_with_credentials), url_without_credentials)
+
+        # Check that it works with other protocols ftp
+        ftp_with_credentials = r"ftp://test_username_ftp:test_password_321@server.com/resurce.zip"
+        ftp_without_credentials = r"ftp://server.com/resurce.zip"
+        self.assertEqual(_remove_credentials(ftp_with_credentials), ftp_without_credentials)
+
+        # Check function also works for file paths *unix/windows
+        unix_file_path = r"/tmp/test"
+        self.assertEqual(_remove_credentials(unix_file_path), unix_file_path)
+        windows_file_path = r"c:\windows\test"
+        self.assertEqual(_remove_credentials(windows_file_path), windows_file_path)
+
+        # Check works with unknown inputs
+        self.assertIsNone(_remove_credentials(None))
+        self.assertEqual(_remove_credentials(''), '')
+        self.assertEqual(_remove_credentials([]), [])

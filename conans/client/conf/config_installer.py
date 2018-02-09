@@ -1,5 +1,6 @@
 import os
 import shutil
+from six import string_types
 
 try:
     # urlparse was moved to urllib in python 3
@@ -19,9 +20,12 @@ def _remove_credentials(resource):
     """
     Remove credentials from resource url/file path
 
-    :param resource: url or file path
+    :param resource: string with url or file path
     :return: resource with credentials removed if present
     """
+    if not isinstance(resource, string_types):
+        return resource
+
     parsed_url = urlparse(resource)
     if parsed_url.password is not None:
         # Remove from netloc credentials, format <username>:<password>@<host>:<port>
