@@ -110,7 +110,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     arguments = list()
     arguments.append(vswhere_path)
-    
+
     # Output json format
     arguments.append("-format")
     arguments.append("json")
@@ -148,7 +148,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     try:
         output = subprocess.check_output(arguments)
-        vswhere_out = output.decode().strip()
+        vswhere_out = decode_text(output).strip()
     except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
@@ -229,7 +229,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                                          "and vswhere didn't find it" % env_var)
             if not os.path.isdir(vs_path):
                 _global_output.warn('VS variable %s points to the non-existing path "%s",'
-                    'please check that you have set it correctly' % (env_var, vs_path))
+                                    'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
             command = ('set "VSCMD_START_DIR=%%CD%%" && '
                        'call "%s" %s' % (vcvars_path, vcvars_arch))
@@ -240,7 +240,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                 raise ConanException("VS '%s' variable not defined. Please install VS" % env_var)
             if not os.path.isdir(vs_path):
                 _global_output.warn('VS variable %s points to the non-existing path "%s",'
-                    'please check that you have set it correctly' % (env_var, vs_path))
+                                    'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
             command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
 
@@ -321,6 +321,7 @@ def get_cased_path(name):
         return None
     return res[0]
 
+
 MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
@@ -333,7 +334,6 @@ def unix_path(path, path_flavor=None):
     c/users/path/to/file. Not working in a regular console or MinGW!"""
     if not path:
         return None
-    from conans.client.tools.oss import os_info
 
     if os.path.exists(path):
         path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
