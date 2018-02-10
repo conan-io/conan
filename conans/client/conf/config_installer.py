@@ -1,13 +1,6 @@
 import os
 import shutil
-from six import string_types
-
-try:
-    # urlparse was moved to urllib in python 3
-    from urllib.parse import urlparse
-except ImportError:
-    # location for python 2
-    from urlparse import urlparse
+from six.moves.urllib.parse import urlparse
 
 from conans.tools import unzip
 from conans.util.files import rmdir, mkdir
@@ -23,7 +16,7 @@ def _remove_credentials(resource):
     :param resource: string with url or file path
     :return: resource with credentials removed if present
     """
-    if not isinstance(resource, string_types):
+    if not resource:
         return resource
 
     parsed_url = urlparse(resource)
@@ -31,6 +24,7 @@ def _remove_credentials(resource):
         # Remove from netloc credentials, format <username>:<password>@<host>:<port>
         # see https://tools.ietf.org/html/rfc1738#section-3.1
         new_netloc = ''.join(parsed_url.netloc.rsplit("@", 1)[1:])
+        # noinspection PyProtectedMember
         return parsed_url._replace(netloc=new_netloc).geturl()
     return resource
 
