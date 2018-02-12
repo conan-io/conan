@@ -43,7 +43,7 @@ class VisualStudioBuildEnvironment(object):
         ret = copy.copy(self._deps_cpp_info.cflags)
         btd = build_type_define(build_type=self._build_type)
         if btd:
-            ret.append(btd)
+            ret.extend(format_defines([btd], compiler="Visual Studio"))
         btf = build_type_flag("Visual Studio", build_type=self._build_type)
         if btf:
             ret.append(btf)
