@@ -41,7 +41,7 @@ class CompilerArgsGenerator(Generator):
             flags.append(btf)
         btd = build_type_define(build_type=build_type)
         if btd:
-            flags.append(format_defines([btd], self.compiler)[0])
+            flags.extend(format_defines([btd], self.compiler))
 
         if self.compiler == "Visual Studio":
             runtime = visual_runtime(self.conanfile.settings.get_safe("compiler.runtime"))
