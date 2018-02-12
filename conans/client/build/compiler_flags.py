@@ -1,13 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import platform
+
 
 from conans.tools import unix_path
 
 
-def rpath_flags(compiler, lib_paths):
+def rpath_flags(os_build, compiler, lib_paths):
+    if not os_build:
+        return []
     if compiler in ("clang", "apple-clang", "gcc"):
-        rpath_separator = "," if platform.system() == "Darwin" else "="
+        rpath_separator = "," if os_build == "Macos" else "="
         return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
                 for x in lib_paths if x]
     return []
