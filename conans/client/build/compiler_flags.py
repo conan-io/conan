@@ -114,6 +114,11 @@ def sysroot_flag(sysroot, win_bash=False, subsystem=None, compiler=None):
     return ""
 
 
+def visual_runtime(runtime):
+    if runtime:
+       return "/%s" % runtime
+    return ""
+
 def _option_char(compiler):
     """-L vs /L"""
     return "-" if compiler != "Visual Studio" else "/"
@@ -139,5 +144,5 @@ def format_library_paths(library_paths, win_bash=False, subsystem=None, compiler
 
 
 def format_libraries(libraries, compiler=None):
-    pattern = "%s" if str(compiler) == 'Visual Studio' else "-l%s"
+    pattern = "%s.lib" if str(compiler) == 'Visual Studio' else "-l%s"
     return [pattern % library for library in libraries if library]

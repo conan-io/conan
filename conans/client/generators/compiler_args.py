@@ -4,7 +4,7 @@ from conans.client.build.compiler_flags import (architecture_flag, sysroot_flag,
                                                 format_defines, format_include_paths,
                                                 format_library_paths, format_libraries,
                                                 build_type_flag, build_type_define, libcxx_flag,
-                                                libcxx_define, rpath_flags)
+                                                libcxx_define, rpath_flags, visual_runtime)
 
 
 class CompilerArgsGenerator(Generator):
@@ -19,25 +19,18 @@ class CompilerArgsGenerator(Generator):
 
     @property
     def content(self):
-        """With gcc_flags you can invoke gcc like that:
+        """With compiler_args you can invoke your compiler:
         $ gcc main.c @conanbuildinfo.args -o main
+        $ clang main.c @conanbuildinfo.args -o main
+        $ cl /EHsc main.c @conanbuildinfo.args
         """
         flags = []
         flags.extend(format_defines(self._deps_build_info.defines, compiler=self.compiler))
         flags.extend(format_include_paths(self._deps_build_info.include_paths, compiler=self.compiler))
 
-        flags.extend(rpath_flags(self.compiler, self._deps_build_info.lib_paths))  # rpaths
-
-        flags.extend(format_library_paths(self._deps_build_info.lib_paths, compiler=self.compiler))
-        flags.extend(format_libraries(self._deps_build_info.libs, compiler=self.compiler))
         flags.extend(self._deps_build_info.cppflags)
         flags.extend(self._deps_build_info.cflags)
-        flags.extend(self._deps_build_info.sharedlinkflags)
-        flags.extend(self._deps_build_info.exelinkflags)
-        flags.extend(self._libcxx_flags())
-        sysrf = sysroot_flag(self._deps_build_info.sysroot, compiler=self.compiler)
-        if sysrf:
-            flags.append(sysrf)
+
         arch_flag = architecture_flag(arch=self.conanfile.settings.get_safe("arch"), compiler=self.compiler)
         if arch_flag:
             flags.append(arch_flag)
@@ -49,6 +42,23 @@ class CompilerArgsGenerator(Generator):
         btd = build_type_define(build_type=build_type)
         if btd:
             flags.append(format_defines([btd], self.compiler)[0])
+
+        if self.compiler == "Visual Studio":
+            runtime = visual_runtime(self.conanfile.settings.get_safe("compiler.runtime"))
+            if runtime:
+                flags.append(runtime)
+            # Necessary in the "cl" invocation before specify the rest of linker flags
+            flags.append("/link")
+
+        flags.extend(rpath_flags(self.compiler, self._deps_build_info.lib_paths))
+        flags.extend(format_library_paths(self._deps_build_info.lib_paths, compiler=self.compiler))
+        flags.extend(format_libraries(self._deps_build_info.libs, compiler=self.compiler))
+        flags.extend(self._deps_build_info.sharedlinkflags)
+        flags.extend(self._deps_build_info.exelinkflags)
+        flags.extend(self._libcxx_flags())
+        sysrf = sysroot_flag(self._deps_build_info.sysroot, compiler=self.compiler)
+        if sysrf:
+            flags.append(sysrf)
 
         return " ".join(flag for flag in flags if flag)
 
