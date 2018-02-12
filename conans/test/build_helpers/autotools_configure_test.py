@@ -58,7 +58,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                     'CPPFLAGS': '/Ipath\\includes /Iother\\include\\path /Donedefinition /Dtwodefinition /DNDEBUG',
                     'CXXFLAGS': 'a_c_flag a_cpp_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag /LIBPATH:one\\lib\\path',
-                    'LIBS': 'onelib twolib'}
+                    'LIBS': 'onelib.lib twolib.lib'}
 
         self.assertEquals(be.vars, expected)
         # GCC 32
