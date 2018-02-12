@@ -241,10 +241,8 @@ class Pkg(ConanFile):
         windows_file_path = r"c:\windows\test"
         self.assertEqual(_remove_credentials(windows_file_path), windows_file_path)
 
-        # Check works with unknown inputs
-        self.assertIsNone(_remove_credentials(None))
+        # Check works with empty string
         self.assertEqual(_remove_credentials(''), '')
-        self.assertEqual(_remove_credentials([]), [])
 
     def remove_credentials_config_installer_test(self):
         """ Functional test to check credentials are not displayed in output but are still present

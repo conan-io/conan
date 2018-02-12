@@ -16,14 +16,13 @@ def _remove_credentials(resource):
     :param resource: string with url or file path
     :return: resource with credentials removed if present
     """
-    if not resource:
-        return resource
-
     parsed_url = urlparse(resource)
     if parsed_url.password is not None:
         # Remove from netloc credentials, format <username>:<password>@<host>:<port>
         # see https://tools.ietf.org/html/rfc1738#section-3.1
         new_netloc = ''.join(parsed_url.netloc.rsplit("@", 1)[1:])
+        # parsed_url is an instance of namedtuple and _replace is part of the public api,
+        # to prevent conflicts with field names, the method and attribute names start with an underscore.
         # noinspection PyProtectedMember
         return parsed_url._replace(netloc=new_netloc).geturl()
     return resource
