@@ -43,22 +43,25 @@ class CompilerArgsTest(unittest.TestCase):
 
         conan_file = self._get_conanfile(settings)
         gcc = GCCGenerator(conan_file)
-        self.assertEquals('-Dmydefine1 -Ipath/to/include1 -Wl,-rpath,"path/to/lib1" '
-                          '-Lpath/to/lib1 -lmylib cxx_flag1 c_flag1 -m32 -s -DNDEBUG', gcc.content)
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -s -DNDEBUG '
+                          '-Wl,-rpath,"path/to/lib1" '
+                          '-Lpath/to/lib1 -lmylib', gcc.content)
 
         settings.arch = "x86_64"
         settings.build_type = "Debug"
         settings.compiler.libcxx = "libstdc++11"
 
         gcc = GCCGenerator(conan_file)
-        self.assertEquals('-Dmydefine1 -Ipath/to/include1 -Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 '
-                          '-lmylib cxx_flag1 c_flag1 -D_GLIBCXX_USE_CXX11_ABI=1 -m64 -g',
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
+                          '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib '
+                          '-D_GLIBCXX_USE_CXX11_ABI=1',
                           gcc.content)
 
         settings.compiler.libcxx = "libstdc++"
         gcc = GCCGenerator(conan_file)
-        self.assertEquals('-Dmydefine1 -Ipath/to/include1 -Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 '
-                          '-lmylib cxx_flag1 c_flag1 -D_GLIBCXX_USE_CXX11_ABI=0 -m64 -g',
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
+                          '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib '
+                          '-D_GLIBCXX_USE_CXX11_ABI=0',
                           gcc.content)
 
         settings.os = "Windows"
@@ -68,8 +71,8 @@ class CompilerArgsTest(unittest.TestCase):
         settings.build_type = "Release"
         gcc = GCCGenerator(conan_file)
         # GCC generator ignores the compiler setting, it is always gcc
-        self.assertEquals('-Dmydefine1 -Ipath/to/include1 -Wl,-rpath,"path/to/lib1" '
-                          '-Lpath/to/lib1 -lmylib cxx_flag1 c_flag1 -m32 -s -DNDEBUG', gcc.content)
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -s '
+                          '-DNDEBUG -Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib', gcc.content)
 
     def compiler_args_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -81,8 +84,8 @@ class CompilerArgsTest(unittest.TestCase):
 
         conan_file = self._get_conanfile(settings)
         gen = CompilerArgsGenerator(conan_file)
-        self.assertEquals('/Dmydefine1 /Ipath\\to\\include1 '
-                          '/LIBPATH:path\\to\\lib1 mylib cxx_flag1 c_flag1 /DNDEBUG', gen.content)
+        self.assertEquals('/Dmydefine1 /Ipath\\to\\include1 cxx_flag1 c_flag1 /DNDEBUG '
+                          '/link /LIBPATH:path\\to\\lib1 mylib.lib', gen.content)
 
         settings = Settings.loads(default_settings_yml)
         settings.os = "Macos"
@@ -92,5 +95,5 @@ class CompilerArgsTest(unittest.TestCase):
         settings.build_type = "Release"
         conan_file = self._get_conanfile(settings)
         gen = CompilerArgsGenerator(conan_file)
-        self.assertEquals('-Dmydefine1 -Ipath/to/include1 -Wl,-rpath,"path/to/lib1" '
-                          '-Lpath/to/lib1 -lmylib cxx_flag1 c_flag1 -m32 -DNDEBUG', gen.content)
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -DNDEBUG '
+                          '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib', gen.content)
