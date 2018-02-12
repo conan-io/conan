@@ -9,7 +9,7 @@ def rpath_flags(os_build, compiler, lib_paths):
     if not os_build:
         return []
     if compiler in ("clang", "apple-clang", "gcc"):
-        rpath_separator = "," if os_build == "Macos" else "="
+        rpath_separator = "," if os_build in ["Macos", "iOS", "watchOS", "tvOS"] else "="
         return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
                 for x in lib_paths if x]
     return []
@@ -31,6 +31,9 @@ def architecture_flag(compiler, arch):
 
 
 def libcxx_define(compiler, libcxx):
+
+    if not compiler or not libcxx:
+        return ""
 
     if str(compiler) in ['gcc', 'clang', 'apple-clang']:
         if str(libcxx) == 'libstdc++':
@@ -63,7 +66,7 @@ def pic_flag(compiler=None):
     """
     returns PIC (position independent code) flags, such as -fPIC
     """
-    if compiler == 'Visual Studio':
+    if not compiler or compiler == 'Visual Studio':
         return ""
     return '-fPIC'
 
@@ -73,6 +76,8 @@ def build_type_flag(compiler, build_type):
     returns flags specific to the build type (Debug, Release, etc.)
     (-s, -g, /Zi, etc.)
     """
+    if not compiler or not build_type:
+        return ""
 
     if str(compiler) == 'Visual Studio':
         if build_type == 'Debug':

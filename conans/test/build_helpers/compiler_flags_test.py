@@ -78,7 +78,7 @@ class CompilerFlagsTest(unittest.TestCase):
 
     def test_pic_flags(self):
         flag = pic_flag()
-        self.assertEquals(flag, '-fPIC')
+        self.assertEquals(flag, '')
 
         flags = pic_flag(compiler='gcc')
         self.assertEquals(flags, '-fPIC')
