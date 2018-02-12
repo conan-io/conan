@@ -208,7 +208,8 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertEquals(be.vars, expected)
 
     def rpath_optin_test(self):
-        settings = MockSettings({"build_type": "Release",
+        settings = MockSettings({"os_build": "Linux",
+                                 "build_type": "Release",
                                  "arch": "x86_64",
                                  "compiler": "gcc",
                                  "compiler.libcxx": "libstdc++11"})
@@ -220,7 +221,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
                                 '-D_GLIBCXX_USE_CXX11_ABI=1',
                     'CXXFLAGS': 'a_c_flag -m64 -s --sysroot=/path/to/folder a_cpp_flag',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder '
-                               '-Wl,-rpath,"one/lib/path" -Lone/lib/path',
+                               '-Wl,-rpath="one/lib/path" -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile, include_rpath_flags=True)
         self.assertEquals(be.vars, expected)
