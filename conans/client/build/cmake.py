@@ -15,7 +15,7 @@ from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
-from conans.client.build.compiler_flags import architecture_flags
+from conans.client.build.compiler_flags import architecture_flag
 
 
 def _get_env_cmake_system_name():
@@ -259,16 +259,15 @@ class CMake(object):
         return ""
 
     def _get_cmake_definitions(self):
-        def add_cmake_flags(cmake_flags, name, flags):
+        def add_cmake_flag(cmake_flags, name, flag):
             """
             appends compiler linker flags (if already present), or just sets
             """
-            if flags:
-                joint_flags = ' '.join(flags)
+            if flag:
                 if name not in cmake_flags:
-                    cmake_flags[name] = joint_flags
+                    cmake_flags[name] = flag
                 else:
-                    cmake_flags[name] = ' ' + joint_flags
+                    cmake_flags[name] = ' ' + flag
             return cmake_flags
 
         ret = OrderedDict()
@@ -284,14 +283,14 @@ class CMake(object):
             ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
-        arch_flags = architecture_flags(compiler=self._compiler, arch=self._arch)
-        ret = add_cmake_flags(ret, 'CONAN_CXX_FLAGS', arch_flags.cxxflags)
-        ret = add_cmake_flags(ret, 'CONAN_SHARED_LINKER_FLAGS', arch_flags.ldflags)
-        ret = add_cmake_flags(ret, 'CONAN_C_FLAGS', arch_flags.cflags)
+        arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
+        ret = add_cmake_flag(ret, 'CONAN_CXX_FLAGS', arch_flag)
+        ret = add_cmake_flag(ret, 'CONAN_SHARED_LINKER_FLAGS', arch_flag)
+        ret = add_cmake_flag(ret, 'CONAN_C_FLAGS', arch_flag)
         if self._set_cmake_flags:
-            ret = add_cmake_flags(ret, 'CMAKE_CXX_FLAGS', arch_flags.cxxflags)
-            ret = add_cmake_flags(ret, 'CMAKE_SHARED_LINKER_FLAGS', arch_flags.ldflags)
-            ret = add_cmake_flags(ret, 'CMAKE_C_FLAGS', arch_flags.cflags)
+            ret = add_cmake_flag(ret, 'CMAKE_CXX_FLAGS', arch_flag)
+            ret = add_cmake_flag(ret, 'CMAKE_SHARED_LINKER_FLAGS', arch_flag)
+            ret = add_cmake_flag(ret, 'CMAKE_C_FLAGS', arch_flag)
 
         if self._libcxx:
             ret["CONAN_LIBCXX"] = self._libcxx
@@ -341,7 +340,6 @@ class CMake(object):
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   source_folder=None, build_folder=None, cache_build_folder=None):
-
 
         # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         args = args or []

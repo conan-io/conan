@@ -1,108 +1,94 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import platform
 
 from conans.tools import unix_path
 
 
-class CompilerFlags(object):
-    def __init__(self, cflags=None, cxxflags=None, ldflags=None, defines=None):
-        self._cflags = cflags if cflags else []
-        self._cxxflags = cxxflags if cxxflags else []
-        self._ldflags = ldflags if ldflags else []
-        self._defines = defines if defines else []
-
-    @property
-    def cflags(self):
-        return self._cflags
-
-    @property
-    def cxxflags(self):
-        return self._cxxflags
-
-    @property
-    def ldflags(self):
-        return self._ldflags
-
-    @property
-    def defines(self):
-        return self._defines
-
-    def append(self, additional_flags):
-        """
-        merges compiler flags with additional flags specified
-        :param additional_flags: flags to be added
-        """
-        self.cflags.extend(additional_flags.cflags)
-        self.cxxflags.extend(additional_flags.cxxflags)
-        self.ldflags.extend(additional_flags.ldflags)
-        self.defines.extend(additional_flags.defines)
+def rpath_flags(compiler, lib_paths):
+    if compiler in ("clang", "apple-clang", "gcc"):
+        rpath_separator = "," if platform.system() == "Darwin" else "="
+        return ['-Wl,-rpath%s"%s"' % (rpath_separator, x.replace("\\", "/"))
+                for x in lib_paths if x]
+    return []
 
 
-def architecture_flags(compiler=None, arch=None):
+def architecture_flag(compiler, arch):
     """
     returns flags specific to the target architecture and compiler
     """
+    if not compiler or not arch:
+        return ""
+
     if str(compiler) in ['gcc', 'apple-clang', 'clang', 'sun-cc']:
         if str(arch) in ['x86_64', 'sparcv9']:
-            return CompilerFlags(cflags=['-m64'], cxxflags=['-m64'], ldflags=['-m64'])
+            return '-m64'
         elif str(arch) in ['x86', 'sparc']:
-            return CompilerFlags(cflags=['-m32'], cxxflags=['-m32'], ldflags=['-m32'])
-    return CompilerFlags()
+            return '-m32'
+    return ""
 
 
-def libcxx_flags(compiler=None, libcxx=None):
-    """
-    returns flags specific to the target C++ standard library
-    """
-    flags = CompilerFlags()
+def libcxx_define(compiler, libcxx):
+
     if str(compiler) in ['gcc', 'clang', 'apple-clang']:
         if str(libcxx) == 'libstdc++':
-            flags.defines.append('_GLIBCXX_USE_CXX11_ABI=0')
+            return '_GLIBCXX_USE_CXX11_ABI=0'
         elif str(libcxx) == 'libstdc++11':
-            flags.defines.append('_GLIBCXX_USE_CXX11_ABI=1')
+            return '_GLIBCXX_USE_CXX11_ABI=1'
+    return ""
+
+
+def libcxx_flag(compiler, libcxx):
+    """
+    returns flag specific to the target C++ standard library
+    """
+    if not compiler or not libcxx:
+        return ""
     if str(compiler) in ['clang', 'apple-clang']:
         if str(libcxx) in ['libstdc++', 'libstdc++11']:
-            flags.cxxflags.append('-stdlib=libstdc++')
+            return '-stdlib=libstdc++'
         elif str(libcxx) == 'libc++':
-            flags.cxxflags.append('-stdlib=libc++')
+            return '-stdlib=libc++'
     elif str(compiler) == 'sun-cc':
-        flags.cxxflags.append({"libCstd": "-library=Cstd",
-                               "libstdcxx": "-library=stdcxx4",
-                               "libstlport": "-library=stlport4",
-                               "libstdc++": "-library=stdcpp"}.get(libcxx, None))
-    return flags
+        return ({"libCstd": "-library=Cstd",
+                         "libstdcxx": "-library=stdcxx4",
+                         "libstlport": "-library=stlport4",
+                         "libstdc++": "-library=stdcpp"}.get(libcxx, ""))
+    return ""
 
 
-def pic_flags(compiler=None):
+def pic_flag(compiler=None):
     """
     returns PIC (position independent code) flags, such as -fPIC
     """
     if compiler == 'Visual Studio':
-        return CompilerFlags()
-    return CompilerFlags(cflags=['-fPIC'], cxxflags=['-fPIC'])
+        return ""
+    return '-fPIC'
 
 
-def build_type_flags(compiler=None, build_type=None):
+def build_type_flag(compiler, build_type):
     """
     returns flags specific to the build type (Debug, Release, etc.)
-    usually definitions like DEBUG, _DEBUG, NDEBUG, or flags to
-    control debug information (-s, -g, /Zi, etc.)
+    (-s, -g, /Zi, etc.)
     """
-    flags = CompilerFlags()
+
     if str(compiler) == 'Visual Studio':
         if build_type == 'Debug':
-            flags.cflags.append('/Zi')
-            flags.cxxflags.append('/Zi')
+            return '/Zi'
     else:
         if build_type == 'Debug':
-            flags.cflags.append('-g')
-            flags.cxxflags.append('-g')
+            return '-g'
         elif build_type == 'Release' and str(compiler) == 'gcc':
-            flags.cflags.append('-s')
-            flags.cxxflags.append('-s')
-            # TODO: why NDEBUG only for GCC?
-            flags.defines.append('NDEBUG')
-    return flags
+            return '-s'
+    return ""
+
+
+def build_type_define(build_type=None):
+    """
+    returns definitions specific to the build type (Debug, Release, etc.)
+    like DEBUG, _DEBUG, NDEBUG
+    """
+    return 'NDEBUG' if build_type == 'Release' else ""
 
 
 def adjust_path(path, win_bash=False, subsystem=None, compiler=None):
@@ -121,29 +107,37 @@ def adjust_path(path, win_bash=False, subsystem=None, compiler=None):
     return '"%s"' % path if ' ' in path else path
 
 
-def sysroot_flags(sysroot, win_bash=False, subsystem=None, compiler=None):
+def sysroot_flag(sysroot, win_bash=False, subsystem=None, compiler=None):
     if str(compiler) != 'Visual Studio' and sysroot:
         sysroot = adjust_path(sysroot, win_bash=win_bash, subsystem=subsystem, compiler=compiler)
-        sysroot_flag = ['--sysroot=%s' % sysroot]
-        return CompilerFlags(cflags=sysroot_flag, cxxflags=sysroot_flag, ldflags=sysroot_flag)
-    return CompilerFlags()
+        return '--sysroot=%s' % sysroot
+    return ""
 
 
-def format_defines(defines):
-    return ["-D%s" % define for define in defines]
+def _option_char(compiler):
+    """-L vs /L"""
+    return "-" if compiler != "Visual Studio" else "/"
+
+
+def format_defines(defines, compiler):
+    return ["%sD%s" % (_option_char(compiler), define) for define in defines if define]
 
 
 def format_include_paths(include_paths, win_bash=False, subsystem=None, compiler=None):
-    return ["-I%s" % adjust_path(include_path, win_bash=win_bash, subsystem=subsystem, compiler=compiler)
-            for include_path in include_paths]
+    return ["%sI%s" % (_option_char(compiler),
+                       adjust_path(include_path, win_bash=win_bash,
+                                   subsystem=subsystem, compiler=compiler))
+            for include_path in include_paths if include_path]
 
 
 def format_library_paths(library_paths, win_bash=False, subsystem=None, compiler=None):
-    pattern = "-LIBPATH:%s" if str(compiler) == 'Visual Studio' else "-L%s"
-    return [pattern % adjust_path(library_path, win_bash=win_bash, subsystem=subsystem, compiler=compiler)
-            for library_path in library_paths]
+
+    pattern = "/LIBPATH:%s" if str(compiler) == 'Visual Studio' else "-L%s"
+    return [pattern % adjust_path(library_path, win_bash=win_bash,
+                                  subsystem=subsystem, compiler=compiler)
+            for library_path in library_paths if library_path]
 
 
 def format_libraries(libraries, compiler=None):
     pattern = "%s" if str(compiler) == 'Visual Studio' else "-l%s"
-    return [pattern % library for library in libraries]
+    return [pattern % library for library in libraries if library]
