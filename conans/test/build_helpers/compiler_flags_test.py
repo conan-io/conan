@@ -155,4 +155,5 @@ class CompilerFlagsTest(unittest.TestCase):
 
     def test_format_libraries(self):
         self.assertEquals(['-llib1', '-llib2'], format_libraries(['lib1', 'lib2']))
-        self.assertEquals(['lib1', 'lib2'], format_libraries(['lib1', 'lib2'], compiler='Visual Studio'))
+        self.assertEquals(['lib1.lib', 'lib2.lib'], format_libraries(['lib1', 'lib2'],
+                                                                     compiler='Visual Studio'))
