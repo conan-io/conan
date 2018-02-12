@@ -428,13 +428,15 @@ class ConanAPIV1(object):
     def config_set(self, item, value):
         config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
         config_parser.set_item(item, value)
-        self._client_cache = get_client_cache(get_conan_user_home(), self._user_io.out)
+        self._client_cache._conan_config = None
+        # self._client_cache = get_client_cache(get_conan_user_home(), self._user_io.out)
 
     @api_method
     def config_rm(self, item):
         config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
         config_parser.rm_item(item)
-        self._client_cache = get_client_cache(get_conan_user_home(), self._user_io.out)
+        self._client_cache._conan_config = None
+        # self._client_cache = get_client_cache(get_conan_user_home(), self._user_io.out)
 
     @api_method
     def config_install(self, item):
@@ -712,13 +714,9 @@ def get_conan_runner():
     return runner
 
 
-def get_client_cache(base_folder, out, storage_folder=None):
-    return ClientCache(base_folder, storage_folder, out)
-
-
 def migrate_and_get_client_cache(base_folder, out, storage_folder=None):
     # Init paths
-    client_cache = get_client_cache(base_folder, storage_folder, out)
+    client_cache = ClientCache(base_folder, storage_folder, out)
 
     # Migration system
     migrator = ClientMigrator(client_cache, Version(client_version), out)
