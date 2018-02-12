@@ -33,6 +33,7 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file.env_info = EnvInfo()
         return conan_file
 
+
     def gcc_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
@@ -44,7 +45,7 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file = self._get_conanfile(settings)
         gcc = GCCGenerator(conan_file)
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -s -DNDEBUG '
-                          '-Wl,-rpath,"path/to/lib1" '
+                          '-Wl,-rpath="path/to/lib1" '
                           '-Lpath/to/lib1 -lmylib', gcc.content)
 
         settings.arch = "x86_64"
@@ -53,14 +54,14 @@ class CompilerArgsTest(unittest.TestCase):
 
         gcc = GCCGenerator(conan_file)
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
-                          '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib '
+                          '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
                           '-D_GLIBCXX_USE_CXX11_ABI=1',
                           gcc.content)
 
         settings.compiler.libcxx = "libstdc++"
         gcc = GCCGenerator(conan_file)
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
-                          '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib '
+                          '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
                           '-D_GLIBCXX_USE_CXX11_ABI=0',
                           gcc.content)
 
@@ -72,7 +73,7 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         # GCC generator ignores the compiler setting, it is always gcc
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -s '
-                          '-DNDEBUG -Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib', gcc.content)
+                          '-DNDEBUG -Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib', gcc.content)
 
     def compiler_args_test(self):
         settings = Settings.loads(default_settings_yml)
@@ -97,3 +98,17 @@ class CompilerArgsTest(unittest.TestCase):
         gen = CompilerArgsGenerator(conan_file)
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -DNDEBUG '
                           '-Wl,-rpath,"path/to/lib1" -Lpath/to/lib1 -lmylib', gen.content)
+
+        settings = Settings.loads(default_settings_yml)
+        settings.os = "Linux"
+        settings.os_build = "Macos"
+        settings.compiler = "apple-clang"
+        settings.compiler.version = "9.0"
+        settings.arch = "x86"
+        settings.build_type = "Release"
+
+        conan_file = self._get_conanfile(settings)
+        args = CompilerArgsGenerator(conan_file)
+        self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -DNDEBUG '
+                          '-Wl,-rpath,"path/to/lib1" '
+                          '-Lpath/to/lib1 -lmylib', args.content)
