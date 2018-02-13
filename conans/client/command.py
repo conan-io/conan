@@ -1212,11 +1212,19 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
 def main(args):
     """ main entry point of the conan application, using a Command to
     parse parameters
+
+    Exit codes for conan command:
+
+        0: Success (done)
+        1: General ConanException error (done)
+        2: Migration error
+        3: Ctrl+C
+        4: Ctrl+Break
     """
     try:
         conan_api, client_cache, user_io = Conan.factory()
     except ConanException:  # Error migrating
-        sys.exit(-1)
+        sys.exit(2)
 
     outputer = CommandOutputer(user_io, client_cache)
     command = Command(conan_api, client_cache, user_io, outputer)
@@ -1226,11 +1234,11 @@ def main(args):
 
         def ctrl_c_handler(_, __):
             print('You pressed Ctrl+C!')
-            sys.exit(0)
+            sys.exit(3)
 
         def ctrl_break_handler(_, __):
             print('You pressed Ctrl+Break!')
-            sys.exit(0)
+            sys.exit(4)
 
         signal.signal(signal.SIGINT, ctrl_c_handler)
         if sys.platform == 'win32':
