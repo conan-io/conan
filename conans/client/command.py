@@ -285,13 +285,15 @@ class Command(object):
         install_subparser = subparsers.add_parser('install',
                                                   help='install a full configuration from a zip '
                                                        'file, local or remote')
-        install_subparser.add_argument("--ssl-verify", action='store_true', default=True,
-                                       help='Verify SSL connection when downloading file')
 
         rm_subparser.add_argument("item", help="item to remove")
         get_subparser.add_argument("item", nargs="?", help="item to print")
         set_subparser.add_argument("item", help="key=value to set")
         install_subparser.add_argument("item", nargs="?", help="configuration file to use")
+
+        install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
+                                       help='Verify SSL connection when downloading file')
+
         args = parser.parse_args(*args)
 
         if args.subcommand == "set":
@@ -305,7 +307,8 @@ class Command(object):
         elif args.subcommand == "rm":
             return self._conan.config_rm(args.item)
         elif args.subcommand == "install":
-            return self._conan.config_install(args.item, args.ssl_verify)
+            verify_ssl = get_bool_from_text(args.verify_ssl)
+            return self._conan.config_install(args.item, verify_ssl)
 
     def info(self, *args):
         """Gets information about the dependency graph of a recipe.
