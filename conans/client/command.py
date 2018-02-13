@@ -155,6 +155,8 @@ class Command(object):
         To create and test a binary package use the 'conan create' command.
         """
         parser = argparse.ArgumentParser(description=self.test.__doc__, prog="conan test")
+        parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
+                            help="Optional. Working directory of the build process.")
         parser.add_argument("path", help='path to the "testing" folder containing a recipe '
                             '(conanfile.py) with a test() method or to a recipe file, '
                             'e.g. conan test_package/conanfile.py pkg/version@user/channel')
@@ -166,7 +168,7 @@ class Command(object):
         args = parser.parse_args(*args)
         return self._conan.test(args.path, args.reference, args.profile, args.settings,
                                 args.options, args.env, args.remote, args.update,
-                                build_modes=args.build)
+                                build_modes=args.build, test_build_folder=args.test_build_folder)
 
     def create(self, *args):
         """ Builds a binary package for recipe (conanfile.py) located in current dir.
@@ -186,6 +188,8 @@ class Command(object):
         parser.add_argument("-tf", "--test-folder", action=OnceArgument,
                             help='alternative test folder name, by default is "test_package". '
                                  '"None" if test stage needs to be disabled')
+        parser.add_argument("-tbf", "--test-build-folder", action=OnceArgument,
+                            help='Optional. Working directory for the build of the test project.')
         parser.add_argument('-k', '--keep-source', default=False, action='store_true',
                             help='Optional. Do not remove the source folder in local cache. '
                                  'Use for testing purposes only')
@@ -209,7 +213,8 @@ class Command(object):
                                   args.env, args.test_folder, args.not_export,
                                   args.build, args.keep_source, args.keep_build, args.verify,
                                   args.manifests, args.manifests_interactive,
-                                  args.remote, args.update)
+                                  args.remote, args.update,
+                                  test_build_folder=args.test_build_folder)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
