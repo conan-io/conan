@@ -428,15 +428,13 @@ class ConanAPIV1(object):
     def config_set(self, item, value):
         config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
         config_parser.set_item(item, value)
-        self._client_cache._conan_config = None
-        # self._client_cache = get_client_cache(get_conan_user_home(), self._user_io.out)
+        self._client_cache.invalidate()
 
     @api_method
     def config_rm(self, item):
         config_parser = ConanClientConfigParser(self._client_cache.conan_conf_path)
         config_parser.rm_item(item)
-        self._client_cache._conan_config = None
-        # self._client_cache = get_client_cache(get_conan_user_home(), self._user_io.out)
+        self._client_cache.invalidate()
 
     @api_method
     def config_install(self, item):
