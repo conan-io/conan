@@ -1,5 +1,6 @@
 from conans.test.utils.tools import TestClient
 import unittest
+from nose_parameterized.parameterized import parameterized
 
 
 class CreateTest(unittest.TestCase):
@@ -33,7 +34,8 @@ class HelloTestConan(ConanFile):
         self.assertNotIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
                          client.user_io.out)
 
-    def keep_build_test(self):
+    @parameterized.expand([(True, ), (False, )])
+    def keep_build_test(self, with_test):
         client = TestClient()
         conanfile = """from conans import ConanFile
 class MyPkg(ConanFile):
@@ -46,8 +48,18 @@ class MyPkg(ConanFile):
         self.output.info("mypackage!!")
         self.copy("*.h")
 """
-        client.save({"conanfile.py": conanfile,
-                     "header.h": ""})
+        if with_test:
+            client.save({"conanfile.py": conanfile,
+                         "header.h": ""})
+        else:
+            test_conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    def test(self):
+        pass
+"""
+            client.save({"conanfile.py": conanfile,
+                         "header.h": "",
+                         "test_package/conanfile.py": test_conanfile})
         client.run("create . Pkg/0.1@lasote/testing")
         self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
         self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
