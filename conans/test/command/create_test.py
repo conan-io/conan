@@ -1,5 +1,7 @@
+from conans import tools
 from conans.test.utils.tools import TestClient
 import unittest
+import os
 from nose_parameterized.parameterized import parameterized
 
 
@@ -381,3 +383,49 @@ class HelloTestConan(ConanFile):
         client.run("create . lasote/stable")
         self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
                       client.out)
+
+    def test_build_folder_handling_test(self):
+        conanfile = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    name = "Hello"
+    version = "0.1"
+'''
+        test_conanfile = '''
+from conans import ConanFile
+
+class TestConanLib(ConanFile):
+    def test(self):
+        pass
+'''
+        client = TestClient()
+        default_build_dir = os.path.join(client.current_folder, "test_package", "build")
+
+        # Test the default behavior.
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        client.run("create . lasote/stable")
+        self.assertTrue(os.path.exists(default_build_dir))
+
+        # Test if the specified build folder is respected.
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        client.run("create -tbf=build_folder . lasote/stable")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_folder")))
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # Test if using a temporary test folder can be enabled via the environment variable.
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        with tools.environment_append({"CONAN_TEMP_TEST_FOLDER": "True"}):
+            client.run("create . lasote/stable")
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # # Test if using a temporary test folder can be enabled via the config file.
+        client.run('config set general.temp_test_folder=True')
+        client.run("create . lasote/stable")
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # Test if the specified build folder is respected also when the use of
+        # temporary test folders is enabled in the config file.
+        client.run("create -tbf=test_package/build_folder . lasote/stable")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package", "build_folder")))
+        self.assertFalse(os.path.exists(default_build_dir))
