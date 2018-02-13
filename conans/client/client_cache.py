@@ -236,6 +236,12 @@ class ClientCache(SimplePaths):
                         break  # not empty
                 ref_path = os.path.dirname(ref_path)
 
+    def invalidate(self):
+        self._conan_config = None
+        self._settings = None
+        self._default_profile = None
+        self._no_lock = None
+
 
 def _mix_settings_with_env(settings):
     """Reads CONAN_ENV_XXXX variables from environment
