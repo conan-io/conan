@@ -1,5 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient
+from nose_parameterized import parameterized
 
 
 conanfile = """from conans import ConanFile
@@ -27,9 +28,19 @@ class Pkg(ConanFile):
 
 class DevelopTest(unittest.TestCase):
 
-    def develop_test(self):
+    @parameterized.expand([(True, ), (False, )])
+    def develop_test(self, with_test):
         client = TestClient()
-        client.save({"conanfile.py": conanfile})
+        if with_test:
+            client.save({"conanfile.py": conanfile})
+        else:
+            test_conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    def test(self):
+        pass
+"""
+            client.save({"conanfile.py": conanfile,
+                         "test_package/conanfile.py": test_conanfile})
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("Develop requirements!", client.out)
         self.assertIn("Develop source!", client.out)
