@@ -411,9 +411,8 @@ compiler:
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings)
 
-        import requests
         new_out = StringIO()
-        tools.set_global_instances(ConanOutput(new_out), requests)
+        tools.set_global_instances(ConanOutput(new_out), None)
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
             tools.vcvars_command(settings)
