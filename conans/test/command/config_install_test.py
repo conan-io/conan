@@ -266,3 +266,20 @@ class Pkg(ConanFile):
 
             # Check credentials still stored in configuration
             self._check(fake_url_with_credentials)
+
+    def ssl_verify_test(self):
+        fake_url = "https://fakeurl.com/myconf.zip"
+
+        def download_verify_false(obj, url, filename, **kwargs):  # @UnusedVariable
+            self.assertFalse(obj.verify)
+            self._create_zip(filename)
+
+        def download_verify_true(obj, url, filename, **kwargs):  # @UnusedVariable
+            self.assertTrue(obj.verify.endswith("cacert.pem"))
+            self._create_zip(filename)
+
+        with patch.object(Downloader, 'download', new=download_verify_false):
+            self.client.run("config install %s --verify-ssl=False" % fake_url)
+
+        with patch.object(Downloader, 'download', new=download_verify_true):
+            self.client.run("config install %s --verify-ssl=True" % fake_url)
