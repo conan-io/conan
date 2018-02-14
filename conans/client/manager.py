@@ -237,8 +237,8 @@ class ConanManager(object):
             conanfile.requires(str(inject_require))
 
     def _get_graph_builder(self, loader, update, remote_proxy):
-        local_search = None if update else self._search_manager
-        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy)
+        local_search = self._search_manager
+        resolver = RequireResolver(self._user_io.out, local_search, remote_proxy, update=update)
         graph_builder = DepsGraphBuilder(remote_proxy, self._user_io.out, loader, resolver)
         return graph_builder
 
@@ -329,8 +329,11 @@ class ConanManager(object):
                                   update=update, manifest_manager=manifest_manager)
 
         loader = self.get_loader(profile)
-        if not install_reference and isinstance(reference, ConanFileReference):  # is a create
-            loader.dev_reference = reference
+        if not install_reference:
+            if isinstance(reference, ConanFileReference):  # is a create
+                loader.dev_reference = reference
+            elif inject_require:
+                loader.dev_reference = inject_require
         conanfile = self._load_install_conanfile(loader, reference)
         if inject_require:
             self._inject_require(conanfile, inject_require)

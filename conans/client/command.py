@@ -290,6 +290,10 @@ class Command(object):
         get_subparser.add_argument("item", nargs="?", help="item to print")
         set_subparser.add_argument("item", help="key=value to set")
         install_subparser.add_argument("item", nargs="?", help="configuration file to use")
+
+        install_subparser.add_argument("--verify-ssl", nargs="?", default="True",
+                                       help='Verify SSL connection when downloading file')
+
         args = parser.parse_args(*args)
 
         if args.subcommand == "set":
@@ -303,7 +307,8 @@ class Command(object):
         elif args.subcommand == "rm":
             return self._conan.config_rm(args.item)
         elif args.subcommand == "install":
-            return self._conan.config_install(args.item)
+            verify_ssl = get_bool_from_text(args.verify_ssl)
+            return self._conan.config_install(args.item, verify_ssl)
 
     def info(self, *args):
         """Gets information about the dependency graph of a recipe.
@@ -1212,11 +1217,19 @@ _help_build_policies = '''Optional, use it to choose if you want to build from s
 def main(args):
     """ main entry point of the conan application, using a Command to
     parse parameters
+
+    Exit codes for conan command:
+
+        0: Success (done)
+        1: General ConanException error (done)
+        2: Migration error
+        3: Ctrl+C
+        4: Ctrl+Break
     """
     try:
         conan_api, client_cache, user_io = Conan.factory()
     except ConanException:  # Error migrating
-        sys.exit(-1)
+        sys.exit(2)
 
     outputer = CommandOutputer(user_io, client_cache)
     command = Command(conan_api, client_cache, user_io, outputer)
@@ -1226,11 +1239,11 @@ def main(args):
 
         def ctrl_c_handler(_, __):
             print('You pressed Ctrl+C!')
-            sys.exit(0)
+            sys.exit(3)
 
         def ctrl_break_handler(_, __):
             print('You pressed Ctrl+Break!')
-            sys.exit(0)
+            sys.exit(4)
 
         signal.signal(signal.SIGINT, ctrl_c_handler)
         if sys.platform == 'win32':

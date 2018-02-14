@@ -205,16 +205,20 @@ class ConanProxy(object):
 
         if self._remote_name:
             output.info("Not found, retrieving from server '%s' " % self._remote_name)
-            remote = self._registry.remote(self._remote_name)
-            return _retrieve_from_remote(remote)
+            ref_remote = self._registry.remote(self._remote_name)
         else:
             ref_remote = self._registry.get_ref(conan_reference)
             if ref_remote:
                 output.info("Retrieving from predefined remote '%s'" % ref_remote.name)
-                return _retrieve_from_remote(ref_remote)
-            else:
-                output.info("Not found in local cache, looking in remotes...")
 
+        if ref_remote:
+            try:
+                return _retrieve_from_remote(ref_remote)
+            except NotFoundException:
+                raise NotFoundException("%s was not found in remote '%s'" % (str(conan_reference),
+                                                                             ref_remote.name))
+
+        output.info("Not found in local cache, looking in remotes...")
         remotes = self._registry.remotes
         for remote in remotes:
             logger.debug("Trying with remote %s" % remote.name)
