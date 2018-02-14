@@ -180,7 +180,7 @@ class CMakeTest(unittest.TestCase):
         conan_file = ConanFileMock()
         conan_file.settings = settings
 
-        def check(text, build_config, generator=None):
+        def check(text, build_config, generator=None, set_cmake_flags=False):
             os = str(settings.os)
             os_ver = str(settings.os.version) if settings.get_safe('os.version') else None
             for cmake_system_name in (True, False):
@@ -188,7 +188,8 @@ class CMakeTest(unittest.TestCase):
                 cross = ("-DCMAKE_SYSTEM_NAME=\"%s\" %s-DCMAKE_SYSROOT=\"/path/to/sysroot\" "
                          % ({"Macos": "Darwin"}.get(os, os), cross_ver)
                          if (platform.system() != os and cmake_system_name) else "")
-                cmake = CMake(conan_file, generator=generator, cmake_system_name=cmake_system_name)
+                cmake = CMake(conan_file, generator=generator, cmake_system_name=cmake_system_name,
+                              set_cmake_flags=set_cmake_flags)
                 new_text = text.replace("-DCONAN_EXPORTED", "%s-DCONAN_EXPORTED" % cross)
                 if "Visual Studio" in text:
                     cores = ('-DCONAN_CXX_FLAGS="/MP{0}" '
@@ -205,6 +206,10 @@ class CMakeTest(unittest.TestCase):
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
               '', generator="Custom Generator")
 
+        check('-G "Custom Generator" -DCONAN_EXPORTED="1" '
+              '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
+              '', generator="Custom Generator", set_cmake_flags=True)
+
         settings.build_type = "Debug"
         check('-G "Visual Studio 12 2013" -DCONAN_EXPORTED="1" '
               '-DCONAN_COMPILER="Visual Studio" -DCONAN_COMPILER_VERSION="12" -Wno-dev',
@@ -218,10 +223,9 @@ class CMakeTest(unittest.TestCase):
         settings.compiler = "gcc"
         settings.compiler.version = "4.8"
         generator = "MinGW Makefiles" if platform.system() == "Windows" else "Unix Makefiles"
-        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
-              '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
-              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
-              '-Wno-dev' % generator, "")
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug" -DCONAN_EXPORTED="1" '
+              '-DCONAN_COMPILER="gcc" -DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator, "")
 
         settings.os = "Linux"
         settings.arch = "x86"
@@ -237,6 +241,14 @@ class CMakeTest(unittest.TestCase):
               '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
               '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" -Wno-dev' % generator,
               "")
+
+        check('-G "%s" -DCMAKE_BUILD_TYPE="Debug"'
+              ' -DCONAN_EXPORTED="1" -DCONAN_COMPILER="gcc" '
+              '-DCONAN_COMPILER_VERSION="4.8" -DCONAN_CXX_FLAGS="-m64" '
+              '-DCONAN_SHARED_LINKER_FLAGS="-m64" -DCONAN_C_FLAGS="-m64" '
+              '-DCMAKE_CXX_FLAGS="-m64" -DCMAKE_SHARED_LINKER_FLAGS="-m64" -DCMAKE_C_FLAGS="-m64" '
+              '-Wno-dev' % generator,
+              "", set_cmake_flags=True)
 
         settings.os = "FreeBSD"
         settings.compiler = "clang"
