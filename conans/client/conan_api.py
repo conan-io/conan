@@ -435,9 +435,9 @@ class ConanAPIV1(object):
         config_parser.rm_item(item)
 
     @api_method
-    def config_install(self, item, ssl_verify):
+    def config_install(self, item, verify_ssl):
         from conans.client.conf.config_installer import configuration_install
-        return configuration_install(item, self._client_cache, self._user_io.out, self._runner, ssl_verify)
+        return configuration_install(item, self._client_cache, self._user_io.out, self._runner, verify_ssl)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = os.getcwd()
