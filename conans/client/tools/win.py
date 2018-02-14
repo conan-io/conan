@@ -5,6 +5,7 @@ import platform
 import re
 
 import subprocess
+from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
@@ -67,11 +68,12 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
 def vs_installation_path(version, preference=None):
 
     if not preference:
-        preference = [var.lstrip().rstrip() for var in get_env("CONAN_VS_INSTALLATION_PREFERENCE",
+        env_prefs = [var.lstrip().rstrip() for var in get_env("CONAN_VS_INSTALLATION_PREFERENCE",
                                                                list())]
-    
-    if not preference:
-        preference = ["Enterprise", "Professional", "Community", "BuildTools"]
+        if env_prefs:
+            preference = env_prefs
+        else:  # default values
+            preference = ["Enterprise", "Professional", "Community", "BuildTools"]
 
     if not hasattr(vs_installation_path, "_cached"):
         vs_installation_path._cached = dict()
@@ -84,13 +86,12 @@ def vs_installation_path(version, preference=None):
                 vs_installation_path._cached[version] = None
 
     # Try with vswhere()
-    products = None
     try:
-        legacy_products =vswhere(legacy=True)
+        legacy_products = vswhere(legacy=True)
         all_products = vswhere(products=["*"])
         products = list(legacy_products + all_products)
     except ConanException:
-        pass
+        products = None
 
     vs_paths = list()
 
