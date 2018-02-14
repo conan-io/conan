@@ -68,6 +68,22 @@ class Command(object):
         self._user_io = user_io
         self._outputer = outputer
 
+    def help(self, *args):
+        """Show help of a specific commmand.
+        """
+        parser = argparse.ArgumentParser(description=self.help.__doc__, prog="conan help")
+        parser.add_argument("command", help='command', nargs="?")
+        args = parser.parse_args(*args)
+        if not args.command:
+            self._show_help()
+            return
+        try:
+            commands = self._commands()
+            method = commands[args.command]
+            method(["--help"])
+        except KeyError:
+            raise ConanException("Unknown command '%s'" % args.command)
+
     def new(self, *args):
         """Creates a new package recipe template with a 'conanfile.py'.
         And optionally, 'test_package' package testing files.
@@ -1039,7 +1055,7 @@ class Command(object):
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download"))]
+                                   "alias", "download", "help"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
