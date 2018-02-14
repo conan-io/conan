@@ -161,7 +161,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     arguments = list()
     arguments.append(vswhere_path)
-    
+
     # Output json format
     arguments.append("-format")
     arguments.append("json")
@@ -199,7 +199,7 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
 
     try:
         output = subprocess.check_output(arguments)
-        vswhere_out = output.decode().strip()
+        vswhere_out = decode_text(output).strip()
     except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
         raise ConanException("vswhere error: %s" % str(e))
 
@@ -366,6 +366,7 @@ def get_cased_path(name):
         return None
     return res[0]
 
+
 MSYS2 = 'msys2'
 MSYS = 'msys'
 CYGWIN = 'cygwin'
@@ -378,7 +379,6 @@ def unix_path(path, path_flavor=None):
     c/users/path/to/file. Not working in a regular console or MinGW!"""
     if not path:
         return None
-    from conans.client.tools.oss import os_info
 
     if os.path.exists(path):
         path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
