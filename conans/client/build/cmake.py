@@ -15,6 +15,7 @@ from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
+from conans.client.build.compiler_flags import architecture_flag
 
 
 def _get_env_cmake_system_name():
@@ -25,7 +26,7 @@ def _get_env_cmake_system_name():
 class CMake(object):
 
     def __init__(self, conanfile, generator=None, cmake_system_name=True,
-                 parallel=True, build_type=None, toolset=None, make_program=None):
+                 parallel=True, build_type=None, toolset=None, make_program=None, set_cmake_flags=False):
         """
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
         :param generator: Generator name to use or none to autodetect
@@ -35,6 +36,8 @@ class CMake(object):
         :param build_type: Overrides default build type comming from settings
         :param toolset: Toolset name to use (such as llvm-vs2014) or none for default one,
                 applies only to certain generators (e.g. Visual Studio)
+        :param set_cmake_flags: whether or not to set CMake flags like CMAKE_CXX_FLAGS, CMAKE_C_FLAGS, etc.
+               it's vital to set for certain projects (e.g. using CMAKE_SIZEOF_VOID_P or CMAKE_LIBRARY_ARCHITECTURE)
         """
         if not isinstance(conanfile, ConanFile):
             raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
@@ -60,6 +63,7 @@ class CMake(object):
         if self._cmake_system_name is None:  # Not overwritten using environment
             self._cmake_system_name = cmake_system_name
         self.parallel = parallel
+        self._set_cmake_flags = set_cmake_flags
         self.definitions = self._get_cmake_definitions()
         if build_type and build_type != self._build_type:
             # Call the setter to warn and update the definitions if needed
@@ -255,6 +259,17 @@ class CMake(object):
         return ""
 
     def _get_cmake_definitions(self):
+        def add_cmake_flag(cmake_flags, name, flag):
+            """
+            appends compiler linker flags (if already present), or just sets
+            """
+            if flag:
+                if name not in cmake_flags:
+                    cmake_flags[name] = flag
+                else:
+                    cmake_flags[name] = ' ' + flag
+            return cmake_flags
+
         ret = OrderedDict()
         ret.update(self._build_type_definition())
         ret.update(self._runtime_definition())
@@ -268,16 +283,14 @@ class CMake(object):
             ret["CONAN_COMPILER_VERSION"] = str(self._compiler_version)
 
         # Force compiler flags -- TODO: give as environment/setting parameter?
-        if self._compiler in ("gcc", "clang", "apple-clang", "sun-cc"):
-            if self._arch == "x86" or self._arch == "sparc":
-                ret["CONAN_CXX_FLAGS"] = "-m32"
-                ret["CONAN_SHARED_LINKER_FLAGS"] = "-m32"
-                ret["CONAN_C_FLAGS"] = "-m32"
-
-            if self._arch == "x86_64" or self._arch == "sparcv9":
-                ret["CONAN_CXX_FLAGS"] = "-m64"
-                ret["CONAN_SHARED_LINKER_FLAGS"] = "-m64"
-                ret["CONAN_C_FLAGS"] = "-m64"
+        arch_flag = architecture_flag(compiler=self._compiler, arch=self._arch)
+        ret = add_cmake_flag(ret, 'CONAN_CXX_FLAGS', arch_flag)
+        ret = add_cmake_flag(ret, 'CONAN_SHARED_LINKER_FLAGS', arch_flag)
+        ret = add_cmake_flag(ret, 'CONAN_C_FLAGS', arch_flag)
+        if self._set_cmake_flags:
+            ret = add_cmake_flag(ret, 'CMAKE_CXX_FLAGS', arch_flag)
+            ret = add_cmake_flag(ret, 'CMAKE_SHARED_LINKER_FLAGS', arch_flag)
+            ret = add_cmake_flag(ret, 'CMAKE_C_FLAGS', arch_flag)
 
         if self._libcxx:
             ret["CONAN_LIBCXX"] = self._libcxx
@@ -327,7 +340,6 @@ class CMake(object):
 
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   source_folder=None, build_folder=None, cache_build_folder=None):
-
 
         # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         args = args or []
