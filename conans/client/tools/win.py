@@ -67,6 +67,8 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
 
 def vs_installation_path(version, preference=None):
 
+    vs_installation_path = None
+
     if not preference:
         env_prefs = [var.lstrip().rstrip() for var in get_env("CONAN_VS_INSTALLATION_PREFERENCE",
                                                                list())]
@@ -74,16 +76,6 @@ def vs_installation_path(version, preference=None):
             preference = env_prefs
         else:  # default values
             preference = ["Enterprise", "Professional", "Community", "BuildTools"]
-
-    if not hasattr(vs_installation_path, "_cached"):
-        vs_installation_path._cached = dict()
-
-    if version in vs_installation_path._cached:
-        if vs_installation_path._cached[version] is not None:
-            if preference[0] in vs_installation_path._cached[version]:
-                return vs_installation_path._cached[version]
-            else:
-                vs_installation_path._cached[version] = None
 
     # Try with vswhere()
     try:
@@ -126,12 +118,11 @@ def vs_installation_path(version, preference=None):
             if vs_path.endswith(sub_path_to_remove):
                 vs_path = vs_path[:-(len(sub_path_to_remove)+1)]
 
-        # Remember to cache result
-        vs_installation_path._cached[version] = vs_path
+        vs_installation_path = vs_path
     else:
-        vs_installation_path._cached[version] = vs_paths[0]
+        vs_installation_path = vs_paths[0]
 
-    return vs_installation_path._cached[version]
+    return vs_installation_path
 
 
 def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
