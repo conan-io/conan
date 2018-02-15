@@ -1,13 +1,13 @@
 import unittest
 import os
 import platform
+import re
 
 from conans import tools
 from conans.test.utils.tools import TestClient
 from conans.test.utils.test_files import temp_folder
-from conans.paths import CONANFILE, long_paths_support
+from conans.paths import CONANFILE
 from conans.model.ref import ConanFileReference, PackageReference
-import re
 
 
 conanfile_py = """
@@ -42,16 +42,16 @@ class InfoFoldersTest(unittest.TestCase):
 
     def _prepare_deps(self, client):
         client.save({CONANFILE: conanfile_py})
-        client.run("export %s" % self.user_channel)
+        client.run("export . %s" % self.user_channel)
         client.save({CONANFILE: with_deps_path_file}, clean_first=True)
-        client.run("export %s" % self.user_channel)
+        client.run("export . %s" % self.user_channel)
         client.save({'conanfile.txt': deps_txt_file}, clean_first=True)
 
     def test_basic(self):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
-        client.run("export %s" % self.user_channel)
-        client.run("info --paths %s" % (self.conan_ref))
+        client.run("export . %s" % self.user_channel)
+        client.run("info %s --paths" % (self.conan_ref))
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         output = client.user_io.out
         self.assertIn(os.path.join(base_path, "export"), output)
@@ -64,8 +64,8 @@ class InfoFoldersTest(unittest.TestCase):
         client = TestClient()
         self._prepare_deps(client)
 
-        for ref in [self.conan_ref2, ""]:
-            client.run("info --paths %s" % (ref))
+        for ref in [self.conan_ref2, "."]:
+            client.run("info %s --paths" % (ref))
             output = client.user_io.out
 
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
@@ -79,7 +79,7 @@ class InfoFoldersTest(unittest.TestCase):
     def test_deps_specific_information(self):
         client = TestClient()
         self._prepare_deps(client)
-        client.run("info --paths --only package_folder --package_filter MyPackage/*")
+        client.run("info . --paths --only package_folder --package-filter MyPackage/*")
         output = client.user_io.out
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
@@ -87,7 +87,7 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertNotIn("build", output)
         self.assertNotIn("MyPackage2", output)
 
-        client.run("info --paths --only package_folder --package_filter MyPackage*")
+        client.run("info . --paths --only package_folder --package-filter MyPackage*")
         output = client.user_io.out
 
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
@@ -100,8 +100,8 @@ class InfoFoldersTest(unittest.TestCase):
     def test_single_field(self):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
-        client.run("export %s" % self.user_channel)
-        client.run("info --paths --only=build_folder %s" % (self.conan_ref))
+        client.run("export . %s" % self.user_channel)
+        client.run("info %s --paths --only=build_folder" % (self.conan_ref))
         base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
         output = client.user_io.out
         self.assertNotIn("export", output)
@@ -110,30 +110,26 @@ class InfoFoldersTest(unittest.TestCase):
         self.assertNotIn("package", output)
 
     def test_short_paths(self):
+        if platform.system() != "Windows":
+            return
         folder = temp_folder(False)
         short_folder = os.path.join(folder, ".cn")
 
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
             client = TestClient(base_folder=folder)
             client.save({CONANFILE: conanfile_py.replace("False", "True")})
-            client.run("export %s" % self.user_channel)
-            client.run("info --paths %s" % (self.conan_ref))
+            client.run("export . %s" % self.user_channel)
+            client.run("info %s --paths" % (self.conan_ref))
             base_path = os.path.join("MyPackage", "0.1.0", "myUser", "testing")
             output = client.user_io.out
             self.assertIn(os.path.join(base_path, "export"), output)
-            if long_paths_support:
-                self.assertIn(os.path.join(base_path, "source"), output)
-                self.assertIn(os.path.join(base_path, "build"), output)
-                self.assertIn(os.path.join(base_path, "package"), output)
-                self.assertNotIn(short_folder, output)
-            else:
-                self.assertNotIn(os.path.join(base_path, "source"), output)
-                self.assertNotIn(os.path.join(base_path, "build"), output)
-                self.assertNotIn(os.path.join(base_path, "package"), output)
+            self.assertNotIn(os.path.join(base_path, "source"), output)
+            self.assertNotIn(os.path.join(base_path, "build"), output)
+            self.assertNotIn(os.path.join(base_path, "package"), output)
 
-                self.assertIn("source_folder: %s" % short_folder, output)
-                self.assertIn("build_folder: %s" % short_folder, output)
-                self.assertIn("package_folder: %s" % short_folder, output)
+            self.assertIn("source_folder: %s" % short_folder, output)
+            self.assertIn("build_folder: %s" % short_folder, output)
+            self.assertIn("package_folder: %s" % short_folder, output)
 
             # Ensure that the inner folders are not created (that could affect
             # pkg creation flow
@@ -144,13 +140,12 @@ class InfoFoldersTest(unittest.TestCase):
                          client.client_cache.build(pkg_ref, True),
                          client.client_cache.package(pkg_ref, True)):
                 self.assertFalse(os.path.exists(path))
-                if not long_paths_support:  # The parent has been created for .conan_link
-                    self.assertTrue(os.path.exists(os.path.dirname(path)))
+                self.assertTrue(os.path.exists(os.path.dirname(path)))
 
     def test_direct_conanfile(self):
         client = TestClient()
         client.save({CONANFILE: conanfile_py})
-        client.run("info")
+        client.run("info .")
         output = client.user_io.out
         self.assertNotIn("export_folder", output)
         self.assertNotIn("source_folder", output)

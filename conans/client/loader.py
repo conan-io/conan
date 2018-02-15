@@ -26,12 +26,12 @@ class ConanFileLoader(object):
         # assert package_settings is None or isinstance(package_settings, dict)
         self._settings = settings
         self._user_options = profile.options.copy()
-        self._scopes = profile.scopes
 
         self._package_settings = profile.package_settings_values
         self._env_values = profile.env_values
+        self.dev_reference = None
 
-    def load_conan(self, conanfile_path, output, consumer=False, reference=None):
+    def load_conan(self, conanfile_path, output, consumer=False, reference=None, local=False):
         """ loads a ConanFile object from the given file
         """
         result = load_conanfile_class(conanfile_path)
@@ -52,8 +52,7 @@ class ConanFileLoader(object):
                 user, channel = None, None
 
             # Instance the conanfile
-            result = result(output, self._runner, tmp_settings,
-                            os.path.dirname(conanfile_path), user, channel)
+            result = result(output, self._runner, tmp_settings, user, channel, local)
 
             # Assign environment
             result._env_values.update(self._env_values)
@@ -62,11 +61,11 @@ class ConanFileLoader(object):
                 self._user_options.descope_options(result.name)
                 result.options.initialize_upstream(self._user_options)
                 self._user_options.clear_unscoped_options()
-                # If this is the consumer project, it has no name
-                result.scope = self._scopes.package_scope()
             else:
-                result.scope = self._scopes.package_scope(result.name)
                 result.in_local_cache = True
+
+            if consumer or (self.dev_reference and self.dev_reference == reference):
+                result.develop = True
 
             return result
         except Exception as e:  # re-raise with file name
@@ -83,7 +82,7 @@ class ConanFileLoader(object):
         return conanfile
 
     def _parse_conan_txt(self, contents, path, output):
-        conanfile = ConanFile(output, self._runner, Settings(), path)
+        conanfile = ConanFile(output, self._runner, Settings())
         # It is necessary to copy the settings, because the above is only a constraint of
         # conanfile settings, and a txt doesn't define settings. Necessary for generators,
         # as cmake_multi, that check build_type.
@@ -105,15 +104,14 @@ class ConanFileLoader(object):
 
         # imports method
         conanfile.imports = parser.imports_method(conanfile)
-        conanfile.scope = self._scopes.package_scope()
         conanfile._env_values.update(self._env_values)
         return conanfile
 
-    def load_virtual(self, references, cwd, scope_options=True,
+    def load_virtual(self, references, scope_options=True,
                      build_requires_options=None):
         # If user don't specify namespace in options, assume that it is
         # for the reference (keep compatibility)
-        conanfile = ConanFile(None, self._runner, self._settings.copy(), conanfile_directory=cwd)
+        conanfile = ConanFile(None, self._runner, self._settings.copy())
         conanfile.settings = self._settings.copy_values()
         # Assign environment
         conanfile._env_values.update(self._env_values)
@@ -131,6 +129,5 @@ class ConanFileLoader(object):
             conanfile.options.initialize_upstream(self._user_options)
 
         conanfile.generators = []  # remove the default txt generator
-        conanfile.scope = self._scopes.package_scope()
 
         return conanfile

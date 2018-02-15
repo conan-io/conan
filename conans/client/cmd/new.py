@@ -1,7 +1,7 @@
 import re
 from conans.errors import ConanException
 from conans.model.ref import ConanFileReference
-from conans.client.new_ci import ci_get_files
+from conans.client.cmd.new_ci import ci_get_files
 
 
 conanfile = """from conans import ConanFile, CMake, tools
@@ -29,13 +29,13 @@ conan_basic_setup()''')
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="%s/hello" % self.source_folder)
+        cmake.configure(source_folder="hello")
         cmake.build()
 
         # Explicit way:
         # self.run('cmake %s/hello %s' % (self.source_folder, cmake.command_line))
         # self.run("cmake --build . %s" % cmake.build_config)
-        
+
     def package(self):
         self.copy("*.h", dst="include", src="hello")
         self.copy("*hello.lib", dst="lib", keep_path=False)
@@ -83,7 +83,7 @@ class {package_name}Conan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        cmake.configure(source_dir="%s/src" % self.source_folder)
+        cmake.configure(source_folder="src")
         cmake.build()
 
         # Explicit way:
@@ -112,6 +112,7 @@ class {package_name}Conan(ConanFile):
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
+    no_copy_source = True
     # No settings/options are necessary, this is header only
 
     def source(self):
@@ -127,7 +128,7 @@ class {package_name}Conan(ConanFile):
 """
 
 
-test_conanfile = """from conans import ConanFile, CMake
+test_conanfile = """from conans import ConanFile, CMake, tools
 import os
 
 class {package_name}TestConan(ConanFile):
@@ -137,7 +138,7 @@ class {package_name}TestConan(ConanFile):
     def build(self):
         cmake = CMake(self)
         # Current dir is "test_package/build/<build_id>" and CMakeLists.txt is in "test_package"
-        cmake.configure(source_dir=self.conanfile_directory, build_dir="./")
+        cmake.configure()
         cmake.build()
 
     def imports(self):
@@ -146,8 +147,9 @@ class {package_name}TestConan(ConanFile):
         self.copy('*.so*', dst='bin', src='lib')
 
     def test(self):
-        os.chdir("bin")
-        self.run(".%sexample" % os.sep)
+        if not tools.cross_building(self.settings):
+            os.chdir("bin")
+            self.run(".%sexample" % os.sep)
 """
 
 test_cmake = """project(PackageTest CXX)
@@ -213,9 +215,9 @@ test_package/build
 """
 
 
-def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
-              visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
-              shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
+def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
+            visual_versions=None, linux_gcc_versions=None, linux_clang_versions=None, osx_clang_versions=None,
+            shared=None, upload_url=None, gitignore=None, gitlab_gcc_versions=None, gitlab_clang_versions=None):
     try:
         tokens = ref.split("@")
         name, version = tokens[0].split("/")
@@ -226,7 +228,7 @@ def get_files(ref, header=False, pure_c=False, test=False, exports_sources=False
 
         pattern = re.compile('[\W_]+')
         package_name = pattern.sub('', name).capitalize()
-    except:
+    except ValueError:
         raise ConanException("Bad parameter, please use full package name,"
                              "e.g: MyLib/1.2.3@user/testing")
 

@@ -7,7 +7,6 @@ from conans.model.info import ConanInfo
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.model.scope import Scopes
 from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
@@ -78,21 +77,31 @@ def read_conaninfo_profile(current_path):
     profile = Profile()
     profile.settings = OrderedDict(existing_info.full_settings.as_list())
     profile.options = existing_info.full_options
-    profile.scopes = existing_info.scope
     profile.env_values = existing_info.env_values
     return profile
 
 
-def get_profile_path(profile_name, default_folder, cwd):
+def get_profile_path(profile_name, default_folder, cwd, exists=True):
+    def valid_path(profile_path):
+        if exists and not os.path.isfile(profile_path):
+            raise ConanException("Profile not found: %s" % profile_path)
+        return profile_path
+
     if os.path.isabs(profile_name):
-        profile_path = profile_name
-    elif cwd and (os.path.exists(os.path.join(cwd, profile_name)) or profile_name.startswith(".")):
-        # relative path name
+        return valid_path(profile_name)
+
+    if profile_name[:2] in ("./", ".\\"):  # local
         profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-    else:
-        if not os.path.exists(default_folder):
-            mkdir(default_folder)
-        profile_path = os.path.join(default_folder, profile_name)
+        return valid_path(profile_path)
+
+    if not os.path.exists(default_folder):
+        mkdir(default_folder)
+    profile_path = os.path.join(default_folder, profile_name)
+    if exists:
+        if not os.path.isfile(profile_path):
+            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+        if not os.path.isfile(profile_path):
+            raise ConanException("Profile not found: %s" % profile_name)
     return profile_path
 
 
@@ -105,17 +114,7 @@ def read_profile(profile_name, cwd, default_folder):
         return None, None
 
     profile_path = get_profile_path(profile_name, default_folder, cwd)
-    try:
-        text = load(profile_path)
-    except IOError:
-        folder = os.path.dirname(profile_path)
-        if os.path.exists(folder):
-            profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-        else:
-            profiles = []
-        current_profiles = ", ".join(profiles) or "[]"
-        raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                             "%s" % (profile_name, current_profiles))
+    text = load(profile_path)
 
     try:
         return _load_profile(text, profile_path, default_folder)
@@ -215,24 +214,28 @@ def _apply_inner_profile(doc, base_profile):
         for req in doc.build_requires.splitlines():
             _load_single_build_require(base_profile, req)
 
-    if doc.scopes:
-        base_profile.update_scopes(Scopes.from_list(doc.scopes.splitlines()))
-
     if doc.options:
         base_profile.options.update(OptionsValues.loads(doc.options))
 
-    base_profile.env_values.update(EnvValues.loads(doc.env))
+    # The env vars from the current profile (read in doc)
+    # are updated with the included profiles (base_profile)
+    # the current env values has priority
+    current_env_values = EnvValues.loads(doc.env)
+    current_env_values.update(base_profile.env_values)
+    base_profile.env_values = current_env_values
 
 
-def profile_from_args(profile, settings, options, env, scope, cwd, client_cache):
+def profile_from_args(profile, settings, options, env, cwd, client_cache):
     """ Return a Profile object, as the result of merging a potentially existing Profile
     file and the args command-line arguments
     """
+    default_profile = client_cache.default_profile  # Ensures a default profile creating
+
     if profile is None:
-        file_profile = client_cache.default_profile
+        file_profile = default_profile
     else:
         file_profile, _ = read_profile(profile, cwd, client_cache.profiles_path)
-    args_profile = _profile_parse_args(settings, options, env, scope)
+    args_profile = _profile_parse_args(settings, options, env)
 
     if file_profile:
         file_profile.update(args_profile)
@@ -241,7 +244,7 @@ def profile_from_args(profile, settings, options, env, scope, cwd, client_cache)
         return args_profile
 
 
-def _profile_parse_args(settings, options, envs, scopes):
+def _profile_parse_args(settings, options, envs):
     """ return a Profile object result of parsing raw data
     """
     def _get_tuples_list_from_extender_arg(items):
@@ -291,5 +294,4 @@ def _profile_parse_args(settings, options, envs, scopes):
     result.settings = OrderedDict(settings)
     for pkg, values in package_settings.items():
         result.package_settings[pkg] = OrderedDict(values)
-    result.scopes = Scopes.from_list(scopes) if scopes else Scopes()
     return result

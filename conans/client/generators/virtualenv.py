@@ -10,7 +10,7 @@ class VirtualEnvGenerator(Generator):
     def __init__(self, conanfile):
         self.conanfile = conanfile
         self.env = conanfile.env
-
+        self.venv_name = "conanenv"
         super(VirtualEnvGenerator, self).__init__(conanfile)
 
     @property
@@ -84,7 +84,7 @@ class VirtualEnvGenerator(Generator):
 
     def _ps1_lines(self, venv_name):
         deactivate_lines = []
-        activate_lines = ["function global:_old_conan_prompt {\"\"}",]
+        activate_lines = ["function global:_old_conan_prompt {\"\"}"]
         activate_lines.append("$function:_old_conan_prompt = $function:prompt")
         activate_lines.append(
             "function global:prompt { write-host \"(%s) \" -nonewline; & $function:_old_conan_prompt }" % venv_name)
@@ -104,16 +104,15 @@ class VirtualEnvGenerator(Generator):
 
     @property
     def content(self):
-        venv_name = os.path.basename(self.conanfile.conanfile_directory)
         deactivate_lines = self._deactivate_lines()
-        activate_lines = self._activate_lines(venv_name)
+        activate_lines = self._activate_lines(self.venv_name)
 
         ext = "bat" if platform.system() == "Windows" else "sh"
         result = {"activate.%s" % ext: os.linesep.join(activate_lines),
                   "deactivate.%s" % ext: os.linesep.join(deactivate_lines)}
 
         if platform.system() == "Windows":
-            ps1_activate, ps1_deactivate = self._ps1_lines(venv_name)
+            ps1_activate, ps1_deactivate = self._ps1_lines(self.venv_name)
             alt_shell = {"activate.ps1": os.linesep.join(ps1_activate),
                          "deactivate.ps1": os.linesep.join(ps1_deactivate)}
             result.update(alt_shell)

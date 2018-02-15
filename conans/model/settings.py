@@ -25,11 +25,16 @@ def undefined_value(name):
 
 
 class SettingsItem(object):
+    """ represents a setting value and its child info, which could be:
+    - A range of valid values: [Debug, Release] (for settings.compiler.runtime of VS)
+    - "ANY", as string to accept any value
+    - A dict {subsetting: definition}, e.g. {version: [], runtime: []} for VS
+    """
     def __init__(self, definition, name):
-        self._name = name
-        self._value = None
-        self._definition = {}
+        self._name = name  # settings.compiler
+        self._value = None  # gcc
         if isinstance(definition, dict):
+            self._definition = {}
             # recursive
             for k, v in definition.items():
                 k = str(k)
@@ -178,6 +183,10 @@ class SettingsItem(object):
         if isinstance(self._definition, dict):
             self._definition[self._value].validate()
 
+    def remove_undefined(self):
+        if isinstance(self._definition, dict):
+            self._definition[self._value].remove_undefined()
+
 
 class Settings(object):
     def __init__(self, definition=None, name="settings", parent_value=None):
@@ -224,6 +233,17 @@ class Settings(object):
         for field in self.fields:
             child = self._data[field]
             child.validate()
+
+    def remove_undefined(self):
+        """ Remove/delete those settings or subsettings that are not defined.
+        Kind of opposite to "validate()" that raises error for not defined settings
+        Necessary to recover settings state from conaninfo.txt
+        """
+        for name, setting in list(self._data.items()):
+            if setting.value is None:
+                self._data.pop(name)
+            else:
+                setting.remove_undefined()
 
     @property
     def fields(self):
@@ -295,11 +315,18 @@ class Settings(object):
         assert isinstance(vals, Values)
         self.values_list = vals.as_list()
 
-    def constraint(self, constraint_def):
+    def constraint(self, constraint_def, raise_undefined_field=True):
         """ allows to restrict a given Settings object with the input of another Settings object
         1. The other Settings object MUST be exclusively a subset of the former.
            No additions allowed
         2. If the other defines {"compiler": None} means to keep the full specification
+
+        :param raise_missing_value:
+
+                When True: will raise when a value for a declared setting is not defined
+                When False: will remove the setting if it has not a value for it
+                            (local methods reading from a conaninfo.txt with already removed settings)
+
         """
         if isinstance(constraint_def, (list, tuple, set)):
             constraint_def = {str(k): None for k in constraint_def or []}
@@ -333,9 +360,10 @@ class Settings(object):
             config_item.remove(values_to_remove)
 
         # Sanity check for input constraint wrong fields
-        for field in constraint_def:
-            if field not in self._data:
-                raise undefined_field(self._name, field, self.fields)
+        if raise_undefined_field:
+            for field in constraint_def:
+                if field not in self._data:
+                    raise undefined_field(self._name, field, self.fields)
 
         # remove settings not defined in the constraint
         self.remove(fields_to_remove)

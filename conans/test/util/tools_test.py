@@ -5,7 +5,6 @@ import unittest
 from collections import namedtuple
 
 from conans.client.client_cache import CONAN_CONF
-from nose.plugins.attrib import attr
 
 from conans import tools
 from conans.client.conan_api import ConanAPIV1
@@ -13,15 +12,15 @@ from conans.client.conf import default_settings_yml, default_client_conf
 
 from conans.errors import ConanException
 from conans.model.settings import Settings
-from conans.paths import CONANFILE
+
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.test.utils.tools import TestClient, TestBufferConanOutput, TestRequester
-from conans.test.utils.visual_project_files import get_vs_project_files
+from conans.test.utils.tools import TestClient, TestBufferConanOutput
+
 from conans.test.utils.context_manager import which
 from conans.tools import OSInfo, SystemPackageTool, replace_in_file, AptTool, ChocolateyTool,\
     set_global_instances
-from conans.util.files import save
+from conans.util.files import save, load
 import requests
 
 
@@ -30,8 +29,10 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output):  # @UnusedVariable
+    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
         self.command_called = command
+        self.win_bash = win_bash
+        self.subsystem = subsystem
         return 0 if self.return_ok else 1
 
 
@@ -53,15 +54,13 @@ class ReplaceInFileTest(unittest.TestCase):
         replace_in_file(self.win_file, "nis", "nus")
         replace_in_file(self.bytes_file, "nis", "nus")
 
-        with open(self.win_file, "rt") as handler:
-            content = handler.read()
-            self.assertNotIn("nis", content)
-            self.assertIn("nus", content)
+        content = tools.load(self.win_file)
+        self.assertNotIn("nis", content)
+        self.assertIn("nus", content)
 
-        with open(self.bytes_file, "rt") as handler:
-            content = handler.read()
-            self.assertNotIn("nis", content)
-            self.assertIn("nus", content)
+        content = tools.load(self.bytes_file)
+        self.assertNotIn("nis", content)
+        self.assertIn("nus", content)
 
 
 class ToolsTest(unittest.TestCase):
@@ -88,7 +87,7 @@ class HelloConan(ConanFile):
         """
         client.save({"conanfile.py": conanfile})
 
-        client.run("install")
+        client.run("install .")
         client.run("build .")
 
         # Not test the real commmand get_command if it's setting the module global vars
@@ -135,144 +134,156 @@ class HelloConan(ConanFile):
 
     def system_package_tool_test(self):
 
-        runner = RunnerMock()
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMock()
+            # fake os info to linux debian, default sudo
+            os_info = OSInfo()
+            os_info.is_macos = False
+            os_info.is_linux = True
+            os_info.is_windows = False
+            os_info.linux_distro = "debian"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo apt-get update")
 
-        # fake os info to linux debian, default sudo
-        os_info = OSInfo()
-        os_info.is_linux = True
-        os_info.linux_distro = "debian"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "sudo apt-get update")
+            os_info.linux_distro = "ubuntu"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo apt-get update")
 
-        os_info.linux_distro = "ubuntu"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "sudo apt-get update")
+            os_info.linux_distro = "knoppix"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo apt-get update")
 
-        os_info.linux_distro = "knoppix"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "sudo apt-get update")
+            os_info.linux_distro = "fedora"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo yum check-update")
 
-        os_info.linux_distro = "fedora"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "sudo yum check-update")
+            os_info.linux_distro = "opensuse"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo zypper --non-interactive ref")
 
-        os_info.linux_distro = "redhat"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.install("a_package", force=False)
-        self.assertEquals(runner.command_called, "rpm -q a_package")
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "sudo yum install -y a_package")
+            
+            os_info.linux_distro = "redhat"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.install("a_package", force=False)
+            self.assertEquals(runner.command_called, "rpm -q a_package")
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "sudo yum install -y a_package")
+            
+            os_info.linux_distro = "debian"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            with self.assertRaises(ConanException):
+                runner.return_ok = False
+                spt.install("a_package")
+                self.assertEquals(runner.command_called, "sudo apt-get install -y --no-install-recommends a_package")
+                
+            runner.return_ok = True
+            spt.install("a_package", force=False)
+            self.assertEquals(runner.command_called, "dpkg -s a_package")
 
-        os_info.linux_distro = "debian"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        with self.assertRaises(ConanException):
-            runner.return_ok = False
-            spt.install("a_package")
-            self.assertEquals(runner.command_called, "sudo apt-get install -y a_package")
+            
+            os_info.is_macos = True
+            os_info.is_linux = False
+            os_info.is_windows = False
 
-        runner.return_ok = True
-        spt.install("a_package", force=False)
-        self.assertEquals(runner.command_called, "dpkg -s a_package")
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "brew update")
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "brew install a_package")
 
-        os_info.is_macos = True
-        os_info.is_linux = False
+            os_info.is_freebsd = True
+            os_info.is_macos = False
 
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "brew update")
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "brew install a_package")
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "sudo pkg update")
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "sudo pkg install -y a_package")
+            spt.install("a_package", force=False)
+            self.assertEquals(runner.command_called, "pkg info a_package")
 
-        os_info.is_freebsd = True
-        os_info.is_macos = False
+            # Chocolatey is an optional package manager on Windows
+            if platform.system() == "Windows" and which("choco.exe"):
+                os_info.is_freebsd = False
+                os_info.is_windows = True
+                spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
+                spt.update()
+                self.assertEquals(runner.command_called, "choco outdated")
+                spt.install("a_package", force=True)
+                self.assertEquals(runner.command_called, "choco install --yes a_package")
+                spt.install("a_package", force=False)
+                self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "sudo pkg update")
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "sudo pkg install -y a_package")
-        spt.install("a_package", force=False)
-        self.assertEquals(runner.command_called, "pkg info a_package")
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "False"}):
 
-        # Chocolatey is an optional package manager on Windows
-        if platform.system() == "Windows" and which("choco.exe"):
+            os_info = OSInfo()
+            os_info.is_linux = True
+            os_info.linux_distro = "redhat"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "yum install -y a_package")
+            spt.update()
+            self.assertEquals(runner.command_called, "yum check-update")
+
+            os_info.linux_distro = "ubuntu"
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "apt-get install -y --no-install-recommends a_package")
+
+            spt.update()
+            self.assertEquals(runner.command_called, "apt-get update")
+
+            os_info.is_macos = True
+            os_info.is_linux = False
+            os_info.is_windows = False
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+
+            spt.update()
+            self.assertEquals(runner.command_called, "brew update")
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "brew install a_package")
+
+            os_info.is_freebsd = True
+            os_info.is_macos = False
+            os_info.is_windows = False
+
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
+            spt.update()
+            self.assertEquals(runner.command_called, "pkg update")
+            spt.install("a_package", force=True)
+            self.assertEquals(runner.command_called, "pkg install -y a_package")
+            spt.install("a_package", force=False)
+            self.assertEquals(runner.command_called, "pkg info a_package")
+
+            os_info.is_solaris = True
             os_info.is_freebsd = False
-            os_info.is_windows = True
+            os_info.is_windows = False
 
-            spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
+            spt = SystemPackageTool(runner=runner, os_info=os_info)
             spt.update()
-            self.assertEquals(runner.command_called, "choco outdated")
+            self.assertEquals(runner.command_called, "pkgutil --catalog")
             spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "choco install --yes a_package")
-            spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
+            self.assertEquals(runner.command_called, "pkgutil --install --yes a_package")
 
-        os.environ["CONAN_SYSREQUIRES_SUDO"] = "False"
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
 
-        os_info = OSInfo()
-        os_info.is_linux = True
-        os_info.linux_distro = "redhat"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "yum install -y a_package")
-        spt.update()
-        self.assertEquals(runner.command_called, "yum check-update")
+            # Chocolatey is an optional package manager on Windows
+            if platform.system() == "Windows" and which("choco.exe"):
+                os_info.is_solaris = False
+                os_info.is_windows = True
 
-        os_info.linux_distro = "ubuntu"
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "apt-get install -y a_package")
-
-        spt.update()
-        self.assertEquals(runner.command_called, "apt-get update")
-
-        os_info.is_macos = True
-        os_info.is_linux = False
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-
-        spt.update()
-        self.assertEquals(runner.command_called, "brew update")
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "brew install a_package")
-
-        os_info.is_freebsd = True
-        os_info.is_macos = False
-
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "pkg update")
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "pkg install -y a_package")
-        spt.install("a_package", force=False)
-        self.assertEquals(runner.command_called, "pkg info a_package")
-
-        os_info.is_solaris = True
-        os_info.is_freebsd = False
-
-        spt = SystemPackageTool(runner=runner, os_info=os_info)
-        spt.update()
-        self.assertEquals(runner.command_called, "pkgutil --catalog")
-        spt.install("a_package", force=True)
-        self.assertEquals(runner.command_called, "pkgutil --install --yes a_package")
-
-        # Chocolatey is an optional package manager on Windows
-        if platform.system() == "Windows" and which("choco.exe"):
-            os_info.is_solaris = False
-            os_info.is_windows = True
-
-            spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
-            spt.update()
-            self.assertEquals(runner.command_called, "choco outdated")
-            spt.install("a_package", force=True)
-            self.assertEquals(runner.command_called, "choco install --yes a_package")
-            spt.install("a_package", force=False)
-            self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
-
-        del os.environ["CONAN_SYSREQUIRES_SUDO"]
+                spt = SystemPackageTool(runner=runner, os_info=os_info, tool=ChocolateyTool())
+                spt.update()
+                self.assertEquals(runner.command_called, "choco outdated")
+                spt.install("a_package", force=True)
+                self.assertEquals(runner.command_called, "choco install --yes a_package")
+                spt.install("a_package", force=False)
+                self.assertEquals(runner.command_called, 'choco search --local-only --exact a_package | findstr /c:"1 packages installed."')
 
     def system_package_tool_try_multiple_test(self):
         class RunnerMultipleMock(object):
@@ -285,22 +296,22 @@ class HelloConan(ConanFile):
                 return 0 if command in self.expected else 1
 
         packages = ["a_package", "another_package", "yet_another_package"]
-
-        runner = RunnerMultipleMock(["dpkg -s another_package"])
-        spt = SystemPackageTool(runner=runner, tool=AptTool())
-        spt.install(packages)
-        self.assertEquals(2, runner.calls)
-
-        runner = RunnerMultipleMock(["sudo apt-get update", "sudo apt-get install -y yet_another_package"])
-        spt = SystemPackageTool(runner=runner, tool=AptTool())
-        spt.install(packages)
-        self.assertEquals(7, runner.calls)
-
-        runner = RunnerMultipleMock(["sudo apt-get update"])
-        spt = SystemPackageTool(runner=runner, tool=AptTool())
-        with self.assertRaises(ConanException):
+        with tools.environment_append({"CONAN_SYSREQUIRES_SUDO": "True"}):
+            runner = RunnerMultipleMock(["dpkg -s another_package"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
-        self.assertEquals(7, runner.calls)
+            self.assertEquals(2, runner.calls)
+            runner = RunnerMultipleMock(["sudo apt-get update",
+                                         "sudo apt-get install -y --no-install-recommends yet_another_package"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            spt.install(packages)
+            self.assertEquals(7, runner.calls)
+
+            runner = RunnerMultipleMock(["sudo apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            with self.assertRaises(ConanException):
+                spt.install(packages)
+            self.assertEquals(7, runner.calls)
 
     def system_package_tool_installed_test(self):
         if platform.system() != "Linux" and platform.system() != "Macos" and platform.system() != "Windows":
@@ -366,8 +377,7 @@ class HelloConan(ConanFile):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     def vcvars_constrained_test(self):
-        if platform.system() != "Windows":
-            return
+
         text = """os: [Windows]
 compiler:
     Visual Studio:
@@ -380,12 +390,17 @@ compiler:
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings)
         settings.compiler.version = "14"
-        cmd = tools.vcvars_command(settings)
-        self.assertIn("vcvarsall.bat", cmd)
-        with tools.environment_append({"VisualStudioVersion": "12"}):
-            with self.assertRaisesRegexp(ConanException,
-                                         "Error, Visual environment already set to 12"):
-                tools.vcvars_command(settings)
+        with tools.environment_append({"vs140comntools": "path/to/fake"}):
+            cmd = tools.vcvars_command(settings)
+            self.assertIn("vcvarsall.bat", cmd)
+            with tools.environment_append({"VisualStudioVersion": "12"}):
+                with self.assertRaisesRegexp(ConanException,
+                                             "Error, Visual environment already set to 12"):
+                    tools.vcvars_command(settings)
+
+            with tools.environment_append({"VisualStudioVersion": "12"}):
+                # Not raising
+                tools.vcvars_command(settings, force=True)
 
     def run_in_bash_test(self):
         if platform.system() != "Windows":
@@ -395,68 +410,31 @@ compiler:
             def __init__(self):
                 self.command = ""
                 self.output = namedtuple("output", "info")(lambda x: None)
+                self.env = {"PATH": "/path/to/somewhere"}
 
-            def run(self, command):
+            def run(self, command, win_bash=False):
                 self.command = command
 
         conanfile = MockConanfile()
-        tools.run_in_windows_bash(conanfile, "a_command.bat")
-        self.assertIn("bash --login -c", conanfile.command)
+        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
+        self.assertIn("bash", conanfile.command)
+        self.assertIn("--login -c", conanfile.command)
         self.assertIn("^&^& a_command.bat ^", conanfile.command)
 
         with tools.environment_append({"CONAN_BASH_PATH": "path\\to\\mybash.exe"}):
-            tools.run_in_windows_bash(conanfile, "a_command.bat")
-            self.assertIn("path\\to\\mybash.exe --login -c", conanfile.command)
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
+            self.assertIn('path\\to\\mybash.exe --login -c', conanfile.command)
 
-    @attr('slow')
-    def build_vs_project_test(self):
-        if platform.system() != "Windows":
-            return
-        conan_build_vs = """
-from conans import ConanFile, tools, ConfigureEnvironment
-import platform
+        with tools.environment_append({"CONAN_BASH_PATH": "path with spaces\\to\\mybash.exe"}):
+            tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin")
+            self.assertIn('"path with spaces\\to\\mybash.exe" --login -c', conanfile.command)
 
-class HelloConan(ConanFile):
-    name = "Hello"
-    version = "1.2.1"
-    exports = "*"
-    settings = "os", "build_type", "arch", "compiler"
-
-    def build(self):
-        build_command = tools.build_sln_command(self.settings, "MyProject.sln")
-        env = ConfigureEnvironment(self)
-        command = "%s && %s" % (env.command_line_env, build_command)
-        self.output.warn(command)
-        self.run(command)
-
-    def package(self):
-        self.copy(pattern="*.exe")
-
-"""
-        client = TestClient()
-        files = get_vs_project_files()
-        files[CONANFILE] = conan_build_vs
-
-        # Try with x86_64
-        client.save(files)
-        client.run("export lasote/stable")
-        client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86_64")
-        self.assertIn("Release|x64", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
-
-        # Try with x86
-        client.save(files, clean_first=True)
-        client.run("export lasote/stable")
-        client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86")
-        self.assertIn("Release|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
-
-        # Try with x86 debug
-        client.save(files, clean_first=True)
-        client.run("export lasote/stable")
-        client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
-        self.assertIn("Debug|x86", client.user_io.out)
-        self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+        # try to append more env vars
+        conanfile = MockConanfile()
+        tools.run_in_windows_bash(conanfile, "a_command.bat", subsystem="cygwin", env={"PATH": "/other/path",
+                                                                                       "MYVAR": "34"})
+        self.assertIn('^&^& PATH=\\^"/cygdrive/other/path:/cygdrive/path/to/somewhere:$PATH\\^" '
+                      '^&^& MYVAR=34 ^&^& a_command.bat ^', conanfile.command)
 
     def download_retries_test(self):
         out = TestBufferConanOutput()
@@ -481,6 +459,7 @@ class HelloConan(ConanFile):
                        retry=3, retry_wait=0)
 
         self.assertTrue(os.path.exists(dest))
+        content = load(dest)
 
         # overwrite = False
         with self.assertRaises(ConanException):
@@ -494,6 +473,8 @@ class HelloConan(ConanFile):
                        retry=3, retry_wait=0, overwrite=True)
 
         self.assertTrue(os.path.exists(dest))
+        content_new = load(dest)
+        self.assertEqual(content, content_new)
 
         # Not authorized
         with self.assertRaises(ConanException):

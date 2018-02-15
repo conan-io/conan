@@ -112,7 +112,7 @@ class UploadTest(unittest.TestCase):
     def try_upload_bad_recipe_test(self):
         files = hello_conan_files("Hello0", "1.2.1")
         self.client.save(files)
-        self.client.run("export frodo/stable")
+        self.client.run("export . frodo/stable")
         ref = ConanFileReference.loads("Hello0/1.2.1@frodo/stable")
         os.unlink(os.path.join(self.client.client_cache.export(ref), CONAN_MANIFEST))
         with self.assertRaisesRegexp(Exception, "Command failed"):
@@ -124,7 +124,7 @@ class UploadTest(unittest.TestCase):
         for num in range(5):
             files = hello_conan_files("Hello%s" % num, "1.2.1")
             self.client.save(files)
-            self.client.run("export frodo/stable")
+            self.client.run("export . frodo/stable")
 
         self.client.run("upload Hello* --confirm")
         for num in range(5):
@@ -146,8 +146,8 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(BadConnectionUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
-        client.run("upload Hello* --confirm --retry_wait=0")
+        client.run("export . frodo/stable")
+        client.run("upload Hello* --confirm --retry-wait=0")
         self.assertIn("Can't connect because of the evil mock", client.user_io.out)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
 
@@ -155,8 +155,8 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(BadConnectionUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
-        client.run("upload Hello* --confirm --retry 1 --retry_wait=1", ignore_error=True)
+        client.run("export . frodo/stable")
+        client.run("upload Hello* --confirm --retry 1 --retry-wait=1", ignore_error=True)
         self.assertNotIn("Waiting 1 seconds to retry...", client.user_io.out)
         self.assertIn("ERROR: Execute upload again to retry upload the failed files: "
                       "conanmanifest.txt. [Remote: default]", client.user_io.out)
@@ -165,8 +165,8 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(TerribleConnectionUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
-        client.run("upload Hello* --confirm --retry 10 --retry_wait=0", ignore_error=True)
+        client.run("export . frodo/stable")
+        client.run("upload Hello* --confirm --retry 10 --retry-wait=0", ignore_error=True)
         self.assertIn("Waiting 0 seconds to retry...", client.user_io.out)
         self.assertIn("ERROR: Execute upload again to retry upload the failed files", client.user_io.out)
 
@@ -174,15 +174,15 @@ class UploadTest(unittest.TestCase):
         client = self._get_client(FailPairFilesUploader)
         files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
         client.save(files)
-        client.run("export frodo/stable")
+        client.run("export . frodo/stable")
         client.run("install Hello0/1.2.1@frodo/stable --build")
-        client.run("upload Hello* --confirm --retry 3 --retry_wait=0 --all")
+        client.run("upload Hello* --confirm --retry 3 --retry-wait=0 --all")
         self.assertEquals(str(client.user_io.out).count("ERROR: Pair file, error!"), 6)
 
     def upload_with_pattern_and_package_error_test(self):
         files = hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
-        self.client.run("export frodo/stable")
+        self.client.run("export . frodo/stable")
 
         self.client.run("upload Hello* --confirm -p 234234234", ignore_error=True)
         self.assertIn("-p parameter only allowed with a valid recipe reference",
@@ -192,7 +192,7 @@ class UploadTest(unittest.TestCase):
         user_io = self.client.user_io
         files = hello_conan_files("Hello1", "1.2.1")
         self.client.save(files)
-        self.client.run("export frodo/stable")
+        self.client.run("export . frodo/stable")
 
         user_io.request_string = lambda _: "y"
         self.client.run("upload Hello*", user_io=user_io)
@@ -200,7 +200,7 @@ class UploadTest(unittest.TestCase):
 
         files = hello_conan_files("Hello2", "1.2.1")
         self.client.save(files)
-        self.client.run("export frodo/stable")
+        self.client.run("export . frodo/stable")
 
         user_io.request_string = lambda _: "n"
         self.client.run("upload Hello*", user_io=user_io)
@@ -234,7 +234,7 @@ class TestConan(ConanFile):
 """
         files = {CONANFILE: conanfile}
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.assertIn("WARN: Conanfile doesn't have 'license'", self.client.user_io.out)
         self.client.run("upload Hello/1.2@lasote/stable", ignore_error=False)
         self.assertIn("Uploading conanmanifest.txt", self.client.user_io.out)

@@ -6,8 +6,8 @@ patch==1.16
 fasteners>=0.14.1
 six>=1.10.0
 node-semver==0.2.0
-distro>=1.0.2, <1.1.0
-pylint>=1.6.5, <=1.8.0
+distro>=1.0.2, <1.2.0
+pylint>=1.8.1, <1.9.0
 future==0.16.0
 pygments>=2.0, <3.0
-
+astroid>=1.6, <1.7

@@ -30,11 +30,12 @@ def _gcc_compiler(output, compiler_exe="gcc"):
         # Since GCC 7.1, -dumpversion return the major version number
         # only ("7"). We must use -dumpfullversion to get the full version
         # number ("7.1.1").
-        if len(installed_version) == 1:
-            _, out = _execute('%s -dumpfullversion' % compiler_exe)
-            installed_version = re.search("([0-9]\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
+            major = installed_version.split(".")[0]
+            if int(major) >= 5:
+                output.info("gcc>=5, using the major as version")
+                installed_version = major
             return compiler, installed_version
     except:
         return None
@@ -213,8 +214,9 @@ def _detect_os_arch(result, output):
                      'amd64': 'x86_64',
                      'aarch64': 'armv8',
                      'sun4v': 'sparc'}
-
-    result.append(("os", detected_os()))
+    the_os = detected_os()
+    result.append(("os", the_os))
+    result.append(("os_build", the_os))
     arch = architectures.get(platform.machine().lower(), platform.machine().lower())
     if arch.startswith('arm'):
         for a in ("armv6", "armv7hf", "armv7", "armv8"):
@@ -225,6 +227,7 @@ def _detect_os_arch(result, output):
             output.error("Your ARM '%s' architecture is probably not defined in settings.yml\n"
                          "Please check your conan.conf and settings.yml files" % arch)
     result.append(("arch", arch))
+    result.append(("arch_build", arch))
 
 
 def detect_defaults_settings(output):

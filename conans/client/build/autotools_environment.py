@@ -4,6 +4,8 @@ import os
 
 from conans.client import join_arguments
 from conans.tools import environment_append, args_to_string, cpu_count, cross_building, detected_architecture
+from conans.client.tools.win import unix_path
+from conans.client.tools.oss import OSInfo
 
 sun_cc_libcxx_flags_dict = {"libCstd": "-library=Cstd",
                             "libstdcxx": "-library=stdcxx4",
@@ -45,8 +47,10 @@ class AutoToolsBuildEnvironment(object):
     - LDFLAGS (-L, others like -m64 -m32) linker
     """
 
-    def __init__(self, conanfile):
+    def __init__(self, conanfile, win_bash=False):
         self._conanfile = conanfile
+        self._win_bash = win_bash
+        self.subsystem = OSInfo().detect_windows_subsystem() if self._win_bash else None
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._arch = conanfile.settings.get_safe("arch")
         self._build_type = conanfile.settings.get_safe("build_type")
@@ -88,7 +92,7 @@ class AutoToolsBuildEnvironment(object):
             host = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
         else:  # Building for Linux or Android
             build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu",
-                                               "Darwin": "apple-macos"}.get(os_detected,
+                                               "Darwin": "apple-darwin"}.get(os_detected,
                                                                             os_detected.lower()))
             if arch_setting == "x86":
                 host_arch = "i686"
@@ -97,8 +101,12 @@ class AutoToolsBuildEnvironment(object):
             else:
                 host_arch = "arm" if "arm" in arch_setting else arch_setting
 
-            host = "%s%s" % (host_arch, { "Linux": "-linux-gnueabi",
-                                         "Android": "-linux-android"}.get(os_setting, ""))
+            host = "%s%s" % (host_arch, {"Linux": "-linux-gnueabi",
+                                         "Android": "-linux-android",
+                                         "Macos": "-apple-darwin",
+                                         "iOS": "-apple-darwin",
+                                         "watchOS": "-apple-darwin",
+                                         "tvOS": "-apple-darwin"}.get(os_setting, ""))
             if arch_setting == "armv7hf" and os_setting == "Linux":
                 host += "hf"
             elif "arm" in arch_setting and arch_setting != "armv8" and os_setting == "Android":
@@ -106,8 +114,10 @@ class AutoToolsBuildEnvironment(object):
 
         return build, host, None
 
-    def configure(self, configure_dir=None, args=None, build=None, host=None, target=None):
+    def configure(self, configure_dir=None, args=None, build=None, host=None, target=None,
+                  pkg_config_paths=None):
         """
+        :param pkg_config_paths: Optional paths to locate the *.pc files
         :param configure_dir: Absolute or relative path to the configure script
         :param args: Optional arguments to pass to configure.
         :param build: In which system the program will be built. "False" skips the --build flag
@@ -133,30 +143,48 @@ class AutoToolsBuildEnvironment(object):
 
         if build is not False:  # Skipped by user
             if build or auto_build:  # User specified value or automatic
-                triplet_args.append("--build %s" % (build or auto_build))
+                triplet_args.append("--build=%s" % (build or auto_build))
 
         if host is not False:   # Skipped by user
             if host or auto_host:  # User specified value or automatic
-                triplet_args.append("--host %s" % (host or auto_host))
+                triplet_args.append("--host=%s" % (host or auto_host))
 
         if target is not False:  # Skipped by user
             if target or auto_target:  # User specified value or automatic
-                triplet_args.append("--target %s" % (target or auto_target))
+                triplet_args.append("--target=%s" % (target or auto_target))
 
-        with environment_append(self.vars):
-            self._conanfile.run("%s/configure %s %s"
-                                % (configure_dir, args_to_string(args), " ".join(triplet_args)))
+        if pkg_config_paths:
+            pkg_env = {"PKG_CONFIG_PATH": os.pathsep.join(pkg_config_paths)}
+        else:
+            # If we are using pkg_config generator automate the pcs location, otherwise it could
+            # read wrong files
+            pkg_env = {"PKG_CONFIG_PATH": self._conanfile.build_folder} \
+                if "pkg_config" in self._conanfile.generators else {}
+
+        with environment_append(pkg_env):
+            with environment_append(self.vars):
+                configure_dir = self._adjust_path(configure_dir)
+                self._conanfile.run('%s/configure %s %s'
+                                    % (configure_dir, args_to_string(args), " ".join(triplet_args)),
+                                    win_bash=self._win_bash,
+                                    subsystem=self.subsystem)
+
+    def _adjust_path(self, path):
+        if self._win_bash:
+            path = unix_path(path, path_flavor=self.subsystem)
+        return '"%s"' % path if " " in path else path
 
     def make(self, args="", make_program=None):
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(self.vars):
             str_args = args_to_string(args)
             cpu_count_option = ("-j%s" % cpu_count()) if "-j" not in str_args else None
-            self._conanfile.run("%s" % join_arguments([make_program, str_args, cpu_count_option]))
+            self._conanfile.run("%s" % join_arguments([make_program, str_args, cpu_count_option]),
+                                win_bash=self._win_bash, subsystem=self.subsystem)
 
     @property
     def _sysroot_flag(self):
-        return "--sysroot=%s" % self._deps_cpp_info.sysroot if self._deps_cpp_info.sysroot else None
+        return "--sysroot=%s" % self._adjust_path(self._deps_cpp_info.sysroot) if self._deps_cpp_info.sysroot else None
 
     def _configure_link_flags(self):
         """Not the -L"""
@@ -173,7 +201,8 @@ class AutoToolsBuildEnvironment(object):
         if self._build_type == "Debug":
             ret.append("-g")  # default debug information
         elif self._build_type == "Release" and self._compiler == "gcc":
-            ret.append("-s") # Remove all symbol table and relocation information from the executable.
+            # Remove all symbol table and relocation information from the executable.
+            ret.append("-s")
         if self._sysroot_flag:
             ret.append(self._sysroot_flag)
         return ret
@@ -210,8 +239,8 @@ class AutoToolsBuildEnvironment(object):
                         ret.append(arg)
             return ret
 
-        lib_paths = ['-L%s' % x.replace("\\", "/") for x in self.library_paths]
-        include_paths = ['-I%s' % x.replace("\\", "/") for x in self.include_paths]
+        lib_paths = ['-L%s' % self._adjust_path(x.replace("\\", "/")) for x in self.library_paths]
+        include_paths = ['-I%s' % self._adjust_path(x.replace("\\", "/")) for x in self.include_paths]
 
         ld_flags = append(self.link_flags, lib_paths)
         cpp_flags = append(include_paths, ["-D%s" % x for x in self.defines])

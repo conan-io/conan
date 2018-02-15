@@ -147,6 +147,10 @@ class Downloader(object):
                     save(file_path, response.content, append=True)
             else:
                 total_length = int(total_length)
+                encoding = response.headers.get('content-encoding')
+                gzip = (encoding == "gzip")
+                # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
+                # It will not send content-length or should be ignored
 
                 def download_chunks(file_handler=None, ret_buffer=None):
                     """Write to a buffer or to a file handler"""
@@ -170,12 +174,12 @@ class Downloader(object):
 
                 if file_path:
                     mkdir(os.path.dirname(file_path))
-                    with open(file_path, 'ab') as handle:
+                    with open(file_path, 'wb') as handle:
                         dl_size = download_chunks(file_handler=handle)
                 else:
                     dl_size = download_chunks(ret_buffer=ret)
 
-                if dl_size != total_length:
+                if dl_size != total_length and not gzip:
                     raise ConanException("Transfer interrupted before "
                                          "complete: %s < %s" % (dl_size, total_length))
 
@@ -204,7 +208,7 @@ class Downloader(object):
 
 
 def progress_units(progress, total):
-    return int(50 * progress / total)
+    return min(50, int(50 * progress / total))
 
 
 def human_readable_progress(bytes_transferred, total_bytes):

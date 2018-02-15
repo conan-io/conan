@@ -1,14 +1,8 @@
-import os
 import platform
 import unittest
 
-from nose.plugins.attrib import attr
-
-from conans.model.ref import ConanFileReference
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
-from conans.tools import unix_path
-from conans.util.files import md5sum
 
 mylibh = '''
 double mean(double a, double b);
@@ -65,96 +59,12 @@ int main(){
 
 class BuildEnvironmenTest(unittest.TestCase):
 
-    @attr("mingw")
-    def test_gcc_and_environment(self):
-        if platform.system() == "SunOS":
-            return  # If is using sun-cc the gcc generator doesn't work
-
-        # CREATE A DUMMY LIBRARY WITH GCC (could be generated with other build system)
-        client = TestClient()
-        client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
-        client.run("export lasote/stable")
-        client.run("install Mean/0.1@lasote/stable --build")
-
-        # Reuse the mean library using only the generator
-
-        reuse_gcc_conanfile = '''
-import platform
-from conans import ConanFile
-from conans.tools import environment_append
-
-class ConanReuseLib(ConanFile):
-
-    requires = "Mean/0.1@lasote/stable"
-    generators = "gcc"
-    settings = "os", "compiler", "build_type", "arch"
-
-    def build(self):
-
-
-        self.run("c++ example.cpp @conanbuildinfo.gcc -o mean_exe ")
-        self.run("./mean_exe" if platform.system() != "Windows" else "mean_exe")
-'''
-
-        client.save({CONANFILE: reuse_gcc_conanfile, "example.cpp": example})
-        client.run("install . --build missing")
-        client.run("build .")
-
-        self.assertIn("15", client.user_io.out)
-        self.assertIn("Active var!!!", client.user_io.out)
-
-        client.run("install . --build missing -o Mean:activate_define=False")
-        client.run("build .")
-        self.assertIn("15", client.user_io.out)
-        self.assertNotIn("Active var!!!", client.user_io.out)
-
-        if platform.system() != "Windows":  # MinGW 32 bits apps not running correctly
-            client.run("install . --build missing -o Mean:activate_define=False -s arch=x86")
-            client.run("build .")
-            md5_binary = md5sum(os.path.join(client.current_folder, "mean_exe"))
-
-            # Pass the optimize option that will append a cflag to -O2, the binary will be different
-            client.run("install . --build missing -o Mean:activate_define=False -o Mean:optimize=True -s arch=x86")
-            client.run("build .")
-            md5_binary2 = md5sum(os.path.join(client.current_folder, "mean_exe"))
-
-            self.assertNotEquals(md5_binary, md5_binary2)
-
-            # Rebuid the same binary, same md5sum
-            client.run("install . --build missing -o Mean:activate_define=False -o Mean:optimize=True -s arch=x86")
-            client.run("build .")
-            md5_binary = md5sum(os.path.join(client.current_folder, "mean_exe"))
-
-            self.assertEquals(md5_binary, md5_binary2)
-
-    def run_in_windows_bash_test(self):
-        if platform.system() != "Windows":
-            return
-        conanfile = '''
-from conans import ConanFile, tools
-
-class ConanBash(ConanFile):
-    name = "bash"
-    version = "0.1"
-    settings = "os", "compiler", "build_type", "arch"
-
-    def build(self):
-        tools.run_in_windows_bash(self, "pwd")
-
-        '''
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
-        client.run("install bash/0.1@lasote/stable --build")
-        expected_curdir_base = unix_path(client.client_cache.conan(ConanFileReference.loads("bash/0.1@lasote/stable")))
-        self.assertIn(expected_curdir_base, client.user_io.out)
-
     def use_build_virtualenv_test(self):
         if platform.system() != "Linux":
             return
         client = TestClient(path_with_spaces=False)
         client.save({CONANFILE: conanfile, "mean.cpp": mylib, "mean.h": mylibh})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         makefile_am = '''
 bin_PROGRAMS = main
@@ -195,6 +105,6 @@ class ConanReuseLib(ConanFile):
                      "Makefile.am": makefile_am,
                      "configure.ac": configure_ac,
                      "main.cpp": example})
-        client.run("install --build missing")
+        client.run("install . --build missing")
         client.run("build .")
         self.assertIn("15", client.user_io.out)

@@ -54,7 +54,7 @@ class ExceptionsTest(ConanFile):
 
     def _call_install(self, conanfile):
         self.client.save({CONANFILE: conanfile}, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         with self.assertRaises(Exception):
             with tools.environment_append({"CONAN_USERNAME": "lasote", "CONAN_CHANNEL": "stable"}):
                 self.client.run("install ExceptionsTest/0.1@lasote/stable --build")

@@ -14,6 +14,7 @@ from conans.client.require_resolver import RequireResolver, satisfying
 import re
 from nose_parameterized import parameterized
 from conans.model.profile import Profile
+from conans.errors import ConanException
 
 
 class BasicMaxVersionTest(unittest.TestCase):
@@ -26,6 +27,12 @@ class BasicMaxVersionTest(unittest.TestCase):
         self.assertEqual(result, "1.1.1-a.111")
         result = satisfying(["1.1.1", "1.1.1-11", "1.1.1-111", "1.1.1-21"], "", output)
         self.assertEqual(result, "1.1.1")
+        result = satisfying(["4.2.2", "4.2.3-pre"], "~4.2.3-", output)
+        self.assertEqual(result, "4.2.3-pre")
+        result = satisfying(["4.2.2", "4.2.3-pre", "4.2.4"], "~4.2.3-", output)
+        self.assertEqual(result, "4.2.4")
+        result = satisfying(["4.2.2", "4.2.3-pre", "4.2.3"], "~4.2.3-", output)
+        self.assertEqual(result, "4.2.3")
 
     def basic_test(self):
         output = TestBufferConanOutput()
@@ -241,6 +248,10 @@ class ChatConan(ConanFile):
     version = "2.3"
     requires = "Hello/1.2@memsharded/testing", %s
 """
+        if valid is False:
+            with self.assertRaisesRegexp(ConanException, "not valid"):
+                self.root(chat_content % version_range)
+            return
 
         deps_graph = self.root(chat_content % version_range)
         hello = _get_nodes(deps_graph, "Hello")[0]

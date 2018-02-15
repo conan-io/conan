@@ -65,14 +65,15 @@ class SymLinksTest(unittest.TestCase):
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
-        client.run("export lasote/stable")
-        client.run("install --build -f=conanfile.txt")
+
+        client.run("export . lasote/stable")
+        client.run("install conanfile.txt --build")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
         self._check(client, ref)
 
-        client.run("install --build -f=conanfile.txt")
+        client.run("install conanfile.txt --build")
         self._check(client, ref)
 
     def package_files_test(self):
@@ -85,7 +86,7 @@ from conans import ConanFile
 class TestConan(ConanFile):
     name = "Hello"
     version = "0.1"
-    
+
     def package(self):
         self.copy("*", symlinks=True)
     """
@@ -120,9 +121,9 @@ class TestConan(ConanFile):
         pre_export_link = os.path.join(client.current_folder, link_name)
         os.symlink(lib_name, pre_export_link)
 
-        client.run("export lasote/stable")
-        client.run("install --build -f=conanfile.txt")
-        client.run("copy Hello/0.1@lasote/stable team/testing")
+        client.run("export . lasote/stable")
+        client.run("install conanfile.txt --build")
+        client.run("copy Hello/0.1@lasote/stable team/testing --all")
         conan_ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         team_ref = ConanFileReference.loads("Hello/0.1@team/testing")
         package_ref = PackageReference(conan_ref,
@@ -152,13 +153,14 @@ class TestConan(ConanFile):
 
         client.save({"conanfile.py": conanfile,
                      "conanfile.txt": test_conanfile})
-        client.run("export lasote/stable")
-        client.run("install --build -f=conanfile.txt")
+
+        client.run("export . lasote/stable")
+        client.run("install conanfile.txt --build")
         ref = PackageReference.loads("Hello/0.1@lasote/stable:"
                                      "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
 
         client.run("upload Hello/0.1@lasote/stable --all")
         client.run('remove "*" -f')
         client.save({"conanfile.txt": test_conanfile}, clean_first=True)
-        client.run("install")
+        client.run("install conanfile.txt")
         self._check(client, ref, build=False)

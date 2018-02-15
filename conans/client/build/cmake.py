@@ -2,34 +2,19 @@ import os
 import platform
 
 from collections import OrderedDict
-from contextlib import contextmanager
 
 from conans.client import defs_to_string, join_arguments
+from conans.client.tools import cross_building
+from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
 from conans.model.conan_file import ConanFile
-from conans.model.settings import Settings
+from conans.model.version import Version
 from conans.util.env_reader import get_env
 from conans.util.files import mkdir
 from conans.tools import cpu_count, args_to_string
 from conans import tools
 from conans.util.log import logger
 from conans.util.config_parser import get_bool_from_text
-
-# Deprecated in 0.22
-deprecated_conanfile_param_message = '''
-*******************************   WARNING!!! ************************************
-
-Do not pass 'self' to configure() nor build() methods, it is deprecated and will be removed.
-
-Instance CMake with the conanfile instance instead:
-
-    cmake = CMake(self)
-    cmake.configure() # Optional args, defs, source_dir and build_dir parameters
-    cmake.build() # Optional args, build_dir and target
-
-
-**********************************************************************************
-'''
 
 
 def _get_env_cmake_system_name():
@@ -39,7 +24,7 @@ def _get_env_cmake_system_name():
 
 class CMake(object):
 
-    def __init__(self, settings_or_conanfile, generator=None, cmake_system_name=True,
+    def __init__(self, conanfile, generator=None, cmake_system_name=True,
                  parallel=True, build_type=None, toolset=None):
         """
         :param settings_or_conanfile: Conanfile instance (or settings for retro compatibility)
@@ -51,20 +36,15 @@ class CMake(object):
         :param toolset: Toolset name to use (such as llvm-vs2014) or none for default one,
                 applies only to certain generators (e.g. Visual Studio)
         """
-        if isinstance(settings_or_conanfile, Settings):
-            self._settings = settings_or_conanfile
-            self._conanfile = None
-            self.configure = self._configure_old
-            self.build = self._build_old
-        elif isinstance(settings_or_conanfile, ConanFile):
-            self._settings = settings_or_conanfile.settings
-            self._conanfile = settings_or_conanfile
-            self.configure = self._configure_new
-            self.build = self._build_new
-        else:
-            raise ConanException("First parameter of CMake() has to be a ConanFile instance.")
+        if not isinstance(conanfile, ConanFile):
+            raise ConanException("First argument of CMake() has to be ConanFile. Use CMake(self)")
+
+        self._settings = conanfile.settings
+        self._conanfile = conanfile
 
         self._os = self._settings.get_safe("os")
+        self._os_build, _, self._os_host, _ = get_cross_building_settings(self._settings)
+
         self._compiler = self._settings.get_safe("compiler")
         self._compiler_version = self._settings.get_safe("compiler.version")
         self._arch = self._settings.get_safe("arch")
@@ -86,6 +66,14 @@ class CMake(object):
             self.build_type = build_type
 
     @property
+    def build_folder(self):
+        return self.build_dir
+
+    @build_folder.setter
+    def build_folder(self, value):
+        self.build_dir = value
+
+    @property
     def build_type(self):
         return self._build_type
 
@@ -102,19 +90,6 @@ class CMake(object):
     @property
     def flags(self):
         return defs_to_string(self.definitions)
-
-    @staticmethod
-    def options_cmd_line(options, option_upper=True, value_upper=True):
-        """ FIXME: this function seems weird, not tested, not used.
-        Probably should be deprecated
-        """
-        result = []
-        for option, value in options.values.as_list():
-            if value is not None:
-                option = option.upper() if option_upper else option
-                value = value.upper() if value_upper else value
-                result.append("-D%s=%s" % (option, value))
-        return ' '.join(result)
 
     def _generator(self):
 
@@ -142,15 +117,20 @@ class CMake(object):
             else:
                 return base
 
-        if self._os == "Windows":
+        # The generator depends on the build machine, not the target
+        if self._os_build == "Windows":
             return "MinGW Makefiles"  # it is valid only under Windows
 
         return "Unix Makefiles"
 
     def _toolset(self, toolset=None):
-        if "CONAN_CMAKE_TOOLSET" in os.environ:
-            return os.environ["CONAN_CMAKE_TOOLSET"]
-        return toolset
+        if toolset:
+            return toolset
+        elif self._settings.get_safe("compiler") == "Visual Studio":
+            subs_toolset = self._settings.get_safe("compiler.toolset")
+            if subs_toolset:
+                return subs_toolset
+        return None
 
     def _cmake_compiler_options(self, the_os, arch):
         cmake_definitions = OrderedDict()
@@ -177,14 +157,15 @@ class CMake(object):
             ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
         else:  # detect if we are cross building and the system name and version
-            platform_os = {"Darwin": "Macos"}.get(platform.system(), platform.system())
-            if (platform_os != the_os) or os_ver:  # We are cross building
-                if the_os:
-                    ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS", "watchOS"] else the_os
-                    if os_ver:
-                        ret["CMAKE_SYSTEM_VERSION"] = os_ver
-                else:
-                    ret["CMAKE_SYSTEM_NAME"] = "Generic"
+            if cross_building(self._conanfile.settings):  # We are cross building
+                if self._os != self._os_build:
+                    if the_os:  # the_os is the host (regular setting)
+                        ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS",
+                                                                          "watchOS"] else the_os
+                        if os_ver:
+                            ret["CMAKE_SYSTEM_VERSION"] = os_ver
+                    else:
+                        ret["CMAKE_SYSTEM_NAME"] = "Generic"
 
         if ret:  # If enabled cross compile
             for env_var in ["CONAN_CMAKE_SYSTEM_PROCESSOR",
@@ -296,39 +277,55 @@ class CMake(object):
         # Shared library
         try:
             ret["BUILD_SHARED_LIBS"] = "ON" if self._conanfile.options.shared else "OFF"
-        except:
+        except ConanException:
             pass
 
         # Install to package folder
         try:
             if self._conanfile.package_folder:
                 ret["CMAKE_INSTALL_PREFIX"] = self._conanfile.package_folder
-        except:
+        except AttributeError:
             pass
 
-        if self._os == "Windows" and self._compiler == "Visual Studio":
+        if str(self._os) in ["Windows", "WindowsStore"] and self._compiler == "Visual Studio":
             if self.parallel:
                 cpus = tools.cpu_count()
                 ret["CONAN_CXX_FLAGS"] = "/MP%s" % cpus
                 ret["CONAN_C_FLAGS"] = "/MP%s" % cpus
         return ret
 
-    def _configure_old(self, conanfile, args=None, defs=None, source_dir=None, build_dir=None):
-        """Deprecated in 0.22"""
-        if not isinstance(conanfile, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
-        self._conanfile = conanfile
-        self._conanfile.output.warn(deprecated_conanfile_param_message)
-        return self._configure_new(args=args, defs=defs, source_dir=source_dir, build_dir=build_dir)
+    def _get_dirs(self, source_folder, build_folder, source_dir, build_dir, cache_build_folder):
+        if (source_folder or build_folder) and (source_dir or build_dir):
+            raise ConanException("Use 'build_folder'/'source_folder' arguments")
 
-    def _configure_new(self, args=None, defs=None, source_dir=None, build_dir=None):
-        if isinstance(args, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
+        def get_dir(folder, origin):
+            if folder:
+                if os.path.isabs(folder):
+                    return folder
+                return os.path.join(origin, folder)
+            return origin
+
+        if source_dir or build_dir:  # OLD MODE
+            build_ret = build_dir or self.build_dir or self._conanfile.build_folder
+            source_ret = source_dir or self._conanfile.source_folder
+        else:
+            build_ret = get_dir(build_folder, self._conanfile.build_folder)
+            source_ret = get_dir(source_folder, self._conanfile.source_folder)
+
+        if self._conanfile.in_local_cache and cache_build_folder:
+            build_ret = get_dir(cache_build_folder, self._conanfile.build_folder)
+
+        return source_ret, build_ret
+
+    def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
+                  source_folder=None, build_folder=None, cache_build_folder=None):
+        # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
         args = args or []
         defs = defs or {}
-        source_dir = source_dir or self._conanfile.source_folder
-        self.build_dir = build_dir or self.build_dir or self._conanfile.build_folder
 
+        source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
+                                                    source_dir, build_dir,
+                                                    cache_build_folder)
         mkdir(self.build_dir)
         arg_list = join_arguments([
             self.command_line,
@@ -338,32 +335,27 @@ class CMake(object):
         ])
         command = "cd %s && cmake %s" % (args_to_string([self.build_dir]), arg_list)
         if platform.system() == "Windows" and self.generator == "MinGW Makefiles":
-            with clean_sh_from_path():
+            with tools.remove_from_path("sh"):
                 self._conanfile.run(command)
         else:
             self._conanfile.run(command)
 
-    def _build_old(self, conanfile, args=None, build_dir=None, target=None):
-        """Deprecated in 0.22"""
-        if not isinstance(conanfile, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
-        self._conanfile = conanfile
-        self._conanfile.output.warn(deprecated_conanfile_param_message)
-        return self._build_new(args=args, build_dir=build_dir, target=target)
-
-    def _build_new(self, args=None, build_dir=None, target=None):
-        if isinstance(args, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
+    def build(self, args=None, build_dir=None, target=None):
         args = args or []
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
         if target is not None:
             args = ["--target", target] + args
 
         if self.parallel:
-            if "Makefiles" in self.generator:
+            if "Makefiles" in self.generator and "NMake" not in self.generator:
                 if "--" not in args:
                     args.append("--")
                 args.append("-j%i" % cpu_count())
+            elif "Visual Studio" in self.generator and \
+                    self._compiler_version and Version(self._compiler_version) >= "10":
+                if "--" not in args:
+                    args.append("--")
+                args.append("/m:%i" % cpu_count())
 
         arg_list = join_arguments([
             args_to_string([build_dir]),
@@ -378,33 +370,21 @@ class CMake(object):
         if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
             raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
                                  "Make sure 'package_folder' is defined")
-        self._build_new(args=args, build_dir=build_dir, target="install")
+        self.build(args=args, build_dir=build_dir, target="install")
 
     def test(self, args=None, build_dir=None, target=None):
-        if isinstance(args, ConanFile):
-            raise ConanException(deprecated_conanfile_param_message)
         if not target:
-            target = "RUN_TESTS" if self._compiler == "Visual Studio" else "test"
-        self._build_new(args=args, build_dir=build_dir, target=target)
+            target = "RUN_TESTS" if self.is_multi_configuration else "test"
+        self.build(args=args, build_dir=build_dir, target=target)
 
     @property
     def verbose(self):
         try:
             verbose = self.definitions["CMAKE_VERBOSE_MAKEFILE"]
             return get_bool_from_text(str(verbose))
-        except:
+        except KeyError:
             return False
 
     @verbose.setter
     def verbose(self, value):
         self.definitions["CMAKE_VERBOSE_MAKEFILE"] = "ON" if value else "OFF"
-
-
-@contextmanager
-def clean_sh_from_path():
-    new_path = []
-    for path_entry in os.environ.get("PATH", "").split(os.pathsep):
-        if not os.path.exists(os.path.join(path_entry, "sh.exe")):
-            new_path.append(path_entry)
-    with tools.environment_append({"PATH": os.pathsep.join(new_path)}):
-        yield

@@ -1,15 +1,15 @@
-import copy
-
-from conans.model.options import Options, PackageOptions, OptionsValues
-from conans.model.requires import Requirements
-from conans.model.build_info import DepsCppInfo
-from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
-from conans.errors import ConanException
-from conans.model.env_info import DepsEnvInfo, EnvValues
 import os
 
+from conans import tools  # @UnusedImport KEEP THIS! Needed for pyinstaller to copy to exe.
+from conans.errors import ConanException
+from conans.model.build_info import DepsCppInfo
+from conans.model.env_info import DepsEnvInfo, EnvValues
+from conans.model.options import Options, PackageOptions, OptionsValues
+from conans.model.requires import Requirements
 from conans.model.user_info import DepsUserInfo
 from conans.paths import RUN_LOG_NAME
+from conans.tools import environment_append, no_op
+from conans.client.output import Color
 
 
 def create_options(conanfile):
@@ -48,13 +48,13 @@ def create_requirements(conanfile):
         raise ConanException("Error while initializing requirements. %s" % str(e))
 
 
-def create_settings(conanfile, settings):
+def create_settings(conanfile, settings, local):
     try:
         defined_settings = getattr(conanfile, "settings", None)
         if isinstance(defined_settings, str):
             defined_settings = [defined_settings]
         current = defined_settings or {}
-        settings.constraint(current)
+        settings.constraint(current, raise_undefined_field=not local)
         return settings
     except Exception as e:
         raise ConanException("Error while initializing settings. %s" % str(e))
@@ -78,6 +78,10 @@ def create_exports_sources(conanfile):
         return conanfile.exports_sources
 
 
+def get_env_context_manager(conanfile):
+    return environment_append(conanfile.env) if conanfile.apply_env else no_op()
+
+
 class ConanFile(object):
     """ The base class for all package recipes
     """
@@ -91,8 +95,9 @@ class ConanFile(object):
     author = None  # Main maintainer/responsible for the package, any format
     build_policy = None
     short_paths = False
+    apply_env = True  # Apply environment variables from requires deps_env_info and profiles
 
-    def __init__(self, output, runner, settings, conanfile_directory, user=None, channel=None):
+    def __init__(self, output, runner, settings, user=None, channel=None, local=None):
         # User defined generators
         self.generators = self.generators if hasattr(self, "generators") else ["txt"]
         if isinstance(self.generators, str):
@@ -101,7 +106,19 @@ class ConanFile(object):
         # User defined options
         self.options = create_options(self)
         self.requires = create_requirements(self)
-        self.settings = create_settings(self, settings)
+        self.settings = create_settings(self, settings, local)
+        try:
+            if self.settings.os_build and self.settings.os:
+                output.writeln("*"*60, front=Color.BRIGHT_RED)
+                output.writeln("  This package defines both 'os' and 'os_build' ",
+                               front=Color.BRIGHT_RED)
+                output.writeln("  Please use 'os' for libraries and 'os_build'",
+                               front=Color.BRIGHT_RED)
+                output.writeln("  only for build-requires used for cross-building",
+                               front=Color.BRIGHT_RED)
+                output.writeln("*"*60, front=Color.BRIGHT_RED)
+        except ConanException:
+            pass
         self.exports = create_exports(self)
         self.exports_sources = create_exports_sources(self)
         # needed variables to pack the project
@@ -124,8 +141,7 @@ class ConanFile(object):
         # something that can run commands, as os.sytem
         self._runner = runner
 
-        self.conanfile_directory = conanfile_directory
-        self._scope = None
+        self.develop = False
 
         # user specified env variables
         self._env_values = EnvValues()  # Updated at runtime, user specified -e
@@ -175,14 +191,6 @@ class ConanFile(object):
         return tools.collect_libs(self, folder=folder)
 
     @property
-    def scope(self):
-        return self._scope
-
-    @scope.setter
-    def scope(self, value):
-        self._scope = value
-
-    @property
     def build_policy_missing(self):
         return self.build_policy == "missing"
 
@@ -216,9 +224,6 @@ class ConanFile(object):
         This is also the place for conditional requirements
         """
 
-    def imports(self):
-        pass
-
     def build(self):
         self.output.warn("This conanfile has no build step")
 
@@ -229,13 +234,17 @@ class ConanFile(object):
         """ define cpp_build_info, flags, etc
         """
 
-    def run(self, command, output=True, cwd=None):
-        """ runs such a command in the folder the Conan
-        is defined
-        """
-        retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME),  cwd)
+    def run(self, command, output=True, cwd=None, win_bash=False, subsystem=None, msys_mingw=True):
+        if not win_bash:
+            retcode = self._runner(command, output, os.path.abspath(RUN_LOG_NAME),  cwd)
+        else:
+            retcode = tools.run_in_windows_bash(self, bashcmd=command, cwd=cwd, subsystem=subsystem,
+                                                msys_mingw=msys_mingw)
+
         if retcode != 0:
             raise ConanException("Error %d while executing %s" % (retcode, command))
+
+        return retcode
 
     def package_id(self):
         """ modify the conans info, typically to narrow values

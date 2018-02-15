@@ -1,7 +1,9 @@
 """
 Server's configuration variables
 """
+import six
 
+from conans import tools
 from conans.util.env_reader import get_env
 from datetime import timedelta
 import os
@@ -58,7 +60,11 @@ class ConanServerConfigParser(ConfigParser):
 
             if not self._loaded:
                 self._loaded = True
-                self.read(self.config_filename)
+                # To avoid encoding problems we use our tools.load
+                if six.PY3:
+                    self.read_string(tools.load(self.config_filename))
+                else:
+                    self.read(self.config_filename)
 
             if varname:
                 section = dict(self.items(section))
@@ -150,7 +156,8 @@ class ConanServerConfigParser(ConfigParser):
             try:
                 password.encode('ascii')
             except (UnicodeDecodeError, UnicodeEncodeError):
-                raise ConanException("Password contains invalid characters. Only ASCII encoding is supported")
+                raise ConanException("Password contains invalid characters. "
+                                     "Only ASCII encoding is supported")
             return password
 
         if self.env_config["users"]:

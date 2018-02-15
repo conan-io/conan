@@ -11,6 +11,20 @@ from conans.util.files import load
 
 class InfoTest(unittest.TestCase):
 
+    def failed_info_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "Pkg/1.0.x@user/testing"
+"""
+        client.save({"conanfile.py": conanfile})
+        error = client.run("info .", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Pkg/1.0.x@user/testing: Not found in local cache", client.out)
+        client.run("search")
+        self.assertIn("There are no packages", client.out)
+        self.assertNotIn("Pkg/1.0.x@user/testing", client.out)
+
     def _create(self, number, version, deps=None, deps_dev=None, export=True):
         files = cpp_hello_conan_files(number, version, deps, build=False)
         files[CONANFILE] = files[CONANFILE].replace("config(", "configure(")
@@ -21,7 +35,7 @@ class InfoTest(unittest.TestCase):
 
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
             expected_output = textwrap.dedent(
                 """\
                 WARN: Conanfile doesn't have 'url'.
@@ -45,8 +59,48 @@ class InfoTest(unittest.TestCase):
 
         self.client.save(files)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
             self.assertNotIn("WARN: Conanfile doesn't have 'url'", self.client.user_io.out)
+
+    def install_folder_test(self):
+
+        conanfile = """from conans import ConanFile
+from conans.util.files import save
+
+class MyTest(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+    settings = "build_type"
+
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("info . -s build_type=Debug")
+        self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
+        self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
+
+        client.run('install . -s build_type=Debug')
+        client.run("info .")  # Re-uses debug from curdir
+        self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
+        self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
+
+        client.run('install . -s build_type=Release --install-folder=MyInstall')
+        client.run("info . --install-folder=MyInstall")  # Re-uses debug from MyInstall folder
+
+        self.assertIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
+        self.assertNotIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
+
+        client.run('install . -s build_type=Debug --install-folder=MyInstall')
+        client.run("info . --install-folder=MyInstall")  # Re-uses debug from MyInstall folder
+
+        self.assertNotIn("ID: 4024617540c4f240a6a5e8911b0de9ef38a11a72", client.user_io.out)
+        self.assertIn("ID: 5a67a79dbc25fd0fa149a0eb7a20715189a0d988", client.user_io.out)
+
+        # Both should raise
+        error = client.run("info . --install-folder=MyInstall -s build_type=Release",
+                           ignore_error=True)  # Re-uses debug from MyInstall folder
+        self.assertTrue(error)
+        self.assertIn("--install-folder cannot be used together with -s, -o, -e or -pr", client.out)
 
     def graph_test(self):
         self.client = TestClient()
@@ -109,12 +163,12 @@ class InfoTest(unittest.TestCase):
         dot_regex = re.compile(r'^\s+"[^"]+" -> {"[^"]+"( "[^"]+")*}$')
 
         # default case - file will be named graph.dot
-        error = self.client.run("info --graph", ignore_error=True)
+        error = self.client.run("info . --graph", ignore_error=True)
         self.assertTrue(error)
 
         # arbitrary case - file will be named according to argument
         arg_filename = "test.dot"
-        self.client.run("info --graph=%s" % arg_filename)
+        self.client.run("info . --graph=%s" % arg_filename)
         dot_file = os.path.join(self.client.current_folder, arg_filename)
         check_file(dot_file)
 
@@ -139,7 +193,7 @@ class InfoTest(unittest.TestCase):
 
         # arbitrary case - file will be named according to argument
         arg_filename = "test.html"
-        self.client.run("info --graph=%s" % arg_filename)
+        self.client.run("info . --graph=%s" % arg_filename)
         arg_filename = os.path.join(self.client.current_folder, arg_filename)
         html = load(arg_filename)
         self.assertIn("<body>", html)
@@ -152,20 +206,20 @@ class InfoTest(unittest.TestCase):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("info --only None")
+        self.client.run("info . --only None")
         self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable",
                           "Hello1/0.1@lasote/stable"], str(self.client.user_io.out).splitlines())
-        self.client.run("info --only=date")
+        self.client.run("info . --only=date")
         lines = [(line if "date" not in line else "Date")
                  for line in str(self.client.user_io.out).splitlines()]
         self.assertEqual(["Hello2/0.1@PROJECT", "Hello0/0.1@lasote/stable", "Date",
                           "Hello1/0.1@lasote/stable", "Date"], lines)
 
-        self.client.run("info --only=invalid", ignore_error=True)
+        self.client.run("info . --only=invalid", ignore_error=True)
         self.assertIn("Invalid --only value", self.client.user_io.out)
         self.assertNotIn("with --path specified, allowed values:", self.client.user_io.out)
 
-        self.client.run("info --paths --only=bad", ignore_error=True)
+        self.client.run("info . --paths --only=bad", ignore_error=True)
         self.assertIn("Invalid --only value", self.client.user_io.out)
         self.assertIn("with --path specified, allowed values:", self.client.user_io.out)
 
@@ -181,12 +235,12 @@ class MyTest(ConanFile):
 
 """
         self.client.save({"subfolder/conanfile.py": conanfile})
-        self.client.run("export --path ./subfolder lasote/testing")
+        self.client.run("export ./subfolder lasote/testing")
 
         self.client.run("info ./subfolder")
         self.assertIn("Pkg/0.1@PROJECT", self.client.user_io.out)
 
-        self.client.run("info ./subfolder --build_order "
+        self.client.run("info ./subfolder --build-order "
                         "Pkg/0.1@lasote/testing --json=jsonfile.txt")
         path = os.path.join(self.client.current_folder, "jsonfile.txt")
         self.assertTrue(os.path.exists(path))
@@ -197,7 +251,7 @@ class MyTest(ConanFile):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("info -u")
+        self.client.run("info . -u")
 
         self.assertIn("Creation date: ", self.client.user_io.out)
         self.assertIn("ID: ", self.client.user_io.out)
@@ -240,7 +294,7 @@ class MyTest(ConanFile):
         # The timestamp is variable so we can't check the equality
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
 
-        self.client.run("info -u --only=url")
+        self.client.run("info . -u --only=url")
         expected_output = textwrap.dedent(
             """\
             Hello2/0.1@PROJECT
@@ -250,7 +304,7 @@ class MyTest(ConanFile):
             Hello1/0.1@lasote/stable
                 URL: myurl""")
         self.assertIn(expected_output, clean_output(self.client.user_io.out))
-        self.client.run("info -u --only=url --only=license")
+        self.client.run("info . -u --only=url --only=license")
         expected_output = textwrap.dedent(
             """\
             Hello2/0.1@PROJECT
@@ -270,14 +324,14 @@ class MyTest(ConanFile):
         self._create("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         self._create("Hello2", "0.1", ["Hello1/0.1@lasote/stable"], export=False)
 
-        self.client.run("info -bo=Hello0/0.1@lasote/stable")
+        self.client.run("info ./conanfile.py -bo=Hello0/0.1@lasote/stable")
         self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
                       self.client.user_io.out)
 
-        self.client.run("info -bo=Hello1/0.1@lasote/stable")
+        self.client.run("info conanfile.py -bo=Hello1/0.1@lasote/stable")
         self.assertIn("[Hello1/0.1@lasote/stable]", self.client.user_io.out)
 
-        self.client.run("info -bo=Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
+        self.client.run("info ./ -bo=Hello1/0.1@lasote/stable -bo=Hello0/0.1@lasote/stable")
         self.assertIn("[Hello0/0.1@lasote/stable], [Hello1/0.1@lasote/stable]",
                       self.client.user_io.out)
 
@@ -304,29 +358,41 @@ class MyTest(ConanFile):
         self._create("LibD", "0.1", ["LibB/0.1@lasote/stable", "LibC/0.1@lasote/stable"],
                      export=False)
 
-        self.client.run("info -bo=LibA/0.1@lasote/stable")
+        self.client.run("info . -bo=LibA/0.1@lasote/stable")
         self.assertIn("[LibA/0.1@lasote/stable], "
                       "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
-        self.client.run("info -bo=LibB/0.1@lasote/stable")
+        self.client.run("info . -bo=LibB/0.1@lasote/stable")
         self.assertIn("[LibB/0.1@lasote/stable]", self.client.user_io.out)
-        self.client.run("info -bo=LibE/0.1@lasote/stable")
+        self.client.run("info . -bo=LibE/0.1@lasote/stable")
         self.assertIn("[LibE/0.1@lasote/stable], [LibB/0.1@lasote/stable]",
                       self.client.user_io.out)
-        self.client.run("info -bo=LibF/0.1@lasote/stable")
+        self.client.run("info . -bo=LibF/0.1@lasote/stable")
         self.assertIn("[LibF/0.1@lasote/stable], [LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
-        self.client.run("info -bo=Dev1/0.1@lasote/stable")
+        self.client.run("info . -bo=Dev1/0.1@lasote/stable")
         self.assertEqual("\n", self.client.user_io.out)
-        self.client.run("info -bo=LibG/0.1@lasote/stable")
+        self.client.run("info . -bo=LibG/0.1@lasote/stable")
         self.assertEqual("\n", self.client.user_io.out)
 
-        self.client.run("info --build_order=ALL")
+        self.client.run("info . --build-order=ALL")
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, LibF/0.1@lasote/stable], "
                       "[LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
 
-        self.client.run("info --build_order=ALL")
+        self.client.run("info . --build-order=ALL")
         self.assertIn("[LibA/0.1@lasote/stable, LibE/0.1@lasote/stable, "
                       "LibF/0.1@lasote/stable], [LibB/0.1@lasote/stable, LibC/0.1@lasote/stable]",
                       self.client.user_io.out)
+
+    def wrong_path_parameter_test(self):
+        self.client = TestClient()
+
+        self.client.run("info", ignore_error=True)
+        self.assertIn("ERROR: Exiting with code: 2", self.client.out)
+
+        self.client.run("info not_real_path", ignore_error=True)
+        self.assertIn("ERROR: Conanfile not found", self.client.out)
+
+        self.client.run("info conanfile.txt", ignore_error=True)
+        self.assertIn("ERROR: Conanfile not found", self.client.out)

@@ -219,8 +219,7 @@ class Printer(object):
 
     def print_profile(self, name, profile):
         self._out.info("Configuration for profile %s:\n" % name)
-        self._print_profile_section("settings", profile.settings.items())
-
+        self._print_profile_section("settings", profile.settings.items(), separator="=")
         self._print_profile_section("options", profile.options.as_list(), separator="=")
         self._print_profile_section("build_requires", [(key, ", ".join(str(val) for val in values))
                                                        for key, values in
@@ -232,10 +231,6 @@ class Printer(object):
                 key = "%s:%s" % (package, name) if package else name
                 envs.append((key, value))
         self._print_profile_section("env", envs, separator='=')
-        scopes = profile.scopes.dumps().splitlines()
-        self._print_colored_line("[scopes]")
-        for scope in scopes:
-            self._print_colored_line(scope, indent=1)
 
     def _print_profile_section(self, name, items, indent=0, separator=": "):
         self._print_colored_line("[%s]" % name, indent=indent)

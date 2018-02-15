@@ -1,28 +1,32 @@
+import glob
 import os
 import platform
+import re
 
 import subprocess
+from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.files import unix_path
-from conans.client.tools.oss import cpu_count
+from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
+from conans.util.files import decode_text
 
 _global_output = None
 
 
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None, parallel=True):
+                       arch=None, parallel=True, force_vcvars=False, toolset=None):
     """ Do both: set the environment variables and call the .sln build
     """
-    vcvars = vcvars_command(settings)
-    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch, parallel)
+    vcvars = vcvars_command(settings, force=force_vcvars)
+    build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
+                              parallel, toolset=toolset)
     command = "%s && %s" % (vcvars, build)
     return command
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True):
+                      arch=None, parallel=True, toolset=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -39,17 +43,22 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         raise ConanException("Cannot build_sln_command, arch not defined")
     command += "msbuild %s /p:Configuration=%s" % (sln_path, build_type)
     arch = str(arch)
-    if arch in ["x86_64", "x86"]:
-        command += ' /p:Platform='
-        command += '"x64"' if arch == "x86_64" else '"x86"'
-    elif "ARM" in arch.upper():
-        command += ' /p:Platform="ARM"'
+    msvc_arch = {'x86': 'x86',
+                 'x86_64': 'x64',
+                 'armv7': 'ARM',
+                 'armv8': 'ARM64'}.get(arch)
+    if msvc_arch:
+        command += ' /p:Platform="%s"' % msvc_arch
 
     if parallel:
         command += ' /m:%s' % cpu_count()
 
     if targets:
         command += " /target:%s" % ";".join(targets)
+
+    if toolset:
+        command += " /p:PlatformToolset=%s" % toolset
+
     return command
 
 
@@ -79,21 +88,66 @@ def vs_installation_path(version):
     return vs_installation_path._cached[version]
 
 
-def vcvars_command(settings, arch=None, compiler_version=None):
+def find_windows_10_sdk():
+    """finds valid Windows 10 SDK version which can be passed to vcvarsall.bat (vcvars_command)"""
+    # uses the same method as VCVarsQueryRegistry.bat
+    from six.moves import winreg  # @UnresolvedImport
+    hives = [
+        (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE\Wow6432Node'),
+        (winreg.HKEY_CURRENT_USER, r'SOFTWARE\Wow6432Node'),
+        (winreg.HKEY_LOCAL_MACHINE, r'SOFTWARE'),
+        (winreg.HKEY_CURRENT_USER, r'SOFTWARE')
+    ]
+    for key, subkey in hives:
+        try:
+            hkey = winreg.OpenKey(key, r'%s\Microsoft\Microsoft SDKs\Windows\v10.0' % subkey)
+            installation_folder, _ = winreg.QueryValueEx(hkey, 'InstallationFolder')
+            if os.path.isdir(installation_folder):
+                include_dir = os.path.join(installation_folder, 'include')
+                for sdk_version in os.listdir(include_dir):
+                    if os.path.isdir(os.path.join(include_dir, sdk_version)) and sdk_version.startswith('10.'):
+                        windows_h = os.path.join(include_dir, sdk_version, 'um', 'Windows.h')
+                        if os.path.isfile(windows_h):
+                            return sdk_version
+        except EnvironmentError:
+            pass
+        finally:
+            winreg.CloseKey(hkey)
+    return None
+
+
+def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     arch_setting = arch or settings.get_safe("arch")
     compiler_version = compiler_version or settings.get_safe("compiler.version")
+    os_setting = settings.get_safe("os")
     if not compiler_version:
         raise ConanException("compiler.version setting required for vcvars not defined")
 
-    param = "x86" if arch_setting == "x86" else "amd64"
+    # https://msdn.microsoft.com/en-us/library/f2ccy3wt.aspx
+    arch_setting = arch_setting or 'x86_64'
+    if detected_architecture() == 'x86_64':
+        vcvars_arch = {'x86': 'x86',
+                       'x86_64': 'amd64',
+                       'armv7': 'amd64_arm',
+                       'armv8': 'amd64_arm64'}.get(arch_setting)
+    elif detected_architecture() == 'x86':
+        vcvars_arch = {'x86': 'x86',
+                       'x86_64': 'x86_amd64',
+                       'armv7': 'x86_arm',
+                       'armv8': 'x86_arm64'}.get(arch_setting)
+    if not vcvars_arch:
+        raise ConanException('unsupported architecture %s' % arch_setting)
     existing_version = os.environ.get("VisualStudioVersion")
     if existing_version:
         command = "echo Conan:vcvars already set"
         existing_version = existing_version.split(".")[0]
         if existing_version != compiler_version:
-            raise ConanException("Error, Visual environment already set to %s\n"
-                                 "Current settings visual version: %s"
-                                 % (existing_version, compiler_version))
+            message = "Visual environment already set to %s\n " \
+                      "Current settings visual version: %s" % (existing_version, compiler_version)
+            if not force:
+                raise ConanException("Error, %s" % message)
+            else:
+                _global_output.warn(message)
     else:
         env_var = "vs%s0comntools" % compiler_version
 
@@ -111,7 +165,7 @@ def vcvars_command(settings, arch=None, compiler_version=None):
                     'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
             command = ('set "VSCMD_START_DIR=%%CD%%" && '
-                       'call "%s" %s' % (vcvars_path, param))
+                       'call "%s" %s' % (vcvars_path, vcvars_arch))
         else:
             try:
                 vs_path = os.environ[env_var]
@@ -121,9 +175,55 @@ def vcvars_command(settings, arch=None, compiler_version=None):
                 _global_output.warn('VS variable %s points to the non-existing path "%s",'
                     'please check that you have set it correctly' % (env_var, vs_path))
             vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
-            command = ('call "%s" %s' % (vcvars_path, param))
+            command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
 
+    if os_setting == 'WindowsStore':
+        os_version_setting = settings.get_safe("os.version")
+        if os_version_setting == '8.1':
+            command += ' store 8.1'
+        elif os_version_setting == '10.0':
+            windows_10_sdk = find_windows_10_sdk()
+            if not windows_10_sdk:
+                raise ConanException("cross-compiling for WindowsStore 10 (UWP), "
+                                     "but Windows 10 SDK wasn't found")
+            command += ' store ' + windows_10_sdk
+        else:
+            raise ConanException('unsupported Windows Store version %s' % os_version_setting)
     return command
+
+
+def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False):
+    cmd = vcvars_command(settings, arch=arch,
+                         compiler_version=compiler_version, force=force) + " && echo __BEGINS__ && set"
+    ret = decode_text(subprocess.check_output(cmd, shell=True))
+    new_env = {}
+    start_reached = False
+    for line in ret.splitlines():
+        if not start_reached:
+            if "__BEGINS__" in line:
+                start_reached = True
+            continue
+        name_var, value = line.split("=", 1)
+        new_env[name_var] = value
+
+    if filter_known_paths:
+        def relevant_path(path):
+            path = path.replace("\\", "/").lower()
+            keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/", "system32", "windows"
+            return any(word in path for word in keywords)
+
+        path = new_env.get("PATH", "").split(";")
+        path = [entry for entry in path if relevant_path(entry)]
+        new_env["PATH"] = ";".join(path)
+
+    return new_env
+
+
+@contextmanager
+def vcvars(*args, **kwargs):
+    new_env = vcvars_dict(*args, **kwargs)
+    with environment_append(new_env):
+        yield
 
 
 def escape_windows_cmd(command):
@@ -137,24 +237,106 @@ def escape_windows_cmd(command):
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
 
 
-def run_in_windows_bash(conanfile, bashcmd, cwd=None):
-    """ Will run a unix command inside the msys2 environment
-        It requires to have MSYS2 in the path and MinGW
+def get_cased_path(name):
+    if platform.system() != "Windows":
+        return name
+    if not os.path.isabs(name):
+        name = os.path.abspath(name)
+    dirs = name.split('\\')
+    # disk letter
+    test_name = [dirs[0].upper()]
+    for d in dirs[1:]:
+        test_name += ["%s[%s]" % (d[:-1], d[-1])]  # This brackets do the trick to match cased
+
+    res = glob.glob('\\'.join(test_name))
+    if not res:
+        # File not found
+        return None
+    return res[0]
+
+MSYS2 = 'msys2'
+MSYS = 'msys'
+CYGWIN = 'cygwin'
+WSL = 'wsl'  # Windows Subsystem for Linux
+SFU = 'sfu'  # Windows Services for UNIX
+
+
+def unix_path(path, path_flavor=None):
+    """"Used to translate windows paths to MSYS unix paths like
+    c/users/path/to/file. Not working in a regular console or MinGW!"""
+    if not path:
+        return None
+    from conans.client.tools.oss import os_info
+
+    if os.path.exists(path):
+        path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
+
+    path_flavor = path_flavor or os_info.detect_windows_subsystem() or MSYS2
+    path = path.replace(":/", ":\\")
+    pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
+    path = pattern.sub('/\\1/', path).replace('\\', '/')
+    if path_flavor in (MSYS, MSYS2):
+        return path.lower()
+    elif path_flavor == CYGWIN:
+        return '/cygdrive' + path.lower()
+    elif path_flavor == WSL:
+        return '/mnt' + path[0:2].lower() + path[2:]
+    elif path_flavor == SFU:
+        path = path.lower()
+        return '/dev/fs' + path[0] + path[1:].capitalize()
+    return None
+
+
+def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None):
+    """ Will run a unix command inside a bash terminal
+        It requires to have MSYS2, CYGWIN, or WSL
     """
+    env = env or {}
     if platform.system() != "Windows":
         raise ConanException("Command only for Windows operating system")
-    # This needs to be set so that msys2 bash profile will set up the environment correctly.
-    try:
-        arch = conanfile.settings.arch  # Maybe arch doesn't exist
-    except:
-        arch = None
-    env_vars = {"MSYSTEM": "MINGW32" if arch == "x86" else "MINGW64",
-                "MSYS2_PATH_TYPE": "inherit"}
+    subsystem = subsystem or os_info.detect_windows_subsystem()
+
+    if not subsystem:
+        raise ConanException("Cannot recognize the Windows subsystem, install MSYS2/cygwin or specify a build_require "
+                             "to apply it.")
+
+    if subsystem == MSYS2 and msys_mingw:
+        # This needs to be set so that msys2 bash profile will set up the environment correctly.
+        env_vars = {"MSYSTEM": "MINGW32" if conanfile.settings.get_safe("arch") == "x86" else "MINGW64",
+                    "MSYS2_PATH_TYPE": "inherit"}
+    else:
+        env_vars = {}
+
     with environment_append(env_vars):
-        curdir = unix_path(cwd or os.path.abspath(os.path.curdir))
+        hack_env = ""
+        if subsystem != WSL:  # In the bash.exe from WSL this trick do not work, always the /usr/bin etc at first place
+            inherited_path = conanfile.env.get("PATH", None)
+            if isinstance(inherited_path, list):
+                paths = [unix_path(path, path_flavor=subsystem) for path in inherited_path]
+                inherited_path = ":".join(paths)
+            else:
+                inherited_path = unix_path(inherited_path, path_flavor=subsystem)
+
+            if "PATH" in env:
+                tmp = unix_path(env["PATH"].replace(";", ":"), path_flavor=subsystem)
+                inherited_path = "%s:%s" % (tmp, inherited_path) if inherited_path else tmp
+
+            # Put the build_requires and requires path at the first place inside the shell
+            hack_env = ' && PATH="%s:$PATH"' % inherited_path if inherited_path else ""
+
+        for var_name, value in env.items():
+            if var_name == "PATH":
+                continue
+            hack_env += ' && %s=%s' % (var_name, value)
+
         # Needed to change to that dir inside the bash shell
-        to_run = 'cd "%s" && %s ' % (curdir, bashcmd)
-        custom_bash_path = os.getenv("CONAN_BASH_PATH", "bash")
-        wincmd = '%s --login -c %s' % (custom_bash_path, escape_windows_cmd(to_run))
+        if cwd and not os.path.isabs(cwd):
+            cwd = os.path.join(os.getcwd(), cwd)
+
+        curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
+        to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
+        bash_path = os_info.bash_path()
+        bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
+        wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
-        conanfile.run(wincmd)
+        return conanfile.run(wincmd, win_bash=False)

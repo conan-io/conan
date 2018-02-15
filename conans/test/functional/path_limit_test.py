@@ -6,7 +6,7 @@ from conans.model.ref import PackageReference, ConanFileReference
 from conans.tools import environment_append
 from conans.test import CONAN_TEST_FOLDER
 import tempfile
-from conans.paths import long_paths_support
+import platform
 
 
 base = '''
@@ -21,14 +21,14 @@ class ConanLib(ConanFile):
     exports_sources = "*"
 
     def source(self):
-        extra_path = "1/" * 108
+        extra_path = "1/" * 90
         os.makedirs(extra_path)
         myfile = os.path.join(extra_path, "myfile.txt")
         # print("File length ", len(myfile))
         save(myfile, "Hello extra path length")
 
     def build(self):
-        extra_path = "1/" * 108
+        extra_path = "1/" * 90
         myfile = os.path.join(extra_path, "myfile2.txt")
         # print("File length ", len(myfile))
         save(myfile, "Hello2 extra path length")
@@ -43,11 +43,11 @@ class PathLengthLimitTest(unittest.TestCase):
     def remove_test(self):
         short_home = tempfile.mkdtemp(dir=CONAN_TEST_FOLDER)
         client = TestClient()
-        files = {"conanfile.py": base.replace("108", "90"),
+        files = {"conanfile.py": base,
                  "path/"*20 + "file0.txt": "file0 content"}  # shorten to pass appveyor
         client.save(files)
         with environment_append({"CONAN_USER_HOME_SHORT": short_home}):
-            client.run("export lasote/channel")
+            client.run("export . lasote/channel")
             client.run("install lib/0.1@lasote/channel --build")
             client.run('remove "lib*" -b -p -f')
             client.run("install lib/0.1@lasote/channel --build")
@@ -63,7 +63,7 @@ class PathLengthLimitTest(unittest.TestCase):
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export lasote/channel")
+        client.run("export . lasote/channel")
         client.run("install lib/0.1@lasote/channel --build")
         client.run("upload lib/0.1@lasote/channel --all")
         client.run("remove lib/0.1@lasote/channel -f")
@@ -80,7 +80,7 @@ class PathLengthLimitTest(unittest.TestCase):
             package_ref = PackageReference.loads("lib/0.1@lasote/channel:"
                                                  "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
             package_folder = client2.client_cache.package(package_ref, short_paths=None)
-            if not long_paths_support:
+            if platform.system() == "Windows":
                 original_folder = client2.client_cache.package(package_ref)
                 link = load(os.path.join(original_folder, ".conan_link"))
                 self.assertEqual(link, package_folder)
@@ -95,29 +95,30 @@ class PathLengthLimitTest(unittest.TestCase):
         files = {"conanfile.py": base,
                  "path/"*20 + "file0.txt": "file0 content"}
         client.save(files)
-        client.run("export user/channel")
+        client.run("export . user/channel")
         conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
-        if not long_paths_support:
-            source_folder = client.client_cache.export_sources(conan_ref)
-            link_source = load(os.path.join(source_folder, ".conan_link"))
-            self.assertTrue(os.path.exists(link_source))
-            self.assertEqual(load(os.path.join(link_source + "/path"*20 + "/file0.txt")),
-                             "file0 content")
-            client.run("install lib/0.1@user/channel --build=missing")
-            package_ref = PackageReference.loads("lib/0.1@user/channel:"
-                                                 "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-            package_folder = client.client_cache.package(package_ref)
-            link_source = load(os.path.join(package_folder, ".conan_link"))
-            self.assertTrue(os.path.exists(link_source))
-            self.assertEqual(load(os.path.join(link_source + "/file0.txt")), "file0 content")
+        source_folder = client.client_cache.export_sources(conan_ref)
+        if platform.system() == "Windows":
+            source_folder = load(os.path.join(source_folder, ".conan_link"))
+        self.assertTrue(os.path.exists(source_folder))
+        self.assertEqual(load(os.path.join(source_folder + "/path"*20 + "/file0.txt")),
+                         "file0 content")
+        client.run("install lib/0.1@user/channel --build=missing")
+        package_ref = PackageReference.loads("lib/0.1@user/channel:"
+                                             "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        package_folder = client.client_cache.package(package_ref)
+        if platform.system() == "Windows":
+            package_folder = load(os.path.join(package_folder, ".conan_link"))
+        self.assertTrue(os.path.exists(package_folder))
+        self.assertEqual(load(os.path.join(package_folder + "/file0.txt")), "file0 content")
 
     def package_copier_test(self):
         client = TestClient()
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export lasote/channel")
+        client.run("export . lasote/channel")
         client.run("install lib/0.1@lasote/channel --build")
-        client.run("copy lib/0.1@lasote/channel memsharded/stable")
+        client.run("copy lib/0.1@lasote/channel memsharded/stable --all")
         client.run("search")
         self.assertIn("lib/0.1@lasote/channel", client.user_io.out)
         self.assertIn("lib/0.1@memsharded/stable", client.user_io.out)
@@ -126,18 +127,18 @@ class PathLengthLimitTest(unittest.TestCase):
         client.run("search lib/0.1@memsharded/stable")
         self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
 
-        if not long_paths_support:
-            conan_ref = ConanFileReference.loads("lib/0.1@lasote/channel")
-            package_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
-            package_folder = client.client_cache.package(package_ref)
-            link_package = load(os.path.join(package_folder, ".conan_link"))
-            self.assertTrue(os.path.exists(link_package))
+        conan_ref = ConanFileReference.loads("lib/0.1@lasote/channel")
+        package_ref = PackageReference(conan_ref, "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
+        package_folder = client.client_cache.package(package_ref)
+        if platform.system() == "Windows":
+            package_folder = load(os.path.join(package_folder, ".conan_link"))
+        self.assertTrue(os.path.exists(package_folder))
 
     def basic_test(self):
         client = TestClient()
         files = {"conanfile.py": base}
         client.save(files)
-        client.run("export user/channel")
+        client.run("export . user/channel")
         client.run("install lib/0.1@user/channel --build")
         package_ref = PackageReference.loads("lib/0.1@user/channel:"
                                              "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
@@ -151,8 +152,7 @@ class PathLengthLimitTest(unittest.TestCase):
         self.assertEqual("Hello extra path length", file1)
         file2 = load(os.path.join(package_folder, "myfile2.txt"))
         self.assertEqual("Hello2 extra path length", file2)
-
-        if not long_paths_support:
+        if platform.system() == "Windows":
             conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
             source_folder = client.client_cache.source(conan_ref)
             link_source = load(os.path.join(source_folder, ".conan_link"))
@@ -181,7 +181,7 @@ class ConanLib(ConanFile):
 '''
         client.save({"conanfile.py": base})
 
-        client.run("create lib/0.1@user/channel")
+        client.run("create . lib/0.1@user/channel")
         package_ref = PackageReference.loads("lib/0.1@user/channel:"
                                              "5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9")
         client.run("search")
@@ -189,18 +189,15 @@ class ConanLib(ConanFile):
         client.run("search lib/0.1@user/channel")
         self.assertIn("Package_ID: 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9", client.user_io.out)
 
-        conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
-        source_folder = client.client_cache.source(conan_ref)
-        build_folder = client.client_cache.build(package_ref)
-        package_folder = client.client_cache.package(package_ref)
-        link_source = os.path.join(source_folder, ".conan_link")
-        link_build = os.path.join(build_folder, ".conan_link")
-        link_package = os.path.join(package_folder, ".conan_link")
-        if long_paths_support:
-            self.assertFalse(os.path.exists(link_source))
-            self.assertFalse(os.path.exists(link_build))
-            self.assertFalse(os.path.exists(link_package))
-        else:
+        if platform.system() == "Windows":
+            conan_ref = ConanFileReference.loads("lib/0.1@user/channel")
+            source_folder = client.client_cache.source(conan_ref)
+            build_folder = client.client_cache.build(package_ref)
+            package_folder = client.client_cache.package(package_ref)
+            link_source = os.path.join(source_folder, ".conan_link")
+            link_build = os.path.join(build_folder, ".conan_link")
+            link_package = os.path.join(package_folder, ".conan_link")
+
             self.assertTrue(os.path.exists(link_source))
             self.assertTrue(os.path.exists(link_build))
             self.assertTrue(os.path.exists(link_package))
@@ -220,9 +217,8 @@ class ConanLib(ConanFile):
     generators = "cmake"
 
     def build(self):
-        self.output.info("%s/%s" % (self.conanfile_directory, self.name))
-        # print os.listdir(self.conanfile_directory)
-        path = os.path.join(self.conanfile_directory, self.name)
+        self.output.info("%s/%s" % (self.build_folder, self.name))
+        path = os.path.join(self.build_folder, self.name)
         # print "PATH EXISTS ", os.path.exists(path)
         # print os.listdir(path)
         path = os.path.join(path, "myfile.txt")
@@ -236,7 +232,7 @@ class ConanLib(ConanFile):
         files = {"conanfile.py": base,
                  "lib/myfile.txt": "Hello world!"}
         client.save(files)
-        client.run("export user/channel")
+        client.run("export . user/channel")
         client.run("install lib/0.1@user/channel --build")
         # print client.paths.store
         package_ref = PackageReference.loads("lib/0.1@user/channel:"

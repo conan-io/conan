@@ -166,7 +166,12 @@ class ExportsSourcesTest(unittest.TestCase):
             expected_exports.append("license.txt")
 
         self.assertEqual(scan_folder(self.export_folder), sorted(expected_exports))
-        self.assertFalse(os.path.exists(self.export_sources_folder))
+        if reuploaded and mode == "exports":
+            # In this mode, we know the sources are not required
+            # So the local folder is created, but empty
+            self.assertTrue(os.path.exists(self.export_sources_folder))
+        else:
+            self.assertFalse(os.path.exists(self.export_sources_folder))
 
     def _check_export_uploaded_folder(self, mode, export_folder=None, export_src_folder=None):
         if mode == "exports_sources":
@@ -251,7 +256,7 @@ class ExportsSourcesTest(unittest.TestCase):
         # https://github.com/conan-io/conan/issues/943
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
@@ -275,7 +280,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def export_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self._check_export_folder(mode)
 
         # now build package
@@ -323,7 +328,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def export_upload_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
 
         self.client.run("upload Hello/0.1@lasote/testing")
         self.assertFalse(os.path.exists(self.source_folder))
@@ -354,7 +359,7 @@ class ExportsSourcesTest(unittest.TestCase):
         """
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')
@@ -374,7 +379,7 @@ class ExportsSourcesTest(unittest.TestCase):
     def update_test(self, mode):
         self._create_code(mode)
 
-        self.client.run("export lasote/testing")
+        self.client.run("export . lasote/testing")
         self.client.run("install Hello/0.1@lasote/testing --build=missing")
         self.client.run("upload Hello/0.1@lasote/testing --all")
         self.client.run('remove Hello/0.1@lasote/testing -f')

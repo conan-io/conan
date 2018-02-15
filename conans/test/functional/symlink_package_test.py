@@ -13,12 +13,10 @@ class SymlinkPackageTest(unittest.TestCase):
         conanfile = """from conans import ConanFile
 import os
 
-
 class TestlinksConan(ConanFile):
     name = "test_links"
     version = "1.0"
     settings = "os", "compiler", "build_type", "arch"
-    generators = "cmake"
 
     def build(self):
         os.makedirs("foo/test/bar")
@@ -29,19 +27,12 @@ class TestlinksConan(ConanFile):
     def package(self):
         self.copy("*", src=".", dst=".", links=True)
 """
-        test_package = """from conans import ConanFile, CMake
+        test_package = """from conans import ConanFile
 from conans.errors import ConanException
 import os
 
-
-channel = os.getenv("CONAN_CHANNEL", "stable")
-username = os.getenv("CONAN_USERNAME", "plex")
-
-
 class TestlinksTestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
-    requires = "test_links/1.0@%s/%s" % (username, channel)
-    generators = "cmake"
 
     def test(self):
         foopath = self.deps_cpp_info["test_links"].rootpath + "/foo/test_link"
@@ -53,8 +44,4 @@ class TestlinksTestConan(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "test_package/conanfile.py": test_package})
 
-        client.run("test_package")
-
-
-if __name__ == '__main__':
-    unittest.main()
+        client.run("create . user/channel")

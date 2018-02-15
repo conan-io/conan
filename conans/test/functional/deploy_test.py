@@ -26,7 +26,7 @@ class Lib(ConanFile):
         client.save({"conanfile.py": libconanfile,
                      "License.md": "lib license",
                      "otherfile": ""})
-        client.run("create Lib/0.1@user/testing")
+        client.run("create . Lib/0.1@user/testing")
         self.assertNotIn("Lib deploy()", client.out)
 
         if deploy_to_abs:
@@ -48,23 +48,30 @@ class Pkg(ConanFile):
         self.copy_deps("*.dll", dst="%s")
 """ % dll_folder.replace("\\", "/")
         client.save({"conanfile.py": conanfile})
-        client.run("create Pkg/0.1@user/testing")
+        client.run("create . Pkg/0.1@user/testing")
         self.assertNotIn("deploy()", client.out)
-        client.current_folder = temp_folder()
-        client.run("install Pkg/0.1@user/testing")
-        self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.dll' files: mylib.dll",
-                      client.out)
-        self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.exe' files: myapp.exe",
-                      client.out)
-        deploy_manifest = FileTreeManifest.loads(load(os.path.join(client.current_folder,
-                                                                   "deploy_manifest.txt")))
 
-        app = os.path.join(client.current_folder, "myapp.exe")
-        if deploy_to_abs:
-            lib = os.path.join(dll_folder, "mylib.dll")
-        else:
-            lib = os.path.join(client.current_folder, "mylib.dll")
-        self.assertEqual(sorted([app, lib]),
-                         sorted(deploy_manifest.file_sums.keys()))
-        self.assertEqual(load(app), "myexe")
-        self.assertEqual(load(lib), "mydll")
+        def test_install_in(folder):
+            client.current_folder = temp_folder()
+            client.run("install Pkg/0.1@user/testing --install-folder=%s" % folder)
+
+            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.dll' files: mylib.dll",
+                          client.out)
+            self.assertIn("Pkg/0.1@user/testing deploy(): Copied 1 '.exe' files: myapp.exe",
+                          client.out)
+            deploy_manifest = FileTreeManifest.loads(load(os.path.join(client.current_folder,
+                                                                       folder,
+                                                                       "deploy_manifest.txt")))
+
+            app = os.path.abspath(os.path.join(client.current_folder, folder, "myapp.exe"))
+            if deploy_to_abs:
+                lib = os.path.join(dll_folder, "mylib.dll")
+            else:
+                lib = os.path.abspath(os.path.join(client.current_folder, folder, "mylib.dll"))
+            self.assertEqual(sorted([app, lib]),
+                             sorted(deploy_manifest.file_sums.keys()))
+            self.assertEqual(load(app), "myexe")
+            self.assertEqual(load(lib), "mydll")
+
+        test_install_in("./")
+        test_install_in("other_install_folder")

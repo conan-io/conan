@@ -23,7 +23,7 @@ class HelloConan(ConanFile):
         files = {"conanfile.py": self.conanfile, "path/to/exported_source": "1",
                  "other/path/to/exported": "2"}
         self.client.save(files)
-        self.client.run("export lasote/channel")
+        self.client.run("export . lasote/channel")
         self.client.run("install Hello0/0.1@lasote/channel --build missing")
 
     def test_get_local(self):
@@ -69,8 +69,6 @@ class HelloConan(ConanFile):
 
 [full_options]
 
-
-[scope]
 
 [recipe_hash]
     dcb3ad84f4e46fb3da40dbbea0017094

@@ -14,7 +14,7 @@ class CMakeConfigsTest(unittest.TestCase):
         files = multi_config_files(name, test=True)
         client.save(files, clean_first=True)
 
-        client.run("test_package")
+        client.run("create . user/testing")
         self.assertIn("Hello Release Hello0", client.user_io.out)
         self.assertIn("Hello Debug Hello0", client.user_io.out)
 
@@ -27,7 +27,7 @@ class CMakeConfigsTest(unittest.TestCase):
             client.save(files, clean_first=True)
             deps = [name]
             if name != "Hello2":
-                client.run("export lasote/stable")
+                client.run("export . lasote/stable")
 
         client.run('install . --build missing')
         client.run("build .")

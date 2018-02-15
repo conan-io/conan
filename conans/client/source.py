@@ -4,6 +4,7 @@ import shutil
 import six
 
 from conans import tools
+from conans.model.conan_file import get_env_context_manager
 from conans.errors import ConanException, conanfile_exception_formatter, \
     ConanExceptionInUserConanfileMethod
 from conans.paths import EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE, CONAN_MANIFEST
@@ -71,7 +72,7 @@ def config_source(export_folder, export_source_folder, src_folder,
         os.chdir(src_folder)
         conan_file.source_folder = src_folder
         try:
-            with tools.environment_append(conan_file.env):
+            with get_env_context_manager(conan_file):
                 with conanfile_exception_formatter(str(conan_file), "source"):
                     conan_file.build_folder = None
                     conan_file.package_folder = None
@@ -95,7 +96,7 @@ def config_source_local(dest_dir, conan_file, output):
     with tools.chdir(dest_dir):
         try:
             with conanfile_exception_formatter(str(conan_file), "source"):
-                with tools.environment_append(conan_file.env):
+                with get_env_context_manager(conan_file):
                     conan_file.build_folder = None
                     conan_file.package_folder = None
                     conan_file.source()
