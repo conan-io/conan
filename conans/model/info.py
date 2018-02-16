@@ -1,3 +1,4 @@
+from conans.client.build.cppstd_flags import cppstd_default
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
@@ -250,6 +251,7 @@ class ConanInfo(object):
         result.env_values = EnvValues()
         result.vs_toolset_compatible()
         result.discard_build_settings()
+        result.default_std_matching()
 
         return result
 
@@ -396,3 +398,20 @@ class ConanInfo(object):
     def include_build_settings(self):
         self.settings.os_build = self.full_settings.os_build
         self.settings.arch_build = self.full_settings.arch_build
+
+    def default_std_matching(self):
+        """
+        If we are building with gcc 7, and we specify -s cppstd=14gnu, it's the default, so the
+        same as specifying None, packages are the same
+        """
+
+        if self.full_settings.compiler and self.full_settings.compiler.version and \
+           self.full_settings.cppstd:
+            default = cppstd_default(str(self.full_settings.compiler),
+                                     str(self.full_settings.compiler.version))
+            if default == str(self.full_settings.cppstd):
+                self.settings.cppstd = None
+
+    def default_std_non_matching(self):
+        if self.full_options.cppstd:
+            self.settings.cppstd = self.full_settings.cppstd
