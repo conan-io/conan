@@ -59,7 +59,9 @@ class CompilerArgsGenerator(Generator):
         flags.extend(self._deps_build_info.sharedlinkflags)
         flags.extend(self._deps_build_info.exelinkflags)
         flags.extend(self._libcxx_flags())
-        flags.extend(cppstd_flag(self._compiler, self._compiler_version, self._cppstd))
+        flags.extend(cppstd_flag(self.conanfile.settings.get_safe("compiler"),
+                                 self.conanfile.settings.get_safe("compiler.version"),
+                                 self.conanfile.settings.get_safe("cppstd")))
         sysrf = sysroot_flag(self._deps_build_info.sysroot, compiler=self.compiler)
         if sysrf:
             flags.append(sysrf)
