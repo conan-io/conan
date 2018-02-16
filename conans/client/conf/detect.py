@@ -23,6 +23,19 @@ def _execute(command):
     return proc.returncode, "".join(output_buffer)
 
 
+def _is_real_compiler(compiler_name, compiler_exe):
+    """
+    In some platforms gcc compiler is not a real gcc, i.e: in Mac OS X gcc is clang by default.
+    It can also be a problem if gcc is a symlink to clang or the other way around.
+    """
+
+    try:
+        _, out = _execute("%s --version" % compiler_exe)
+        return compiler_name in out
+    except Exception:
+        return False
+
+
 def _gcc_compiler(output, compiler_exe="gcc"):
     try:
         _, out = _execute('%s -dumpversion' % compiler_exe)
@@ -49,7 +62,7 @@ def _clang_compiler(output, compiler_exe="clang"):
             compiler = "apple-clang"
         elif "clang version" in out:
             compiler = "clang"
-        installed_version = re.search("([0-9]\.[0-9])", out).group()
+        installed_version = re.search("version ([0-9]\.[0-9])", out).group(1)
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
@@ -146,9 +159,9 @@ def _get_default_compiler(output):
     if cc or cxx:  # Env defined, use them
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
-        if "gcc" in command:
+        if _is_real_compiler("gcc", command):
             return _gcc_compiler(output, command)
-        if "clang" in command.lower():
+        if _is_real_compiler("clang", command.lower()):
             return _clang_compiler(output, command)
         if platform.system() == "SunOS" and command.lower() == "cc":
             return _sun_cc_compiler(output, command)
