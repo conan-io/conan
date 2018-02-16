@@ -69,6 +69,7 @@ compiler:
         libcxx: [libstdc++, libc++]
 
 build_type: [None, Debug, Release]
+cppstd: [None, 98, 98gnu, 11, 11gnu, 14, 14gnu, 17, 17gnu]
 """
 
 default_client_conf = """

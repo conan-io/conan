@@ -2,6 +2,7 @@ import copy
 import os
 
 from conans.client.build.compiler_flags import build_type_define, build_type_flag, visual_runtime, format_defines
+from conans.client.build.cppstd_flags import cppstd_flag
 
 
 class VisualStudioBuildEnvironment(object):
@@ -33,6 +34,7 @@ class VisualStudioBuildEnvironment(object):
         self.flags = self._configure_flags()
         self.cxx_flags = copy.copy(self._deps_cpp_info.cppflags)
         self.link_flags = self._configure_link_flags()
+        self.std = self._std_cpp()
 
     def _configure_link_flags(self):
         ret = copy.copy(self._deps_cpp_info.exelinkflags)
@@ -66,6 +68,9 @@ class VisualStudioBuildEnvironment(object):
         ret.extend(self.cxx_flags)
         ret.extend(self.link_flags)
 
+        if self.std:
+            ret.append(self.std)
+
         return ret
 
     @property
@@ -94,6 +99,15 @@ class VisualStudioBuildEnvironment(object):
         ret = {"CL": cl,
                "LIB": lib}
         return ret
+
+    def _std_cpp(self):
+        if self._settings.get_safe("compiler") == "Visual Studio" and \
+                self._settings.get_safe("cppstd"):
+            flag = cppstd_flag(self._settings.get_safe("compiler"),
+                               self._settings.get_safe("compiler.version"),
+                               self._settings.get_safe("cppstd"))
+            return flag
+        return None
 
 
 def _environ_value_prefix(var_name, prefix=" "):
