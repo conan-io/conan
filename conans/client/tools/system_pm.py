@@ -26,6 +26,38 @@ class SystemPackageTool(object):
         return env_sudo != "False" and env_sudo != "0"
 
     @staticmethod
+    def _check_sysrequires_mode(packages):
+        """
+        Check the working mode and return True or False if the install can progress and print in _global_output
+        a report of packages to be installed if modes are verify or disabled.
+
+        Allowed modes are (enabled, verify, disabled).
+
+        For verify mode raise a conan exception
+
+        :param packages: list of packages to be installed
+        :return: True if install can progress or False if not.
+        """
+        allowed_modes= ("enabled", "verify", "disabled")
+        mode = os.environ.get("CONAN_SYSREQUIRES_MODE", "enabled")
+        mode_to_lower = mode.lower()
+        if mode_to_lower not in allowed_modes:
+            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r" % (mode, allowed_modes))
+
+        if mode_to_lower == "enabled":
+            return True
+
+        # Report to output packages needs to be installed
+        packages_output = '\n'.join(packages)
+        _global_output.info("The following packages needs to be installed:\n %s" % packages_output)
+        if mode_to_lower == "verify":
+            raise ConanException(
+                "Aborted due to CONAN_SYSREQUIRES_MODE=%s and packages needs to be installed" % mode
+            )
+        # Working mode is disabled, installing packages can't progress
+        return False
+
+    @staticmethod
     def _create_tool(os_info):
         if os_info.with_apt:
             return AptTool()
@@ -56,8 +88,14 @@ class SystemPackageTool(object):
             Get the system package tool install command.
         '"""
         packages = [packages] if isinstance(packages, str) else list(packages)
+
         if not force and self._installed(packages):
             return
+
+        if not self._check_sysrequires_mode(packages):
+            return
+
+        # From here system packages can be updated/modified
         if update and not self._is_up_to_date:
             self.update()
         self._install_any(packages)
