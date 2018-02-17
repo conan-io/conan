@@ -9,18 +9,21 @@ _global_output = None
 class SystemPackageTool(object):
 
     def __init__(self, runner=None, os_info=None, tool=None, recommends=False):
-        env_sudo = os.environ.get("CONAN_SYSREQUIRES_SUDO", None)
-        self._sudo = (env_sudo != "False" and env_sudo != "0")
-        if env_sudo is None and os.name == 'posix' and os.geteuid() == 0:
-            self._sudo = False
-        if env_sudo is None and os.name == 'nt':
-            self._sudo = False
         os_info = os_info or OSInfo()
         self._is_up_to_date = False
         self._tool = tool or self._create_tool(os_info)
-        self._tool._sudo_str = "sudo " if self._sudo else ""
+        self._tool._sudo_str = "sudo " if self._is_sudo_enabled() else ""
         self._tool._runner = runner or ConanRunner()
         self._tool._recommends = recommends
+
+    @staticmethod
+    def _is_sudo_enabled():
+        env_sudo = os.environ.get("CONAN_SYSREQUIRES_SUDO", None)
+        if env_sudo is None and os.name == 'posix' and os.geteuid() == 0:
+            return False
+        if env_sudo is None and os.name == 'nt':
+            return False
+        return env_sudo != "False" and env_sudo != "0"
 
     @staticmethod
     def _create_tool(os_info):
