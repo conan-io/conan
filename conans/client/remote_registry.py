@@ -193,7 +193,7 @@ class RemoteRegistry(object):
             if insert is not None:
                 try:
                     insert_index = int(insert)
-                except:
+                except ValueError:
                     raise ConanException("insert argument must be an integer")
                 remotes.pop(remote_name, None)  # Remove if exists (update)
                 remotes_list = list(remotes.items())
