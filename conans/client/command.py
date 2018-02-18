@@ -419,7 +419,6 @@ class Command(object):
             else:
                 self._outputer.info(deps_graph, graph_updates_info, only, args.remote,
                                     args.package_filter, args.paths, project_reference)
-        return
 
     def source(self, *args):
         """ Calls your local conanfile.py 'source()' method.
@@ -822,7 +821,6 @@ class Command(object):
                                          prog="conan upload")
         parser.add_argument('pattern', help='Pattern or package recipe reference, '
                                             'e.g., "openssl/*", "MyPackage/1.2@user/channel"')
-        # TODO: packageparser.add_argument('package', help='user name')
         parser.add_argument("-p", "--package", default=None, help='package ID to upload',
                             action=OnceArgument)
         parser.add_argument("-r", "--remote", help='upload to this specific remote',
@@ -942,7 +940,7 @@ class Command(object):
 
         parser_new = subparsers.add_parser('new', help='Creates a new empty profile')
         parser_new.add_argument('profile',  help="name for the profile in the '.conan/profiles' "
-                                                  "folder or path and name for a profile file")
+                                                 "folder or path and name for a profile file")
         parser_new.add_argument("--detect", action='store_true',
                                 default=False,
                                 help='Autodetect settings and fill [settings] section')
@@ -955,7 +953,7 @@ class Command(object):
         parser_get = subparsers.add_parser('get', help='Get a profile key')
         parser_get.add_argument('item', help='key of the value to get, e.g: settings.compiler')
         parser_get.add_argument('profile',  help="name of the profile in the '.conan/profiles' "
-                                                  "folder or path to a profile file")
+                                                 "folder or path to a profile file")
 
         parser_remove = subparsers.add_parser('remove', help='Remove a profile key')
         parser_remove.add_argument('item', help='key, e.g: settings.compiler')
@@ -985,8 +983,6 @@ class Command(object):
             self._outputer.writeln(self._conan.get_profile_key(profile, key))
         elif args.subcommand == "remove":
             self._conan.delete_profile_key(profile, args.item)
-
-        return
 
     def get(self, *args):
         """ Gets a file or list a directory of a given reference or package.
@@ -1029,8 +1025,6 @@ class Command(object):
         args = parser.parse_args(*args)
 
         self._conan.export_alias(args.reference, args.target)
-
-        return
 
     def _show_help(self):
         """ prints a summary of all commands
