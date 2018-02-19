@@ -8,18 +8,17 @@ from conans.test.utils.tools import TestBufferConanOutput
 
 class DetectTest(unittest.TestCase):
 
-    platform_default_compilers = {
-        "Linux": "gcc",
-        "Darwin": "apple-clang",
-        "Windows": "Visual Studio"
-    }
-
     def detect_default_compilers_test(self):
+        platform_default_compilers = {
+            "Linux": "gcc",
+            "Darwin": "apple-clang",
+            "Windows": "Visual Studio"
+        }
         output = TestBufferConanOutput()
         result = detect_defaults_settings(output)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
-        platform_compiler = self.platform_default_compilers.get(platform.system(), None)
+        platform_compiler = platform_default_compilers.get(platform.system(), None)
         if platform_compiler is not None:
             self.assertEquals(result.get("compiler", None), platform_compiler)
 
@@ -31,6 +30,4 @@ class DetectTest(unittest.TestCase):
             result = detect_defaults_settings(output)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
-        platform_compiler = self.platform_default_compilers.get(platform.system(), None)
-        self.assertIsNotNone(platform_compiler)
-        self.assertEquals(result.get("compiler", None), platform_compiler)
+        self.assertEquals(result.get("compiler", None), "apple-clang")
