@@ -105,8 +105,7 @@ class BuildRequires(object):
 
         reference = str(reference)
         output.info("Installing build requirements of: %s" % (reference or "PROJECT"))
-        output.info("Build requires: [%s]"
-                          % ", ".join(str(r) for r in build_requires.values()))
+        output.info("Build requires: [%s]" % ", ".join(str(r) for r in build_requires.values()))
         # clear root package options, they won't match the build-require
         conanfile.build_requires_options.clear_unscoped_options()
         virtual = self._loader.load_virtual(build_requires.values(), scope_options=False,
