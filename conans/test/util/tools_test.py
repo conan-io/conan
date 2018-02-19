@@ -441,7 +441,7 @@ class HelloConan(ConanFile):
             with self.assertRaises(ConanException) as exc:
                 spt.install(packages)
             self.assertIn("CONAN_SYSREQUIRES_MODE=test_not_valid_mode is not allowed", str(exc.exception))
-            self.assertEquals(3, runner.calls)
+            self.assertEquals(0, runner.calls)
 
         # Check verify mode, a package report should be displayed in output and ConanException raised.
         # No system packages are installed
@@ -469,7 +469,7 @@ class HelloConan(ConanFile):
             spt = SystemPackageTool(runner=runner, tool=AptTool())
             spt.install(packages)
             self.assertIn('\n'.join(packages), tools.system_pm._global_output)
-            self.assertEquals(3, runner.calls)
+            self.assertEquals(0, runner.calls)
 
         # Check enabled, default mode, system packages must be installed.
         with tools.environment_append({

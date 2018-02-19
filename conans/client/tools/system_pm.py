@@ -2,8 +2,13 @@ import os
 from conans.client.runner import ConanRunner
 from conans.client.tools.oss import OSInfo
 from conans.errors import ConanException
+from conans.util.env_reader import get_env
 
 _global_output = None
+
+
+class SystemPackageToolInvalidMode(ConanException):
+    pass
 
 
 class SystemPackageTool(object):
@@ -18,44 +23,23 @@ class SystemPackageTool(object):
 
     @staticmethod
     def _is_sudo_enabled():
-        env_sudo = os.environ.get("CONAN_SYSREQUIRES_SUDO", None)
-        if env_sudo is None and os.name == 'posix' and os.geteuid() == 0:
-            return False
-        if env_sudo is None and os.name == 'nt':
-            return False
-        return env_sudo != "False" and env_sudo != "0"
+        if "CONAN_SYSREQUIRES_SUDO" not in os.environ:
+            if os.name == 'posix' and os.geteuid() == 0:
+                return False
+            if os.name == 'nt':
+                return False
+        return get_env("CONAN_SYSREQUIRES_SUDO", True)
 
     @staticmethod
-    def _check_sysrequires_mode(packages):
-        """
-        Check the working mode and return True or False if the install can progress and print in _global_output
-        a report of packages to be installed if modes are verify or disabled.
-
-        Allowed modes are (enabled, verify, disabled).
-
-        For verify mode raise a conan exception
-
-        :param packages: list of packages to be installed
-        :return: True if install can progress or False if not.
-        """
+    def _get_sysrequire_mode():
         allowed_modes= ("enabled", "verify", "disabled")
-        mode = os.environ.get("CONAN_SYSREQUIRES_MODE", "enabled")
-        mode_to_lower = mode.lower()
-        if mode_to_lower not in allowed_modes:
-            raise ConanException("CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r" % (mode, allowed_modes))
-
-        if mode_to_lower == "enabled":
-            return True
-
-        # Report to output packages needs to be installed
-        packages_output = '\n'.join(packages)
-        _global_output.warn("The following packages need to be installed:\n %s" % packages_output)
-        if mode_to_lower == "verify":
-            raise ConanException(
-                "Aborted due to CONAN_SYSREQUIRES_MODE=%s and packages needs to be installed" % mode
+        mode = get_env("CONAN_SYSREQUIRES_MODE", "enabled")
+        mode_lower = mode.lower()
+        if mode_lower not in allowed_modes:
+            raise SystemPackageToolInvalidMode(
+                "CONAN_SYSREQUIRES_MODE=%s is not allowed, allowed modes=%r" % (mode, allowed_modes)
             )
-        # Working mode is disabled, installing packages can't progress
-        return False
+        return mode_lower
 
     @staticmethod
     def _create_tool(os_info):
@@ -89,10 +73,20 @@ class SystemPackageTool(object):
         '"""
         packages = [packages] if isinstance(packages, str) else list(packages)
 
-        if not force and self._installed(packages):
-            return
+        mode = self._get_sysrequire_mode()
 
-        if not self._check_sysrequires_mode(packages):
+        if mode in ("verify", "disabled"):
+            # Report to output packages need to be installed
+            _global_output.warn("The following packages need to be installed:\n %s" % "\n".join(packages))
+            if mode == "disabled":
+                return
+
+            if mode == "verify" and not self._installed(packages):
+                raise ConanException(
+                    "Aborted due to CONAN_SYSREQUIRES_MODE=%s and packages needs to be installed" % mode
+                )
+
+        if not force and self._installed(packages):
             return
 
         # From here system packages can be updated/modified
