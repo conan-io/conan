@@ -49,7 +49,7 @@ class SystemPackageTool(object):
 
         # Report to output packages needs to be installed
         packages_output = '\n'.join(packages)
-        _global_output.info("The following packages needs to be installed:\n %s" % packages_output)
+        _global_output.warn("The following packages need to be installed:\n %s" % packages_output)
         if mode_to_lower == "verify":
             raise ConanException(
                 "Aborted due to CONAN_SYSREQUIRES_MODE=%s and packages needs to be installed" % mode
