@@ -8,6 +8,7 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
+from conans.model.requires import Requirements
 from conans.util.files import load
 
 
@@ -95,6 +96,11 @@ class ConanFileLoader(object):
         for requirement_text in parser.requirements:
             ConanFileReference.loads(requirement_text)  # Raise if invalid
             conanfile.requires.add(requirement_text)
+        for build_requirement_text in parser.build_requirements:
+            ConanFileReference.loads(build_requirement_text)
+            if not hasattr(conanfile, "build_requires"):
+                conanfile.build_requires = []
+            conanfile.build_requires.append(build_requirement_text)
 
         conanfile.generators = parser.generators
 
