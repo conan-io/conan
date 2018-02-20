@@ -33,11 +33,8 @@ def cppstd_default(compiler, compiler_version):
 
 
 def _gcc_cppstd_default(compiler_version):
-    if Version(compiler_version) < "6.1":
-        return "98gnu"
-    if Version(compiler_version) >= "6.1":
-        return "14gnu"
-    return None
+
+    return "98gnu" if Version(compiler_version) < "6.1" else "14gnu"
 
 
 def _visual_cppstd_default(compiler_version):
@@ -69,20 +66,20 @@ def _cppstd_apple_clang(clang_version, cppstd):
 
     v98 = v98gnu = v11 = v11gnu = v14 = v14gnu = v17 = v17gnu = None
 
-    if not Version(clang_version) < "4.0":
+    if Version(clang_version) >= "4.0":
         v98 = "c++98"
         v98gnu = "gnu++98"
         v11 = "c++11"
         v11gnu = "gnu++11"
 
-    if not Version(clang_version) < "6.1":
+    if Version(clang_version) >= "6.1":
         v14 = "c++14"
         v14gnu = "gnu++14"
-    elif not Version(clang_version) < "5.1":
+    elif Version(clang_version) >= "5.1":
         v14 = "c++1y"
         v14gnu = "gnu++1y"
 
-    if not Version(clang_version) < "6.1":
+    if Version(clang_version) >= "6.1":
         v17 = "c++1z"
         v17gnu = "gnu++1z"
 
@@ -102,27 +99,25 @@ def _cppstd_clang(clang_version, cppstd):
     """
     v98 = v98gnu = v11 = v11gnu = v14 = v14gnu = v17 = v17gnu = None
 
-    if not Version(clang_version) < "2.1":
+    if Version(clang_version) >= "2.1":
         v98 = "c++98"
         v98gnu = "gnu++98"
 
-    if not Version(clang_version) < "3.1":
+    if Version(clang_version) >= "3.1":
         v11 = "c++11"
         v11gnu = "gnu++11"
-    elif not Version(clang_version) < "2.1":
+    elif Version(clang_version) >= "2.1":
         v11 = "c++0x"
         v11gnu = "gnu++0x"
 
-    if not Version(clang_version) < "3.5":
+    if Version(clang_version) >= "3.5":
         v14 = "c++14"
         v14gnu = "gnu++14"
-    elif not Version(clang_version) < "3.4":
-        v14 = "c++1y"
-        v14gnu = "gnu++1y"
-
-    if not Version(clang_version) < "3.5":
         v17 = "c++1z"
         v17gnu = "gnu++1z"
+    elif Version(clang_version) >= "3.4":
+        v14 = "c++1y"
+        v14gnu = "gnu++1y"
 
     flag = {"98": v98, "98gnu": v98gnu,
             "11": v11, "11gnu": v11gnu,
@@ -136,25 +131,25 @@ def _cppstd_gcc(gcc_version, cppstd):
     # https://gcc.gnu.org/projects/cxx-status.html#cxx98
     v98 = v98gnu = v11 = v11gnu = v14 = v14gnu = v17 = v17gnu = None
 
-    if not Version(gcc_version) < "3.4":
+    if Version(gcc_version) >= "3.4":
         v98 = "c++98"
         v98gnu = "gnu++98"
 
-    if not Version(gcc_version) < "4.7":
+    if Version(gcc_version) >= "4.7":
         v11 = "c++11"
         v11gnu = "gnu++11"
-    elif not Version(gcc_version) < "4.3":
+    elif Version(gcc_version) >= "4.3":
         v11 = "c++0x"
         v11gnu = "gnu++0x"
 
-    if not Version(gcc_version) < "4.9":
+    if Version(gcc_version) >= "4.9":
         v14 = "c++14"
         v14gnu = "gnu++14"
-    elif not Version(gcc_version) < "4.8":
+    elif Version(gcc_version) >= "4.8":
         v14 = "c++1y"
         v14gnu = "gnu++1y"
 
-    if not Version(gcc_version) < "5.1":
+    if Version(gcc_version) >= "5.1":
         v17 = "c++1z"
         v17gnu = "gnu++1z"
 
