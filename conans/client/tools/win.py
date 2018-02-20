@@ -253,8 +253,9 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     if not vcvars_arch:
         raise ConanException('unsupported architecture %s' % arch_setting)
 
+    command = ""
     existing_version = os.environ.get("VisualStudioVersion")
-    
+
     if existing_version:
         command = "echo Conan:vcvars already set"
         existing_version = existing_version.split(".")[0]
@@ -275,7 +276,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
             if int(compiler_version) > 14:
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
                 command = ('set "VSCMD_START_DIR=%%CD%%" && '
-                       'call "%s" %s' % (vcvars_path, vcvars_arch))
+                           'call "%s" %s' % (vcvars_path, vcvars_arch))
             else:
                 vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
                 command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
