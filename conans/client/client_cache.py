@@ -129,13 +129,17 @@ class ClientCache(SimplePaths):
         if self._default_profile is None:
             if not os.path.exists(self.default_profile_path):
                 self._output.writeln("Auto detecting your dev setup to initialize the "
-                                     "default profile (%s)" % self.default_profile_path, Color.BRIGHT_YELLOW)
+                                     "default profile (%s)" % self.default_profile_path,
+                                     Color.BRIGHT_YELLOW)
 
                 default_settings = detect_defaults_settings(self._output)
                 self._output.writeln("Default settings", Color.BRIGHT_YELLOW)
-                self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]), Color.BRIGHT_YELLOW)
-                self._output.writeln("*** You can change them in %s ***" % self.default_profile_path, Color.BRIGHT_MAGENTA)
-                self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n", Color.BRIGHT_MAGENTA)
+                self._output.writeln("\n".join(["\t%s=%s" % (k, v) for (k, v) in default_settings]),
+                                     Color.BRIGHT_YELLOW)
+                self._output.writeln("*** You can change them in %s ***" % self.default_profile_path,
+                                     Color.BRIGHT_MAGENTA)
+                self._output.writeln("*** Or override with -s compiler='other' -s ...s***\n\n",
+                                     Color.BRIGHT_MAGENTA)
 
                 self._default_profile = Profile()
                 tmp = OrderedDict(default_settings)
@@ -174,7 +178,7 @@ class ClientCache(SimplePaths):
         try:
             packages = [dirname for dirname in os.listdir(packages_dir)
                         if os.path.isdir(os.path.join(packages_dir, dirname))]
-        except:  # if there isn't any package folder
+        except OSError:  # if there isn't any package folder
             packages = []
         return packages
 
@@ -185,7 +189,7 @@ class ClientCache(SimplePaths):
         try:
             builds = [dirname for dirname in os.listdir(builds_dir)
                       if os.path.isdir(os.path.join(builds_dir, dirname))]
-        except:  # if there isn't any package folder
+        except OSError:  # if there isn't any package folder
             builds = []
         return builds
 
