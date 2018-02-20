@@ -89,6 +89,9 @@ class SystemPackageTool(object):
         self._install_any(packages)
 
     def _installed(self, packages):
+        if not packages:
+            return True
+
         for pkg in packages:
             if self._tool.installed(pkg):
                 _global_output.info("Package already installed: %s" % pkg)
