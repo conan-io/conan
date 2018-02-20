@@ -141,11 +141,7 @@ bin, *.dll ->  @ excludes=Foo/*.dll Baz/*.dll
                                                      "licenses/path/to/license.txt")))
 
         # keep_path = False AND conanfile.py
-        testconanfile = conanfile % "LibD" + "    requires='LibC/0.1@lasote/testing'"
-        testconanfile += """
-    def imports(self):
-        self.copy("*license*", dst="licenses", keep_path=False)
-"""
+        testconanfile = testconanfile.replace("keep_path=True", "keep_path=False")
         client.save({"conanfile.py": testconanfile}, clean_first=True)
         client.run("install . --build=missing")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder,
@@ -163,11 +159,7 @@ bin, *.dll ->  @ excludes=Foo/*.dll Baz/*.dll
                                                      "licenses/path/to/license.txt")))
 
         # keep_path = False AND conanfile.txt
-        testconanfile = conanfile_txt % "LibC/0.1@lasote/testing"
-        testconanfile += """
-[imports]:
-., *license* -> licenses @ keep_path=False
-"""
+        testconanfile = testconanfile.replace("keep_path=True", "keep_path=False")
         client.save({"conanfile.txt": testconanfile}, clean_first=True)
         client.run("install . --build=missing")
         self.assertTrue(os.path.exists(os.path.join(client.current_folder, "licenses")))
