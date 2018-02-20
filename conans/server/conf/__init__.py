@@ -73,7 +73,7 @@ class ConanServerConfigParser(ConfigParser):
                 return section[varname]
             else:
                 return self.items(section)
-        except NoSectionError as exc:
+        except NoSectionError:
             raise ConanException("No section '%s' found" % section)
         except Exception as exc:
             logger.debug(exc)
@@ -84,8 +84,7 @@ class ConanServerConfigParser(ConfigParser):
     def ssl_enabled(self):
         try:
             ssl_enabled = self._get_conf_server_string("ssl_enabled").lower()
-            return ssl_enabled == "true" or \
-                   ssl_enabled == "1"
+            return ssl_enabled == "true" or ssl_enabled == "1"
         except ConanException:
             return None
 
@@ -114,7 +113,7 @@ class ConanServerConfigParser(ConfigParser):
         protocol_version = "v1"
         if host_name is None and ssl_enabled is None:
             # No hostname and ssl config means that the transfer and the
-            # logical endpoint are the same and a realtive URL is sufficient
+            # logical endpoint are the same and a relative URL is sufficient
             return protocol_version
         elif host_name is None or ssl_enabled is None:
             raise ConanException("'host_name' and 'ssl_enable' have to be defined together.")
