@@ -1,5 +1,6 @@
 import platform
 import unittest
+from subprocess import Popen, PIPE, STDOUT
 
 from conans import tools
 from conans.client.conf.detect import detect_defaults_settings
@@ -22,9 +23,30 @@ class DetectTest(unittest.TestCase):
         if platform_compiler is not None:
             self.assertEquals(result.get("compiler", None), platform_compiler)
 
-    @unittest.skipIf(platform.system() != "Darwin", "Test only running in Mac OS X")
     def detect_default_in_mac_os_using_gcc_as_default_test(self):
+        """
+        In some Mac OS X gcc is in reality clang.
+        """
         # See: https://github.com/conan-io/conan/issues/2231
+        def _execute(command):
+            proc = Popen(command, shell=True, bufsize=1, stdout=PIPE, stderr=STDOUT)
+
+            output_buffer = []
+            while True:
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                # output.write(line)
+                output_buffer.append(str(line))
+
+            proc.communicate()
+            return proc.returncode, "".join(output_buffer)
+
+        proc_return, output = _execute("gcc --version")
+        if proc_return != 0 or "clang" not in output:
+            # Not test scenario (gcc should display that it's clang)
+            return
+
         output = TestBufferConanOutput()
         with tools.environment_append({"CC": "gcc"}):
             result = detect_defaults_settings(output)
