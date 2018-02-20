@@ -413,5 +413,5 @@ class ConanInfo(object):
                 self.settings.cppstd = None
 
     def default_std_non_matching(self):
-        if self.full_options.cppstd:
+        if self.full_settings.cppstd:
             self.settings.cppstd = self.full_settings.cppstd
