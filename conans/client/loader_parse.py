@@ -118,7 +118,7 @@ class ConanFileTextLoader(object):
     @property
     def _import_parameters(self):
         def _parse_args(param_string):
-            root_package, ignore_case, folder, excludes = None, False, False, None
+            root_package, ignore_case, folder, excludes, keep_path = None, False, False, None, True
             params = param_string.split(",")
             params = [p.split("=") for p in params if p]
             for (var, value) in params:
@@ -132,9 +132,11 @@ class ConanFileTextLoader(object):
                     folder = (value.lower() == "true")
                 elif var == "excludes":
                     excludes = value.split()
+                elif var == "keep_path":
+                    keep_path = (value.lower() == "true")
                 else:
                     raise Exception("Invalid imports. Unknown argument %s" % var)
-            return root_package, ignore_case, folder, excludes
+            return root_package, ignore_case, folder, excludes, keep_path
 
         def _parse_import(line):
             pair = line.split("->")
@@ -163,9 +165,9 @@ class ConanFileTextLoader(object):
                     params = tokens[1]
                 else:
                     params = ""
-                root_package, ignore_case, folder, excludes = _parse_args(params)
+                root_package, ignore_case, folder, excludes, keep_path = _parse_args(params)
                 pattern, dest, src = _parse_import(line)
-                ret.append((pattern, dest, src, root_package, folder, ignore_case, excludes))
+                ret.append((pattern, dest, src, root_package, folder, ignore_case, excludes, keep_path))
             except Exception as e:
                 raise ConanException("%s\n%s" % (invalid_line_msg, str(e)))
         return ret
