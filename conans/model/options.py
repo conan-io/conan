@@ -298,13 +298,16 @@ class PackageOption(object):
     def __bool__(self):
         if not self._value:
             return False
-        return self._value.lower() not in _falsey_options
+        return self.value.lower() not in _falsey_options
 
     def __nonzero__(self):
         return self.__bool__()
 
     def __str__(self):
         return str(self._value)
+
+    def __int__(self):
+        return int(self._value)
 
     def _check_option_value(self, value):
         """ checks that the provided value is allowed by current restrictions
