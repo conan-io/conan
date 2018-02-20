@@ -1,11 +1,12 @@
-from conans.errors import ConanException, ConanConnectionError
-from conans.util.log import logger
-import traceback
-from conans.util.files import save, sha1sum, exception_message_safe
 import os
 import time
-from conans.util.tracer import log_download
+import traceback
+
 import conans.tools
+from conans.errors import ConanException, ConanConnectionError, NotFoundException
+from conans.util.files import save, sha1sum, exception_message_safe, to_file_bytes, mkdir
+from conans.util.log import logger
+from conans.util.tracer import log_download
 
 
 class Uploader(object):
@@ -113,16 +114,27 @@ class Downloader(object):
         self.requester = requester
         self.verify = verify
 
-    def download(self, url, file_path=None, auth=None, retry=1, retry_wait=0):
+    def download(self, url, file_path=None, auth=None, retry=1, retry_wait=0, overwrite=False,
+                 headers=None):
+
+        if file_path and not os.path.isabs(file_path):
+            file_path = os.path.abspath(file_path)
 
         if file_path and os.path.exists(file_path):
-            # Should not happen, better to raise, probably we had to remove the dest folder before
-            raise ConanException("Error, the file to download already exists: '%s'" % file_path)
+            if overwrite:
+                if self.output:
+                    self.output.warn("file '%s' already exists, overwriting" % file_path)
+            else:
+                # Should not happen, better to raise, probably we had to remove
+                # the dest folder before
+                raise ConanException("Error, the file to download already exists: '%s'" % file_path)
 
         t1 = time.time()
         ret = bytearray()
-        response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth)
+        response = call_with_retry(self.output, retry, retry_wait, self._download_file, url, auth, headers)
         if not response.ok:  # Do not retry if not found or whatever controlled error
+            if response.status_code == 404:
+                raise NotFoundException("Not found: %s" % url)
             raise ConanException("Error %d downloading file %s" % (response.status_code, url))
 
         try:
@@ -137,23 +149,42 @@ class Downloader(object):
                     print_progress(self.output, 50, progress)
                     save(file_path, response.content, append=True)
             else:
-                dl = 0
                 total_length = int(total_length)
-                last_progress = None
-                chunk_size = 1024 if not file_path else 1024 * 100
-                for data in response.iter_content(chunk_size=chunk_size):
-                    dl += len(data)
-                    if not file_path:
-                        ret.extend(data)
-                    else:
-                        save(file_path, data, append=True)
+                encoding = response.headers.get('content-encoding')
+                gzip = (encoding == "gzip")
+                # chunked can be a problem: https://www.greenbytes.de/tech/webdav/rfc2616.html#rfc.section.4.4
+                # It will not send content-length or should be ignored
 
-                    units = progress_units(dl, total_length)
-                    progress = human_readable_progress(dl, total_length)
-                    if last_progress != units:  # Avoid screen refresh if nothing has change
-                        if self.output:
-                            print_progress(self.output, units, progress)
-                        last_progress = units
+                def download_chunks(file_handler=None, ret_buffer=None):
+                    """Write to a buffer or to a file handler"""
+                    chunk_size = 1024 if not file_path else 1024 * 100
+                    download_size = 0
+                    last_progress = None
+                    for data in response.iter_content(chunk_size=chunk_size):
+                        download_size += len(data)
+                        if ret_buffer is not None:
+                            ret_buffer.extend(data)
+                        if file_handler is not None:
+                            file_handler.write(to_file_bytes(data))
+
+                        units = progress_units(download_size, total_length)
+                        progress = human_readable_progress(download_size, total_length)
+                        if last_progress != units:  # Avoid screen refresh if nothing has change
+                            if self.output:
+                                print_progress(self.output, units, progress)
+                            last_progress = units
+                    return download_size
+
+                if file_path:
+                    mkdir(os.path.dirname(file_path))
+                    with open(file_path, 'wb') as handle:
+                        dl_size = download_chunks(file_handler=handle)
+                else:
+                    dl_size = download_chunks(ret_buffer=ret)
+
+                if dl_size != total_length and not gzip:
+                    raise ConanException("Transfer interrupted before "
+                                         "complete: %s < %s" % (dl_size, total_length))
 
             duration = time.time() - t1
             log_download(url, duration)
@@ -169,9 +200,10 @@ class Downloader(object):
             raise ConanConnectionError("Download failed, check server, possibly try again\n%s"
                                        % str(e))
 
-    def _download_file(self, url, auth):
+    def _download_file(self, url, auth, headers):
         try:
-            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth)
+            response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
+                                          headers=headers)
         except Exception as exc:
             raise ConanException("Error downloading file %s: '%s'" % (url, exception_message_safe(exc)))
 
@@ -179,7 +211,7 @@ class Downloader(object):
 
 
 def progress_units(progress, total):
-    return int(50 * progress / total)
+    return min(50, int(50 * progress / total))
 
 
 def human_readable_progress(bytes_transferred, total_bytes):

@@ -22,7 +22,7 @@ class HalfDiamondTest(unittest.TestCase):
 """
         self.client.save({CONANFILE: conanfile}, clean_first=True)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
 
     def reuse_test(self):
         self._export("Hello0")

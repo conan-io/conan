@@ -78,20 +78,20 @@ class CustomGeneratorTest(unittest.TestCase):
 
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("upload %s" % str(conan_reference))
 
         gen_reference = ConanFileReference.loads("MyCustomGen/0.2@lasote/stable")
         files = {CONANFILE: generator}
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("upload %s" % str(gen_reference))
 
         # Test local, no retrieval
         files = {CONANFILE_TXT: consumer}
         client.save(files, clean_first=True)
-        client.run("install --build")
+        client.run("install . --build")
         generated = load(os.path.join(client.current_folder, "customfile.gen"))
         self.assertEqual(generated, "My custom generator content")
 
@@ -99,7 +99,7 @@ class CustomGeneratorTest(unittest.TestCase):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = {CONANFILE_TXT: consumer}
         client.save(files)
-        client.run("install --build")
+        client.run("install . --build")
 
         generated = load(os.path.join(client.current_folder, "customfile.gen"))
         self.assertEqual(generated, "My custom generator content")
@@ -109,13 +109,13 @@ class CustomGeneratorTest(unittest.TestCase):
         client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
         files = {CONANFILE: generator_multi}
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("upload %s" % str(gen_reference))
 
         # Test local, no retrieval
         files = {CONANFILE_TXT: consumer_multi}
         client.save(files, clean_first=True)
-        client.run("install --build")
+        client.run("install . --build")
         self.assertIn("Generator MyCustomMultiGenerator is multifile. "
                       "Property 'filename' not used",
                       client.user_io.out)

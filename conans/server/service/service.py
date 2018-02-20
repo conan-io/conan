@@ -47,7 +47,7 @@ class FileUploadDownloadService(object):
             file_saver.save(os.path.dirname(abs_filepath))
 
         except (jwt.ExpiredSignature, jwt.DecodeError, AttributeError):
-            return NotFoundException("File not found")
+            raise NotFoundException("File not found")
 
     def _valid_path(self, filepath, encoded_path):
         if encoded_path == filepath:
@@ -78,7 +78,7 @@ class SearchService(object):
             Attributes:
                 pattern = wildcards like opencv/*
         """
-        references = self._search_manager.search(pattern, ignorecase)
+        references = self._search_manager.search_recipes(pattern, ignorecase)
         filtered = []
         # Filter out restricted items
         for conan_ref in references:

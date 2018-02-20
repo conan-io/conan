@@ -12,7 +12,7 @@ class PythonDiamondTest(unittest.TestCase):
     def _export_upload(self, name, version=None, deps=None):
         files = py_hello_conan_files(name, version, deps)
         self.client.save(files, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
 
     def reuse_test(self):
         self._export_upload("Hello0", "0.1")
@@ -35,7 +35,7 @@ class PythonDiamondTest(unittest.TestCase):
                       " ".join(str(self.client.user_io.out).splitlines()))
         self.assertNotIn("Project: Build stuff Hello3", self.client.user_io.out)
 
-        self.client.run("build")
+        self.client.run("build .")
         self.assertIn("Project: Build stuff Hello3", self.client.user_io.out)
 
         if platform.system() == "Windows":

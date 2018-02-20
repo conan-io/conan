@@ -5,7 +5,8 @@ from conans.util.log import logger
 from conans.model.ref import PackageReference
 from conans.paths import SYSTEM_REQS, rm_conandir
 from conans.model.ref import ConanFileReference
-from conans.search.search import filter_outdated
+from conans.search.search import filter_outdated, DiskSearchManager
+from conans.client.remote_registry import RemoteRegistry
 
 
 class DiskRemover(object):
@@ -38,6 +39,11 @@ class DiskRemover(object):
         self._remove(self._paths.export(conan_ref), conan_ref, "export folder")
         self._remove(self._paths.export_sources(conan_ref), conan_ref, "export_source folder")
         self._remove(self._paths.conan(conan_ref), conan_ref)
+        for f in self._paths.conanfile_lock_files(conan_ref):
+            try:
+                os.remove(f)
+            except OSError:
+                pass
 
     def remove_src(self, conan_ref):
         self._remove(self._paths.source(conan_ref), conan_ref, "src folder")
@@ -72,11 +78,11 @@ class DiskRemover(object):
 class ConanRemover(object):
     """ Class responsible for removing locally/remotely conans, package folders, etc. """
 
-    def __init__(self, client_cache, search_manager, user_io, remote_proxy):
+    def __init__(self, client_cache, remote_manager, user_io, remote_proxy):
         self._user_io = user_io
         self._remote_proxy = remote_proxy
         self._client_cache = client_cache
-        self._search_manager = search_manager
+        self._remote_manager = remote_manager
 
     def _remote_remove(self, reference, package_ids):
         if package_ids is None:
@@ -97,7 +103,7 @@ class ConanRemover(object):
             registry = self._remote_proxy.registry
             registry.remove_ref(reference, quiet=True)
 
-    def remove(self, pattern, src=None, build_ids=None, package_ids_filter=None, force=False,
+    def remove(self, pattern, remote, src=None, build_ids=None, package_ids_filter=None, force=False,
                packages_query=None, outdated=False):
         """ Remove local/remote conans, package folders, etc.
         @param src: Remove src folder
@@ -107,13 +113,16 @@ class ConanRemover(object):
         @param force: if True, it will be deleted without requesting anything
         @param packages_query: Only if src is a reference. Query settings and options
         """
-        has_remote = self._remote_proxy._remote_name
 
-        if has_remote and (build_ids is not None or src):
+        if remote and (build_ids is not None or src):
             raise ConanException("Remotes don't have 'build' or 'src' folder, just packages")
 
-        searcher = self._remote_proxy if has_remote else self._search_manager
-        references = searcher.search(pattern)
+        if remote:
+            remote = RemoteRegistry(self._client_cache.registry, self._user_io.out).remote(remote)
+            references = self._remote_manager.search_recipes(remote, pattern)
+        else:
+            disk_search = DiskSearchManager(self._client_cache)
+            references = disk_search.search_recipes(pattern)
         if not references:
             self._user_io.out.warn("No package recipe matches '%s'" % str(pattern))
             return
@@ -124,9 +133,12 @@ class ConanRemover(object):
             package_ids = package_ids_filter
             if packages_query or outdated:
                 # search packages
-                packages = searcher.search_packages(reference, packages_query)
+                if remote:
+                    packages = self._remote_manager.search_packages(remote, reference, packages_query)
+                else:
+                    packages = disk_search.search_packages(reference, packages_query)
                 if outdated:
-                    if has_remote:
+                    if remote:
                         recipe_hash = self._remote_proxy.get_conan_digest(reference).summary_hash
                     else:
                         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
@@ -142,13 +154,13 @@ class ConanRemover(object):
 
             if self._ask_permission(reference, src, build_ids, package_ids, force):
                 deleted_refs.append(reference)
-                if has_remote:
+                if remote:
                     self._remote_remove(reference, package_ids)
                 else:
                     deleted_refs.append(reference)
                     self._local_remove(reference, src, build_ids, package_ids)
 
-        if not has_remote:
+        if not remote:
             self._client_cache.delete_empty_dirs(deleted_refs)
 
     def _ask_permission(self, conan_ref, src, build_ids, package_ids_filter, force):

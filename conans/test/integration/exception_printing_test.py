@@ -52,10 +52,9 @@ class ExceptionsTest(ConanFile):
     def setUp(self):
         self.client = TestClient()
 
-
     def _call_install(self, conanfile):
         self.client.save({CONANFILE: conanfile}, clean_first=True)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         with self.assertRaises(Exception):
             with tools.environment_append({"CONAN_USERNAME": "lasote", "CONAN_CHANNEL": "stable"}):
                 self.client.run("install ExceptionsTest/0.1@lasote/stable --build")
@@ -78,10 +77,13 @@ class ExceptionsTest(ConanFile):
                                    config_options_contents=throw if method_name == "config_options" else "pass")
         return cf
 
-    def _test_fail_line_aux(self, conanfile, numline, method_name):
+    def _test_fail_line_aux(self, conanfile, main_line, numline, method_name):
         self._call_install(conanfile)
-        self.assertIn("ExceptionsTest/0.1@lasote/stable: Error in %s() method, while calling '_aux_method', line %s" % (method_name, numline),
+        self.assertIn("ExceptionsTest/0.1@lasote/stable: Error in %s() method, line %s" % (method_name, main_line),
                       self.client.user_io.out)
+        self.assertIn("\nwhile calling '_aux_method', line %s" % numline,
+                      self.client.user_io.out)
+
         self.assertIn("DRLException: Oh! an error!", self.client.user_io.out)
 
     def _get_conanfile_for_error_in_other_method(self, method_name):
@@ -107,13 +109,20 @@ class ExceptionsTest(ConanFile):
             self._test_fail_line(self._get_conanfile_for(method), line, method)
 
     def test_aux_method(self):
-        for method, line in [("source", 41), ("build", 41),
-                             ("package", 41), ("package_info", 41),
-                             ("configure", 41), ("build_id", 41),
-                             ("package_id", 41), ("requirements", 41),
-                             ("config_options", 41)]:
-            self._test_fail_line_aux(self._get_conanfile_for_error_in_other_method(method), line, method)
+        for method, main_line, line in [("source", 14, 41), ("build", 17, 41),
+                                        ("package", 20, 41), ("package_info", 23, 41),
+                                        ("configure", 26, 41), ("build_id", 29, 41),
+                                        ("package_id", 32, 41), ("requirements", 35, 41),
+                                        ("config_options", 38, 41)]:
+            self._test_fail_line_aux(self._get_conanfile_for_error_in_other_method(method),
+                                     main_line, line, method)
 
+    def test_complete_traceback(self):
+        with tools.environment_append({"CONAN_VERBOSE_TRACEBACK": "1"}):
+            self._call_install(self._get_conanfile_for_error_in_other_method("source"))
+            self.assertIn("ERROR: Traceback (most recent call last):", self.client.user_io.out)
+            self.assertIn('self._aux_method()', self.client.user_io.out)
+            self.assertIn("raise DRLException('Oh! an error!')", self.client.user_io.out)
 
 
 if __name__ == '__main__':

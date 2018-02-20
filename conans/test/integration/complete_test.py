@@ -20,7 +20,7 @@ class CompleteFlowTest(unittest.TestCase):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True)
         self.client.save(files)
-        self.client.run("export lasote/stable")
+        self.client.run("export . lasote/stable")
         self.client.run("install %s --build missing" % str(conan_reference))
 
         self.assertIn("Hello0/0.1@lasote/stable package(): Copied 1 '.h' files: helloHello0.h",
@@ -83,16 +83,16 @@ class CompleteFlowTest(unittest.TestCase):
         conan_reference = ConanFileReference.loads("Hello1/0.2@lasote/stable")
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         client3.save(files3)
-        client3.run('install')
-        client3.run('build')
+        client3.run('install .')
+        client3.run('build .')
         command = os.sep.join([".", "bin", "say_hello"])
         client3.runner(command, cwd=client3.current_folder)
         self.assertIn("Hello Hello1", client3.user_io.out)
         self.assertIn("Hello Hello0", client3.user_io.out)
 
-        client3.run('install -o language=1 --build missing')
+        client3.run('install . -o language=1 --build missing')
         time.sleep(1)
-        client3.run('build')
+        client3.run('build .')
 
         command = os.sep.join([".", "bin", "say_hello"])
         client3.runner(command, cwd=client3.current_folder)

@@ -9,8 +9,11 @@
 import os
 
 
-def get_env(env_key, default=None, environment=os.environ):
+def get_env(env_key, default=None, environment=None):
     """Get the env variable associated with env_key"""
+    if environment is None:
+        environment = os.environ
+
     env_var = environment.get(env_key, default)
     if env_var != default:
         if isinstance(default, str):

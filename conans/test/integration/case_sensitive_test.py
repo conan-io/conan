@@ -25,7 +25,7 @@ class CaseSensitiveTest(unittest.TestCase):
 
         files = cpp_hello_conan_files("Hello0", "0.1", build=False)
         client.save(files)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.run("install Hello0/0.1@lasote/stable --build missing")
         client.run("upload  Hello0/0.1@lasote/stable --all")
@@ -34,7 +34,7 @@ class CaseSensitiveTest(unittest.TestCase):
         files = cpp_hello_conan_files("Hello1", "0.1", deps=["hello0/0.1@lasote/stable"],
                                       build=False)
         client.save(files)
-        error = client.run("install", ignore_error=True)
+        error = client.run("install .", ignore_error=True)
         self._check(error, client)
 
     def _check(self, error, client):
@@ -47,37 +47,34 @@ class CaseSensitiveTest(unittest.TestCase):
     def install_same_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         error = client.run("install hello0/0.1@lasote/stable --build=missing", ignore_error=True)
         self._check(error, client)
 
     def imports_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
         error = client.run("imports hello0/0.1@lasote/stable", ignore_error=True)
-        self._check(error, client)
+        self.assertTrue(error)
+        # Reference interpreted as a path, so no valid path
+        self.assertIn("Parameter 'path' cannot be a reference", client.out)
 
     def package_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
-        error = client.run("package hello0/0.1@lasote/stable", ignore_error=True)
-        self._check(error, client)
+        error = client.run("export-pkg . hello0/0.1@lasote/stable", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Specified name/version doesn't match with the name/version in "
+                      "the conanfile", client.out)
 
     def copy_test(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.run("install Hello0/0.1@lasote/stable --build=missing")
         error = client.run("copy hello0/0.1@lasote/stable otheruser/testing", ignore_error=True)
-        self._check(error, client)
-
-    def source_test(self):
-        client = TestClient()
-        client.save({CONANFILE: conanfile})
-        client.run("export lasote/stable")
-        error = client.run("source hello0/0.1@lasote/stable", ignore_error=True)
         self._check(error, client)

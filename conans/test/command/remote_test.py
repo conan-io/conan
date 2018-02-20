@@ -60,6 +60,26 @@ class RemoteTest(unittest.TestCase):
         self.assertIn("origin3: https://myurl3", lines[1])
         self.assertIn("origin: https://myurl", lines[2])
 
+    def update_test_insert(self):
+        client = TestClient()
+        client.run("remote add r1 https://r1")
+        client.run("remote add r2 https://r2")
+        client.run("remote add r3 https://r3")
+
+        client.run("remote update r2 https://r2new --insert")
+        client.run("remote list")
+        lines = str(client.user_io.out).splitlines()
+        self.assertIn("r2: https://r2new", lines[0])
+        self.assertIn("r1: https://r1", lines[1])
+        self.assertIn("r3: https://r3", lines[2])
+
+        client.run("remote update r2 https://r2new2 --insert 2")
+        client.run("remote list")
+        lines = str(client.user_io.out).splitlines()
+        self.assertIn("r1: https://r1", lines[0])
+        self.assertIn("r3: https://r3", lines[1])
+        self.assertIn("r2: https://r2new2", lines[2])
+
     def verify_ssl_test(self):
         client = TestClient()
         client.run("remote add my-remote http://someurl TRUE")

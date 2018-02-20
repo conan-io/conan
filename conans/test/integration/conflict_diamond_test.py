@@ -22,7 +22,7 @@ class HelloReuseConan(ConanFile):
         files = {CONANFILE: conanfile}
         self.client.save(files, clean_first=True)
         if export:
-            self.client.run("export lasote/stable")
+            self.client.run("export . lasote/stable")
 
     def reuse_test(self):
         self._export("Hello0", "0.1")
@@ -32,10 +32,7 @@ class HelloReuseConan(ConanFile):
         self._export("Hello3", "0.1", ["Hello1/0.1@lasote/stable", "Hello2/0.1@lasote/stable"],
                      export=False)
 
-        self.client.run("install . --build missing")
-        self.assertIn("WARN: Conflict in Hello2/0.1@lasote/stable", self.client.user_io.out)
-        self.assertIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)
-
-        self.client.run("install . --build missing --werror", ignore_error=True)
-        self.assertIn("ERROR: Conflict in Hello2/0.1@lasote/stable", self.client.user_io.out)
+        error = self.client.run("install . --build missing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Conflict in Hello2/0.1@lasote/stable", self.client.user_io.out)
         self.assertNotIn("PROJECT: Generated conaninfo.txt", self.client.user_io.out)

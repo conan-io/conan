@@ -6,6 +6,17 @@ from conans.util.files import load
 
 class GeneratorsTest(unittest.TestCase):
 
+    def test_error(self):
+        base = '''
+[generators]
+unknown
+'''
+        client = TestClient()
+        client.save({"conanfile.txt": base})
+        error = client.run("install . --build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: Invalid generator 'unknown'. Available types:", client.out)
+
     def test_base(self):
         base = '''
 [generators]
@@ -16,17 +27,19 @@ qmake
 scons
 txt
 visual_studio
+visual_studio_legacy
 xcode
 ycm
     '''
         files = {"conanfile.txt": base}
         client = TestClient()
         client.save(files)
-        client.run("install --build")
+        client.run("install . --build")
         self.assertEqual(sorted(['conanfile.txt', 'conaninfo.txt', 'conanbuildinfo.cmake',
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
-                                 'conanbuildinfo.xcconfig', '.ycm_extra_conf.py']),
+                                 'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
+                                 '.ycm_extra_conf.py']),
                          sorted(os.listdir(client.current_folder)))
 
     def test_qmake(self):
@@ -52,9 +65,9 @@ Pkg/0.1@lasote/testing
 qmake
     '''
         client.save({"conanfile.py": dep})
-        client.run("export lasote/testing")
+        client.run("export . lasote/testing")
         client.save({"conanfile.txt": base}, clean_first=True)
-        client.run("install --build")
+        client.run("install . --build")
 
         qmake = load(os.path.join(client.current_folder, "conanbuildinfo.pri"))
         self.assertIn("CONAN_RESDIRS += ", qmake)

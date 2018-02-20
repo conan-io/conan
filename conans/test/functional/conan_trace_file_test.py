@@ -47,7 +47,7 @@ class HelloConan(ConanFile):
             files[CONANFILE] = base
             client.save(files)
             client.run("user lasote -p mypass -r default")
-            client.run("export lasote/stable")
+            client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(conan_reference))
             package_dir = client.client_cache.packages(ConanFileReference.loads("Hello0/0.1@lasote/stable"))
             package_dir = os.path.join(package_dir, os.listdir(package_dir)[0])
@@ -82,7 +82,7 @@ class HelloConan(ConanFile):
             files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True, build=False)
             client.save(files)
             client.run("user lasote -p mypass -r default")
-            client.run("export lasote/stable")
+            client.run("export . lasote/stable")
             client.run("install %s --build missing" % str(conan_reference))
             client.run("upload %s --all" % str(conan_reference))
 
@@ -104,7 +104,7 @@ class HelloConan(ConanFile):
         self.assertEquals(json.loads(actions[2])["name"], "export")
 
         self.assertEquals(json.loads(actions[3])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[3])["name"], "install")
+        self.assertEquals(json.loads(actions[3])["name"], "install_reference")
 
         self.assertEquals(json.loads(actions[4])["_action"], "GOT_RECIPE_FROM_LOCAL_CACHE")
         self.assertEquals(json.loads(actions[4])["_id"], "Hello0/0.1@lasote/stable")

@@ -1,11 +1,13 @@
-from conans.client.configure_build_environment import (AutoToolsBuildEnvironment, VisualStudioBuildEnvironment)
 from conans.client.generators.virtualenv import VirtualEnvGenerator
+from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
+from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 
 
 class VirtualBuildEnvGenerator(VirtualEnvGenerator):
 
     def __init__(self, conanfile):
         super(VirtualBuildEnvGenerator, self).__init__(conanfile)
+        self.venv_name = "conanbuildenv"
         compiler = conanfile.settings.get_safe("compiler")
         if compiler != "Visual Studio":
             tools = AutoToolsBuildEnvironment(conanfile)

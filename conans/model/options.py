@@ -2,6 +2,7 @@ from conans.util.sha import sha1
 from conans.errors import ConanException
 import yaml
 import six
+import fnmatch
 
 
 _falsey_options = ["false", "none", "0", "off", ""]
@@ -57,6 +58,12 @@ class PackageOptionValues(object):
         self._dict = {}  # {option_name: PackageOptionValue}
         self._modified = {}
 
+    def __bool__(self):
+        return bool(self._dict)
+
+    def __nonzero__(self):
+        return self.__bool__()
+
     def __getattr__(self, attr):
         if attr not in self._dict:
             return None
@@ -80,6 +87,9 @@ class PackageOptionValues(object):
     def fields(self):
         return sorted(list(self._dict.keys()))
 
+    def keys(self):
+        return self._dict.keys()
+
     def items(self):
         return sorted(list(self._dict.items()))
 
@@ -95,7 +105,10 @@ class PackageOptionValues(object):
         assert isinstance(other, PackageOptionValues)
         self._dict.update(other._dict)
 
-    def propagate_upstream(self, down_package_values, down_ref, own_ref, output, package_name):
+    def remove(self, option_name):
+        del self._dict[option_name]
+
+    def propagate_upstream(self, down_package_values, down_ref, own_ref, package_name):
         if not down_package_values:
             return
 
@@ -108,10 +121,10 @@ class PackageOptionValues(object):
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
-                output.werror("%s tried to change %s option %s:%s to %s\n"
-                              "but it was already assigned to %s by %s"
-                              % (down_ref, own_ref, package_name, name, value,
-                                 modified_value, modified_ref))
+                raise ConanException("%s tried to change %s option %s:%s to %s\n"
+                                     "but it was already assigned to %s by %s"
+                                     % (down_ref, own_ref, package_name, name, value,
+                                        modified_value, modified_ref))
             else:
                 self._modified[name] = (value, down_ref)
                 self._dict[name] = value
@@ -168,8 +181,9 @@ class OptionsValues(object):
             pkg_values.update(package_values)
 
     def scope_options(self, name):
-        self._reqs_options.setdefault(name, PackageOptionValues()).update(self._package_values)
-        self._package_values = PackageOptionValues()
+        if self._package_values:
+            self._reqs_options.setdefault(name, PackageOptionValues()).update(self._package_values)
+            self._package_values = PackageOptionValues()
 
     def descope_options(self, name):
         package_values = self._reqs_options.pop(name, None)
@@ -187,6 +201,12 @@ class OptionsValues(object):
 
     def pop(self, item):
         return self._reqs_options.pop(item, None)
+
+    def remove(self, name, package=None):
+        if package:
+            self._reqs_options[package].remove(name)
+        else:
+            self._package_values.remove(name)
 
     def __repr__(self):
         return self.dumps()
@@ -245,17 +265,12 @@ class OptionsValues(object):
             result.append((name.strip(), value.strip()))
         return OptionsValues(result)
 
-    def sha(self, non_dev_requirements):
+    @property
+    def sha(self):
         result = []
         result.append(self._package_values.sha)
-        if non_dev_requirements is None:  # Not filtering
-            for key in sorted(list(self._reqs_options.keys())):
-                result.append(self._reqs_options[key].sha)
-        else:
-            for key in sorted(list(self._reqs_options.keys())):
-                non_dev = key in non_dev_requirements
-                if non_dev:
-                    result.append(self._reqs_options[key].sha)
+        for key in sorted(list(self._reqs_options.keys())):
+            result.append(self._reqs_options[key].sha)
         return sha1('\n'.join(result).encode())
 
     def serialize(self):
@@ -340,6 +355,9 @@ class PackageOptions(object):
                       for k, v in definition.items()}
         self._modified = {}
 
+    def __contains__(self, option):
+        return str(option) in self._data
+
     @staticmethod
     def loads(text):
         return PackageOptions(yaml.load(text) or {})
@@ -362,25 +380,25 @@ class PackageOptions(object):
     def clear(self):
         self._data = {}
 
-    def _check_field(self, field):
+    def _ensure_exists(self, field):
         if field not in self._data:
             raise ConanException(option_not_exist_msg(field, list(self._data.keys())))
 
     def __getattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        self._check_field(field)
+        self._ensure_exists(field)
         return self._data[field]
 
     def __delattr__(self, field):
         assert field[0] != "_", "ERROR %s" % field
-        self._check_field(field)
+        self._ensure_exists(field)
         del self._data[field]
 
     def __setattr__(self, field, value):
         if field[0] == "_" or field.startswith("values"):
             return super(PackageOptions, self).__setattr__(field, value)
 
-        self._check_field(field)
+        self._ensure_exists(field)
         self._data[field].value = value
 
     @property
@@ -406,10 +424,15 @@ class PackageOptions(object):
     def values(self, vals):
         assert isinstance(vals, PackageOptionValues)
         for (name, value) in vals.items():
-            self._check_field(name)
+            self._ensure_exists(name)
             self._data[name].value = value
 
-    def propagate_upstream(self, package_values, down_ref, own_ref, output):
+    def propagate_upstream(self, package_values, down_ref, own_ref, pattern_options):
+        """
+        :param: package_values: PackageOptionValues({"shared": "True"}
+        :param: pattern_options: Keys from the "package_values" e.j ["shared"] that shouldn't raise
+                                 if they are not existing options for the current object
+        """
         if not package_values:
             return
 
@@ -421,13 +444,18 @@ class PackageOptions(object):
             modified = self._modified.get(name)
             if modified is not None:
                 modified_value, modified_ref = modified
-                output.werror("%s tried to change %s option %s to %s\n"
-                              "but it was already assigned to %s by %s"
-                              % (down_ref, own_ref, name, value, modified_value, modified_ref))
+                raise ConanException("%s tried to change %s option %s to %s\n"
+                                     "but it was already assigned to %s by %s"
+                                     % (down_ref, own_ref, name, value, modified_value, modified_ref))
             else:
-                self._modified[name] = (value, down_ref)
-                self._check_field(name)
-                self._data[name].value = value
+                if name in pattern_options:  # If it is a pattern-matched option, should check field
+                    if name in self._data:
+                        self._data[name].value = value
+                        self._modified[name] = (value, down_ref)
+                else:
+                    self._ensure_exists(name)
+                    self._data[name].value = value
+                    self._modified[name] = (value, down_ref)
 
 
 class Options(object):
@@ -449,6 +477,9 @@ class Options(object):
 
     def clear(self):
         self._package_options.clear()
+
+    def __contains__(self, option):
+        return option in self._package_options
 
     def __getitem__(self, item):
         return self._deps_package_values.setdefault(item, PackageOptionValues())
@@ -483,19 +514,38 @@ class Options(object):
         for k, v in v._reqs_options.items():
             self._deps_package_values[k] = v.copy()
 
-    def propagate_upstream(self, down_package_values, down_ref, own_ref, output):
+    def propagate_upstream(self, down_package_values, down_ref, own_ref):
         """ used to propagate from downstream the options to the upper requirements
+        :param: down_package_values => {"*": PackageOptionValues({"shared": "True"})}
+        :param: down_ref
+        :param: own_ref: Reference of the current package => ConanFileReference
         """
         if not down_package_values:
             return
 
         assert isinstance(down_package_values, dict)
-        option_values = down_package_values.get(own_ref.name)
-        self._package_options.propagate_upstream(option_values, down_ref, own_ref, output)
+        option_values = PackageOptionValues()
+        # First step is to accumulate all matching patterns, in sorted()=alphabetical order
+        # except the exact match
+
+        for package_pattern, package_option_values in sorted(down_package_values.items()):
+            if own_ref.name != package_pattern and fnmatch.fnmatch(own_ref.name, package_pattern):
+                option_values.update(package_option_values)
+        # These are pattern options, shouldn't raise if not existing
+        pattern_options = list(option_values.keys())
+        # Now, update with the exact match, that has higher priority
+        down_options = down_package_values.get(own_ref.name)
+        if down_options is not None:
+            option_values.update(down_options)
+
+        self._package_options.propagate_upstream(option_values, down_ref, own_ref,
+                                                 pattern_options=pattern_options)
+
+        # Upstream propagation to deps
         for name, option_values in sorted(list(down_package_values.items())):
             if name != own_ref.name:
                 pkg_values = self._deps_package_values.setdefault(name, PackageOptionValues())
-                pkg_values.propagate_upstream(option_values, down_ref, own_ref, output, name)
+                pkg_values.propagate_upstream(option_values, down_ref, own_ref, name)
 
     def initialize_upstream(self, user_values):
         """ used to propagate from downstream the options to the upper requirements

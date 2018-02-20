@@ -1,5 +1,5 @@
 import os
-from conans.errors import ConanException
+from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.files import load, save
 from collections import OrderedDict, namedtuple
 import fasteners
@@ -7,9 +7,7 @@ from conans.util.config_parser import get_bool_from_text_value
 from conans.util.log import logger
 
 
-default_remotes = """conan-center https://conan.bintray.com True
-conan-transit https://conan-transit.bintray.com True
-"""
+default_remotes = "conan-center https://conan.bintray.com True"
 
 Remote = namedtuple("Remote", "name url verify_ssl")
 
@@ -78,7 +76,7 @@ class RemoteRegistry(object):
         try:
             return self.remotes[0]
         except:
-            raise ConanException("No default remote defined in %s" % self._filename)
+            raise NoRemoteAvailable("No default remote defined in %s" % self._filename)
 
     @property
     def remotes(self):
@@ -98,8 +96,8 @@ class RemoteRegistry(object):
             try:
                 return Remote(name, remotes[name][0], remotes[name][1])
             except KeyError:
-                raise ConanException("No remote '%s' defined in remotes in file %s"
-                                     % (name, self._filename))
+                raise NoRemoteAvailable("No remote '%s' defined in remotes in file %s"
+                                        % (name, self._filename))
 
     def get_ref(self, conan_reference):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
@@ -167,13 +165,23 @@ class RemoteRegistry(object):
             refs = {k: v for k, v in refs.items() if v != remote_name}
             self._save(remotes, refs)
 
-    def update(self, remote_name, remote, verify_ssl=True):
+    def update(self, remote_name, remote, verify_ssl=True, insert=None):
         def exists_function(remotes):
             if remote_name not in remotes:
                 raise ConanException("Remote '%s' not found in remotes" % remote_name)
-        self._add_update(remote_name, remote, verify_ssl, exists_function)
+        self._add_update(remote_name, remote, verify_ssl, exists_function, insert)
+
+    def define_remotes(self, remotes):
+        with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
+            _, refs = self._load()
+            new_remotes = OrderedDict()
+            for remote in remotes:
+                new_remotes[remote.name] = (remote.url, remote.verify_ssl)
+            refs = {k: v for k, v in refs.items() if v in new_remotes}
+            self._save(new_remotes, refs)
 
     def _add_update(self, remote_name, remote, verify_ssl, exists_function, insert=None):
+
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
             remotes, refs = self._load()
             exists_function(remotes)
@@ -185,6 +193,7 @@ class RemoteRegistry(object):
                     insert_index = int(insert)
                 except:
                     raise ConanException("insert argument must be an integer")
+                remotes.pop(remote_name, None)  # Remove if exists (update)
                 remotes_list = list(remotes.items())
                 remotes_list.insert(insert_index, (remote_name, (remote, verify_ssl)))
                 remotes = OrderedDict(remotes_list)

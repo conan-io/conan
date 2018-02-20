@@ -1,5 +1,5 @@
 import os
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 
 from conans.errors import ConanException
 from conans.model.env_info import EnvValues, unquote
@@ -7,7 +7,6 @@ from conans.model.info import ConanInfo
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.model.ref import ConanFileReference
-from conans.model.scope import Scopes
 from conans.paths import CONANINFO
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load, mkdir
@@ -16,12 +15,13 @@ from conans.util.files import load, mkdir
 class ProfileParser(object):
 
     def __init__(self, text):
-        self.vars = OrderedDict() # Order matters, if user declares F=1 and then FOO=12, and in profile MYVAR=$FOO, it will
+        self.vars = OrderedDict()  # Order matters, if user declares F=1 and then FOO=12,
+        # and in profile MYVAR=$FOO, it will
         self.includes = []
         self.profile_text = ""
 
         for counter, line in enumerate(text.splitlines()):
-            if not line or line.strip().startswith("#"):
+            if not line.strip() or line.strip().startswith("#"):
                 continue
             elif line.strip().startswith("["):
                 self.profile_text = "\n".join(text.splitlines()[counter:])
@@ -77,9 +77,32 @@ def read_conaninfo_profile(current_path):
     profile = Profile()
     profile.settings = OrderedDict(existing_info.full_settings.as_list())
     profile.options = existing_info.full_options
-    profile.scopes = existing_info.scope
     profile.env_values = existing_info.env_values
     return profile
+
+
+def get_profile_path(profile_name, default_folder, cwd, exists=True):
+    def valid_path(profile_path):
+        if exists and not os.path.isfile(profile_path):
+            raise ConanException("Profile not found: %s" % profile_path)
+        return profile_path
+
+    if os.path.isabs(profile_name):
+        return valid_path(profile_name)
+
+    if profile_name[:2] in ("./", ".\\"):  # local
+        profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+        return valid_path(profile_path)
+
+    if not os.path.exists(default_folder):
+        mkdir(default_folder)
+    profile_path = os.path.join(default_folder, profile_name)
+    if exists:
+        if not os.path.isfile(profile_path):
+            profile_path = os.path.abspath(os.path.join(cwd, profile_name))
+        if not os.path.isfile(profile_path):
+            raise ConanException("Profile not found: %s" % profile_name)
+    return profile_path
 
 
 def read_profile(profile_name, cwd, default_folder):
@@ -90,28 +113,8 @@ def read_profile(profile_name, cwd, default_folder):
     if not profile_name:
         return None, None
 
-    if os.path.isabs(profile_name):
-        profile_path = profile_name
-        folder = os.path.dirname(profile_name)
-    elif cwd and os.path.exists(os.path.join(cwd, profile_name)):  # relative path name
-        profile_path = os.path.abspath(os.path.join(cwd, profile_name))
-        folder = os.path.dirname(profile_path)
-    else:
-        if not os.path.exists(default_folder):
-            mkdir(default_folder)
-        profile_path = os.path.join(default_folder, profile_name)
-        folder = default_folder
-
-    try:
-        text = load(profile_path)
-    except IOError:
-        if os.path.exists(folder):
-            profiles = [name for name in os.listdir(folder) if not os.path.isdir(name)]
-        else:
-            profiles = []
-        current_profiles = ", ".join(profiles) or "[]"
-        raise ConanException("Specified profile '%s' doesn't exist.\nExisting profiles: "
-                             "%s" % (profile_name, current_profiles))
+    profile_path = get_profile_path(profile_name, default_folder, cwd)
+    text = load(profile_path)
 
     try:
         return _load_profile(text, profile_path, default_folder)
@@ -129,7 +132,8 @@ def _load_profile(text, profile_path, default_folder):
         cwd = os.path.dirname(os.path.abspath(profile_path)) if profile_path else None
         profile_parser = ProfileParser(text)
         inherited_vars = profile_parser.vars
-        # Iterate the includes and call recursive to get the profile and variables from parent profiles
+        # Iterate the includes and call recursive to get the profile and variables
+        # from parent profiles
         for include in profile_parser.includes:
             # Recursion !!
             profile, declared_vars = read_profile(include, cwd, default_folder)
@@ -138,14 +142,16 @@ def _load_profile(text, profile_path, default_folder):
 
         # Apply the automatic PROFILE_DIR variable
         if cwd:
-            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd)  # Allows PYTHONPATH=$PROFILE_DIR/pythontools
+            inherited_vars["PROFILE_DIR"] = os.path.abspath(cwd)
+            # Allows PYTHONPATH=$PROFILE_DIR/pythontools
 
         # Replace the variables from parents in the current profile
         profile_parser.apply_vars(inherited_vars)
 
         # Current profile before update with parents (but parent variables already applied)
         doc = ConfigParser(profile_parser.profile_text,
-                           allowed_fields=["build_requires", "settings", "env", "scopes", "options"])
+                           allowed_fields=["build_requires", "settings", "env",
+                                           "scopes", "options"])
 
         # Merge the inherited profile with the readed from current profile
         _apply_inner_profile(doc, inherited_profile)
@@ -160,10 +166,22 @@ def _load_profile(text, profile_path, default_folder):
         raise ConanException("Error parsing the profile text file: %s" % str(exc))
 
 
+def _load_single_build_require(profile, line):
+
+    tokens = line.split(":", 1)
+    if len(tokens) == 1:
+        pattern, req_list = "*", line
+    else:
+        pattern, req_list = tokens
+    req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
+    profile.build_requires.setdefault(pattern, []).extend(req_list)
+
+
 def _apply_inner_profile(doc, base_profile):
     """
 
-    :param doc: ConfigParser object from the current profile (excluding includes and vars, and with values already replaced)
+    :param doc: ConfigParser object from the current profile (excluding includes and vars,
+    and with values already replaced)
     :param base_profile: Profile inherited, it's used as a base profile to modify it.
     :return: None
     """
@@ -194,18 +212,86 @@ def _apply_inner_profile(doc, base_profile):
     if doc.build_requires:
         # FIXME CHECKS OF DUPLICATED?
         for req in doc.build_requires.splitlines():
-            tokens = req.split(":", 1)
-            if len(tokens) == 1:
-                pattern, req_list = "*", req
-            else:
-                pattern, req_list = tokens
-            req_list = [ConanFileReference.loads(r.strip()) for r in req_list.split(",")]
-            base_profile.build_requires.setdefault(pattern, []).extend(req_list)
-
-    if doc.scopes:
-        base_profile.update_scopes(Scopes.from_list(doc.scopes.splitlines()))
+            _load_single_build_require(base_profile, req)
 
     if doc.options:
         base_profile.options.update(OptionsValues.loads(doc.options))
 
-    base_profile.env_values.update(EnvValues.loads(doc.env))
+    # The env vars from the current profile (read in doc)
+    # are updated with the included profiles (base_profile)
+    # the current env values has priority
+    current_env_values = EnvValues.loads(doc.env)
+    current_env_values.update(base_profile.env_values)
+    base_profile.env_values = current_env_values
+
+
+def profile_from_args(profile, settings, options, env, cwd, client_cache):
+    """ Return a Profile object, as the result of merging a potentially existing Profile
+    file and the args command-line arguments
+    """
+    default_profile = client_cache.default_profile  # Ensures a default profile creating
+
+    if profile is None:
+        file_profile = default_profile
+    else:
+        file_profile, _ = read_profile(profile, cwd, client_cache.profiles_path)
+    args_profile = _profile_parse_args(settings, options, env)
+
+    if file_profile:
+        file_profile.update(args_profile)
+        return file_profile
+    else:
+        return args_profile
+
+
+def _profile_parse_args(settings, options, envs):
+    """ return a Profile object result of parsing raw data
+    """
+    def _get_tuples_list_from_extender_arg(items):
+        if not items:
+            return []
+        # Validate the pairs
+        for item in items:
+            chunks = item.split("=", 1)
+            if len(chunks) != 2:
+                raise ConanException("Invalid input '%s', use 'name=value'" % item)
+        return [(item[0], item[1]) for item in [item.split("=", 1) for item in items]]
+
+    def _get_simple_and_package_tuples(items):
+        """Parse items like "thing:item=value or item2=value2 and returns a tuple list for
+        the simple items (name, value) and a dict for the package items
+        {package: [(item, value)...)], ...}
+        """
+        simple_items = []
+        package_items = defaultdict(list)
+        tuples = _get_tuples_list_from_extender_arg(items)
+        for name, value in tuples:
+            if ":" in name:  # Scoped items
+                tmp = name.split(":", 1)
+                ref_name = tmp[0]
+                name = tmp[1]
+                package_items[ref_name].append((name, value))
+            else:
+                simple_items.append((name, value))
+        return simple_items, package_items
+
+    def _get_env_values(env, package_env):
+        env_values = EnvValues()
+        for name, value in env:
+            env_values.add(name, EnvValues.load_value(value))
+        for package, data in package_env.items():
+            for name, value in data:
+                env_values.add(name, EnvValues.load_value(value), package)
+        return env_values
+
+    result = Profile()
+    options = _get_tuples_list_from_extender_arg(options)
+    result.options = OptionsValues(options)
+    env, package_env = _get_simple_and_package_tuples(envs)
+    env_values = _get_env_values(env, package_env)
+    result.env_values = env_values
+    settings, package_settings = _get_simple_and_package_tuples(settings)
+    result.settings = OrderedDict(settings)
+    for pkg, values in package_settings.items():
+        result.package_settings[pkg] = OrderedDict(values)
+    return result

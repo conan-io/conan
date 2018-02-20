@@ -17,7 +17,7 @@ conanfile_build_new_env = """
         import os
         from conans import VisualStudioBuildEnvironment, AutoToolsBuildEnvironment
         from conans.tools import environment_append, vcvars_command, save
-
+        from conans import tools
 
         if self.settings.compiler == "Visual Studio":
             env_build = VisualStudioBuildEnvironment(self)
@@ -34,7 +34,7 @@ conanfile_build_new_env = """
 
                 command = ('{} && cl /EHsc main.cpp hello{}.lib {}'.format(vcvars, self.name, flags))
                 self.run(command)
-        elif self.settings.compiler == "gcc" and self.settings.os == "Linux":
+        elif tools.os_info.bash_path() and tools.which("aclocal"):
             makefile_am = '''
 bin_PROGRAMS = main
 lib_LIBRARIES = libhello{}.a
@@ -54,16 +54,20 @@ AC_OUTPUT
 '''
             save("Makefile.am", makefile_am)
             save("configure.ac", configure_ac)
-            self.run("aclocal")
-            self.run("autoconf")
-            self.run("automake --add-missing --foreign")
-
-            env_build = AutoToolsBuildEnvironment(self)
-            env_build.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
-
-            with environment_append(env_build.vars):
-                self.run("./configure")
-                self.run("make")
+            
+            iswin = self.settings.os == "Windows"
+            self.run("aclocal", win_bash=iswin)
+            self.run("autoconf", win_bash=iswin)
+            self.run("automake --add-missing --foreign", win_bash=iswin)
+           
+            autotools = AutoToolsBuildEnvironment(self, win_bash=iswin)
+            autotools.defines.append('CONAN_LANGUAGE=%s' % self.options.language)
+            autotools.configure()
+            autotools.make()
+            env = {"DYLD_LIBRARY_PATH": ".",
+                   "LD_LIBRARY_PATH": "."}
+            with tools.environment_append(env):
+                self.run("main.exe" if platform.system() == "Windows" else "./main")
 
         elif self.settings.compiler == "gcc" or "clang" in str(self.settings.compiler):
             lang = '-DCONAN_LANGUAGE=%s' % self.options.language
@@ -117,7 +121,7 @@ class {name}Conan(ConanFile):
     default_options = '''language={language}
                         static= {static}'''
     requires = ({requires})
-    settings = "os", "compiler", "arch"
+    settings = {settings}
     generators = "cmake", "gcc"
     exports = '*'
 
@@ -149,7 +153,7 @@ class {name}Conan(ConanFile):
 
     def package_info(self):
         self.cpp_info.libs = ["hello{name}"]
-
+{additional_info}
     def imports(self):
         self.copy(pattern="*.dylib", dst=".", src="lib")
         self.copy(pattern="*.dll", dst=".", src="bin")
@@ -310,7 +314,8 @@ def cpp_hello_source_files(name="Hello", deps=None, private_includes=False, msg=
 def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, static=True,
                           private_includes=False, msg=None, dll_export=False, need_patch=False,
                           pure_c=False, config=True, build=True, collect_libs=False,
-                          use_cmake=True, cmake_targets=False, no_copy_source=False):
+                          use_cmake=True, cmake_targets=False, no_copy_source=False,
+                          use_additional_infos=0, settings=None):
     """Generate hello_files, as described above, plus the necessary
     CONANFILE to manage it
     param number: integer, defining name of the conans Hello0, Hello1, HelloX
@@ -324,6 +329,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
          "Hello 3", that depends both in Hello4 and Hello7.
          The output of such a conans exe could be like: Hello 3, Hello 4, Hello7"""
     assert deps is None or isinstance(deps, list)
+    settings = (settings or '"os", "compiler", "arch"')
 
     code_deps = []
     requires = []
@@ -345,13 +351,24 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
                                         pure_c=pure_c, cmake_targets=cmake_targets)
     libcxx_remove = "del self.settings.compiler.libcxx" if pure_c else ""
     build_env = conanfile_build_cmake if use_cmake else conanfile_build_new_env
+
+    info_tmp = """
+        self.env_info.%s.append("2")
+        self.user_info.%s = "UserValue" """
+
+    res = ""
+    for i in range(use_additional_infos):
+        res += info_tmp % ("EnvVar%d" % i, "UserVar%d" % i)
+
     conanfile = conanfile_template.format(name=name,
                                           version=version,
                                           requires=requires,
                                           language=language,
                                           static=static,
                                           libcxx_remove=libcxx_remove,
-                                          build=build_env)
+                                          build=build_env,
+                                          additional_info=res,
+                                          settings=settings)
 
     if no_copy_source:
         conanfile = conanfile.replace("exports = '*'", """exports = '*'
@@ -365,6 +382,7 @@ def cpp_hello_conan_files(name="Hello", version="0.1", deps=None, language=0, st
     if not config:
         conanfile = conanfile.replace("config(", "config2(")
     if collect_libs:
-        conanfile = conanfile.replace('["hello%s"]' % name, "self.collect_libs()")
+        conanfile = "from conans import tools\n" + conanfile.replace('["hello%s"]' % name,
+                                                                     "tools.collect_libs(self)")
     base_files[CONANFILE] = conanfile
     return base_files

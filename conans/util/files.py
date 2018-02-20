@@ -9,6 +9,33 @@ import re
 import six
 from conans.util.log import logger
 import tarfile
+import stat
+
+
+def make_read_only(path):
+    for root, _, files in os.walk(path):
+        for f in files:
+            full_path = os.path.join(root, f)
+            mode = os.stat(full_path).st_mode
+            os.chmod(full_path, mode & ~ stat.S_IWRITE)
+
+
+_DIRTY_FOLDER = ".dirty"
+
+
+def set_dirty(folder):
+    dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    save(dirty_file, "")
+
+
+def clean_dirty(folder):
+    dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    os.remove(dirty_file)
+
+
+def is_dirty(folder):
+    dirty_file = os.path.normpath(folder) + _DIRTY_FOLDER
+    return os.path.exists(dirty_file)
 
 
 def decode_text(text):
@@ -68,23 +95,27 @@ def _generic_algorithm_sum(file_path, algorithm_name):
 
 
 def save(path, content, append=False):
-    '''
+    """
     Saves a file with given content
     Params:
         path: path to write file to
         load: contents to save in the file
-    '''
+    """
     try:
         os.makedirs(os.path.dirname(path))
     except:
         pass
 
+    mode = 'wb' if not append else 'ab'
+    with open(path, mode) as handle:
+        handle.write(to_file_bytes(content))
+
+
+def to_file_bytes(content):
     if six.PY3:
         if not isinstance(content, bytes):
             content = bytes(content, "utf-8")
-    mode = 'wb' if not append else 'ab'
-    with open(path, mode) as handle:
-        handle.write(content)
+    return content
 
 
 def save_files(path, files):
@@ -111,7 +142,6 @@ def relative_dirs(path):
 
 
 def _change_permissions(func, path, exc_info):
-    import stat
     if not os.access(path, os.W_OK):
         os.chmod(path, stat.S_IWUSR)
         func(path)

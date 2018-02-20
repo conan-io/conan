@@ -2,7 +2,6 @@ from conans.errors import ConanException
 from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.ref import PackageReference
-from conans.model.scope import Scopes
 from conans.model.values import Values
 from conans.util.config_parser import ConfigParser
 from conans.util.files import load
@@ -101,14 +100,12 @@ class RequirementInfo(object):
 
 
 class RequirementsInfo(object):
-    def __init__(self, requires, non_devs_requirements):
+    def __init__(self, requires):
         # {PackageReference: RequirementInfo}
-        self._non_devs_requirements = non_devs_requirements
         self._data = {r: RequirementInfo(str(r)) for r in requires}
 
     def copy(self):
-        return RequirementsInfo(self._data.keys(), self._non_devs_requirements.copy()
-                                if self._non_devs_requirements else None)
+        return RequirementsInfo(self._data.keys())
 
     def clear(self):
         self._data = {}
@@ -151,14 +148,8 @@ class RequirementsInfo(object):
         result = []
         # Remove requirements without a name, i.e. indirect transitive requirements
         data = {k: v for k, v in self._data.items() if v.name}
-        if self._non_devs_requirements is None:
-            for key in sorted(data):
-                result.append(data[key].sha)
-        else:
-            for key in sorted(data):
-                non_dev = key.conan.name in self._non_devs_requirements
-                if non_dev:
-                    result.append(data[key].sha)
+        for key in sorted(data):
+            result.append(data[key].sha)
         return sha1('\n'.join(result).encode())
 
     def dumps(self):
@@ -166,10 +157,6 @@ class RequirementsInfo(object):
         for ref in sorted(self._data):
             dumped = self._data[ref].dumps()
             if dumped:
-                dev = (self._non_devs_requirements is not None and
-                       ref.conan.name not in self._non_devs_requirements)
-                if dev:
-                    dumped += " DEV"
                 result.append(dumped)
         return "\n".join(result)
 
@@ -245,11 +232,10 @@ class ConanInfo(object):
         result.settings = self.settings.copy()
         result.options = self.options.copy()
         result.requires = self.requires.copy()
-        result._non_devs_requirements = self._non_devs_requirements
         return result
 
     @staticmethod
-    def create(settings, options, requires, indirect_requires, non_devs_requirements):
+    def create(settings, options, requires, indirect_requires):
         result = ConanInfo()
         result.full_settings = settings
         result.settings = settings.copy()
@@ -257,13 +243,14 @@ class ConanInfo(object):
         result.options = options.copy()
         result.options.clear_indirect()
         result.full_requires = RequirementsList(requires)
-        result.requires = RequirementsInfo(requires, non_devs_requirements)
-        result.scope = None
+        result.requires = RequirementsInfo(requires)
         result.requires.add(indirect_requires)
         result.full_requires.extend(indirect_requires)
         result.recipe_hash = None
-        result._non_devs_requirements = non_devs_requirements  # Can be None
         result.env_values = EnvValues()
+        result.vs_toolset_compatible()
+        result.discard_build_settings()
+
         return result
 
     @staticmethod
@@ -277,11 +264,10 @@ class ConanInfo(object):
         result.options = OptionsValues.loads(parser.options)
         result.full_options = OptionsValues.loads(parser.full_options)
         result.full_requires = RequirementsList.loads(parser.full_requires)
-        result.requires = RequirementsInfo(result.full_requires, None)
+        result.requires = RequirementsInfo(result.full_requires)
         result.recipe_hash = parser.recipe_hash or None
 
         # TODO: Missing handling paring of requires, but not necessary now
-        result.scope = Scopes.loads(parser.scope)
         result.env_values = EnvValues.loads(parser.env)
         return result
 
@@ -304,9 +290,6 @@ class ConanInfo(object):
         result.append(indent(self.full_requires.dumps()))
         result.append("\n[full_options]")
         result.append(indent(self.full_options.dumps()))
-        result.append("\n[scope]")
-        if self.scope:
-            result.append(indent(self.scope.dumps()))
         result.append("\n[recipe_hash]\n%s" % indent(self.recipe_hash))
         result.append("\n[env]")
         result.append(indent(self.env_values.dumps()))
@@ -344,7 +327,7 @@ class ConanInfo(object):
         # Only are valid requires for OPtions those Non-Dev who are still in requires
 
         self.options.filter_used(self.requires.pkg_names)
-        result.append(self.options.sha(self._non_devs_requirements))
+        result.append(self.options.sha)
         result.append(self.requires.sha)
         self._package_id = sha1('\n'.join(result).encode())
         return self._package_id
@@ -373,3 +356,43 @@ class ConanInfo(object):
         self.settings.clear()
         self.options.clear()
         self.requires.unrelated_mode()
+
+    def vs_toolset_compatible(self):
+        """Default behaviour, same package for toolset v140 with compiler=Visual Studio 15 than
+        using Visual Studio 14"""
+        if self.full_settings.compiler != "Visual Studio":
+            return
+
+        toolsets_versions = {
+            "v141": "15",
+            "v140": "14",
+            "v120": "12",
+            "v110": "11",
+            "v100": "10",
+            "v90": "9",
+            "v80": "8"}
+
+        toolset = str(self.full_settings.compiler.toolset)
+        version = toolsets_versions.get(toolset)
+        if version is not None:
+            self.settings.compiler.version = version
+            del self.settings.compiler.toolset
+
+    def vs_toolset_incompatible(self):
+        """Will generate different packages for v140 and visual 15 than the visual 14"""
+        if self.full_settings.compiler != "Visual Studio":
+            return
+        self.settings.compiler.version = self.full_settings.compiler.version
+        self.settings.compiler.toolset = self.full_settings.compiler.toolset
+
+    def discard_build_settings(self):
+        # When os is defined, os_build is irrelevant for the consumer.
+        # only when os_build is alone (installers, etc) it has to be present in the package_id
+        if self.full_settings.os and self.full_settings.os_build:
+            del self.settings.os_build
+        if self.full_settings.arch and self.full_settings.arch_build:
+            del self.settings.arch_build
+
+    def include_build_settings(self):
+        self.settings.os_build = self.full_settings.os_build
+        self.settings.arch_build = self.full_settings.arch_build

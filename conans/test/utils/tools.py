@@ -4,6 +4,7 @@ import shutil
 import sys
 import uuid
 from collections import Counter
+from contextlib import contextmanager
 from io import StringIO
 
 import requests
@@ -12,7 +13,8 @@ from mock import Mock
 from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import __version__ as CLIENT_VERSION, tools
+from conans import __version__ as CLIENT_VERSION
+from conans.client import settings_preprocessor
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
 from conans.client.conan_api import migrate_and_get_client_cache, Conan
@@ -34,9 +36,9 @@ from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USE
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
-from conans.util.env_reader import get_env
-from conans.util.files import save_files, load, save
+from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
+from conans.tools import set_global_instances
 
 
 class TestingResponse(object):
@@ -262,6 +264,9 @@ class MockedUserIO(UserIO):
 
     def get_username(self, remote_name):
         """Overridable for testing purpose"""
+        username_env = self._get_env_username(remote_name)
+        if username_env:
+            return username_env
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         if len(sub_dict) - 1 < index:
@@ -271,6 +276,10 @@ class MockedUserIO(UserIO):
 
     def get_password(self, remote_name):
         """Overridable for testing purpose"""
+        password_env = self._get_env_password(remote_name)
+        if password_env:
+            return password_env
+
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         tmp = sub_dict[index][1]
@@ -298,12 +307,12 @@ class TestClient(object):
         self.all_output = ""  # For debugging purpose, append all the run outputs
         self.users = users or {"default":
                                [(TESTING_REMOTE_PRIVATE_USER, TESTING_REMOTE_PRIVATE_PASS)]}
-        self.servers = servers or {}
 
         self.client_version = Version(str(client_version))
         self.min_server_compatible_version = Version(str(min_server_compatible_version))
 
         self.base_folder = base_folder or temp_folder(path_with_spaces)
+
         # Define storage_folder, if not, it will be read from conf file & pointed to real user home
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
@@ -314,8 +323,14 @@ class TestClient(object):
         self.requester_class = requester_class
         self.conan_runner = runner
 
+        self.update_servers(servers)
         self.init_dynamic_vars()
 
+        logger.debug("Client storage = %s" % self.storage_folder)
+        self.current_folder = current_folder or temp_folder(path_with_spaces)
+
+    def update_servers(self, servers):
+        self.servers = servers or {}
         save(self.client_cache.registry, "")
         registry = RemoteRegistry(self.client_cache.registry, TestBufferConanOutput())
         for name, server in self.servers.items():
@@ -323,9 +338,6 @@ class TestClient(object):
                 registry.add(name, server.fake_url)
             else:
                 registry.add(name, server)
-
-        logger.debug("Client storage = %s" % self.storage_folder)
-        self.current_folder = current_folder or temp_folder(path_with_spaces)
 
     @property
     def paths(self):
@@ -339,6 +351,18 @@ class TestClient(object):
     @property
     def out(self):
         return self.user_io.out
+
+    @contextmanager
+    def chdir(self, newdir):
+        old_dir = self.current_folder
+        if not os.path.isabs(newdir):
+            newdir = os.path.join(old_dir, newdir)
+        mkdir(newdir)
+        self.current_folder = newdir
+        try:
+            yield
+        finally:
+            self.current_folder = old_dir
 
     def _init_collaborators(self, user_io=None):
 
@@ -374,9 +398,7 @@ class TestClient(object):
         # Handle remote connections
         self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
 
-        # Patch the globals in tools
-        tools._global_requester = requests
-        tools._global_output = self.user_io.out
+        set_global_instances(output, self.requester)
 
     def init_dynamic_vars(self, user_io=None):
         # Migration system
@@ -392,17 +414,20 @@ class TestClient(object):
             tuple if required
         """
         self.init_dynamic_vars(user_io)
-        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager, self.search_manager)
+        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
+                      self.search_manager, settings_preprocessor)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)
         current_dir = os.getcwd()
         os.chdir(self.current_folder)
-
+        old_path = sys.path[:]
+        sys.path.append(os.path.join(self.client_cache.conan_folder, "python"))
         old_modules = list(sys.modules.keys())
         try:
             error = command.run(args)
         finally:
+            sys.path = old_path
             os.chdir(current_dir)
             # Reset sys.modules to its prev state. A .copy() DOES NOT WORK
             added_modules = set(sys.modules).difference(old_modules)
@@ -411,6 +436,7 @@ class TestClient(object):
 
         if not ignore_error and error:
             logger.error(self.user_io.out)
+            print(self.user_io.out)
             raise Exception("Command failed:\n%s" % command_line)
 
         self.all_output += str(self.user_io.out)
@@ -424,3 +450,5 @@ class TestClient(object):
         if clean_first:
             shutil.rmtree(self.current_folder, ignore_errors=True)
         save_files(path, files)
+        if not files:
+            mkdir(self.current_folder)

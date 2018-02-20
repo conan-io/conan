@@ -50,9 +50,8 @@ class MyLib(ConanFile):
 
     def build(self):
         self.run("mytool")
-        with tools.pythonpath(self):
-            import mypythontool
-            self.output.info(mypythontool.tool_hello_world())
+        import mypythontool
+        self.output.info(mypythontool.tool_hello_world())
 """
 
 profile = """
@@ -71,16 +70,59 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 class BuildRequiresTest(unittest.TestCase):
 
+    def duplicated_build_requires_test(self):
+        client = TestClient()
+        build_require = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": build_require})
+        client.run("create . build_require/0.1@user/testing")
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        client.run("export . MyLib/0.1@user/testing")
+        profile = """[build_requires]
+build_require/0.1@user/testing
+"""
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    requires = "MyLib/0.1@user/testing"
+"""
+        test_conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def test(self):
+        pass
+"""
+        client.save({"conanfile.py": conanfile,
+                     "test_package/conanfile.py": test_conanfile,
+                     "myprofile": profile})
+        client.run("create . Pkg/0.1@user/testing -pr=myprofile --build=missing")
+        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing (test package): "
+                                               "Installing build requirements of: PROJECT"), 1)
+        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing (test package): "
+                                               "Build requires: [build_require/0.1@user/testing]"), 1)
+        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing: Installing build "
+                                               "requirements of: Pkg/0.1@user/testing"), 1)
+        self.assertEqual(str(client.out).count("Pkg/0.1@user/testing: Build requires: "
+                                               "[build_require/0.1@user/testing]"), 1)
+        self.assertEqual(str(client.out).count("MyLib/0.1@user/testing: Installing build "
+                                               "requirements of: MyLib/0.1@user/testing"), 1)
+        self.assertEqual(str(client.out).count("MyLib/0.1@user/testing: Build requires: "
+                                               "[build_require/0.1@user/testing]"), 1)
+
     def _create(self, client):
         name = "mytool.bat" if platform.system() == "Windows" else "mytool"
         client.save({CONANFILE: tool_conanfile,
                      name: "echo Hello World!"}, clean_first=True)
         os.chmod(os.path.join(client.current_folder, name), 0o777)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         client.save({CONANFILE: python_conanfile,
                      "mypythontool.py": """def tool_hello_world():
     return 'Hello world from python tool!'"""}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
     def test_profile_requires(self):
         client = TestClient()
@@ -89,7 +131,7 @@ class BuildRequiresTest(unittest.TestCase):
         client.save({CONANFILE: lib_conanfile,
                      "profile.txt": profile,
                      "profile2.txt": profile2}, clean_first=True)
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
 
         client.run("install MyLib/0.1@lasote/stable --profile ./profile.txt --build missing")
         self.assertIn("Hello World!", client.user_io.out)
@@ -106,9 +148,9 @@ class BuildRequiresTest(unittest.TestCase):
         client.save({CONANFILE: lib_conanfile,
                      "profile.txt": profile}, clean_first=True)
 
-        client.run("install --profile ./profile.txt --build missing")
+        client.run("install . --profile ./profile.txt --build missing")
         self.assertNotIn("Hello World!", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertIn("Hello World!", client.user_io.out)
         self.assertIn("Project: Hello world from python tool!", client.user_io.out)
 
@@ -119,16 +161,16 @@ class BuildRequiresTest(unittest.TestCase):
         client.save({CONANFILE: lib_conanfile,
                      "profile.txt": profile}, clean_first=True)
 
-        error = client.run("install --profile ./profile.txt", ignore_error=True)
+        error = client.run("install . --profile ./profile.txt", ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Missing prebuilt package for 'PythonTool/0.1@lasote/stable'",
                       client.user_io.out)
-        error = client.run("install --profile ./profile.txt --build=PythonTool",
+        error = client.run("install . --profile ./profile.txt --build=PythonTool",
                            ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: Missing prebuilt package for 'Tool/0.1@lasote/stable'",
                       client.user_io.out)
-        client.run("install --profile ./profile.txt --build=*Tool")
+        client.run("install . --profile ./profile.txt --build=*Tool")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [Tool/0.1@lasote/stable, PythonTool/0.1@lasote/stable]",
                       client.user_io.out)
@@ -137,7 +179,7 @@ class BuildRequiresTest(unittest.TestCase):
 
         # now remove packages, ensure --build=missing also creates them
         client.run('remove "*" -p -f')
-        client.run("install --profile ./profile.txt --build=missing")
+        client.run("install . --profile ./profile.txt --build=missing")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [Tool/0.1@lasote/stable, PythonTool/0.1@lasote/stable]",
                       client.user_io.out)
@@ -157,9 +199,9 @@ class TestMyLib(ConanFile):
 
     def build(self):
         self.run("mytool")
-        with tools.pythonpath(self):
-            import mypythontool
-            self.output.info(mypythontool.tool_hello_world())
+        import mypythontool
+        self.output.info(mypythontool.tool_hello_world())
+
     def test(self):
         pass
         """
@@ -168,10 +210,10 @@ class TestMyLib(ConanFile):
                      "profile.txt": profile,
                      "profile2.txt": profile2}, clean_first=True)
 
-        client.run("test_package --profile ./profile.txt --build missing")
+        client.run("create . lasote/stable --profile ./profile.txt --build missing")
         self.assertEqual(2, str(client.user_io.out).splitlines().count("Hello World!"))
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.user_io.out)
-        self.assertIn("MyLib/0.1@lasote/stable test package: Hello world from python tool!",
+        self.assertIn("MyLib/0.1@lasote/stable (test package): Hello world from python tool!",
                       client.user_io.out)
 
     def test_consumer_patterns(self):
@@ -199,9 +241,8 @@ class MyLib(ConanFile):
     version = "0.1"
 
     def build(self):
-        with tools.pythonpath(self):
-            import mypythontool
-            self.output.info(mypythontool.tool_hello_world())
+        import mypythontool
+        self.output.info(mypythontool.tool_hello_world())
 """
         profile_patterns = """
 [build_requires]
@@ -213,7 +254,7 @@ nonexistingpattern*: SomeTool/1.2@user/channel
                      "test_package/conanfile.py": test_conanfile,
                      "profile.txt": profile_patterns}, clean_first=True)
 
-        client.run("test_package --profile ./profile.txt --build missing")
+        client.run("create . lasote/stable --profile=./profile.txt --build=missing")
         self.assertEqual(1, str(client.user_io.out).splitlines().count("Hello World!"))
         self.assertIn("MyLib/0.1@lasote/stable: Hello world from python tool!", client.user_io.out)
         self.assertNotIn("Project: Hello world from python tool!", client.user_io.out)
@@ -229,7 +270,7 @@ class MyTool(ConanFile):
 """
 
         client.save({CONANFILE: lib_conanfile})
-        client.run("export lasote/stable")
+        client.run("export . lasote/stable")
         conanfile = """
 from conans import ConanFile, tools
 
@@ -242,15 +283,15 @@ class MyLib(ConanFile):
         self.output.info("Coverage %s" % self.options.coverage)
 """
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("install -o MyLib:coverage=True --build missing")
+        client.run("install . -o MyLib:coverage=True --build missing")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertIn("Project: Coverage True", client.user_io.out)
 
         client.save({CONANFILE: conanfile}, clean_first=True)
-        client.run("install -o coverage=True")
+        client.run("install . -o coverage=True")
         self.assertIn("Installing build requirements of: PROJECT", client.user_io.out)
         self.assertIn("Build requires: [MyTool/0.1@lasote/stable]", client.user_io.out)
-        client.run("build")
+        client.run("build .")
         self.assertIn("Project: Coverage True", client.user_io.out)
