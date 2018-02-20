@@ -81,29 +81,29 @@ def vs_installation_path(version, preference=None):
     try:
         legacy_products = vswhere(legacy=True)
         all_products = vswhere(products=["*"])
-        products = list(legacy_products + all_products)
+        products = legacy_products + all_products
     except ConanException:
         products = None
 
-    vs_paths = list()
+    vs_paths = []
 
     if products:
         # remove repeated products
-        seenProducts = list()
+        seen_products = []
         for product in products:
-            if product not in seenProducts:
-                seenProducts.append(product)
+            if product not in seen_products:
+                seen_products.append(product)
 
         # Append products with "productId" by order of preference
         for product_type in preference:
-            for product in seenProducts:
+            for product in seen_products:
                 product = dict(product)
                 if product["installationVersion"].startswith(("%d." % int(version))) and "productId" in product:
                     if product_type in product["productId"]:
                         vs_paths.append(product["installationPath"])
 
         # Append products without "productId" (Legacy installations)
-        for product in seenProducts:
+        for product in seen_products:
             product = dict(product)
             if product["installationVersion"].startswith(("%d." % int(version))) and "productId" not in product:
                 vs_paths.append(product["installationPath"])
@@ -253,9 +253,8 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     if not vcvars_arch:
         raise ConanException('unsupported architecture %s' % arch_setting)
 
-    command = ""
     existing_version = os.environ.get("VisualStudioVersion")
-
+    
     if existing_version:
         command = "echo Conan:vcvars already set"
         existing_version = existing_version.split(".")[0]
@@ -275,10 +274,11 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
             vcvars_path = ""
             if int(compiler_version) > 14:
                 vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
+                command = ('set "VSCMD_START_DIR=%%CD%%" && '
+                       'call "%s" %s' % (vcvars_path, vcvars_arch))
             else:
                 vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
-            command = ('set "VSCMD_START_DIR=%%CD%%" && '
-                       'call "%s" %s' % (vcvars_path, vcvars_arch))
+                command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
 
     if os_setting == 'WindowsStore':
         os_version_setting = settings.get_safe("os.version")
