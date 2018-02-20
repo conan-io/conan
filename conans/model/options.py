@@ -298,7 +298,7 @@ class PackageOption(object):
     def __bool__(self):
         if not self._value:
             return False
-        return self.value.lower() not in _falsey_options
+        return self._value.lower() not in _falsey_options
 
     def __nonzero__(self):
         return self.__bool__()
