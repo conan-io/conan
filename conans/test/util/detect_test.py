@@ -25,9 +25,12 @@ class DetectTest(unittest.TestCase):
 
     def detect_default_in_mac_os_using_gcc_as_default_test(self):
         """
-        In some Mac OS X gcc is in reality clang.
+        Test if gcc in Mac OS X is using apple-clang as frontend
         """
         # See: https://github.com/conan-io/conan/issues/2231
+        if platform.system() != "Darwin":
+            return
+
         def _execute(command):
             proc = Popen(command, shell=True, bufsize=1, stdout=PIPE, stderr=STDOUT)
 
@@ -44,7 +47,7 @@ class DetectTest(unittest.TestCase):
 
         proc_return, output = _execute("gcc --version")
         if proc_return != 0 or "clang" not in output:
-            # Not test scenario (gcc should display that it's clang)
+            # Not test scenario (gcc should display clang in output
             return
 
         output = TestBufferConanOutput()
