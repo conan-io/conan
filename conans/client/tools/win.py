@@ -5,11 +5,13 @@ import platform
 import re
 
 import subprocess
+from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
 from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
+from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 
 _global_output = None
@@ -63,24 +65,64 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     return command
 
 
-def vs_installation_path(version):
-    if not hasattr(vs_installation_path, "_cached"):
-        vs_installation_path._cached = dict()
+def vs_installation_path(version, preference=None):
 
-    if version not in vs_installation_path._cached:
-        vs_path = None
+    vs_installation_path = None
+
+    if not preference:
+        env_prefs = get_env("CONAN_VS_INSTALLATION_PREFERENCE", list())
+
+        if env_prefs:
+            preference = env_prefs
+        else:  # default values
+            preference = ["Enterprise", "Professional", "Community", "BuildTools"]
+
+    # Try with vswhere()
+    try:
         legacy_products = vswhere(legacy=True)
         all_products = vswhere(products=["*"])
         products = legacy_products + all_products
+    except ConanException:
+        products = None
 
+    vs_paths = []
+
+    if products:
+        # remove repeated products
+        seen_products = []
         for product in products:
-            if product["installationVersion"].startswith(("%d." % int(version))):
-                vs_path = product["installationPath"]
+            if product not in seen_products:
+                seen_products.append(product)
 
-        # Remember to cache result
-        vs_installation_path._cached[version] = vs_path
+        # Append products with "productId" by order of preference
+        for product_type in preference:
+            for product in seen_products:
+                product = dict(product)
+                if product["installationVersion"].startswith(("%d." % int(version))) and "productId" in product:
+                    if product_type in product["productId"]:
+                        vs_paths.append(product["installationPath"])
 
-    return vs_installation_path._cached[version]
+        # Append products without "productId" (Legacy installations)
+        for product in seen_products:
+            product = dict(product)
+            if product["installationVersion"].startswith(("%d." % int(version))) and "productId" not in product:
+                vs_paths.append(product["installationPath"])
+
+    # If vswhere does not find anything or not available, try with vs_comntools()
+    if not vs_paths:
+        vs_path = vs_comntools(version)
+
+        if vs_path:
+            sub_path_to_remove = os.path.join("", "Common7", "Tools", "")
+            # Remove '\\Common7\\Tools\\' to get same output as vswhere
+            if vs_path.endswith(sub_path_to_remove):
+                vs_path = vs_path[:-(len(sub_path_to_remove)+1)]
+
+        vs_installation_path = vs_path
+    else:
+        vs_installation_path = vs_paths[0]
+
+    return vs_installation_path
 
 
 def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
@@ -155,6 +197,12 @@ def vswhere(all_=False, prerelease=False, products=None, requires=None, version=
     return json.loads(vswhere_out)
 
 
+def vs_comntools(compiler_version):
+    env_var = "vs%s0comntools" % compiler_version
+    vs_path = os.getenv(env_var)
+    return vs_path
+
+
 def find_windows_10_sdk():
     """finds valid Windows 10 SDK version which can be passed to vcvarsall.bat (vcvars_command)"""
     # uses the same method as VCVarsQueryRegistry.bat
@@ -204,7 +252,10 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                        'armv8': 'x86_arm64'}.get(arch_setting)
     if not vcvars_arch:
         raise ConanException('unsupported architecture %s' % arch_setting)
+
+    command = ""
     existing_version = os.environ.get("VisualStudioVersion")
+
     if existing_version:
         command = "echo Conan:vcvars already set"
         existing_version = existing_version.split(".")[0]
@@ -216,33 +267,19 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
             else:
                 _global_output.warn(message)
     else:
-        env_var = "vs%s0comntools" % compiler_version
+        vs_path = vs_installation_path(str(compiler_version))
 
-        if env_var == 'vs150comntools':
-            vs_path = os.getenv(env_var)
-            if not vs_path:  # Try to locate with vswhere
-                vs_root = vs_installation_path("15")
-                if vs_root:
-                    vs_path = os.path.join(vs_root, "Common7", "Tools")
-                else:
-                    raise ConanException("VS2017 '%s' variable not defined, "
-                                         "and vswhere didn't find it" % env_var)
-            if not os.path.isdir(vs_path):
-                _global_output.warn('VS variable %s points to the non-existing path "%s",'
-                                    'please check that you have set it correctly' % (env_var, vs_path))
-            vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
-            command = ('set "VSCMD_START_DIR=%%CD%%" && '
-                       'call "%s" %s' % (vcvars_path, vcvars_arch))
+        if not vs_path or not os.path.isdir(vs_path):
+            _global_output.warn("VS non-existing installation")
         else:
-            try:
-                vs_path = os.environ[env_var]
-            except KeyError:
-                raise ConanException("VS '%s' variable not defined. Please install VS" % env_var)
-            if not os.path.isdir(vs_path):
-                _global_output.warn('VS variable %s points to the non-existing path "%s",'
-                                    'please check that you have set it correctly' % (env_var, vs_path))
-            vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
-            command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
+            vcvars_path = ""
+            if int(compiler_version) > 14:
+                vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
+                command = ('set "VSCMD_START_DIR=%%CD%%" && '
+                           'call "%s" %s' % (vcvars_path, vcvars_arch))
+            else:
+                vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
+                command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
 
     if os_setting == 'WindowsStore':
         os_version_setting = settings.get_safe("os.version")

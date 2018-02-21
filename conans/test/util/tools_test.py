@@ -3,12 +3,14 @@ import platform
 import unittest
 
 from collections import namedtuple
+from six import StringIO
 
 from conans.client.client_cache import CONAN_CONF
 
 from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
+from conans.client.output import ConanOutput
 
 from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
@@ -29,7 +31,7 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
+    def __call__(self, command, output, win_bash=False, subsystem=None): # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
@@ -124,7 +126,7 @@ class ToolsTest(unittest.TestCase):
         )
         self.assertEqual(
             tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED": " 1 , 2 , 3 "}),
-            [" 1 ", " 2 ", " 3 "]
+            ["1", "2", "3"]
         )
 
     def test_get_env_in_conanfile(self):
@@ -476,7 +478,6 @@ class HelloConan(ConanFile):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     def vcvars_constrained_test(self):
-
         text = """os: [Windows]
 compiler:
     Visual Studio:
@@ -488,10 +489,15 @@ compiler:
         with self.assertRaisesRegexp(ConanException,
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings)
+
+        new_out = StringIO()
+        tools.set_global_instances(ConanOutput(new_out), None)
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
-            cmd = tools.vcvars_command(settings)
-            self.assertIn("vcvarsall.bat", cmd)
+            tools.vcvars_command(settings)
+            if platform.system() != "Windows":
+                self.assertIn("VS non-existing installation", new_out.getvalue())
+
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 with self.assertRaisesRegexp(ConanException,
                                              "Error, Visual environment already set to 12"):
