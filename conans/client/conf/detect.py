@@ -49,7 +49,7 @@ def _clang_compiler(output, compiler_exe="clang"):
             compiler = "apple-clang"
         elif "clang version" in out:
             compiler = "clang"
-        installed_version = re.search("version ([0-9]\.[0-9])", out).group(1)
+        installed_version = re.search("([0-9]\.[0-9])", out).group()
         if installed_version:
             output.success("Found %s %s" % (compiler, installed_version))
             return compiler, installed_version
@@ -146,13 +146,19 @@ def _get_default_compiler(output):
     if cc or cxx:  # Env defined, use them
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
-        if "gcc" in command or "clang" in command.lower():
+        if "gcc" in command:
+            if platform.system() != "Darwin":
+                return _gcc_compiler(output, command)
+
+            # In Mac OS X check if gcc is a fronted using apple-clang
             _, out = _execute("%s --version" % command)
             out = out.lower()
-            if "gcc" in out:
+            if "clang" not in out:
                 return _gcc_compiler(output, command)
-            if "clang" in out:
-                return _clang_compiler(output, command)
+            output.warn("%s detected as a frontend using apple-clang, skipping it to use native apple-clang" % command)
+            command = "clang"  # Force use of clang when gcc is detected as a fronted of apple-clang
+        if "clang" in command.lower():
+            return _clang_compiler(output, command)
         if platform.system() == "SunOS" and command.lower() == "cc":
             return _sun_cc_compiler(output, command)
         # I am not able to find its version
