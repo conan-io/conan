@@ -37,7 +37,7 @@ class DetectTest(unittest.TestCase):
             # gcc is not installed or there is any error (no test scenario)
             return
 
-        if "clang" not in output:
+        if b"clang" not in output:
             # Not test scenario gcc should display clang in output
             # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
             raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore! please check")
