@@ -1,4 +1,8 @@
+import platform
 import unittest
+
+import os
+
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
 
@@ -211,3 +215,52 @@ class MyLib(ConanFile):
         client.run("install .")
         client.run("build .")
 
+    def std_flag_applied_test(self):
+        conanfile = """
+import os
+from conans import ConanFile, CMake
+class MyLib(ConanFile):
+    name = "MyLib"
+    version = "0.1"
+    settings = "arch", "compiler", "cppstd"
+    generators = "cmake"
+
+    def build(self):
+        cmake = CMake(self)
+        cmake.configure()
+        cmake.build()
+        """
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "mylib.cpp": "auto myfunc(){return 3;}",  # c++14 feature
+                     "CMakeLists.txt": """
+set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup()
+add_library(mylib mylib.cpp)
+target_link_libraries(mylib ${CONAN_LIBS})
+"""})
+
+        if platform.system() != "Windows":
+            client.run("install . --install-folder=build -s cppstd=gnu98")
+            error = client.run("build . --build-folder=build", ignore_error=True)
+            self.assertTrue(error)
+            self.assertIn("Error in build()", client.out)
+
+            # Now specify c++14
+            client.run("install . --install-folder=build -s cppstd=gnu14")
+            client.run("build . --build-folder=build")
+            self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS ON", client.out)
+            libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
+            libpath = os.path.join(client.current_folder, "build", "lib", libname)
+            self.assertTrue(os.path.exists(libpath))
+
+        client.run("install . --install-folder=build -s cppstd=14")
+        client.run("build . --build-folder=build")
+        self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS OFF", client.out)
+        libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
+        libpath = os.path.join(client.current_folder, "build", "lib", libname)
+        self.assertTrue(os.path.exists(libpath))

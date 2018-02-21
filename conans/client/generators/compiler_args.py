@@ -1,3 +1,4 @@
+from conans.client.build.cppstd_flags import cppstd_flag
 from conans.model import Generator
 from conans.paths import BUILD_INFO_COMPILER_ARGS
 from conans.client.build.compiler_flags import (architecture_flag, sysroot_flag,
@@ -58,6 +59,9 @@ class CompilerArgsGenerator(Generator):
         flags.extend(self._deps_build_info.sharedlinkflags)
         flags.extend(self._deps_build_info.exelinkflags)
         flags.extend(self._libcxx_flags())
+        flags.extend(cppstd_flag(self.conanfile.settings.get_safe("compiler"),
+                                 self.conanfile.settings.get_safe("compiler.version"),
+                                 self.conanfile.settings.get_safe("cppstd")))
         sysrf = sysroot_flag(self._deps_build_info.sysroot, compiler=self.compiler)
         if sysrf:
             flags.append(sysrf)
