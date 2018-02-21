@@ -251,9 +251,9 @@ target_link_libraries(mylib ${CONAN_LIBS})
             self.assertIn("Error in build()", client.out)
 
         # Now specify c++14
-        client.run("install . --install-folder=build -s cppstd=14")
+        client.run("install . --install-folder=build -s cppstd=gnu14")
         client.run("build . --build-folder=build")
-        self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS OFF", client.out)
+        self.assertIn("CPP STANDARD: 14 WITH EXTENSIONS ON", client.out)
         libname = "libmylib.a" if platform.system() != "Windows" else "mylib.lib"
         libpath = os.path.join(client.current_folder, "build", "lib", libname)
         self.assertTrue(os.path.exists(libpath))
