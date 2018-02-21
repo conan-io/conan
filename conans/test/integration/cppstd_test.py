@@ -23,7 +23,7 @@ class TestConan(ConanFile):
                            '-s compiler.version="4.6" -s cppstd=17', ignore_error=True)
         self.assertTrue(error)
         self.assertIn("The specified 'cppstd=17' is not available for 'gcc 4.6'", client.out)
-        self.assertIn("Possible values are ['98', '98gnu', '11', '11gnu']", client.out)
+        self.assertIn("Possible values are ['98', 'gnu98', '11', 'gnu11']", client.out)
 
         client.run('create . user/testing -s compiler="gcc" -s compiler.libcxx="libstdc++11" '
                    '-s compiler.version="6.3" -s cppstd=17')
@@ -50,7 +50,7 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting
         client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
                    '-s compiler.libcxx="libstdc++" '
-                   '-s cppstd=14gnu '
+                   '-s cppstd=gnu14 '
                    '--build missing')
         self.assertNotIn("BUILDING!", client.out)
 
@@ -58,6 +58,6 @@ class TestConan(ConanFile):
         client.save({CONANFILE: conanfile % '"cppstd"'})  # With the setting
         client.run('create . user/testing -s compiler="gcc" -s compiler.version="7.1" '
                    '-s compiler.libcxx="libstdc++" '
-                   '-s cppstd=17gnu '
+                   '-s cppstd=gnu17 '
                    '--build missing')
         self.assertIn("BUILDING!", client.out)

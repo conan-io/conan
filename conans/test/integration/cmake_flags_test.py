@@ -245,7 +245,7 @@ target_link_libraries(mylib ${CONAN_LIBS})
 """})
 
         if platform.system() != "Windows":
-            client.run("install . --install-folder=build -s cppstd=98gnu")
+            client.run("install . --install-folder=build -s cppstd=gnu98")
             error = client.run("build . --build-folder=build", ignore_error=True)
             self.assertTrue(error)
             self.assertIn("Error in build()", client.out)
