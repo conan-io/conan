@@ -70,8 +70,8 @@ def vs_installation_path(version, preference=None):
     vs_installation_path = None
 
     if not preference:
-        env_prefs = [var.lstrip().rstrip() for var in get_env("CONAN_VS_INSTALLATION_PREFERENCE",
-                                                               list())]
+        env_prefs = get_env("CONAN_VS_INSTALLATION_PREFERENCE", list())
+
         if env_prefs:
             preference = env_prefs
         else:  # default values
