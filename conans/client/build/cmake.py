@@ -419,8 +419,8 @@ class CMake(object):
             return {}
 
         ret = {}
-        if self._cppstd.endswith("gnu"):
-            ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd[:-3]
+        if self._cppstd.startswith("gnu"):
+            ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd[3:]
             ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "ON"
         else:
             ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd
