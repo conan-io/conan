@@ -8,7 +8,6 @@ from conans.model.options import OptionsValues
 from conans.model.ref import ConanFileReference
 from conans.model.settings import Settings
 from conans.model.values import Values
-from conans.model.requires import Requirements
 from conans.util.files import load
 
 
