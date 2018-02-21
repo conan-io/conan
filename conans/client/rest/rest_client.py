@@ -11,7 +11,7 @@ import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
 from conans.model.ref import ConanFileReference
-from six.moves.urllib.parse import urlsplit, parse_qs, urlencode
+from six.moves.urllib.parse import urlsplit, parse_qs, urlencode, urlparse, urljoin
 from conans import COMPLEX_SEARCH_CAPABILITY
 from conans.search.search import filter_packages
 from conans.model.info import ConanInfo
@@ -103,7 +103,7 @@ class RestApiClient(object):
 
         # Obtain the URLs
         url = "%s/conans/%s/digest" % (self._remote_api_url, "/".join(conan_reference))
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
 
         # Get the digest
         contents = self.download_files(urls)
@@ -118,7 +118,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/digest" % (self._remote_api_url,
                                                    "/".join(package_reference.conan),
                                                    package_reference.package_id)
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
 
         # Get the digest
         contents = self.download_files(urls)
@@ -132,7 +132,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
                                                           package_reference.package_id)
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
 
@@ -149,7 +149,7 @@ class RestApiClient(object):
         """Gets a dict of filename:contents from conans"""
         # Get the conanfile snapshot first
         url = "%s/conans/%s/download_urls" % (self._remote_api_url, "/".join(conan_reference))
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
 
         urls = filter_files_function(urls)
         if not urls:
@@ -164,7 +164,7 @@ class RestApiClient(object):
         url = "%s/conans/%s/packages/%s/download_urls" % (self._remote_api_url,
                                                           "/".join(package_reference.conan),
                                                           package_reference.package_id)
-        urls = self._get_json(url)
+        urls = self._get_file_to_url_dict(url)
         if not urls:
             raise NotFoundException("Package not found!")
         # TODO: Get fist an snapshot and compare files and download only required?
@@ -198,7 +198,7 @@ class RestApiClient(object):
             url = "%s/conans/%s/upload_urls" % (self._remote_api_url, "/".join(conan_reference))
             filesizes = {filename.replace("\\", "/"): os.stat(abs_path).st_size
                          for filename, abs_path in files_to_upload.items()}
-            urls = self._get_json(url, data=filesizes)
+            urls = self._get_file_to_url_dict(url, data=filesizes)
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
         if deleted:
             self._remove_conanfile_files(conan_reference, deleted)
@@ -230,7 +230,7 @@ class RestApiClient(object):
             filesizes = {filename: os.stat(abs_path).st_size for filename,
                          abs_path in files_to_upload.items()}
             self._output.rewrite_line("Requesting upload permissions...")
-            urls = self._get_json(url, data=filesizes)
+            urls = self._get_file_to_url_dict(url, data=filesizes)
             self._output.rewrite_line("Requesting upload permissions...Done!")
             self._output.writeln("")
             self.upload_files(urls, files_to_upload, self._output, retry, retry_wait)
@@ -388,6 +388,20 @@ class RestApiClient(object):
                                        json=payload)
         return response
 
+    def _complete_url(self, url):
+        """ Ensures that an url is absolute by completing relative urls with
+            the remote url. urls that are already absolute are not modified.
+        """
+        if bool(urlparse(url).netloc):
+            return url
+        return urljoin(self.remote_url, url)
+
+    def _get_file_to_url_dict(self, url, data=None):
+        """Call to url and decode the json returning a dict of {filepath: url} dict
+        converting the url to a complete url when needed"""
+        urls = self._get_json(url, data=data)
+        return {filepath: self._complete_url(url) for filepath, url in urls.items()}
+
     def _get_json(self, url, data=None):
         t1 = time.time()
         headers = self.custom_headers
@@ -509,7 +523,7 @@ class RestApiClient(object):
                                                               "/".join(conan_reference),
                                                               package_id)
         try:
-            urls = self._get_json(url)
+            urls = self._get_file_to_url_dict(url)
         except NotFoundException:
             if package_id:
                 raise NotFoundException("Package %s:%s not found" % (conan_reference, package_id))
