@@ -1,6 +1,6 @@
 import platform
+import subprocess
 import unittest
-from subprocess import Popen, PIPE, STDOUT
 
 from conans import tools
 from conans.client.conf.detect import detect_defaults_settings
@@ -31,23 +31,14 @@ class DetectTest(unittest.TestCase):
         if platform.system() != "Darwin":
             return
 
-        def _execute(command):
-            proc = Popen(command, shell=True, bufsize=1, stdout=PIPE, stderr=STDOUT)
+        try:
+            output = subprocess.check_output(["gcc", "--version"], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError:
+            # gcc is not installed or there is any error (no test scenario)
+            return
 
-            output_buffer = []
-            while True:
-                line = proc.stdout.readline()
-                if not line:
-                    break
-                # output.write(line)
-                output_buffer.append(str(line))
-
-            proc.communicate()
-            return proc.returncode, "".join(output_buffer)
-
-        proc_return, output = _execute("gcc --version")
-        if proc_return != 0 or "clang" not in output:
-            # Not test scenario (gcc should display clang in output
+        if "clang" not in output:
+            # Not test scenario gcc should display clang in output
             return
 
         output = TestBufferConanOutput()
