@@ -39,7 +39,8 @@ class DetectTest(unittest.TestCase):
 
         if "clang" not in output:
             # Not test scenario gcc should display clang in output
-            return
+            # see: https://stackoverflow.com/questions/19535422/os-x-10-9-gcc-links-to-clang
+            raise Exception("Apple gcc doesn't point to clang with gcc frontend anymore! please check")
 
         output = TestBufferConanOutput()
         with tools.environment_append({"CC": "gcc"}):
