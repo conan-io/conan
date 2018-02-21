@@ -401,7 +401,7 @@ class ConanInfo(object):
 
     def default_std_matching(self):
         """
-        If we are building with gcc 7, and we specify -s cppstd=14gnu, it's the default, so the
+        If we are building with gcc 7, and we specify -s cppstd=gnu14, it's the default, so the
         same as specifying None, packages are the same
         """
 
