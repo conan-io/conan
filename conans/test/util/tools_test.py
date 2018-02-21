@@ -126,7 +126,7 @@ class ToolsTest(unittest.TestCase):
         )
         self.assertEqual(
             tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED": " 1 , 2 , 3 "}),
-            [" 1 ", " 2 ", " 3 "]
+            ["1", "2", "3"]
         )
 
     def test_get_env_in_conanfile(self):
