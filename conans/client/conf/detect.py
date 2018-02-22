@@ -24,6 +24,14 @@ def _execute(command):
 
 
 def _gcc_compiler(output, compiler_exe="gcc"):
+
+    if platform.system() == "Darwin":
+        # In Mac OS X check if gcc is a fronted using apple-clang
+        _, out = _execute("%s --version" % compiler_exe)
+        out = out.lower()
+        if "clang" in out:
+            return None
+
     try:
         _, out = _execute('%s -dumpversion' % compiler_exe)
         compiler = "gcc"
@@ -147,16 +155,15 @@ def _get_default_compiler(output):
         output.info("CC and CXX: %s, %s " % (cc or "None", cxx or "None"))
         command = cc or cxx
         if "gcc" in command:
-            if platform.system() != "Darwin":
-                return _gcc_compiler(output, command)
-
-            # In Mac OS X check if gcc is a fronted using apple-clang
-            _, out = _execute("%s --version" % command)
-            out = out.lower()
-            if "clang" not in out:
-                return _gcc_compiler(output, command)
-            output.warn("%s detected as a frontend using apple-clang, skipping it to use native apple-clang" % command)
-            command = "clang"  # Force use of clang when gcc is detected as a fronted of apple-clang
+            gcc = _gcc_compiler(output, command)
+            if gcc is not None:
+                return gcc
+            if platform.system() == "Darwin":
+                output.warn(
+                    "%s detected as a frontend using apple-clang, skipping it to use native apple-clang" % command
+                )
+                # using clang instead
+                command = "clang"
         if "clang" in command.lower():
             return _clang_compiler(output, command)
         if platform.system() == "SunOS" and command.lower() == "cc":
