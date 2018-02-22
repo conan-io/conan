@@ -108,6 +108,9 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 
 # cpu_count = 1             # environment CONAN_CPU_COUNT
 
+# Change the default location for building test packages to a temporary folder
+# which is deleted after the test.
+# temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
 [storage]
 # This is the default path, but you can write your own. It must be an absolute path or a
@@ -180,6 +183,7 @@ class ConanClientConfigParser(ConfigParser, object):
 
                "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
+               "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
                }
 
         # Filter None values

@@ -206,7 +206,7 @@ class ConanAPIV1(object):
 
     @api_method
     def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
-             remote=None, update=False, build_modes=None, cwd=None):
+             remote=None, update=False, build_modes=None, cwd=None, test_build_folder=None):
 
         settings = settings or []
         options = options or []
@@ -219,7 +219,8 @@ class ConanAPIV1(object):
         reference = ConanFileReference.loads(reference)
         pt = PackageTester(self._manager, self._user_io)
         pt.install_build_and_test(conanfile_path, reference, profile, remote,
-                                  update, build_modes=build_modes)
+                                  update, build_modes=build_modes,
+                                  test_build_folder=test_build_folder)
 
     @api_method
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
@@ -228,7 +229,7 @@ class ConanAPIV1(object):
                build_modes=None,
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
-               remote=None, update=False, cwd=None):
+               remote=None, update=False, cwd=None, test_build_folder=None):
         """
         API method to create a conan package
 
@@ -295,7 +296,8 @@ class ConanAPIV1(object):
                                       manifest_folder=manifest_folder,
                                       manifest_verify=manifest_verify,
                                       manifest_interactive=manifest_interactive,
-                                      keep_build=keep_build)
+                                      keep_build=keep_build,
+                                      test_build_folder=test_build_folder)
         else:
             self._manager.install(reference=reference,
                                   install_folder=None,  # Not output anything
