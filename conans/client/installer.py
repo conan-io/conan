@@ -186,14 +186,15 @@ class _ConanPackageBuilder(object):
                         self._out.warn("Unable to remove imported file from build: %s" % f)
 
 
-def _raise_package_not_found_error(conan_file, conan_ref, out):
+def _raise_package_not_found_error(conan_file, conan_ref, package_id, out):
     settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
     options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
 
     out.warn('''Can't find a '%s' package for the specified options and settings:
 - Settings: %s
 - Options: %s
-''' % (conan_ref, settings_text, options_text))
+- Package ID: %s
+''' % (conan_ref, settings_text, options_text, package_id))
 
     raise ConanException('''Missing prebuilt package for '%s'
 Try to build it from sources with "--build %s"
@@ -354,7 +355,7 @@ class ConanInstaller(object):
                 package_ref = PackageReference(conan_ref, package_id)
                 build_allowed = self._build_mode.allowed(conan_file, conan_ref)
                 if not build_allowed:
-                    _raise_package_not_found_error(conan_file, conan_ref, output)
+                    _raise_package_not_found_error(conan_file, conan_ref, package_id, output)
 
                 skip_build = conan_file.develop and keep_build
                 if skip_build:
@@ -434,7 +435,8 @@ class ConanInstaller(object):
                 make_read_only(package_folder)
             return True
 
-        _raise_package_not_found_error(conan_file, package_reference.conan, output)
+        _raise_package_not_found_error(conan_file, package_reference.conan,
+                                       package_reference.package_id, output)
 
     def _log_built_package(self, conan_file, package_ref, duration):
         build_folder = self._client_cache.build(package_ref, conan_file.short_paths)
