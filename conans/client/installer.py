@@ -269,10 +269,9 @@ class ConanInstaller(object):
         self._build_mode = build_mode
         self._built_packages = set()  # To avoid re-building twice the same package reference
 
-    def install(self, deps_graph, profile_build_requires, keep_build=False, conan_project=None):
+    def install(self, deps_graph, profile_build_requires, keep_build=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
-        conan_project = conan_project or {}
         t1 = time.time()
         # order by levels and propagate exports as download imports
         nodes_by_level = deps_graph.by_levels()

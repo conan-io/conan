@@ -30,6 +30,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
+from conans.model.project import ConanProject
 
 
 class BuildMode(object):
@@ -319,14 +320,15 @@ class ConanManager(object):
         """
 
         try:
-            conan_project = load(os.path.join(install_folder, "conan-project.txt"))
-        except IOError:
-            conan_project = {}
-        else:
-            conan_project = [line.strip() for line in conan_project.splitlines() if line.strip()]
-            conan_project = [line.split(":") for line in conan_project]
-            conan_project = [(k.strip(), v.strip()) for k, v in conan_project]
-            conan_project = dict(conan_project)
+            base_folder = os.path.dirname(reference)
+            path = os.path.join(base_folder, "conan-project.txt")
+            text = load(path)
+            conan_project = ConanProject(base_folder)
+            conan_project.loads(text)
+            print "CONAN_PROJECT ", conan_project._local_packages
+        except Exception as e:
+            print "SOMETHING WRONT!!!!! ", e
+            conan_project = None
 
         if generators is not False:
             generators = set(generators) if generators else set()
@@ -349,6 +351,7 @@ class ConanManager(object):
         if inject_require:
             self._inject_require(conanfile, inject_require)
         graph_builder = self._get_graph_builder(loader, update, remote_proxy)
+        graph_builder._conan_project = conan_project
         deps_graph = graph_builder.load(conanfile)
 
         registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
@@ -379,7 +382,7 @@ class ConanManager(object):
         if not isinstance(reference, ConanFileReference):
             build_requires.install("", conanfile, installer, profile.build_requires, output)
 
-        installer.install(deps_graph, profile.build_requires, keep_build, conan_project)
+        installer.install(deps_graph, profile.build_requires, keep_build)
 
         build_mode.report_matches()
 
