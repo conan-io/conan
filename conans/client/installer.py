@@ -401,8 +401,13 @@ class ConanInstaller(object):
                 package_ref = None
                 if conan_ref:
                     package_ref = PackageReference(conan_ref, package_id)
-                    with self._client_cache.package_lock(package_ref):
-                        self._get_remote_package(conan_file, package_ref, output)
+
+                    if self._conan_project:
+                        package_path = self._conan_project.get_package_path(package_ref)
+                        print "PACKAGE PATH HERE!!!! ", package_path
+                    else:
+                        with self._client_cache.package_lock(package_ref):
+                            self._get_remote_package(conan_file, package_ref, output)
 
                 # Assign to the node the propagated info
                 # (conan_ref could be None if user project, but of course assign the info
@@ -410,7 +415,11 @@ class ConanInstaller(object):
 
                 if package_ref:
                     # Call the info method
-                    package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
+                    if self._conan_project:
+                        package_folder = self._conan_project.get_package_path(package_ref)
+                        print "PACKAGE PATH HERE!!!! ", package_path
+                    else:
+                        package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
                     call_package_info(conan_file, package_folder)
 
     def _get_remote_package(self, conan_file, package_reference, output):
@@ -490,9 +499,18 @@ class ConanInstaller(object):
                         if self._build_mode.forced(conan_file, conan_ref):
                             build_node = True
                         else:
-                            available = self._remote_proxy.package_available(package_reference,
-                                                                             conan_file.short_paths,
-                                                                             check_outdated)
+                            if self._conan_project:
+                                package_path = self._conan_project.get_package_path(package_reference)
+                                print "PACKAGE PATH!!!! ", package_path
+                                if os.path.exists(package_path):
+                                    print "PACKAEG PATH AVIALBLE!!! "
+                                    available = True
+                                else:
+                                    available = False
+                            else:
+                                available = self._remote_proxy.package_available(package_reference,
+                                                                                 conan_file.short_paths,
+                                                                                 check_outdated)
                             build_node = not available
 
                 nodes_to_build.append((conan_ref, package_id, conan_file, build_node))

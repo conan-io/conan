@@ -19,6 +19,7 @@ class ConanProjectTest(unittest.TestCase):
 folder: ../B
 """
         client.save({"B/conanfile.py": conanfile.format(deps=None),
+                     "B/package/manifest.txt": "",
                      "A/conanfile.py": conanfile.format(deps="'HelloB/0.1@lasote/stable'"),
                      "A/conan-project.txt": project})
 

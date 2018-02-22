@@ -16,6 +16,10 @@ class LocalPackage(object):
     def conanfile_path(self):
         return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, "conanfile.py"))
 
+    @property
+    def package_path(self):
+        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, "package"))
+
     def load_lines(self, lines):
         for line in lines:
             key, value = line.split(":", 1)
@@ -43,6 +47,12 @@ class ConanProject(object):
         if not local:
             return None
         return local.conanfile_path
+
+    def get_package_path(self, package_reference):
+        local = self._local_packages.get(package_reference.conan.name)
+        if not local:
+            return None
+        return local.package_path
 
     def loads(self, text):
         # Some duplication with _loads_cpp_info()
