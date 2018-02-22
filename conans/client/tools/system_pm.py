@@ -72,7 +72,7 @@ class SystemPackageTool(object):
         if mode in ("verify", "disabled"):
             # Report to output packages need to be installed
             if mode == "disabled":
-                _global_output.error("The following packages need to be installed:\n %s" % "\n".join(packages))
+                _global_output.info("The following packages need to be installed:\n %s" % "\n".join(packages))
                 return
 
             if mode == "verify" and not self._installed(packages):
