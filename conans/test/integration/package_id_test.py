@@ -165,6 +165,7 @@ class Pkg(ConanFile):
         with self.assertRaises(Exception):
             self.client.run("install .")
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
+        self.assertIn("Package ID:", self.client.user_io.out)
 
     def test_nameless_mode(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
