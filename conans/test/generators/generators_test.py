@@ -39,7 +39,7 @@ ycm
                                  'conanbuildinfo.gcc', 'conanbuildinfo.qbs', 'conanbuildinfo.pri',
                                  'SConscript_conan', 'conanbuildinfo.txt', 'conanbuildinfo.props',
                                  'conanbuildinfo.vsprops', 'conanbuildinfo.xcconfig',
-                                 '.ycm_extra_conf.py']),
+                                 'conan_ycm_flags.json', 'conan_ycm_extra_conf.py']),
                          sorted(os.listdir(client.current_folder)))
 
     def test_qmake(self):
