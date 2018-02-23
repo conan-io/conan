@@ -191,6 +191,7 @@ class ConanManager(object):
 
         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
         conanfile.info.recipe_hash = recipe_hash
+        conanfile.develop = True
         if source_folder or build_folder:
             install_folder = build_folder  # conaninfo.txt will be there
             package_output = ScopedOutput(str(reference), self._user_io.out)
