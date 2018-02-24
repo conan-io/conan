@@ -25,14 +25,14 @@ def _execute(command):
 
 def _gcc_compiler(output, compiler_exe="gcc"):
 
-    if platform.system() == "Darwin":
-        # In Mac OS X check if gcc is a fronted using apple-clang
-        _, out = _execute("%s --version" % compiler_exe)
-        out = out.lower()
-        if "clang" in out:
-            return None
-
     try:
+        if platform.system() == "Darwin":
+            # In Mac OS X check if gcc is a fronted using apple-clang
+            _, out = _execute("%s --version" % compiler_exe)
+            out = out.lower()
+            if "clang" in out:
+                return None
+
         _, out = _execute('%s -dumpversion' % compiler_exe)
         compiler = "gcc"
         installed_version = re.search("([0-9](\.[0-9])?)", out).group()
