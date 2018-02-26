@@ -379,7 +379,12 @@ function(conan_check_compiler)
         message(STATUS "WARN: Disabled conan compiler checks")
         return()
     endif()
-
+    if(NOT CMAKE_CXX_COMPILER_ID AND NOT CMAKE_C_COMPILER_ID)
+        # This use case happens when compiler is not identified by CMake, but the compilers are there and work
+        message(STATUS "*** WARN: CMake was not able to identify a C or C++ compiler ***")
+        message(STATUS "*** WARN: Disabling compiler checks. Please make sure your settings match your environment ***")
+        return()
+    endif()
     if(NOT DEFINED CONAN_COMPILER)
         conan_get_compiler(CONAN_COMPILER CONAN_COMPILER_VERSION)
         if(NOT DEFINED CONAN_COMPILER)
