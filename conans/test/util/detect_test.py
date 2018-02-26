@@ -47,6 +47,7 @@ class DetectTest(unittest.TestCase):
             result = detect_defaults_settings(output)
         # result is a list of tuples (name, value) so converting it to dict
         result = dict(result)
-        self.assertEquals(result.get("compiler", None), "apple-clang")
+        # No compiler should be detected
+        self.assertIsNone(result.get("compiler", None))
         self.assertIn("gcc detected as a frontend using apple-clang", output)
-        self.assertIsNotNone(output.warn)
+        self.assertIsNotNone(output.error)
