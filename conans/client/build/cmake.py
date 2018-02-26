@@ -2,6 +2,7 @@ import os
 import platform
 
 from collections import OrderedDict
+from itertools import chain
 
 from conans.client import defs_to_string, join_arguments
 from conans.client.build.cppstd_flags import cppstd_flag
@@ -413,6 +414,51 @@ class CMake(object):
     @verbose.setter
     def verbose(self, value):
         self.definitions["CMAKE_VERBOSE_MAKEFILE"] = "ON" if value else "OFF"
+
+    def patch_config_paths(self):
+        """
+        changes references to the absolute path of the installed package in
+        exported cmake config files to the appropriate conan variable. This makes
+        most (sensible) cmake config files portable.
+
+        For example, if a package foo installs a file called "fooConfig.cmake" to
+        be used by cmake's find_package method, normally this file will contain
+        absolute paths to the installed package folder, for example it will contain
+        a line such as:
+
+            SET(Foo_INSTALL_DIR /home/developer/.conan/data/Foo/1.0.0/...)
+
+        This will cause cmake find_package() method to fail when someone else
+        installs the package via conan.
+
+        This function will replace such mentions to
+
+            SET(Foo_INSTALL_DIR ${CONAN_FOO_ROOT})
+
+        which is a variable that is set by conanbuildinfo.cmake, so that find_package()
+        now correctly works on this conan package.
+
+        If the install() method of the CMake object in the conan file is used, this
+        function should be called _after_ that invocation. For example:
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+                cmake.install()
+                cmake.patch_config_paths()
+        """
+
+        if not self._conanfile.name:
+            raise ConanException("cmake.patch_config_paths() can't work without package name. "
+                                 "Define name in your recipe")
+        pf = self.definitions.get("CMAKE_INSTALL_PREFIX")
+        replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
+        allwalk = chain(os.walk(self._conanfile.build_folder), os.walk(self._conanfile.package_folder))
+        for root, _, files in allwalk:
+            for f in files:
+                if f.endswith(".cmake"):
+                    tools.replace_in_file(os.path.join(root, f), pf, replstr, strict=False)
 
     def _get_cpp_standard_vars(self):
         if not self._cppstd:
