@@ -34,6 +34,8 @@ class VisualStudioGenerator(Generator):
     </Midl>
     <ResourceCompile>
       <AdditionalIncludeDirectories>{include_dirs}%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>{definitions}%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalOptions>{compiler_flags} %(AdditionalOptions)</AdditionalOptions>
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup />

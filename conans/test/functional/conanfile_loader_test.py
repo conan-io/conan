@@ -97,6 +97,8 @@ OpenCV2:other_option=Cosa #
         file_content = '''[requires]
 OpenCV/2.4.10@phil/stable
 OpenCV2/2.4.10@phil/stable
+[build_requires]
+MyPkg/1.0.0@phil/stable
 [generators]
 one
 two
@@ -121,8 +123,11 @@ OpenCV2:other_option=Cosa""")
         requirements = Requirements()
         requirements.add("OpenCV/2.4.10@phil/stable")
         requirements.add("OpenCV2/2.4.10@phil/stable")
+        build_requirements = []
+        build_requirements.append("MyPkg/1.0.0@phil/stable")
 
         self.assertEquals(ret.requires, requirements)
+        self.assertEquals(ret.build_requires, build_requirements)
         self.assertEquals(ret.generators, ["one", "two"])
         self.assertEquals(ret.options.values.dumps(), options1.dumps())
 
@@ -162,6 +167,7 @@ OpenCV/bin, * -> ./bin # I need this binaries
 OpenCV/lib, * -> ./lib @ root_package=Pkg
 OpenCV/data, * -> ./data @ root_package=Pkg, folder=True # Irrelevant
 docs, * -> ./docs @ root_package=Pkg, folder=True, ignore_case=True, excludes="a b c" # Other
+licenses, * -> ./licenses @ root_package=Pkg, folder=True, ignore_case=True, excludes="a b c", keep_path=False # Other
 '''
         tmp_dir = temp_folder()
         file_path = os.path.join(tmp_dir, "file.txt")
@@ -171,10 +177,12 @@ docs, * -> ./docs @ root_package=Pkg, folder=True, ignore_case=True, excludes="a
 
         ret.copy = Mock()
         ret.imports()
-        expected = [call(u'*', u'./bin', u'OpenCV/bin', None, False, False, None),
-                    call(u'*', u'./lib', u'OpenCV/lib', u'Pkg', False, False, None),
-                    call(u'*', u'./data', u'OpenCV/data', u'Pkg', True, False, None),
-                    call(u'*', u'./docs', u'docs', u'Pkg', True, True, [u'"a', u'b', u'c"'])]
+        expected = [call(u'*', u'./bin', u'OpenCV/bin', None, False, False, None, True),
+                    call(u'*', u'./lib', u'OpenCV/lib', u'Pkg', False, False, None, True),
+                    call(u'*', u'./data', u'OpenCV/data', u'Pkg', True, False, None, True),
+                    call(u'*', u'./docs', u'docs', u'Pkg', True, True, [u'"a', u'b', u'c"'], True),
+                    call(u'*', u'./licenses', u'licenses', u'Pkg', True, True, [u'"a', u'b', u'c"'],
+                         False)]
         self.assertEqual(ret.copy.call_args_list, expected)
 
     def test_package_settings(self):

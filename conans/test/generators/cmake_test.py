@@ -44,7 +44,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def variables_cmake_multi_user_vars_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x: x), None)
+        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x, raise_undefined_field: x), None)
         conanfile.deps_user_info["LIB1"].myvar = "myvalue"
         conanfile.deps_user_info["LIB1"].myvar2 = "myvalue2"
         conanfile.deps_user_info["lib2"].MYVAR2 = "myvalue4"
@@ -57,7 +57,7 @@ class CMakeGeneratorTest(unittest.TestCase):
 
     def variables_cmake_multi_user_vars_escape_test(self):
         settings_mock = namedtuple("Settings", "build_type, os, os_build, constraint")
-        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x: x), None)
+        conanfile = ConanFile(None, None, settings_mock("Release", None, None, lambda x, raise_undefined_field: x), None)
         conanfile.deps_user_info["FOO"].myvar = 'my"value"'
         conanfile.deps_user_info["FOO"].myvar2 = 'my${value}'
         conanfile.deps_user_info["FOO"].myvar3 = 'my\\value'
@@ -97,7 +97,7 @@ class CMakeGeneratorTest(unittest.TestCase):
         # extract the conan_basic_setup macro
         macro = self._extract_macro("conan_basic_setup", aux_cmake_test_setup)
         self.assertEqual("""macro(conan_basic_setup)
-    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS)
+    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
@@ -122,6 +122,10 @@ class CMakeGeneratorTest(unittest.TestCase):
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
         message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
+    endif()
+    if(NOT ARGUMENTS_SKIP_STD)
+        message(STATUS "Conan: Adjusting language standard")
+        conan_set_std()
     endif()
     conan_set_vs_runtime()
     conan_set_libcxx()

@@ -5,6 +5,8 @@ import requests
 from conans.client.tools import *
 from conans.client.output import ConanOutput
 # noinspection PyUnresolvedReferences
+from conans.util.env_reader import get_env
+# noinspection PyUnresolvedReferences
 from conans.util.files import (_generic_algorithm_sum, load, save, sha256sum,
                                sha1sum, md5sum, md5, touch, relative_dirs, rmdir, mkdir)
 

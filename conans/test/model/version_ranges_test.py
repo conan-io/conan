@@ -110,7 +110,7 @@ class Retriever(object):
         conan_path = os.path.join(self.folder, "/".join(conan_ref), CONANFILE)
         return conan_path
 
-    def search(self, pattern):
+    def search_recipes(self, pattern):
         from fnmatch import translate
         pattern = translate(pattern)
         pattern = re.compile(pattern)
@@ -171,7 +171,7 @@ class VersionRangesTest(unittest.TestCase):
         self.loader = ConanFileLoader(None, Settings.loads(""), Profile())
         self.retriever = Retriever(self.loader, self.output)
         self.remote_search = MockSearchRemote()
-        self.resolver = RequireResolver(self.output, self.retriever, self.remote_search)
+        self.resolver = RequireResolver(self.output, self.retriever, self.remote_search, update=False)
         self.builder = DepsGraphBuilder(self.retriever, self.output, self.loader, self.resolver)
 
         for v in ["0.1", "0.2", "0.3", "1.1", "1.1.2", "1.2.1", "2.1", "2.2.1"]:

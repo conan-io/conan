@@ -12,6 +12,18 @@ from nose_parameterized import parameterized
 
 class ExportPkgTest(unittest.TestCase):
 
+    def test_develop(self):
+        # https://github.com/conan-io/conan/issues/2513
+        conanfile = """from conans import ConanFile
+class HelloPythonConan(ConanFile):
+    def package(self):
+        self.output.info("DEVELOP IS: %s!" % self.develop)
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("export-pkg . Hello/0.1@lasote/stable")
+        self.assertIn("Hello/0.1@lasote/stable: DEVELOP IS: True!", client.out)
+
     def test_options(self):
         # https://github.com/conan-io/conan/issues/2242
         conanfile = """from conans import ConanFile
@@ -177,7 +189,7 @@ class TestConan(ConanFile):
 
         # ensure the recipe hash is computed and added
         client.run("search Hello/0.1@lasote/stable")
-        self.assertIn("outdated from recipe: False", client.user_io.out)
+        self.assertIn("Outdated from recipe: False", client.user_io.out)
 
     def test_build_folders(self):
         client = TestClient()

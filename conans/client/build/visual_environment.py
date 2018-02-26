@@ -1,6 +1,9 @@
 import copy
 import os
 
+from conans.client.build.compiler_flags import build_type_define, build_type_flag, visual_runtime, format_defines
+from conans.client.build.cppstd_flags import cppstd_flag
+
 
 class VisualStudioBuildEnvironment(object):
     """
@@ -21,6 +24,8 @@ class VisualStudioBuildEnvironment(object):
         self._settings = conanfile.settings
         self._options = conanfile.options
         self._deps_cpp_info = conanfile.deps_cpp_info
+        self._build_type = self._settings.get_safe("build_type")
+        self._runtime = self._settings.get_safe("runtime")
 
         self.include_paths = conanfile.deps_cpp_info.include_paths
         self.lib_paths = conanfile.deps_cpp_info.lib_paths
@@ -29,6 +34,7 @@ class VisualStudioBuildEnvironment(object):
         self.flags = self._configure_flags()
         self.cxx_flags = copy.copy(self._deps_cpp_info.cppflags)
         self.link_flags = self._configure_link_flags()
+        self.std = self._std_cpp()
 
     def _configure_link_flags(self):
         ret = copy.copy(self._deps_cpp_info.exelinkflags)
@@ -37,23 +43,33 @@ class VisualStudioBuildEnvironment(object):
 
     def _configure_flags(self):
         ret = copy.copy(self._deps_cpp_info.cflags)
-        if self._settings.get_safe("build_type") == "Debug":
-            ret.append("/Zi")  # default debug information
+        btd = build_type_define(build_type=self._build_type)
+        if btd:
+            ret.extend(format_defines([btd], compiler="Visual Studio"))
+        btf = build_type_flag("Visual Studio", build_type=self._build_type)
+        if btf:
+            ret.append(btf)
         return ret
 
     def _get_cl_list(self, quotes=True):
+        # FIXME: It should be managed with the compiler_flags module
+        # But need further investigation about the quotes and so on, so better to not break anything
         if quotes:
             ret = ['/I"%s"' % lib for lib in self.include_paths]
         else:
             ret = ['/I%s' % lib for lib in self.include_paths]
 
-        if self.runtime:
-            ret.append("/%s" % self.runtime)
+        runtime = visual_runtime(self._runtime)
+        if runtime:
+            ret.append(runtime)
 
-        ret.extend(['/D%s' % lib for lib in self.defines])
+        ret.extend(format_defines(self.defines, "Visual Studio"))
         ret.extend(self.flags)
         ret.extend(self.cxx_flags)
         ret.extend(self.link_flags)
+
+        if self.std:
+            ret.append(self.std)
 
         return ret
 
@@ -83,6 +99,15 @@ class VisualStudioBuildEnvironment(object):
         ret = {"CL": cl,
                "LIB": lib}
         return ret
+
+    def _std_cpp(self):
+        if self._settings.get_safe("compiler") == "Visual Studio" and \
+                self._settings.get_safe("cppstd"):
+            flag = cppstd_flag(self._settings.get_safe("compiler"),
+                               self._settings.get_safe("compiler.version"),
+                               self._settings.get_safe("cppstd"))
+            return flag
+        return None
 
 
 def _environ_value_prefix(var_name, prefix=" "):

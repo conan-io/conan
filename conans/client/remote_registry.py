@@ -1,5 +1,5 @@
 import os
-from conans.errors import ConanException
+from conans.errors import ConanException, NoRemoteAvailable
 from conans.util.files import load, save
 from collections import OrderedDict, namedtuple
 import fasteners
@@ -7,9 +7,7 @@ from conans.util.config_parser import get_bool_from_text_value
 from conans.util.log import logger
 
 
-default_remotes = """conan-center https://conan.bintray.com True
-conan-transit https://conan-transit.bintray.com True
-"""
+default_remotes = "conan-center https://conan.bintray.com True"
 
 Remote = namedtuple("Remote", "name url verify_ssl")
 
@@ -78,7 +76,7 @@ class RemoteRegistry(object):
         try:
             return self.remotes[0]
         except:
-            raise ConanException("No default remote defined in %s" % self._filename)
+            raise NoRemoteAvailable("No default remote defined in %s" % self._filename)
 
     @property
     def remotes(self):
@@ -98,8 +96,8 @@ class RemoteRegistry(object):
             try:
                 return Remote(name, remotes[name][0], remotes[name][1])
             except KeyError:
-                raise ConanException("No remote '%s' defined in remotes in file %s"
-                                     % (name, self._filename))
+                raise NoRemoteAvailable("No remote '%s' defined in remotes in file %s"
+                                        % (name, self._filename))
 
     def get_ref(self, conan_reference):
         with fasteners.InterProcessLock(self._filename + ".lock", logger=logger):
@@ -193,7 +191,7 @@ class RemoteRegistry(object):
             if insert is not None:
                 try:
                     insert_index = int(insert)
-                except:
+                except ValueError:
                     raise ConanException("insert argument must be an integer")
                 remotes.pop(remote_name, None)  # Remove if exists (update)
                 remotes_list = list(remotes.items())
