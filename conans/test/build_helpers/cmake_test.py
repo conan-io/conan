@@ -13,7 +13,7 @@ from conans.client.conf import default_settings_yml
 from conans.client.build.cmake import CMake
 from conans.test.utils.tools import TestBufferConanOutput
 from conans.tools import cpu_count
-from conans.util.files import save
+from conans.util.files import save, load
 from conans.test.utils.test_files import temp_folder
 from conans.model.options import Options, PackageOptions
 from conans.errors import ConanException
@@ -25,6 +25,33 @@ class CMakeTest(unittest.TestCase):
 
     def tearDown(self):
         shutil.rmtree(self.tempdir)
+
+    def config_patch_test(self):
+        conan_file = ConanFileMock()
+        conan_file.name = "MyPkg"
+        conan_file.settings = Settings()
+        conan_file.source_folder = os.path.join(self.tempdir, "src")
+        conan_file.build_folder = os.path.join(self.tempdir, "build")
+        conan_file.package_folder = os.path.join(self.tempdir, "pkg")
+
+        msg = "FOLDER: " + conan_file.package_folder
+        for folder in (conan_file.build_folder, conan_file.package_folder):
+            save(os.path.join(folder, "file1.cmake"), "Nothing")
+            save(os.path.join(folder, "file2"), msg)
+            save(os.path.join(folder, "file3.txt"), msg)
+            save(os.path.join(folder, "file3.cmake"), msg)
+            save(os.path.join(folder, "sub", "file3.cmake"), msg)
+
+        cmake = CMake(conan_file, generator="Unix Makefiles")
+        cmake.patch_config_paths()
+        for folder in (conan_file.build_folder, conan_file.package_folder):
+            self.assertEqual("Nothing", load(os.path.join(folder, "file1.cmake")))
+            self.assertEqual(msg, load(os.path.join(folder, "file2")))
+            self.assertEqual(msg, load(os.path.join(folder, "file3.txt")))
+            self.assertEqual("FOLDER: ${CONAN_MYPKG_ROOT}",
+                             load(os.path.join(folder, "file3.cmake")))
+            self.assertEqual("FOLDER: ${CONAN_MYPKG_ROOT}",
+                             load(os.path.join(folder, "sub", "file3.cmake")))
 
     def folders_test(self):
         def quote_var(var):
