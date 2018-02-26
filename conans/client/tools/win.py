@@ -5,7 +5,6 @@ import platform
 import re
 
 import subprocess
-from collections import OrderedDict
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
@@ -37,7 +36,13 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         self.run(command)
     """
     targets = targets or []
-    command = "devenv %s /upgrade && " % sln_path if upgrade_project else ""
+    command = ""
+
+    if upgrade_project and not get_env("CONAN_SKIP_VS_PROJECTS_UPGRADE", False):
+        command += "devenv %s /upgrade && " % sln_path
+    else:
+        _global_output.info("Skipped sln project upgrade")
+
     build_type = build_type or settings.build_type
     arch = arch or settings.arch
     if not build_type:
