@@ -3,6 +3,7 @@ import unittest
 
 from nose.plugins.attrib import attr
 
+from conans import tools
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.test.utils.visual_project_files import get_vs_project_files
@@ -70,3 +71,9 @@ class HelloConan(ConanFile):
         client.run("install Hello/1.2.1@lasote/stable --build -s arch=x86 -s build_type=Debug")
         self.assertIn("Debug|x86", client.user_io.out)
         self.assertIn("Copied 1 '.exe' files: MyProject.exe", client.user_io.out)
+
+        # Try to not update the project
+        tools.replace_in_file(client.client_cache.conan_conf_path, "[general]",
+                              "[general]\nskip_vs_projects_upgrade = True)")
+        client.run("install Hello/1.2.1@lasote/stable --build")
+        self.assertIn("Skipped sln project upgrade")
