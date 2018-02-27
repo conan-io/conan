@@ -1,5 +1,6 @@
 from os.path import join
 
+from conans.client.generators.compiler_args import CompilerArgsGenerator
 from conans.client.generators.pkg_config import PkgConfigGenerator
 from conans.errors import ConanException
 from conans.util.files import save, normalize
@@ -47,6 +48,7 @@ registered_generators = _GeneratorManager()
 
 registered_generators.add("txt", TXTGenerator)
 registered_generators.add("gcc", GCCGenerator)
+registered_generators.add("compiler_args", CompilerArgsGenerator)
 registered_generators.add("cmake", CMakeGenerator)
 registered_generators.add("cmake_multi", CMakeMultiGenerator)
 registered_generators.add("qmake", QmakeGenerator)

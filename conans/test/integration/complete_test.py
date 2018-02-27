@@ -1,4 +1,7 @@
 import unittest
+
+from nose_parameterized import parameterized
+
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 import os
@@ -11,12 +14,12 @@ from conans.test.utils.test_files import uncompress_packaged_files
 @attr("slow")
 class CompleteFlowTest(unittest.TestCase):
 
-    def setUp(self):
-        test_server = TestServer()
+    @parameterized.expand([(True, ), (False, )])
+    def reuse_test(self, complete_urls):
+        test_server = TestServer(complete_urls=complete_urls)
         self.servers = {"default": test_server}
         self.client = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
 
-    def reuse_test(self):
         conan_reference = ConanFileReference.loads("Hello0/0.1@lasote/stable")
         files = cpp_hello_conan_files("Hello0", "0.1", need_patch=True)
         self.client.save(files)
@@ -80,7 +83,6 @@ class CompleteFlowTest(unittest.TestCase):
             self._assert_library_exists(ref, other_conan.paths)
 
         client3 = TestClient(servers=self.servers, users={"default": [("lasote", "mypass")]})
-        conan_reference = ConanFileReference.loads("Hello1/0.2@lasote/stable")
         files3 = cpp_hello_conan_files("Hello1", "0.1", ["Hello0/0.1@lasote/stable"])
         client3.save(files3)
         client3.run('install .')

@@ -175,7 +175,7 @@ class TestServer(object):
                  write_permissions=None, users=None, plugins=None, base_path=None,
                  server_version=Version(SERVER_VERSION),
                  min_client_compatible_version=Version(MIN_CLIENT_COMPATIBLE_VERSION),
-                 server_capabilities=None):
+                 server_capabilities=None, complete_urls=False):
         """
              'read_permissions' and 'write_permissions' is a list of:
                  [("opencv/2.3.4@lasote/testing", "user1, user2")]
@@ -195,9 +195,10 @@ class TestServer(object):
 
         self.fake_url = "http://fake%s.com" % str(uuid.uuid4()).replace("-", "")
         min_client_ver = min_client_compatible_version
+        base_url = "%s/v1" % self.fake_url if complete_urls else "v1"
         self.test_server = TestServerLauncher(base_path, read_permissions,
                                               write_permissions, users,
-                                              base_url=self.fake_url + "/v1",
+                                              base_url=base_url,
                                               plugins=plugins,
                                               server_version=server_version,
                                               min_client_compatible_version=min_client_ver,

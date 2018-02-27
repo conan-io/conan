@@ -3,14 +3,16 @@ import platform
 import unittest
 
 from collections import namedtuple
+from six import StringIO
 
 from conans.client.client_cache import CONAN_CONF
 
 from conans import tools
 from conans.client.conan_api import ConanAPIV1
 from conans.client.conf import default_settings_yml, default_client_conf
+from conans.client.output import ConanOutput
 
-from conans.errors import ConanException
+from conans.errors import ConanException, NotFoundException
 from conans.model.settings import Settings
 
 from conans.test.utils.runner import TestRunner
@@ -29,7 +31,7 @@ class RunnerMock(object):
         self.command_called = None
         self.return_ok = return_ok
 
-    def __call__(self, command, output, win_bash=False, subsystem=None):  # @UnusedVariable
+    def __call__(self, command, output, win_bash=False, subsystem=None): # @UnusedVariable
         self.command_called = command
         self.win_bash = win_bash
         self.subsystem = subsystem
@@ -70,6 +72,85 @@ class ToolsTest(unittest.TestCase):
         self.assertGreaterEqual(cpus, 1)
         with tools.environment_append({"CONAN_CPU_COUNT": "34"}):
             self.assertEquals(tools.cpu_count(), 34)
+
+    def get_env_unit_test(self):
+        """
+        Unit tests tools.get_env
+        """
+        # Test default
+        self.assertIsNone(
+            tools.get_env("NOT_DEFINED", environment={}),
+            None
+        )
+        # Test defined default
+        self.assertEqual(
+            tools.get_env("NOT_DEFINED_KEY", default="random_default", environment={}),
+            "random_default"
+        )
+        # Test return defined string
+        self.assertEqual(
+            tools.get_env("FROM_STR", default="", environment={"FROM_STR": "test_string_value"}),
+            "test_string_value"
+        )
+        # Test boolean conversion
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "1"}),
+            True
+        )
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": "0"}),
+            False
+        )
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=False, environment={"BOOL_FROM_STR": "True"}),
+            True
+        )
+        self.assertEqual(
+            tools.get_env("BOOL_FROM_STR", default=True, environment={"BOOL_FROM_STR": ""}),
+            False
+        )
+        # Test int conversion
+        self.assertEqual(
+            tools.get_env("TO_INT", default=2, environment={"TO_INT": "1"}),
+            1
+        )
+        # Test float conversion
+        self.assertEqual(
+            tools.get_env("TO_FLOAT", default=2.0, environment={"TO_FLOAT": "1"}),
+            1.0
+        ),
+        # Test list conversion
+        self.assertEqual(
+            tools.get_env("TO_LIST", default=[], environment={"TO_LIST": "1,2,3"}),
+            ["1", "2", "3"]
+        )
+        self.assertEqual(
+            tools.get_env("TO_LIST_NOT_TRIMMED", default=[], environment={"TO_LIST_NOT_TRIMMED": " 1 , 2 , 3 "}),
+            ["1", "2", "3"]
+        )
+
+    def test_get_env_in_conanfile(self):
+        """
+        Test get_env is available and working in conanfile
+        """
+        client = TestClient()
+
+        conanfile = """from conans import ConanFile, tools
+
+class HelloConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+
+    def build(self):
+        run_tests = tools.get_env("CONAN_RUN_TESTS", default=False)
+        print("test_get_env_in_conafile CONAN_RUN_TESTS=%r" % run_tests)
+        assert(run_tests == True)
+        """
+        client.save({"conanfile.py": conanfile})
+
+        with tools.environment_append({"CONAN_RUN_TESTS": "1"}):
+            client.run("install .")
+            client.run("build .")
 
     def test_global_tools_overrided(self):
         client = TestClient()
@@ -118,16 +199,36 @@ class HelloConan(ConanFile):
         self.assertEquals(os.getenv("Z", None), None)
 
     def system_package_tool_fail_when_not_0_returned_test(self):
+        def get_linux_error_message():
+            """
+            Get error message for Linux platform if distro is supported, None otherwise
+            """
+            os_info = OSInfo()
+            update_command = None
+            if os_info.with_apt:
+                update_command = "sudo apt-get update"
+            elif os_info.with_yum:
+                update_command = "sudo yum check-update"
+            elif os_info.with_zypper:
+                update_command = "sudo zypper --non-interactive ref"
+            elif os_info.with_pacman:
+                update_command = "sudo pacman -Syyu --noconfirm"
+
+            return "Command '{0}' failed".format(update_command) if update_command is not None else None
+
+        platform_update_error_msg = {
+            "Linux": get_linux_error_message(),
+            "Darwin": "Command 'brew update' failed",
+            "Windows": "Command 'choco outdated' failed" if which("choco.exe") else None,
+        }
+
         runner = RunnerMock(return_ok=False)
-        spt = SystemPackageTool(runner=runner)
-        platforms = {"Linux": "sudo apt-get update", "Darwin": "brew update"}
-        if platform.system() in platforms:
-            msg = "Command '%s' failed" % platforms[platform.system()]
+        pkg_tool = ChocolateyTool() if which("choco.exe") else None
+        spt = SystemPackageTool(runner=runner, tool=pkg_tool)
+
+        msg = platform_update_error_msg.get(platform.system(), None)
+        if msg is not None:
             with self.assertRaisesRegexp(ConanException, msg):
-                spt.update()
-        elif platform.system() == "Windows" and which("choco.exe"):
-            spt = SystemPackageTool(runner=runner, tool=ChocolateyTool())
-            with self.assertRaisesRegexp(ConanException, "Command 'choco outdated' failed"):
                 spt.update()
         else:
             spt.update()  # Won't raise anything because won't do anything
@@ -313,6 +414,75 @@ class HelloConan(ConanFile):
                 spt.install(packages)
             self.assertEquals(7, runner.calls)
 
+    def system_package_tool_mode_test(self):
+        """
+        System Package Tool mode is defined by CONAN_SYSREQUIRES_MODE env variable.
+        Allowed values: (enabled, verify, disabled). Parser accepts it in lower/upper case or any combination.
+        """
+
+        class RunnerMultipleMock(object):
+            def __init__(self, expected=None):
+                self.calls = 0
+                self.expected = expected
+
+            def __call__(self, command, *args, **kwargs):
+                self.calls += 1
+                return 0 if command in self.expected else 1
+
+        packages = ["a_package", "another_package", "yet_another_package"]
+
+        # Check invalid mode raises ConanException
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": "test_not_valid_mode",
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            runner = RunnerMultipleMock([])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertIn("CONAN_SYSREQUIRES_MODE=test_not_valid_mode is not allowed", str(exc.exception))
+            self.assertEquals(0, runner.calls)
+
+        # Check verify mode, a package report should be displayed in output and ConanException raised.
+        # No system packages are installed
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": "VeRiFy",
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
+            runner = RunnerMultipleMock(["sudo apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
+            self.assertIn('\n'.join(packages), tools.system_pm._global_output)
+            self.assertEquals(3, runner.calls)
+
+        # Check disabled mode, a package report should be displayed in output.
+        # No system packages are installed
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": "DiSaBlEd",
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            packages = ["disabled_package", "disabled_another_package", "disabled_yet_another_package"]
+            runner = RunnerMultipleMock(["sudo apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            spt.install(packages)
+            self.assertIn('\n'.join(packages), tools.system_pm._global_output)
+            self.assertEquals(0, runner.calls)
+
+        # Check enabled, default mode, system packages must be installed.
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": "EnAbLeD",
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            runner = RunnerMultipleMock(["sudo apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
+            self.assertEquals(7, runner.calls)
+
     def system_package_tool_installed_test(self):
         if platform.system() != "Linux" and platform.system() != "Macos" and platform.system() != "Windows":
             return
@@ -377,7 +547,6 @@ class HelloConan(ConanFile):
             self.assertIn("VS140COMNTOOLS=", str(output))
 
     def vcvars_constrained_test(self):
-
         text = """os: [Windows]
 compiler:
     Visual Studio:
@@ -389,10 +558,15 @@ compiler:
         with self.assertRaisesRegexp(ConanException,
                                      "compiler.version setting required for vcvars not defined"):
             tools.vcvars_command(settings)
+
+        new_out = StringIO()
+        tools.set_global_instances(ConanOutput(new_out), None)
         settings.compiler.version = "14"
         with tools.environment_append({"vs140comntools": "path/to/fake"}):
-            cmd = tools.vcvars_command(settings)
-            self.assertIn("vcvarsall.bat", cmd)
+            tools.vcvars_command(settings)
+            if platform.system() != "Windows":
+                self.assertIn("VS non-existing installation", new_out.getvalue())
+
             with tools.environment_append({"VisualStudioVersion": "12"}):
                 with self.assertRaisesRegexp(ConanException,
                                              "Error, Visual environment already set to 12"):
@@ -447,7 +621,7 @@ compiler:
 
         # Not found error
         self.assertEquals(str(out).count("Waiting 0 seconds to retry..."), 2)
-        with self.assertRaisesRegexp(ConanException, "Error 404 downloading file"):
+        with self.assertRaisesRegexp(NotFoundException, "Not found: "):
             tools.download("https://github.com/conan-io/conan/blob/develop/FILE_NOT_FOUND.txt",
                            os.path.join(temp_folder(), "README.txt"), out=out,
                            retry=3, retry_wait=0)
