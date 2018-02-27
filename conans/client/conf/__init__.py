@@ -51,16 +51,16 @@ compiler:
         libcxx: [libCstd, libstdcxx, libstlport, libstdc++]
     gcc:
         version: ["4.1", "4.4", "4.5", "4.6", "4.7", "4.8", "4.9",
-                  "5", "5.1", "5.2", "5.3", "5.4",
+                  "5", "5.1", "5.2", "5.3", "5.4", "5.5",
                   "6", "6.1", "6.2", "6.3", "6.4",
-                  "7", "7.1", "7.2"]
+                  "7", "7.1", "7.2", "7.3"]
         libcxx: [libstdc++, libstdc++11]
         threads: [None, posix, win32] #  Windows MinGW
         exception: [None, dwarf2, sjlj, seh] # Windows MinGW
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
-        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp, v140, v140_xp, v140_clang_c2, LLVM-vs2014, LLVM-vs2014_xp, v141, v141_xp, v141_clang_c2]  
+        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp, v140, v140_xp, v140_clang_c2, LLVM-vs2014, LLVM-vs2014_xp, v141, v141_xp, v141_clang_c2]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0"]
         libcxx: [libstdc++, libstdc++11, libc++]
@@ -69,6 +69,7 @@ compiler:
         libcxx: [libstdc++, libc++]
 
 build_type: [None, Debug, Release]
+cppstd: [None, 98, gnu98, 11, gnu11, 14, gnu14, 17, gnu17]
 """
 
 default_client_conf = """
@@ -83,6 +84,8 @@ print_run_commands = False  # environment CONAN_PRINT_RUN_COMMANDS
 default_profile = %s
 compression_level = 9                 # environment CONAN_COMPRESSION_LEVEL
 sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
+# sysrequires_mode = enabled            # environment CONAN_SYSREQUIRES_MODE (allowed modes enabled/verify/disabled)
+# vs_installation_preference = Enterprise, Professional, Community, BuildTools # environment CONAN_VS_INSTALLATION_PREFERENCE
 # verbose_traceback = False           # environment CONAN_VERBOSE_TRACEBACK
 # bash_path = ""                      # environment CONAN_BASH_PATH (only windows)
 # recipe_linter = False               # environment CONAN_RECIPE_LINTER
@@ -90,6 +93,7 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # pylintrc = path/to/pylintrc_file    # environment CONAN_PYLINTRC
 # cache_no_locks = True
 # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
+# skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
 
 # conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
 
@@ -106,6 +110,9 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 
 # cpu_count = 1             # environment CONAN_CPU_COUNT
 
+# Change the default location for building test packages to a temporary folder
+# which is deleted after the test.
+# temp_test_folder = True             # environment CONAN_TEMP_TEST_FOLDER
 
 [storage]
 # This is the default path, but you can write your own. It must be an absolute path or a
@@ -149,6 +156,8 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_PYLINTRC": self._env_c("general.pylintrc", "CONAN_PYLINTRC", None),
                "CONAN_PYLINT_WERR": self._env_c("general.pylint_werr", "CONAN_PYLINT_WERR", None),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),
+               "CONAN_SYSREQUIRES_MODE": self._env_c("general.sysrequires_mode", "CONAN_SYSREQUIRES_MODE", "enabled"),
+               "CONAN_VS_INSTALLATION_PREFERENCE": self._env_c("general.vs_installation_preference", "CONAN_VS_INSTALLATION_PREFERENCE", None),
                "CONAN_RECIPE_LINTER": self._env_c("general.recipe_linter", "CONAN_RECIPE_LINTER", "True"),
                "CONAN_CPU_COUNT": self._env_c("general.cpu_count", "CONAN_CPU_COUNT", None),
                "CONAN_READ_ONLY_CACHE": self._env_c("general.read_only_cache", "CONAN_READ_ONLY_CACHE", None),
@@ -177,6 +186,8 @@ class ConanClientConfigParser(ConfigParser, object):
 
                "CONAN_BASH_PATH": self._env_c("general.bash_path", "CONAN_BASH_PATH", None),
                "CONAN_MAKE_PROGRAM": self._env_c("general.conan_make_program", "CONAN_MAKE_PROGRAM", None),
+               "CONAN_TEMP_TEST_FOLDER": self._env_c("general.temp_test_folder", "CONAN_TEMP_TEST_FOLDER", "False"),
+               "CONAN_SKIP_VS_PROJECTS_UPGRADE": self._env_c("general.skip_vs_projects_upgrade", "CONAN_SKIP_VS_PROJECTS_UPGRADE", "False")
                }
 
         # Filter None values

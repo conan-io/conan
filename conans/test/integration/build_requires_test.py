@@ -4,6 +4,7 @@ from nose_parameterized.parameterized import parameterized
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
 import os
+from conans.util.files import load
 
 
 tool_conanfile = """from conans import ConanFile
@@ -49,6 +50,24 @@ nonexistingpattern*: SomeTool/1.2@user/channel
 
 
 class BuildRequiresTest(unittest.TestCase):
+
+    def test_dependents_txt(self):
+        client = TestClient()
+        boost = """from conans import ConanFile
+class Boost(ConanFile):
+    def package_info(self):
+        self.env_info.PATH.append("myboostpath")
+"""
+        client.save({CONANFILE: boost})
+        client.run("create . Boost/1.0@user/channel")
+        other = """[build_requires]
+Boost/1.0@user/channel
+"""
+        client.save({"conanfile.txt": other}, clean_first=True)
+        client.run("install .")
+        self.assertIn("PROJECT: Build requires: [Boost/1.0@user/channel]", client.out)
+        conanbuildinfo = load(os.path.join(client.current_folder, "conanbuildinfo.txt"))
+        self.assertIn('PATH=["myboostpath"]', conanbuildinfo)
 
     def test_dependents(self):
         client = TestClient()

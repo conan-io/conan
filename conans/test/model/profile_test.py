@@ -80,15 +80,15 @@ MyPackage:os=Windows
         profile.settings["compiler.version"] = "12"
         profile.build_requires["*"] = ["zlib/1.2.8@lasote/testing"]
         profile.build_requires["zlib/*"] = ["aaaa/1.2.3@lasote/testing", "bb/1.2@lasote/testing"]
-        self.assertEqual("""[build_requires]
-*: zlib/1.2.8@lasote/testing
-zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
-[settings]
+        self.assertEqual("""[settings]
 arch=x86_64
 compiler=Visual Studio
 compiler.version=12
 zlib:compiler=gcc
 [options]
+[build_requires]
+*: zlib/1.2.8@lasote/testing
+zlib/*: aaaa/1.2.3@lasote/testing, bb/1.2@lasote/testing
 [env]""".splitlines(), profile.dumps().splitlines())
 
     def apply_test(self):
@@ -103,8 +103,9 @@ zlib:compiler=gcc
 
         profile.update_settings(OrderedDict([("compiler.version", "14")]))
 
-        self.assertEqual('[build_requires]\n[settings]\narch=x86_64\ncompiler=Visual Studio'
+        self.assertEqual('[settings]\narch=x86_64\ncompiler=Visual Studio'
                          '\ncompiler.version=14\n'
                          '[options]\n'
+                         '[build_requires]\n'
                          '[env]\nCC=path/to/my/compiler/gcc\nCXX=path/to/my/compiler/g++',
                          profile.dumps())

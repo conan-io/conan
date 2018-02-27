@@ -40,9 +40,9 @@ def input_credentials_if_unauthorized(func):
                 remote = self.remote
                 self._user_io.out.info('Please log in to "%s" to perform this action. '
                                        'Execute "conan user" command.' % remote.name)
-                if remote.name == "conan.io":
+                if "bintray" in remote.url:
                     self._user_io.out.info('If you don\'t have an account sign up here: '
-                                           'http://www.conan.io')
+                                           'https://bintray.com/signup/oss')
                 return retry_with_new_token(self, *args, **kwargs)
             else:
                 # Token expired or not valid, so clean the token and repeat the call
