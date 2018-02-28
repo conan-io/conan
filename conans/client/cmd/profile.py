@@ -44,7 +44,11 @@ def cmd_profile_create(profile_name, cache_profiles_path, output, detect=False):
 
     contents = profile.dumps()
     save(profile_path, contents)
-    output.info("Empty profile created: %s" % profile_path)
+
+    if detect:
+        output.info("Profile created with detected settings: %s" % profile_path)
+    else:
+        output.info("Empty profile created: %s" % profile_path)
     return profile_path
 
 

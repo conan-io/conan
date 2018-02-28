@@ -52,7 +52,8 @@ class _ConanPackageBuilder(object):
                                                      self._conan_file.short_paths)
 
     def prepare_build(self):
-        if os.path.exists(self.build_folder) and hasattr(self._conan_file, "build_id"):
+        if self.build_reference != self._package_reference and \
+              os.path.exists(self.build_folder) and hasattr(self._conan_file, "build_id"):
             self._skip_build = True
             return
 
@@ -185,14 +186,15 @@ class _ConanPackageBuilder(object):
                         self._out.warn("Unable to remove imported file from build: %s" % f)
 
 
-def _raise_package_not_found_error(conan_file, conan_ref, out):
+def _raise_package_not_found_error(conan_file, conan_ref, package_id, out):
     settings_text = ", ".join(conan_file.info.full_settings.dumps().splitlines())
     options_text = ", ".join(conan_file.info.full_options.dumps().splitlines())
 
     out.warn('''Can't find a '%s' package for the specified options and settings:
 - Settings: %s
 - Options: %s
-''' % (conan_ref, settings_text, options_text))
+- Package ID: %s
+''' % (conan_ref, settings_text, options_text, package_id))
 
     raise ConanException('''Missing prebuilt package for '%s'
 Try to build it from sources with "--build %s"
@@ -268,7 +270,7 @@ class ConanInstaller(object):
         self._build_mode = build_mode
         self._built_packages = set()  # To avoid re-building twice the same package reference
 
-    def install(self, deps_graph, profile_build_requires):
+    def install(self, deps_graph, profile_build_requires, keep_build=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         t1 = time.time()
@@ -279,7 +281,7 @@ class ConanInstaller(object):
         skip_private_nodes = self._compute_private_nodes(deps_graph)
         logger.debug("Install-Process private %s", (time.time() - t1))
         t1 = time.time()
-        self._build(nodes_by_level, skip_private_nodes, deps_graph, profile_build_requires)
+        self._build(nodes_by_level, skip_private_nodes, deps_graph, profile_build_requires, keep_build)
         logger.debug("Install-build %s", (time.time() - t1))
 
     def _compute_private_nodes(self, deps_graph):
@@ -322,7 +324,7 @@ class ConanInstaller(object):
         return [(PackageReference(conan_ref, package_id), conan_file)
                 for conan_ref, package_id, conan_file, build in nodes if build]
 
-    def _build(self, nodes_by_level, skip_private_nodes, deps_graph, profile_build_requires):
+    def _build(self, nodes_by_level, skip_private_nodes, deps_graph, profile_build_requires, keep_build):
         """ The build assumes an input of conans ordered by degree, first level
         should be independent from each other, the next-second level should have
         dependencies only to first level conans.
@@ -353,26 +355,38 @@ class ConanInstaller(object):
                 package_ref = PackageReference(conan_ref, package_id)
                 build_allowed = self._build_mode.allowed(conan_file, conan_ref)
                 if not build_allowed:
-                    _raise_package_not_found_error(conan_file, conan_ref, output)
+                    _raise_package_not_found_error(conan_file, conan_ref, package_id, output)
 
-                if conan_file.build_policy_missing:
-                    output.info("Building package from source as defined by build_policy='missing'")
-                elif self._build_mode.forced(conan_file, conan_ref):
-                    output.warn('Forced build from source')
+                skip_build = conan_file.develop and keep_build
+                if skip_build:
+                    output.info("Won't be built as specified by --keep-build")
+                else:
+                    if conan_file.build_policy_missing:
+                        output.info("Building package from source as defined by build_policy='missing'")
+                    elif self._build_mode.forced(conan_file, conan_ref):
+                        output.warn('Forced build from source')
 
-                self._build_requires.install(conan_ref, conan_file, self, profile_build_requires)
+                if not skip_build:
+                    self._build_requires.install(conan_ref, conan_file, self,
+                                                 profile_build_requires, output)
 
                 t1 = time.time()
                 # Assign to node the propagated info
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
                 builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)
-                with self._client_cache.conanfile_write_lock(conan_ref):
-                    self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
-                    builder.prepare_build()
+
+                if skip_build:
+                    if not os.path.exists(builder.build_folder):
+                        raise ConanException("--keep-build specified, but build folder not found")
+                else:
+                    with self._client_cache.conanfile_write_lock(conan_ref):
+                        self._remote_proxy.get_recipe_sources(conan_ref, conan_file.short_paths)
+                        builder.prepare_build()
 
                 with self._client_cache.conanfile_read_lock(conan_ref):
                     with self._client_cache.package_lock(builder.build_reference):
-                        builder.build()
+                        if not skip_build:
+                            builder.build()
                         builder.package()
 
                         self._remote_proxy.handle_package_manifest(package_ref, installed=True)
@@ -421,7 +435,8 @@ class ConanInstaller(object):
                 make_read_only(package_folder)
             return True
 
-        _raise_package_not_found_error(conan_file, package_reference.conan, output)
+        _raise_package_not_found_error(conan_file, package_reference.conan,
+                                       package_reference.package_id, output)
 
     def _log_built_package(self, conan_file, package_ref, duration):
         build_folder = self._client_cache.build(package_ref, conan_file.short_paths)

@@ -1,8 +1,27 @@
+from conans.client.build.cppstd_flags import available_cppstd_versions
+from conans.errors import ConanException
 from conans.util.log import logger
 
 
 def preprocess(settings):
     fill_runtime(settings)
+    check_cppstd(settings)
+
+
+def check_cppstd(settings):
+    compiler = settings.get_safe("compiler")
+    compiler_version = settings.get_safe("compiler.version")
+    cppstd = settings.get_safe("cppstd")
+
+    if not cppstd or not compiler or not compiler_version:
+        return
+    available = available_cppstd_versions(compiler, compiler_version)
+    if str(cppstd) not in available:
+        raise ConanException("The specified 'cppstd=%s' is not available "
+                             "for '%s %s'. Possible values are %s'" % (cppstd,
+                                                                      compiler,
+                                                                      compiler_version,
+                                                                      available))
 
 
 def fill_runtime(settings):

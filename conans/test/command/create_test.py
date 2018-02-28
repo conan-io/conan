@@ -1,5 +1,8 @@
+from conans import tools
 from conans.test.utils.tools import TestClient
 import unittest
+import os
+from nose_parameterized.parameterized import parameterized
 
 
 class CreateTest(unittest.TestCase):
@@ -32,6 +35,75 @@ class HelloTestConan(ConanFile):
         client.run("create . lasote/stable")
         self.assertNotIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
                          client.user_io.out)
+
+    @parameterized.expand([(True, ), (False, )])
+    def keep_build_test(self, with_test):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    exports_sources = "*.h"
+    def source(self):
+        self.output.info("mysource!!")
+    def build(self):
+        self.output.info("mybuild!!")
+    def package(self):
+        self.output.info("mypackage!!")
+        self.copy("*.h")
+"""
+        if with_test:
+            client.save({"conanfile.py": conanfile,
+                         "header.h": ""})
+        else:
+            test_conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    def test(self):
+        pass
+"""
+            client.save({"conanfile.py": conanfile,
+                         "header.h": "",
+                         "test_package/conanfile.py": test_conanfile})
+        client.run("create . Pkg/0.1@lasote/testing")
+        self.assertIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+        # keep the source
+        client.save({"conanfile.py": conanfile + " "})
+        client.run("create . Pkg/0.1@lasote/testing --keep-source")
+        self.assertIn("A new conanfile.py version was exported", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+        # keep build
+        client.run("create . Pkg/0.1@lasote/testing --keep-build")
+        self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+
+        # Changes in the recipe again
+        client.save({"conanfile.py": conanfile})
+        client.run("create . Pkg/0.1@lasote/testing --keep-build")
+        # The source folder is removed, but not necessary, as it will reuse build
+        self.assertNotIn("Pkg/0.1@lasote/testing: Removing 'source' folder", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: Won't be built as specified by --keep-build", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mysource!!", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing: mybuild!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing: mypackage!!", client.out)
+        self.assertIn("Pkg/0.1@lasote/testing package(): Copied 1 '.h' files: header.h", client.out)
+
+    def keep_build_error_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class MyPkg(ConanFile):
+    pass
+"""
+        client.save({"conanfile.py": conanfile})
+        error = client.run("create . Pkg/0.1@lasote/testing --keep-build", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --keep-build specified, but build folder not found", client.out)
 
     def create_test(self):
         client = TestClient()
@@ -175,6 +247,25 @@ class MyTest(ConanFile):
         self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
         self.assertIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
 
+    def create_skip_test_package_test(self):
+        """
+        Skip the test package stage if explicitly disabled with --test-folder=None
+        """
+        # https://github.com/conan-io/conan/issues/2355
+        client = TestClient()
+        client.save({"conanfile.py": """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Pkg"
+    version = "0.1"
+""", "test_package/conanfile.py": """from conans import ConanFile
+class MyTest(ConanFile):
+    def test(self):
+        self.output.info("TESTING!!!")
+"""})
+        client.run("create . lasote/testing --test-folder=None")
+        self.assertIn("Pkg/0.1@lasote/testing: Generating the package", client.out)
+        self.assertNotIn("Pkg/0.1@lasote/testing (test package): TESTING!!!", client.out)
+
     def create_test_package_requires(self):
         client = TestClient()
         dep_conanfile = """from conans import ConanFile
@@ -292,3 +383,49 @@ class HelloTestConan(ConanFile):
         client.run("create . lasote/stable")
         self.assertIn("HelloBar/0.1@lasote/testing: WARN: Forced build from source",
                       client.out)
+
+    def test_build_folder_handling_test(self):
+        conanfile = '''
+from conans import ConanFile
+
+class ConanLib(ConanFile):
+    name = "Hello"
+    version = "0.1"
+'''
+        test_conanfile = '''
+from conans import ConanFile
+
+class TestConanLib(ConanFile):
+    def test(self):
+        pass
+'''
+        client = TestClient()
+        default_build_dir = os.path.join(client.current_folder, "test_package", "build")
+
+        # Test the default behavior.
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        client.run("create . lasote/stable")
+        self.assertTrue(os.path.exists(default_build_dir))
+
+        # Test if the specified build folder is respected.
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        client.run("create -tbf=build_folder . lasote/stable")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "build_folder")))
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # Test if using a temporary test folder can be enabled via the environment variable.
+        client.save({"conanfile.py": conanfile, "test_package/conanfile.py": test_conanfile}, clean_first=True)
+        with tools.environment_append({"CONAN_TEMP_TEST_FOLDER": "True"}):
+            client.run("create . lasote/stable")
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # # Test if using a temporary test folder can be enabled via the config file.
+        client.run('config set general.temp_test_folder=True')
+        client.run("create . lasote/stable")
+        self.assertFalse(os.path.exists(default_build_dir))
+
+        # Test if the specified build folder is respected also when the use of
+        # temporary test folders is enabled in the config file.
+        client.run("create -tbf=test_package/build_folder . lasote/stable")
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder, "test_package", "build_folder")))
+        self.assertFalse(os.path.exists(default_build_dir))

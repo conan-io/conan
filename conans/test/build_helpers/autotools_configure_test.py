@@ -5,7 +5,7 @@ from conans.client.build.autotools_environment import AutoToolsBuildEnvironment
 from conans import tools
 from conans.client.tools.oss import cpu_count
 from conans.paths import CONANFILE
-from conans.test.utils.conanfile import MockConanfile, MockSettings
+from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
 from conans.test.util.tools_test import RunnerMock
 from conans.test.utils.tools import TestClient
 
@@ -27,6 +27,89 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
 
+    def test_cppstd(self):
+        options = MockOptions({})
+        # Valid one for GCC
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "7.1",
+                                 "cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("-std=c++1z", expected)
+
+        # Invalid one for GCC
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "4.9",
+                                 "cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertNotIn("-std", expected)
+
+        # Valid one for Clang
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "clang",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "4.0",
+                                 "cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("-std=c++1z", expected)
+
+        # Invalid one for Clang
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "clang",
+                                 "compiler.libcxx": "libstdc++11",
+                                 "compiler.version": "3.3",
+                                 "cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertNotIn("-std=", expected)
+
+        # Visual Activate 11 is useless
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "cppstd": "11"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertNotIn("-std=c++", expected)
+
+        # Visual Activate 17 in VS 2017
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "15",
+                                 "cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("/std:c++17", expected)
+
+        # Visual Activate 17 in VS 2015
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "14",
+                                 "cppstd": "17"})
+        conanfile = MockConanfile(settings, options)
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = be.vars["CXXFLAGS"]
+        self.assertIn("/std:c++latest", expected)
+
     def test_mocked_methods(self):
 
         runner = RunnerMock()
@@ -44,6 +127,23 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertEquals(runner.command_called, "make %s -j%s" % (things, cpu_count()))
 
     def test_variables(self):
+        # Visual Studio
+        settings = MockSettings({"build_type": "Release",
+                                 "arch": "x86",
+                                 "compiler": "Visual Studio",
+                                 "compiler.version": "14",
+                                 "compiler.runtime": "MD"})
+        conanfile = MockConanfile(settings)
+        self._set_deps_info(conanfile)
+
+        be = AutoToolsBuildEnvironment(conanfile)
+        expected = {'CFLAGS': 'a_c_flag',
+                    'CPPFLAGS': '/Ipath\\includes /Iother\\include\\path /Donedefinition /Dtwodefinition /DNDEBUG',
+                    'CXXFLAGS': 'a_c_flag a_cpp_flag',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag /LIBPATH:one\\lib\\path',
+                    'LIBS': 'onelib.lib twolib.lib'}
+
+        self.assertEquals(be.vars, expected)
         # GCC 32
         settings = MockSettings({"build_type": "Release",
                                  "arch": "x86",
@@ -89,7 +189,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
                     'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition'
-                                ' -D_GLIBCXX_USE_CXX11_ABI=0',
+                                ' -DNDEBUG -D_GLIBCXX_USE_CXX11_ABI=0',
                     'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -stdlib=libstdc++',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
@@ -105,7 +205,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
-                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
+                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
                     'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -stdlib=libc++',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
@@ -138,7 +238,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
-                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
+                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
                     'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -library=Cstd',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
@@ -153,7 +253,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
-                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
+                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
                     'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -library=stdcxx4',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
@@ -168,7 +268,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
-                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
+                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
                     'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -library=stlport4',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
@@ -183,11 +283,30 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.settings = settings
         self._set_deps_info(conanfile)
         expected = {'CFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder',
-                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition',
+                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG',
                     'CXXFLAGS': 'a_c_flag -m64 --sysroot=/path/to/folder a_cpp_flag -library=stdcpp',
                     'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder -Lone/lib/path',
                     'LIBS': '-lonelib -ltwolib'}
         be = AutoToolsBuildEnvironment(conanfile)
+        self.assertEquals(be.vars, expected)
+
+    def rpath_optin_test(self):
+        settings = MockSettings({"os_build": "Linux",
+                                 "build_type": "Release",
+                                 "arch": "x86_64",
+                                 "compiler": "gcc",
+                                 "compiler.libcxx": "libstdc++11"})
+        conanfile = MockConanfile(settings)
+        conanfile.settings = settings
+        self._set_deps_info(conanfile)
+        expected = {'CFLAGS': 'a_c_flag -m64 -s --sysroot=/path/to/folder',
+                    'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -Dtwodefinition -DNDEBUG '
+                                '-D_GLIBCXX_USE_CXX11_ABI=1',
+                    'CXXFLAGS': 'a_c_flag -m64 -s --sysroot=/path/to/folder a_cpp_flag',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -m64 --sysroot=/path/to/folder '
+                               '-Wl,-rpath="one/lib/path" -Lone/lib/path',
+                    'LIBS': '-lonelib -ltwolib'}
+        be = AutoToolsBuildEnvironment(conanfile, include_rpath_flags=True)
         self.assertEquals(be.vars, expected)
 
     def environment_append_test(self):
@@ -207,11 +326,11 @@ class AutoToolsConfigureTest(unittest.TestCase):
         with(tools.environment_append(env_vars)):
             be = AutoToolsBuildEnvironment(conanfile)
             expected = {'CPPFLAGS': '-Ipath/includes -Iother/include/path -Donedefinition -'
-                                    'Dtwodefinition -D_GLIBCXX_USE_CXX11_ABI=0 -additionalcppflag', 
-                        'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder a_cpp_flag -additionalcxxflag', 
-                        'LIBS': '-lonelib -ltwolib -additionallibs', 
+                                    'Dtwodefinition -D_GLIBCXX_USE_CXX11_ABI=0 -additionalcppflag',
+                        'CXXFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder a_cpp_flag -additionalcxxflag',
+                        'LIBS': '-lonelib -ltwolib -additionallibs',
                         'LDFLAGS': 'shared_link_flag exe_link_flag -m64 '
-                                   '--sysroot=/path/to/folder -Lone/lib/path -additionalldflag', 
+                                   '--sysroot=/path/to/folder -Lone/lib/path -additionalldflag',
                         'CFLAGS': 'a_c_flag -m64 -g --sysroot=/path/to/folder -additionalcflag'}
             self.assertEquals(be.vars, expected)
 
@@ -419,3 +538,15 @@ class HelloConan(ConanFile):
 
         ab.configure(target="i686-apple-darwin")
         self.assertEquals(runner.command_called, "./configure  --target=i686-apple-darwin")
+
+
+    def test_make_targets(self):
+        runner = RunnerMock()
+        conanfile = MockConanfile(MockSettings({}),None,runner)
+        
+        ab = AutoToolsBuildEnvironment(conanfile)
+        ab.configure()
+        
+        ab.make(target="install")
+        self.assertEquals(runner.command_called,"make install -j%s" % cpu_count())        
+
