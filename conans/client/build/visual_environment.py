@@ -1,7 +1,8 @@
 import copy
 import os
 
-from conans.client.build.compiler_flags import build_type_define, build_type_flag, visual_runtime, format_defines
+from conans.client.build.compiler_flags import build_type_define, build_type_flag, visual_runtime, format_defines, \
+    include_path_option
 from conans.client.build.cppstd_flags import cppstd_flag
 
 
@@ -55,9 +56,9 @@ class VisualStudioBuildEnvironment(object):
         # FIXME: It should be managed with the compiler_flags module
         # But need further investigation about the quotes and so on, so better to not break anything
         if quotes:
-            ret = ['/I"%s"' % lib for lib in self.include_paths]
+            ret = ['%s"%s"' % (include_path_option, lib) for lib in self.include_paths]
         else:
-            ret = ['/I%s' % lib for lib in self.include_paths]
+            ret = ['%s%s' % (include_path_option, lib) for lib in self.include_paths]
 
         runtime = visual_runtime(self._runtime)
         if runtime:

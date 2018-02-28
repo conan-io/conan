@@ -23,10 +23,10 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
 
         tool = VisualStudioBuildEnvironment(conanfile)
         self.assertEquals(tool.vars_dict, {
-            "CL": ["/I/one/include/path", "/I/two/include/path",
+            "CL": ["-I/one/include/path", "-I/two/include/path",
                    '-mycflag',
                    '-mycflag2',
-                   '/Zi',
+                   '-Zi',
                    '-mycppflag',
                    '-mycppflag2',
                    '-myexelinkflag',
@@ -39,12 +39,12 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
         tool.lib_paths.append("/three/lib/path")
 
         self.assertEquals(tool.vars_dict, {
-            "CL": ["/I/one/include/path",
-                   "/I/two/include/path",
-                   "/I/three/include/path",
+            "CL": ["-I/one/include/path",
+                   "-I/two/include/path",
+                   "-I/three/include/path",
                    '-mycflag',
                    '-mycflag2',
-                   '/Zi',
+                   '-Zi',
                    '-mycppflag',
                    '-mycppflag2',
                    '-myexelinkflag',
@@ -53,26 +53,26 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
         })
 
         # Now try appending to environment
-        with tools.environment_append({"CL": "/I/four/include/path /I/five/include/path",
+        with tools.environment_append({"CL": "-I/four/include/path -I/five/include/path",
                                        "LIB": "/four/lib/path;/five/lib/path"}):
             self.assertEquals(tool.vars_dict, {
-                "CL": ["/I/one/include/path", "/I/two/include/path",
-                       "/I/three/include/path",
+                "CL": ["-I/one/include/path", "-I/two/include/path",
+                       "-I/three/include/path",
                        '-mycflag',
                        '-mycflag2',
-                       '/Zi',
+                       '-Zi',
                        '-mycppflag',
                        '-mycppflag2',
                        '-myexelinkflag',
                        '-mysharedlinkflag',
-                       "/I/four/include/path /I/five/include/path"],
+                       "-I/four/include/path -I/five/include/path"],
                 "LIB": ["/one/lib/path", "/two/lib/path", "/three/lib/path", "/four/lib/path;/five/lib/path"],
             })
 
             self.assertEquals(tool.vars, {
-                "CL": '/I"/one/include/path" /I"/two/include/path" /I"/three/include/path" '
-                      '-mycflag -mycflag2 /Zi '
+                "CL": '-I"/one/include/path" -I"/two/include/path" -I"/three/include/path" '
+                      '-mycflag -mycflag2 -Zi '
                       '-mycppflag -mycppflag2 -myexelinkflag -mysharedlinkflag '
-                      '/I/four/include/path /I/five/include/path',
+                      '-I/four/include/path -I/five/include/path',
                 "LIB": "/one/lib/path;/two/lib/path;/three/lib/path;/four/lib/path;/five/lib/path",
             })
