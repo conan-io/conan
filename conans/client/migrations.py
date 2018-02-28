@@ -41,12 +41,23 @@ class ClientMigrator(Migrator):
         # VERSION 0.1
         if old_version is None:
             return
-        if old_version < Version("1.0"):
-            _migrate_lock_files(self.client_cache, self.out)
-            _add_build_cross_settings(self.client_cache, self.out)
+        if old_version < Version("1.1.0-dev"):
             old_settings = """
+# Only for cross building, 'os_build/arch_build' is the system that runs Conan
+os_build: [Windows, WindowsStore, Linux, Macos, FreeBSD, SunOS]
+arch_build: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+
+# Only for building cross compilation tools, 'os_target/arch_target' is the system for
+# which the tools generate code
+os_target: [Windows, Linux, Macos, Android, iOS, watchOS, tvOS, FreeBSD, SunOS, Arduino]
+arch_target: [x86, x86_64, ppc64le, ppc64, armv6, armv7, armv7hf, armv8, sparc, sparcv9, mips, mips64, avr, armv7s, armv7k]
+
+# Rest of the settings are "host" settings:
+# - For native building/cross building: Where the library/program will run.
+# - For building cross compilation tools: Where the cross compiler will run.
 os:
     Windows:
+        subsystem: [None, cygwin, msys, msys2, wsl]
     WindowsStore:
         version: ["8.1", "10.0"]
     Linux:
@@ -80,7 +91,7 @@ compiler:
     Visual Studio:
         runtime: [MD, MT, MTd, MDd]
         version: ["8", "9", "10", "11", "12", "14", "15"]
-        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp, v140, v140_xp, v140_clang_c2, LLVM-vs2014, LLVM-vs2014_xp, v141, v141_xp, v141_clang_c2]  
+        toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp, v140, v140_xp, v140_clang_c2, LLVM-vs2014, LLVM-vs2014_xp, v141, v141_xp, v141_clang_c2]
     clang:
         version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0"]
         libcxx: [libstdc++, libstdc++11, libc++]
@@ -91,6 +102,9 @@ compiler:
 build_type: [None, Debug, Release]
 """
             self._update_settings_yml(old_settings)
+
+        if old_version < Version("1.0"):
+            _migrate_lock_files(self.client_cache, self.out)
 
         if old_version < Version("0.25"):
             from conans.paths import DEFAULT_PROFILE_NAME
