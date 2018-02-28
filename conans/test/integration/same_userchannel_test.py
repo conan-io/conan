@@ -3,6 +3,33 @@ from conans.test.utils.tools import TestClient
 import os
 
 
+class UserChannelTestPackage(unittest.TestCase):
+
+    def test(self):
+        # https://github.com/conan-io/conan/issues/2501
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class SayConan(ConanFile):
+    pass
+"""
+        test = """from conans import ConanFile
+class SayConan(ConanFile):
+    def requirements(self):
+        self.output.info("USER: %s!!" % self.user)
+        self.output.info("CHANNEL: %s!!" % self.channel)
+
+    def test(self):
+        pass
+"""
+
+        client.save({"conanfile.py": conanfile,
+                     "test_package/conanfile.py": test})
+        client.run("create . Pkg/0.1@conan/testing")
+        self.assertIn("PROJECT: USER: conan!!", client.out)
+        self.assertIn("PROJECT: CHANNEL: testing!!", client.out)
+
+
+
 class SameUserChannelTest(unittest.TestCase):
 
     def setUp(self):
