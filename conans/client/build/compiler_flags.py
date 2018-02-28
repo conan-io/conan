@@ -131,7 +131,7 @@ def sysroot_flag(sysroot, win_bash=False, subsystem=None, compiler=None):
 
 def visual_runtime(runtime):
     if runtime:
-        return "/%s" % runtime
+        return "-%s" % runtime
     return ""
 
 
