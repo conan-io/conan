@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import unittest
+
+from conans import tools
 from conans.tools import build_sln_command, cpu_count
 from conans.errors import ConanException
 from conans.model.settings import Settings
@@ -37,6 +39,22 @@ class BuildSLNCommandTest(unittest.TestCase):
         self.assertIn('devenv dummy.sln /upgrade', command)
         self.assertNotIn('/m:%s' % cpu_count(), command)
         self.assertNotIn('/target:teapot', command)
+
+        with tools.environment_append({"CONAN_SKIP_VS_PROJECTS_UPGRADE": "1"}):
+            command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None,
+                                        upgrade_project=True,
+                                        build_type='Debug', arch='x86_64', parallel=False)
+            self.assertIn('msbuild dummy.sln', command)
+            self.assertIn('/p:Platform="x64"', command)
+            self.assertNotIn('devenv dummy.sln /upgrade', command)
+            self.assertNotIn('/m:%s' % cpu_count(), command)
+            self.assertNotIn('/target:teapot', command)
+
+        with tools.environment_append({"CONAN_SKIP_VS_PROJECTS_UPGRADE": "False"}):
+            command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None,
+                                        upgrade_project=True,
+                                        build_type='Debug', arch='x86_64', parallel=False)
+            self.assertIn('devenv dummy.sln /upgrade', command)
 
     def parallel_test(self):
         command = build_sln_command(Settings({}), sln_path='dummy.sln', targets=None, upgrade_project=True,

@@ -78,7 +78,7 @@ class SearchService(object):
             Attributes:
                 pattern = wildcards like opencv/*
         """
-        references = self._search_manager.search(pattern, ignorecase)
+        references = self._search_manager.search_recipes(pattern, ignorecase)
         filtered = []
         # Filter out restricted items
         for conan_ref in references:

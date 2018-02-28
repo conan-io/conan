@@ -14,6 +14,21 @@ class PackageIDTest(unittest.TestCase):
     def setUp(self):
         self.client = TestClient()
 
+    def cross_build_settings_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    settings = "os", "arch", "compiler", "os_build", "arch_build"
+        """
+        client.save({"conanfile.py": conanfile})
+        client.run('install . -s os=Windows -s compiler="Visual Studio" '
+                   '-s compiler.version=15 -s compiler.runtime=MD '
+                   '-s os_build=Windows -s arch_build=x86 -s compiler.toolset=v141')
+        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+        self.assertNotIn("compiler.toolset=None", conaninfo)
+        self.assertNotIn("os_build=None", conaninfo)
+        self.assertNotIn("arch_build=None", conaninfo)
+
     def _export(self, name, version, package_id_text=None, requires=None,
                 channel=None, default_option_value="off", settings=None):
         conanfile = TestConanFile(name, version, requires=requires,
@@ -150,6 +165,7 @@ class PackageIDTest(unittest.TestCase):
         with self.assertRaises(Exception):
             self.client.run("install .")
         self.assertIn("Can't find a 'Hello2/2.3.8@lasote/stable' package", self.client.user_io.out)
+        self.assertIn("Package ID:", self.client.user_io.out)
 
     def test_nameless_mode(self):
         self._export("Hello", "1.2.0", package_id_text=None, requires=None)
@@ -293,3 +309,49 @@ class PackageIDTest(unittest.TestCase):
         info = ConanInfo.loads(load(os.path.join(pkg_folder, CONANINFO)))
         self.assertEquals(str(info.settings.os_build), "Linux")
         self.assertEquals(str(info.settings.arch_build), "x86")
+
+    def test_standard_version_default_matching(self):
+        self._export("Hello", "1.2.0",
+                     channel="user/testing",
+                     settings='"compiler"')
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 --build')
+
+        self._export("Hello", "1.2.0",
+                     channel="user/testing",
+                     settings='"compiler", "cppstd"')
+
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 -s cppstd=gnu14')  # Default, already built
+
+        # Should NOT have binary available
+        error = self.client.run('install Hello/1.2.0@user/testing'
+                                ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                                ' -s compiler.version=7.2 -s cppstd=gnu11',
+                                ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
+
+    def test_standard_version_default_non_matching(self):
+        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
+                     channel="user/testing",
+                     settings='"compiler"'
+                     )
+        self.client.run('install Hello/1.2.0@user/testing '
+                        ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                        ' -s compiler.version=7.2 --build')
+
+        self._export("Hello", "1.2.0", package_id_text="self.info.default_std_non_matching()",
+                     channel="user/testing",
+                     settings='"compiler", "cppstd"'
+                     )
+        error = self.client.run('install Hello/1.2.0@user/testing '
+                                ' -s compiler="gcc" -s compiler.libcxx=libstdc++11'
+                                ' -s compiler.version=7.2 -s cppstd=gnu14',
+                                ignore_error=True)  # Default
+        self.assertTrue(error)
+        self.assertIn("Missing prebuilt package for 'Hello/1.2.0@user/testing'", self.client.out)
+

@@ -234,6 +234,23 @@ macro(conan_set_libcxx)
     endif()
 endmacro()
 
+macro(conan_set_std)
+  # Do not warn "Manually-specified variables were not used by the project"
+  set(ignorevar "${CONAN_STD_CXX_FLAG}${CONAN_CMAKE_CXX_STANDARD}${CONAN_CMAKE_CXX_EXTENSIONS}")
+  if (CMAKE_VERSION VERSION_LESS "3.1")
+    if(CONAN_STD_CXX_FLAG)
+      message(STATUS "Conan setting CXX_FLAGS flags: ${CONAN_STD_CXX_FLAG}")
+      set(CMAKE_CXX_FLAGS "-std=${CONAN_STD_CXX_FLAG} ${CMAKE_CXX_FLAGS}")
+    endif()
+  else()
+    if(CONAN_CMAKE_CXX_STANDARD)
+      message(STATUS "Conan setting CPP STANDARD: ${CONAN_CMAKE_CXX_STANDARD} WITH EXTENSIONS ${CONAN_CMAKE_CXX_EXTENSIONS}")
+      set(CMAKE_CXX_STANDARD ${CONAN_CMAKE_CXX_STANDARD})
+      set(CMAKE_CXX_EXTENSIONS ${CONAN_CMAKE_CXX_EXTENSIONS})
+    endif()
+  endif ()
+endmacro()
+
 macro(conan_set_rpath)
     if(APPLE)
         # https://cmake.org/Wiki/CMake_RPATH_handling
@@ -362,7 +379,12 @@ function(conan_check_compiler)
         message(STATUS "WARN: Disabled conan compiler checks")
         return()
     endif()
-
+    if(NOT CMAKE_CXX_COMPILER_ID AND NOT CMAKE_C_COMPILER_ID)
+        # This use case happens when compiler is not identified by CMake, but the compilers are there and work
+        message(STATUS "*** WARN: CMake was not able to identify a C or C++ compiler ***")
+        message(STATUS "*** WARN: Disabling compiler checks. Please make sure your settings match your environment ***")
+        return()
+    endif()
     if(NOT DEFINED CONAN_COMPILER)
         conan_get_compiler(CONAN_COMPILER CONAN_COMPILER_VERSION)
         if(NOT DEFINED CONAN_COMPILER)
@@ -376,10 +398,25 @@ function(conan_check_compiler)
         set(CROSS_BUILDING 1)
     endif()
 
+    # If using VS, verify toolset
+    if (CONAN_COMPILER STREQUAL "Visual Studio")
+        if (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "LLVM" OR
+            CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "clang")
+            set(EXPECTED_CMAKE_CXX_COMPILER_ID "Clang")
+        elseif (CONAN_SETTINGS_COMPILER_TOOLSET MATCHES "Intel")
+            set(EXPECTED_CMAKE_CXX_COMPILER_ID "Intel")
+        else()
+            set(EXPECTED_CMAKE_CXX_COMPILER_ID "MSVC")
+        endif()
+
+        if (NOT CMAKE_CXX_COMPILER_ID MATCHES ${EXPECTED_CMAKE_CXX_COMPILER_ID})
+            message(FATAL_ERROR "Incorrect '${CONAN_COMPILER}'. Toolset specifies compiler as '${EXPECTED_CMAKE_CXX_COMPILER_ID}' "
+                                "but CMake detected '${CMAKE_CXX_COMPILER_ID}'")
+        endif()
+
     # Avoid checks when cross compiling, apple-clang crashes because its APPLE but not apple-clang
     # Actually CMake is detecting "clang" when you are using apple-clang, only if CMP0025 is set to NEW will detect apple-clang
-    if( (CONAN_COMPILER STREQUAL "Visual Studio" AND NOT CMAKE_CXX_COMPILER_ID MATCHES MSVC) OR
-        (CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
+    elseif((CONAN_COMPILER STREQUAL "gcc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR
         (CONAN_COMPILER STREQUAL "apple-clang" AND NOT CROSS_BUILDING AND (NOT APPLE OR NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")) OR
         (CONAN_COMPILER STREQUAL "clang" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang") OR
         (CONAN_COMPILER STREQUAL "sun-cc" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "SunPro") )
@@ -453,7 +490,7 @@ endmacro()
 
 cmake_macros = """
 macro(conan_basic_setup)
-    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS)
+    set(options TARGETS NO_OUTPUT_DIRS SKIP_RPATH KEEP_RPATHS SKIP_STD)
     cmake_parse_arguments(ARGUMENTS "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN} )
     if(CONAN_EXPORTED)
         message(STATUS "Conan: called by CMake conan helper")
@@ -478,6 +515,10 @@ macro(conan_basic_setup)
         # Parameter has renamed, but we keep the compatibility with old SKIP_RPATH
         message(STATUS "Conan: Adjusting default RPATHs Conan policies")
         conan_set_rpath()
+    endif()
+    if(NOT ARGUMENTS_SKIP_STD)
+        message(STATUS "Conan: Adjusting language standard")
+        conan_set_std()
     endif()
     conan_set_vs_runtime()
     conan_set_libcxx()

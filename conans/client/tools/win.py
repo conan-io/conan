@@ -1,13 +1,16 @@
+import glob
+import json
 import os
 import platform
+import re
 
 import subprocess
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.files import unix_path, MSYS2, WSL, which
 from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
+from conans.util.env_reader import get_env
 from conans.util.files import decode_text
 
 _global_output = None
@@ -33,7 +36,13 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         self.run(command)
     """
     targets = targets or []
-    command = "devenv %s /upgrade && " % sln_path if upgrade_project else ""
+    command = ""
+
+    if upgrade_project and not get_env("CONAN_SKIP_VS_PROJECTS_UPGRADE", False):
+        command += "devenv %s /upgrade && " % sln_path
+    else:
+        _global_output.info("Skipped sln project upgrade")
+
     build_type = build_type or settings.build_type
     arch = arch or settings.arch
     if not build_type:
@@ -61,30 +70,142 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     return command
 
 
-def vs_installation_path(version):
-    if not hasattr(vs_installation_path, "_cached"):
-        vs_installation_path._cached = dict()
+def vs_installation_path(version, preference=None):
 
-    if version not in vs_installation_path._cached:
-        vs_path = None
-        program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
-        if program_files:
-            vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
-                                        "vswhere.exe")
-            if os.path.isfile(vswhere_path):
-                version_range = "[%d.0, %d.0)" % (int(version), int(version) + 1)
-                try:
-                    output = subprocess.check_output([vswhere_path, "-version", version_range,
-                                                      "-legacy", "-property", "installationPath"])
-                    vs_path = output.decode().strip()
-                    _global_output.info("vswhere detected VS %s in %s" % (version, vs_path))
-                except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
-                    _global_output.error("vswhere error: %s" % str(e))
+    vs_installation_path = None
 
-        # Remember to cache result
-        vs_installation_path._cached[version] = vs_path
+    if not preference:
+        env_prefs = get_env("CONAN_VS_INSTALLATION_PREFERENCE", list())
 
-    return vs_installation_path._cached[version]
+        if env_prefs:
+            preference = env_prefs
+        else:  # default values
+            preference = ["Enterprise", "Professional", "Community", "BuildTools"]
+
+    # Try with vswhere()
+    try:
+        legacy_products = vswhere(legacy=True)
+        all_products = vswhere(products=["*"])
+        products = legacy_products + all_products
+    except ConanException:
+        products = None
+
+    vs_paths = []
+
+    if products:
+        # remove repeated products
+        seen_products = []
+        for product in products:
+            if product not in seen_products:
+                seen_products.append(product)
+
+        # Append products with "productId" by order of preference
+        for product_type in preference:
+            for product in seen_products:
+                product = dict(product)
+                if product["installationVersion"].startswith(("%d." % int(version))) and "productId" in product:
+                    if product_type in product["productId"]:
+                        vs_paths.append(product["installationPath"])
+
+        # Append products without "productId" (Legacy installations)
+        for product in seen_products:
+            product = dict(product)
+            if product["installationVersion"].startswith(("%d." % int(version))) and "productId" not in product:
+                vs_paths.append(product["installationPath"])
+
+    # If vswhere does not find anything or not available, try with vs_comntools()
+    if not vs_paths:
+        vs_path = vs_comntools(version)
+
+        if vs_path:
+            sub_path_to_remove = os.path.join("", "Common7", "Tools", "")
+            # Remove '\\Common7\\Tools\\' to get same output as vswhere
+            if vs_path.endswith(sub_path_to_remove):
+                vs_path = vs_path[:-(len(sub_path_to_remove)+1)]
+
+        vs_installation_path = vs_path
+    else:
+        vs_installation_path = vs_paths[0]
+
+    return vs_installation_path
+
+
+def vswhere(all_=False, prerelease=False, products=None, requires=None, version="", latest=False,
+            legacy=False, property_="", nologo=True):
+
+    # 'version' option only works if Visual Studio 2017 is installed:
+    # https://github.com/Microsoft/vswhere/issues/91
+
+    products = list() if products is None else products
+    requires = list() if requires is None else requires
+
+    if legacy and (products or requires):
+        raise ConanException("The 'legacy' parameter cannot be specified with either the "
+                             "'products' or 'requires' parameter")
+
+    program_files = os.environ.get("ProgramFiles(x86)", os.environ.get("ProgramFiles"))
+
+    vswhere_path = ""
+
+    if program_files:
+        vswhere_path = os.path.join(program_files, "Microsoft Visual Studio", "Installer",
+                                    "vswhere.exe")
+        if not os.path.isfile(vswhere_path):
+            raise ConanException("Cannot locate 'vswhere'")
+    else:
+        raise ConanException("Cannot locate 'Program Files'/'Program Files (x86)' directory")
+
+    arguments = list()
+    arguments.append(vswhere_path)
+
+    # Output json format
+    arguments.append("-format")
+    arguments.append("json")
+
+    if all_:
+        arguments.append("-all")
+
+    if prerelease:
+        arguments.append("-prerelease")
+
+    if products:
+        arguments.append("-products")
+        arguments.extend(products)
+
+    if requires:
+        arguments.append("-requires")
+        arguments.extend(requires)
+
+    if len(version) is not 0:
+        arguments.append("-version")
+        arguments.append(version)
+
+    if latest:
+        arguments.append("-latest")
+
+    if legacy:
+        arguments.append("-legacy")
+
+    if len(property_) is not 0:
+        arguments.append("-property")
+        arguments.append(property_)
+
+    if nologo:
+        arguments.append("-nologo")
+
+    try:
+        output = subprocess.check_output(arguments)
+        vswhere_out = decode_text(output).strip()
+    except (ValueError, subprocess.CalledProcessError, UnicodeDecodeError) as e:
+        raise ConanException("vswhere error: %s" % str(e))
+
+    return json.loads(vswhere_out)
+
+
+def vs_comntools(compiler_version):
+    env_var = "vs%s0comntools" % compiler_version
+    vs_path = os.getenv(env_var)
+    return vs_path
 
 
 def find_windows_10_sdk():
@@ -136,7 +257,10 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
                        'armv8': 'x86_arm64'}.get(arch_setting)
     if not vcvars_arch:
         raise ConanException('unsupported architecture %s' % arch_setting)
+
+    command = ""
     existing_version = os.environ.get("VisualStudioVersion")
+
     if existing_version:
         command = "echo Conan:vcvars already set"
         existing_version = existing_version.split(".")[0]
@@ -148,33 +272,19 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
             else:
                 _global_output.warn(message)
     else:
-        env_var = "vs%s0comntools" % compiler_version
+        vs_path = vs_installation_path(str(compiler_version))
 
-        if env_var == 'vs150comntools':
-            vs_path = os.getenv(env_var)
-            if not vs_path:  # Try to locate with vswhere
-                vs_root = vs_installation_path("15")
-                if vs_root:
-                    vs_path = os.path.join(vs_root, "Common7", "Tools")
-                else:
-                    raise ConanException("VS2017 '%s' variable not defined, "
-                                         "and vswhere didn't find it" % env_var)
-            if not os.path.isdir(vs_path):
-                _global_output.warn('VS variable %s points to the non-existing path "%s",'
-                    'please check that you have set it correctly' % (env_var, vs_path))
-            vcvars_path = os.path.join(vs_path, "../../VC/Auxiliary/Build/vcvarsall.bat")
-            command = ('set "VSCMD_START_DIR=%%CD%%" && '
-                       'call "%s" %s' % (vcvars_path, vcvars_arch))
+        if not vs_path or not os.path.isdir(vs_path):
+            _global_output.warn("VS non-existing installation")
         else:
-            try:
-                vs_path = os.environ[env_var]
-            except KeyError:
-                raise ConanException("VS '%s' variable not defined. Please install VS" % env_var)
-            if not os.path.isdir(vs_path):
-                _global_output.warn('VS variable %s points to the non-existing path "%s",'
-                    'please check that you have set it correctly' % (env_var, vs_path))
-            vcvars_path = os.path.join(vs_path, "../../VC/vcvarsall.bat")
-            command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
+            vcvars_path = ""
+            if int(compiler_version) > 14:
+                vcvars_path = os.path.join(vs_path, "VC/Auxiliary/Build/vcvarsall.bat")
+                command = ('set "VSCMD_START_DIR=%%CD%%" && '
+                           'call "%s" %s' % (vcvars_path, vcvars_arch))
+            else:
+                vcvars_path = os.path.join(vs_path, "VC/vcvarsall.bat")
+                command = ('call "%s" %s' % (vcvars_path, vcvars_arch))
 
     if os_setting == 'WindowsStore':
         os_version_setting = settings.get_safe("os.version")
@@ -191,7 +301,7 @@ def vcvars_command(settings, arch=None, compiler_version=None, force=False):
     return command
 
 
-def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=True):
+def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_known_paths=False):
     cmd = vcvars_command(settings, arch=arch,
                          compiler_version=compiler_version, force=force) + " && echo __BEGINS__ && set"
     ret = decode_text(subprocess.check_output(cmd, shell=True))
@@ -208,7 +318,7 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
     if filter_known_paths:
         def relevant_path(path):
             path = path.replace("\\", "/").lower()
-            keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/"
+            keywords = "msbuild", "visual", "microsoft", "/msvc/", "/vc/", "system32", "windows"
             return any(word in path for word in keywords)
 
         path = new_env.get("PATH", "").split(";")
@@ -234,6 +344,56 @@ def escape_windows_cmd(command):
     """
     quoted_arg = subprocess.list2cmdline([command])
     return "".join(["^%s" % arg if arg in r'()%!^"<>&|' else arg for arg in quoted_arg])
+
+
+def get_cased_path(name):
+    if platform.system() != "Windows":
+        return name
+    if not os.path.isabs(name):
+        name = os.path.abspath(name)
+    dirs = name.split('\\')
+    # disk letter
+    test_name = [dirs[0].upper()]
+    for d in dirs[1:]:
+        test_name += ["%s[%s]" % (d[:-1], d[-1])]  # This brackets do the trick to match cased
+
+    res = glob.glob('\\'.join(test_name))
+    if not res:
+        # File not found
+        return None
+    return res[0]
+
+
+MSYS2 = 'msys2'
+MSYS = 'msys'
+CYGWIN = 'cygwin'
+WSL = 'wsl'  # Windows Subsystem for Linux
+SFU = 'sfu'  # Windows Services for UNIX
+
+
+def unix_path(path, path_flavor=None):
+    """"Used to translate windows paths to MSYS unix paths like
+    c/users/path/to/file. Not working in a regular console or MinGW!"""
+    if not path:
+        return None
+
+    if os.path.exists(path):
+        path = get_cased_path(path)  # if the path doesn't exist (and abs) we cannot guess the casing
+
+    path_flavor = path_flavor or os_info.detect_windows_subsystem() or MSYS2
+    path = path.replace(":/", ":\\")
+    pattern = re.compile(r'([a-z]):\\', re.IGNORECASE)
+    path = pattern.sub('/\\1/', path).replace('\\', '/')
+    if path_flavor in (MSYS, MSYS2):
+        return path.lower()
+    elif path_flavor == CYGWIN:
+        return '/cygdrive' + path.lower()
+    elif path_flavor == WSL:
+        return '/mnt' + path[0:2].lower() + path[2:]
+    elif path_flavor == SFU:
+        path = path.lower()
+        return '/dev/fs' + path[0] + path[1:].capitalize()
+    return None
 
 
 def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw=True, env=None):
@@ -281,8 +441,11 @@ def run_in_windows_bash(conanfile, bashcmd, cwd=None, subsystem=None, msys_mingw
         # Needed to change to that dir inside the bash shell
         if cwd and not os.path.isabs(cwd):
             cwd = os.path.join(os.getcwd(), cwd)
+
         curdir = unix_path(cwd or os.getcwd(), path_flavor=subsystem)
         to_run = 'cd "%s"%s && %s ' % (curdir, hack_env, bashcmd)
-        wincmd = '%s --login -c %s' % (os_info.bash_path(), escape_windows_cmd(to_run))
+        bash_path = os_info.bash_path()
+        bash_path = '"%s"' % bash_path if " " in bash_path else bash_path
+        wincmd = '%s --login -c %s' % (bash_path, escape_windows_cmd(to_run))
         conanfile.output.info('run_in_windows_bash: %s' % wincmd)
         return conanfile.run(wincmd, win_bash=False)

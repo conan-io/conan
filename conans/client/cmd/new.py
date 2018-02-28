@@ -13,7 +13,7 @@ class {package_name}Conan(ConanFile):
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
-    settings = "os", "compiler", "build_type", "arch", "os_build", "arch_build"
+    settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
     generators = "cmake"
@@ -54,7 +54,7 @@ from conans import tools
 class {package_name}Conan(ConanFile):
     name = "{name}"
     version = "{version}"
-    settings = "os", "compiler", "build_type", "arch", "os_build", "arch_build"
+    settings = "os", "compiler", "build_type", "arch"
     description = "<Description of {package_name} here>"
     url = "None"
     license = "None"
@@ -75,7 +75,7 @@ class {package_name}Conan(ConanFile):
     license = "<Put the package license here>"
     url = "<Package recipe repository url here, for issues about the package>"
     description = "<Description of {package_name} here>"
-    settings = "os", "compiler", "build_type", "arch", "os_build", "arch_build"
+    settings = "os", "compiler", "build_type", "arch"
     options = {{"shared": [True, False]}}
     default_options = "shared=False"
     generators = "cmake"
@@ -132,7 +132,7 @@ test_conanfile = """from conans import ConanFile, CMake, tools
 import os
 
 class {package_name}TestConan(ConanFile):
-    settings = "os", "compiler", "build_type", "arch", "os_build", "arch_build"
+    settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
 
     def build(self):
