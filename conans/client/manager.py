@@ -236,6 +236,8 @@ class ConanManager(object):
             require.conan_reference = require.range_reference = inject_require
         else:
             conanfile.requires(str(inject_require))
+        conanfile._user = inject_require.user
+        conanfile._channel = inject_require.channel
 
     def _get_graph_builder(self, loader, update, remote_proxy):
         local_search = self._search_manager
