@@ -138,9 +138,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         be = AutoToolsBuildEnvironment(conanfile)
         expected = {'CFLAGS': 'a_c_flag',
-                    'CPPFLAGS': '/Ipath\\includes /Iother\\include\\path /Donedefinition /Dtwodefinition /DNDEBUG',
+                    'CPPFLAGS': '-Ipath\\includes -Iother\\include\\path -Donedefinition -Dtwodefinition -DNDEBUG',
                     'CXXFLAGS': 'a_c_flag a_cpp_flag',
-                    'LDFLAGS': 'shared_link_flag exe_link_flag /LIBPATH:one\\lib\\path',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -LIBPATH:one\\lib\\path',
                     'LIBS': 'onelib.lib twolib.lib'}
 
         self.assertEquals(be.vars, expected)
