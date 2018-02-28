@@ -26,12 +26,11 @@ class VisualStudioBuildEnvironment(object):
         self._options = conanfile.options
         self._deps_cpp_info = conanfile.deps_cpp_info
         self._build_type = self._settings.get_safe("build_type")
-        self._runtime = self._settings.get_safe("runtime")
+        self._runtime = self._settings.get_safe("compiler.runtime")
 
         self.include_paths = conanfile.deps_cpp_info.include_paths
         self.lib_paths = conanfile.deps_cpp_info.lib_paths
         self.defines = copy.copy(conanfile.deps_cpp_info.defines)
-        self.runtime = conanfile.settings.get_safe("compiler.runtime")
         self.flags = self._configure_flags()
         self.cxx_flags = copy.copy(self._deps_cpp_info.cppflags)
         self.link_flags = self._configure_link_flags()

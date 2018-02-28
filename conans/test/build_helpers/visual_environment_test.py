@@ -8,7 +8,9 @@ from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 class VisualStudioBuildEnvironmentTest(unittest.TestCase):
 
     def test_visual(self):
-        settings = MockSettings({"build_type": "Debug"})
+        settings = MockSettings({"build_type": "Debug",
+                                 "compier": "Visual Studio",
+                                 "compiler.runtime": "MDd"})
         conanfile = MockConanfile(settings)
         conanfile.deps_cpp_info.include_paths.append("/one/include/path")
         conanfile.deps_cpp_info.include_paths.append("/two/include/path")
@@ -24,6 +26,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
         tool = VisualStudioBuildEnvironment(conanfile)
         self.assertEquals(tool.vars_dict, {
             "CL": ["-I/one/include/path", "-I/two/include/path",
+                   '-MDd',
                    '-mycflag',
                    '-mycflag2',
                    '-Zi',
@@ -42,6 +45,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
             "CL": ["-I/one/include/path",
                    "-I/two/include/path",
                    "-I/three/include/path",
+                   '-MDd',
                    '-mycflag',
                    '-mycflag2',
                    '-Zi',
@@ -58,6 +62,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
             self.assertEquals(tool.vars_dict, {
                 "CL": ["-I/one/include/path", "-I/two/include/path",
                        "-I/three/include/path",
+                       '-MDd',
                        '-mycflag',
                        '-mycflag2',
                        '-Zi',
@@ -70,7 +75,7 @@ class VisualStudioBuildEnvironmentTest(unittest.TestCase):
             })
 
             self.assertEquals(tool.vars, {
-                "CL": '-I"/one/include/path" -I"/two/include/path" -I"/three/include/path" '
+                "CL": '-I"/one/include/path" -I"/two/include/path" -I"/three/include/path" -MDd '
                       '-mycflag -mycflag2 -Zi '
                       '-mycppflag -mycppflag2 -myexelinkflag -mysharedlinkflag '
                       '-I/four/include/path -I/five/include/path',
