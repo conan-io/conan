@@ -11,24 +11,24 @@ from conans.client.tools.env import environment_append
 from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
-from conans.util.files import decode_text
+from conans.util.files import decode_text, load
 
 _global_output = None
 
 
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None, parallel=True, force_vcvars=False, toolset=None):
+                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None):
     """ Do both: set the environment variables and call the .sln build
     """
     vcvars = vcvars_command(settings, force=force_vcvars)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset)
+                              parallel, toolset=toolset, platforms=platforms)
     command = "%s && %s" % (vcvars, build)
     return command
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True, toolset=None):
+                      arch=None, parallel=True, toolset=None, platforms=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -50,11 +50,27 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     if not arch:
         raise ConanException("Cannot build_sln_command, arch not defined")
     command += "msbuild %s /p:Configuration=%s" % (sln_path, build_type)
-    arch = str(arch)
     msvc_arch = {'x86': 'x86',
                  'x86_64': 'x64',
                  'armv7': 'ARM',
-                 'armv8': 'ARM64'}.get(arch)
+                 'armv8': 'ARM64'}
+    if platforms:
+        msvc_arch.update(platforms)
+    msvc_arch = msvc_arch.get(str(arch))
+    try:
+        sln = load(sln_path)
+        pattern = re.compile(r"GlobalSection(.*?)EndGlobalSection", re.DOTALL)
+        solution_global = pattern.search(sln).group(1)
+        lines = solution_global.splitlines()
+        lines = [s.split("=")[0].strip() for s in lines]
+    except Exception:
+        pass
+    else:
+        config = "%s|%s" % (build_type, msvc_arch)
+        if config not in "".join(lines):
+            _global_output.error("***** The configuration %s does not exist in this solution *****" % config)
+            _global_output.error("Use 'platforms' argument to define your architectures")
+
     if msvc_arch:
         command += ' /p:Platform="%s"' % msvc_arch
 
