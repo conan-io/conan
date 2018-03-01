@@ -18,7 +18,9 @@ import os
 @attr('visual_studio')
 class BuildSLNCommandTest(unittest.TestCase):
     def no_configuration_test(self):
-        dummy = """    GlobalSection(SolutionConfigurationPlatforms) = preSolution
+        dummy = """GlobalSection
+            EndGlobalSection
+     GlobalSection(SolutionConfigurationPlatforms) = preSolution
         Debug|Win32 = Debug|Win32
         Debug|x64 = Debug|x64
         Release|Win32 = Release|Win32
@@ -33,7 +35,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
                                     build_type='Debug', arch="x86", parallel=False)
         self.assertIn('/p:Configuration=Debug /p:Platform="x86"', command)
-        self.assertIn("ERROR: ***** The configuration Debug|x86 does not exist in this solution *****",
+        self.assertIn("WARN: ***** The configuration Debug|x86 does not exist in this solution *****",
                       new_out.getvalue())
         # use platforms
         new_out = StringIO()
@@ -41,6 +43,7 @@ class BuildSLNCommandTest(unittest.TestCase):
         command = build_sln_command(Settings({}), sln_path=path, targets=None, upgrade_project=False,
                                     build_type='Debug', arch="x86", parallel=False, platforms={"x86": "Win32"})
         self.assertIn('/p:Configuration=Debug /p:Platform="Win32"', command)
+        self.assertNotIn("WARN", new_out.getvalue())
         self.assertNotIn("ERROR", new_out.getvalue())
 
     def no_arch_test(self):

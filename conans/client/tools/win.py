@@ -59,7 +59,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     msvc_arch = msvc_arch.get(str(arch))
     try:
         sln = load(sln_path)
-        pattern = re.compile(r"GlobalSection(.*?)EndGlobalSection", re.DOTALL)
+        pattern = re.compile(r"GlobalSection\(SolutionConfigurationPlatforms\)(.*?)EndGlobalSection", re.DOTALL)
         solution_global = pattern.search(sln).group(1)
         lines = solution_global.splitlines()
         lines = [s.split("=")[0].strip() for s in lines]
@@ -68,8 +68,8 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     else:
         config = "%s|%s" % (build_type, msvc_arch)
         if config not in "".join(lines):
-            _global_output.error("***** The configuration %s does not exist in this solution *****" % config)
-            _global_output.error("Use 'platforms' argument to define your architectures")
+            _global_output.warn("***** The configuration %s does not exist in this solution *****" % config)
+            _global_output.warn("Use 'platforms' argument to define your architectures")
 
     if msvc_arch:
         command += ' /p:Platform="%s"' % msvc_arch
