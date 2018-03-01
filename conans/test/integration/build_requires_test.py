@@ -1,5 +1,5 @@
 import unittest
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 
 from conans.test.utils.tools import TestClient
 from conans.paths import CONANFILE
