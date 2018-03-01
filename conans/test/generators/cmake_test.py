@@ -100,8 +100,8 @@ class CMakeGeneratorTest(unittest.TestCase):
         generator = CMakeGenerator(conanfile)
         content = generator.content
         cmake_lines = content.splitlines()
-        self.assertIn(r'set(CONAN_C_FLAGS_MYPKG "-load C:\\foo\\bar.dll ${CONAN_CXX_FLAGS}")', cmake_lines)
-        self.assertIn(r'set(CONAN_CXX_FLAGS_MYPKG "-load C:\\foo\\bar.dll ${CONAN_CXX_FLAGS}")', cmake_lines)
+        self.assertIn(r'set(CONAN_C_FLAGS_MYPKG "-load C:\\foo\\bar2.dll")', cmake_lines)
+        self.assertIn(r'set(CONAN_CXX_FLAGS_MYPKG "-load C:\\foo\\bar.dll")', cmake_lines)
 
     def aux_cmake_test_setup_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
