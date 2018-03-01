@@ -397,7 +397,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-linux-gnueabi")
+        self.assertEquals(host, "i686-linux-gnu")
         self.assertFalse(target)
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
