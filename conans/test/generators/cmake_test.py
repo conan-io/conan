@@ -89,6 +89,20 @@ class CMakeGeneratorTest(unittest.TestCase):
         self.assertIn('set(CONAN_CXX_FLAGS "-DGTEST_USE_OWN_TR1_TUPLE=1'
                       ' -DGTEST_LINKED_AS_SHARED_LIBRARY=1 ${CONAN_CXX_FLAGS}")', cmake_lines)
 
+    def escaped_flags_test(self):
+        conanfile = ConanFile(None, None, Settings({}), None)
+        ref = ConanFileReference.loads("MyPkg/0.1@lasote/stables")
+        cpp_info = CppInfo("dummy_root_folder1")
+        cpp_info.includedirs.append("other_include_dir")
+        cpp_info.cppflags = ["-load", r"C:\foo\bar.dll"]
+        cpp_info.cflags = ["-load", r"C:\foo\bar2.dll"]
+        conanfile.deps_cpp_info.update(cpp_info, ref.name)
+        generator = CMakeGenerator(conanfile)
+        content = generator.content
+        cmake_lines = content.splitlines()
+        self.assertIn(r'set(CONAN_C_FLAGS_MYPKG "-load C:\\foo\\bar.dll ${CONAN_CXX_FLAGS}")', cmake_lines)
+        self.assertIn(r'set(CONAN_CXX_FLAGS_MYPKG "-load C:\\foo\\bar.dll ${CONAN_CXX_FLAGS}")', cmake_lines)
+
     def aux_cmake_test_setup_test(self):
         conanfile = ConanFile(None, None, Settings({}), None)
         generator = CMakeGenerator(conanfile)
