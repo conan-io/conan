@@ -54,8 +54,10 @@ class VirtualEnvGenerator(Generator):
         if platform.system() == "Windows":
             activate_lines.append("SET PROMPT=(%s) " % venv_name + "%PROMPT%")
         else:
-            activate_lines.append("export OLD_PS1=\"$PS1\"")
-            activate_lines.append("export PS1=\"(%s) " % venv_name + "$PS1\"")
+            activate_lines.append("OLD_PS1=\"$PS1\"")
+            activate_lines.append("export OLD_PS1")
+            activate_lines.append("PS1=\"(%s) " % venv_name + "$PS1\"")
+            activate_lines.append("export PS1")
 
         activate_commands = self._get_setenv_variables_commands()
         activate_lines.extend(activate_commands)
@@ -71,13 +73,14 @@ class VirtualEnvGenerator(Generator):
                 if platform.system() == "Windows":
                     ret.append('SET %s=%s' % (name, old_value))
                 else:
-                    line = "export %s=%s" % (name, old_value) if old_value else ("unset %s" % name)
-                    ret.append(line)
+                    ret.append('%s=%s' % (name, old_value))
+                    ret.append('export %s' % (name))
 
             if platform.system() == "Windows":
                 ret.append("SET PROMPT=%s" % os.environ.get("PROMPT", ""))
             else:
-                ret.append('export PS1="$OLD_PS1"')
+                ret.append('PS1="$OLD_PS1"')
+                ret.append('export PS1')
             return ret
         deactivate_lines.extend(append_deactivate_lines(self.env.keys()))
         return deactivate_lines
