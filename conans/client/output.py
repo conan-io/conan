@@ -46,12 +46,16 @@ class ConanOutput(object):
 
     @property
     def is_terminal(self):
+        if self._stream is None:
+            return False
         return hasattr(self._stream, "isatty") and self._stream.isatty()
 
     def writeln(self, data, front=None, back=None):
         self.write(data, front, back, True)
 
     def write(self, data, front=None, back=None, newline=False):
+        if self._stream is None:
+            return
         if six.PY2:
             if isinstance(data, str):
                 data = decode_text(data)  # Keep python 2 compatibility
@@ -90,6 +94,8 @@ class ConanOutput(object):
         self.write(data, Color.GREEN)
 
     def rewrite_line(self, line):
+        if self._stream is None:
+            return
         tmp_color = self._color
         self._color = False
         TOTAL_SIZE = 70

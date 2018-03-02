@@ -1142,6 +1142,8 @@ class Command(object):
         parser = argparse.ArgumentParser(description=self.execute.__doc__, prog="conan exec")
         parser.add_argument("-ref", "--reference", nargs=1, action=Extender,
                             help='Full package reference (Pkg/version@user/channel)')
+        parser.add_argument('-q', '--quiet', default=False,
+                            action='store_true', help='Suppress all output from conan.')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
@@ -1156,7 +1158,7 @@ class Command(object):
                             # install arguments
                             settings=args.settings, options=args.options,
                             remote=args.remote, build_modes=args.build,
-                            update=args.update, env=args.env)
+                            update=args.update, env=args.env, quiet=args.quiet)
 
     def _show_help(self):
         """Prints a summary of all commands

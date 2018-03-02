@@ -73,6 +73,14 @@ class ToolBConan(ConanFile):
         self.assertIn("toola/0.1@lasote/testing", client.out)
         self.assertNotIn("toolb/0.1@lasote/testing", client.out)
 
+    def quiet_test(self):
+        client = TestClient()
+        self._setup_recipes(client)
+        client.run_in_external_process("exec -q -ref toola/0.1@lasote/testing %s" % self._true_cmd())
+        self.assertNotIn("Requirements", client.out)
+        self.assertNotIn("toola/0.1@lasote/testing", client.out)
+        self.assertNotIn("toolb/0.1@lasote/testing", client.out)
+
     def toolA_test(self):
         client = TestClient()
         self._setup_recipes(client)
