@@ -314,6 +314,7 @@ class ConanManager(object):
                 deploy_conanfile = deps_graph.inverse_levels()[1][0].conanfile
                 if hasattr(deploy_conanfile, "deploy") and callable(deploy_conanfile.deploy):
                     run_deploy(deploy_conanfile, install_folder, output)
+        return conanfile
 
     def source(self, conanfile_path, source_folder, info_folder):
         """

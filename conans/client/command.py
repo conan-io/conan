@@ -1135,6 +1135,29 @@ class Command(object):
 
         self._conan.export_alias(args.reference, args.target)
 
+    def execute(self, *args):
+        """ Executes a command in the environment defined by the profile, the
+        specified references, settings, and options.
+        """
+        parser = argparse.ArgumentParser(description=self.execute.__doc__, prog="conan exec")
+        parser.add_argument("-ref", "--reference", nargs=1, action=Extender,
+                            help='Full package reference (Pkg/version@user/channel)')
+
+        _add_common_install_arguments(parser, build_help=_help_build_policies)
+
+        parser.add_argument('command', nargs=1)
+        parser.add_argument('arguments', nargs=argparse.REMAINDER)
+
+        args = parser.parse_args(*args)
+        self._conan.execute(command=args.command+args.arguments,
+                            references=args.reference,
+                            profile_name=args.profile,
+                            initial_env=os.environ.copy(),
+                            # install arguments
+                            settings=args.settings, options=args.options,
+                            remote=args.remote, build_modes=args.build,
+                            update=args.update, env=args.env)
+
     def _show_help(self):
         """Prints a summary of all commands
         """
@@ -1142,7 +1165,7 @@ class Command(object):
                 ("Creator commands", ("new", "create", "upload", "export", "export-pkg", "test")),
                 ("Package development commands", ("source", "build", "package")),
                 ("Misc commands", ("profile", "remote", "user", "imports", "copy", "remove",
-                                   "alias", "download", "help"))]
+                                   "alias", "download", "help", "exec"))]
 
         def check_all_commands_listed():
             """Keep updated the main directory, raise if don't"""
@@ -1177,6 +1200,8 @@ class Command(object):
             if not method_name.startswith('_'):
                 if "export_pkg" == method_name:
                     method_name = "export-pkg"
+                if "execute" == method_name:
+                    method_name = "exec"
                 method = m[1]
                 if method.__doc__ and not method.__doc__.startswith('HIDDEN'):
                     result[method_name] = method

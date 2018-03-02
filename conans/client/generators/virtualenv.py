@@ -16,48 +16,58 @@ class VirtualEnvGenerator(Generator):
     def filename(self):
         return
 
-    def _variable_placeholder(self, flavor, name):
+    def _variable_placeholder(self, flavor, name, env):
         """
         :param flavor: flavor of the execution environment
         :param name: variable name
+        :param env: current environment dictionary
         :return: placeholder for the variable name formatted for a certain execution environment.
-        (e.g., cmd, ps1, sh).
+        (e.g., cmd, ps1, sh, exec).
         """
         if flavor == "cmd":
             return "%%%s%%" % name
+        if flavor == "exec":
+            return env.get(name, None)
         if flavor == "ps1":
             return "$env:%s" % name
         return "$%s" % name  # flavor == sh
 
-    def format_values(self, flavor, variables):
+    def format_values(self, flavor, variables, env=None):
         """
         Formats the values for the different supported script language flavors.
         :param flavor: flavor of the execution environment
         :param variables: variables to be formatted
+        :param env: current environment dictionary
         :return:
         """
         variables = variables or self.env.items()
+        env = env or os.environ
         path_sep, quote_elements, quote_full_value, enable_space_path_sep = ":", True, False, True
         if flavor in ["cmd", "ps1"]:
             path_sep, quote_elements, enable_space_path_sep = ";", False, False
         if flavor in ["ps1"]:
             quote_full_value = True
+        if flavor in ["exec"]:
+            path_sep = os.pathsep
+            quote_elements = False
+            enable_space_path_sep = os_info.is_posix
 
         ret = []
         for name, value in variables:
             # activate values
             if isinstance(value, list):
-                placeholder = self._variable_placeholder(flavor, name)
+                placeholder = self._variable_placeholder(flavor, name, env)
+                placeholder = [placeholder] if placeholder is not None else []
                 if enable_space_path_sep and name in self.append_with_spaces:
                     # Variables joined with spaces look like: CPPFLAGS="one two three"
-                    value = " ".join(value+[placeholder])
+                    value = " ".join(value+placeholder)
                     value = "\"%s\"" % value if value else ""
                 else:
                     # Quoted variables joined with pathset may look like:
                     # PATH="one path":"two paths"
                     # Unquoted variables joined with pathset may look like: PATH=one path;two paths
                     value = ["\"%s\"" % v for v in value] if quote_elements else value
-                    value = path_sep.join(value+[placeholder])
+                    value = path_sep.join(value+placeholder)
             else:
                 # single value
                 value = "\"%s\"" % value if quote_elements else value

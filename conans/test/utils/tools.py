@@ -1,11 +1,15 @@
+import codecs
+import io
 import os
 import shlex
 import shutil
 import sys
+import tempfile
 import uuid
 from collections import Counter
 from contextlib import contextmanager
 from io import StringIO
+from multiprocessing import Process
 
 import requests
 import six
@@ -337,6 +341,16 @@ class MockedUserIO(UserIO):
         self.login_index.update([remote_name])
         return tmp
 
+def run_helper(command_line, user_io,
+                 base_folder, current_folder,
+                 servers, users, client_version,
+                 min_server_compatible_version,
+                 requester_class, runner):
+    tc = TestClient(base_folder, current_folder,
+                 servers, users, client_version,
+                 min_server_compatible_version,
+                 requester_class, runner)
+    sys.exit(tc.run(command_line, user_io, True, True))
 
 class TestClient(object):
 
@@ -421,6 +435,48 @@ class TestClient(object):
         finally:
             self.current_folder = old_dir
 
+    # from https://eli.thegreenplace.net/2015/redirecting-all-kinds-of-stdout-in-python
+    @contextmanager
+    def stdout_redirector(self, stream):
+        original_stdout = None
+        try:
+            # The original fd stdout points to. Usually 1 on POSIX systems.
+            original_stdout_fd = sys.stdout.fileno()
+        except:
+            # Nose replaced stdout already, keep it and only redirect the file descriptor
+            original_stdout    = sys.stdout
+            original_stdout_fd = sys.__stdout__.fileno()
+
+        def _redirect_stdout(to_fd):
+            """Redirect stdout to the given file descriptor."""
+            # Make original_stdout_fd point to the same file as to_fd
+            os.dup2(to_fd, original_stdout_fd)
+            # Create a new sys.stdout that points to the redirected fd
+            sys.stdout = io.TextIOWrapper(io.open(original_stdout_fd, 'wb'))
+
+        # Save a copy of the original stdout fd in saved_stdout_fd
+        saved_stdout_fd = os.dup(original_stdout_fd)
+        try:
+            # Create a temporary file and redirect stdout to it
+            tfile = tempfile.TemporaryFile(mode='w+b')
+            # Flush and close sys.stdout - also closes the file descriptor (fd)
+            if not original_stdout:
+                sys.stdout.close()
+            _redirect_stdout(tfile.fileno())
+            # Yield to caller, then redirect stdout back to the saved fd
+            yield
+            sys.stdout.close()
+            _redirect_stdout(saved_stdout_fd)
+            # Copy contents of temporary file to the given stream
+            tfile.flush()
+            tfile.seek(0, io.SEEK_SET)
+            stream.write(tfile.read())
+        finally:
+            tfile.close()
+            os.close(saved_stdout_fd)
+            if original_stdout:
+                sys.stdout = original_stdout
+
     def _init_collaborators(self, user_io=None):
 
         output = TestBufferConanOutput()
@@ -460,12 +516,35 @@ class TestClient(object):
         # Maybe something have changed with migrations
         self._init_collaborators(user_io)
 
-    def run(self, command_line, user_io=None, ignore_error=False):
+    def run_in_external_process(self, command_line, user_io=None, ignore_error=False):
+        output = io.BytesIO()
+        with self.stdout_redirector(output):
+            p = Process(target=run_helper, args=(command_line, user_io,
+                                                self.base_folder, self.current_folder,
+                                                self.servers, self.users, self.client_version,
+                                                self.min_server_compatible_version,
+                                                self.requester_class, self.runner))
+            p.start()
+            p.join()
+        self.user_io.out = output.getvalue().decode("utf-8", errors='ignore')
+        error = p.exitcode
+
+        if not ignore_error and error:
+            logger.error(self.user_io.out)
+            print(self.user_io.out)
+            raise Exception("Command failed:\n%s" % command_line)
+
+        self.all_output += str(self.user_io.out)
+        return error
+
+    def run(self, command_line, user_io=None, ignore_error=False, stdout_output=False):
         """ run a single command as in the command line.
             If user or password is filled, user_io will be mocked to return this
             tuple if required
         """
         self.init_dynamic_vars(user_io)
+        if stdout_output:
+            self.user_io.out = ConanOutput(sys.stdout)
         with tools.environment_append(self.client_cache.conan_config.env_vars):
             # Settings preprocessor
             interactive = not get_env("CONAN_NON_INTERACTIVE", False)
