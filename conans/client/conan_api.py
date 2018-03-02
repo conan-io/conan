@@ -312,8 +312,8 @@ class ConanAPIV1(object):
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
-                   install_folder=None, profile_name=None, settings=None, options=None,
-                   env=None, force=False, user=None, version=None, cwd=None):
+                   package_folder=None, install_folder=None, profile_name=None, settings=None,
+                   options=None, env=None, force=False, user=None, version=None, cwd=None):
 
         settings = settings or []
         options = options or []
@@ -326,6 +326,12 @@ class ConanAPIV1(object):
                                  "files" % (CONANINFO, BUILD_INFO))
 
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+
+        if package_folder:
+            if build_folder or source_folder:
+                raise ConanException("--package-folder incompatible with --build-folder and --source-folder")
+            package_folder = _make_abs_path(package_folder, cwd)
+
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
@@ -357,7 +363,8 @@ class ConanAPIV1(object):
 
         reference = ConanFileReference(name, version, user, channel)
         self._manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
-                                 install_folder=install_folder, profile=profile, force=force)
+                                 package_folder=package_folder, install_folder=install_folder,
+                                 profile=profile, force=force)
 
     @api_method
     def download(self, reference, remote=None, package=None):

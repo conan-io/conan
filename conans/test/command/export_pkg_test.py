@@ -12,6 +12,31 @@ from parameterized import parameterized
 
 class ExportPkgTest(unittest.TestCase):
 
+    def test_package_folder(self):
+        # https://github.com/conan-io/conan/issues/2350
+        conanfile = """from conans import ConanFile
+class HelloPythonConan(ConanFile):
+    settings = "os"
+    def package(self):
+        self.output.info("PACKAGE NOT CALLED")
+        raise Exception("PACKAGE NOT CALLED")
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile,
+                     "pkg/myfile.h": "",
+                     "profile": "[settings]\nos=Windows"})
+        client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -pr=profile")
+        self.assertNotIn("PACKAGE NOT CALLED", client.out)
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        pkg_folder = client.client_cache.packages(ref)
+        folders = os.listdir(pkg_folder)
+        pkg_folder = os.path.join(pkg_folder, folders[0])
+        conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
+        self.assertEqual(2, conaninfo.count("os=Windows"))
+        manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
+        self.assertIn("conaninfo.txt: f395060da1ffdeb934be8b62e4bd8a3a", manifest)
+        self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
+
     def test_develop(self):
         # https://github.com/conan-io/conan/issues/2513
         conanfile = """from conans import ConanFile
