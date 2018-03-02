@@ -2,7 +2,7 @@ import unittest
 from conans.test.utils.tools import TestClient
 from conans.util.files import load, mkdir
 import os
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 
 class CMakeFoldersTest(unittest.TestCase):

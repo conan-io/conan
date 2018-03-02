@@ -7,7 +7,7 @@ from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
 from conans.util.files import load
 from conans.test.utils.conanfile import TestConanFile
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 
 class ExportPkgTest(unittest.TestCase):
