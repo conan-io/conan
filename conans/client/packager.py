@@ -17,11 +17,9 @@ def export_pkg(conanfile, src_package_folder, package_folder, output):
     output.info("Exporting to cache existing package from user folder")
     output.info("Package folder %s" % (package_folder))
 
-    for root, _, files in os.walk(src_package_folder):
-        relative_path = os.path.relpath(root, src_package_folder)
-        for f in files:
-            fil = os.path.join(relative_path, f)
-            shutil.copy(os.path.join(root, f), os.path.join(package_folder, fil))
+    copier = FileCopier(src_package_folder, package_folder)
+    copier("*", symlinks=True)
+    copier.report(output, warn=True)
 
     save(os.path.join(package_folder, CONANINFO), conanfile.info.dumps())
     digest = FileTreeManifest.create(package_folder)

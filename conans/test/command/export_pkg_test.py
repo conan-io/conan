@@ -5,12 +5,35 @@ import os
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import load
+from conans.util.files import load, mkdir
 from conans.test.utils.conanfile import TestConanFile
 from parameterized import parameterized
 
 
 class ExportPkgTest(unittest.TestCase):
+
+    def test_package_folder_errors(self):
+        # https://github.com/conan-io/conan/issues/2350
+        conanfile = """from conans import ConanFile
+class HelloPythonConan(ConanFile):
+    pass
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        mkdir(os.path.join(client.current_folder, "pkg"))
+
+        error = client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -bf=.", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --package-folder incompatible with --build-folder and --source-folder",
+                      client.out)
+
+        error = client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -sf=.", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --package-folder incompatible with --build-folder and --source-folder",
+                      client.out)
+
+        client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg")
+        self.assertIn("Hello/0.1@lasote/stable: WARN: No files copied!", client.out)
 
     def test_package_folder(self):
         # https://github.com/conan-io/conan/issues/2350
@@ -25,8 +48,10 @@ class HelloPythonConan(ConanFile):
         client.save({CONANFILE: conanfile,
                      "pkg/myfile.h": "",
                      "profile": "[settings]\nos=Windows"})
+
         client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -pr=profile")
         self.assertNotIn("PACKAGE NOT CALLED", client.out)
+        self.assertIn("Hello/0.1@lasote/stable: Copied 1 '.h' files: myfile.h", client.out)
         ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
         pkg_folder = client.client_cache.packages(ref)
         folders = os.listdir(pkg_folder)
