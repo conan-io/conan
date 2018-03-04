@@ -31,24 +31,6 @@ def conan_expand_user(path):
     return result
 
 
-def _give_full_control_current_user(folder):
-    """
-    Gives to the current user full control in folder. In cygwin and msys2 if current user doesn't
-    have full control there will be access problems for new files under folder. Problem only observed
-    when cygwin/msys2 work on mounted NTFS drive
-    :param folder:
-    """
-    try:
-        cmd = 'cacls %s /E /G "%s\\%s":F' % (folder, os.environ['USERDOMAIN'], os.environ['USERNAME'])
-        subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, make command quiet
-    except subprocess.CalledProcessError as e:
-        if "NTFS" in str(e.output):
-            # cacls only works for NTFS drives. If folder is living in non NTFS drive it will return:
-            # """The Cacls command can be run only on disk drives that use the NTFS file system."""
-            return
-        raise
-
-
 def path_shortener(path, short_paths):
     """ short_paths is 4-state:
     False: Never shorten the path
@@ -69,8 +51,14 @@ def path_shortener(path, short_paths):
         short_home = drive + "/.conan"
     mkdir(short_home)
 
-    # Workaround for folders in NTFS drives
-    _give_full_control_current_user(short_home)
+    # Workaround for short_home living in NTFS file systems. Give full control permission to current user to avoid
+    # access problems in cygwing/msys2 windows subsystems when using short_home folder
+    try:
+        cmd = r'cacls %s /E /G "%s\%s":F' % (short_home, os.environ['USERDOMAIN'], os.environ['USERNAME'])
+        subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, make command quiet
+    except subprocess.CalledProcessError:
+        # cmd can fail if trying to set ACL in non NTFS drives, ignoring it.
+        pass
 
     redirect = tempfile.mkdtemp(dir=short_home, prefix="")
     # This "1" is the way to have a non-existing directory, so commands like
