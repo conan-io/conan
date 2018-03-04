@@ -152,23 +152,37 @@ class InfoFoldersTest(unittest.TestCase):
         if platform.system() != "Windows":
             return
 
-        folder = temp_folder(False)
-        short_folder = os.path.join(folder, ".cn")
+        folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
+        short_folder = os.path.join(folder, ".cnacls")
 
         self.assertFalse(os.path.exists(short_folder), "short_folder: %s shouldn't exists" % short_folder)
+        os.makedirs(short_folder)
 
+        current_domain = os.environ['USERDOMAIN']
+        current_user = os.environ['USERNAME']
+
+        # Explicitly revoke full control permission to current user
+        cmd = r'cacls %s /E /R "%s\%s"' % (short_folder, current_domain, current_user)
+        try:
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            raise Exception("Error %s setting ACL to short_folder: '%s'."
+                            "Please check that cacls.exe exists" % (e, short_folder))
+
+        # Run conan export in using short_folder
         with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
             client = TestClient(base_folder=folder)
             client.save({CONANFILE: conanfile_py.replace("False", "True")})
             client.run("export . %s" % self.user_channel)
 
+        # Retrieve ACLs from short_folder
         try:
             short_folder_acls = subprocess.check_output("cacls %s" % short_folder, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
-            raise Exception("Error %r getting ACL from short_folder: '%s'"
-                            "Please check that cacls.exe exists" % (e, short_folder))
+            raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
 
-        user_acl = r"%s\%s:(OI)(CI)F" % (os.environ['USERDOMAIN'], os.environ['USERNAME'])
+        # Check user has full control
+        user_acl = r"%s\%s:(OI)(CI)F" % (current_domain, current_user)
         self.assertIn(user_acl, short_folder_acls)
 
     def test_direct_conanfile(self):
