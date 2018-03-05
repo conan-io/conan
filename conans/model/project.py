@@ -10,7 +10,10 @@ class LocalPackage(object):
         self._conanfile_folder = None  # The folder with the conanfile
         self._source_folder = ""  # By default the conanfile_folder
         self._build_folder = "build_{settings.build_type}_{settings.arch}"
+        # package_folder can be None, then it will directly use build_folder
         self._package_folder = "package_{settings.build_type}_{settings.arch}"
+        self._includedirs = None  # To override include dirs, mainly for build_folder
+        self._libdirs = None  # To override libdirs...
 
     @property
     def conanfile_path(self):
@@ -19,6 +22,10 @@ class LocalPackage(object):
     @property
     def package_path(self):
         return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, "package"))
+
+    @property
+    def build_path(self):
+        return os.path.abspath(os.path.join(self._base_folder, self._conanfile_folder, "build"))
 
     def load_lines(self, lines):
         for line in lines:
@@ -53,6 +60,11 @@ class ConanProject(object):
         if not local:
             return None
         return local.package_path
+
+    def get_build_path(self, conan_ref):
+        local = self._local_packages.get(conan_ref.name)
+        return local.build_path
+
 
     def loads(self, text):
         # Some duplication with _loads_cpp_info()

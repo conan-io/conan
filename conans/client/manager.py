@@ -76,7 +76,9 @@ class BuildMode(object):
 
         ref = reference.name
         # Patterns to match, if package matches pattern, build is forced
+        print "MATCHING ", ref , " wtih ", self.patterns
         force_build = any([fnmatch.fnmatch(ref, pattern) for pattern in self.patterns])
+        print "MATCHING RESULT ", force_build
         return force_build
 
     def allowed(self, conan_file, reference):
