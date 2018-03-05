@@ -9,7 +9,7 @@ def serialize_cpp_info(cpp_info):
         "description",
         "rootpath",
         "sysroot",
-        "includedirs", "libdirs", "bindirs", "builddirs", "resdirs",
+        "include_paths", "lib_paths", "bin_paths", "build_paths", "res_paths",
         "libs",
         "defines", "cflags", "cppflags", "sharedlinkflags", "exelinkflags",
     ]
