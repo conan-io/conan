@@ -52,7 +52,7 @@ def path_shortener(path, short_paths):
     mkdir(short_home)
 
     # Workaround for short_home living in NTFS file systems. Give full control permission to current user to avoid
-    # access problems in cygwing/msys2 windows subsystems when using short_home folder
+    # access problems in cygwin/msys2 windows subsystems when using short_home folder
     try:
         cmd = r'cacls %s /E /G "%s\%s":F' % (short_home, os.environ['USERDOMAIN'], os.environ['USERNAME'])
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, make command quiet
