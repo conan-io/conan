@@ -85,8 +85,8 @@ class CompilerArgsTest(unittest.TestCase):
 
         conan_file = self._get_conanfile(settings)
         gen = CompilerArgsGenerator(conan_file)
-        self.assertEquals('/Dmydefine1 /Ipath\\to\\include1 cxx_flag1 c_flag1 /DNDEBUG '
-                          '/link /LIBPATH:path\\to\\lib1 mylib.lib', gen.content)
+        self.assertEquals('-Dmydefine1 -Ipath\\to\\include1 cxx_flag1 c_flag1 -DNDEBUG '
+                          '-link -LIBPATH:path\\to\\lib1 mylib.lib', gen.content)
 
         settings = Settings.loads(default_settings_yml)
         settings.os = "Macos"
