@@ -33,7 +33,7 @@ class JsonGeneratorTest(unittest.TestCase):
         client.run("export . lasote/testing")
         client.save({"conanfile.txt": conanfile, "CMakeLists.txt": cmake}, clean_first=True)
         client.run("install . -g json --build")
-        conan_json = os.path.join(client.current_folder, "conaninfo.json")
+        conan_json = os.path.join(client.current_folder, "conanbuildinfo.json")
         with open(conan_json) as f:
             data = json.load(f)
         self.assertEquals(data["deps_env_info"]["MY_ENV_VAR"], "foo")

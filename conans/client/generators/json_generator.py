@@ -22,7 +22,7 @@ def serialize_cpp_info(cpp_info):
 class JsonGenerator(Generator):
     @property
     def filename(self):
-        return "conaninfo.json"
+        return "conanbuildinfo.json"
 
     @property
     def content(self):
