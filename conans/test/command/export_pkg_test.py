@@ -24,12 +24,12 @@ class HelloPythonConan(ConanFile):
 
         error = client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -bf=.", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: --package-folder incompatible with --build-folder and --source-folder",
+        self.assertIn("ERROR: package folder definition incompatible with build and source folders",
                       client.out)
 
         error = client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -sf=.", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("ERROR: --package-folder incompatible with --build-folder and --source-folder",
+        self.assertIn("ERROR: package folder definition incompatible with build and source folders",
                       client.out)
 
         client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg")
@@ -204,7 +204,7 @@ class TestConan(ConanFile):
         # Try to specify a install folder with no files
         error = client.run("export-pkg . Hello/0.1@lasote/stable -if fake", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("The specified --install-folder doesn't contain 'conaninfo.txt' and "
+        self.assertIn("The specified install folder doesn't contain 'conaninfo.txt' and "
                       "'conanbuildinfo.txt' files", client.user_io.out)
 
     def _consume(self, client, install_args):

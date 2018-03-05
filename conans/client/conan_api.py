@@ -322,14 +322,14 @@ class ConanAPIV1(object):
 
         # Checks that info files exists if the install folder is specified
         if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
-            raise ConanException("The specified --install-folder doesn't contain '%s' and '%s' "
+            raise ConanException("The specified install folder doesn't contain '%s' and '%s' "
                                  "files" % (CONANINFO, BUILD_INFO))
 
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
 
         if package_folder:
             if build_folder or source_folder:
-                raise ConanException("--package-folder incompatible with --build-folder and --source-folder")
+                raise ConanException("package folder definition incompatible with build and source folders")
             package_folder = _make_abs_path(package_folder, cwd)
 
         build_folder = _make_abs_path(build_folder, cwd)
