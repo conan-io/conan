@@ -5,7 +5,7 @@ from conans.test.utils.test_files import temp_folder
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.util.files import load, mkdir
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 
 
 class DeployTest(unittest.TestCase):

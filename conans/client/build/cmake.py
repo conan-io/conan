@@ -2,8 +2,10 @@ import os
 import platform
 
 from collections import OrderedDict
+from itertools import chain
 
 from conans.client import defs_to_string, join_arguments
+from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools import cross_building
 from conans.client.tools.oss import get_cross_building_settings
 from conans.errors import ConanException
@@ -55,6 +57,7 @@ class CMake(object):
         self._libcxx = self._settings.get_safe("compiler.libcxx")
         self._runtime = self._settings.get_safe("compiler.runtime")
         self._build_type = self._settings.get_safe("build_type")
+        self._cppstd = self._settings.get_safe("cppstd")
 
         self.generator = generator or self._generator()
         self.toolset = self._toolset(toolset)
@@ -144,17 +147,18 @@ class CMake(object):
                 return subs_toolset
         return None
 
-    def _cmake_compiler_options(self, the_os, arch):
+    def _cmake_compiler_options(self):
         cmake_definitions = OrderedDict()
 
-        if str(the_os).lower() == "macos":
-            if arch == "x86":
+        if str(self._os).lower() == "macos":
+            if self._arch == "x86":
                 cmake_definitions["CMAKE_OSX_ARCHITECTURES"] = "i386"
         return cmake_definitions
 
-    def _cmake_cross_build_defines(self, the_os, os_ver):
+    def _cmake_cross_build_defines(self):
+
         ret = OrderedDict()
-        os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", os_ver)
+        os_ver = get_env("CONAN_CMAKE_SYSTEM_VERSION", self._op_system_version)
         toolchain_file = get_env("CONAN_CMAKE_TOOLCHAIN_FILE", "")
 
         if toolchain_file != "":
@@ -171,9 +175,9 @@ class CMake(object):
         else:  # detect if we are cross building and the system name and version
             if cross_building(self._conanfile.settings):  # We are cross building
                 if self._os != self._os_build:
-                    if the_os:  # the_os is the host (regular setting)
-                        ret["CMAKE_SYSTEM_NAME"] = "Darwin" if the_os in ["iOS", "tvOS",
-                                                                          "watchOS"] else the_os
+                    if self._os:  # the_os is the host (regular setting)
+                        ret["CMAKE_SYSTEM_NAME"] = "Darwin" if self._os in ["iOS", "tvOS",
+                                                                          "watchOS"] else self._os
                         if os_ver:
                             ret["CMAKE_SYSTEM_VERSION"] = os_ver
                     else:
@@ -273,8 +277,9 @@ class CMake(object):
         ret = OrderedDict()
         ret.update(self._build_type_definition())
         ret.update(self._runtime_definition())
-        ret.update(self._cmake_compiler_options(the_os=self._os,  arch=self._arch))
-        ret.update(self._cmake_cross_build_defines(the_os=self._os, os_ver=self._op_system_version))
+        ret.update(self._cmake_compiler_options())
+        ret.update(self._cmake_cross_build_defines())
+        ret.update(self._get_cpp_standard_vars())
 
         ret["CONAN_EXPORTED"] = "1"
         if self._compiler:
@@ -409,3 +414,64 @@ class CMake(object):
     @verbose.setter
     def verbose(self, value):
         self.definitions["CMAKE_VERBOSE_MAKEFILE"] = "ON" if value else "OFF"
+
+    def patch_config_paths(self):
+        """
+        changes references to the absolute path of the installed package in
+        exported cmake config files to the appropriate conan variable. This makes
+        most (sensible) cmake config files portable.
+
+        For example, if a package foo installs a file called "fooConfig.cmake" to
+        be used by cmake's find_package method, normally this file will contain
+        absolute paths to the installed package folder, for example it will contain
+        a line such as:
+
+            SET(Foo_INSTALL_DIR /home/developer/.conan/data/Foo/1.0.0/...)
+
+        This will cause cmake find_package() method to fail when someone else
+        installs the package via conan.
+
+        This function will replace such mentions to
+
+            SET(Foo_INSTALL_DIR ${CONAN_FOO_ROOT})
+
+        which is a variable that is set by conanbuildinfo.cmake, so that find_package()
+        now correctly works on this conan package.
+
+        If the install() method of the CMake object in the conan file is used, this
+        function should be called _after_ that invocation. For example:
+
+            def build(self):
+                cmake = CMake(self)
+                cmake.configure()
+                cmake.build()
+                cmake.install()
+                cmake.patch_config_paths()
+        """
+
+        if not self._conanfile.name:
+            raise ConanException("cmake.patch_config_paths() can't work without package name. "
+                                 "Define name in your recipe")
+        pf = self.definitions.get("CMAKE_INSTALL_PREFIX")
+        replstr = "${CONAN_%s_ROOT}" % self._conanfile.name.upper()
+        allwalk = chain(os.walk(self._conanfile.build_folder), os.walk(self._conanfile.package_folder))
+        for root, _, files in allwalk:
+            for f in files:
+                if f.endswith(".cmake"):
+                    tools.replace_in_file(os.path.join(root, f), pf, replstr, strict=False)
+
+    def _get_cpp_standard_vars(self):
+        if not self._cppstd:
+            return {}
+
+        ret = {}
+        if self._cppstd.startswith("gnu"):
+            ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd[3:]
+            ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "ON"
+        else:
+            ret["CONAN_CMAKE_CXX_STANDARD"] = self._cppstd
+            ret["CONAN_CMAKE_CXX_EXTENSIONS"] = "OFF"
+
+        ret["CONAN_STD_CXX_FLAG"] = cppstd_flag(self._compiler, self._compiler_version,
+                                                self._cppstd)
+        return ret

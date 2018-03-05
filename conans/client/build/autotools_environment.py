@@ -8,6 +8,7 @@ from conans.client.build.compiler_flags import (architecture_flag, format_librar
                                                 sysroot_flag, format_include_paths,
                                                 build_type_flag, libcxx_flag, build_type_define,
                                                 libcxx_define, pic_flag, rpath_flags)
+from conans.client.build.cppstd_flags import cppstd_flag
 from conans.client.tools.oss import OSInfo
 from conans.client.tools.win import unix_path
 from conans.tools import (environment_append, args_to_string, cpu_count, cross_building,
@@ -34,7 +35,9 @@ class AutoToolsBuildEnvironment(object):
         self._arch = conanfile.settings.get_safe("arch")
         self._build_type = conanfile.settings.get_safe("build_type")
         self._compiler = conanfile.settings.get_safe("compiler")
+        self._compiler_version = conanfile.settings.get_safe("compiler.version")
         self._libcxx = conanfile.settings.get_safe("compiler.libcxx")
+        self._cppstd = conanfile.settings.get_safe("cppstd")
 
         # Set the generic objects before mapping to env vars to let the user
         # alter some value
@@ -47,6 +50,8 @@ class AutoToolsBuildEnvironment(object):
         self.flags = self._configure_flags()
         # Only c++ flags [-stdlib, -library], will go to CXXFLAGS
         self.cxx_flags = self._configure_cxx_flags()
+        # cpp standard
+        self.cppstd_flag = cppstd_flag(self._compiler, self._compiler_version, self._cppstd)
         # Not -L flags, ["-m64" "-m32"]
         self.link_flags = self._configure_link_flags()  # TEST!
         # Not declared by default
@@ -246,7 +251,7 @@ class AutoToolsBuildEnvironment(object):
         if self.fpic:
             tmp_compilation_flags.append(pic_flag(self._compiler))
 
-        cxx_flags = append(tmp_compilation_flags, self.cxx_flags)
+        cxx_flags = append(tmp_compilation_flags, self.cxx_flags, self.cppstd_flag)
         c_flags = tmp_compilation_flags
 
         return ld_flags, cpp_flags, libs, cxx_flags, c_flags

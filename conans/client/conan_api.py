@@ -206,7 +206,7 @@ class ConanAPIV1(object):
 
     @api_method
     def test(self, path, reference, profile_name=None, settings=None, options=None, env=None,
-             remote=None, update=False, build_modes=None, cwd=None):
+             remote=None, update=False, build_modes=None, cwd=None, test_build_folder=None):
 
         settings = settings or []
         options = options or []
@@ -219,7 +219,8 @@ class ConanAPIV1(object):
         reference = ConanFileReference.loads(reference)
         pt = PackageTester(self._manager, self._user_io)
         pt.install_build_and_test(conanfile_path, reference, profile, remote,
-                                  update, build_modes=build_modes)
+                                  update, build_modes=build_modes,
+                                  test_build_folder=test_build_folder)
 
     @api_method
     def create(self, conanfile_path, name=None, version=None, user=None, channel=None,
@@ -228,7 +229,7 @@ class ConanAPIV1(object):
                build_modes=None,
                keep_source=False, keep_build=False, verify=None,
                manifests=None, manifests_interactive=None,
-               remote=None, update=False, cwd=None):
+               remote=None, update=False, cwd=None, test_build_folder=None):
         """
         API method to create a conan package
 
@@ -295,7 +296,8 @@ class ConanAPIV1(object):
                                       manifest_folder=manifest_folder,
                                       manifest_verify=manifest_verify,
                                       manifest_interactive=manifest_interactive,
-                                      keep_build=keep_build)
+                                      keep_build=keep_build,
+                                      test_build_folder=test_build_folder)
         else:
             self._manager.install(reference=reference,
                                   install_folder=None,  # Not output anything
@@ -310,8 +312,8 @@ class ConanAPIV1(object):
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
-                   install_folder=None, profile_name=None, settings=None, options=None,
-                   env=None, force=False, user=None, version=None, cwd=None):
+                   package_folder=None, install_folder=None, profile_name=None, settings=None,
+                   options=None, env=None, force=False, user=None, version=None, cwd=None):
 
         settings = settings or []
         options = options or []
@@ -320,10 +322,16 @@ class ConanAPIV1(object):
 
         # Checks that info files exists if the install folder is specified
         if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
-            raise ConanException("The specified --install-folder doesn't contain '%s' and '%s' "
+            raise ConanException("The specified install folder doesn't contain '%s' and '%s' "
                                  "files" % (CONANINFO, BUILD_INFO))
 
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+
+        if package_folder:
+            if build_folder or source_folder:
+                raise ConanException("package folder definition incompatible with build and source folders")
+            package_folder = _make_abs_path(package_folder, cwd)
+
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
@@ -355,7 +363,8 @@ class ConanAPIV1(object):
 
         reference = ConanFileReference(name, version, user, channel)
         self._manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
-                                 install_folder=install_folder, profile=profile, force=force)
+                                 package_folder=package_folder, install_folder=install_folder,
+                                 profile=profile, force=force)
 
     @api_method
     def download(self, reference, remote=None, package=None):

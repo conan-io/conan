@@ -414,6 +414,75 @@ class HelloConan(ConanFile):
                 spt.install(packages)
             self.assertEquals(7, runner.calls)
 
+    def system_package_tool_mode_test(self):
+        """
+        System Package Tool mode is defined by CONAN_SYSREQUIRES_MODE env variable.
+        Allowed values: (enabled, verify, disabled). Parser accepts it in lower/upper case or any combination.
+        """
+
+        class RunnerMultipleMock(object):
+            def __init__(self, expected=None):
+                self.calls = 0
+                self.expected = expected
+
+            def __call__(self, command, *args, **kwargs):
+                self.calls += 1
+                return 0 if command in self.expected else 1
+
+        packages = ["a_package", "another_package", "yet_another_package"]
+
+        # Check invalid mode raises ConanException
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": "test_not_valid_mode",
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            runner = RunnerMultipleMock([])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertIn("CONAN_SYSREQUIRES_MODE=test_not_valid_mode is not allowed", str(exc.exception))
+            self.assertEquals(0, runner.calls)
+
+        # Check verify mode, a package report should be displayed in output and ConanException raised.
+        # No system packages are installed
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": "VeRiFy",
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            packages = ["verify_package", "verify_another_package", "verify_yet_another_package"]
+            runner = RunnerMultipleMock(["sudo apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertIn("Aborted due to CONAN_SYSREQUIRES_MODE=", str(exc.exception))
+            self.assertIn('\n'.join(packages), tools.system_pm._global_output)
+            self.assertEquals(3, runner.calls)
+
+        # Check disabled mode, a package report should be displayed in output.
+        # No system packages are installed
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": "DiSaBlEd",
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            packages = ["disabled_package", "disabled_another_package", "disabled_yet_another_package"]
+            runner = RunnerMultipleMock(["sudo apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            spt.install(packages)
+            self.assertIn('\n'.join(packages), tools.system_pm._global_output)
+            self.assertEquals(0, runner.calls)
+
+        # Check enabled, default mode, system packages must be installed.
+        with tools.environment_append({
+            "CONAN_SYSREQUIRES_MODE": "EnAbLeD",
+            "CONAN_SYSREQUIRES_SUDO": "True"
+        }):
+            runner = RunnerMultipleMock(["sudo apt-get update"])
+            spt = SystemPackageTool(runner=runner, tool=AptTool())
+            with self.assertRaises(ConanException) as exc:
+                spt.install(packages)
+            self.assertNotIn("CONAN_SYSREQUIRES_MODE", str(exc.exception))
+            self.assertEquals(7, runner.calls)
+
     def system_package_tool_installed_test(self):
         if platform.system() != "Linux" and platform.system() != "Macos" and platform.system() != "Windows":
             return
