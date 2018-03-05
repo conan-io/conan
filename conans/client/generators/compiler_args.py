@@ -5,7 +5,8 @@ from conans.client.build.compiler_flags import (architecture_flag, sysroot_flag,
                                                 format_defines, format_include_paths,
                                                 format_library_paths, format_libraries,
                                                 build_type_flag, build_type_define, libcxx_flag,
-                                                libcxx_define, rpath_flags, visual_runtime)
+                                                libcxx_define, rpath_flags, visual_runtime,
+                                                visual_linker_option_separator)
 
 
 class CompilerArgsGenerator(Generator):
@@ -49,7 +50,7 @@ class CompilerArgsGenerator(Generator):
             if runtime:
                 flags.append(runtime)
             # Necessary in the "cl" invocation before specify the rest of linker flags
-            flags.append("/link")
+            flags.append(visual_linker_option_separator)
 
         the_os = self.conanfile.settings.get_safe("os_build") or \
                  self.conanfile.settings.get_safe("os")

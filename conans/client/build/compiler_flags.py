@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+"""
+    # Visual Studio cl options reference:
+    #   https://msdn.microsoft.com/en-us/library/610ecb4h.aspx
+    #       "Options are specified by either a forward slash (/) or a dash (–)."
+    #   Here we use "-" better than "/" that produces invalid escaped chars using AutoTools.
+    #   -LIBPATH, -D, -I, -ZI and so on.
+
+"""
 
 from conans.tools import unix_path
 
@@ -81,7 +89,7 @@ def build_type_flag(compiler, build_type):
 
     if str(compiler) == 'Visual Studio':
         if build_type == 'Debug':
-            return '/Zi'
+            return '-Zi'
     else:
         if build_type == 'Debug':
             return '-g'
@@ -123,28 +131,26 @@ def sysroot_flag(sysroot, win_bash=False, subsystem=None, compiler=None):
 
 def visual_runtime(runtime):
     if runtime:
-       return "/%s" % runtime
+        return "-%s" % runtime
     return ""
-
-def _option_char(compiler):
-    """-L vs /L"""
-    return "-" if compiler != "Visual Studio" else "/"
 
 
 def format_defines(defines, compiler):
-    return ["%sD%s" % (_option_char(compiler), define) for define in defines if define]
+    return ["-D%s" % define for define in defines if define]
+
+
+include_path_option = "-I"
+visual_linker_option_separator = "-link"  # Further options will apply to the linker
 
 
 def format_include_paths(include_paths, win_bash=False, subsystem=None, compiler=None):
-    return ["%sI%s" % (_option_char(compiler),
-                       adjust_path(include_path, win_bash=win_bash,
-                                   subsystem=subsystem, compiler=compiler))
+    return ["%s%s" % (include_path_option, adjust_path(include_path, win_bash=win_bash,
+                                                       subsystem=subsystem, compiler=compiler))
             for include_path in include_paths if include_path]
 
 
 def format_library_paths(library_paths, win_bash=False, subsystem=None, compiler=None):
-
-    pattern = "/LIBPATH:%s" if str(compiler) == 'Visual Studio' else "-L%s"
+    pattern = "-LIBPATH:%s" if str(compiler) == 'Visual Studio' else "-L%s"
     return [pattern % adjust_path(library_path, win_bash=win_bash,
                                   subsystem=subsystem, compiler=compiler)
             for library_path in library_paths if library_path]

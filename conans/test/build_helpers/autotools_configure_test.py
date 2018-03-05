@@ -138,9 +138,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         be = AutoToolsBuildEnvironment(conanfile)
         expected = {'CFLAGS': 'a_c_flag',
-                    'CPPFLAGS': '/Ipath\\includes /Iother\\include\\path /Donedefinition /Dtwodefinition /DNDEBUG',
+                    'CPPFLAGS': '-Ipath\\includes -Iother\\include\\path -Donedefinition -Dtwodefinition -DNDEBUG',
                     'CXXFLAGS': 'a_c_flag a_cpp_flag',
-                    'LDFLAGS': 'shared_link_flag exe_link_flag /LIBPATH:one\\lib\\path',
+                    'LDFLAGS': 'shared_link_flag exe_link_flag -LIBPATH:one\\lib\\path',
                     'LIBS': 'onelib.lib twolib.lib'}
 
         self.assertEquals(be.vars, expected)
@@ -397,7 +397,7 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-linux-gnueabi")
+        self.assertEquals(host, "i686-linux-gnu")
         self.assertFalse(target)
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
