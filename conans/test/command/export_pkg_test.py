@@ -5,12 +5,62 @@ import os
 from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 from conans.model.ref import ConanFileReference, PackageReference
-from conans.util.files import load
+from conans.util.files import load, mkdir
 from conans.test.utils.conanfile import TestConanFile
 from parameterized import parameterized
 
 
 class ExportPkgTest(unittest.TestCase):
+
+    def test_package_folder_errors(self):
+        # https://github.com/conan-io/conan/issues/2350
+        conanfile = """from conans import ConanFile
+class HelloPythonConan(ConanFile):
+    pass
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        mkdir(os.path.join(client.current_folder, "pkg"))
+
+        error = client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -bf=.", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: package folder definition incompatible with build and source folders",
+                      client.out)
+
+        error = client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -sf=.", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: package folder definition incompatible with build and source folders",
+                      client.out)
+
+        client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg")
+        self.assertIn("Hello/0.1@lasote/stable: WARN: No files copied!", client.out)
+
+    def test_package_folder(self):
+        # https://github.com/conan-io/conan/issues/2350
+        conanfile = """from conans import ConanFile
+class HelloPythonConan(ConanFile):
+    settings = "os"
+    def package(self):
+        self.output.info("PACKAGE NOT CALLED")
+        raise Exception("PACKAGE NOT CALLED")
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile,
+                     "pkg/myfile.h": "",
+                     "profile": "[settings]\nos=Windows"})
+
+        client.run("export-pkg . Hello/0.1@lasote/stable -pf=pkg -pr=profile")
+        self.assertNotIn("PACKAGE NOT CALLED", client.out)
+        self.assertIn("Hello/0.1@lasote/stable: Copied 1 '.h' files: myfile.h", client.out)
+        ref = ConanFileReference.loads("Hello/0.1@lasote/stable")
+        pkg_folder = client.client_cache.packages(ref)
+        folders = os.listdir(pkg_folder)
+        pkg_folder = os.path.join(pkg_folder, folders[0])
+        conaninfo = load(os.path.join(pkg_folder, "conaninfo.txt"))
+        self.assertEqual(2, conaninfo.count("os=Windows"))
+        manifest = load(os.path.join(pkg_folder, "conanmanifest.txt"))
+        self.assertIn("conaninfo.txt: f395060da1ffdeb934be8b62e4bd8a3a", manifest)
+        self.assertIn("myfile.h: d41d8cd98f00b204e9800998ecf8427e", manifest)
 
     def test_develop(self):
         # https://github.com/conan-io/conan/issues/2513
@@ -154,7 +204,7 @@ class TestConan(ConanFile):
         # Try to specify a install folder with no files
         error = client.run("export-pkg . Hello/0.1@lasote/stable -if fake", ignore_error=True)
         self.assertTrue(error)
-        self.assertIn("The specified --install-folder doesn't contain 'conaninfo.txt' and "
+        self.assertIn("The specified install folder doesn't contain 'conaninfo.txt' and "
                       "'conanbuildinfo.txt' files", client.user_io.out)
 
     def _consume(self, client, install_args):
