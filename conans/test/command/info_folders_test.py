@@ -182,8 +182,8 @@ class InfoFoldersTest(unittest.TestCase):
             raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
 
         # Check user has full control
-        user_acl = r"%s\%s:(OI)(CI)F" % (current_domain, current_user)
-        self.assertIn(user_acl, short_folder_acls)
+        user_acl = "%s\\%s:(OI)(CI)F" % (current_domain, current_user)
+        self.assertIn(user_acl.encode(), short_folder_acls)
 
     def test_direct_conanfile(self):
         client = TestClient()
