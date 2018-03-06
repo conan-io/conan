@@ -1,12 +1,23 @@
 import unittest
 from conans.test.utils.tools import TestClient
 import os
-from conans.util.files import load
+from conans.util.files import load, mkdir
+import re
+from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 
 
 conanfile = """from conans import ConanFile
+import os
 class Pkg(ConanFile):
     requires = {deps}
+    generators = "cmake"
+    exports_sources = "*.h"
+    def build(self):
+        assert os.path.exists("conanbuildinfo.cmake")
+    def package(self):
+        self.copy("*.h", dst="include")
+    def package_id(self):
+        self.info.header_only()
 """
 
 
@@ -17,16 +28,64 @@ class ConanProjectTest(unittest.TestCase):
         base_folder = client.current_folder
         project = """[HelloB]
 folder: ../B
+[HelloC]
+folder: ../C
 """
-        client.save({"B/conanfile.py": conanfile.format(deps=None),
-                     "B/package/manifest.txt": "",
+        client.save({"C/conanfile.py": conanfile.format(deps=None),
+                     "C/header_c.h": "header-c!",
+                     "B/conanfile.py": conanfile.format(deps="'HelloC/0.1@lasote/stable'"),
+                     "B/header_b.h": "header-b!",
                      "A/conanfile.py": conanfile.format(deps="'HelloB/0.1@lasote/stable'"),
                      "A/conan-project.txt": project})
 
         client.current_folder = os.path.join(base_folder, "A")
         client.run("install . -g cmake")
+        client.run("search")
+        self.assertIn("There are no packages", client.out)
+        # Check A
+        content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+        include_dirs_hellob = re.search('set\(CONAN_INCLUDE_DIRS_HELLOB "(.*)"\)', content).group(1)
+        self.assertEqual("header-b!", load(os.path.join(include_dirs_hellob, "header_b.h")))
+        include_dirs_helloc = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
+        self.assertEqual("header-c!", load(os.path.join(include_dirs_helloc, "header_c.h")))
+
+        # Check B
+        content = load(os.path.join(base_folder, "B/build/conanbuildinfo.cmake"))
+        include_dirs_helloc2 = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
+        self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
+
+    def build_test(self):
+        client = TestClient()
+        c_files = cpp_hello_conan_files(name="HelloC")
+        client.save(c_files, path=os.path.join(client.current_folder, "C"))
+        b_files = cpp_hello_conan_files(name="HelloB", deps=["HelloC/0.1@lasote/stable"])
+        client.save(b_files, path=os.path.join(client.current_folder, "B"))
+
+        base_folder = client.current_folder
+        project = """[HelloB]
+folder: ../B
+[HelloC]
+folder: ../C
+"""
+        client.save({"A/conanfile.py": conanfile.format(deps="'HelloB/0.1@lasote/stable'"),
+                     "A/conan-project.txt": project})
+
+        client.current_folder = os.path.join(base_folder, "A")
+        client.run("install . -g cmake")
+        print client.out
+
+        # Check A
         content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
         print content
+        include_dirs_hellob = re.search('set\(CONAN_INCLUDE_DIRS_HELLOB "(.*)"\)', content).group(1)
+        self.assertEqual("header-b!", load(os.path.join(include_dirs_hellob, "header_b.h")))
+        include_dirs_helloc = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
+        self.assertEqual("header-c!", load(os.path.join(include_dirs_helloc, "header_c.h")))
+
+        # Check B
+        content = load(os.path.join(base_folder, "B/build/conanbuildinfo.cmake"))
+        include_dirs_helloc2 = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
+        self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
 
     def basic_test2(self):
         client = TestClient()

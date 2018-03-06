@@ -352,62 +352,61 @@ class ConanInstaller(object):
             output = ScopedOutput(str(conan_ref), self._out)
 
             if build_needed and (conan_ref, package_id) not in self._built_packages:
-
                 if self._conan_project:
                     conanfile_path = self._conan_project.get_conanfile_path(conan_ref)
                     if conanfile_path:
-                        print "DOING A CRAZY LOCAL BUILD!!!! ", conanfile_path
-                        source_folder = os.path.dirname(conanfile_path)
-                        self._build_requires.install(conan_ref, conan_file, self,
-                                                     profile_build_requires, output)
-
-                        # Assign to node the propagated info
-                        self._propagate_info(conan_file, conan_ref, flat, deps_graph)
-                        output.highlight("Calling build()")
-                        build_folder = self._conan_project.get_build_path(conan_ref)
-                        package_ref = PackageReference(conan_ref, package_id)
-                        package_folder = self._conan_project.get_package_path(package_ref)
-                        mkdir(build_folder)
-                        mkdir(package_folder)
-                        os.chdir(build_folder)
-                        conan_file.build_folder = build_folder
-                        conan_file.package_folder = package_folder
-                        # In local cache, install folder always is build_folder
-                        conan_file.install_folder = build_folder
-                        with conanfile_exception_formatter(str(conan_file), "build"):
-                            conan_file.build()
-
-                        output.success("Package '%s' built" % conan_file.info.package_id())
-                        output.info("Build folder %s" % build_folder)
-                        # Creating ***info.txt files
-                        save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
-                        output.info("Generated %s" % CONANINFO)
-                        save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
-                        output.info("Generated %s" % BUILD_INFO)
-                        
-                        create_package(conan_file, source_folder, build_folder, package_folder,
-                                       build_folder, output)
-                        
-                        call_package_info(conan_file, package_folder)
-
+                        self._build_project_pkg(conan_file, output, conan_ref, package_id, flat,
+                                                deps_graph, conanfile_path, profile_build_requires)
                 if not conanfile_path:
                     self._build_pkg(conan_ref, package_id, conan_file, output, keep_build,
                                     profile_build_requires, flat, deps_graph)
             else:
                 self._get_existing_pkg(conan_ref, package_id, conan_file, output, flat, deps_graph)
 
+    def _build_project_pkg(self, conan_file, output, conan_ref, package_id, flat, deps_graph,
+                           conanfile_path, profile_build_requires):
+        source_folder = os.path.dirname(conanfile_path)
+        self._build_requires.install(conan_ref, conan_file, self,
+                                     profile_build_requires, output)
+
+        # Assign to node the propagated info
+        self._propagate_info(conan_file, conan_ref, flat, deps_graph)
+        output.highlight("Calling build()")
+        build_folder = self._conan_project.get_build_path(conan_ref)
+        package_ref = PackageReference(conan_ref, package_id)
+        package_folder = self._conan_project.get_package_path(package_ref)
+        mkdir(build_folder)
+        mkdir(package_folder)
+        os.chdir(build_folder)
+        conan_file.source_folder = source_folder
+        conan_file.build_folder = build_folder
+        conan_file.package_folder = package_folder
+        write_generators(conan_file, build_folder, output)
+        # In local cache, install folder always is build_folder
+        conan_file.install_folder = build_folder
+        with conanfile_exception_formatter(str(conan_file), "build"):
+            conan_file.build()
+
+        output.success("Package '%s' built" % conan_file.info.package_id())
+        output.info("Build folder %s" % build_folder)
+        # Creating ***info.txt files
+        save(os.path.join(build_folder, CONANINFO), conan_file.info.dumps())
+        output.info("Generated %s" % CONANINFO)
+        save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
+        output.info("Generated %s" % BUILD_INFO)
+
+        create_package(conan_file, source_folder, build_folder, package_folder,
+                       build_folder, output)
+
+        call_package_info(conan_file, package_folder)
+
     def _get_existing_pkg(self, conan_ref, package_id, conan_file, output, flat, deps_graph):
         # Get the package, we have a not outdated remote package
         package_ref = None
         if conan_ref:
             package_ref = PackageReference(conan_ref, package_id)
-
-            if self._conan_project:
-                package_path = self._conan_project.get_package_path(package_ref)
-                print "PACKAGE PATH HERE!!!! ", package_path
-            else:
-                with self._client_cache.package_lock(package_ref):
-                    self._get_remote_package(conan_file, package_ref, output)
+            with self._client_cache.package_lock(package_ref):
+                self._get_remote_package(conan_file, package_ref, output)
 
         # Assign to the node the propagated info
         # (conan_ref could be None if user project, but of course assign the info
@@ -415,11 +414,7 @@ class ConanInstaller(object):
 
         if package_ref:
             # Call the info method
-            if self._conan_project:
-                package_folder = self._conan_project.get_package_path(package_ref)
-                print "PACKAGE PATH HERE!!!! ", package_path
-            else:
-                package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
+            package_folder = self._client_cache.package(package_ref, conan_file.short_paths)
             call_package_info(conan_file, package_folder)
 
     def _build_pkg(self, conan_ref, package_id, conan_file, output, keep_build, profile_build_requires,
