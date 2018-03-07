@@ -5,6 +5,7 @@ import tempfile
 from conans.util.files import rmdir
 from conans.util.env_reader import get_env
 
+
 class PackageTester(object):
 
     def __init__(self, manager, user_io):
@@ -26,16 +27,16 @@ class PackageTester(object):
             build_modes = ["never"]
         try:
             self._manager.install(inject_require=reference,
-                                reference=conanfile_abs_path,
-                                install_folder=test_build_folder,
-                                remote=remote,
-                                profile=profile,
-                                update=update,
-                                build_modes=build_modes,
-                                manifest_folder=manifest_folder,
-                                manifest_verify=manifest_verify,
-                                manifest_interactive=manifest_interactive,
-                                keep_build=keep_build)
+                                  reference=conanfile_abs_path,
+                                  install_folder=test_build_folder,
+                                  remote=remote,
+                                  profile=profile,
+                                  update=update,
+                                  build_modes=build_modes,
+                                  manifest_folder=manifest_folder,
+                                  manifest_verify=manifest_verify,
+                                  manifest_interactive=manifest_interactive,
+                                  keep_build=keep_build)
             self._manager.build(conanfile_abs_path, base_folder, test_build_folder, package_folder=None,
                                 install_folder=test_build_folder, test=str(reference))
         finally:

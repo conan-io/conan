@@ -3,7 +3,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.model.ref import ConanFileReference, PackageReference
 import os
 from conans.paths import EXPORT_SOURCES_TGZ_NAME, EXPORT_TGZ_NAME, EXPORT_SRC_FOLDER
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 from conans.util.files import load, save, md5sum
 from conans.model.manifest import FileTreeManifest
 from collections import OrderedDict

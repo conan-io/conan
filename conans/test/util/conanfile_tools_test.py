@@ -5,7 +5,7 @@ from conans.client.loader import ConanFileLoader
 from conans.model.settings import Settings
 from conans.test.utils.test_files import temp_folder
 from conans import tools
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 from conans.test.utils.tools import TestClient
 from conans.model.profile import Profile
 

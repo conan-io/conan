@@ -609,6 +609,10 @@ class Command(object):
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "
                                  "(relative to the current directory)")
+        parser.add_argument("-pf", "--package-folder", action=OnceArgument,
+                            help="folder containing a locally created package. "
+                                 "If a value is giving, it won't call the recipe 'package()' "
+                                 "method, and will run a copy of the provided folder.")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to "
@@ -638,6 +642,7 @@ class Command(object):
                                       version=version,
                                       source_folder=args.source_folder,
                                       build_folder=args.build_folder,
+                                      package_folder=args.package_folder,
                                       install_folder=args.install_folder,
                                       profile_name=args.profile,
                                       env=args.env,

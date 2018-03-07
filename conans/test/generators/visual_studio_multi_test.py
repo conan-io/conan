@@ -2,7 +2,7 @@ import unittest
 import os
 
 from nose.plugins.attrib import attr
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 from conans.model.settings import Settings
 from conans.model.conan_file import ConanFile

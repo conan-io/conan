@@ -6,7 +6,7 @@ import os
 from conans.paths import CONANFILE
 from conans.util.files import load, mkdir
 from conans.test.utils.test_files import temp_folder
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 
 class PackageLocalCommandTest(unittest.TestCase):
