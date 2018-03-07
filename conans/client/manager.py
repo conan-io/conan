@@ -33,6 +33,12 @@ from conans.util.log import logger
 
 
 class BuildMode(object):
+    """ build_mode => ["*"] if user wrote "--build"
+                   => ["hello*", "bye*"] if user wrote "--build hello --build bye"
+                   => False if user wrote "never"
+                   => True if user wrote "missing"
+                   => "outdated" if user wrote "--build outdated"
+    """
     def __init__(self, params, output):
         self._out = output
         self.outdated = False
