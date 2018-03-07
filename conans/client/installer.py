@@ -308,7 +308,6 @@ class ConanInstaller(object):
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
             output = ScopedOutput(str(conan_ref), self._out)
             # Assign to node the propagated info
-            self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
             if conan_ref:
                 package_ref = PackageReference(conan_ref, package_id)
@@ -317,17 +316,19 @@ class ConanInstaller(object):
 
                 if build_needed and (conan_ref, package_id) not in self._built_packages:
                     self._build_package(conan_file, conan_ref, package_id, package_ref, output,
-                                        keep_build, profile_build_requires)
+                                        keep_build, profile_build_requires, flat, deps_graph)
                 else:
                     # Get the package, we have a not outdated remote package
                     with self._client_cache.package_lock(package_ref):
                         self._get_remote_package(conan_file, package_ref, output, package_folder)
 
+                    self._propagate_info(conan_file, conan_ref, flat, deps_graph)
+
                 # Call the info method
                 self._call_package_info(conan_file, package_folder)
 
     def _build_package(self, conan_file, conan_ref, package_id, package_ref, output, keep_build,
-                       profile_build_requires):
+                       profile_build_requires, flat, deps_graph):
         build_allowed = self._build_mode.allowed(conan_file, conan_ref)
         if not build_allowed:
             _raise_package_not_found_error(conan_file, conan_ref, package_id, output)
@@ -344,6 +345,9 @@ class ConanInstaller(object):
         if not skip_build:
             self._build_requires.install(conan_ref, conan_file, self,
                                          profile_build_requires, output)
+
+        # It is important that it is done AFTER build_requires install
+        self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
         t1 = time.time()
         builder = _ConanPackageBuilder(conan_file, package_ref, self._client_cache, output)
