@@ -92,7 +92,8 @@ class HelloConan(ConanFile):
         self.assertIn(self.conanfile, self.client.user_io.out)
 
         # List package dir
-        self.client.run('get Hello0/0.1@lasote/channel "." -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --raw -r default')
+        self.client.run('get Hello0/0.1@lasote/channel "." '
+                        '  -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --raw -r default')
         self.assertEquals("conan_package.tgz\nconaninfo.txt\nconanmanifest.txt\n",
                           self.client.user_io.out)
 

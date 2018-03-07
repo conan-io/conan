@@ -90,7 +90,8 @@ class TestRequester(object):
     def __init__(self, test_servers):
         self.test_servers = test_servers
 
-    def _get_url_path(self, url):
+    @staticmethod
+    def _get_url_path(url):
         # Remove schema from url
         _, _, path, query, _ = urlsplit(url)
         url = urlunsplit(("", "", path, query, ""))
@@ -103,68 +104,79 @@ class TestRequester(object):
 
         raise Exception("Testing error: Not remote found")
 
-    def get(self, url, auth=None, headers=None, verify=None, stream=None):
-        headers = headers or {}
-        app, url = self._prepare_call(url, headers, auth)
+    def get(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
         if app:
-            response = app.get(url, headers=headers, expect_errors=True)
+            response = app.get(url, **kwargs)
             return TestingResponse(response)
         else:
-            return requests.get(url, headers=headers)
+            return requests.get(url, **kwargs)
 
-    def put(self, url, data, headers=None, verify=None, auth=None):
-        headers = headers or {}
-        app, url = self._prepare_call(url, headers, auth=auth)
+    def put(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
         if app:
-            if isinstance(data, IterableToFileAdapter):
-                data_accum = b""
-                for tmp in data:
-                    data_accum += tmp
-                data = data_accum
-            response = app.put(url, data, expect_errors=True, headers=headers)
+            response = app.put(url, **kwargs)
             return TestingResponse(response)
         else:
-            return requests.put(url, data=data.read())
+            return requests.put(url, **kwargs)
 
-    def delete(self, url, auth, headers, verify=None):
-        headers = headers or {}
-        app, url = self._prepare_call(url, headers, auth)
+    def delete(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
         if app:
-            response = app.delete(url, "", headers=headers, expect_errors=True)
+            response = app.delete(url, **kwargs)
             return TestingResponse(response)
         else:
-            return requests.delete(url, headers=headers)
+            return requests.delete(url, **kwargs)
 
-    def post(self, url, auth=None, headers=None, verify=None, stream=None, data=None, json=None):
-        headers = headers or {}
-        app, url = self._prepare_call(url, headers, auth)
+    def post(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
         if app:
-            content_type = None
-            if json:
-                import json as JSON
-                data = JSON.dumps(json)
-                content_type = "application/json"
-            response = app.post(url, data, headers=headers,
-                                content_type=content_type, expect_errors=True)
+            response = app.post(url, **kwargs)
             return TestingResponse(response)
         else:
-            requests.post(url, data=data, json=json)
+            requests.post(url, **kwargs)
 
-    def _prepare_call(self, url, headers, auth):
+    def _prepare_call(self, url, kwargs):
         if not url.startswith("http://fake"):  # Call to S3 (or external), perform a real request
             return None, url
         app = self._get_wsgi_app(url)
         url = self._get_url_path(url)  # Remove http://server.com
 
-        self._set_auth_headers(auth, headers)
+        self._set_auth_headers(kwargs)
+
+        if app:
+            kwargs["expect_errors"] = True
+            kwargs.pop("stream", None)
+            kwargs.pop("verify", None)
+            kwargs.pop("auth", None)
+            kwargs.pop("cert", None)
+            if "data" in kwargs:
+                if isinstance(kwargs["data"], IterableToFileAdapter):
+                    data_accum = b""
+                    for tmp in kwargs["data"]:
+                        data_accum += tmp
+                    kwargs["data"] = data_accum
+                kwargs["params"] = kwargs["data"]
+                del kwargs["data"]  # Parameter in test app is called "params"
+            if kwargs.get("json"):
+                # json is a high level parameter of requests, not a generic one
+                # translate it to data and content_type
+                import json as JSON
+                kwargs["params"] = JSON.dumps(kwargs["json"])
+                kwargs["content_type"] = "application/json"
+            kwargs.pop("json", None)
+
         return app, url
 
-    def _set_auth_headers(self, auth, headers):
-        if auth:
+    @staticmethod
+    def _set_auth_headers(kwargs):
+        if kwargs.get("auth"):
             mock_request = Mock()
             mock_request.headers = {}
-            auth(mock_request)
-            headers.update(mock_request.headers)
+            kwargs["auth"](mock_request)
+            if "headers" not in kwargs:
+                kwargs["headers"] = {}
+            kwargs["headers"].update(mock_request.headers)
 
 
 class TestServer(object):

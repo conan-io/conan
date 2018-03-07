@@ -22,6 +22,9 @@ LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
 PROFILES_FOLDER = "profiles"
 
+CLIENT_CERT = "client.crt"
+CLIENT_
+
 
 class ClientCache(SimplePaths):
     """ Class to represent/store/compute all the paths involved in the execution

@@ -13,8 +13,8 @@ class RequesterMockTrue(object):
     def __init__(self, *args, **kwargs):
         pass
 
-    def get(self, url, auth=None, headers=None, verify=None, stream=None):
-        assert("cacert.pem" in verify)
+    def get(self, url, *args, **kwargs):
+        assert("cacert.pem" in kwargs["verify"])
         return resp
 
 
@@ -23,8 +23,8 @@ class RequesterMockFalse(object):
     def __init__(self, *args, **kwargs):
         pass
 
-    def get(self, url, auth=None, headers=None, verify=None, stream=None):
-        assert(verify is False)
+    def get(self, url, *args, **kwargs):
+        assert(kwargs["verify"] is False)
         return resp
 
 

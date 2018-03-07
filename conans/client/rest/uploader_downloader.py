@@ -205,6 +205,8 @@ class Downloader(object):
             response = self.requester.get(url, stream=True, verify=self.verify, auth=auth,
                                           headers=headers)
         except Exception as exc:
+            import traceback
+            logger.warn(exception_message_safe(traceback.format_exc()))
             raise ConanException("Error downloading file %s: '%s'" % (url, exception_message_safe(exc)))
 
         return response

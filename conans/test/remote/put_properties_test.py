@@ -24,12 +24,12 @@ class PutPropertiesTest(unittest.TestCase):
         wanted_vars = {"MyHeader1": "MyHeaderValue1;MyHeaderValue2", "Other": "Value"}
 
         class RequesterCheckHeaders(TestRequester):
-            def put(self, url, data, headers=None, verify=None, auth=None):
+            def put(self, url, **kwargs):
                 for name, value in wanted_vars.items():
-                    value1 = headers[name]
+                    value1 = kwargs["headers"][name]
                     if value1 != value:
                         raise Exception()
-                return super(RequesterCheckHeaders, self).put(url, data, headers, verify, auth)
+                return super(RequesterCheckHeaders, self).put(url, **kwargs)
 
         self.client = TestClient(requester_class=RequesterCheckHeaders, servers=self.servers,
                                  users={"default": [("lasote", "mypass")]})
