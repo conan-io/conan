@@ -224,27 +224,6 @@ def call_system_requirements(conanfile, output):
         raise ConanException("Error in system requirements")
 
 
-def call_package_info(conanfile, package_folder):
-    conanfile.cpp_info = CppInfo(package_folder)
-    conanfile.cpp_info.version = conanfile.version
-    conanfile.cpp_info.description = conanfile.description
-    conanfile.env_info = EnvInfo()
-    conanfile.user_info = UserInfo()
-
-    # Get deps_cpp_info from upstream nodes
-    public_deps = [name for name, req in conanfile.requires.items() if not req.private]
-    conanfile.cpp_info.public_deps = public_deps
-    # Once the node is build, execute package info, so it has access to the
-    # package folder and artifacts
-    with tools.chdir(package_folder):
-        with conanfile_exception_formatter(str(conanfile), "package_info"):
-            conanfile.package_folder = package_folder
-            conanfile.source_folder = None
-            conanfile.build_folder = None
-            conanfile.install_folder = None
-            conanfile.package_info()
-
-
 class ConanInstaller(object):
     """ main responsible of retrieving binary packages or building them from source
     locally in case they are not found in remotes
@@ -269,8 +248,8 @@ class ConanInstaller(object):
         logger.debug("Install-Process private %s", (time.time() - t1))
         t1 = time.time()
         # Get the nodes in order and if we have to build them
-        nodes_to_process = self._get_nodes(nodes_by_level, skip_private_nodes, deps_graph)
-        self._build(nodes_to_process, profile_build_requires, keep_build)
+        nodes_to_process = self._get_nodes(nodes_by_level, skip_private_nodes)
+        self._build(nodes_to_process, deps_graph, skip_private_nodes, profile_build_requires, keep_build)
         logger.debug("Install-build %s", (time.time() - t1))
 
     def _compute_private_nodes(self, deps_graph):
@@ -313,28 +292,39 @@ class ConanInstaller(object):
         return [(PackageReference(conan_ref, package_id), conan_file)
                 for conan_ref, package_id, conan_file, build in nodes if build]
 
-    def _build(self, nodes_to_process, profile_build_requires, keep_build):
+    def _build(self, nodes_to_process, deps_graph, skip_nodes, profile_build_requires, keep_build):
         """ The build assumes an input of conans ordered by degree, first level
         should be independent from each other, the next-second level should have
         dependencies only to first level conans.
         param nodes_by_level: list of lists [[nodeA, nodeB], [nodeC], [nodeD, ...], ...]
         """
+        inverse = deps_graph.inverse_levels()
+        flat = []
+
+        for level in inverse:
+            level = sorted(level, key=lambda x: x.conan_ref)
+            flat.extend(n for n in level if n not in skip_nodes)
 
         for conan_ref, package_id, conan_file, build_needed in nodes_to_process:
             output = ScopedOutput(str(conan_ref), self._out)
-            package_ref = PackageReference(conan_ref, package_id)
-            package_folder = self._client_cache.package(package_ref,
-                                                        conan_file.short_paths)
-            if build_needed and (conan_ref, package_id) not in self._built_packages:
-                self._build_package(conan_file, conan_ref, package_id, package_ref, output,
-                                    keep_build, profile_build_requires)
-            else:
-                # Get the package, we have a not outdated remote package
-                with self._client_cache.package_lock(package_ref):
-                    self._get_remote_package(conan_file, package_ref, output, package_folder)
+            # Assign to node the propagated info
+            self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
-            # Call the info method
-            call_package_info(conan_file, package_folder)
+            if conan_ref:
+                package_ref = PackageReference(conan_ref, package_id)
+                package_folder = self._client_cache.package(package_ref,
+                                                            conan_file.short_paths)
+
+                if build_needed and (conan_ref, package_id) not in self._built_packages:
+                    self._build_package(conan_file, conan_ref, package_id, package_ref, output,
+                                        keep_build, profile_build_requires)
+                else:
+                    # Get the package, we have a not outdated remote package
+                    with self._client_cache.package_lock(package_ref):
+                        self._get_remote_package(conan_file, package_ref, output, package_folder)
+
+                # Call the info method
+                self._call_package_info(conan_file, package_folder)
 
     def _build_package(self, conan_file, conan_ref, package_id, package_ref, output, keep_build,
                        profile_build_requires):
@@ -421,17 +411,31 @@ class ConanInstaller(object):
                    package_name == conan_file.name:
                     conan_file.info.env_values.add(name, value, package_name)
 
-    def _get_nodes(self, nodes_by_level, skip_nodes, deps_graph):
-        """Install the available packages if needed/allowed and return a list
-        of nodes to build (tuples (conan_file, conan_ref))
-        and installed nodes"""
+    @staticmethod
+    def _call_package_info(conanfile, package_folder):
+        conanfile.cpp_info = CppInfo(package_folder)
+        conanfile.cpp_info.version = conanfile.version
+        conanfile.cpp_info.description = conanfile.description
+        conanfile.env_info = EnvInfo()
+        conanfile.user_info = UserInfo()
 
-        inverse = deps_graph.inverse_levels()
-        flat = []
+        # Get deps_cpp_info from upstream nodes
+        public_deps = [name for name, req in conanfile.requires.items() if not req.private]
+        conanfile.cpp_info.public_deps = public_deps
+        # Once the node is build, execute package info, so it has access to the
+        # package folder and artifacts
+        with tools.chdir(package_folder):
+            with conanfile_exception_formatter(str(conanfile), "package_info"):
+                conanfile.package_folder = package_folder
+                conanfile.source_folder = None
+                conanfile.build_folder = None
+                conanfile.install_folder = None
+                conanfile.package_info()
 
-        for level in inverse:
-            level = sorted(level, key=lambda x: x.conan_ref)
-            flat.extend(n for n in level if n not in skip_nodes)
+    def _get_nodes(self, nodes_by_level, skip_nodes):
+        """Compute a list of (conan_ref, package_id, conan_file, build_node)
+        defining what to do with each node
+        """
 
         nodes_to_build = []
         # Now build each level, starting from the most independent one
@@ -441,13 +445,11 @@ class ConanInstaller(object):
                 if node in skip_nodes:
                     continue
                 conan_ref, conan_file = node
-
-                # Assign to node the propagated info
-                self._propagate_info(conan_file, conan_ref, flat, deps_graph)
-
                 # it is possible that the root conans
                 # is not inside the storage but in a user folder, and thus its
                 # treatment is different
+                build_node = False
+                package_id = None
                 if conan_ref:
                     logger.debug("Processing node %s", repr(conan_ref))
                     package_id = conan_file.info.package_id()
@@ -464,10 +466,9 @@ class ConanInstaller(object):
                                                                              check_outdated)
                             build_node = not available
 
-                    nodes_to_build.append((conan_ref, package_id, conan_file, build_node))
+                nodes_to_build.append((conan_ref, package_id, conan_file, build_node))
 
         # A check to be sure that if introduced a pattern, something is going to be built
-
         if self._build_mode.patterns:
             to_build = [str(n[0].name) for n in nodes_to_build if n[3]]
             self._build_mode.check_matches(to_build)
