@@ -39,7 +39,7 @@ folder: ../C
                      "A/conan-project.txt": project})
 
         client.current_folder = os.path.join(base_folder, "A")
-        client.run("install . -g cmake")
+        client.run("install . -g cmake --build")
         client.run("search")
         self.assertIn("There are no packages", client.out)
         # Check A
@@ -67,25 +67,33 @@ folder: ../B
 [HelloC]
 folder: ../C
 """
-        client.save({"A/conanfile.py": conanfile.format(deps="'HelloB/0.1@lasote/stable'"),
-                     "A/conan-project.txt": project})
+        a_files = cpp_hello_conan_files(name="HelloA", deps=["HelloB/0.1@lasote/stable"])
+        a_files["conan-project.txt"] = project
+        client.save(a_files, path=os.path.join(client.current_folder, "A"))
 
         client.current_folder = os.path.join(base_folder, "A")
-        client.run("install . -g cmake")
+        client.run("install . -g cmake --build")
         print client.out
 
         # Check A
         content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
-        print content
+
         include_dirs_hellob = re.search('set\(CONAN_INCLUDE_DIRS_HELLOB "(.*)"\)', content).group(1)
-        self.assertEqual("header-b!", load(os.path.join(include_dirs_hellob, "header_b.h")))
+        self.assertIn("void helloHelloB();", load(os.path.join(include_dirs_hellob, "helloHelloB.h")))
         include_dirs_helloc = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
-        self.assertEqual("header-c!", load(os.path.join(include_dirs_helloc, "header_c.h")))
+        self.assertIn("void helloHelloC();", load(os.path.join(include_dirs_helloc, "helloHelloC.h")))
 
         # Check B
         content = load(os.path.join(base_folder, "B/build/conanbuildinfo.cmake"))
         include_dirs_helloc2 = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
         self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
+
+        client.run("build .")
+        print client.out
+        command = os.sep.join([".", "bin", "say_hello"])
+        client.runner(command, cwd=client.current_folder)
+        print client.current_folder
+        print client.out
 
     def basic_test2(self):
         client = TestClient()

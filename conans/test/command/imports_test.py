@@ -62,9 +62,9 @@ class ImportsTest(unittest.TestCase):
         self.client.save({"conanfile.py": conanfile})
         self.client.run("export . lasote/stable")
 
-    def imports_global_path_test(self):
+    def imports_global_path_removed_test(self):
         """ Ensure that when importing files in a global path, outside the package build,
-        they are not deleted
+        they are removed too
         """
         dst_global_folder = temp_folder().replace("\\", "/")
         conanfile2 = '''
@@ -84,9 +84,8 @@ class ConanLib(ConanFile):
 
         self.client.current_folder = temp_folder()
         self.client.run("install Say/0.1@lasote/stable --build=missing")
-        for filename, content in [("file1.txt", "Hello"), ("file2.txt", "World")]:
-            filecontent = load(os.path.join(dst_global_folder, filename))
-            self.assertTrue(content, filecontent)
+        for filename in ["file1.txt", "file2.txt"]:
+            self.assertFalse(os.path.exists(os.path.join(dst_global_folder, filename)))
 
     def imports_env_var_test(self):
         conanfile2 = '''

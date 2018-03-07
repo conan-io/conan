@@ -65,7 +65,6 @@ class ConanProject(object):
         local = self._local_packages.get(conan_ref.name)
         return local.build_path
 
-
     def loads(self, text):
         # Some duplication with _loads_cpp_info()
         pattern = re.compile(r"^\[([a-zA-Z0-9._:-]+)\]([^\[]+)", re.MULTILINE)
@@ -75,7 +74,6 @@ class ConanProject(object):
                 var_name = m.group(1)
                 lines = []
                 for line in m.group(2).splitlines():
-                    print "PROCESSING LINE ", line
                     line = line.strip()
                     if not line or line[0] == "#":
                         continue

@@ -34,6 +34,12 @@ from conans.model.project import ConanProject
 
 
 class BuildMode(object):
+    """ build_mode => ["*"] if user wrote "--build"
+                   => ["hello*", "bye*"] if user wrote "--build hello --build bye"
+                   => False if user wrote "never"
+                   => True if user wrote "missing"
+                   => "outdated" if user wrote "--build outdated"
+    """
     def __init__(self, params, output):
         self._out = output
         self.outdated = False
@@ -76,9 +82,7 @@ class BuildMode(object):
 
         ref = reference.name
         # Patterns to match, if package matches pattern, build is forced
-        print "MATCHING ", ref , " wtih ", self.patterns
         force_build = any([fnmatch.fnmatch(ref, pattern) for pattern in self.patterns])
-        print "MATCHING RESULT ", force_build
         return force_build
 
     def allowed(self, conan_file, reference):
@@ -331,7 +335,6 @@ class ConanManager(object):
             text = load(path)
             conan_project = ConanProject(base_folder)
             conan_project.loads(text)
-            print "CONAN_PROJECT ", conan_project._local_packages
         except Exception as e:
             print "SOMETHING WRONT!!!!! ", e
             conan_project = None
