@@ -160,3 +160,4 @@ class SimplePaths(object):
         p = normpath(join(self.conan(package_reference.conan), PACKAGES_FOLDER,
                           package_reference.package_id))
         return path_shortener(p, short_paths)
+

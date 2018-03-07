@@ -68,12 +68,7 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester, put_headers=None, client_certs=None):
-        """
-        :param client_certs: Tuple with one or two elements,
-            - when one element: It is a pem with both public (cert) and private (key)
-            - when two elements: The first one is a file with public and a the second one with key
-        """
+    def __init__(self, output, requester, put_headers=None):
 
         # Set to instance
         self.token = None
@@ -81,24 +76,8 @@ class RestApiClient(object):
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
         self.requester = requester
-        self._verify_ssl = True
+        self.verify_ssl = True
         self._put_headers = put_headers
-        self.client_certificate = client_certs
-
-    @property
-    def verify_ssl(self):
-        from conans.client.rest import cacert
-        if self._verify_ssl:
-            # Necessary for pyinstaller, because it doesn't copy the cacert.
-            # It should not be necessary anymore the own conan.io certificate (fixed in server)
-            return cacert.file_path
-        else:
-            return False
-
-    @verify_ssl.setter
-    def verify_ssl(self, check):
-        assert(isinstance(check, bool))
-        self._verify_ssl = check
 
     @property
     def auth(self):
@@ -253,7 +232,7 @@ class RestApiClient(object):
         url = "%s/users/authenticate" % self._remote_api_url
         t1 = time.time()
         ret = self.requester.get(url, auth=auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl, cert=self.client_certificate)
+                                 verify=self.verify_ssl)
         if ret.status_code == 401:
             raise AuthenticationException("Wrong user or password")
         # Cannot check content-type=text/html, conan server is doing it wrong
@@ -271,7 +250,7 @@ class RestApiClient(object):
         url = "%s/users/check_credentials" % self._remote_api_url
         t1 = time.time()
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl, cert=self.client_certificate)
+                                 verify=self.verify_ssl)
         duration = time.time() - t1
         log_client_rest_api_call(url, "GET", duration, self.custom_headers)
         return ret
@@ -320,8 +299,7 @@ class RestApiClient(object):
         response = self.requester.delete(url,
                                          auth=self.auth,
                                          headers=self.custom_headers,
-                                         verify=self.verify_ssl,
-                                         cert=self.client_certificate)
+                                         verify=self.verify_ssl)
         return response
 
     @handle_return_deserializer()
@@ -354,7 +332,7 @@ class RestApiClient(object):
         """Get information about the server: status, version, type and capabilities"""
         url = "%s/ping" % self._remote_api_url
         ret = self.requester.get(url, auth=self.auth, headers=self.custom_headers,
-                                 verify=self.verify_ssl, cert=self.client_certificate)
+                                 verify=self.verify_ssl)
         if ret.status_code == 404:
             raise NotFoundException("Not implemented endpoint")
 
@@ -392,8 +370,7 @@ class RestApiClient(object):
                                        auth=self.auth,
                                        headers=self.custom_headers,
                                        verify=self.verify_ssl,
-                                       json=payload,
-                                       cert=self.client_certificate)
+                                       json=payload)
         return response
 
     def _complete_url(self, url):
@@ -420,11 +397,11 @@ class RestApiClient(object):
             response = self.requester.post(url, auth=self.auth, headers=headers,
                                            verify=self.verify_ssl,
                                            stream=True,
-                                           data=json.dumps(data), cert=self.client_certificate)
+                                           data=json.dumps(data))
         else:
             response = self.requester.get(url, auth=self.auth, headers=headers,
                                           verify=self.verify_ssl,
-                                          stream=True, cert=self.client_certificate)
+                                          stream=True)
 
         duration = time.time() - t1
         method = "POST" if data else "GET"

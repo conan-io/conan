@@ -88,6 +88,12 @@ Other/1.2@user/channel conan-center
         save(os.path.join(self.client.client_cache.profiles_path, "default"), "#default profile empty")
         save(os.path.join(self.client.client_cache.profiles_path, "linux"), "#empty linux profile")
 
+        self.old_env = dict(os.environ)
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.old_env)
+
     def _create_profile_folder(self, folder=None):
         folder = folder or temp_folder(path_with_spaces=False)
         save_files(folder, {"settings.yml": settings_yml,
@@ -275,7 +281,7 @@ class Pkg(ConanFile):
             self._create_zip(filename)
 
         def download_verify_true(obj, url, filename, **kwargs):  # @UnusedVariable
-            self.assertTrue(obj.verify.endswith("cacert.pem"))
+            self.assertTrue(obj.verify)
             self._create_zip(filename)
 
         with patch.object(Downloader, 'download', new=download_verify_false):

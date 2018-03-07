@@ -1,4 +1,5 @@
 import os
+from os.path import join, normpath
 from collections import OrderedDict
 
 from conans.client.conf import ConanClientConfigParser, default_client_conf, default_settings_yml
@@ -22,8 +23,12 @@ LOCALDB = ".conan.db"
 REGISTRY = "registry.txt"
 PROFILES_FOLDER = "profiles"
 
+# Client certificates
 CLIENT_CERT = "client.crt"
-CLIENT_
+CLIENT_KEY = "client.key"
+
+# Server authorities file
+CACERT_FILE = "cacert.pem"
 
 
 class ClientCache(SimplePaths):
@@ -39,7 +44,14 @@ class ClientCache(SimplePaths):
         self._store_folder = store_folder or self.conan_config.storage_path or self.conan_folder
         self._default_profile = None
         self._no_lock = None
+        self.client_cert_path = normpath(join(self.conan_folder, CLIENT_CERT))
+        self.client_cert_key_path = normpath(join(self.conan_folder, CLIENT_KEY))
+
         super(ClientCache, self).__init__(self._store_folder)
+
+    @property
+    def cacert_path(self):
+        return os.path.join(normpath(join(self.conan_folder, CACERT_FILE)))
 
     def _no_locks(self):
         if self._no_lock is None:

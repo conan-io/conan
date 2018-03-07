@@ -21,24 +21,20 @@ from conans.client.conan_api import migrate_and_get_client_cache, Conan
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
-from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
-from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.rest.version_checker import VersionCheckerRequester
-from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.model.version import Version
-from conans.search.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
+from conans.tools import set_global_instances
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
-from conans.tools import set_global_instances
 
 
 class TestingResponse(object):
@@ -165,6 +161,7 @@ class TestRequester(object):
                 kwargs["params"] = JSON.dumps(kwargs["json"])
                 kwargs["content_type"] = "application/json"
             kwargs.pop("json", None)
+
 
         return app, url
 
@@ -330,8 +327,7 @@ class TestClient(object):
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
 
-        search_adapter = DiskSearchAdapter()
-        self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
+        self.search_manager = DiskSearchManager(self.client_cache)
 
         self.requester_class = requester_class
         self.conan_runner = runner
@@ -391,25 +387,19 @@ class TestClient(object):
                 real_servers = True
 
         if real_servers:
-            requester = requests
+            requester = requests.Session()
         else:
             if self.requester_class:
                 requester = self.requester_class(self.servers)
             else:
                 requester = TestRequester(self.servers)
 
-        # Verify client version against remotes
-        self.requester = VersionCheckerRequester(requester, self.client_version,
-                                                 self.min_server_compatible_version, output)
+        self.requester = ConanRequester(requester, self.client_cache)
 
-        put_headers = self.client_cache.read_put_headers()
-        self.rest_api_client = RestApiClient(output, requester=self.requester, put_headers=put_headers)
-        # To store user and token
-        self.localdb = LocalDB(self.client_cache.localdb)
-        # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(self.rest_api_client, self.user_io, self.localdb)
-        # Handle remote connections
-        self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
+        self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
+                                                        self.requester, self.client_cache,
+                                                        self.user_io, self.client_version,
+                                                        self.min_server_compatible_version)
 
         set_global_instances(output, self.requester)
 

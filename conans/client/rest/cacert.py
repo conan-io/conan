@@ -5716,10 +5716,3 @@ lBlGGSW4gNfL1IYoakRwJiNiqZ+Gb7+6kHDSVneFeO/qJakXzlByjAA6quPbYzSf
 +AZxAeKCINT+b72x
 -----END CERTIFICATE-----
 '''
-
-# Workaround to avoid pyinstaller statics hell.
-# request (at the end because openssl) needs a file with
-# certs, it can't be injected. Damned coupled code.
-file_path = os.path.join(get_conan_user_home(), ".conan", "cacert.pem")
-if not os.path.exists(file_path):
-    save(file_path, cacert)

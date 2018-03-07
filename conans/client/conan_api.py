@@ -16,6 +16,7 @@ from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans.client.runner import ConanRunner
 from conans.client.store.localdb import LocalDB
@@ -44,14 +45,8 @@ default_manifest_folder = '.conan_manifests'
 
 def get_basic_requester(client_cache):
     requester = requests.Session()
-    proxies = client_cache.conan_config.proxies
-    if proxies:
-        # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
-        no_proxy = proxies.pop("no_proxy", None)
-        if no_proxy:
-            os.environ["NO_PROXY"] = no_proxy
-        requester.proxies = proxies
-    return requester
+    # Manage the verify and the client certificates and setup proxies
+    return ConanRequester(requester, client_cache)
 
 
 def api_method(f):
@@ -115,26 +110,29 @@ def _get_conanfile_path(path, cwd, py):
 class ConanAPIV1(object):
 
     @staticmethod
+    def instance_remote_manager(requester, client_cache, user_io, _client_version,
+                                min_server_compatible_version):
+
+        # Verify client version against remotes
+        version_checker_req = VersionCheckerRequester(requester, _client_version,
+                                                      min_server_compatible_version,
+                                                      user_io.out)
+
+        # To handle remote connections
+        put_headers = client_cache.read_put_headers()
+        rest_api_client = RestApiClient(user_io.out, requester=version_checker_req,
+                                        put_headers=put_headers)
+        # To store user and token
+        localdb = LocalDB(client_cache.localdb)
+        # Wraps RestApiClient to add authentication support (same interface)
+        auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
+        # Handle remote connections
+        remote_manager = RemoteManager(client_cache, auth_manager, user_io.out)
+        return localdb, rest_api_client, remote_manager
+
+    @staticmethod
     def factory():
         """Factory"""
-
-        def instance_remote_manager(client_cache):
-            requester = get_basic_requester(client_cache)
-            # Verify client version against remotes
-            version_checker_req = VersionCheckerRequester(requester, Version(client_version),
-                                                          Version(MIN_SERVER_COMPATIBLE_VERSION),
-                                                          out)
-            # To handle remote connections
-            put_headers = client_cache.read_put_headers()
-            rest_api_client = RestApiClient(out, requester=version_checker_req,
-                                            put_headers=put_headers)
-            # To store user and token
-            localdb = LocalDB(client_cache.localdb)
-            # Wraps RestApiClient to add authentication support (same interface)
-            auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
-            # Handle remote connections
-            remote_manager = RemoteManager(client_cache, auth_manager, out)
-            return remote_manager
 
         use_color = get_env("CONAN_COLOR_DISPLAY", 1)
         if use_color and hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
@@ -159,7 +157,15 @@ class ConanAPIV1(object):
             conans.util.log.logger = configure_logger()
 
             # Get the new command instance after migrations have been done
-            remote_manager = instance_remote_manager(client_cache)
+            requester = get_basic_requester(client_cache)
+            _, _, remote_manager = ConanAPIV1.instance_remote_manager(
+                                                requester,
+                                                client_cache, user_io,
+                                                Version(client_version),
+                                                Version(MIN_SERVER_COMPATIBLE_VERSION))
+
+            # Adjust global tool variables
+            set_global_instances(out, requester)
 
             # Get a search manager
             search_manager = DiskSearchManager(client_cache)
@@ -180,8 +186,6 @@ class ConanAPIV1(object):
         self._remote_manager = remote_manager
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
                                      settings_preprocessor)
-        # Patch the tools module with a good requester and user_io
-        set_global_instances(self._user_io.out, get_basic_requester(self._client_cache))
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
