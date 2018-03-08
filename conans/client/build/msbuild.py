@@ -31,7 +31,7 @@ class MSBuild(object):
                                   "MTd": "MultiThreadedDebug",
                                   "MD": "MultiThreadedDLL",
                                   "MDd": "MultiThreadedDebugDLL"}[runtime]
-                template = """<?xml version="1.0" encodinog="utf-8"?>
+                template = """<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemDefinitionGroup>
     <ClCompile>
