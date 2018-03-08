@@ -11,24 +11,25 @@ from conans.client.tools.env import environment_append
 from conans.client.tools.oss import cpu_count, detected_architecture, os_info
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
-from conans.util.files import decode_text, load
+from conans.util.files import decode_text, load, save
 
 _global_output = None
 
 
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None):
+                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None,
+                       runtime=None, use_env=False):
     """ Do both: set the environment variables and call the .sln build
     """
     vcvars = vcvars_command(settings, force=force_vcvars)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset, platforms=platforms)
+                              parallel, toolset=toolset, platforms=platforms, use_env=use_env)
     command = "%s && %s" % (vcvars, build)
     return command
 
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True, toolset=None, platforms=None):
+                      arch=None, parallel=True, toolset=None, platforms=None, use_env=False):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -49,7 +50,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         raise ConanException("Cannot build_sln_command, build_type not defined")
     if not arch:
         raise ConanException("Cannot build_sln_command, arch not defined")
-    command += "msbuild %s /p:Configuration=%s" % (sln_path, build_type)
+    command += "msbuild  %s /p:Configuration=%s" % (sln_path, build_type)
     msvc_arch = {'x86': 'x86',
                  'x86_64': 'x64',
                  'armv7': 'ARM',
@@ -70,6 +71,9 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         if config not in "".join(lines):
             _global_output.warn("***** The configuration %s does not exist in this solution *****" % config)
             _global_output.warn("Use 'platforms' argument to define your architectures")
+
+    if use_env:
+        command += ' /p:UseEnv=true'
 
     if msvc_arch:
         command += ' /p:Platform="%s"' % msvc_arch

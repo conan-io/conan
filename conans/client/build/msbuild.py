@@ -1,3 +1,5 @@
+import os
+
 from conans import tools
 from conans.client.build.visual_environment import VisualStudioBuildEnvironment
 from conans.client.tools.win import msvc_build_command
@@ -17,5 +19,34 @@ class MSBuild(object):
                                          upgrade_project=upgrade_project,
                                          build_type=build_type, arch=arch, parallel=parallel,
                                          force_vcvars=force_vcvars, toolset=toolset,
-                                         platforms=platforms)
-            return self._conanfile.run(command)
+                                         platforms=platforms,
+                                         use_env=True)
+            runtime = self._conanfile.settings.get_safe("compiler.runtime")
+            # Rel path is ignored, so make it abs
+            overrides_path = os.path.join(os.getcwd(), ".conan_overrides.props")
+            if runtime:
+                # how to specify runtime in command line:
+                # https://stackoverflow.com/questions/38840332/msbuild-overrides-properties-while-building-vc-project
+                runtime_library = {"MT": "MultiThreaded",
+                                  "MTd": "MultiThreadedDebug",
+                                  "MD": "MultiThreadedDLL",
+                                  "MDd": "MultiThreadedDebugDLL"}[runtime]
+                template = """<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <RuntimeLibrary>%s</RuntimeLibrary>
+    </ClCompile>
+  </ItemDefinitionGroup>
+</Project>""" % runtime_library
+                tools.save(overrides_path, template)
+                command += ' /p:ForceImportBeforeCppTargets="%s"' % overrides_path
+
+            ret = self._conanfile.run(command)
+
+            try:
+                if os.path.exists(overrides_path):
+                    os.unlink(overrides_path)
+            except Exception:
+                pass
+            return ret
