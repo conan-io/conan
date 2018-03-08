@@ -1,5 +1,7 @@
 import os
 import shutil
+import tempfile
+from contextlib import contextmanager
 from errno import ENOENT, EEXIST
 import hashlib
 import sys
@@ -109,6 +111,21 @@ def save(path, content, append=False):
     mode = 'wb' if not append else 'ab'
     with open(path, mode) as handle:
         handle.write(to_file_bytes(content))
+
+
+def mkdir_tmp():
+    return tempfile.mkdtemp(suffix='tmp_conan')
+
+
+@contextmanager
+def tmp_file(contents):
+    try:
+        tmp_dir = mkdir_tmp()
+        path = os.path.join(tmp_dir, "t")
+        save(path, contents)
+        yield path
+    finally:
+        rmdir(tmp_dir)
 
 
 def to_file_bytes(content):

@@ -8,10 +8,19 @@ from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.util.files import load, save, _generic_algorithm_sum
+from conans.util.files import (load, save, _generic_algorithm_sum,
+                               mkdir_tmp as _mkdir_tmp, tmp_file as _tmp_file)
 
 
 _global_output = None
+
+
+def mkdir_tmp(*args, **kwargs):
+    return _mkdir_tmp(*args, **kwargs)
+
+
+def tmp_file(*args, **kwargs):
+    return _tmp_file(*args, **kwargs)
 
 
 @contextmanager
@@ -226,6 +235,7 @@ def _path_equals(path1, path2):
         path1 = path1.lower().replace("sysnative", "system32")
         path2 = path2.lower().replace("sysnative", "system32")
     return path1 == path2
+
 
 def collect_libs(conanfile, folder="lib"):
     if not conanfile.package_folder:

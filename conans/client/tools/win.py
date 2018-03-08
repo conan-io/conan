@@ -8,10 +8,10 @@ import subprocess
 from contextlib import contextmanager
 
 from conans.client.tools.env import environment_append
-from conans.client.tools.oss import cpu_count, detected_architecture, os_info
+from conans.client.tools.oss import detected_architecture, os_info
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
-from conans.util.files import decode_text, load, save
+from conans.util.files import decode_text, save, mkdir_tmp
 
 _global_output = None
 
@@ -21,6 +21,8 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
                        runtime=None, use_env=False):
     """ Do both: set the environment variables and call the .sln build
     """
+    # !!! DEPRECAR!!!
+
     vcvars = vcvars_command(settings, force=force_vcvars)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
                               parallel, toolset=toolset, platforms=platforms, use_env=use_env)
@@ -30,62 +32,30 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
 
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
                       arch=None, parallel=True, toolset=None, platforms=None, use_env=False):
+    # Smell: These classes should be in the tools becase are used by the tools, but it had never been here but in
+    # the client/build module
+
+    # !!! DEPRECAR!!!
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
         command = "%s && %s" % (tools.vcvars_command(self.settings), build_command)
         self.run(command)
     """
-    targets = targets or []
-    command = ""
 
-    if upgrade_project and not get_env("CONAN_SKIP_VS_PROJECTS_UPGRADE", False):
-        command += "devenv %s /upgrade && " % sln_path
-    else:
-        _global_output.info("Skipped sln project upgrade")
+    from conans.client.build.msbuild import _MSBuildCommandBuilder, _get_props_file_contents
 
-    build_type = build_type or settings.build_type
-    arch = arch or settings.arch
-    if not build_type:
-        raise ConanException("Cannot build_sln_command, build_type not defined")
-    if not arch:
-        raise ConanException("Cannot build_sln_command, arch not defined")
-    command += "msbuild  %s /p:Configuration=%s" % (sln_path, build_type)
-    msvc_arch = {'x86': 'x86',
-                 'x86_64': 'x64',
-                 'armv7': 'ARM',
-                 'armv8': 'ARM64'}
-    if platforms:
-        msvc_arch.update(platforms)
-    msvc_arch = msvc_arch.get(str(arch))
-    try:
-        sln = load(sln_path)
-        pattern = re.compile(r"GlobalSection\(SolutionConfigurationPlatforms\)(.*?)EndGlobalSection", re.DOTALL)
-        solution_global = pattern.search(sln).group(1)
-        lines = solution_global.splitlines()
-        lines = [s.split("=")[0].strip() for s in lines]
-    except Exception:
-        pass
-    else:
-        config = "%s|%s" % (build_type, msvc_arch)
-        if config not in "".join(lines):
-            _global_output.warn("***** The configuration %s does not exist in this solution *****" % config)
-            _global_output.warn("Use 'platforms' argument to define your architectures")
+    # Generate the properties file
+    props_file_contents = _get_props_file_contents(settings)
+    tmp_path = os.path.join(mkdir_tmp(), ".conan_properties")
+    save(tmp_path, props_file_contents)
 
-    if use_env:
-        command += ' /p:UseEnv=true'
-
-    if msvc_arch:
-        command += ' /p:Platform="%s"' % msvc_arch
-
-    if parallel:
-        command += ' /m:%s' % cpu_count()
-
-    if targets:
-        command += " /target:%s" % ";".join(targets)
-
-    if toolset:
-        command += " /p:PlatformToolset=%s" % toolset
+    # Build command
+    builder = _MSBuildCommandBuilder(settings, _global_output)
+    command = builder.get_command(sln_path, tmp_path,
+                                  targets=targets, upgrade_project=upgrade_project,
+                                  build_type=build_type, arch=arch, parallel=parallel,
+                                  toolset=toolset, platforms=platforms, use_env=use_env)
 
     return command
 
