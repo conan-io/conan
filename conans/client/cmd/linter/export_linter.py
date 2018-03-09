@@ -1,14 +1,16 @@
-import os
 import json
+import os
 import sys
-import six
-from six import StringIO
 
-from pylint.reporters.json import JSONReporter
+import six
 from pylint.lint import Run
+from pylint.reporters.json import JSONReporter
+from six import StringIO
 
 from conans.client.output import Color
 from conans.errors import ConanException
+
+LINTER_PLUGINS = ["conans.client.cmd.linter.linter_deprecated_plugin"]
 
 
 def conan_linter(conanfile_path, out):
@@ -76,7 +78,9 @@ def _lint_py3(conanfile_path):
 
 
 def _normal_linter(conanfile_path):
-    args = ["--reports=no", "--disable=no-absolute-import", "--persistent=no", conanfile_path]
+
+    args = ["--reports=no", "--disable=no-absolute-import", "--persistent=no",
+            "--load-plugins=%s" % ",".join(LINTER_PLUGINS), conanfile_path]
     pylintrc = os.environ.get("CONAN_PYLINTRC", None)
     if pylintrc:
         if not os.path.exists(pylintrc):
@@ -91,6 +95,7 @@ def _normal_linter(conanfile_path):
     def _accept_message(msg):
         symbol = msg.get("symbol")
         text = msg.get("message")
+
         if symbol == "no-member":
             for field in dynamic_fields:
                 if field in text:
@@ -99,6 +104,7 @@ def _normal_linter(conanfile_path):
             return False
         if symbol in ("bare-except", "broad-except"):  # No exception type(s) specified
             return False
+
         return True
 
     result = []
