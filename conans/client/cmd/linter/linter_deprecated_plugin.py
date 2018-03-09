@@ -48,9 +48,7 @@ class ConanChecker(BaseChecker):
             for decorator in inferred.decorators.nodes:
                 if isinstance(decorator, astroid.node_classes.Call):
                     if decorator.func.attrname == "deprecated":
-                        deprecated_in = ""
-                        removed_in = ""
-                        details = ""
+                        deprecated_in = removed_in = details = ""
                         for arg in decorator.func.parent.keywords:
                             if arg.arg == "deprecated_in":
                                 deprecated_in = arg.value.value
@@ -62,6 +60,7 @@ class ConanChecker(BaseChecker):
                         self.add_message('conan-deprecated', node=node, args=(func_name, deprecated_in, removed_in,
                                                                               details))
         return
+
 
 def register(linter):
     """required method to auto register this checker """
