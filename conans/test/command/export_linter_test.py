@@ -6,7 +6,7 @@ import os
 
 
 conanfile = """
-from conans import ConanFile
+from conans import ConanFile, tools
 class TestConan(ConanFile):
     name = "Hello"
     version = "1.2"
@@ -14,6 +14,7 @@ class TestConan(ConanFile):
         print("HEllo world")
         for k, v in {}.iteritems():
             pass
+        tools.msvc_build_command(self.settings, "path")
 """
 
 
@@ -32,6 +33,8 @@ class ExportLinterTest(unittest.TestCase):
                           output)
         self.assertIn("WARN: Linter. Line 8: Unused variable 'k'", output)
         self.assertIn("WARN: Linter. Line 8: Unused variable 'v'", output)
+        self.assertIn('WARN: Linter. Line 10: "msvc_build_command" is deprecated since Conan v1.2 and '
+                      'will be removed in v2.0. Use the MSBuild() build helper instead', output)
 
     def test_disable_linter(self):
         client = TestClient()
