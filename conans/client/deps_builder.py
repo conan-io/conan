@@ -310,8 +310,8 @@ class DepsGraphBuilder(object):
             if incompatible:    
                 raise ConanException("%s: Incompatible requirements obtained in different "
                                      "evaluations of 'requirements'\n"
-                                     "    New requirements: %s\n"
-                                     "    Previous requirements: %s"
+                                     "    Previous requirements: %s\n"
+                                     "    New requirements: %s"
                                      % (conanref, list(conanfile.requires.values()),
                                         list(conanfile._evaluated_requires.values())))
 
