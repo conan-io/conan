@@ -1,7 +1,7 @@
 import re
 
 from conans import tools
-from conans.client.build.visual_environment import VisualStudioBuildEnvironment
+from conans.client.build.visual_environment import VisualStudioBuildEnvironment, vs_build_type_flags, vs_std_cpp
 from conans.client.tools.oss import cpu_count
 from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
@@ -11,34 +11,26 @@ from conans.util.env_reader import get_env
 class MSBuild(object):
 
     def __init__(self, conanfile):
-        self._conanfile = conanfile
-        self.build_env = VisualStudioBuildEnvironment(self._conanfile)
+        if conanfile:  # FIXME: Remove when deprecated win.py msbuild tools
+            self._conanfile = conanfile
+            self._settings = self._conanfile.settings
+            self._output = self._conanfile.output
+            self.build_env = VisualStudioBuildEnvironment(self._conanfile)
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None):
         with tools.environment_append(self.build_env.vars):
             # Path for custom properties file
-            props_file_contents = _get_props_file_contents(self._conanfile.settings)
-            builder = _MSBuildCommandBuilder(self._conanfile.settings, self._conanfile.output)
+            props_file_contents = self.get_props_file_contents()
             with tools.tmp_file(props_file_contents) as props_file_path:
                 vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars)
-                command = builder.get_command(project_file, props_file_path,
-                                              targets=targets, upgrade_project=upgrade_project,
-                                              build_type=build_type, arch=arch, parallel=parallel,
-                                              toolset=toolset, platforms=platforms,
-                                              use_env=True)
+                command = self.get_command(project_file, props_file_path,
+                                           targets=targets, upgrade_project=upgrade_project,
+                                           build_type=build_type, arch=arch, parallel=parallel,
+                                           toolset=toolset, platforms=platforms,
+                                           use_env=True)
                 command = "%s && %s" % (vcvars, command)
                 return self._conanfile.run(command)
-
-
-class _MSBuildCommandBuilder(object):
-    """Can't be merged with MSBuild(), thing that sounds reasonable because it is used by the tools build_sln_command
-    where we don't have the conanfile but the settings. Idea: Deprecate these tools in favor of the MSBuild(),
-     merge when removed in 2.0"""
-
-    def __init__(self, settings, output):
-        self._settings = settings
-        self._output = output
 
     def get_command(self, sln_path, props_file_path, targets=None, upgrade_project=True, build_type=None,
                     arch=None, parallel=True, toolset=None, platforms=None, use_env=False):
@@ -49,7 +41,7 @@ class _MSBuildCommandBuilder(object):
         if upgrade_project and not get_env("CONAN_SKIP_VS_PROJECTS_UPGRADE", False):
             command += "devenv %s /upgrade && " % sln_path
         else:
-            self.output.info("Skipped sln project upgrade")
+            self._output.info("Skipped sln project upgrade")
 
         build_type = build_type or self._settings.build_type
         arch = arch or self._settings.arch
@@ -57,7 +49,7 @@ class _MSBuildCommandBuilder(object):
             raise ConanException("Cannot build_sln_command, build_type not defined")
         if not arch:
             raise ConanException("Cannot build_sln_command, arch not defined")
-        command += "msbuild  %s /p:Configuration=%s" % (sln_path, build_type)
+        command += "msbuild %s /p:Configuration=%s" % (sln_path, build_type)
         msvc_arch = {'x86': 'x86',
                      'x86_64': 'x64',
                      'armv7': 'ARM',
@@ -76,8 +68,8 @@ class _MSBuildCommandBuilder(object):
         else:
             config = "%s|%s" % (build_type, msvc_arch)
             if config not in "".join(lines):
-                self.output.warn("***** The configuration %s does not exist in this solution *****" % config)
-                self.output.warn("Use 'platforms' argument to define your architectures")
+                self._output.warn("***** The configuration %s does not exist in this solution *****" % config)
+                self._output.warn("Use 'platforms' argument to define your architectures")
 
         if use_env:
             command += ' /p:UseEnv=true'
@@ -98,25 +90,25 @@ class _MSBuildCommandBuilder(object):
 
         return command
 
-
-def _get_props_file_contents(settings):
-    runtime = settings.get_safe("compiler.runtime")
-    # Rel path is ignored, so make it abs
-    if runtime:
+    def get_props_file_contents(self):
         # how to specify runtime in command line:
         # https://stackoverflow.com/questions/38840332/msbuild-overrides-properties-while-building-vc-project
         runtime_library = {"MT": "MultiThreaded",
-                          "MTd": "MultiThreadedDebug",
-                          "MD": "MultiThreadedDLL",
-                          "MDd": "MultiThreadedDebugDLL"}[runtime]
-        template = """<?xml version="1.0" encoding="utf-8"?>
-<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <RuntimeLibrary>%s</RuntimeLibrary>
-    </ClCompile>
-  </ItemDefinitionGroup>
-</Project>""" % runtime_library
-        return template
+                           "MTd": "MultiThreadedDebug",
+                           "MD": "MultiThreadedDLL",
+                           "MDd": "MultiThreadedDebugDLL"}.get(self._settings.get_safe("compiler.runtime"), "")
 
-    return ""
+        flags = vs_build_type_flags(self._settings)
+        flags.append(vs_std_cpp(self._settings))
+
+        template = """<?xml version="1.0" encoding="utf-8"?>
+    <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+      <ItemDefinitionGroup>
+        <ClCompile>
+          <RuntimeLibrary>{runtime}</RuntimeLibrary>
+          <AdditionalOptions>{compiler_flags} %(AdditionalOptions)</AdditionalOptions>
+        </ClCompile>
+      </ItemDefinitionGroup>
+    </Project>""".format(**{"runtime": runtime_library,
+                            "compiler_flags": " ".join([flag for flag in flags if flag])})
+        return template

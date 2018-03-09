@@ -16,8 +16,7 @@ class MSBuildTest(unittest.TestCase):
         if platform.system() != "Windows":
             return
         conan_build_vs = """
-from conans import ConanFile, tools, MSBuild
-import platform
+from conans import ConanFile, MSBuild
 
 class HelloConan(ConanFile):
     name = "Hello"
