@@ -290,13 +290,30 @@ class DepsGraphBuilder(object):
 
         if not hasattr(conanfile, "_evaluated_requires"):
             conanfile._evaluated_requires = conanfile.requires.copy()
-        elif conanfile.requires != conanfile._evaluated_requires:
-            raise ConanException("%s: Incompatible requirements obtained in different "
-                                 "evaluations of 'requirements'\n"
-                                 "    Previous requirements: %s\n"
-                                 "    New requirements: %s"
-                                 % (conanref, list(conanfile.requires.values()),
-                                    list(conanfile._evaluated_requires.values())))
+        else:
+            incompatible = False
+            if len(conanfile.requires) != len(conanfile._evaluated_requires):
+                incompatible = True
+            else:
+                try:
+                    for index in conanfile.requires:
+                        if conanfile.requires[index].is_resolved == conanfile._evaluated_requires[index].is_resolved:
+                            if conanfile.requires[index] != conanfile._evaluated_requires[index]:
+                                incompatible = True
+                                break
+                        else:
+                            if conanfile.requires[index].range_reference != conanfile._evaluated_requires[index].range_reference:
+                                incompatible = True
+                                break
+                except KeyError:
+                    incompatible = True           
+            if incompatible:    
+                raise ConanException("%s: Incompatible requirements obtained in different "
+                                     "evaluations of 'requirements'\n"
+                                     "    New requirements: %s\n"
+                                     "    Previous requirements: %s"
+                                     % (conanref, list(conanfile.requires.values()),
+                                        list(conanfile._evaluated_requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
                    loop_ancestors, aliased):
