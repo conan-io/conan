@@ -1,6 +1,8 @@
 """ ConanFile user tools, as download, etc"""
 from __future__ import print_function
 
+import requests
+# noinspection PyUnresolvedReferences
 from conans.client.tools import *
 # noinspection PyUnresolvedReferences
 from conans.util.env_reader import get_env
@@ -23,3 +25,8 @@ def set_global_instances(the_output, the_requester):
     _system_pm._global_output = the_output
     _win._global_output = the_output
     _net._global_requester = the_requester
+
+
+# Assign a default, will be overwritten in the Factory of the ConanAPI
+out = ConanOutput(sys.stdout)
+set_global_instances(out, requests)
