@@ -42,5 +42,3 @@ class ClientCertsTest(unittest.TestCase):
         client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
         client.run("install something_fake/1.0@conan/stable", ignore_error=True)
         self.assertTrue(os.path.exists(client.client_cache.cacert_path))
-        tmp = load(client.client_cache.cacert_path, binary=True)
-        self.assertEquals(tmp, cacert.cacert)
