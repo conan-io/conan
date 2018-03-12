@@ -6,7 +6,7 @@ import json
 from conans.paths import CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum
+from conans.util.files import decode_text, md5sum, save
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -68,7 +68,7 @@ class RestApiClient(object):
         Rest Api Client for handle remote.
     """
 
-    def __init__(self, output, requester, put_headers=None):
+    def __init__(self, output, requester, cacert_path=None, put_headers=None):
 
         # Set to instance
         self.token = None
@@ -76,8 +76,25 @@ class RestApiClient(object):
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
         self.requester = requester
-        self.verify_ssl = True
+        self._verify_ssl = True
         self._put_headers = put_headers
+        self._cacert_path = cacert_path
+
+    @property
+    def verify_ssl(self):
+
+        if self._verify_ssl:
+            if self._cacert_path and not os.path.exists(self._cacert_path):
+                from conans.client.rest.cacert import cacert
+                save(self._cacert_path, cacert)
+            return self._cacert_path
+        else:
+            return False
+
+    @verify_ssl.setter
+    def verify_ssl(self, check):
+        assert(isinstance(check, bool))
+        self._verify_ssl = check
 
     @property
     def auth(self):

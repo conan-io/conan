@@ -157,8 +157,8 @@ class TestRequester(object):
             if kwargs.get("json"):
                 # json is a high level parameter of requests, not a generic one
                 # translate it to data and content_type
-                import json as JSON
-                kwargs["params"] = JSON.dumps(kwargs["json"])
+                import json
+                kwargs["params"] = json.dumps(kwargs["json"])
                 kwargs["content_type"] = "application/json"
             kwargs.pop("json", None)
 

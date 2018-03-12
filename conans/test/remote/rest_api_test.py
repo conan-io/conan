@@ -34,7 +34,7 @@ class RestApiTest(unittest.TestCase):
                                             plugins=[plugin])
             cls.server.start()
 
-            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests)
+            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests, cacert_path=None)
             cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
 
             # Authenticate user
@@ -49,7 +49,7 @@ class RestApiTest(unittest.TestCase):
         RestApiTest.server.clean()
 
     def relative_url_completion_test(self):
-        api = RestApiClient(TestBufferConanOutput(), requester=requests)
+        api = RestApiClient(TestBufferConanOutput(), requester=requests, cacert_path=None)
 
         # test absolute urls
         self.assertEquals(api._complete_url("http://host"), "http://host")
