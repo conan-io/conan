@@ -661,3 +661,33 @@ compiler:
         # Authorized using headers
         tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
+
+    def test_tmp_files_tools(self):
+
+        conanfile = """from conans import ConanFile, tools
+import os
+
+class TestConan(ConanFile):
+    name = "test_links"
+    version = "1.0"
+
+    def build(self):
+        tmpdir = tools.mkdir_tmp()
+        assert(os.path.exists(tmpdir) and os.path.isdir(tmpdir) and [] == os.listdir(tmpdir))
+
+        tmp = None
+        with tools.tmp_file("my contents") as filepath:
+            tmp = filepath  # To check if the file is deleted outside the context
+            assert(tools.load(filepath) == "my contents")
+
+        assert(tmp is not None)
+        assert(not os.path.exists(tmp))
+
+    def package(self):
+        self.copy("*", src=".", dst=".", links=True)
+"""
+
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+
+        client.run("create . user/channel")

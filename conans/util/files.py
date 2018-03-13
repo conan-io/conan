@@ -119,6 +119,12 @@ def mkdir_tmp():
 
 @contextmanager
 def tmp_file(contents):
+    """ Usage:
+
+    with tmp_file("mycontents") as filepath:
+        # Here exists filepath tmp file with "mycontents" inside
+
+    """
     try:
         tmp_dir = mkdir_tmp()
         path = os.path.join(tmp_dir, "t")

@@ -15,12 +15,12 @@ from conans.util.files import (load, save, _generic_algorithm_sum,
 _global_output = None
 
 
-def mkdir_tmp(*args, **kwargs):
-    return _mkdir_tmp(*args, **kwargs)
+def mkdir_tmp():
+    return _mkdir_tmp()
 
 
-def tmp_file(*args, **kwargs):
-    return _tmp_file(*args, **kwargs)
+def tmp_file(contents):
+    return _tmp_file(contents)
 
 
 @contextmanager
@@ -227,6 +227,7 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
         else:
             lines.append(line)
     save(pc_file, "\n".join(lines))
+
 
 def _path_equals(path1, path2):
     path1 = os.path.normpath(path1)
