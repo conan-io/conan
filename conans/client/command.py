@@ -499,12 +499,21 @@ class Command(object):
                             help="Optional. Local folder containing the conaninfo.txt and "
                                  "conanbuildinfo.txt files (from a previous conan install "
                                  "execution). Defaulted to --build-folder")
+        parser.add_argument("-c", "--configure", default=False, action="store_true",
+                            help="Execute the configuration step (variable should_configure=True)")
+        parser.add_argument("-b", "--build", default=False, action="store_true",
+                            help="Execute the build step (variable should_build=True)")
+        parser.add_argument("-i", "--install", default=False, action="store_true",
+                            help="Execute the install step (variable should_install=True)")
         args = parser.parse_args(*args)
         return self._conan.build(conanfile_path=args.path,
                                  source_folder=args.source_folder,
                                  package_folder=args.package_folder,
                                  build_folder=args.build_folder,
-                                 install_folder=args.install_folder)
+                                 install_folder=args.install_folder,
+                                 should_configure=args.configure,
+                                 should_build=args.build,
+                                 should_install=args.install)
 
     def package(self, *args):
         """ Calls your local conanfile.py 'package()' method.
