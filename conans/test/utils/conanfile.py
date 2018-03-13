@@ -1,3 +1,5 @@
+from conans.test.utils.tools import TestBufferConanOutput
+
 
 class MockSettings(object):
 
@@ -33,6 +35,7 @@ class MockConanfile(object):
         self.runner = runner
         self.options = options or MockOptions({})
         self.generators = []
+        self.output = TestBufferConanOutput()
 
     def run(self, *args, **kwargs):
         if self.runner:

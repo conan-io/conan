@@ -7,7 +7,7 @@ from conans.client.tools.oss import cpu_count
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
 from conans.test.util.tools_test import RunnerMock
-from conans.test.utils.tools import TestClient
+from conans.test.utils.tools import TestClient, TestBufferConanOutput
 
 
 class AutoToolsConfigureTest(unittest.TestCase):
@@ -369,9 +369,11 @@ class AutoToolsConfigureTest(unittest.TestCase):
             self.assertEquals(be.vars["CPPFLAGS"], "MyCppFlag")
 
     def cross_build_flags_test(self):
-        def get_values(this_os, this_arch, setting_os, setting_arch):
+
+        def get_values(this_os, this_arch, setting_os, setting_arch, compiler=None):
             settings = MockSettings({"arch": setting_arch,
-                                     "os": setting_os})
+                                     "os": setting_os,
+                                     "compiler": compiler})
             conanfile = MockConanfile(settings)
             conanfile.settings = settings
             be = AutoToolsBuildEnvironment(conanfile)
@@ -397,7 +399,17 @@ class AutoToolsConfigureTest(unittest.TestCase):
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "x86")
         self.assertEquals(build, "x86_64-linux-gnu")
-        self.assertEquals(host, "i686-linux-gnu")
+        self.assertEquals(host, "x86-linux-gnu")
+        self.assertFalse(target)
+
+        build, host, target = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-w64-mingw32")
+        self.assertFalse(target)
+
+        build, host, target = get_values("Linux", "x86_64", "Windows", "x86", compiler="Visual Studio")
+        self.assertEquals(build, "x86_64-linux-gnu")
+        self.assertEquals(host, "i686-windows-msvc")  # Not very common but exists sometimes
         self.assertFalse(target)
 
         build, host, target = get_values("Linux", "x86_64", "Linux", "armv7hf")
@@ -436,12 +448,12 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "arm-linux-androideabi")
 
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86")
-        self.assertEquals(build, "x86_64-w64-mingw32")
+        build, host, target = get_values("Linux", "x86_64", "Windows", "x86", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "i686-w64-mingw32")
 
-        build, host, target = get_values("Linux", "x86_64", "Windows", "x86_64")
-        self.assertEquals(build, "x86_64-w64-mingw32")
+        build, host, target = get_values("Linux", "x86_64", "Windows", "x86_64", compiler="gcc")
+        self.assertEquals(build, "x86_64-linux-gnu")
         self.assertEquals(host, "x86_64-w64-mingw32")
 
         build, host, target = get_values("Windows", "x86_64", "Windows", "x86_64")
@@ -454,19 +466,14 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertFalse(host)
         self.assertFalse(target)
 
-        build, host, target = get_values("Windows", "x86_64", "Windows", "x86")
+        build, host, target = get_values("Windows", "x86_64", "Windows", "x86", compiler="gcc")
         self.assertEquals(build, "x86_64-w64-mingw32")
         self.assertEquals(host, "i686-w64-mingw32")
         self.assertFalse(target)
 
-        build, host, target = get_values("Windows", "x86_64", "Linux", "armv7hf")
-        self.assertFalse(build)
-        self.assertFalse(host)
-        self.assertFalse(target)
-
-        build, host, target = get_values("Windows", "x86_64", "Linux", "x86_64")
-        self.assertFalse(build)
-        self.assertFalse(host)
+        build, host, target = get_values("Windows", "x86_64", "Linux", "armv7hf", compiler="gcc")
+        self.assertEquals(build, "x86_64-w64-mingw32")
+        self.assertEquals(host, "arm-linux-gnueabihf")
         self.assertFalse(target)
 
         build, host, target = get_values("Darwin", "x86_64", "Android", "armv7hf")
@@ -486,9 +493,9 @@ class AutoToolsConfigureTest(unittest.TestCase):
         self.assertEquals(build, "x86_64-apple-darwin")
         self.assertEquals(host, "arm-apple-darwin")
 
-        build, host, target = get_values("Darwin", "x86_64", "tvOS", "arm64")
+        build, host, target = get_values("Darwin", "x86_64", "tvOS", "armv8")
         self.assertEquals(build, "x86_64-apple-darwin")
-        self.assertEquals(host, "arm-apple-darwin")
+        self.assertEquals(host, "aarch64-apple-darwin")
 
     def test_pkg_config_paths(self):
         if platform.system() == "Windows":
@@ -539,10 +546,9 @@ class HelloConan(ConanFile):
         ab.configure(target="i686-apple-darwin")
         self.assertEquals(runner.command_called, "./configure  --target=i686-apple-darwin")
 
-
     def test_make_targets(self):
         runner = RunnerMock()
-        conanfile = MockConanfile(MockSettings({}),None,runner)
+        conanfile = MockConanfile(MockSettings({}), None, runner)
         
         ab = AutoToolsBuildEnvironment(conanfile)
         ab.configure()
