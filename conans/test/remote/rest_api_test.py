@@ -34,7 +34,7 @@ class RestApiTest(unittest.TestCase):
                                             plugins=[plugin])
             cls.server.start()
 
-            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests, cacert_path=None)
+            cls.api = RestApiClient(TestBufferConanOutput(), requester=requests)
             cls.api.remote_url = "http://127.0.0.1:%s" % str(cls.server.port)
 
             # Authenticate user
