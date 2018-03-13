@@ -7,7 +7,7 @@ from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.manifest import FileTreeManifest
 from conans.test.utils.tools import TestClient
 import stat
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 
 class ExportSettingsTest(unittest.TestCase):

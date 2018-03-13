@@ -1,6 +1,6 @@
 from conans.client.conan_api import _parse_manifests_arguments, ConanException, default_manifest_folder
 import unittest
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 import os
 
 

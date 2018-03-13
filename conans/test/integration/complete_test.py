@@ -1,6 +1,6 @@
 import unittest
 
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 from conans.test.utils.tools import TestServer, TestClient
 from conans.model.ref import ConanFileReference, PackageReference

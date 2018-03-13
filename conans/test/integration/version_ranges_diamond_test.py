@@ -3,7 +3,7 @@ from conans.test.utils.tools import TestClient, TestServer
 from conans.paths import CONANFILE
 from conans.util.files import load, save
 import os
-from nose_parameterized import parameterized
+from parameterized import parameterized
 from conans.model.ref import ConanFileReference
 
 

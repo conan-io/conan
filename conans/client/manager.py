@@ -33,6 +33,12 @@ from conans.util.log import logger
 
 
 class BuildMode(object):
+    """ build_mode => ["*"] if user wrote "--build"
+                   => ["hello*", "bye*"] if user wrote "--build hello --build bye"
+                   => False if user wrote "never"
+                   => True if user wrote "missing"
+                   => "outdated" if user wrote "--build outdated"
+    """
     def __init__(self, params, output):
         self._out = output
         self.outdated = False
@@ -154,7 +160,7 @@ class ConanManager(object):
         cmd_export(conanfile_path, name, version, user, channel, keep_source,
                    self._user_io.out, self._client_cache)
 
-    def export_pkg(self, reference, source_folder, build_folder, install_folder, profile, force):
+    def export_pkg(self, reference, source_folder, build_folder, package_folder, install_folder, profile, force):
 
         conan_file_path = self._client_cache.conanfile(reference)
         if not os.path.exists(conan_file_path):
@@ -192,9 +198,10 @@ class ConanManager(object):
         recipe_hash = self._client_cache.load_manifest(reference).summary_hash
         conanfile.info.recipe_hash = recipe_hash
         conanfile.develop = True
-        if source_folder or build_folder:
-            install_folder = build_folder  # conaninfo.txt will be there
-            package_output = ScopedOutput(str(reference), self._user_io.out)
+        package_output = ScopedOutput(str(reference), self._user_io.out)
+        if package_folder:
+            packager.export_pkg(conanfile, package_folder, dest_package_folder, package_output)
+        else:
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     install_folder, package_output, local=True)
 
@@ -236,6 +243,8 @@ class ConanManager(object):
             require.conan_reference = require.range_reference = inject_require
         else:
             conanfile.requires(str(inject_require))
+        conanfile._user = inject_require.user
+        conanfile._channel = inject_require.channel
 
     def _get_graph_builder(self, loader, update, remote_proxy):
         local_search = self._search_manager
