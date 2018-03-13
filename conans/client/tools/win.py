@@ -346,8 +346,12 @@ def vcvars_dict(settings, arch=None, compiler_version=None, force=False, filter_
 
 @contextmanager
 def vcvars(*args, **kwargs):
-    new_env = vcvars_dict(*args, **kwargs)
-    with environment_append(new_env):
+    settings = args[0]
+    if settings.get_safe("os") == "Windows":
+        new_env = vcvars_dict(*args, **kwargs)
+        with environment_append(new_env):
+            yield
+    else:
         yield
 
 

@@ -576,6 +576,49 @@ compiler:
                 # Not raising
                 tools.vcvars_command(settings, force=True)
 
+    def vcvars_context_manager_test(self):
+        conanfile = """
+from conans import ConanFile, tools
+
+class MyConan(ConanFile):
+    name = "MyConan"
+    version = "0.1"
+    settings = "os", "compiler"
+
+    def build(self):
+        with tools.vcvars(self.settings):
+            self.output.info(str(self.settings.os) + ": vcvars applies")
+            self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
+"""
+        profile_win = """
+[settings]
+os=Windows
+arch=x86
+compiler=Visual Studio
+compiler.version=15
+"""
+        profile_lin = """
+[settings]
+os=Linux
+arch=x86
+compiler=gcc
+compiler.version=7
+compiler.libcxx=libstdc++
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "profile_win": profile_win,
+                     "profile_lin": profile_lin})
+
+        if platform.system() == "Windows":
+            client.run("create . conan/testing --profile profile_win")
+            self.assertIn("MyConan/0.1@conan/testing: Windows: vcvars applies", client.out)
+            self.assertNotIn("VCINSTALLDIR set to: None", client.out)
+
+        client.run("create . conan/testing --profile profile_lin")
+        self.assertIn("MyConan/0.1@conan/testing: Linux: vcvars applies", client.out)
+        self.assertIn("VCINSTALLDIR set to: None", client.out)
+
     def run_in_bash_test(self):
         if platform.system() != "Windows":
             return
