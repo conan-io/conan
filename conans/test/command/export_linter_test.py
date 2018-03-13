@@ -140,4 +140,8 @@ class BaseConan(ConanFile):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . conan/stable")
-        self.assertNotIn("Instance of 'BaseConan' has no 'copy_deps' member", client.out)
+        self.assertNotIn("Linter warnings", client.out)
+        self.assertNotIn("WARN: Linter. Line 8: Instance of 'BaseConan' has no 'copy_deps' member",
+                         client.out)
+        self.assertNotIn("WARN: Linter. Line 8: self.copy_deps is not callable",
+                         client.out)
