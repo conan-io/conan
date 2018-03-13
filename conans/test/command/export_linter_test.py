@@ -125,3 +125,19 @@ class BaseConan(ConanFile):
         self._check_linter(client.user_io.out)
         self.assertIn("ERROR: Package recipe has linter errors. Please fix them",
                       client.user_io.out)
+
+    def export_deploy_test(self):
+
+        conanfile = """
+from conans import ConanFile
+class BaseConan(ConanFile):
+    name = "baselib"
+    version = "1.0"
+
+    def deploy(self):
+        self.copy_deps("*.dll")
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("export . conan/stable")
+        self.assertNotIn("Instance of 'BaseConan' has no 'copy_deps' member", client.out)
