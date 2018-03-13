@@ -119,6 +119,8 @@ class AutoToolsBuildEnvironment(object):
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
 
         """
+        if not self._conanfile.should_configure:
+            return
         if configure_dir:
             configure_dir = configure_dir.rstrip("/")
         else:
@@ -163,6 +165,8 @@ class AutoToolsBuildEnvironment(object):
         return '"%s"' % path if " " in path else path
 
     def make(self, args="", make_program=None, target=None):
+        if not self._conanfile.should_build:
+            return
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(self.vars):
             str_args = args_to_string(args)
