@@ -8,6 +8,178 @@ from conans.client.tools.files import replace_in_file
 
 class ConanAliasTest(unittest.TestCase):
 
+    def complete_large_test(self):
+        # https://github.com/conan-io/conan/issues/2583
+        conanfile0 = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    def requirements(self):
+        self.requires("%s")
+"""
+        conanfile2 = """from conans import ConanFile
+class Pkg(ConanFile):
+    def requirements(self):
+        self.requires("%s")
+        self.requires("%s")
+"""
+        conanfile3 = """from conans import ConanFile
+class Pkg(ConanFile):
+    def requirements(self):
+        self.requires("%s")
+        self.requires("%s")
+        self.requires("%s")
+"""
+        client = TestClient()
+
+        def export_alias(name, conanfile):
+            client.save({"conanfile.py": conanfile})
+            client.run("export . %s/0.1@user/testing" % name)
+            client.run("alias %s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
+        for name, conanfile in [("CA", conanfile0),
+                                ("CB", conanfile % "CA/ALIAS@user/testing"),
+                                ("CC", conanfile % "CA/ALIAS@user/testing"),
+                                ("CD", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+                                ("CE", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+                                ("CF", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+                                ("CG", conanfile3 % ("CA/ALIAS@user/testing", "CD/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+                                ("CI", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+                                ("CH", conanfile2 % ("CA/ALIAS@user/testing", "CB/ALIAS@user/testing")),
+                                ]:
+            export_alias(name, conanfile)
+
+        cj = """from conans import ConanFile
+class Pkg(ConanFile):
+    def build_requirements( self):
+        self.requires( "CA/ALIAS@user/testing")
+    def requirements( self):
+        self.requires( "CB/ALIAS@user/testing")
+"""
+        export_alias("CJ", cj)
+
+        ck = """from conans import ConanFile
+class Pkg(ConanFile):
+    def build_requirements( self):
+        self.requires( "CA/ALIAS@user/testing")
+
+    def requirements( self):
+        self.requires( "CB/ALIAS@user/testing")
+        self.requires( "CH/ALIAS@user/testing")
+        self.requires( "CI/ALIAS@user/testing")
+        self.requires( "CF/ALIAS@user/testing")
+        self.requires( "CE/ALIAS@user/testing")
+        self.requires( "CD/ALIAS@user/testing")
+        self.requires( "CJ/ALIAS@user/testing")
+        self.requires( "CG/ALIAS@user/testing")
+"""
+        export_alias("CK", ck)
+
+        cl = """from conans import ConanFile
+class Pkg(ConanFile):
+    def build_requirements( self):
+        self.requires( "CA/ALIAS@user/testing")
+
+    def requirements( self):
+        self.requires( "CI/ALIAS@user/testing")
+        self.requires( "CF/ALIAS@user/testing")
+        self.requires( "CC/ALIAS@user/testing")
+        self.requires( "CJ/ALIAS@user/testing")
+        self.requires( "CB/ALIAS@user/testing")
+        self.requires( "CH/ALIAS@user/testing")
+        self.requires( "CK/ALIAS@user/testing")
+"""
+        export_alias("CL", cl)
+
+        cm = """from conans import ConanFile
+class Pkg(ConanFile):
+    def build_requirements( self):
+        self.requires( "CA/ALIAS@user/testing")
+
+    def requirements( self):
+        self.requires( "CB/ALIAS@user/testing")
+        self.requires( "CL/ALIAS@user/testing")
+"""
+        export_alias("CM", cm)
+
+        consumer = """from conans import ConanFile
+class Pkg(ConanFile):
+    def build_requirements( self):
+        self.requires( "CA/ALIAS@user/testing")
+
+    def requirements( self):
+        self.requires( "CD/ALIAS@user/testing")
+        self.requires( "CI/ALIAS@user/testing")
+        self.requires( "CG/ALIAS@user/testing")
+        self.requires( "CM/ALIAS@user/testing")
+        self.requires( "CJ/ALIAS@user/testing")
+        self.requires( "CK/ALIAS@user/testing")
+        self.requires( "CB/ALIAS@user/testing")
+        self.requires( "CL/ALIAS@user/testing")
+        self.requires( "CH/ALIAS@user/testing")
+"""
+        client.save({"conanfile.py": consumer})
+        client.run("info . --graph=file.dot")
+        graphfile = load(os.path.join(client.current_folder, "file.dot"))
+        self.assertIn('"CB/0.1@user/testing" -> {"CA/0.1@user/testing"}', graphfile)
+        self.assertTrue(('"CD/0.1@user/testing" -> {"CA/0.1@user/testing" "CB/0.1@user/testing"}' in graphfile) or
+                        ('"CD/0.1@user/testing" -> {"CB/0.1@user/testing" "CA/0.1@user/testing"}' in graphfile))
+        self.assertIn('"CJ/0.1@user/testing" -> {"CB/0.1@user/testing"}', graphfile)
+
+    def striped_large_test(self):
+        # https://github.com/conan-io/conan/issues/2583
+        conanfile0 = """from conans import ConanFile
+class Pkg(ConanFile):
+    pass
+"""
+        client = TestClient()
+
+        def export_alias(name, conanfile):
+            client.save({"conanfile.py": conanfile})
+            client.run("export . %s/0.1@user/testing" % name)
+            client.run("alias %s/ALIAS@user/testing %s/0.1@user/testing" % (name, name))
+
+        export_alias("CH", conanfile0)
+
+        ck = """from conans import ConanFile
+class Pkg(ConanFile):
+    def requirements( self):
+        self.requires( "CH/ALIAS@user/testing")
+"""
+        export_alias("CK", ck)
+
+        cl = """from conans import ConanFile
+class Pkg(ConanFile):
+    def requirements( self):
+        self.requires( "CK/ALIAS@user/testing")
+        self.requires( "CH/ALIAS@user/testing")
+"""
+        export_alias("CL", cl)
+
+        cm = """from conans import ConanFile
+class Pkg(ConanFile):
+    def requirements( self):
+        self.requires( "CL/ALIAS@user/testing")
+"""
+        export_alias("CM", cm)
+
+        consumer = """from conans import ConanFile
+class Pkg(ConanFile):
+    def requirements( self):
+        self.requires( "CM/ALIAS@user/testing")
+        self.requires( "CL/ALIAS@user/testing")
+        self.requires( "CK/ALIAS@user/testing")
+        self.requires( "CH/ALIAS@user/testing")
+"""
+        client.save({"conanfile.py": consumer})
+        client.run("info . --graph=file.dot")
+        graphfile = load(os.path.join(client.current_folder, "file.dot"))
+        self.assertIn('"CM/0.1@user/testing" -> {"CL/0.1@user/testing"}', graphfile)
+        self.assertTrue(('"CL/0.1@user/testing" -> {"CK/0.1@user/testing" "CH/0.1@user/testing"}' in graphfile) or
+                        ('"CL/0.1@user/testing" -> {"CH/0.1@user/testing" "CK/0.1@user/testing"}' in graphfile))
+        self.assertIn('"CK/0.1@user/testing" -> {"CH/0.1@user/testing"}', graphfile)
+
     @parameterized.expand([(True, ), (False, )])
     def double_alias_test(self, use_requires):
         # https://github.com/conan-io/conan/issues/2583

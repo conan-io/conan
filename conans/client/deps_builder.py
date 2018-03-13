@@ -301,8 +301,8 @@ class DepsGraphBuilder(object):
                                  "evaluations of 'requirements'\n"
                                  "    Previous requirements: %s\n"
                                  "    New requirements: %s"
-                                 % (conanref, list(conanfile.requires.values()),
-                                    list(conanfile._evaluated_requires.values())))
+                                 % (conanref, list(conanfile._evaluated_requires.values()),
+                                    list(conanfile.requires.values())))
 
     def _load_deps(self, node, down_reqs, dep_graph, public_deps, down_ref, down_options,
                    loop_ancestors, aliased):
@@ -344,6 +344,8 @@ class DepsGraphBuilder(object):
             else:  # a public node already exist with this name
                 previous_node, closure = previous
                 alias_ref = aliased.get(require.conan_reference, require.conan_reference)
+                # Necessary to make sure that it is pointing to the correct aliased
+                require.conan_reference = alias_ref
                 if previous_node.conan_ref != alias_ref:
                     raise ConanException("Conflict in %s\n"
                                          "    Requirement %s conflicts with already defined %s\n"
