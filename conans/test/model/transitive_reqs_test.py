@@ -1145,8 +1145,8 @@ class ChatConan(ConanFile):
         self.retriever.conan(hello_ref, hello_content)
 
         expected = """Say/0.1@user/testing: Incompatible requirements obtained in different evaluations of 'requirements'
-    Previous requirements: [Base/0.1@user/testing, Zlib/0.1@user/testing]
-    New requirements: [Base/0.1@user/testing, png/0.1@user/testing]"""
+    Previous requirements: [Base/0.1@user/testing, png/0.1@user/testing]
+    New requirements: [Base/0.1@user/testing, Zlib/0.1@user/testing]"""
         try:
             _ = self.root(chat_content)
             self.assert_(False, "Exception not thrown")
