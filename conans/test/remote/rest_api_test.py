@@ -49,7 +49,7 @@ class RestApiTest(unittest.TestCase):
         RestApiTest.server.clean()
 
     def relative_url_completion_test(self):
-        api = RestApiClient(TestBufferConanOutput(), requester=requests, cacert_path=None)
+        api = RestApiClient(TestBufferConanOutput(), requester=requests)
 
         # test absolute urls
         self.assertEquals(api._complete_url("http://host"), "http://host")
