@@ -23,7 +23,6 @@ class ExportLinterTest(unittest.TestCase):
         client = TestClient()
         client.save({CONANFILE: conanfile})
         client.run("export . lasote/stable")
-        print client.out
         self._check_linter(client.user_io.out)
 
     def _check_linter(self, output):

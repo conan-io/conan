@@ -6,7 +6,6 @@ import six
 from conans.client.output import Color
 from conans.errors import ConanException
 from subprocess import PIPE, Popen
-from conans import tools
 from conans import __path__ as root_path
 
 
@@ -18,32 +17,31 @@ def conan_linter(conanfile_path, out):
     if not apply_lint or apply_lint == "False":
         return
 
-    dirname = os.path.dirname(conanfile_path)
     dir_path = os.path.dirname(root_path[0])
-
-    with tools.environment_append({"PYTHONPATH": [dirname, dir_path]}):
-        try:
-            py3_msgs = _lint_py3(conanfile_path)
-            msgs = _normal_linter(conanfile_path)
-        except Exception as e:
-            out.warn("Failed pylint: %s" % e)
-        else:
-            if py3_msgs:
-                out.writeln("Python 3 incompatibilities\n    ERROR: %s"
-                            % "\n    ERROR: ".join(py3_msgs),
-                            front=Color.BRIGHT_MAGENTA)
-            if msgs:
-                out.writeln("Linter warnings\n    WARN: %s" % "\n    WARN: ".join(msgs),
-                            front=Color.MAGENTA)
-            pylint_werr = os.environ.get("CONAN_PYLINT_WERR", None)
-            if pylint_werr and (py3_msgs or msgs):
-                raise ConanException("Package recipe has linter errors. Please fix them.")
+    dirname = os.path.dirname(conanfile_path)
+    hook = '--init-hook="import sys; sys.path.extend([\'%s\', \'%s\'])"' % (dir_path, dirname)
+    try:
+        py3_msgs = _lint_py3(conanfile_path)
+        msgs = _normal_linter(conanfile_path, hook)
+    except Exception as e:
+        out.warn("Failed pylint: %s" % e)
+    else:
+        if py3_msgs:
+            out.writeln("Python 3 incompatibilities\n    ERROR: %s"
+                        % "\n    ERROR: ".join(py3_msgs),
+                        front=Color.BRIGHT_MAGENTA)
+        if msgs:
+            out.writeln("Linter warnings\n    WARN: %s" % "\n    WARN: ".join(msgs),
+                        front=Color.MAGENTA)
+        pylint_werr = os.environ.get("CONAN_PYLINT_WERR", None)
+        if pylint_werr and (py3_msgs or msgs):
+            raise ConanException("Package recipe has linter errors. Please fix them.")
 
 
 def _runner(args):
     command = "pylint -f json " + " ".join(args)
     # This is a bit repeated from det
-    proc = Popen(command, shell=True, bufsize=1, stdout=PIPE, stderr=PIPE)
+    proc = Popen(command, shell=False, bufsize=1, stdout=PIPE, stderr=PIPE)
     output_buffer = []
     while True:
         line = proc.stdout.readline()
@@ -60,7 +58,7 @@ def _lint_py3(conanfile_path):
         return
 
     args = ['--py3k', "--reports=no", "--disable=no-absolute-import", "--persistent=no",
-            conanfile_path]
+            '"%s"' % conanfile_path]
 
     output_json = _runner(args)
 
@@ -72,16 +70,16 @@ def _lint_py3(conanfile_path):
     return result
 
 
-def _normal_linter(conanfile_path):
-    args = ["--reports=no", "--disable=no-absolute-import", "--persistent=no", conanfile_path]
+def _normal_linter(conanfile_path, hook):
+    args = ["--reports=no", "--disable=no-absolute-import", "--persistent=no", hook,
+            '"%s"' % conanfile_path]
     pylintrc = os.environ.get("CONAN_PYLINTRC", None)
     if pylintrc:
         if not os.path.exists(pylintrc):
             raise ConanException("File %s defined by PYLINTRC doesn't exist" % pylintrc)
-        args.append('--rcfile=%s' % pylintrc)
+        args.append('--rcfile="%s"' % pylintrc)
 
     output_json = _runner(args)
-
     dynamic_fields = ("source_folder", "build_folder", "package_folder", "info_build",
                       "build_requires", "info")
 
