@@ -11,6 +11,7 @@ import time
 
 
 def conan_linter(conanfile_path, out):
+    t1 = time.time()
     if getattr(sys, 'frozen', False):
         out.info("No linter available. Use a pip installed conan for recipe linting")
         return
@@ -37,15 +38,16 @@ def conan_linter(conanfile_path, out):
         pylint_werr = os.environ.get("CONAN_PYLINT_WERR", None)
         if pylint_werr and (py3_msgs or msgs):
             raise ConanException("Package recipe has linter errors. Please fix them.")
-
+    
+    print "Elapsed time ", time.time() - t1
 
 def _runner(args):
     command = "pylint -f json " + " ".join(args)
     # command = ["pylint", "-f json"] + args
-    t1 = time.time()
+    
     proc = Popen(command, shell=False, bufsize=10, stdout=PIPE, stderr=PIPE)
     stdout, _ = proc.communicate()
-    print "Elapsed time ", time.time() - t1
+
     return json.loads(stdout) if stdout else {}
 
 
