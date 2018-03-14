@@ -7,6 +7,7 @@ from conans.client.output import Color
 from conans.errors import ConanException
 from subprocess import PIPE, Popen
 from conans import __path__ as root_path
+import time
 
 
 def conan_linter(conanfile_path, out):
@@ -21,8 +22,8 @@ def conan_linter(conanfile_path, out):
     dirname = os.path.dirname(conanfile_path)
     hook = '--init-hook="import sys; sys.path.extend([\'%s\', \'%s\'])"' % (dir_path, dirname)
     try:
-        py3_msgs = _lint_py3(conanfile_path)
-        msgs = _normal_linter(conanfile_path, hook)
+        py3_msgs = None
+        msgs, py3_msgs = _normal_linter(conanfile_path, hook)
     except Exception as e:
         out.warn("Failed pylint: %s" % e)
     else:
@@ -40,39 +41,17 @@ def conan_linter(conanfile_path, out):
 
 def _runner(args):
     command = "pylint -f json " + " ".join(args)
-    # This is a bit repeated from det
-    proc = Popen(command, shell=False, bufsize=1, stdout=PIPE, stderr=PIPE)
-    output_buffer = []
-    while True:
-        line = proc.stdout.readline()
-        if not line:
-            break
-        output_buffer.append(str(line))
-    proc.communicate()
-    output = "".join(output_buffer)
-    return json.loads(output) if output else {}
-
-
-def _lint_py3(conanfile_path):
-    if six.PY3:
-        return
-
-    args = ['--py3k', "--reports=no", "--disable=no-absolute-import", "--persistent=no",
-            '"%s"' % conanfile_path]
-
-    output_json = _runner(args)
-
-    result = []
-    for msg in output_json:
-        if msg.get("type") in ("warning", "error"):
-            result.append("Py3 incompatibility. Line %s: %s"
-                          % (msg.get("line"), msg.get("message")))
-    return result
+    # command = ["pylint", "-f json"] + args
+    t1 = time.time()
+    proc = Popen(command, shell=False, bufsize=10, stdout=PIPE, stderr=PIPE)
+    stdout, _ = proc.communicate()
+    print "Elapsed time ", time.time() - t1
+    return json.loads(stdout) if stdout else {}
 
 
 def _normal_linter(conanfile_path, hook):
-    args = ["--reports=no", "--disable=no-absolute-import", "--persistent=no", hook,
-            '"%s"' % conanfile_path]
+    args = ['--py3k', "--enable=all", "--reports=no", "--disable=no-absolute-import", "--persistent=no",
+            hook, '"%s"' % conanfile_path]
     pylintrc = os.environ.get("CONAN_PYLINTRC", None)
     if pylintrc:
         if not os.path.exists(pylintrc):
@@ -99,9 +78,14 @@ def _normal_linter(conanfile_path, hook):
         return True
 
     result = []
+    py3msgs = []
     for msg in output_json:
         if msg.get("type") in ("warning", "error"):
-            if _accept_message(msg):
+            message_id = msg.get("message-id")
+            if message_id in ("W1620", "E1601"):
+                py3msgs.append("Py3 incompatibility. Line %s: %s"
+                               % (msg.get("line"), msg.get("message")))
+            elif _accept_message(msg):
                 result.append("Linter. Line %s: %s" % (msg.get("line"), msg.get("message")))
 
-    return result
+    return result, py3msgs
