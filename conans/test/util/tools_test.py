@@ -587,7 +587,6 @@ class MyConan(ConanFile):
 
     def build(self):
         with tools.vcvars(self.settings):
-            self.output.info(str(self.settings.os) + ": vcvars applies")
             self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
 """
         client = TestClient()
@@ -595,12 +594,9 @@ class MyConan(ConanFile):
 
         if platform.system() == "Windows":
             client.run("create . conan/testing")
-            self.assertIn("MyConan/0.1@conan/testing: Windows: vcvars applies", client.out)
             self.assertNotIn("VCINSTALLDIR set to: None", client.out)
-
-        if platform.system() == "Linux":
+        else:
             client.run("create . conan/testing")
-            self.assertIn("MyConan/0.1@conan/testing: Linux: vcvars applies", client.out)
             self.assertIn("VCINSTALLDIR set to: None", client.out)
 
     def run_in_bash_test(self):
