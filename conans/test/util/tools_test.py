@@ -591,9 +591,7 @@ class MyConan(ConanFile):
             self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
 """
         client = TestClient()
-        client.save({"conanfile.py": conanfile,
-                     "profile_win": profile_win,
-                     "profile_lin": profile_lin})
+        client.save({"conanfile.py": conanfile})
 
         if platform.system() == "Windows":
             client.run("create . conan/testing")
