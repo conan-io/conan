@@ -590,21 +590,6 @@ class MyConan(ConanFile):
             self.output.info(str(self.settings.os) + ": vcvars applies")
             self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
 """
-        profile_win = """
-[settings]
-os=Windows
-arch=x86
-compiler=Visual Studio
-compiler.version=15
-"""
-        profile_lin = """
-[settings]
-os=Linux
-arch=x86
-compiler=gcc
-compiler.version=7
-compiler.libcxx=libstdc++
-"""
         client = TestClient()
         client.save({"conanfile.py": conanfile,
                      "profile_win": profile_win,
