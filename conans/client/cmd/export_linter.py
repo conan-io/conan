@@ -7,11 +7,9 @@ from conans.client.output import Color
 from conans.errors import ConanException
 from subprocess import PIPE, Popen
 from conans import __path__ as root_path
-import time
 
 
 def conan_linter(conanfile_path, out):
-    t1 = time.time()
     if getattr(sys, 'frozen', False):
         out.info("No linter available. Use a pip installed conan for recipe linting")
         return
@@ -39,8 +37,6 @@ def conan_linter(conanfile_path, out):
         pylint_werr = os.environ.get("CONAN_PYLINT_WERR", None)
         if pylint_werr and (py3_msgs or msgs):
             raise ConanException("Package recipe has linter errors. Please fix them.")
-
-    print "Elapsed time ", time.time() - t1
 
 
 def _runner(args):
