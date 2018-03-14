@@ -611,13 +611,14 @@ compiler.libcxx=libstdc++
                      "profile_lin": profile_lin})
 
         if platform.system() == "Windows":
-            client.run("create . conan/testing --profile profile_win")
+            client.run("create . conan/testing")
             self.assertIn("MyConan/0.1@conan/testing: Windows: vcvars applies", client.out)
             self.assertNotIn("VCINSTALLDIR set to: None", client.out)
 
-        client.run("create . conan/testing --profile profile_lin")
-        self.assertIn("MyConan/0.1@conan/testing: Linux: vcvars applies", client.out)
-        self.assertIn("VCINSTALLDIR set to: None", client.out)
+        if platform.system() == "Linux":
+            client.run("create . conan/testing")
+            self.assertIn("MyConan/0.1@conan/testing: Linux: vcvars applies", client.out)
+            self.assertIn("VCINSTALLDIR set to: None", client.out)
 
     def run_in_bash_test(self):
         if platform.system() != "Windows":
