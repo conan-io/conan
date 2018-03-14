@@ -1,7 +1,7 @@
 import os
 import json
 import sys
-import six
+
 
 from conans.client.output import Color
 from conans.errors import ConanException
@@ -21,7 +21,8 @@ def conan_linter(conanfile_path, out):
 
     dir_path = os.path.dirname(root_path[0])
     dirname = os.path.dirname(conanfile_path)
-    hook = '--init-hook="import sys; sys.path.extend([\'%s\', \'%s\'])"' % (dir_path, dirname)
+    hook = '--init-hook="import sys; sys.path.extend([\'%s\', \'%s\'])"' % (dirname, dir_path)
+
     try:
         py3_msgs = None
         msgs, py3_msgs = _normal_linter(conanfile_path, hook)
@@ -38,16 +39,14 @@ def conan_linter(conanfile_path, out):
         pylint_werr = os.environ.get("CONAN_PYLINT_WERR", None)
         if pylint_werr and (py3_msgs or msgs):
             raise ConanException("Package recipe has linter errors. Please fix them.")
-    
+
     print "Elapsed time ", time.time() - t1
+
 
 def _runner(args):
     command = "pylint -f json " + " ".join(args)
-    # command = ["pylint", "-f json"] + args
-    
     proc = Popen(command, shell=False, bufsize=10, stdout=PIPE, stderr=PIPE)
     stdout, _ = proc.communicate()
-
     return json.loads(stdout) if stdout else {}
 
 
