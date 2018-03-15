@@ -148,6 +148,7 @@ class ConanFile(object):
         self.deps_user_info = DepsUserInfo()
 
         self.copy = None  # initialized at runtime
+        self.copy_deps = None  # initialized at runtime
 
         # an output stream (writeln, info, warn error)
         self.output = output

@@ -100,6 +100,8 @@ def _normal_linter(conanfile_path):
                     return False
         if symbol == "not-callable" and "self.copy is not callable" == text:
             return False
+        if symbol == "not-callable" and "self.copy_deps is not callable" == text:
+            return False
         if symbol in ("bare-except", "broad-except"):  # No exception type(s) specified
             return False
         return True
