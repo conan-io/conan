@@ -12,5 +12,4 @@ class TestRunner(object):
                                             log_run_to_output=True)
 
     def __call__(self, command, output=None, log_filepath=None, cwd=None):
-        return self.runner(command, output=self._output or output,
-                           log_filepath=log_filepath, cwd=cwd)
+        return self.runner(command, output=self._output, log_filepath=log_filepath, cwd=cwd)
