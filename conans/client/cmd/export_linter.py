@@ -1,7 +1,7 @@
 import os
 import json
 import sys
-
+import platform
 
 from conans.client.output import Color
 from conans.errors import ConanException
@@ -19,7 +19,7 @@ def conan_linter(conanfile_path, out):
 
     dir_path = os.path.dirname(root_path[0])
     dirname = os.path.dirname(conanfile_path)
-    hook = '--init-hook="import sys; sys.path.extend([\'%s\', \'%s\'])"' % (dirname, dir_path)
+    hook = '--init-hook="import sys;sys.path.extend([\'%s\', \'%s\'])"' % (dirname, dir_path)
 
     try:
         py3_msgs = None
@@ -40,8 +40,10 @@ def conan_linter(conanfile_path, out):
 
 
 def _runner(args):
-    command = "pylint -f json " + " ".join(args)
-    proc = Popen(command, shell=False, bufsize=10, stdout=PIPE, stderr=PIPE)
+    command = ["pylint",  "--output-format=json"] + args
+    command = " ".join(command)
+    shell = True if platform.system() != "Windows" else False
+    proc = Popen(command, shell=shell, bufsize=10, stdout=PIPE, stderr=PIPE)
     stdout, _ = proc.communicate()
     return json.loads(stdout) if stdout else {}
 
@@ -78,8 +80,8 @@ def _normal_linter(conanfile_path, hook):
     py3msgs = []
     for msg in output_json:
         if msg.get("type") in ("warning", "error"):
-            message_id = msg.get("message-id")
-            if message_id in ("W1620", "E1601"):
+            message_id = msg.get("symbol")
+            if message_id in ("print-statement", "dict-iter-method"):
                 py3msgs.append("Py3 incompatibility. Line %s: %s"
                                % (msg.get("line"), msg.get("message")))
             elif _accept_message(msg):
