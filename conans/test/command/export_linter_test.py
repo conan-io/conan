@@ -19,6 +19,14 @@ class TestConan(ConanFile):
 
 class ExportLinterTest(unittest.TestCase):
 
+    def setUp(self):
+        self.old_env = dict(os.environ)
+        os.environ["CONAN_RECIPE_LINTER"] = "True"
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.old_env)
+
     def test_basic(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
@@ -127,7 +135,6 @@ class BaseConan(ConanFile):
                       client.user_io.out)
 
     def export_deploy_test(self):
-
         conanfile = """
 from conans import ConanFile
 class BaseConan(ConanFile):
