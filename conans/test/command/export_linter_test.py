@@ -3,6 +3,7 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 import six
 import os
+from conans import tools
 
 
 conanfile = """
@@ -44,10 +45,10 @@ class ExportLinterTest(unittest.TestCase):
     def test_disable_linter(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("config set general.recipe_linter=False")
-        client.run("export . lasote/stable")
-        self.assertNotIn("ERROR: Py3 incompatibility", client.user_io.out)
-        self.assertNotIn("WARN: Linter", client.user_io.out)
+        with tools.environment_append({"CONAN_RECIPE_LINTER": "False"}):
+            client.run("export . lasote/stable")
+            self.assertNotIn("ERROR: Py3 incompatibility", client.user_io.out)
+            self.assertNotIn("WARN: Linter", client.user_io.out)
 
     def test_custom_rc_linter(self):
         client = TestClient()
