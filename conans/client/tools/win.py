@@ -17,10 +17,10 @@ from conans.util.files import decode_text, save, mkdir_tmp
 _global_output = None
 
 
-@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0", details="Use the MSBuild() build helper instead")
+@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
+                        details="Use the MSBuild() build helper instead")
 def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None,
-                       runtime=None, use_env=False):
+                       arch=None, parallel=True, force_vcvars=False, toolset=None, platforms=None):
     """ Do both: set the environment variables and call the .sln build
     """
     import warnings
@@ -28,14 +28,15 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
 
     vcvars = vcvars_command(settings, force=force_vcvars)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset, platforms=platforms, use_env=use_env)
+                              parallel, toolset=toolset, platforms=platforms, use_env=False)
     command = "%s && %s" % (vcvars, build)
     return command
 
 
-@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0", details="Use the MSBuild() build helper instead")
+@deprecation.deprecated(deprecated_in="1.2", removed_in="2.0",
+                        details="Use the MSBuild() build helper instead")
 def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, build_type=None,
-                      arch=None, parallel=True, toolset=None, platforms=None, use_env=False):
+                      arch=None, parallel=True, toolset=None, platforms=None):
     """
     Use example:
         build_command = build_sln_command(self.settings, "myfile.sln", targets=["SDL2_image"])
@@ -56,7 +57,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     command = tmp.get_command(sln_path, tmp_path,
                               targets=targets, upgrade_project=upgrade_project,
                               build_type=build_type, arch=arch, parallel=parallel,
-                              toolset=toolset, platforms=platforms, use_env=use_env)
+                              toolset=toolset, platforms=platforms, use_env=False)
 
     return command
 
