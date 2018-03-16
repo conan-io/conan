@@ -127,6 +127,8 @@ path = ~/.conan/data
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
+# You can skip the proxy for the matching (fnmatch) urls (comma-separated)
+# no_proxy_match = *bintray.com*, https://myserver.*
 
 
 # Default settings now declared in the default profile

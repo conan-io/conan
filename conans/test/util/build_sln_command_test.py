@@ -3,6 +3,7 @@
 
 import unittest
 
+
 from conans import tools
 from conans.tools import build_sln_command, cpu_count
 from conans.errors import ConanException
@@ -17,6 +18,8 @@ import os
 
 @attr('visual_studio')
 class BuildSLNCommandTest(unittest.TestCase):
+
+
     def no_configuration_test(self):
         dummy = """GlobalSection
             EndGlobalSection
