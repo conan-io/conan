@@ -500,11 +500,14 @@ class Command(object):
                                  "conanbuildinfo.txt files (from a previous conan install "
                                  "execution). Defaulted to --build-folder")
         parser.add_argument("-c", "--configure", default=None, action="store_true",
-                            help="Execute the configuration step (variable should_configure=True)")
+                            help="Execute the configuration step (variable should_configure=True)."
+                            " When specified, build/install won't run unless --build/--install specified")
         parser.add_argument("-b", "--build", default=None, action="store_true",
-                            help="Execute the build step (variable should_build=True)")
+                            help="Execute the build step (variable should_build=True)."
+                            " When specified, configure/install won't run unless --configure/--install specified")
         parser.add_argument("-i", "--install", default=None, action="store_true",
-                            help="Execute the install step (variable should_install=True)")
+                            help="Execute the install step (variable should_install=True)."
+                            " When specified, configure/build won't run unless --configure/--build specified")
         args = parser.parse_args(*args)
 
         if args.build or args.configure or args.install:
