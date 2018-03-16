@@ -499,12 +499,29 @@ class Command(object):
                             help="Optional. Local folder containing the conaninfo.txt and "
                                  "conanbuildinfo.txt files (from a previous conan install "
                                  "execution). Defaulted to --build-folder")
+        parser.add_argument("-c", "--configure", default=None, action="store_true",
+                            help="Execute the configuration step (variable should_configure=True)."
+                            " When specified, build/install won't run unless --build/--install specified")
+        parser.add_argument("-b", "--build", default=None, action="store_true",
+                            help="Execute the build step (variable should_build=True)."
+                            " When specified, configure/install won't run unless --configure/--install specified")
+        parser.add_argument("-i", "--install", default=None, action="store_true",
+                            help="Execute the install step (variable should_install=True)."
+                            " When specified, configure/build won't run unless --configure/--build specified")
         args = parser.parse_args(*args)
+
+        if args.build or args.configure or args.install:
+            build, config, install = bool(args.build), bool(args.configure), bool(args.install)
+        else:
+            build = config = install = True
         return self._conan.build(conanfile_path=args.path,
                                  source_folder=args.source_folder,
                                  package_folder=args.package_folder,
                                  build_folder=args.build_folder,
-                                 install_folder=args.install_folder)
+                                 install_folder=args.install_folder,
+                                 should_configure=config,
+                                 should_build=build,
+                                 should_install=install)
 
     def package(self, *args):
         """ Calls your local conanfile.py 'package()' method.

@@ -33,6 +33,9 @@ class MockConanfile(object):
         self.runner = runner
         self.options = options or MockOptions({})
         self.generators = []
+        self.should_configure = True
+        self.should_build = True
+        self.should_install = True
 
     def run(self, *args, **kwargs):
         if self.runner:

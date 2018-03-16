@@ -448,7 +448,7 @@ class ConanManager(object):
                                 install_folder, output, local=True, copy_info=True)
 
     def build(self, conanfile_path, source_folder, build_folder, package_folder, install_folder,
-              test=False):
+              test=False, should_configure=True, should_build=True, should_install=True):
         """ Call to build() method saved on the conanfile.py
         param conanfile_path: path to a conanfile.py
         """
@@ -473,6 +473,10 @@ class ConanManager(object):
                 conan_file.requires.add(test)
             except ConanException:
                 pass
+
+        conan_file.should_configure = should_configure
+        conan_file.should_build = should_build
+        conan_file.should_install = should_install
 
         try:
             mkdir(build_folder)
