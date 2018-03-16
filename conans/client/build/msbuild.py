@@ -32,14 +32,15 @@ class MSBuild(object):
                 command = "%s && %s" % (vcvars, command)
                 return self._conanfile.run(command)
 
-    def get_command(self, sln_path, props_file_path, targets=None, upgrade_project=True, build_type=None,
-                    arch=None, parallel=True, toolset=None, platforms=None, use_env=False):
+    def get_command(self, project_file, props_file_path=None, targets=None, upgrade_project=True,
+                    build_type=None, arch=None, parallel=True, toolset=None, platforms=None,
+                    use_env=False):
 
         targets = targets or []
         command = ""
 
         if upgrade_project and not get_env("CONAN_SKIP_VS_PROJECTS_UPGRADE", False):
-            command += "devenv %s /upgrade && " % sln_path
+            command += "devenv %s /upgrade && " % project_file
         else:
             self._output.info("Skipped sln project upgrade")
 
@@ -49,7 +50,7 @@ class MSBuild(object):
             raise ConanException("Cannot build_sln_command, build_type not defined")
         if not arch:
             raise ConanException("Cannot build_sln_command, arch not defined")
-        command += "msbuild %s /p:Configuration=%s" % (sln_path, build_type)
+        command += "msbuild %s /p:Configuration=%s" % (project_file, build_type)
         msvc_arch = {'x86': 'x86',
                      'x86_64': 'x64',
                      'armv7': 'ARM',
@@ -58,7 +59,7 @@ class MSBuild(object):
             msvc_arch.update(platforms)
         msvc_arch = msvc_arch.get(str(arch))
         try:
-            sln = tools.load(sln_path)
+            sln = tools.load(project_file)
             pattern = re.compile(r"GlobalSection\(SolutionConfigurationPlatforms\)(.*?)EndGlobalSection", re.DOTALL)
             solution_global = pattern.search(sln).group(1)
             lines = solution_global.splitlines()
@@ -86,7 +87,8 @@ class MSBuild(object):
         if toolset:
             command += " /p:PlatformToolset=%s" % toolset
 
-        command += ' /p:ForceImportBeforeCppTargets="%s"' % props_file_path
+        if props_file_path:
+            command += ' /p:ForceImportBeforeCppTargets="%s"' % props_file_path
 
         return command
 
