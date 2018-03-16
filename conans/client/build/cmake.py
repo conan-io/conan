@@ -347,6 +347,8 @@ class CMake(object):
                   source_folder=None, build_folder=None, cache_build_folder=None):
 
         # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
+        if not self._conanfile.should_configure:
+            return
         args = args or []
         defs = defs or {}
         source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
@@ -367,6 +369,8 @@ class CMake(object):
             self._conanfile.run(command)
 
     def build(self, args=None, build_dir=None, target=None):
+        if not self._conanfile.should_build:
+            return
         args = args or []
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
         if target is not None:
@@ -392,6 +396,8 @@ class CMake(object):
         self._conanfile.run(command)
 
     def install(self, args=None, build_dir=None):
+        if not self._conanfile.should_install:
+            return
         mkdir(self._conanfile.package_folder)
         if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
             raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
@@ -448,7 +454,8 @@ class CMake(object):
                 cmake.install()
                 cmake.patch_config_paths()
         """
-
+        if not self._conanfile.should_install:
+            return
         if not self._conanfile.name:
             raise ConanException("cmake.patch_config_paths() can't work without package name. "
                                  "Define name in your recipe")

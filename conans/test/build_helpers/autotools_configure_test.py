@@ -7,7 +7,10 @@ from conans.client.tools.oss import cpu_count
 from conans.paths import CONANFILE
 from conans.test.utils.conanfile import MockConanfile, MockSettings, MockOptions
 from conans.test.util.tools_test import RunnerMock
-from conans.test.utils.tools import TestClient, TestBufferConanOutput
+from conans.test.utils.tools import TestClient
+from conans.test.build_helpers.cmake_test import ConanFileMock
+from conans.model.settings import Settings
+from collections import namedtuple
 
 
 class AutoToolsConfigureTest(unittest.TestCase):
@@ -26,6 +29,21 @@ class AutoToolsConfigureTest(unittest.TestCase):
         conanfile.deps_cpp_info.sharedlinkflags.append("shared_link_flag")
         conanfile.deps_cpp_info.exelinkflags.append("exe_link_flag")
         conanfile.deps_cpp_info.sysroot = "/path/to/folder"
+
+    def partial_build_test(self):
+        conan_file = ConanFileMock()
+        deps_cpp_info = namedtuple("Deps", "libs, include_paths, lib_paths, defines, cflags, "
+                                   "cppflags, sharedlinkflags, exelinkflags, sysroot")
+        conan_file.deps_cpp_info = deps_cpp_info([], [], [], [], [], [], [], [], "")
+        conan_file.settings = Settings()
+        be = AutoToolsBuildEnvironment(conan_file)
+        conan_file.should_configure = False
+        conan_file.should_build = False
+        conan_file.should_install = False
+        be.configure()
+        self.assertIsNone(conan_file.command)
+        be.make()
+        self.assertIsNone(conan_file.command)
 
     def test_cppstd(self):
         options = MockOptions({})

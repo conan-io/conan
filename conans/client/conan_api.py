@@ -497,7 +497,7 @@ class ConanAPIV1(object):
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
-              install_folder=None, cwd=None):
+              install_folder=None, should_configure=True, should_build=True, should_install=True, cwd=None):
 
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
@@ -508,7 +508,8 @@ class ConanAPIV1(object):
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
         self._manager.build(conanfile_path, source_folder, build_folder, package_folder,
-                            install_folder)
+                            install_folder, should_configure=should_configure, should_build=should_build,
+                            should_install=should_install)
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):
