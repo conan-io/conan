@@ -77,6 +77,7 @@ class OSInfo(object):
         self.is_macos = platform.system() == "Darwin"
         self.is_freebsd = platform.system() == "FreeBSD"
         self.is_solaris = platform.system() == "SunOS"
+        self.is_posix = os.pathsep == ':'
 
         if self.is_linux:
             import distro
