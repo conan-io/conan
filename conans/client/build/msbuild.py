@@ -21,7 +21,7 @@ class MSBuild(object):
               parallel=True, force_vcvars=False, toolset=None, platforms=None):
         with tools.environment_append(self.build_env.vars):
             # Path for custom properties file
-            props_file_contents = self.get_props_file_contents()
+            props_file_contents = self._get_props_file_contents()
             with tools.tmp_file(props_file_contents) as props_file_path:
                 vcvars = vcvars_command(self._conanfile.settings, force=force_vcvars)
                 command = self.get_command(project_file, props_file_path,
@@ -90,7 +90,7 @@ class MSBuild(object):
 
         return command
 
-    def get_props_file_contents(self):
+    def _get_props_file_contents(self):
         # how to specify runtime in command line:
         # https://stackoverflow.com/questions/38840332/msbuild-overrides-properties-while-building-vc-project
         runtime_library = {"MT": "MultiThreaded",

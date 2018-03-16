@@ -48,7 +48,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
     tmp._output = _global_output
 
     # Generate the properties file
-    props_file_contents = tmp.get_props_file_contents()
+    props_file_contents = tmp._get_props_file_contents()
     tmp_path = os.path.join(mkdir_tmp(), ".conan_properties")
     save(tmp_path, props_file_contents)
 
