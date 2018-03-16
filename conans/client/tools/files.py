@@ -8,19 +8,10 @@ from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.util.files import (load, save, _generic_algorithm_sum,
-                               mkdir_tmp as _mkdir_tmp, tmp_file as _tmp_file)
+from conans.util.files import (load, save, _generic_algorithm_sum)
 
 
 _global_output = None
-
-
-def mkdir_tmp():
-    return _mkdir_tmp()
-
-
-def tmp_file(contents):
-    return _tmp_file(contents)
 
 
 @contextmanager
