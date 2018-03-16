@@ -8,8 +8,8 @@ class ConanRequester(object):
 
     def __init__(self, requester, client_cache):
         self.proxies = client_cache.conan_config.proxies or {}
-        self.no_proxy_match = [el.strip() for el in
-                               self.proxies.pop("no_proxy_match", "").split(",")]
+        self._no_proxy_match = [el.strip() for el in
+                                self.proxies.pop("no_proxy_match", "").split(",")]
 
         # Retrocompatibility with deprecated no_proxy
         # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
@@ -19,6 +19,10 @@ class ConanRequester(object):
 
         self._requester = requester
         self._client_cache = client_cache
+
+        if not os.path.exists(self._client_cache.cacert_path):
+            from conans.client.rest.cacert import cacert
+            save(self._client_cache.cacert_path, cacert)
 
         if not os.path.exists(client_cache.client_cert_path):
             self._client_certificates = None
@@ -32,10 +36,8 @@ class ConanRequester(object):
                 self._client_certificates = client_cache.client_cert_path
 
     def _should_skip_proxy(self, url):
-        if not self.no_proxy_match:
-            return False
 
-        for entry in self.no_proxy_match:
+        for entry in self._no_proxy_match:
             if fnmatch.fnmatch(url, entry):
                 return True
 
@@ -43,9 +45,6 @@ class ConanRequester(object):
 
     def _add_kwargs(self, url, kwargs):
         if kwargs.get("verify", None) is True:
-            if not os.path.exists(self._client_cache.cacert_path):
-                from conans.client.rest.cacert import cacert
-                save(self._client_cache.cacert_path, cacert)
             kwargs["verify"] = self._client_cache.cacert_path
         else:
             kwargs["verify"] = False

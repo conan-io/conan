@@ -37,7 +37,7 @@ class ClientCache(SimplePaths):
     """
 
     def __init__(self, base_folder, store_folder, output):
-        self.conan_folder = os.path.join(base_folder, ".conan")
+        self.conan_folder = join(base_folder, ".conan")
         self._conan_config = None
         self._settings = None
         self._output = output
@@ -51,7 +51,7 @@ class ClientCache(SimplePaths):
 
     @property
     def cacert_path(self):
-        return os.path.join(normpath(join(self.conan_folder, CACERT_FILE)))
+        return normpath(join(self.conan_folder, CACERT_FILE))
 
     def _no_locks(self):
         if self._no_lock is None:
@@ -76,12 +76,12 @@ class ClientCache(SimplePaths):
     def package_lock(self, package_ref):
         if self._no_locks():
             return NoLock()
-        return SimpleLock(os.path.join(self.conan(package_ref.conan), "locks",
+        return SimpleLock(join(self.conan(package_ref.conan), "locks",
                                        package_ref.package_id))
 
     @property
     def put_headers_path(self):
-        return os.path.join(self.conan_folder, PUT_HEADERS)
+        return join(self.conan_folder, PUT_HEADERS)
 
     def read_put_headers(self):
         ret = {}
@@ -104,7 +104,7 @@ class ClientCache(SimplePaths):
 
     @property
     def registry(self):
-        return os.path.join(self.conan_folder, REGISTRY)
+        return join(self.conan_folder, REGISTRY)
 
     @property
     def conan_config(self):
@@ -117,26 +117,26 @@ class ClientCache(SimplePaths):
 
     @property
     def localdb(self):
-        return os.path.join(self.conan_folder, LOCALDB)
+        return join(self.conan_folder, LOCALDB)
 
     @property
     def conan_conf_path(self):
-        return os.path.join(self.conan_folder, CONAN_CONF)
+        return join(self.conan_folder, CONAN_CONF)
 
     @property
     def profiles_path(self):
-        return os.path.join(self.conan_folder, PROFILES_FOLDER)
+        return join(self.conan_folder, PROFILES_FOLDER)
 
     @property
     def settings_path(self):
-        return os.path.join(self.conan_folder, CONAN_SETTINGS)
+        return join(self.conan_folder, CONAN_SETTINGS)
 
     @property
     def default_profile_path(self):
         if os.path.isabs(self.conan_config.default_profile):
             return self.conan_config.default_profile
         else:
-            return os.path.expanduser(os.path.join(self.conan_folder, PROFILES_FOLDER,
+            return os.path.expanduser(join(self.conan_folder, PROFILES_FOLDER,
                                                    self.conan_config.default_profile))
 
     @property
@@ -192,7 +192,7 @@ class ClientCache(SimplePaths):
         packages_dir = self.packages(conan_reference)
         try:
             packages = [dirname for dirname in os.listdir(packages_dir)
-                        if os.path.isdir(os.path.join(packages_dir, dirname))]
+                        if os.path.isdir(join(packages_dir, dirname))]
         except OSError:  # if there isn't any package folder
             packages = []
         return packages
@@ -203,7 +203,7 @@ class ClientCache(SimplePaths):
         builds_dir = self.builds(conan_reference)
         try:
             builds = [dirname for dirname in os.listdir(builds_dir)
-                      if os.path.isdir(os.path.join(builds_dir, dirname))]
+                      if os.path.isdir(join(builds_dir, dirname))]
         except OSError:  # if there isn't any package folder
             builds = []
         return builds
@@ -220,7 +220,7 @@ class ClientCache(SimplePaths):
 
     @staticmethod
     def read_package_recipe_hash(package_folder):
-        filename = os.path.join(package_folder, CONANINFO)
+        filename = join(package_folder, CONANINFO)
         info = ConanInfo.loads(load(filename))
         return info.recipe_hash
 
