@@ -30,6 +30,7 @@ from conans.model.ref import ConanFileReference, PackageReference
 from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BUILD_INFO
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
+from conans.client.loader_parse import load_conanfile_class
 
 
 class BuildMode(object):
@@ -220,6 +221,11 @@ class ConanManager(object):
 
         # First of all download package recipe
         remote_proxy.get_recipe(reference)
+        # Download the sources too, don't be lazy
+        conan_file_path = self._client_cache.conanfile(reference)
+        conanfile = load_conanfile_class(conan_file_path)
+        remote_proxy.complete_recipe_sources(conanfile, reference,
+                                             short_paths=conanfile.short_paths)
 
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
