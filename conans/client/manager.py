@@ -206,11 +206,12 @@ class ConanManager(object):
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     install_folder, package_output, local=True)
 
-    def download(self, reference, package_ids, remote):
+    def download(self, reference, package_ids, remote, only_recipe):
         """ Download conanfile and specified packages to local repository
         @param reference: ConanFileReference
         @param package_ids: Package ids or empty for download all
         @param remote: install only from that remote
+        @param only_recipe: download only the recipe
         """
         assert(isinstance(reference, ConanFileReference))
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
@@ -221,23 +222,25 @@ class ConanManager(object):
 
         # First of all download package recipe
         remote_proxy.get_recipe(reference)
-        # Download the sources too, don't be lazy
-        conan_file_path = self._client_cache.conanfile(reference)
-        conanfile = load_conanfile_class(conan_file_path)
-        remote_proxy.complete_recipe_sources(conanfile, reference,
-                                             short_paths=conanfile.short_paths)
 
-        if package_ids:
-            remote_proxy.download_packages(reference, package_ids)
-        else:
-            self._user_io.out.info("Getting the complete package list "
-                                   "from '%s'..." % str(reference))
-            packages_props = self._remote_manager.search_packages(remote, reference, None)
-            if not packages_props:
-                output = ScopedOutput(str(reference), self._user_io.out)
-                output.warn("No remote binary packages found in remote")
+        if not only_recipe:
+            # Download the sources too, don't be lazy
+            conan_file_path = self._client_cache.conanfile(reference)
+            conanfile = load_conanfile_class(conan_file_path)
+            remote_proxy.complete_recipe_sources(conanfile, reference,
+                                                 short_paths=conanfile.short_paths)
+
+            if package_ids:
+                remote_proxy.download_packages(reference, package_ids)
             else:
-                remote_proxy.download_packages(reference, list(packages_props.keys()))
+                self._user_io.out.info("Getting the complete package list "
+                                    "from '%s'..." % str(reference))
+                packages_props = self._remote_manager.search_packages(remote, reference, None)
+                if not packages_props:
+                    output = ScopedOutput(str(reference), self._user_io.out)
+                    output.warn("No remote binary packages found in remote")
+                else:
+                    remote_proxy.download_packages(reference, list(packages_props.keys()))
 
     @staticmethod
     def _inject_require(conanfile, inject_require):

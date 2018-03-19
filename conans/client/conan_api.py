@@ -371,10 +371,10 @@ class ConanAPIV1(object):
                                  profile=profile, force=force)
 
     @api_method
-    def download(self, reference, remote=None, package=None):
+    def download(self, reference, remote=None, package=None, only_recipe=False):
         # Install packages without settings (fixed ids or all)
         conan_ref = ConanFileReference.loads(reference)
-        self._manager.download(conan_ref, package, remote=remote)
+        self._manager.download(conan_ref, package, remote=remote, only_recipe=only_recipe)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,

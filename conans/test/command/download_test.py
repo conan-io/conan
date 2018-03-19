@@ -7,6 +7,44 @@ from conans.util.files import load
 
 class DownloadTest(unittest.TestCase):
 
+    def download_only_recipe_test(self):
+        server = TestServer()
+        servers = {"default": server}
+        client = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+
+        # Test argument --package and --only-recipe cannot be together
+        error = client.run("download eigen/3.3.4@conan/stable --only-recipe --package fake_id",
+                   ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: --only-recipe cannot be used together with --package", client.out)
+
+        # Test download of the recipe only
+        conanfile = """from conans import ConanFile
+class Pkg(ConanFile):
+    name = "pkg"
+    version = "0.1"
+    exports_sources = "*"
+"""
+        client.save({"conanfile.py": conanfile,
+                     "file.h": "myfile.h",
+                     "otherfile.cpp": "C++code"})
+        client.run("export . lasote/stable")
+        ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
+        self.assertTrue(os.path.exists(client.paths.conanfile(ref)))
+        client.run("upload pkg/0.1@lasote/stable")
+        client.run("remove pkg/0.1@lasote/stable -f")
+        self.assertFalse(os.path.exists(client.paths.export(ref)))
+        client.run("download pkg/0.1@lasote/stable --only-recipe")
+
+        self.assertIn("Downloading conanfile.py", client.out)
+        self.assertNotIn("Downloading conan_sources.tgz", client.out)
+        export = client.client_cache.export(ref)
+        self.assertTrue(os.path.exists(os.path.join(export, "conanfile.py")))
+        self.assertEqual(conanfile, load(os.path.join(export, "conanfile.py")))
+        source = client.client_cache.export_sources(ref)
+        self.assertFalse(os.path.exists(os.path.join(source, "file.h")))
+        self.assertFalse(os.path.exists(os.path.join(source, "otherfile.cpp")))
+
     def download_with_sources_test(self):
         server = TestServer()
         servers = {"default": server,
