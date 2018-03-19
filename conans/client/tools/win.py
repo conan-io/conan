@@ -28,7 +28,7 @@ def msvc_build_command(settings, sln_path, targets=None, upgrade_project=True, b
 
     vcvars = vcvars_command(settings, force=force_vcvars)
     build = build_sln_command(settings, sln_path, targets, upgrade_project, build_type, arch,
-                              parallel, toolset=toolset, platforms=platforms, use_env=False)
+                              parallel, toolset=toolset, platforms=platforms)
     command = "%s && %s" % (vcvars, build)
     return command
 
