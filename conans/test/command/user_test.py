@@ -4,13 +4,44 @@ from conans.test.utils.tools import TestClient, TestServer
 
 class UserTest(unittest.TestCase):
 
-    def test_command_user(self):
-        """ Test that the user can be shown and changed, and it is reflected in the
-        user cache localdb
+    def test_command_user_no_remotes(self):
+        """ Test that proper error is reported when no remotes are defined and conan user is executed
         """
         client = TestClient()
-        client.run('user')
-        self.assertIn("ERROR: No remotes defined", client.user_io.out)
+        with self.assertRaises(Exception):
+            client.run("user")
+        self.assertIn("ERROR: No default remote defined", client.user_io.out)
+
+        with self.assertRaises(Exception):
+            client.run("user -r wrong_remote")
+        self.assertIn("ERROR: No remote 'wrong_remote' defined", client.user_io.out)
+
+    def test_command_user_list(self):
+        """ Test list of user is reported for all remotes or queried remote
+        """
+        servers = {
+            "default": TestServer(),
+            "test_remote_1": TestServer(),
+        }
+        client = TestClient(servers=servers)
+
+        # Test with wrong remote right error is reported
+        with self.assertRaises(Exception):
+            client.run("user -r Test_Wrong_Remote")
+        self.assertIn("ERROR: No remote 'Test_Wrong_Remote' defined", client.user_io.out)
+
+        # Test user list for requested remote reported
+        client.run("user -r test_remote_1")
+        self.assertIn("Current 'test_remote_1' user: None (anonymous)", client.user_io.out)
+        self.assertNotIn("Current 'default' user: None (anonymous)", client.user_io.out)
+
+        # Test user list for all remotes is reported
+        client.run("user")
+        self.assertIn(
+            ("Current 'default' user: None (anonymous)\n"
+             "Current 'test_remote_1' user: None (anonymous)"),
+            client.user_io.out
+        )
 
     def test_with_remote_no_connect(self):
         test_server = TestServer()
