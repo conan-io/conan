@@ -14,6 +14,7 @@ from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
 
 
+
 class ConanProxy(object):
     """ Class to access the conan storage, to perform typical tasks as to get packages,
     getting conanfiles, uploading, removing from remote, etc.
@@ -395,13 +396,21 @@ class ConanProxy(object):
             output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
             return False
 
-    def authenticate(self, name, password):
-        if not name:  # List all users, from all remotes
-            remotes = self._registry.remotes
-            if not remotes:
-                self._out.error("No remotes defined")
+    def authenticate(self, name, password, all_remotes=True):
+        """
+        Manage user auth against remote. Also displays a list of authenticated users if user name is
+        evaluated to False.
+
+        :param name: user name string
+        :param password: password string
+        :param all_remotes: True/False only used if name is evaluated to False.
+        """
+        current_remote, _ = self._get_remote()
+
+        if not name:  # List all users from required remotes
+            remotes = self._registry.remotes if all_remotes else [current_remote]
             for remote in remotes:
                 self._remote_manager.authenticate(remote, None, None)
             return
-        remote, _ = self._get_remote()
-        return self._remote_manager.authenticate(remote, name, password)
+
+        return self._remote_manager.authenticate(current_remote, name, password)
