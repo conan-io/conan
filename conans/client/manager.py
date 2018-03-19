@@ -5,7 +5,7 @@ from collections import Counter
 from conans.client import packager
 from conans.client.build_requires import BuildRequires
 from conans.client.client_cache import ClientCache
-from conans.client.cmd.export import cmd_export
+from conans.client.cmd.export import cmd_export, _execute_export
 from conans.client.deps_builder import DepsGraphBuilder
 from conans.client.generators import write_generators
 from conans.client.generators.text import TXTGenerator
@@ -423,6 +423,11 @@ class ConanManager(object):
         output = ScopedOutput("PROJECT", self._user_io.out)
         # only infos if exist
         conanfile = self._load_consumer_conanfile(conanfile_path, info_folder, output)
+        conanfile_folder = os.path.dirname(conanfile_path)
+        if conanfile_folder != source_folder:
+            output.info("Executing exports to: %s" % source_folder)
+            _execute_export(conanfile_path, conanfile, source_folder,
+                            source_folder, output)
         config_source_local(source_folder, conanfile, output)
 
     def imports_undo(self, current_path):
