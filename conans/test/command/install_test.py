@@ -453,3 +453,25 @@ class Pkg(ConanFile):
         self.assertTrue(error)
         self.assertIn("ERROR: Unable to find 'Hello/0.1@lasote/stable' in remotes",
                       client.out)
+
+    def install_argument_order_test(self):
+        # https://github.com/conan-io/conan/issues/2520
+        conanfile = """from conans import ConanFile
+class TestConan(ConanFile):
+    name = "Hello"
+    version = "0.1"
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+        client.run("install . -o boost:shared=True --build=missing")
+        output_0 = client.out
+        client.run("install . -o boost:shared=True --build missing")
+        output_1 = client.out
+        client.run("install -o boost:shared=True . --build missing")
+        output_2 = client.out
+        client.run("install -o boost:shared=True --build missing .")
+        output_3 = client.out
+        self.assertNotIn("ERROR: Exiting with code: 2", output_3)
+        self.assertEqual(output_0, output_1)
+        self.assertEqual(output_1, output_2)
+        self.assertEqual(output_2, output_3)
