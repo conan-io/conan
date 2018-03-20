@@ -889,8 +889,15 @@ class Command(object):
         parser.add_argument('--retry-wait', default=5, type=int,
                             help='Waits specified seconds before retry again',
                             action=OnceArgument)
+        parser.add_argument("-no, --no-overwrite",
+                            help='Uploads package only if recipe is the same as the remote one',
+                            choices=["all", "recipe"], action="store_true")
 
         args = parser.parse_args(*args)
+
+        if args.force and args.no-overwrite:
+            raise ArgumentError(None, "--no-overwrite cannot be used together with --force")
+
         return self._conan.upload(pattern=args.pattern, package=args.package, remote=args.remote,
                                   all_packages=args.all,
                                   force=args.force, confirm=args.confirm, retry=args.retry,
