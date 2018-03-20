@@ -7,7 +7,7 @@ def git_uncommitted(folder):
     with tools.chdir(folder):
         try:
             command = "git diff-index HEAD --quiet --"
-            subprocess.check_output(command)
+            subprocess.check_output(command, shell=True)
             return False
         except subprocess.CalledProcessError:
             return True
@@ -17,7 +17,7 @@ def git_origin(folder):
     with tools.chdir(folder):
         try:
             command = "git remote -v"
-            remotes = subprocess.check_output(command).decode().strip()
+            remotes = subprocess.check_output(command, shell=True).decode().strip()
             for remote in remotes.splitlines():
                 try:
                     name, url = remote.split(None, 1)
@@ -35,7 +35,7 @@ def git_branch(folder):
     with tools.chdir(folder):
         command = "git branch"
         try:
-            branches = subprocess.check_output(command).decode().strip()
+            branches = subprocess.check_output(command, shell=True).decode().strip()
             branches = [branch.replace("*", "").strip() for branch in branches.splitlines()
                         if branch.lstrip()[0] == "*"]
             branch = branches[0]
@@ -48,7 +48,7 @@ def git_commit(folder):
     with tools.chdir(folder):
         command = "git rev-parse HEAD"
         try:
-            commit = subprocess.check_output(command).decode().strip()
+            commit = subprocess.check_output(command, shell=True).decode().strip()
             commit = commit.strip()
             return commit
         except Exception as e:
