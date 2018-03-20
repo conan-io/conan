@@ -202,7 +202,11 @@ class Printer(object):
                 warn_msg = "There are no packages for reference '%s' matching the query '%s'" % (str(reference),
                                                                                                  packages_query)
             else:
-                warn_msg = "There are no packages for pattern '%s'" % str(reference)
+                warn_msg = "There are no packages for reference '%s'" % str(reference)
+
+            if recipe_hash:
+                warn_msg += ", but package recipe found."
+
             self._out.info(warn_msg)
             return
 
