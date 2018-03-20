@@ -24,16 +24,18 @@ def cppstd_flag(compiler, compiler_version, cppstd):
 
 
 def cppstd_default(compiler, compiler_version):
-
     default = {"gcc": _gcc_cppstd_default(compiler_version),
-               "clang": "gnu++98",
-               "apple-clang": "gnu++98",
+               "clang": _clang_cppstd_default(compiler_version),
+               "apple-clang": "gnu98",
                "Visual Studio": _visual_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
 
 
-def _gcc_cppstd_default(compiler_version):
+def _clang_cppstd_default(compiler_version):
+    return "gnu98" if Version(compiler_version) < "6.0" else "gnu14"
 
+
+def _gcc_cppstd_default(compiler_version):
     return "gnu98" if Version(compiler_version) < "6.1" else "gnu14"
 
 
