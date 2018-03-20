@@ -456,22 +456,39 @@ class Pkg(ConanFile):
 
     def install_argument_order_test(self):
         # https://github.com/conan-io/conan/issues/2520
+
+        conanfile_boost = """from conans import ConanFile
+class BoostConan(ConanFile):
+    name = "boost"
+    version = "0.1"
+    options = {"shared": [True, False]}
+    default_options = "shared=True"
+"""
         conanfile = """from conans import ConanFile
 class TestConan(ConanFile):
     name = "Hello"
     version = "0.1"
+    requires = "boost/0.1@conan/stable"
 """
         client = TestClient()
-        client.save({"conanfile.py": conanfile})
+        client.save({"conanfile.py": conanfile,
+                     "conanfile_boost.py": conanfile_boost})
+        client.run("create conanfile_boost.py conan/stable")
         client.run("install . -o boost:shared=True --build=missing")
-        output_0 = client.out
+        output_0 = "%s" % client.out
         client.run("install . -o boost:shared=True --build missing")
-        output_1 = client.out
+        output_1 = "%s" % client.out
         client.run("install -o boost:shared=True . --build missing")
-        output_2 = client.out
+        output_2 = "%s" % client.out
         client.run("install -o boost:shared=True --build missing .")
-        output_3 = client.out
-        self.assertNotIn("ERROR: Exiting with code: 2", output_3)
+        output_3 = "%s" % client.out
+        self.assertNotIn("ERROR", output_3)
         self.assertEqual(output_0, output_1)
         self.assertEqual(output_1, output_2)
         self.assertEqual(output_2, output_3)
+
+        client.run("install -o boost:shared=True --build boost . --build missing")
+        output_4 = "%s" % client.out
+        client.run("install -o boost:shared=True --build missing --build boost .")
+        output_5 = "%s" % client.out
+        self.assertEqual(output_4, output_5)
