@@ -24,20 +24,15 @@ class Pkg(ConanFile):
     name = "pkg"
     version = "0.1"
     exports_sources = "*"
-
-    def package(self):
-        self.copy("file.h", dst="include", src="bin")
 """
         client.save({"conanfile.py": conanfile,
-                     "file.h": "myfile.h",
-                     "otherfile.cpp": "C++code"})
+                     "file.h": "myfile.h"})
         client.run("create . lasote/stable")
         ref = ConanFileReference.loads("pkg/0.1@lasote/stable")
         self.assertTrue(os.path.exists(client.paths.conanfile(ref)))
-        self.assertTrue(os.path.exists(client.paths.conanfile(ref)))
         conan = client.client_cache.conan(ref)
         self.assertTrue(os.path.exists(os.path.join(conan, "package")))
-        client.run("upload pkg/0.1@lasote/stable")
+        client.run("upload pkg/0.1@lasote/stable --all")
         client.run("remove pkg/0.1@lasote/stable -f")
         self.assertFalse(os.path.exists(client.paths.export(ref)))
         client.run("download pkg/0.1@lasote/stable --recipe")
@@ -49,7 +44,6 @@ class Pkg(ConanFile):
         self.assertEqual(conanfile, load(os.path.join(export, "conanfile.py")))
         source = client.client_cache.export_sources(ref)
         self.assertFalse(os.path.exists(os.path.join(source, "file.h")))
-        self.assertFalse(os.path.exists(os.path.join(source, "otherfile.cpp")))
         conan = client.client_cache.conan(ref)
         self.assertFalse(os.path.exists(os.path.join(conan, "package")))
 
