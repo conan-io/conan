@@ -1,6 +1,6 @@
 import unittest
 from conans.test.utils.tools import TestClient
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 
 conanfile = """from conans import ConanFile

@@ -80,6 +80,8 @@ class Meson(object):
     def configure(self, args=None, defs=None, source_dir=None, build_dir=None,
                   pkg_config_paths=None, cache_build_folder=None,
                   build_folder=None, source_folder=None):
+        if not self._conanfile.should_configure:
+            return
         args = args or []
         defs = defs or {}
 
@@ -112,6 +114,8 @@ class Meson(object):
         return command
 
     def build(self, args=None, build_dir=None, targets=None):
+        if not self._conanfile.should_build:
+            return
         if self.backend != "ninja":
             raise ConanException("Build only supported with 'ninja' backend")
 

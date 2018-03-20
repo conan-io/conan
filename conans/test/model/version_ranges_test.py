@@ -12,7 +12,7 @@ from conans.test.utils.test_files import temp_folder
 from collections import namedtuple
 from conans.client.require_resolver import RequireResolver, satisfying
 import re
-from nose_parameterized import parameterized
+from parameterized import parameterized
 from conans.model.profile import Profile
 from conans.errors import ConanException
 

@@ -2,8 +2,8 @@
 from __future__ import print_function
 
 import requests
+# noinspection PyUnresolvedReferences
 from conans.client.tools import *
-from conans.client.output import ConanOutput
 # noinspection PyUnresolvedReferences
 from conans.util.env_reader import get_env
 # noinspection PyUnresolvedReferences
@@ -27,4 +27,6 @@ def set_global_instances(the_output, the_requester):
     _net._global_requester = the_requester
 
 
-set_global_instances(ConanOutput(sys.stdout), requests)
+# Assign a default, will be overwritten in the Factory of the ConanAPI
+out = ConanOutput(sys.stdout)
+set_global_instances(out, requests)

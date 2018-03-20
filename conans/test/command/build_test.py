@@ -34,6 +34,40 @@ class AConan(ConanFile):
 
 class ConanBuildTest(unittest.TestCase):
 
+    def partial_build_test(self):
+        client = TestClient()
+        conanfile = """from conans import ConanFile
+
+class Conan(ConanFile):
+    def build(self):
+        self.output.info("CONFIGURE=%s!" % self.should_configure)
+        self.output.info("BUILD=%s!" % self.should_build)
+        self.output.info("INSTALL=%s!" % self.should_install)
+"""
+        client.save({CONANFILE: conanfile})
+        client.run("install .")
+        client.run("build .")
+        self.assertIn("CONFIGURE=True!", client.out)
+        self.assertIn("BUILD=True!", client.out)
+        self.assertIn("INSTALL=True!", client.out)
+        client.run("build . -c")
+        self.assertIn("CONFIGURE=True!", client.out)
+        self.assertIn("BUILD=False!", client.out)
+        self.assertIn("INSTALL=False!", client.out)
+        client.run("build . -b")
+        self.assertIn("CONFIGURE=False!", client.out)
+        self.assertIn("BUILD=True!", client.out)
+        self.assertIn("INSTALL=False!", client.out)
+        client.run("build . -i")
+        self.assertIn("CONFIGURE=False!", client.out)
+        self.assertIn("BUILD=False!", client.out)
+        self.assertIn("INSTALL=True!", client.out)
+
+        client.run("create . Pkg/0.1@user/testing")
+        self.assertIn("CONFIGURE=True!", client.out)
+        self.assertIn("BUILD=True!", client.out)
+        self.assertIn("INSTALL=True!", client.out)
+
     def build_error_test(self):
         """ If not using -g txt generator, and build() requires self.deps_cpp_info,
         or self.deps_user_info it wont fail because now it's automatic

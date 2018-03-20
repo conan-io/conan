@@ -62,7 +62,7 @@ def cmd_profile_update(profile_name, key, value, cache_profiles_path):
         tmp = OptionsValues([(rest_key, value)])
         profile.options.update(tmp)
     elif first_key == "env":
-        profile.env_values.update(EnvValues.loads("%s=%s" % (rest_key, value)))
+        profile.env_values.update_replace(rest_key, value)
     elif first_key == "build_requires":
         raise ConanException("Edit the profile manually to change the build_requires")
 

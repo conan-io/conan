@@ -54,6 +54,22 @@ class CMakeTest(unittest.TestCase):
             self.assertEqual("FOLDER: ${CONAN_MYPKG_ROOT}",
                              load(os.path.join(folder, "sub", "file3.cmake")))
 
+    def partial_build_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+        conan_file.should_configure = False
+        conan_file.should_build = False
+        conan_file.should_install = False
+        cmake = CMake(conan_file, generator="Unix Makefiles")
+        cmake.configure()
+        self.assertIsNone(conan_file.command)
+        cmake.build()
+        self.assertIsNone(conan_file.command)
+        cmake.install()
+        self.assertIsNone(conan_file.command)
+        conan_file.name = None
+        cmake.patch_config_paths()
+
     def cmake_generator_test(self):
         conan_file = ConanFileMock()
         conan_file.settings = Settings()
@@ -366,7 +382,6 @@ build_type: [ Release]
                          cmake.command_line)
 
     def test_sysroot(self):
-
         settings = Settings.loads(default_settings_yml)
         conan_file = ConanFileMock()
         conan_file.settings = settings
@@ -376,7 +391,8 @@ build_type: [ Release]
         settings.arch = "x86"
         settings.os = "Windows"
         cmake = CMake(conan_file)
-        self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags) if platform.system() == "Windows" else ""
+        if platform.system() == "Windows":
+            self.assertNotIn("-DCMAKE_SYSROOT=", cmake.flags)
 
         # Now activate cross build and check sysroot
         with(tools.environment_append({"CONAN_CMAKE_SYSTEM_NAME": "Android"})):
@@ -719,6 +735,9 @@ class ConanFileMock(ConanFile):
         self.install_folder = "myinstallfolder"
         if shared is not None:
             self.options = namedtuple("options", "shared")(shared)
+        self.should_configure = True
+        self.should_build = True
+        self.should_install = True
 
     def run(self, command):
         self.command = command

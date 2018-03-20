@@ -62,7 +62,7 @@ compiler:
         version: ["8", "9", "10", "11", "12", "14", "15"]
         toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp, v140, v140_xp, v140_clang_c2, LLVM-vs2014, LLVM-vs2014_xp, v141, v141_xp, v141_clang_c2]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0", "6.0"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0"]
@@ -127,6 +127,8 @@ path = ~/.conan/data
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
+# You can skip the proxy for the matching (fnmatch) urls (comma-separated)
+# no_proxy_match = *bintray.com*, https://myserver.*
 
 
 # Default settings now declared in the default profile
