@@ -18,6 +18,17 @@ class MesonTest(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.tempdir)
 
+    def partial_build_test(self):
+        conan_file = ConanFileMock()
+        conan_file.settings = Settings()
+        conan_file.should_configure = False
+        conan_file.should_build = False
+        meson = Meson(conan_file)
+        meson.configure()
+        self.assertIsNone(conan_file.command)
+        meson.build()
+        self.assertIsNone(conan_file.command)
+
     def folders_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"

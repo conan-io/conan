@@ -6,7 +6,7 @@ import json
 from conans.paths import CONAN_MANIFEST, CONANINFO
 import time
 from conans.client.rest.differ import diff_snapshots
-from conans.util.files import decode_text, md5sum
+from conans.util.files import decode_text, md5sum, save
 import os
 from conans.model.manifest import FileTreeManifest
 from conans.client.rest.uploader_downloader import Uploader, Downloader
@@ -76,23 +76,9 @@ class RestApiClient(object):
         self.custom_headers = {}  # Can set custom headers to each request
         self._output = output
         self.requester = requester
-        self._verify_ssl = True
+        # Remote manager will set it to True or False dynamically depending on the remote
+        self.verify_ssl = True
         self._put_headers = put_headers
-
-    @property
-    def verify_ssl(self):
-        from conans.client.rest import cacert
-        if self._verify_ssl:
-            # Necessary for pyinstaller, because it doesn't copy the cacert.
-            # It should not be necessary anymore the own conan.io certificate (fixed in server)
-            return cacert.file_path
-        else:
-            return False
-
-    @verify_ssl.setter
-    def verify_ssl(self, check):
-        assert(isinstance(check, bool))
-        self._verify_ssl = check
 
     @property
     def auth(self):

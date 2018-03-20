@@ -88,7 +88,7 @@ class CompilerFlagsTest(unittest.TestCase):
 
     def test_build_type_flags(self):
         flags = build_type_flag(compiler='Visual Studio', build_type='Debug')
-        self.assertEquals(flags, '/Zi')
+        self.assertEquals(flags, '-Zi')
 
         flags = build_type_flag(compiler='Visual Studio', build_type='Release')
         self.assertEquals(flags, "")
@@ -150,7 +150,7 @@ class CompilerFlagsTest(unittest.TestCase):
 
     def test_format_library_paths(self):
         self.assertEquals(['-Lpath1', '-L"with spaces"'], format_library_paths(['path1', 'with spaces']))
-        self.assertEquals(['/LIBPATH:path1', '/LIBPATH:"with spaces"'],
+        self.assertEquals(['-LIBPATH:path1', '-LIBPATH:"with spaces"'],
                           format_library_paths(['path1', 'with spaces'], compiler='Visual Studio'))
 
     def test_format_libraries(self):

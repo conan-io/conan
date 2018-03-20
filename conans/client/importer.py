@@ -76,6 +76,15 @@ def run_imports(conanfile, dest_folder, output):
     return copied_files
 
 
+def remove_imports(conanfile, copied_files, output):
+    if not getattr(conanfile, "keep_imports", False):
+        for f in copied_files:
+            try:
+                os.remove(f)
+            except OSError:
+                output.warn("Unable to remove imported file from build: %s" % f)
+
+
 def run_deploy(conanfile, install_folder, output):
     deploy_output = ScopedOutput("%s deploy()" % output.scope, output)
     file_importer = _FileImporter(conanfile, install_folder)

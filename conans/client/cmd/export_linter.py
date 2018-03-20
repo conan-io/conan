@@ -12,6 +12,9 @@ from conans.errors import ConanException
 
 
 def conan_linter(conanfile_path, out):
+    if getattr(sys, 'frozen', False):
+        out.info("No linter available. Use a pip installed conan for recipe linting")
+        return
     apply_lint = os.environ.get("CONAN_RECIPE_LINTER", True)
     if not apply_lint or apply_lint == "False":
         return
@@ -96,6 +99,8 @@ def _normal_linter(conanfile_path):
                 if field in text:
                     return False
         if symbol == "not-callable" and "self.copy is not callable" == text:
+            return False
+        if symbol == "not-callable" and "self.copy_deps is not callable" == text:
             return False
         if symbol in ("bare-except", "broad-except"):  # No exception type(s) specified
             return False

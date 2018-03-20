@@ -10,11 +10,12 @@ class MSBuild(object):
         self.build_env = VisualStudioBuildEnvironment(self._conanfile)
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
-              parallel=True, force_vcvars=False, toolset=None):
+              parallel=True, force_vcvars=False, toolset=None, platforms=None):
         with tools.environment_append(self.build_env.vars):
             command = msvc_build_command(self._conanfile.settings,
                                          project_file, targets=targets,
                                          upgrade_project=upgrade_project,
                                          build_type=build_type, arch=arch, parallel=parallel,
-                                         force_vcvars=force_vcvars, toolset=toolset)
+                                         force_vcvars=force_vcvars, toolset=toolset,
+                                         platforms=platforms)
             return self._conanfile.run(command)

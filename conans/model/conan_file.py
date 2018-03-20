@@ -148,6 +148,7 @@ class ConanFile(object):
         self.deps_user_info = DepsUserInfo()
 
         self.copy = None  # initialized at runtime
+        self.copy_deps = None  # initialized at runtime
 
         # an output stream (writeln, info, warn error)
         self.output = output
@@ -161,11 +162,12 @@ class ConanFile(object):
         self._user = user
         self._channel = channel
 
-        # Are we in local cache? Suggest a better name
         self.in_local_cache = False
-
-        # Init a description
         self.description = None
+        # Vars to control the build steps (build(), package())
+        self.should_configure = True
+        self.should_build = True
+        self.should_install = True
 
     @property
     def env(self):

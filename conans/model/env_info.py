@@ -118,6 +118,16 @@ class EnvValues(object):
     def remove(self, name, package=None):
         del self._data[package][name]
 
+    def update_replace(self, key, value):
+        """ method useful for command "conan profile update"
+        to execute real update instead of soft update
+        """
+        if ":" in key:
+            package_name, key = key.split(":", 1)
+        else:
+            package_name, key = None, key
+        self._data[package_name][key] = value
+
     def update(self, env_obj):
         """accepts other EnvValues object or DepsEnvInfo
            it prioritize the values that are already at self._data
