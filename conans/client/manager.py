@@ -230,13 +230,13 @@ class ConanManager(object):
         conan_file_path = self._client_cache.conanfile(reference)
         conanfile = load_conanfile_class(conan_file_path)
         remote_proxy.complete_recipe_sources(conanfile, reference,
-                                                short_paths=conanfile.short_paths)
+                                             short_paths=conanfile.short_paths)
 
         if package_ids:
             remote_proxy.download_packages(reference, package_ids)
         else:
             self._user_io.out.info("Getting the complete package list "
-                                "from '%s'..." % str(reference))
+                                   "from '%s'..." % str(reference))
             packages_props = self._remote_manager.search_packages(remote, reference, None)
             if not packages_props:
                 output = ScopedOutput(str(reference), self._user_io.out)

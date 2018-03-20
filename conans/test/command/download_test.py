@@ -14,7 +14,7 @@ class DownloadTest(unittest.TestCase):
 
         # Test argument --package and --recipe cannot be together
         error = client.run("download eigen/3.3.4@conan/stable --recipe --package fake_id",
-                   ignore_error=True)
+                           ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR: recipe parameter cannot be used together with package", client.out)
 
@@ -39,6 +39,7 @@ class Pkg(ConanFile):
 
         self.assertIn("Downloading conanfile.py", client.out)
         self.assertNotIn("Downloading conan_sources.tgz", client.out)
+        self.assertNotIn("Downloading conan_package.tgz", client.out)
         export = client.client_cache.export(ref)
         self.assertTrue(os.path.exists(os.path.join(export, "conanfile.py")))
         self.assertEqual(conanfile, load(os.path.join(export, "conanfile.py")))
