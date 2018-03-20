@@ -395,7 +395,11 @@ class ConanInstaller(object):
                 return True
         except Exception:
             if os.path.exists(package_folder):
-                rmdir(package_folder)
+                try:
+                    rmdir(package_folder)
+                except OSError as e:
+                    raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
+                                         "using it, and retry" % (str(e), package_folder))
             raise
         _raise_package_not_found_error(conan_file, package_reference.conan,
                                        package_reference.package_id, output)
