@@ -232,16 +232,13 @@ class Command(object):
                             help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("-r", "--remote", help='look in the specified remote server',
                             action=OnceArgument)
-        parser.add_argument("-or", "--only-recipe", help='Downloads only the recipe', default=False,
+        parser.add_argument("-re", "--recipe", help='Downloads only the recipe', default=False,
                             action="store_true")
 
         args = parser.parse_args(*args)
 
-        if args.package and args.only_recipe:
-            raise ArgumentError(None, "--only-recipe cannot be used together with --package")
-
         return self._conan.download(reference=args.reference, package=args.package,
-                                    remote=args.remote, only_recipe=args.only_recipe)
+                                    remote=args.remote, recipe=args.recipe)
 
     def install(self, *args):
         """Installs the requirements specified in a conanfile (.py or .txt).

@@ -206,7 +206,7 @@ class ConanManager(object):
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     install_folder, package_output, local=True)
 
-    def download(self, reference, package_ids, remote, only_recipe):
+    def download(self, reference, package_ids, remote, recipe):
         """ Download conanfile and specified packages to local repository
         @param reference: ConanFileReference
         @param package_ids: Package ids or empty for download all
@@ -223,7 +223,7 @@ class ConanManager(object):
         # First of all download package recipe
         remote_proxy.get_recipe(reference)
 
-        if not only_recipe:
+        if not recipe:
             # Download the sources too, don't be lazy
             conan_file_path = self._client_cache.conanfile(reference)
             conanfile = load_conanfile_class(conan_file_path)
