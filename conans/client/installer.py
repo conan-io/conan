@@ -385,14 +385,18 @@ class ConanInstaller(object):
         if not os.path.exists(package_folder):
             self._out.info("Retrieving package %s" % package_reference.package_id)
 
-        if self._remote_proxy.get_package(package_reference,
-                                          short_paths=conan_file.short_paths):
-            _handle_system_requirements(conan_file, package_reference,
-                                        self._client_cache, output)
-            if get_env("CONAN_READ_ONLY_CACHE", False):
-                make_read_only(package_folder)
-            return True
-
+        try:
+            if self._remote_proxy.get_package(package_reference,
+                                              short_paths=conan_file.short_paths):
+                _handle_system_requirements(conan_file, package_reference,
+                                            self._client_cache, output)
+                if get_env("CONAN_READ_ONLY_CACHE", False):
+                    make_read_only(package_folder)
+                return True
+        except Exception:
+            if os.path.exists(package_folder):
+                rmdir(package_folder)
+            raise
         _raise_package_not_found_error(conan_file, package_reference.conan,
                                        package_reference.package_id, output)
 
