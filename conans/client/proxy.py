@@ -14,7 +14,6 @@ from conans.util.tracer import log_package_got_from_local_cache,\
     log_recipe_got_from_local_cache
 
 
-
 class ConanProxy(object):
     """ Class to access the conan storage, to perform typical tasks as to get packages,
     getting conanfiles, uploading, removing from remote, etc.
