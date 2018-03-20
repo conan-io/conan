@@ -94,6 +94,52 @@ class DevConanFile(HelloConan2):
         self.assertIn("lib/0.1@user/channel", client.user_io.out)
         self.assertIn("otherlib/0.2@user/channel", client.user_io.out)
 
+    def conanfile_subclass_test(self):
+        base = '''
+from conans import ConanFile
+
+class ConanBase(ConanFile):
+    requires = "lib/0.1@user/channel"
+    options = {"test_option": [1, 2, 3]}
+    default_options="test_option=2"
+    my_flag = False
+
+    def build(self):
+        self.output.info("build() MyFlag: %s" % self.my_flag)
+    '''
+        extension = '''
+from base_conan import ConanBase
+
+class ConanFileToolsTest(ConanBase):
+    name = "test"
+    version = "1.9"
+    exports = "base_conan.py"
+
+    def config(self):
+        self.options["otherlib"].otherlib_option = 1
+
+    def requirements(self):
+        self.requires("otherlib/0.2@user/channel")
+
+    def source(self):
+        self.output.info("source() my_flag: %s" % self.my_flag)
+    '''
+        files = {"base_conan.py": base,
+                 "conanfile.py": extension}
+        client = TestClient(self.base_folder)
+
+        client.save(files)
+        client.run("create . conan/testing -o test:test_option=3 --build")
+        self.assertIn("lib/0.1@user/channel from local cache", client.out)
+        self.assertIn("test/1.9@conan/testing: source() my_flag: False", client.out)
+        self.assertIn("test/1.9@conan/testing: build() MyFlag: False", client.out)
+        client.run("install . -o test:test_option=3")
+        conaninfo = load(os.path.join(client.current_folder, "conaninfo.txt"))
+        self.assertIn("lib/0.1@user/channel", conaninfo)
+        self.assertIn("test_option=3", conaninfo)
+        self.assertIn("otherlib/0.2@user/channel", conaninfo)
+        self.assertIn("otherlib:otherlib_option=1", conaninfo)
+
     def test_txt(self):
         base = '''[requires]
 lib/0.1@user/channel
