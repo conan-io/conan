@@ -1137,13 +1137,21 @@ class Command(object):
 
     def execute(self, *args):
         """ Executes a command in the environment defined by the profile, the
-        specified references, settings, and options.
+        specified references, settings, and options. Alternatively, instead of
+        references also a folder containing a recipe (conanfile.py or conanfile.txt)
+        or to the recipe file itself is accepted via the --path argument.
         """
         parser = argparse.ArgumentParser(description=self.execute.__doc__, prog="conan exec")
-        parser.add_argument("-ref", "--reference", nargs=1, action=Extender,
-                            help='Full package reference (Pkg/version@user/channel)')
         parser.add_argument('-q', '--quiet', default=False,
                             action='store_true', help='Suppress all output from conan.')
+
+        # either arbitrary many references or one path is accepted
+        parser.add_argument("-ref", "--reference", nargs=1, action=Extender,
+                            help='Full package reference (Pkg/version@user/channel)')
+        parser.add_argument("--path", default=None, action=OnceArgument,
+                            help="path to a folder containing a recipe"
+                            " (conanfile.py or conanfile.txt) or to a recipe file. e.g., "
+                            "./my_project/conanfile.txt. It could also be a reference")
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
@@ -1153,6 +1161,7 @@ class Command(object):
         args = parser.parse_args(*args)
         self._conan.execute(command=args.command+args.arguments,
                             references=args.reference,
+                            recipe_path=args.path,
                             profile_name=args.profile,
                             initial_env=os.environ.copy(),
                             # install arguments

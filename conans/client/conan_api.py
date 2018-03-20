@@ -847,7 +847,7 @@ class ConanAPIV1(object):
         return self._registry.remote(remote)
 
     @api_method
-    def execute(self, command, references=None, profile_name=None,
+    def execute(self, command, references=None, recipe_path=None, profile_name=None,
                 initial_env=None, settings=None, options=None, remote=None,
                 build_modes=None, update=None, env=None, cwd=None, quiet=None):
         """ Executes a command in the environment defined by the profile, the
@@ -856,6 +856,10 @@ class ConanAPIV1(object):
         If any of the required packages is missing they are automatically
         installed.
         """
+        if references and recipe_path:
+            raise ConanException("Specifying references and a recipe path at the "
+                                 "same time is not supported.")
+
         # setup proper defaults
         cwd = cwd if cwd is not None else os.getcwd()
         references = references if references is not None else []
@@ -873,21 +877,27 @@ class ConanAPIV1(object):
         profile = profile_from_args(profile_name, settings, options, env, cwd,
                                     self._client_cache)
 
-        # Build a temporary conanfile.txt, install it and determine the
-        # required environment variables. Note that, as long as extension
-        # is correct, the actual name does not matter.
+        # Either use the specified recipe path or build a temporary conanfile.txt,
+        # install it and determine the required environment variables.
+        temprecipe = None
+        recipefile = recipe_path
         try:
-            # Write all requested references to the file. Note that we have to
-            # close the file such that Windows can work with them.
-            # (see https://bugs.python.org/issue14243)
-            temp = tempfile.NamedTemporaryFile(suffix=".txt", delete=False)
-            temp.write(to_file_bytes('[requires]\n'))
-            for ref in references:
-                temp.write(to_file_bytes(ref + '\n'))
-            temp.close()
+            if recipefile:
+                recipefile = _get_conanfile_path(recipe_path, cwd, None)
+            else:
+                # Write all requested references to the file. Note that, as long
+                # as extension is correct, the actual name does not matter.
+                # Furthermore, we have to close the file such that Windows can
+                # work with them. (see https://bugs.python.org/issue14243)
+                temprecipe = tempfile.NamedTemporaryFile(suffix=".txt", delete=False)
+                temprecipe.write(to_file_bytes('[requires]\n'))
+                for ref in references:
+                    temprecipe.write(to_file_bytes(ref + '\n'))
+                temprecipe.close()
+                recipefile = temprecipe.name
 
             # Install the dependencies if needed and get an valid conanfile.
-            conanfile = manager.install(reference=temp.name,
+            conanfile = manager.install(reference=recipefile,
                                               install_folder=None,
                                               profile=profile,
                                               remote_name=remote,
@@ -898,9 +908,8 @@ class ConanAPIV1(object):
             env_vars = VirtualEnvGenerator(conanfile).format_values("exec", None, env=initial_env)
         finally:
             # Delete the temporary file after the processing.
-            if not temp.closed:
-                temp.close()
-            os.unlink(temp.name)
+            if temprecipe:
+                os.unlink(temprecipe.name)
 
         # Update the environment with the information from the
         # virtual environment generator.

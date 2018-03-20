@@ -70,7 +70,7 @@ class ToolBConan(ConanFile):
         self._setup_recipes(client)
         client.run_in_external_process("exec -ref toola/0.1@lasote/testing %s" % self._true_cmd())
         self.assertIn("Requirements", client.out)
-        self.assertIn("toola/0.1@lasote/testing", client.out)
+        self.assertIn("toola/0.1@lasote/testing from local cache", client.out)
         self.assertNotIn("toolb/0.1@lasote/testing", client.out)
 
     def quiet_test(self):
@@ -97,4 +97,35 @@ class ToolBConan(ConanFile):
         client = TestClient()
         self._setup_recipes(client)
         client.run_in_external_process("exec --build=missing -ref toolb/0.1@lasote/testing %s" % self._env_cmd())
-        self.assertIn("PATH=%s%s%s%s%s" % (os.path.join("toolb","bin"), os.pathsep, os.path.join("toola","bin"), os.pathsep, os.environ["PATH"]), client.out)
+        self.assertIn("PATH=%s%s%s%s%s" % (os.path.join("toolb","bin"), os.pathsep,
+                                           os.path.join("toola","bin"), os.pathsep,
+                                           os.environ["PATH"]), client.out)
+
+    def path_and_references_test(self):
+        client = TestClient()
+        self.assertEqual(1,client.run_in_external_process("exec --path . -ref toola/0.1@lasote/testing %s" % self._env_cmd(),
+                                                            ignore_error=True))
+        self.assertIn("ERROR: Specifying references and a recipe path at the same time is not supported.", client.out)
+
+    def path_directory_test(self):
+        client = TestClient()
+        self._setup_recipes(client)
+        client.run_in_external_process("exec --path . %s" % self._env_cmd())
+        self.assertIn("PATH=%s%s%s" % (os.path.join("toola","bin"), os.pathsep, os.environ["PATH"]), client.out)
+
+    def path_recipe_test(self):
+        conanfile = '''
+[requires]
+toolb/0.1@lasote/testing
+    '''
+        client = TestClient()
+        self._setup_recipes(client)
+        client.save({"conanfile.txt": conanfile}, clean_first=True)
+        client.run_in_external_process("exec --build=toolb --path conanfile.txt %s" % self._env_cmd())
+
+        self.assertIn("PROJECT: Installing %s" % os.path.join(client.current_folder, "conanfile.txt"), client.out)
+        self.assertIn("toola/0.1@lasote/testing from local cache", client.out)
+        self.assertIn("toolb/0.1@lasote/testing from local cache", client.out)
+        self.assertIn("PATH=%s%s%s%s%s" % (os.path.join("toolb","bin"), os.pathsep,
+                                           os.path.join("toola","bin"), os.pathsep,
+                                           os.environ["PATH"]), client.out)
