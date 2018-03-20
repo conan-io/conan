@@ -54,21 +54,8 @@ def config_source(export_folder, export_source_folder, src_folder,
 
     if not os.path.exists(src_folder):
         output.info('Configuring sources in %s' % src_folder)
-        shutil.copytree(export_folder, src_folder, symlinks=True)
-        # Now move the export-sources to the right location
-        merge_directories(export_source_folder, src_folder)
-        for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
-                  CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
-            try:
-                os.remove(os.path.join(src_folder, f))
-            except OSError:
-                pass
-        try:
-            shutil.rmtree(os.path.join(src_folder, "__pycache__"))
-        except OSError:
-            pass
-
         set_dirty(src_folder)
+        _before_source(conan_file, src_folder, export_folder, export_source_folder, output)
         os.chdir(src_folder)
         conan_file.source_folder = src_folder
         try:
@@ -87,6 +74,35 @@ def config_source(export_folder, export_source_folder, src_folder,
             if isinstance(e, ConanExceptionInUserConanfileMethod):
                 raise e
             raise ConanException(e)
+
+
+def _before_source(conan_file, src_folder, export_folder, export_source_folder, output):
+    cvs_url = getattr(conan_file, "cvs_url", None)
+    if cvs_url:
+        cvs_checkout = conan_file.cvs_checkout
+        if cvs_checkout == "source":
+            output.warn("Checkout not defined. Copying sources from: %s" % cvs_url)
+            shutil.copytree(cvs_url, src_folder, symlinks=True)
+        else:
+            output.info("Getting sources from: %s - %s" % (cvs_url, cvs_checkout))
+            conan_file.run('git clone "%s" "%s"' % (cvs_url, src_folder))
+            conan_file.run('git checkout "%s"' % cvs_checkout, cwd=src_folder)
+        merge_directories(export_folder, src_folder)
+    else:
+        shutil.copytree(export_folder, src_folder, symlinks=True)
+    # Now move the export-sources to the right location
+    merge_directories(export_source_folder, src_folder)
+    # Clean stuff
+    for f in (EXPORT_TGZ_NAME, EXPORT_SOURCES_TGZ_NAME, CONANFILE+"c",
+              CONANFILE+"o", CONANFILE, CONAN_MANIFEST):
+        try:
+            os.remove(os.path.join(src_folder, f))
+        except OSError:
+            pass
+    try:
+        shutil.rmtree(os.path.join(src_folder, "__pycache__"))
+    except OSError:
+        pass
 
 
 def config_source_local(dest_dir, conan_file, output):

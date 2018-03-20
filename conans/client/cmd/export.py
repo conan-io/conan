@@ -17,6 +17,10 @@ from conans.client.loader_parse import load_conanfile_class
 from conans.client.cmd.export_linter import conan_linter
 from conans.model.ref import ConanFileReference
 from conans.search.search import DiskSearchManager
+import subprocess
+from conans.client.tools.files import replace_in_file
+from conans.client.tools.git import git_uncommitted, git_origin, git_branch,\
+    git_commit
 
 
 def cmd_export(conanfile_path, name, version, user, channel, keep_source,
@@ -81,12 +85,52 @@ def _load_export_conanfile(conanfile_path, output, name, version):
     return conanfile
 
 
+def _handle_cvs(conanfile_path, dest_folder, conanfile, output):
+    cvs_url = getattr(conanfile, "cvs_url", None)
+    if not cvs_url:
+        return
+
+    user_folder = os.path.dirname(conanfile_path).replace("\\", "/")
+    result_url = cvs_url
+    cvs_checkout = conanfile.cvs_checkout
+    result_checkout = cvs_checkout
+
+    modified = git_uncommitted(user_folder)
+
+    if modified:
+        result_checkout = "source"
+        result_url = user_folder
+    elif cvs_url == "auto":  # get origin
+        origin = git_origin(user_folder)
+        if origin:
+            result_url = origin
+        else:
+            result_url = user_folder
+
+    if not modified:
+        if cvs_checkout == "branch":
+            result_checkout = git_branch(user_folder)
+        elif cvs_checkout == "commit":
+            result_checkout = git_commit(user_folder)
+
+    final_path = os.path.join(dest_folder, "conanfile.py")
+    if result_checkout != cvs_checkout:
+        # FIXME: very fragile replace
+        replace_in_file(final_path, 'cvs_checkout = "%s"' % cvs_checkout,
+                        'cvs_checkout = "%s"' % result_checkout)
+
+    if result_url != cvs_url:
+        # FIXME: very fragile replace
+        replace_in_file(final_path, 'cvs_url = "auto"', 'cvs_url = "%s"' % result_url)
+
+
 def _export_conanfile(conanfile_path, output, paths, conanfile, conan_ref, keep_source):
     destination_folder = paths.export(conan_ref)
     exports_source_folder = paths.export_sources(conan_ref, conanfile.short_paths)
     previous_digest = _init_export_folder(destination_folder, exports_source_folder)
     _execute_export(conanfile_path, conanfile, destination_folder, exports_source_folder,
                     output)
+    _handle_cvs(conanfile_path, destination_folder, conanfile, output)
 
     digest = FileTreeManifest.create(destination_folder, exports_source_folder)
 
