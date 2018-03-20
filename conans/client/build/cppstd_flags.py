@@ -115,11 +115,16 @@ def _cppstd_clang(clang_version, cppstd):
     if Version(clang_version) >= "3.5":
         v14 = "c++14"
         vgnu14 = "gnu++14"
-        v17 = "c++1z"
-        vgnu17 = "gnu++1z"
     elif Version(clang_version) >= "3.4":
         v14 = "c++1y"
         vgnu14 = "gnu++1y"
+
+    if Version(clang_version) >= "5":
+        v17 = "c++17"
+        vgnu17 = "gnu++17"
+    elif Version(clang_version) >= "3.5":
+        v17 = "c++1z"
+        vgnu17 = "gnu++1z"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,

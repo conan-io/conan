@@ -78,15 +78,15 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEquals(cppstd_flag("clang", "5", "11"), '-std=c++11')
         self.assertEquals(cppstd_flag("clang", "5", "14"), '-std=c++14')
         self.assertEquals(cppstd_flag("clang", "5", "gnu14"), '-std=gnu++14')
-        self.assertEquals(cppstd_flag("clang", "5", "17"), '-std=c++1z')
+        self.assertEquals(cppstd_flag("clang", "5", "17"), '-std=c++17')
 
         self.assertEquals(cppstd_flag("clang", "5.1", "11"), '-std=c++11')
         self.assertEquals(cppstd_flag("clang", "5.1", "14"), '-std=c++14')
-        self.assertEquals(cppstd_flag("clang", "5.1", "17"), '-std=c++1z')
+        self.assertEquals(cppstd_flag("clang", "5.1", "17"), '-std=c++17')
 
         self.assertEquals(cppstd_flag("clang", "7", "11"), '-std=c++11')
         self.assertEquals(cppstd_flag("clang", "7", "14"), '-std=c++14')
-        self.assertEquals(cppstd_flag("clang", "7", "17"), '-std=c++1z')
+        self.assertEquals(cppstd_flag("clang", "7", "17"), '-std=c++17')
 
     def test_clang_cppstd_defaults(self):
         self.assertEquals(cppstd_default("clang", "2"), "gnu98")
