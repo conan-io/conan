@@ -90,10 +90,22 @@ class Requirements(OrderedDict):
 
         new_requirement = Requirement(conan_reference, private, override)
         old_requirement = self.get(name)
-        if old_requirement and old_requirement != new_requirement:
-            raise ConanException("Duplicated requirement %s != %s"
-                                 % (old_requirement, new_requirement))
-        else:
+        add = True
+        duplicate = False
+        if old_requirement:
+            if old_requirement.is_resolved == new_requirement.is_resolved:
+                if old_requirement != new_requirement:
+                    duplicate = True
+            else:
+                if new_requirement.range_reference != old_requirement.range_reference:
+                    duplicate = True
+                
+            if not new_requirement.is_resolved and old_requirement.is_resolved: 
+                add = False
+        if duplicate:
+            raise ConanException("Duplicated requirement %s(ref: %s) != %s(ref: %s)"
+                                 % (old_requirement, old_requirement.range_reference, new_requirement, new_requirement.range_reference))        
+        if add:
             self[name] = new_requirement
 
     def update(self, down_reqs, output, own_ref, down_ref):
