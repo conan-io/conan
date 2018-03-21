@@ -178,21 +178,31 @@ class ConanApiAuthManager(object):
     def authenticate(self, user, password):
         remote_url = self._remote.url
         prev_user = self._localdb.get_username(remote_url)
-        prev_username = prev_user or "None (anonymous)"
-        user = None if user.lower() == 'none' else user
-        if user and password is not None:  # Try remote auth
+
+        if user is None:
+            if prev_user is None:
+                raise ConanException("User for remote '%s' is not defined" % self._remote.name)
+            user = prev_user
+        elif user.lower() == "none":
+            user = None
+
+        # Perform auth if user, pass defined
+        if user is not None and password is not None:  # Try remote auth
             try:
                 token = self._rest_client.authenticate(user, password)
             except UnicodeDecodeError:
                 raise ConanException("Password contains not allowed symbols")
         else:
             token = None
+        # Store result in DB
+        self._localdb.set_login((user, token), remote_url)
+        # Output
+        prev_user = prev_user or "None (anonymous)"
+        user = user or "None (anonymous)"
         if prev_user == user:
             self._user_io.out.info("Current '%s' user already: %s"
-                                   % (self._remote.name, prev_username))
+                                   % (self._remote.name, prev_user))
         else:
-            username = user or "None (anonymous)"
             self._user_io.out.info("Change '%s' user from %s to %s"
-                                   % (self._remote.name, prev_username, username))
-        self._localdb.set_login((user, token), remote_url)
+                                   % (self._remote.name, prev_user, user))
         return token

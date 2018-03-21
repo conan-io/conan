@@ -43,6 +43,14 @@ class UserTest(unittest.TestCase):
             client.user_io.out
         )
 
+    def test_with_no_user(self):
+        test_server = TestServer()
+        client = TestClient(servers={"default": test_server})
+        error = client.run('user -p test', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: User for remote 'default' is not defined. [Remote: default]",
+                      client.out)
+
     def test_with_remote_no_connect(self):
         test_server = TestServer()
         client = TestClient(servers={"default": test_server})
