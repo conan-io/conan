@@ -1,10 +1,10 @@
 
-# FIXME: Move here all the global stuff
+# FIXME: The functions from the tracer.py module should be called here, I removed from there some
+# of them because it has to be called in the remote manager, not in the proxy, where we have info
+# about the downloaded files prior to unzip them
+
 import time
 from collections import namedtuple, defaultdict
-
-from conans.util.tracer import (log_package_got_from_local_cache, log_recipe_got_from_local_cache, \
-                                log_recipe_download, log_package_download, log_package_built)
 
 # Install actions
 INSTALL_CACHE = 0
@@ -37,7 +37,6 @@ class ActionRecorder(object):
 
     # RECIPE METHODS
     def recipe_fetched_from_cache(self, reference):
-        log_recipe_got_from_local_cache(reference)
         if reference in self._inst_recipes_actions:
             if self._inst_recipes_actions[reference].type == INSTALL_DOWNLOADED:
                 return
@@ -45,8 +44,7 @@ class ActionRecorder(object):
         else:
             self._inst_recipes_actions[reference] = Action(INSTALL_CACHE)
 
-    def recipe_downloaded(self, reference, remote, duration, zipped_files):
-        log_recipe_download(reference, duration, remote, zipped_files)
+    def recipe_downloaded(self, reference, remote):
         assert reference not in self._inst_recipes_actions
         self._inst_recipes_actions[reference] = Action(INSTALL_DOWNLOADED, {"remote": remote})
 
@@ -58,13 +56,11 @@ class ActionRecorder(object):
                                                         "remote": remote})
 
     # PACKAGE METHODS
-    def package_built(self, reference, duration, log_file):
-        log_package_built(reference, duration, log_file)
+    def package_built(self, reference):
         assert reference not in self._inst_packages_actions
         self._inst_packages_actions[reference] = Action(INSTALL_BUILT)
 
     def package_fetched_from_cache(self, reference):
-        log_package_got_from_local_cache(reference)
         if reference in self._inst_packages_actions:
             if self._inst_packages_actions[reference].type == INSTALL_BUILT:
                 return
@@ -72,8 +68,7 @@ class ActionRecorder(object):
         else:
             self._inst_packages_actions[reference] = Action(INSTALL_CACHE)
 
-    def package_downloaded(self, reference, remote, duration, zipped_files):
-        log_package_download(reference, duration, remote, zipped_files)
+    def package_downloaded(self, reference, remote):
         assert reference not in self._inst_packages_actions
         self._inst_packages_actions[reference] = Action(INSTALL_DOWNLOADED, {"remote": remote})
 
@@ -82,7 +77,6 @@ class ActionRecorder(object):
         self._inst_packages_actions[reference] = Action(INSTALL_ERROR, {"type": error_type,
                                                                         "description": description,
                                                                         "remote": remote})
-
     @property
     def install_errored(self):
         for _, act in self._inst_recipes_actions.items():

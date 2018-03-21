@@ -1,7 +1,5 @@
 import os
 
-import time
-
 from requests.exceptions import RequestException
 
 from conans.client.loader_parse import load_conanfile_class
@@ -15,6 +13,7 @@ from conans.model.ref import PackageReference
 from conans.paths import EXPORT_SOURCES_TGZ_NAME
 from conans.util.files import rmdir, mkdir
 from conans.util.log import logger
+from conans.util.tracer import log_recipe_got_from_local_cache, log_package_got_from_local_cache
 
 
 class ConanProxy(object):
@@ -99,6 +98,7 @@ class ConanProxy(object):
         if local_package:
             output.success('Already installed!')
             installed = True
+            log_package_got_from_local_cache(package_ref)
             if self._recorder:
                 self._recorder.package_fetched_from_cache(package_ref)
         else:
@@ -138,6 +138,7 @@ class ConanProxy(object):
         conanfile_path = self._client_cache.conanfile(conan_reference)
 
         if os.path.exists(conanfile_path):
+            log_recipe_got_from_local_cache(conan_reference)
             if self._recorder:
                 self._recorder.recipe_fetched_from_cache(conan_reference)
             if self._check_updates:
@@ -202,15 +203,13 @@ class ConanProxy(object):
         """ returns the requested conanfile object, retrieving it from
         remotes if necessary. Can raise NotFoundException
         """
-        def _retrieve_from_remote(remote):
-            output.info("Trying with '%s'..." % remote.name)
+        def _retrieve_from_remote(the_remote):
+            output.info("Trying with '%s'..." % the_remote.name)
             export_path = self._client_cache.export(conan_reference)
-            t1 = time.time()
-            zipped_files = self._remote_manager.get_recipe(conan_reference, export_path, remote)
-            duration = time.time() - t1
-            self._registry.set_ref(conan_reference, remote)
+            self._remote_manager.get_recipe(conan_reference, export_path, the_remote)
+            self._registry.set_ref(conan_reference, the_remote)
             if self._recorder:
-                self._recorder.recipe_downloaded(conan_reference, remote.url, duration, zipped_files)
+                self._recorder.recipe_downloaded(conan_reference, the_remote.url)
 
         if self._remote_name:
             output.info("Not found, retrieving from server '%s' " % self._remote_name)
@@ -410,12 +409,9 @@ class ConanProxy(object):
         try:
             output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
             # Will raise if not found NotFoundException
-            t1 = time.time()
-            zipped_files = self._remote_manager.get_package(package_ref, package_folder, remote)
-            duration = time.time() - t1
             output.success('Package installed %s' % package_id)
             if self._recorder:
-                self._recorder.package_downloaded(package_ref, remote.url, duration, zipped_files)
+                self._recorder.package_downloaded(package_ref, remote.url)
 
             return True
         except NotFoundException as e:

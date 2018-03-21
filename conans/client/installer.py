@@ -22,6 +22,7 @@ from conans.client.output import ScopedOutput
 from conans.client.source import config_source
 from conans.util.env_reader import get_env
 from conans.client.importer import remove_imports
+from conans.util.tracer import log_package_built
 
 
 def build_id(conan_file):
@@ -426,7 +427,8 @@ class ConanInstaller(object):
     def _log_built_package(self, build_folder, package_ref, duration):
         log_file = os.path.join(build_folder, RUN_LOG_NAME)
         log_file = log_file if os.path.exists(log_file) else None
-        self._recorder.package_built(package_ref, duration, log_file)
+        log_package_built(package_ref, duration, log_file)
+        self._recorder.package_built(package_ref)
 
     @staticmethod
     def _propagate_info(conan_file, conan_ref, flat, deps_graph):

@@ -26,8 +26,8 @@ class TracerTest(unittest.TestCase):
     def test_install(self):
         tracer = ActionRecorder()
         tracer.recipe_fetched_from_cache(self.ref1)
-        tracer.package_downloaded(self.ref_p1, "http://drl.com", "", [])
-        tracer.recipe_downloaded(self.ref2, "http://drl.com", 12, [])
+        tracer.package_downloaded(self.ref_p1, "http://drl.com")
+        tracer.recipe_downloaded(self.ref2, "http://drl.com")
         tracer.package_install_error(self.ref_p2, INSTALL_ERROR_MISSING, "no package found",
                                      remote="https://drl.com")
 
