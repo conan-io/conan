@@ -4,7 +4,7 @@
 # about the downloaded files prior to unzip them
 
 import time
-from collections import namedtuple, defaultdict
+from collections import namedtuple, OrderedDict
 
 # Install actions
 INSTALL_CACHE = 0
@@ -30,8 +30,8 @@ class Action(namedtuple("Action", "type, doc, time")):
 class ActionRecorder(object):
 
     def __init__(self):
-        self._inst_recipes_actions = defaultdict(list)
-        self._inst_packages_actions = defaultdict(list)
+        self._inst_recipes_actions = OrderedDict()
+        self._inst_packages_actions = OrderedDict()
 
     # ###### INSTALL METHODS ############
 

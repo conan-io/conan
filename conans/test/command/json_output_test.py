@@ -126,7 +126,6 @@ class JsonOutputTest(unittest.TestCase):
         self.client.save(files, clean_first=True)
         self.client.run("create . private_user/channel --json=myfile.json ")
 
-
         self.client.run('upload "*" -c --all')
 
         files = cpp_hello_conan_files("BB", "1.0", build=False)
@@ -162,8 +161,8 @@ AA*: CC/1.0@private_user/channel
         my_json = json.loads(my_json)
 
         # Installed the build require CC with two options
-        self.assertEquals(len(my_json["installed"][0]["packages"]), 2)
-        self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
-        self.assertTrue(my_json["installed"][0]["recipe"]["cache"])
-        self.assertTrue(my_json["installed"][0]["packages"][0]["cache"])
-        self.assertTrue(my_json["installed"][0]["packages"][1]["cache"])
+        self.assertEquals(len(my_json["installed"][2]["packages"]), 2)
+        self.assertEquals(my_json["installed"][2]["recipe"]["id"], "CC/1.0@private_user/channel")
+        self.assertTrue(my_json["installed"][2]["recipe"]["cache"])
+        self.assertTrue(my_json["installed"][2]["packages"][0]["cache"])
+        self.assertTrue(my_json["installed"][2]["packages"][1]["cache"])
