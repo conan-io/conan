@@ -143,7 +143,7 @@ def log_client_rest_api_call(url, method, duration, headers):
 
 
 def log_command(name, parameters):
-    if name == "user" and "password" in parameters:
+    if name == "authenticate" and "password" in parameters:
         parameters = copy.copy(parameters)  # Ensure we don't alter any app object like args
         parameters["password"] = MASKED_FIELD
     _append_action("COMMAND", {"name": name, "parameters": parameters})

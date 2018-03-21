@@ -87,7 +87,6 @@ class HelloConan(ConanFile):
             client.run("upload %s --all" % str(conan_reference))
 
         traces = load(trace_file)
-        print traces
         self.assertNotIn("mypass", traces)
         self.assertIn('"password": "**********"', traces)
         self.assertIn('"Authorization": "**********"', traces)
@@ -99,7 +98,7 @@ class HelloConan(ConanFile):
             self.assertIn("_action", doc)  # Valid jsons
 
         self.assertEquals(json.loads(actions[0])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[0])["name"], "user")
+        self.assertEquals(json.loads(actions[0])["name"], "authenticate")
 
         self.assertEquals(json.loads(actions[2])["_action"], "COMMAND")
         self.assertEquals(json.loads(actions[2])["name"], "export")

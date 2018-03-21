@@ -153,6 +153,10 @@ class InfoFoldersTest(unittest.TestCase):
             return
 
         folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
+        import win32api
+        volume = win32api.GetVolumeInformation(os.path.splitdrive(folder)[0])[-1]
+        if volume != "NTFS":
+            return
         short_folder = os.path.join(folder, ".cnacls")
 
         self.assertFalse(os.path.exists(short_folder), "short_folder: %s shouldn't exists" % short_folder)
