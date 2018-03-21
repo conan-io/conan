@@ -590,12 +590,20 @@ class ConanAPIV1(object):
 
     @api_method
     def user(self, name=None, clean=False, remote=None, password=None):
-        if clean:
+        if clean:  # Cleaning the DB
             localdb = LocalDB(self._client_cache.localdb)
             localdb.init(clean=True)
             self._user_io.out.success("Deleted user data")
             return
-        self._manager.user(remote, name, password)
+
+        if name is None and password is None:  # Just listing users
+            users = self._manager.users(remote)
+            for remote_name, username in users:
+                self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
+            return
+
+        # Real auth
+        self._manager.authenticate(remote, name, password)
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):

@@ -10,7 +10,7 @@ class UserTest(unittest.TestCase):
         client = TestClient()
         with self.assertRaises(Exception):
             client.run("user")
-        self.assertIn("ERROR: No default remote defined", client.user_io.out)
+        self.assertIn("ERROR: No remotes defined", client.user_io.out)
 
         with self.assertRaises(Exception):
             client.run("user -r wrong_remote")

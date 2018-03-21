@@ -179,26 +179,20 @@ class ConanApiAuthManager(object):
         remote_url = self._remote.url
         prev_user = self._localdb.get_username(remote_url)
         prev_username = prev_user or "None (anonymous)"
-        if not user:
-            self._user_io.out.info("Current '%s' user: %s" % (self._remote.name, prev_username))
+        user = None if user.lower() == 'none' else user
+        if user and password is not None:  # Try remote auth
+            try:
+                token = self._rest_client.authenticate(user, password)
+            except UnicodeDecodeError:
+                raise ConanException("Password contains not allowed symbols")
         else:
-            user = None if user.lower() == 'none' else user
-            if user and password is not None:
-                token = self._remote_auth(user, password)
-            else:
-                token = None
-            if prev_user == user:
-                self._user_io.out.info("Current '%s' user already: %s"
-                                       % (self._remote.name, prev_username))
-            else:
-                username = user or "None (anonymous)"
-                self._user_io.out.info("Change '%s' user from %s to %s"
-                                       % (self._remote.name, prev_username, username))
-            self._localdb.set_login((user, token), remote_url)
-            return token
-
-    def _remote_auth(self, user, password):
-        try:
-            return self._rest_client.authenticate(user, password)
-        except UnicodeDecodeError:
-            raise ConanException("Password contains not allowed symbols")
+            token = None
+        if prev_user == user:
+            self._user_io.out.info("Current '%s' user already: %s"
+                                   % (self._remote.name, prev_username))
+        else:
+            username = user or "None (anonymous)"
+            self._user_io.out.info("Change '%s' user from %s to %s"
+                                   % (self._remote.name, prev_username, username))
+        self._localdb.set_login((user, token), remote_url)
+        return token
