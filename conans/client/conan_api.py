@@ -316,7 +316,7 @@ class ConanAPIV1(object):
                                   update=update,
                                   keep_build=keep_build)
 
-        return self.recorder.get_install_info()
+
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
@@ -409,8 +409,6 @@ class ConanAPIV1(object):
                               generators=generators,
                               install_reference=True)
 
-        return self.recorder.get_install_info()
-
     @api_method
     def install(self, path="", settings=None, options=None, env=None,
                 remote=None, verify=None, manifests=None,
@@ -438,8 +436,6 @@ class ConanAPIV1(object):
                               manifest_interactive=manifest_interactive,
                               generators=generators,
                               no_imports=no_imports)
-
-        return self.recorder.get_install_info()
 
     @api_method
     def config_get(self, item):

@@ -5,7 +5,7 @@ from conans.client.action_recorder import (ActionRecorder, INSTALL_ERROR_MISSING
 from conans.model.ref import ConanFileReference, PackageReference
 
 
-class TracerTest(unittest.TestCase):
+class ActionRecorderTest(unittest.TestCase):
 
     def setUp(self):
         self.ref1 = ConanFileReference.loads("lib1/1.0@conan/stable")
@@ -21,7 +21,7 @@ class TracerTest(unittest.TestCase):
         tracer.recipe_install_error(self.ref1, INSTALL_ERROR_NETWORK, "SSL wtf", "http://drl.com")
         install_info = tracer.get_install_info()
         self.assertTrue(install_info["error"])
-        self.assertIsNone(install_info["packages"][0]["package"])
+        self.assertEquals(install_info["installed"][0]["packages"], [])
 
     def test_install(self):
         tracer = ActionRecorder()
@@ -32,39 +32,39 @@ class TracerTest(unittest.TestCase):
                                      remote="https://drl.com")
 
         tracer.recipe_fetched_from_cache(self.ref3)
-        tracer.package_built(self.ref_p3, "", "")
+        tracer.package_built(self.ref_p3)
 
         install_info = tracer.get_install_info()
         self.assertTrue(install_info["error"])
 
-        first_installed = install_info["packages"][0]
+        first_installed = install_info["installed"][0]
         self.assertTrue(first_installed["recipe"]["cache"])
         self.assertFalse(first_installed["recipe"]["downloaded"])
         self.assertIsNone(first_installed["recipe"]["error"])
         self.assertEquals(str(first_installed["recipe"]["id"]), "lib1/1.0@conan/stable")
 
-        self.assertFalse(first_installed["package"]["cache"])
-        self.assertTrue(first_installed["package"]["downloaded"])
-        self.assertIsNone(first_installed["package"]["error"])
-        self.assertEquals(first_installed["package"]["remote"], 'http://drl.com')
-        self.assertEquals(str(first_installed["package"]["id"]), "1")
+        self.assertFalse(first_installed["packages"][0]["cache"])
+        self.assertTrue(first_installed["packages"][0]["downloaded"])
+        self.assertIsNone(first_installed["packages"][0]["error"])
+        self.assertEquals(first_installed["packages"][0]["remote"], 'http://drl.com')
+        self.assertEquals(str(first_installed["packages"][0]["id"]), "1")
 
-        second_installed = install_info["packages"][1]
+        second_installed = install_info["installed"][1]
         self.assertFalse(second_installed["recipe"]["cache"])
         self.assertTrue(second_installed["recipe"]["downloaded"])
         self.assertIsNone(second_installed["recipe"]["error"])
         self.assertEquals(str(second_installed["recipe"]["id"]), "lib2/1.0@conan/stable")
 
-        self.assertFalse(second_installed["package"]["cache"])
-        self.assertEquals(second_installed["package"]["error"],
+        self.assertFalse(second_installed["packages"][0]["cache"])
+        self.assertEquals(second_installed["packages"][0]["error"],
                           {'type': 'missing', 'description': 'no package found',
                            'remote': 'https://drl.com'})
-        self.assertEquals(second_installed["package"]["remote"], 'https://drl.com')
-        self.assertEquals(str(second_installed["package"]["id"]), "2")
+        self.assertEquals(second_installed["packages"][0]["remote"], 'https://drl.com')
+        self.assertEquals(str(second_installed["packages"][0]["id"]), "2")
 
-        third_installed = install_info["packages"][2]
-        self.assertFalse(third_installed["package"]["cache"])
-        self.assertFalse(third_installed["package"]["error"])
-        self.assertTrue(third_installed["package"]["built"])
-        self.assertIsNone(third_installed["package"]["remote"])
-        self.assertEquals(str(third_installed["package"]["id"]), "3")
+        third_installed = install_info["installed"][2]
+        self.assertFalse(third_installed["packages"][0]["cache"])
+        self.assertFalse(third_installed["packages"][0]["error"])
+        self.assertTrue(third_installed["packages"][0]["built"])
+        self.assertIsNone(third_installed["packages"][0]["remote"])
+        self.assertEquals(str(third_installed["packages"][0]["id"]), "3")

@@ -77,6 +77,7 @@ class ActionRecorder(object):
         self._inst_packages_actions[reference] = Action(INSTALL_ERROR, {"type": error_type,
                                                                         "description": description,
                                                                         "remote": remote})
+
     @property
     def install_errored(self):
         for _, act in self._inst_recipes_actions.items():
@@ -87,18 +88,16 @@ class ActionRecorder(object):
                 return True
         return False
 
-    def _get_installed_package(self, reference):
-        p_ref = p_action = None
+    def _get_installed_packages(self, reference):
+        ret = []
         for _package_ref, _package_action in self._inst_packages_actions.items():
             if _package_ref.conan == reference:
-                p_ref = _package_ref
-                p_action = _package_action
-                break
-        return p_ref, p_action
+                ret.append((_package_ref, _package_action))
+        return ret
 
     def get_install_info(self):
         ret = {"error": self.install_errored,
-               "packages": []}
+               "installed": []}
 
         def get_doc_for_ref(the_ref, the_action):
             error = None if the_action.type != INSTALL_ERROR else the_action.doc
@@ -116,9 +115,14 @@ class ActionRecorder(object):
         for ref, action in self._inst_recipes_actions.items():
             recipe_doc = get_doc_for_ref(ref, action)
             del recipe_doc["built"]  # Avoid confusions
-            p_ref, p_action = self._get_installed_package(ref)
+            packages = self._get_installed_packages(ref)
             tmp = {"recipe": recipe_doc,
-                   "package": get_doc_for_ref(p_ref.package_id, p_action) if p_ref else None}
-            ret["packages"].append(tmp)
+                   "packages": []}
+
+            for p_ref, p_action in packages:
+                p_doc = get_doc_for_ref(p_ref.package_id, p_action)
+                tmp["packages"].append(p_doc)
+
+            ret["installed"].append(tmp)
 
         return ret

@@ -221,7 +221,8 @@ class ConanProxy(object):
 
         if ref_remote:
             try:
-                return _retrieve_from_remote(ref_remote)
+                _retrieve_from_remote(ref_remote)
+                return
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(conan_reference), ref_remote.name)
                 if self._recorder:
@@ -241,7 +242,8 @@ class ConanProxy(object):
         for remote in remotes:
             logger.debug("Trying with remote %s" % remote.name)
             try:
-                return _retrieve_from_remote(remote)
+                _retrieve_from_remote(remote)
+                return
             # If not found continue with the next, else raise
             except NotFoundException as exc:
                 if remote == remotes[-1]:  # Last element not found
@@ -409,6 +411,7 @@ class ConanProxy(object):
         try:
             output.info("Looking for package %s in remote '%s' " % (package_id, remote.name))
             # Will raise if not found NotFoundException
+            self._remote_manager.get_package(package_ref, package_folder, remote)
             output.success('Package installed %s' % package_id)
             if self._recorder:
                 self._recorder.package_downloaded(package_ref, remote.url)

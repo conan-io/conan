@@ -211,13 +211,19 @@ class Command(object):
             # Now if parameter --test-folder=None (string None) we have to skip tests
             args.test_folder = False
 
-        return self._conan.create(args.path, name, version, user, channel,
-                                  args.profile, args.settings, args.options,
-                                  args.env, args.test_folder, args.not_export,
-                                  args.build, args.keep_source, args.keep_build, args.verify,
-                                  args.manifests, args.manifests_interactive,
-                                  args.remote, args.update,
-                                  test_build_folder=args.test_build_folder)
+        cwd = os.getcwd()
+
+        try:
+            self._conan.create(args.path, name, version, user, channel,
+                               args.profile, args.settings, args.options,
+                               args.env, args.test_folder, args.not_export,
+                               args.build, args.keep_source, args.keep_build, args.verify,
+                               args.manifests, args.manifests_interactive,
+                               args.remote, args.update,
+                               test_build_folder=args.test_build_folder)
+        finally:
+            if args.json:
+                self._outputer.json_install(self._conan.recorder.get_install_info(), args.json, cwd)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
