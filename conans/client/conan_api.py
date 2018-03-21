@@ -5,6 +5,7 @@ import requests
 
 import conans
 from conans import __version__ as client_version, tools
+from conans.client.action_recorder import ActionRecorder
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager, existing_info_files
@@ -184,8 +185,9 @@ class ConanAPIV1(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
+        self.recorder = ActionRecorder()
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     settings_preprocessor)
+                                     settings_preprocessor, self.recorder)
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -314,6 +316,8 @@ class ConanAPIV1(object):
                                   update=update,
                                   keep_build=keep_build)
 
+        return self.recorder.get_install_info()
+
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
                    package_folder=None, install_folder=None, profile_name=None, settings=None,
@@ -405,6 +409,8 @@ class ConanAPIV1(object):
                               generators=generators,
                               install_reference=True)
 
+        return self.recorder.get_install_info()
+
     @api_method
     def install(self, path="", settings=None, options=None, env=None,
                 remote=None, verify=None, manifests=None,
@@ -432,6 +438,8 @@ class ConanAPIV1(object):
                               manifest_interactive=manifest_interactive,
                               generators=generators,
                               no_imports=no_imports)
+
+        return self.recorder.get_install_info()
 
     @api_method
     def config_get(self, item):

@@ -86,7 +86,7 @@ def log_package_upload(package_ref, duration, files_uploaded, remote):
     _append_action("UPLOADED_PACKAGE", {"_id": str(package_ref),
                                         "duration": duration,
                                         "files": files_uploaded,
-                                        "remote": remote.name})
+                                        "remote": remote})
 
 
 def log_recipe_download(conan_reference, duration, remote, files_downloaded):
@@ -95,7 +95,7 @@ def log_recipe_download(conan_reference, duration, remote, files_downloaded):
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
     _append_action("DOWNLOADED_RECIPE", {"_id": str(conan_reference),
                                          "duration": duration,
-                                         "remote": remote.name,
+                                         "remote": remote,
                                          "files": files_downloaded})
 
 
@@ -105,7 +105,7 @@ def log_recipe_sources_download(conan_reference, duration, remote, files_downloa
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
     _append_action("DOWNLOADED_RECIPE_SOURCES", {"_id": str(conan_reference),
                                                  "duration": duration,
-                                                 "remote": remote.name,
+                                                 "remote": remote,
                                                  "files": files_downloaded})
 
 
@@ -115,7 +115,7 @@ def log_package_download(package_ref, duration, remote, files_downloaded):
     files_downloaded = [_file_document(name, path) for name, path in files_downloaded.items()]
     _append_action("DOWNLOADED_PACKAGE", {"_id": str(package_ref),
                                           "duration": duration,
-                                          "remote": remote.name,
+                                          "remote": remote,
                                           "files": files_downloaded})
 
 

@@ -105,7 +105,7 @@ class ConanManager(object):
     business logic
     """
     def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
-                 settings_preprocessor):
+                 settings_preprocessor, recorder):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
@@ -114,6 +114,7 @@ class ConanManager(object):
         self._remote_manager = remote_manager
         self._search_manager = search_manager
         self._settings_preprocessor = settings_preprocessor
+        self._recorder = recorder
 
     def _load_consumer_conanfile(self, conanfile_path, info_folder, output,
                                  deps_info_required=False):
@@ -169,7 +170,7 @@ class ConanManager(object):
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager,
                                   remote_name=None, update=False, check_updates=False,
-                                  manifest_manager=None)
+                                  manifest_manager=None, recorder=self._recorder)
 
         loader = self.get_loader(profile)
         conanfile = loader.load_virtual([reference], scope_options=True)
@@ -214,7 +215,8 @@ class ConanManager(object):
         @param only_recipe: download only the recipe
         """
         assert(isinstance(reference, ConanFileReference))
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
+                                  recorder=self._recorder)
         remote, _ = remote_proxy._get_remote()
         package = self._remote_manager.search_recipes(remote, reference, None)
         if not package:  # Search the reference first, and raise if it doesn't exist
@@ -272,18 +274,20 @@ class ConanManager(object):
 
     def info_build_order(self, reference, profile, build_order, remote, check_updates):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
-                                  update=False, check_updates=check_updates)
+                                  update=False, check_updates=check_updates,
+                                  recorder=self._recorder)
         deps_graph, _, _ = self._get_deps_graph(reference, profile, remote_proxy)
         result = deps_graph.build_order(build_order)
         return result
 
     def info_nodes_to_build(self, reference, profile, build_modes, remote, check_updates):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
-                                  update=False, check_updates=check_updates)
+                                  update=False, check_updates=check_updates,
+                                  recorder=self._recorder)
         deps_graph, _, conanfile = self._get_deps_graph(reference, profile, remote_proxy)
         build_mode = BuildMode(build_modes, self._user_io.out)
         installer = ConanInstaller(self._client_cache, self._user_io.out, remote_proxy, build_mode,
-                                   None)
+                                   None, recorder=self._recorder)
         nodes = installer.nodes_to_build(deps_graph)
         counter = Counter(ref.conan.name for ref, _ in nodes)
         ret = [ref if counter[ref.conan.name] > 1 else str(ref.conan) for ref, _ in nodes]
@@ -307,7 +311,8 @@ class ConanManager(object):
         """
 
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
-                                  update=False, check_updates=check_updates)
+                                  update=False, check_updates=check_updates,
+                                  recorder=self._recorder)
 
         deps_graph, graph_builder, conanfile = self._get_deps_graph(reference, profile, remote_proxy)
 
@@ -338,6 +343,7 @@ class ConanManager(object):
         @param no_imports: Install specified packages but avoid running imports
         @param inject_require: Reference to add as a requirement to the conanfile
         """
+
         if generators is not False:
             generators = set(generators) if generators else set()
             generators.add("txt")  # Add txt generator by default
@@ -347,7 +353,8 @@ class ConanManager(object):
                                            verify=manifest_verify,
                                            interactive=manifest_interactive) if manifest_folder else None
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
-                                  update=update, manifest_manager=manifest_manager)
+                                  update=update, manifest_manager=manifest_manager,
+                                  recorder=self._recorder)
 
         loader = self.get_loader(profile)
         if not install_reference:
@@ -383,7 +390,7 @@ class ConanManager(object):
         build_mode = BuildMode(build_modes, self._user_io.out)
         build_requires = BuildRequires(loader, graph_builder, registry)
         installer = ConanInstaller(self._client_cache, output, remote_proxy, build_mode,
-                                   build_requires)
+                                   build_requires, recorder=self._recorder)
 
         # Apply build_requires to consumer conanfile
         if not isinstance(reference, ConanFileReference):
@@ -527,13 +534,15 @@ class ConanManager(object):
         @param force: if True, it will be deleted without requesting anything
         @param packages_query: Only if src is a reference. Query settings and options
         """
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
+                                  recorder=self._recorder)
         remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, remote_proxy)
         remover.remove(pattern, remote, src, build_ids, package_ids_filter, force=force,
                        packages_query=packages_query, outdated=outdated)
 
     def user(self, remote=None, name=None, password=None):
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
+                                  recorder=self._recorder)
         if password == "":
             if not remote:
                 remote = remote_proxy.registry.default_remote.name
@@ -541,7 +550,8 @@ class ConanManager(object):
         return remote_proxy.authenticate(name, password)
 
     def get_path(self, reference, package_id=None, path=None, remote=None):
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
+        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
+                                  recorder=self._recorder)
         if not path and not package_id:
             path = "conanfile.py"
         elif not path and package_id:

@@ -14,8 +14,10 @@ from conans.util.files import gzopen_without_timestamps
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch
 from conans.util.log import logger
-from conans.util.tracer import log_package_upload, log_recipe_upload,\
-    log_recipe_download, log_package_download, log_recipe_sources_download, log_uncompressed_file, log_compressed_files
+# FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
+from conans.util.tracer import (log_package_upload, log_recipe_upload,
+                                log_recipe_sources_download,
+                                log_uncompressed_file, log_compressed_files)
 from conans.client.source import merge_directories
 
 
@@ -148,7 +150,6 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:abs_path , remote_name)"""
         rmdir(dest_folder)  # Remove first the destination folder
-        t1 = time.time()
 
         def filter_function(urls):
             if CONANFILE not in list(urls.keys()):
@@ -159,8 +160,6 @@ class RemoteManager(object):
 
         zipped_files = self._call_remote(remote, "get_recipe", conan_reference, dest_folder,
                                          filter_function)
-        duration = time.time() - t1
-        log_recipe_download(conan_reference, duration, remote, zipped_files)
 
         unzip_and_get_files(zipped_files, dest_folder, EXPORT_TGZ_NAME)
         # Make sure that the source dir is deleted
@@ -168,6 +167,8 @@ class RemoteManager(object):
         for dirname, _, filenames in os.walk(dest_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
+
+        return zipped_files
 
     def get_recipe_sources(self, conan_reference, export_folder, export_sources_folder, remote):
         t1 = time.time()
@@ -205,15 +206,13 @@ class RemoteManager(object):
 
         returns (dict relative_filepath:abs_path , remote_name)"""
         rm_conandir(dest_folder)  # Remove first the destination folder
-        t1 = time.time()
         zipped_files = self._call_remote(remote, "get_package", package_reference, dest_folder)
-        duration = time.time() - t1
-        log_package_download(package_reference, duration, remote, zipped_files)
         unzip_and_get_files(zipped_files, dest_folder, PACKAGE_TGZ_NAME)
         # Issue #214 https://github.com/conan-io/conan/issues/214
         for dirname, _, filenames in os.walk(dest_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
+        return zipped_files
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """

@@ -196,6 +196,9 @@ class Command(object):
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
                             help='Optional. Do not remove the build folder in local cache. '
                                  'Use for testing purposes only')
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='Path to a json file where the install information '
+                                 'will be written')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -267,35 +270,43 @@ class Command(object):
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='Path to a json file where the install information '
+                                 'will be written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
+        cwd = os.getcwd()
 
         try:
-            reference = ConanFileReference.loads(args.path)
-        except ConanException:
-            return self._conan.install(path=args.path,
-                                       settings=args.settings, options=args.options,
-                                       env=args.env,
-                                       remote=args.remote,
-                                       verify=args.verify, manifests=args.manifests,
-                                       manifests_interactive=args.manifests_interactive,
-                                       build=args.build, profile_name=args.profile,
-                                       update=args.update, generators=args.generator,
-                                       no_imports=args.no_imports,
-                                       install_folder=args.install_folder)
-        else:
-            return self._conan.install_reference(reference, settings=args.settings,
-                                                 options=args.options,
-                                                 env=args.env,
-                                                 remote=args.remote,
-                                                 verify=args.verify, manifests=args.manifests,
-                                                 manifests_interactive=args.manifests_interactive,
-                                                 build=args.build, profile_name=args.profile,
-                                                 update=args.update,
-                                                 generators=args.generator,
-                                                 install_folder=args.install_folder)
+            try:
+                reference = ConanFileReference.loads(args.path)
+            except ConanException:
+                self._conan.install(path=args.path,
+                                    settings=args.settings, options=args.options,
+                                    env=args.env,
+                                    remote=args.remote,
+                                    verify=args.verify, manifests=args.manifests,
+                                    manifests_interactive=args.manifests_interactive,
+                                    build=args.build, profile_name=args.profile,
+                                    update=args.update, generators=args.generator,
+                                    no_imports=args.no_imports,
+                                    install_folder=args.install_folder)
+            else:
+                self._conan.install_reference(reference, settings=args.settings,
+                                              options=args.options,
+                                              env=args.env,
+                                              remote=args.remote,
+                                              verify=args.verify, manifests=args.manifests,
+                                              manifests_interactive=args.manifests_interactive,
+                                              build=args.build, profile_name=args.profile,
+                                              update=args.update,
+                                              generators=args.generator,
+                                              install_folder=args.install_folder)
+        finally:
+            if args.json:
+                self._outputer.json_install(self._conan.recorder.get_install_info(), args.json, cwd)
 
     def config(self, *args):
         """Manages configuration. Edits the conan.conf or installs config files.
