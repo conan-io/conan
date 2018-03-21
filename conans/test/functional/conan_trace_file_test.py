@@ -87,6 +87,7 @@ class HelloConan(ConanFile):
             client.run("upload %s --all" % str(conan_reference))
 
         traces = load(trace_file)
+        print traces
         self.assertNotIn("mypass", traces)
         self.assertIn('"password": "**********"', traces)
         self.assertIn('"Authorization": "**********"', traces)

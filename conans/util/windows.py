@@ -56,8 +56,9 @@ def path_shortener(path, short_paths):
     try:
         cmd = r'cacls %s /E /G "%s\%s":F' % (short_home, os.environ['USERDOMAIN'], os.environ['USERNAME'])
         subprocess.check_output(cmd, stderr=subprocess.STDOUT)  # Ignoring any returned output, make command quiet
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as e:
         # cmd can fail if trying to set ACL in non NTFS drives, ignoring it.
+        raise Exception("BOOOM!!! ", e)
         pass
 
     redirect = tempfile.mkdtemp(dir=short_home, prefix="")

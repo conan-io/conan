@@ -38,7 +38,7 @@ from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 from conans.client.cmd.search import Search
-from conans.client.cmd.user import users_clean, users_list
+from conans.client.cmd.user import users_clean, users_list, user_set
 
 
 default_manifest_folder = '.conan_manifests'
@@ -599,12 +599,11 @@ class ConanAPIV1(object):
         if password == "":
             name, password = self._user_io.request_login(remote_name=remote.name,
                                                          username=name)
-
         self._remote_manager.authenticate(remote, name, password)
 
     @api_method
-    def set_user(self, name=None, remote=None):
-        self._manager.authenticate(remote, name)
+    def user_set(self, user, remote_name=None):
+        return user_set(self._client_cache, self._user_io.out, user, remote_name)
 
     @api_method
     def users_clean(self):

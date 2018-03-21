@@ -17,6 +17,7 @@ from conans.errors import AuthenticationException, ForbiddenException,\
 from uuid import getnode as get_mac
 import hashlib
 from conans.util.log import logger
+from conans.client.cmd.user import update_localdb
 
 
 def input_credentials_if_unauthorized(func):
@@ -60,7 +61,6 @@ def input_credentials_if_unauthorized(func):
         credentials are stored in localdb and rest method is called"""
         for _ in range(LOGIN_RETRIES):
             user, password = self._user_io.request_login(self._remote.name, self.user)
-            token = None
             try:
                 token = self.authenticate(user, password)
             except AuthenticationException:
@@ -71,11 +71,10 @@ def input_credentials_if_unauthorized(func):
                         'Wrong password for user "%s"' % self.user)
                     self._user_io.out.info(
                         'You can change username with "conan user <username>"')
-            if token:
+            else:
                 logger.debug("Got token: %s" % str(token))
                 self._rest_client.token = token
                 self.user = user
-                self._store_login((user, token))
                 # Set custom headers of mac_digest and username
                 self.set_custom_headers(user)
                 return wrapper(self, *args, **kwargs)
@@ -176,33 +175,18 @@ class ConanApiAuthManager(object):
         return self._rest_client.get_path(conan_reference, path, package_id)
 
     def authenticate(self, user, password):
-        remote_url = self._remote.url
-        prev_user = self._localdb.get_username(remote_url)
-
-        if user is None:
+        if user is None:  # The user is already in DB, just need the passwd
+            prev_user = self._localdb.get_username(self._remote.url)
             if prev_user is None:
                 raise ConanException("User for remote '%s' is not defined" % self._remote.name)
-            user = prev_user
-        elif user.lower() == "none":
-            user = None
+            else:
+                user = prev_user
 
-        # Perform auth if user, pass defined
-        if user is not None and password is not None:  # Try remote auth
-            try:
-                token = self._rest_client.authenticate(user, password)
-            except UnicodeDecodeError:
-                raise ConanException("Password contains not allowed symbols")
-        else:
-            token = None
+        try:
+            token = self._rest_client.authenticate(user, password)
+        except UnicodeDecodeError:
+            raise ConanException("Password contains not allowed symbols")
+
         # Store result in DB
-        self._localdb.set_login((user, token), remote_url)
-        # Output
-        prev_user = prev_user or "None (anonymous)"
-        user = user or "None (anonymous)"
-        if prev_user == user:
-            self._user_io.out.info("Current '%s' user already: %s"
-                                   % (self._remote.name, prev_user))
-        else:
-            self._user_io.out.info("Change '%s' user from %s to %s"
-                                   % (self._remote.name, prev_user, user))
+        update_localdb(self._localdb, user, token, self._remote, self._user_io.out)
         return token

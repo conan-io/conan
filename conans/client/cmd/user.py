@@ -28,33 +28,25 @@ def users_clean(client_cache):
     localdb.init(clean=True)
 
 
-def set_user(client_cache, output, username, remote=None):
+def user_set(client_cache, output, user, remote_name=None):
     localdb = LocalDB(client_cache.localdb)
     registry = RemoteRegistry(client_cache.registry, output)
-
-    remote_url = self._remote.url
-    prev_user = localdb.get_username(remote_url)
-
-    if user is None:
-        if prev_user is None:
-            raise ConanException("User for remote '%s' is not defined" % self._remote.name)
-        user = prev_user
-    elif user.lower() == "none":
-        user = None
-
-    # Perform auth if user, pass defined
-        token = None
-    # Store result in DB
-    localdb.set_login((user, token), remote_url)
-    # Output
-    prev_user = prev_user or "None (anonymous)"
-    user = user or "None (anonymous)"
-    if prev_user == user:
-        self._user_io.out.info("Current '%s' user already: %s"
-                               % (self._remote.name, prev_user))
+    if not remote_name:
+        remote = registry.default_remote
     else:
-        self._user_io.out.info("Change '%s' user from %s to %s"
-                               % (self._remote.name, prev_user, user))
-    return token
+        remote = registry.remote(remote_name)
+
+    if user.lower() == "none":
+        user = None
+    update_localdb(localdb, user, None, remote, output)
 
 
+def update_localdb(localdb, user, token, remote, output):
+    previous_user = localdb.get_username(remote.url)
+    localdb.set_login((user, token), remote.url)
+    previous_user = previous_user or "None (anonymous)"
+    user = user or "None (anonymous)"
+    if previous_user == user:
+        output.info("Current '%s' user already: %s" % (remote.name, previous_user))
+    else:
+        output.info("Change '%s' user from %s to %s" % (remote.name, previous_user, user))
