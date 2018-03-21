@@ -192,6 +192,13 @@ class Pkg(ConanFile):
             self.client.run("config install http://myfakeurl.com/myconf.zip")
             self._check("http://myfakeurl.com/myconf.zip")
 
+    def failed_install_repo_test(self):
+        """ should install from a git repo
+        """
+        error = self.client.run('config install notexistingrepo.git', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: config install error. Can't clone repo", self.client.out)
+
     def install_repo_test(self):
         """ should install from a git repo
         """
