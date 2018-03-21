@@ -533,35 +533,6 @@ class ConanManager(object):
         remover.remove(pattern, remote, src, build_ids, package_ids_filter, force=force,
                        packages_query=packages_query, outdated=outdated)
 
-    def users(self, remote_name=None):
-        # List all users from required remotes
-        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
-        if remote_name:
-            remotes = [registry.remote(remote_name)]
-        else:
-            remotes = registry.remotes
-
-        if not remotes:
-            raise ConanException("No remotes defined")
-
-        localdb = LocalDB(self._client_cache.localdb)
-        result = []
-        for remote in remotes:
-            prev_user = localdb.get_username(remote.url)
-            username = prev_user or "None (anonymous)"
-            result.append((remote.name, username))
-        return result
-
-    def authenticate(self, remote=None, name=None, password=None):
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-        # Authenticate
-        if password == "":
-            if not remote:
-                remote = remote_proxy.registry.default_remote.name
-            name, password = self._user_io.request_login(remote_name=remote, username=name)
-
-        return remote_proxy.authenticate(name, password)
-
     def get_path(self, reference, package_id=None, path=None, remote=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
         if not path and not package_id:

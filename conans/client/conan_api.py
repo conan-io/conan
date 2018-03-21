@@ -38,6 +38,7 @@ from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 from conans.client.cmd.search import Search
+from conans.client.cmd.user import users_clean, users_list
 
 
 default_manifest_folder = '.conan_manifests'
@@ -589,21 +590,31 @@ class ConanAPIV1(object):
                  self._user_io, self._remote_manager, force=force)
 
     @api_method
-    def user(self, name=None, clean=False, remote=None, password=None):
-        if clean:  # Cleaning the DB
-            localdb = LocalDB(self._client_cache.localdb)
-            localdb.init(clean=True)
-            self._user_io.out.success("Deleted user data")
-            return
+    def authenticate(self, name, password, remote=None):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        if not remote:
+            remote = registry.default_remote
+        else:
+            remote = registry.remote(remote)
+        if password == "":
+            name, password = self._user_io.request_login(remote_name=remote.name,
+                                                         username=name)
 
-        if name is None and password is None:  # Just listing users
-            users = self._manager.users(remote)
-            for remote_name, username in users:
-                self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
-            return
+        self._remote_manager.authenticate(remote, name, password)
 
-        # Real auth
-        self._manager.authenticate(remote, name, password)
+    @api_method
+    def set_user(self, name=None, remote=None):
+        self._manager.authenticate(remote, name)
+
+    @api_method
+    def users_clean(self):
+        return users_clean(self._client_cache)
+
+    @api_method
+    def users_list(self, remote=None):
+        users = users_list(self._client_cache, self._user_io.out, remote)
+        for remote_name, username in users:
+            self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
