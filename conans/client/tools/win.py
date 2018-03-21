@@ -44,8 +44,7 @@ def build_sln_command(settings, sln_path, targets=None, upgrade_project=True, bu
         self.run(command)
     """
     from conans.client.build.msbuild import MSBuild
-    tmp = MSBuild(None)
-    tmp._settings = settings
+    tmp = MSBuild(settings)
     tmp._output = _global_output
 
     # Generate the properties file

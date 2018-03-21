@@ -5,7 +5,7 @@ to the local store, as an initial step before building or uploading to remotes
 import os
 import shutil
 
-from conans.client.cmd.linter.export_linter import conan_linter
+from conans.client.cmd.export_linter import conan_linter
 from conans.client.file_copier import FileCopier
 from conans.client.loader_parse import load_conanfile_class
 from conans.client.output import ScopedOutput

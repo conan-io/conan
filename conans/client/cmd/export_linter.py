@@ -10,8 +10,6 @@ from six import StringIO
 from conans.client.output import Color
 from conans.errors import ConanException
 
-LINTER_PLUGINS = ["conans.client.cmd.linter.linter_deprecated_plugin"]
-
 
 def conan_linter(conanfile_path, out):
     if getattr(sys, 'frozen', False):
@@ -82,8 +80,7 @@ def _lint_py3(conanfile_path):
 
 def _normal_linter(conanfile_path):
 
-    args = ["--reports=no", "--disable=no-absolute-import", "--persistent=no",
-            "--load-plugins=%s" % ",".join(LINTER_PLUGINS), conanfile_path]
+    args = ["--reports=no", "--disable=no-absolute-import", "--persistent=no", conanfile_path]
     pylintrc = os.environ.get("CONAN_PYLINTRC", None)
     if pylintrc:
         if not os.path.exists(pylintrc):

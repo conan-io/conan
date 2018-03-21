@@ -33,8 +33,6 @@ class ExportLinterTest(unittest.TestCase):
                           output)
         self.assertIn("WARN: Linter. Line 8: Unused variable 'k'", output)
         self.assertIn("WARN: Linter. Line 8: Unused variable 'v'", output)
-        self.assertIn('WARN: Linter. Line 10: "msvc_build_command" is deprecated since Conan v1.2 and '
-                      'will be removed in v2.0. Use the MSBuild() build helper instead', output)
 
     def test_disable_linter(self):
         client = TestClient()

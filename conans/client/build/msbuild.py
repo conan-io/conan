@@ -8,16 +8,19 @@ from conans.client.tools.win import vcvars_command
 from conans.errors import ConanException
 from conans.util.env_reader import get_env
 from conans.util.files import tmp_file
+from conans.model.conan_file import ConanFile
 
 
 class MSBuild(object):
 
     def __init__(self, conanfile):
-        if conanfile:  # FIXME: Remove when deprecated win.py msbuild tools
+        if isinstance(conanfile, ConanFile):
             self._conanfile = conanfile
             self._settings = self._conanfile.settings
             self._output = self._conanfile.output
             self.build_env = VisualStudioBuildEnvironment(self._conanfile)
+        else:  # backwards compatible with build_sln_command
+            self._settings = conanfile
 
     def build(self, project_file, targets=None, upgrade_project=True, build_type=None, arch=None,
               parallel=True, force_vcvars=False, toolset=None, platforms=None):
