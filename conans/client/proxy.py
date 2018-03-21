@@ -403,7 +403,7 @@ class ConanProxy(object):
         :param password: password string
         """
         current_remote, _ = self._get_remote()
-        self._remote_manager.authenticate(current_remote, name, password)
+        return self._remote_manager.authenticate(current_remote, name, password)
 
     def list_authenticated_users(self, all_remotes):
         """
