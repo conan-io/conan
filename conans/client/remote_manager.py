@@ -217,7 +217,6 @@ class RemoteManager(object):
         for dirname, _, filenames in os.walk(dest_folder):
             for fname in filenames:
                 touch(os.path.join(dirname, fname))
-        return zipped_files
 
     def search_recipes(self, remote, pattern=None, ignorecase=True):
         """
