@@ -398,12 +398,8 @@ class ConanProxy(object):
     def authenticate(self, name, password):
         """
         Manage user auth against remote.
-        Also displays a list of authenticated users against remote(s) if user name is evaluated to False.
-
         :param name: user name string
         :param password: password string
-        :param all_remotes: True/False to use all available remotes to display a list of authenticated users if
-                            user name is evaluated to False.
         """
         current_remote, _ = self._get_remote()
         return self._remote_manager.authenticate(current_remote, name, password)
