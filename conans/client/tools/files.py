@@ -272,3 +272,13 @@ def which(filename):
                         return trick_path
 
     return None
+
+
+def unix2dos(filepath):
+    """
+    Converts line breaks in a text file from Unix format (LF) to DOS format (CRLF)
+    :param filepath: Path to the text file to convert
+    :return:
+    """
+    contents = open(filepath, 'r').read()
+    open(filepath, 'w').write(contents.replace('\n', '\r\n'))
