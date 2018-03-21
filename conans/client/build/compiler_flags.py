@@ -64,9 +64,9 @@ def libcxx_flag(compiler, libcxx):
             return '-stdlib=libc++'
     elif str(compiler) == 'sun-cc':
         return ({"libCstd": "-library=Cstd",
-                         "libstdcxx": "-library=stdcxx4",
-                         "libstlport": "-library=stlport4",
-                         "libstdc++": "-library=stdcpp"}.get(libcxx, ""))
+                            "libstdcxx": "-library=stdcxx4",
+                            "libstlport": "-library=stlport4",
+                            "libstdc++": "-library=stdcpp"}.get(libcxx, ""))
     return ""
 
 
