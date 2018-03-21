@@ -41,7 +41,6 @@ class RestApiTest(unittest.TestCase):
             token = cls.api.authenticate("private_user", "private_pass")
             cls.api.token = token
 
-
     @classmethod
     def tearDownClass(cls):
         cls.server.stop()

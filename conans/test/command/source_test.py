@@ -7,6 +7,44 @@ import os
 
 class SourceTest(unittest.TestCase):
 
+    def local_flow_patch_test(self):
+        # https://github.com/conan-io/conan/issues/2327
+        conanfile = """from conans import ConanFile, tools
+from conans.tools import save
+import os
+class TestexportConan(ConanFile):
+    exports = "mypython.py"
+    exports_sources = "patch.patch"
+
+    def source(self):
+        save("hello/hello.h", "my hello header!")
+        patch = os.path.join(self.source_folder, "patch.patch")
+        self.output.info("PATCH: %s" % tools.load(patch))
+        header = os.path.join(self.source_folder, "hello/hello.h")
+        self.output.info("HEADER: %s" % tools.load(header))
+        python = os.path.join(self.source_folder, "mypython.py")
+        self.output.info("PYTHON: %s" % tools.load(python))
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile,
+                     "patch.patch": "mypatch",
+                     "mypython.py": "mypython"})
+        client.run("source .")
+        self.assertIn("PROJECT: PATCH: mypatch", client.out)
+        self.assertIn("PROJECT: HEADER: my hello header!", client.out)
+        self.assertIn("PROJECT: PYTHON: mypython", client.out)
+        client.run("source . -sf=mysrc")
+        self.assertIn("PROJECT: Executing exports to", client.out)
+        self.assertIn("PROJECT: PATCH: mypatch", client.out)
+        self.assertIn("PROJECT: HEADER: my hello header!", client.out)
+        self.assertIn("PROJECT: PYTHON: mypython", client.out)
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
+                                                    "mysrc", "patch.patch")))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
+                                                    "mysrc", "mypython.py")))
+        self.assertTrue(os.path.exists(os.path.join(client.current_folder,
+                                                    "mysrc", "hello/hello.h")))
+
     def apply_patch_test(self):
         # https://github.com/conan-io/conan/issues/2327
         # Test if a patch can be applied in source() both in create
@@ -25,6 +63,8 @@ class Pkg(ConanFile):
         client.save({"conanfile.py": conanfile,
                      "mypatch": "this is my patch"})
         client.run("source .")
+        self.assertIn("PATCH: this is my patch", client.out)
+        client.run("source . -sf=mysrc")
         self.assertIn("PATCH: this is my patch", client.out)
         client.run("create . Pkg/0.1@user/testing")
         self.assertIn("PATCH: this is my patch", client.out)

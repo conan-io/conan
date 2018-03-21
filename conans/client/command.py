@@ -35,10 +35,13 @@ class Extender(argparse.Action):
             # share this destination.
             parser.set_defaults(**{self.dest: None})
 
-        try:
-            dest.extend(values)
-        except ValueError:
+        if isinstance(values, str):
             dest.append(values)
+        elif values:
+            try:
+                dest.extend(values)
+            except ValueError:
+                dest.append(values)
 
 
 class OnceArgument(argparse.Action):
@@ -232,10 +235,13 @@ class Command(object):
                             help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("-r", "--remote", help='look in the specified remote server',
                             action=OnceArgument)
+        parser.add_argument("-re", "--recipe", help='Downloads only the recipe', default=False,
+                            action="store_true")
 
         args = parser.parse_args(*args)
 
-        return self._conan.download(reference=args.reference, package=args.package, remote=args.remote)
+        return self._conan.download(reference=args.reference, package=args.package,
+                                    remote=args.remote, recipe=args.recipe)
 
     def install(self, *args):
         """Installs the requirements specified in a conanfile (.py or .txt).
@@ -499,12 +505,29 @@ class Command(object):
                             help="Optional. Local folder containing the conaninfo.txt and "
                                  "conanbuildinfo.txt files (from a previous conan install "
                                  "execution). Defaulted to --build-folder")
+        parser.add_argument("-c", "--configure", default=None, action="store_true",
+                            help="Execute the configuration step (variable should_configure=True)."
+                            " When specified, build/install won't run unless --build/--install specified")
+        parser.add_argument("-b", "--build", default=None, action="store_true",
+                            help="Execute the build step (variable should_build=True)."
+                            " When specified, configure/install won't run unless --configure/--install specified")
+        parser.add_argument("-i", "--install", default=None, action="store_true",
+                            help="Execute the install step (variable should_install=True)."
+                            " When specified, configure/build won't run unless --configure/--build specified")
         args = parser.parse_args(*args)
+
+        if args.build or args.configure or args.install:
+            build, config, install = bool(args.build), bool(args.configure), bool(args.install)
+        else:
+            build = config = install = True
         return self._conan.build(conanfile_path=args.path,
                                  source_folder=args.source_folder,
                                  package_folder=args.package_folder,
                                  build_folder=args.build_folder,
-                                 install_folder=args.install_folder)
+                                 install_folder=args.install_folder,
+                                 should_configure=config,
+                                 should_build=build,
+                                 should_install=install)
 
     def package(self, *args):
         """ Calls your local conanfile.py 'package()' method.
@@ -1215,7 +1238,7 @@ def _add_common_install_arguments(parser, build_help):
                              '-e CXX=/usr/bin/clang++',
                         nargs=1, action=Extender)
     if build_help:
-        parser.add_argument("-b", "--build", action=Extender, nargs="*", help=build_help)
+        parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:

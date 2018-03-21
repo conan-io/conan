@@ -21,24 +21,20 @@ from conans.client.conan_api import migrate_and_get_client_cache, Conan
 from conans.client.conan_command_output import CommandOutputer
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION
 from conans.client.output import ConanOutput
-from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
-from conans.client.rest.auth_manager import ConanApiAuthManager
-from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.uploader_downloader import IterableToFileAdapter
-from conans.client.rest.version_checker import VersionCheckerRequester
-from conans.client.store.localdb import LocalDB
 from conans.client.userio import UserIO
 from conans.model.version import Version
-from conans.search.search import DiskSearchManager, DiskSearchAdapter
+from conans.search.search import DiskSearchManager
 from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USER,
                                                       TESTING_REMOTE_PRIVATE_PASS,
                                                       TestServerLauncher)
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
+from conans.tools import set_global_instances
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
-from conans.tools import set_global_instances
 
 
 class TestingResponse(object):
@@ -90,7 +86,8 @@ class TestRequester(object):
     def __init__(self, test_servers):
         self.test_servers = test_servers
 
-    def _get_url_path(self, url):
+    @staticmethod
+    def _get_url_path(url):
         # Remove schema from url
         _, _, path, query, _ = urlsplit(url)
         url = urlunsplit(("", "", path, query, ""))
@@ -103,68 +100,80 @@ class TestRequester(object):
 
         raise Exception("Testing error: Not remote found")
 
-    def get(self, url, auth=None, headers=None, verify=None, stream=None):
-        headers = headers or {}
-        app, url = self._prepare_call(url, headers, auth)
+    def get(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
         if app:
-            response = app.get(url, headers=headers, expect_errors=True)
+            response = app.get(url, **kwargs)
             return TestingResponse(response)
         else:
-            return requests.get(url, headers=headers)
+            return requests.get(url, **kwargs)
 
-    def put(self, url, data, headers=None, verify=None, auth=None):
-        headers = headers or {}
-        app, url = self._prepare_call(url, headers, auth=auth)
+    def put(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
         if app:
-            if isinstance(data, IterableToFileAdapter):
-                data_accum = b""
-                for tmp in data:
-                    data_accum += tmp
-                data = data_accum
-            response = app.put(url, data, expect_errors=True, headers=headers)
+            response = app.put(url, **kwargs)
             return TestingResponse(response)
         else:
-            return requests.put(url, data=data.read())
+            return requests.put(url, **kwargs)
 
-    def delete(self, url, auth, headers, verify=None):
-        headers = headers or {}
-        app, url = self._prepare_call(url, headers, auth)
+    def delete(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
         if app:
-            response = app.delete(url, "", headers=headers, expect_errors=True)
+            response = app.delete(url, **kwargs)
             return TestingResponse(response)
         else:
-            return requests.delete(url, headers=headers)
+            return requests.delete(url, **kwargs)
 
-    def post(self, url, auth=None, headers=None, verify=None, stream=None, data=None, json=None):
-        headers = headers or {}
-        app, url = self._prepare_call(url, headers, auth)
+    def post(self, url, **kwargs):
+        app, url = self._prepare_call(url, kwargs)
         if app:
-            content_type = None
-            if json:
-                import json as JSON
-                data = JSON.dumps(json)
-                content_type = "application/json"
-            response = app.post(url, data, headers=headers,
-                                content_type=content_type, expect_errors=True)
+            response = app.post(url, **kwargs)
             return TestingResponse(response)
         else:
-            requests.post(url, data=data, json=json)
+            requests.post(url, **kwargs)
 
-    def _prepare_call(self, url, headers, auth):
+    def _prepare_call(self, url, kwargs):
         if not url.startswith("http://fake"):  # Call to S3 (or external), perform a real request
             return None, url
         app = self._get_wsgi_app(url)
         url = self._get_url_path(url)  # Remove http://server.com
 
-        self._set_auth_headers(auth, headers)
+        self._set_auth_headers(kwargs)
+
+        if app:
+            kwargs["expect_errors"] = True
+            kwargs.pop("stream", None)
+            kwargs.pop("verify", None)
+            kwargs.pop("auth", None)
+            kwargs.pop("cert", None)
+            if "data" in kwargs:
+                if isinstance(kwargs["data"], IterableToFileAdapter):
+                    data_accum = b""
+                    for tmp in kwargs["data"]:
+                        data_accum += tmp
+                    kwargs["data"] = data_accum
+                kwargs["params"] = kwargs["data"]
+                del kwargs["data"]  # Parameter in test app is called "params"
+            if kwargs.get("json"):
+                # json is a high level parameter of requests, not a generic one
+                # translate it to data and content_type
+                import json
+                kwargs["params"] = json.dumps(kwargs["json"])
+                kwargs["content_type"] = "application/json"
+            kwargs.pop("json", None)
+
+
         return app, url
 
-    def _set_auth_headers(self, auth, headers):
-        if auth:
+    @staticmethod
+    def _set_auth_headers(kwargs):
+        if kwargs.get("auth"):
             mock_request = Mock()
             mock_request.headers = {}
-            auth(mock_request)
-            headers.update(mock_request.headers)
+            kwargs["auth"](mock_request)
+            if "headers" not in kwargs:
+                kwargs["headers"] = {}
+            kwargs["headers"].update(mock_request.headers)
 
 
 class TestServer(object):
@@ -318,8 +327,7 @@ class TestClient(object):
         self.storage_folder = os.path.join(self.base_folder, ".conan", "data")
         self.client_cache = ClientCache(self.base_folder, self.storage_folder, TestBufferConanOutput())
 
-        search_adapter = DiskSearchAdapter()
-        self.search_manager = DiskSearchManager(self.client_cache, search_adapter)
+        self.search_manager = DiskSearchManager(self.client_cache)
 
         self.requester_class = requester_class
         self.conan_runner = runner
@@ -379,25 +387,19 @@ class TestClient(object):
                 real_servers = True
 
         if real_servers:
-            requester = requests
+            requester = requests.Session()
         else:
             if self.requester_class:
                 requester = self.requester_class(self.servers)
             else:
                 requester = TestRequester(self.servers)
 
-        # Verify client version against remotes
-        self.requester = VersionCheckerRequester(requester, self.client_version,
-                                                 self.min_server_compatible_version, output)
+        self.requester = ConanRequester(requester, self.client_cache)
 
-        put_headers = self.client_cache.read_put_headers()
-        self.rest_api_client = RestApiClient(output, requester=self.requester, put_headers=put_headers)
-        # To store user and token
-        self.localdb = LocalDB(self.client_cache.localdb)
-        # Wraps RestApiClient to add authentication support (same interface)
-        auth_manager = ConanApiAuthManager(self.rest_api_client, self.user_io, self.localdb)
-        # Handle remote connections
-        self.remote_manager = RemoteManager(self.client_cache, auth_manager, self.user_io.out)
+        self.localdb, self.rest_api_client, self.remote_manager = Conan.instance_remote_manager(
+                                                        self.requester, self.client_cache,
+                                                        self.user_io, self.client_version,
+                                                        self.min_server_compatible_version)
 
         set_global_instances(output, self.requester)
 
