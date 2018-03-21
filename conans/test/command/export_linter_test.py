@@ -7,7 +7,7 @@ from conans import tools
 
 
 conanfile = """
-from conans import ConanFile
+from conans import ConanFile, tools
 class TestConan(ConanFile):
     name = "Hello"
     version = "1.2"
@@ -15,6 +15,7 @@ class TestConan(ConanFile):
         print("HEllo world")
         for k, v in {}.iteritems():
             pass
+        tools.msvc_build_command(self.settings, "path")
 """
 
 
