@@ -8,7 +8,7 @@ from patch import fromfile, fromstring
 
 from conans.client.output import ConanOutput
 from conans.errors import ConanException
-from conans.util.files import load, save, _generic_algorithm_sum
+from conans.util.files import (load, save, _generic_algorithm_sum)
 
 
 _global_output = None
@@ -219,6 +219,7 @@ def replace_prefix_in_pc_file(pc_file, new_prefix):
             lines.append(line)
     save(pc_file, "\n".join(lines))
 
+
 def _path_equals(path1, path2):
     path1 = os.path.normpath(path1)
     path2 = os.path.normpath(path2)
@@ -226,6 +227,7 @@ def _path_equals(path1, path2):
         path1 = path1.lower().replace("sysnative", "system32")
         path2 = path2.lower().replace("sysnative", "system32")
     return path1 == path2
+
 
 def collect_libs(conanfile, folder="lib"):
     if not conanfile.package_folder:
