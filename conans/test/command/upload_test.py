@@ -186,6 +186,98 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Uploading conan_package.tgz", client2.out)
         self.assertIn("Package is up to date, upload skipped", client2.out)
 
+    def upload_no_overwrite_collsion_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile,
+                     "hello.cpp": ""})
+        client.run("create . frodo/stable")
+
+        # Not valid arguments
+        error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite kk", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR", client.out)
+
+        # --force not valid with --no-overwrite
+        error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite all --force",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR", client.out)
+
+    def upload_no_overwrite_all_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile,
+                     "hello.cpp": ""})
+        client.run("create . frodo/stable")
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+
+        # Without changes
+        client.run("create . frodo/stable")
+        client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite all")
+        self.assertIn("Recipe is already in the remote", client.out)
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+
+        # When packages changes
+        client.save({"bye.cpp": ""})
+        client.run("create . frodo/stable")
+        client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite all")
+        self.assertIn("Recipe is already in the remote", client.out)
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+
+        # When recipe changes
+        new_recipe = conanfile.replace("self.copy(\"*\")",
+                                       "self.copy(\"*\")\n        self.copy(\"*\")")
+        client.save({"conanfile.py": new_recipe})
+        client.run("create . frodo/stable")
+        client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite all")
+        self.assertIn("Recipe is already in the remote", client.out)
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+
+        # With package id
+        client.run("upload Hello0/1.2.1@frodo/stable -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --no-overwrite all")
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+
+        # with --all
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all")
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+
+    def upload_no_overwrite_recipe_test(self):
+        client = self._client()
+        client.save({"conanfile.py": conanfile,
+                     "hello.cpp": ""})
+        client.run("create . frodo/stable")
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+
+        # Without changes
+        client.run("create . frodo/stable")
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+        error = client.run(
+            "upload Hello0/1.2.1@frodo/stable --no-overwrite recipe", ignore_error=True)
+        # self.assertTrue(error)
+        # self.assertIn("ERROR: Recipe is already in the remote", client.out)
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+
+        # When packages changes
+        client.save({"bye.cpp": ""})
+        client.run("create . frodo/stable")
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+        error = client.run(
+            "upload Hello0/1.2.1@frodo/stable --no-overwrite recipe", ignore_error=True)
+        # self.assertTrue(error)
+        # self.assertIn("ERROR: Recipe is already in the remote", client.out)
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+
+        # When recipe changes
+        new_recipe = conanfile.replace("self.copy(\"*\")",
+                                       "self.copy(\"*\")\n        self.copy(\"*\")")
+        client.save({"conanfile.py": new_recipe})
+        client.run("create . frodo/stable")
+        error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite recipe",
+                           ignore_error=True)
+        # self.assertTrue(error)
+        # self.assertIn("ERROR: Recipe is already in the remote", client.out)
+        print("UPLOAD OUTPUUUUUUUUUUT:", client.out)
+
     def skip_upload_test(self):
         """ Check that the option --dry does not upload anything
         """
