@@ -1,6 +1,5 @@
 import platform
 import unittest
-
 import os
 
 from conans.test.utils.tools import TestClient
@@ -112,8 +111,9 @@ class CMakeFlagsTest(unittest.TestCase):
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.user_io.out)
-        self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+        self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
 
     def targets_own_flags_test(self):
         client = TestClient()
@@ -135,8 +135,9 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CmdCXXFlag", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 CmdCXXFlag", client.user_io.out)
-        self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+        self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
 
     def transitive_targets_flags_test(self):
         client = TestClient()
@@ -161,10 +162,12 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn("My", cmake_cxx_flags)
         self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2 MyChatFlag1 MyChatFlag2",
                       client.user_io.out)
-        self.assertIn("HELLO_CXX_FLAGS=MyFlag1;MyFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+        self.assertIn("HELLO_CXX_FLAGS=-load;C:\some\path;MyFlag1;MyFlag2;"
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
         self.assertIn("CHAT_CXX_FLAGS=MyChatFlag1;MyChatFlag2;"
-                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.user_io.out)
+                      "$<$<CONFIG:Release>:;>;$<$<CONFIG:RelWithDebInfo>:;>;"
+                      "$<$<CONFIG:MinSizeRel>:;>;$<$<CONFIG:Debug>:;>", client.out)
 
     def cmake_test_needed_settings(self):
         conanfile = """
