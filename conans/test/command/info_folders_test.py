@@ -153,9 +153,9 @@ class InfoFoldersTest(unittest.TestCase):
             return
 
         folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
-        import win32api
-        volume = win32api.GetVolumeInformation(os.path.splitdrive(folder)[0])[-1]
-        if volume != "NTFS":
+
+        out = subprocess.check_output("wmic logicaldisk %s get FileSystem" % os.path.splitdrive(folder)[0])
+        if "NTFS" not in out:
             return
         short_folder = os.path.join(folder, ".cnacls")
 
