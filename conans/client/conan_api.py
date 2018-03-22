@@ -25,6 +25,7 @@ from conans.client.rest.rest_client import RestApiClient
 from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans.client.runner import ConanRunner
+from conans.client.run_environment import RunEnvironment
 from conans.client.store.localdb import LocalDB
 from conans.client.cmd.test import PackageTester
 from conans.client.userio import UserIO
@@ -904,6 +905,8 @@ class ConanAPIV1(object):
                                               build_modes=build_modes,
                                               update=update)
 
+            run_env = RunEnvironment(conanfile).vars
+
             # Determine the environment variables for the given conanfile.
             env_vars = VirtualEnvGenerator(conanfile).format_values("exec", None, env=initial_env)
         finally:
@@ -911,10 +914,19 @@ class ConanAPIV1(object):
             if temprecipe:
                 os.unlink(temprecipe.name)
 
-        # Update the environment with the information from the
-        # virtual environment generator.
+        # Update the environment with the information from the virtual
+        # environment generator.
         for key,value,_ in env_vars:
             initial_env[key] = value
+
+        # Append the data from the run environment.
+        for key,value in run_env.items():
+            value = os.pathsep.join(value)
+            if key in initial_env.keys():
+                initial_env[key] += "%s%s" % (os.pathsep, value)
+            else:
+                initial_env[key] = value
+
 
         # Change to the correct directory which might has been changed during
         # installation and launch the command in the new environment.
