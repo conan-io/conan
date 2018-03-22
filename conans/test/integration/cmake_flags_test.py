@@ -16,6 +16,7 @@ class HelloConan(ConanFile):
     build_policy="missing"
     def package_info(self):
         self.cpp_info.cppflags = ["MyFlag1", "MyFlag2"]
+        self.cpp_info.cflags = ["-load", "C:\some\path"]
 """
 
 chatconanfile_py = """
@@ -44,6 +45,8 @@ conan_basic_setup()
 
 message(STATUS "CMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}")
 message(STATUS "CONAN_CXX_FLAGS=${CONAN_CXX_FLAGS}")
+message(STATUS "CMAKE_C_FLAGS=${CMAKE_C_FLAGS}")
+message(STATUS "CONAN_C_FLAGS=${CONAN_C_FLAGS}")
 message(STATUS "HELLO_CXX_FLAGS=${HELLO_FLAGS}")
 message(STATUS "CHAT_CXX_FLAGS=${CHAT_FLAGS}")
 """
@@ -72,7 +75,9 @@ class CMakeFlagsTest(unittest.TestCase):
         client.runner("cmake .", cwd=client.current_folder)
         cmake_cxx_flags = self._get_line(client.user_io.out, "CMAKE_CXX_FLAGS")
         self.assertTrue(cmake_cxx_flags.endswith("MyFlag1 MyFlag2"))
-        self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.user_io.out)
+        self.assertIn("CONAN_CXX_FLAGS=MyFlag1 MyFlag2", client.out)
+        self.assertIn("CMAKE_C_FLAGS= -load C:\some\path", client.out)
+        self.assertIn("CONAN_C_FLAGS=-load C:\some\path ", client.out)
 
     def transitive_flags_test(self):
         client = TestClient()
