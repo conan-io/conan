@@ -889,7 +889,8 @@ class Command(object):
         parser.add_argument('--retry-wait', default=5, type=int,
                             help='Waits specified seconds before retry again',
                             action=OnceArgument)
-        parser.add_argument("-no", "--no-overwrite", type=str, choices=["all", "recipe"],
+        parser.add_argument("-no", "--no-overwrite", type=str,
+                            choices=["all", "recipe", "packages"],
                             help="Uploads package only if recipe is the same as the remote one",
                             action=OnceArgument)
 
