@@ -44,7 +44,7 @@ def input_credentials_if_unauthorized(func):
                 if "bintray" in remote.url:
                     self._user_io.out.info('If you don\'t have an account sign up here: '
                                            'https://bintray.com/signup/oss')
-                disable_login_prompt = getenv("CONAN_DISABLE_LOGIN_PROMPT", "True")
+                disable_login_prompt = getenv("CONAN_DISABLE_LOGIN_PROMPT", "False")
                 if disable_login_prompt == "True":
                     raise AuthenticationException('User "%s" not authenticated' % self.user)
                 return retry_with_new_token(self, *args, **kwargs)
