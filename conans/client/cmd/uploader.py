@@ -155,10 +155,3 @@ class CmdUpload(object):
             return
 
         raise ConanException("Recipe already in the remote. Skipping overwrite.")
-
-    def _check_package_already_uploaded(self, package_ref):
-        try:
-            remote_package_manifest = self._remote_proxy.get_package_digest(package_ref)
-            return True
-        except NotFoundException:
-            return False
