@@ -3,7 +3,6 @@ import logging
 import re
 import os
 import sys
-import tempfile
 
 from contextlib import contextmanager
 from patch import fromfile, fromstring
@@ -12,23 +11,6 @@ from conans.client.output import ConanOutput
 from conans.errors import ConanException
 from conans.util.files import load, save, _generic_algorithm_sum
 
-
-try:
-    import gnupg
-#create a GPG object. If gpg not available on the system, catch the error
-#and the method will fail later
-    
-    _GPG_HOME_DIR = tempfile.mkdtemp(suffix="_conan_gpg")
-    
-    if platform.system() == "Windows":
-        _GPG = gnupg.GPG(gpgbinary="gpg.exe", gnupghome=_GPG_HOME_DIR)
-    else:
-        _GPG = gnupg.GPG(gnupghome=_GPG_HOME_DIR)
-        
-    
-except OSError as err:
-    _GPG = None
-    _GPG_ERROR = err.args[0]
 
 _global_output = None
 
@@ -321,70 +303,3 @@ def which(filename):
                         return trick_path
 
     return None
-
-
-def verify_gpg_sig(data_file, pubkey, sig_file=None, delete_after=True,
-                   keyserver=None):
-    """ verify a supplied GPG signature for a file.
-
-        data_file: filename of the data to verify, e.g. "awesome-lib-v1.tar.gz"
-
-        pubkey: either a filename or key fingerprint / keyid of the public key
-        e.g. "developer_pubkey.txt" or "0B8DA90F"
-
-        sig_file: file name of detached signature, e.g.
-        "awesome-lib-v1.tar.gz.sig" or "awesome-lib-v1.tar.gz.asc"
-        if not provided, assume a signature is present in the file itself
-
-        keyserver: address of the keyserver to retrieve public key from. 
-        keys.gnupg.net is used if none is given
-
-    """
-    if not _GPG:
-        raise ConanException("pygnupg was unable to find GPG binary. Reported error was: %s"
-                             % _GPG_ERROR)
-
-    keyserver = "keys.gnupg.net" if keyserver is None else keyserver
-
-    if os.path.isfile(pubkey):
-        #import pubkey from a file
-        with open(pubkey, "r") as f:
-            import_key_result = _GPG.import_keys(f.read())
-    elif len(pubkey) == 8 or len(pubkey) == 40:
-        #this is a fingerprint or keyid
-        import_key_result = _GPG.recv_keys(keyserver,pubkey)
-    else:
-        #this is a GPG public key ascii-armored in a string
-        import_key_result = _GPG.import_keys(pubkey)
-
-
-    #check if key was imported correctly
-
-    if "problem" in import_key_result.results[0]:
-        raise ConanException("failed to import public key from file: %s "
-                             % import_key_result.problem_reason[
-                            import_key_result.results[0]["problem"]])
-
-    fingerprint = import_key_result.fingerprints[0]
-
-
-    try:
-        if sig_file is None:
-            with open(data_file, "rb") as f:
-                verify_result = _GPG.verify_file(f)
-        else:
-            with open(sig_file, "rb") as f:
-                verify_result = _GPG.verify_file(f, data_file)
-
-    finally:
-        if delete_after:
-            delete_result = _GPG.delete_keys(fingerprint)
-            if delete_result.status != 'ok':
-                ConanOutput(sys.stdout).warn("couldn't cleanup GPG keyring")
-
-    if not verify_result.valid:
-        raise ConanException("""GPG signature verification failed for file: %s
-                                using pubkey with fingerprint : %s.
-                                status message is: %s
-                                """
-                             % (data_file, fingerprint, verify_result.status))
