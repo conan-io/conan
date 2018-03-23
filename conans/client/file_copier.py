@@ -1,7 +1,6 @@
 import os
 import fnmatch
 import shutil
-import stat
 from collections import defaultdict
 
 from conans import tools
