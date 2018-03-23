@@ -155,7 +155,7 @@ class InfoFoldersTest(unittest.TestCase):
         folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
 
         out = subprocess.check_output("wmic logicaldisk %s get FileSystem" % os.path.splitdrive(folder)[0])
-        if "NTFS" not in out:
+        if "NTFS" not in str(out):
             return
         short_folder = os.path.join(folder, ".cnacls")
 
