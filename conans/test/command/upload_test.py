@@ -216,12 +216,18 @@ class UploadTest(unittest.TestCase):
         self.assertNotIn("Skipping overwrite", client.out)
         self.assertIn("'recipe' value as 'no_overwrite' argument cannot be used together with 'package'", client.out)
 
-        # 'packages' value not valid if not uploading packages
-        error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite packages", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("ERROR", client.out)
-
     def upload_no_overwrite_all_test(self):
+        conanfile_new = """from conans import ConanFile
+class MyPkg(ConanFile):
+    name = "Hello0"
+    version = "1.2.1"
+    exports_sources = "*"
+    options = {"shared": [True, False]}
+    default_options = "shared=False"
+
+    def package(self):
+        self.copy("*")
+"""
         client = self._client()
         client.save({"conanfile.py": conanfile,
                      "hello.cpp": ""})
@@ -230,69 +236,23 @@ class UploadTest(unittest.TestCase):
 
         # CASE Without changes
         client.run("create . frodo/stable")
-        ## upload only recipe
-        client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite all")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        ## upload only package
-        client.run("upload Hello0/1.2.1@frodo/stable -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --no-overwrite all")
-        self.assertNotIn("Skipping overwrite", client.out)  # Recipe newer but has not changed
-        self.assertIn("Package is up to date, upload skipped", client.out)
         ## upload recipe and packages
         client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
+        self.assertIn("Recipe is up to date, upload skipped", client.all_output)
         self.assertIn("Package is up to date, upload skipped", client.out)
+        self.assertNotIn("Skipping overwrite", client.out)
 
         # CASE When recipe changes
         new_recipe = conanfile.replace("self.copy(\"*\")",
                                        "self.copy(\"*\")\n        self.copy(\"*\")")
         client.save({"conanfile.py": new_recipe})
         client.run("create . frodo/stable")
-        ## upload only recipe
-        client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite all")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        ## upload only package
-        client.run("upload Hello0/1.2.1@frodo/stable -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --no-overwrite all")
-        self.assertIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
         ## upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        self.assertIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all",
+                           ignore_error=True)
+        self.assertTrue(error)
         self.assertIn("Skipping overwrite", client.out)
         self.assertNotIn("Uploading package", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
-
-        # CASE When package and recipe changes
-        client.run("upload Hello0/1.2.1@frodo/stable --all")
-        client.save({"bye.cpp": ""})
-        client.run("create . frodo/stable")
-        ##  upload only recipe
-        client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite all")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        ## upload only package
-        client.run("upload Hello0/1.2.1@frodo/stable -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --no-overwrite all")
-        self.assertIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploading package", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
-        ## upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        self.assertIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploading package", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
 
     def upload_no_overwrite_recipe_test(self):
         client = self._client()
@@ -301,107 +261,11 @@ class UploadTest(unittest.TestCase):
         client.run("create . frodo/stable")
         client.run("upload Hello0/1.2.1@frodo/stable --all")
 
-        # CASE Without changes
-        client.run("create . frodo/stable")
-        ## upload only recipe
-        client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite recipe")
-        self.assertIn("Recipe is already in the remote", client.out)
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe",
+                           ignore_error=True)
+        self.assertIn("Recipe already in the remote", client.out)
         self.assertIn("Skipping overwrite", client.out)
         self.assertNotIn("Uploaded conan recipe", client.out)
-        ## upload recipe and package
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        self.assertIn("Package is up to date, upload skipped", client.out)
-
-        # CASE When recipe changes
-        new_recipe = conanfile.replace("self.copy(\"*\")",
-                                       "self.copy(\"*\")\n        self.copy(\"*\")")
-        client.save({"conanfile.py": new_recipe})
-        client.run("create . frodo/stable")
-        ## upload only recipe
-        client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite recipe")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        ## upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertIn("Uploading package", client.out)  # package different as recipe hash changes
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
-        self.assertNotIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
-
-        # CASE When package and recipe changes
-        client.run("upload Hello0/1.2.1@frodo/stable --all")
-        client.save({"bye.cpp": ""})
-        client.run("create . frodo/stable")
-        ## upload only recipe
-        client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite recipe")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        ## upload recipe and package
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
-        self.assertIn("Recipe is already in the remote", client.out)
-        self.assertNotIn("Uploaded conan recipe", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertIn("Uploading package", client.out)
-        self.assertNotIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
-
-    def upload_no_overwrite_packages_test(self):
-        client = self._client()
-        client.save({"conanfile.py": conanfile,
-                     "hello.cpp": ""})
-        client.run("create . frodo/stable")
-
-        #CASE With no uploaded
-        ## upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite packages")
-        self.assertIn("Uploaded conan recipe", client.out)
-        self.assertIn("Uploading package", client.out)
-        self.assertNotIn("Recipe is already in the remote", client.out)
-        self.assertNotIn("Skipping overwrite", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
-
-        # CASE Without changes
-        client.run("upload Hello0/1.2.1@frodo/stable --all")
-        client.run("create . frodo/stable")
-        ## upload only package
-        client.run("upload Hello0/1.2.1@frodo/stable -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --no-overwrite packages")
-        self.assertIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploading package", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
-        ## upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite packages")
-        self.assertIn("Recipe is up to date, upload skipped", client.out)
-        self.assertNotIn("Recipe is already in the remote", client.out)
-        self.assertIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploading package", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
-
-        # CASE When recipe changes
-        new_recipe = conanfile.replace("self.copy(\"*\")",
-                                       "self.copy(\"*\")\n        self.copy(\"*\")")
-        client.save({"conanfile.py": new_recipe})
-        client.run("create . frodo/stable")
-        ## upload only package
-        client.run("upload Hello0/1.2.1@frodo/stable -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --no-overwrite packages")
-        self.assertIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
-        ## upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite packages")
-        self.assertIn("Uploaded conan recipe", client.out)
-        self.assertIn("Package Hello0/1.2.1@frodo/stable:5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 already in remote", client.out)
-        self.assertIn("Skipping overwrite", client.out)
-        self.assertNotIn("Uploading package", client.out)
-        self.assertNotIn("Package is up to date, upload skipped", client.out)
 
     def skip_upload_test(self):
         """ Check that the option --dry does not upload anything

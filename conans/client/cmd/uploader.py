@@ -37,7 +37,7 @@ class CmdUpload(object):
         if package_id:  # Upload package
             ref = ConanFileReference.loads(conan_reference_or_pattern)
             self._check_reference(ref)
-            self.upload_package(ref, package_id, retry=retry,
+            self.upload_package(PackageReference(ref, package_id), retry=retry,
                                 retry_wait=retry_wait, skip_upload=skip_upload,
                                 integrity_check=integrity_check, no_overwrite=no_overwrite)
         else:  # Upload conans
@@ -80,21 +80,21 @@ class CmdUpload(object):
         """Uploads the recipes and binaries identified by conan_ref"""
         if not force:
             self._check_recipe_date(conan_ref)
-        if no_overwrite in ["all", "recipe"] and self._check_recipe_already_uploaded(conan_ref):
-            self._user_io.out.info("Recipe is already in the remote: %s. Skipping overwrite."
-                                   % self._remote_proxy._remote_name)
-        else:
-            self._user_io.out.info("Uploading %s" % str(conan_ref))
-            self._remote_proxy.upload_recipe(conan_ref, retry, retry_wait, skip_upload)
+        if no_overwrite == "all":
+            self._check_recipe_different(conan_ref)
+        elif no_overwrite == "recipe":
+            self._check_recipe_already_uploaded(conan_ref)
+
+        self._user_io.out.info("Uploading %s" % str(conan_ref))
+        self._remote_proxy.upload_recipe(conan_ref, retry, retry_wait, skip_upload)
 
         if all_packages:
             self._check_reference(conan_ref)
 
             for index, package_id in enumerate(self._client_cache.conan_packages(conan_ref)):
                 total = len(self._client_cache.conan_packages(conan_ref))
-                self.upload_package(conan_ref, package_id, index + 1, total,
-                                    retry, retry_wait, skip_upload, integrity_check,
-                                    no_overwrite)
+                self.upload_package(PackageReference(conan_ref, package_id), index + 1, total,
+                                    retry, retry_wait, skip_upload, integrity_check, no_overwrite)
 
     def _check_reference(self, conan_reference):
         try:
@@ -109,22 +109,9 @@ class CmdUpload(object):
             raise ConanException("Conanfile has build_policy='always', "
                                  "no packages can be uploaded")
 
-    def upload_package(self, conan_ref, package_id, index=1, total=1, retry=None, retry_wait=None,
+    def upload_package(self, package_ref, index=1, total=1, retry=None, retry_wait=None,
                        skip_upload=False, integrity_check=False, no_overwrite=None):
         """Uploads the package identified by package_id"""
-
-        package_ref = PackageReference(conan_ref, package_id)
-
-        if no_overwrite == "packages" and self._check_package_already_uploaded(package_ref):
-            self._user_io.out.info("Package %s already in remote '%s' Skipping overwrite."
-                                   % (package_ref, self._remote_proxy._remote_name))
-            return
-        print("package_upload:", no_overwrite, self._check_recipe_updated(conan_ref), self._check_package_already_uploaded(package_ref))
-        if (no_overwrite == "all" and self._check_recipe_updated(conan_ref) and
-            self._check_package_already_uploaded(package_ref)):
-            self._user_io.out.info("Package %s already in remote '%s' and recipe has changed. Skipping overwrite."
-                                   % (package_ref, self._remote_proxy._remote_name))
-            return
 
         msg = ("Uploading package %d/%d: %s" % (index, total, str(package_ref.package_id)))
         t1 = time.time()
@@ -148,23 +135,25 @@ class CmdUpload(object):
                                  "\n Remote date: %s\n Local date: %s" %
                                  (remote_recipe_manifest.time, local_manifest.time))
 
-    def _check_recipe_updated(self, conan_ref):
+    def _check_recipe_different(self, conan_ref):
         try:
-            remote_recipe_manifest = self._remote_proxy.get_conan_digest(conan_ref)
+            remote_manifest = self._remote_proxy.get_conan_digest(conan_ref)
         except NotFoundException:
-            return True
+            return
 
         local_manifest = self._client_cache.load_manifest(conan_ref)
 
-        return (remote_recipe_manifest != local_manifest and
-                remote_recipe_manifest.time < local_manifest.time)
+        if (remote_manifest != local_manifest):
+            raise ConanException("Local recipe is different from the remote recipe. "
+                                 "Skipping overwrite.")
 
     def _check_recipe_already_uploaded(self, conan_ref):
         try:
-            remote_recipe_manifest = self._remote_proxy.get_conan_digest(conan_ref)
-            return True
+            self._remote_proxy.get_conan_digest(conan_ref)
         except NotFoundException:
-            return False
+            return
+
+        raise ConanException("Recipe already in the remote. Skipping overwrite.")
 
     def _check_package_already_uploaded(self, package_ref):
         try:
