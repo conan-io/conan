@@ -8,7 +8,7 @@ class DeployImportFilePermissionTest(unittest.TestCase):
     def setUp(self):
         self.file_name = 'myheader.h'
 
-    def _client(self, *, ro_file, ro_cache):
+    def _client(self, ro_file, ro_cache):
         client = TestClient()
         if ro_cache:
             client.run("config set general.read_only_cache=True")
