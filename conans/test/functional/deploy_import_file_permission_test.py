@@ -43,42 +43,45 @@ Pkg/0.1@lasote/channel
         with client.chdir('deploy'):
             client.run('install Pkg/0.1@lasote/channel')
 
+    def _is_file_writable(self, client, folder):
+        return bool(os.stat(os.path.join(client.current_folder, folder, self.file_name)).st_mode & stat.S_IWRITE)
+
     def import_rw_file_rw_cache_test(self):
         client = self._client(ro_file=False, ro_cache=False)
         self._import(client)
-        self.assertTrue(os.stat(os.path.join(client.current_folder, 'import', self.file_name)).st_mode & stat.S_IWRITE)
+        self.assertTrue(self._is_file_writable(client, 'import'))
 
     def import_ro_file_rw_cache_test(self):
         client = self._client(ro_file=True, ro_cache=False)
         self._import(client)
-        self.assertFalse(os.stat(os.path.join(client.current_folder, 'import', self.file_name)).st_mode & stat.S_IWRITE)
+        self.assertFalse(self._is_file_writable(client, 'import'))
 
     def import_rw_file_ro_cache_test(self):
         client = self._client(ro_file=False, ro_cache=True)
         self._import(client)
-        self.assertFalse(os.stat(os.path.join(client.current_folder, 'import', self.file_name)).st_mode & stat.S_IWRITE)
+        self.assertTrue(self._is_file_writable(client, 'import'))
 
     def import_ro_file_ro_cache_test(self):
         client = self._client(ro_file=True, ro_cache=True)
         self._import(client)
-        self.assertFalse(os.stat(os.path.join(client.current_folder, 'import', self.file_name)).st_mode & stat.S_IWRITE)
+        self.assertTrue(self._is_file_writable(client, 'import'))
 
     def deploy_rw_file_rw_cache_test(self):
         client = self._client(ro_file=False, ro_cache=False)
         self._deploy(client)
-        self.assertTrue(os.stat(os.path.join(client.current_folder, 'deploy', self.file_name)).st_mode & stat.S_IWRITE)
+        self.assertTrue(self._is_file_writable(client, 'deploy'))
 
     def deploy_ro_file_rw_cache_test(self):
         client = self._client(ro_file=True, ro_cache=False)
         self._deploy(client)
-        self.assertFalse(os.stat(os.path.join(client.current_folder, 'deploy', self.file_name)).st_mode & stat.S_IWRITE)
+        self.assertFalse(self._is_file_writable(client, 'deploy'))
 
     def deploy_rw_file_ro_cache_test(self):
         client = self._client(ro_file=False, ro_cache=True)
         self._deploy(client)
-        self.assertFalse(os.stat(os.path.join(client.current_folder, 'deploy', self.file_name)).st_mode & stat.S_IWRITE)
+        self.assertTrue(self._is_file_writable(client, 'deploy'))
 
     def deploy_ro_file_ro_cache_test(self):
         client = self._client(ro_file=True, ro_cache=True)
         self._deploy(client)
-        self.assertFalse(os.stat(os.path.join(client.current_folder, 'deploy', self.file_name)).st_mode & stat.S_IWRITE)
+        self.assertTrue(self._is_file_writable(client, 'deploy'))

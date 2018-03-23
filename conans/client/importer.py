@@ -63,13 +63,11 @@ def _report_save_manifest(copied_files, output, dest_folder, manifest_name):
         save(os.path.join(dest_folder, manifest_name), str(manifest))
 
 def _make_files_writable(file_names):
-    if get_env("CONAN_READ_ONLY_CACHE", False):
+    if not get_env("CONAN_READ_ONLY_CACHE", False):
         return
 
-    return
-
-    # for file_name in file_names:
-    #     os.chmod(file_name, os.stat(file_name).st_mode | stat.S_IWRITE)
+    for file_name in file_names:
+        os.chmod(file_name, os.stat(file_name).st_mode | stat.S_IWRITE)
 
 def run_imports(conanfile, dest_folder, output):
     if not hasattr(conanfile, "imports"):
