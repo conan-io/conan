@@ -172,6 +172,6 @@ class FileCopier(object):
             else:
                 shutil.copy2(abs_src_name, abs_dst_name)
                 if make_writable:
-                    os.chmod(abs_dst_name, stat.S_IWRITE)
+                    os.chmod(abs_dst_name, os.stat(abs_dst_name).st_mode | stat.S_IWRITE)
             copied_files.append(abs_dst_name)
         return copied_files
