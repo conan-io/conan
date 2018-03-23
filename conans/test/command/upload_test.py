@@ -203,19 +203,6 @@ class UploadTest(unittest.TestCase):
         self.assertTrue(error)
         self.assertIn("ERROR", client.out)
 
-        # --force not valid with --no-overwrite
-        error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite recipe -p 8y321idhwihd",
-                           ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("ERROR", client.out)
-
-        # 'recipe' value not valid as argument together with 'package'
-        error = client.run("upload Hello0/1.2.1@frodo/stable -p 5ab84d6acfe1f23c4fae0ab88f26e3a396351ac9 --no-overwrite recipe", ignore_error=True)
-        self.assertTrue(error)
-        self.assertIn("ERROR", client.out)
-        self.assertNotIn("Skipping overwrite", client.out)
-        self.assertIn("'recipe' value as 'no_overwrite' argument cannot be used together with 'package'", client.out)
-
     def upload_no_overwrite_all_test(self):
         conanfile_new = """from conans import ConanFile
 class MyPkg(ConanFile):

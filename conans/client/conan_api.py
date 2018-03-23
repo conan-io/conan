@@ -615,13 +615,6 @@ class ConanAPIV1(object):
 
         if force and no_overwrite:
             raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
-        if package and no_overwrite == "recipe":
-            raise ConanException(
-                "'recipe' value as 'no_overwrite' argument cannot be used together with 'package'")
-        if package and all_packages:
-            raise ConanException("'package' argument cannot be used together with 'all'")
-        if package and force:
-            raise ConanException("'package' argument cannot be used together with 'force'")
 
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager, remote)
         return uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
