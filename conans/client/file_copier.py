@@ -27,7 +27,7 @@ class FileCopier(object):
     imports: package folder -> user folder
     export: user folder -> store "export" folder
     """
-    def __init__(self, root_source_folder, root_destination_folder, excluded=None, make_writable=False):
+    def __init__(self, root_source_folder, root_destination_folder, excluded=None):
         """
         Takes the base folders to copy resources src -> dst. These folders names
         will not be used in the relative names while copying
@@ -42,7 +42,6 @@ class FileCopier(object):
         self._excluded = [root_destination_folder]
         if excluded:
             self._excluded.append(excluded)
-        self._make_writable = make_writable
 
     def report(self, output, warn=False):
         report_copied_files(self._copied, output, warn)
@@ -76,7 +75,7 @@ class FileCopier(object):
 
         files_to_copy, link_folders = self._filter_files(src, pattern, links, excludes,
                                                          ignore_case)
-        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links, self._make_writable)
+        copied_files = self._copy_files(files_to_copy, src, dst, keep_path, links)
         self._link_folders(src, dst, link_folders)
         self._copied.extend(files_to_copy)
         return copied_files
@@ -149,7 +148,7 @@ class FileCopier(object):
                     os.symlink(link, linked_folder)
 
     @staticmethod
-    def _copy_files(files, src, dst, keep_path, symlinks, make_writable):
+    def _copy_files(files, src, dst, keep_path, symlinks):
         """ executes a multiple file copy from [(src_file, dst_file), (..)]
         managing symlinks if necessary
         """
@@ -171,7 +170,5 @@ class FileCopier(object):
                 os.symlink(linkto, abs_dst_name)  # @UndefinedVariable
             else:
                 shutil.copy2(abs_src_name, abs_dst_name)
-                if make_writable:
-                    os.chmod(abs_dst_name, os.stat(abs_dst_name).st_mode | stat.S_IWRITE)
             copied_files.append(abs_dst_name)
         return copied_files
