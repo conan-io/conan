@@ -64,8 +64,10 @@ class FileCopier(object):
         # Check for ../ patterns and allow them
         if pattern.startswith(".."):
             rel_dir = os.path.abspath(os.path.join(self._base_src, pattern))
-            base_src = os.path.dirname(rel_dir)
-            pattern = os.path.basename(rel_dir)
+            base_src = os.path.commonprefix([rel_dir, self._base_src])
+            pattern = os.path.relpath(rel_dir, base_src)
+            # base_src = os.path.dirname(rel_dir)
+            # pattern = os.path.basename(rel_dir)
         else:
             base_src = self._base_src
 
