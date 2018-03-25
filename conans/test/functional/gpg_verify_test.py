@@ -18,7 +18,6 @@ from conans.errors import ConanException
 
 
 from conans.tools import verify_gpg_sig
-from conans.client.tools.files import _GPG
 
 PASSPHRASE = "test_key"
 TEST_MESSAGE_CONTENTS = "test message"
@@ -147,7 +146,7 @@ def _generate_gpg_data(basename):
     #import private key
     gpgbinary = "gpg.exe" if platform.system() == "Windows" else "gpg"
     gpghome = tempfile.mkdtemp()
-    
+
     _gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gpghome)
     print(gnupg.__file__)
     _gpg.import_keys(GPG_PRIVATE_KEY)
@@ -168,7 +167,7 @@ def _generate_gpg_data(basename):
         raise RuntimeError("failed to sign test data")
 
     #sign binary file detached ascii signature
-    with open(basename + ".tar.gz","rb") as f:
+    with open(basename + ".tar.gz", "rb") as f:
         signed = _gpg.sign_file(f, keyid=FINGERPRINT[-8:],
                                 passphrase=PASSPHRASE, detach=True,
                                 binary=False, output=basename+".tar.gz.asc")
@@ -203,39 +202,37 @@ class GPGVerifyTest(unittest.TestCase):
     def tearDown(self):
         map(os.remove, self._data_files)
 
-    def testCorrectVerifyFile(self):
+    def test_correct_verify_file(self):
         verify_gpg_sig(data_file=self._data_file, pubkey=GPG_PUBLIC_KEY,
                        sig_file=self._sig_file)
-
         #if we got to here without throwing, verification completed
 
-    def testIncorrectSignatureVerifyFile(self):
+    def test_incorrect_signature_verify_file(self):
         with self.assertRaises(ConanException):
             verify_gpg_sig(data_file=self._data_file, pubkey=GPG_PUBLIC_KEY,
                            sig_file=self._data_file)
 
-    def testIncorrectPubkeyVerifyFile(self):
+    def test_incorrect_pubkey_verify_file(self):
         with self.assertRaises(ConanException):
             verify_gpg_sig(data_file=self._data_file, pubkey="public",
                            sig_file=self._sig_file)
-            
-    def testVerifyWithKeyFile(self):
+
+    def test_verify_with_key_file(self):
         verify_gpg_sig(data_file=self._data_file, pubkey=self._key_file,
                        sig_file=self._sig_file)
-        
-    
-    def testVerifyWithASCIISignature(self):
+
+    def test_verify_with_plaintext_signature(self):
         verify_gpg_sig(data_file=self._data_file, pubkey=GPG_PUBLIC_KEY,
                        sig_file=self._ascii_sig_file)
-        
-    def testVerifyWithBadKeyFingerprint(self):
+
+    def test_verify_with_bad_key_fingerprint(self):
         #don't do network access, just test that this key isn't found with
         # a public keyserver
-        with self.assertRaises(ConanException):    
+        with self.assertRaises(ConanException):
             verify_gpg_sig(data_file=self._data_file, pubkey=FINGERPRINT,
                            sig_file=self._sig_file)
-        
-        
-        
+
+
+
 if __name__ == "__main__":
-    unittest.main()    
+    unittest.main()
