@@ -164,7 +164,6 @@ class CMake(object):
         if toolchain_file != "":
             logger.info("Setting Cross build toolchain file: %s" % toolchain_file)
             ret["CMAKE_TOOLCHAIN_FILE"] = toolchain_file
-            return ret
 
         if self._cmake_system_name is False:
             return ret
@@ -192,7 +191,7 @@ class CMake(object):
 
                 value = os.getenv(env_var, None)
                 if value:
-                    ret[env_var] = value
+                    ret[env_var[6:]] = value
 
             if self._conanfile and self._conanfile.deps_cpp_info.sysroot:
                 sysroot_path = self._conanfile.deps_cpp_info.sysroot
