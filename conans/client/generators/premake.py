@@ -1,15 +1,14 @@
 from conans.model import Generator
-from conans.paths import BUILD_INFO
-from conans import ConanFile, CMake
+from conans import ConanFile
 
 class PremakeDeps(object):
     def __init__(self, deps_cpp_info):
         self.include_paths = ",\n".join('"%s"' % p.replace("\\", "/")
-                                       for p in deps_cpp_info.include_paths)
+                                        for p in deps_cpp_info.include_paths)
         self.lib_paths = ",\n".join('"%s"' % p.replace("\\", "/")
-                                   for p in deps_cpp_info.lib_paths)
+                                    for p in deps_cpp_info.lib_paths)
         self.bin_paths = ",\n".join('"%s"' % p.replace("\\", "/")
-                                   for p in deps_cpp_info.bin_paths)
+                                    for p in deps_cpp_info.bin_paths)
         self.libs = ", ".join('"%s"' % p for p in deps_cpp_info.libs)
         self.defines = ", ".join('"%s"' % p for p in deps_cpp_info.defines)
         self.cppflags = ", ".join('"%s"' % p for p in deps_cpp_info.cppflags)
@@ -18,14 +17,14 @@ class PremakeDeps(object):
         self.exelinkflags = ", ".join('"%s"' % p for p in deps_cpp_info.exelinkflags)
 
         self.rootpath = "%s" % deps_cpp_info.rootpath.replace("\\", "/")
-        
+
 class Premake(Generator):
     @property
     def filename(self):
         return "conanpremake.lua"
 
     @property
-    def content(self):     
+    def content(self):
         deps = PremakeDeps(self.deps_build_info)
 
         template = ('conan_includedirs{dep} = {{{deps.include_paths}}}\n'
@@ -57,11 +56,11 @@ class MyCustomGeneratorPackage(ConanFile):
     version = "0.1"
     url = "https://github.com/memsharded/conan-premake"
     license = "MIT"
-    
+
     def build(self):
-      pass
-    
+        pass
+
     def package_info(self):
-      self.cpp_info.includedirs = []
-      self.cpp_info.libdirs = []
-      self.cpp_info.bindirs = []
+        self.cpp_info.includedirs = []
+        self.cpp_info.libdirs = []
+        self.cpp_info.bindirs = []
