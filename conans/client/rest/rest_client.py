@@ -178,8 +178,6 @@ class RestApiClient(object):
         if not new and not deleted and modified == ["conanmanifest.txt"]:
             return False
 
-        print("DIFF:", no_overwrite, modified, new, deleted)
-
         if no_overwrite in ["all", "recipe"] and (modified not in (["conanmanifest.txt"], []) or
                                                   new or deleted):
             raise ConanException("Local recipe is different from the remote recipe. "

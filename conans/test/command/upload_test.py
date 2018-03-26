@@ -1,4 +1,5 @@
 import unittest
+from conans.tools import environment_append
 from conans.test.utils.tools import TestClient, TestServer
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.model.ref import ConanFileReference
@@ -204,13 +205,17 @@ class UploadTest(unittest.TestCase):
         self.assertIn("ERROR", client.out)
 
     def upload_no_overwrite_all_test(self):
-        conanfile_new = """from conans import ConanFile
+        conanfile_new = """from conans import ConanFile, tools
 class MyPkg(ConanFile):
     name = "Hello0"
     version = "1.2.1"
     exports_sources = "*"
     options = {"shared": [True, False]}
     default_options = "shared=False"
+
+    def build(self):
+        if tools.get_env("MY_VAR", False):
+            open("file.h", 'w').close()
 
     def package(self):
         self.copy("*.h")
@@ -248,14 +253,31 @@ class MyPkg(ConanFile):
         self.assertIn("Forbbiden overwrite", client.out)
         self.assertNotIn("Uploading package", client.out)
 
+         # CASE: When package changes
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+        with environment_append({"MY_VAR": "True"}):
+            client.run("create . frodo/stable")
+        ## upload recipe and packages
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all",
+                           ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
+        self.assertIn("ERROR: Local package is different from the remote package", client.out)
+        self.assertIn("Forbbiden overwrite", client.out)
+        self.assertNotIn("Uploading conan_package.tgz", client.out)
+
     def upload_no_overwrite_recipe_test(self):
-        conanfile_new = """from conans import ConanFile
+        conanfile_new = """from conans import ConanFile, tools
 class MyPkg(ConanFile):
     name = "Hello0"
     version = "1.2.1"
     exports_sources = "*"
     options = {"shared": [True, False]}
     default_options = "shared=False"
+
+    def build(self):
+        if tools.get_env("MY_VAR", False):
+            open("file.h", 'w').close()
 
     def package(self):
         self.copy("*.h")
@@ -286,11 +308,21 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": new_recipe})
         client.run("create . frodo/stable")
         ## upload recipe and packages
-        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all",
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe",
                            ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Forbbiden overwrite", client.out)
         self.assertNotIn("Uploading package", client.out)
+
+        # Create with package changes
+        client.run("upload Hello0/1.2.1@frodo/stable --all")
+        with environment_append({"MY_VAR": "True"}):
+            client.run("create . frodo/stable")
+        ## upload recipe and packages
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite recipe")
+        self.assertIn("Recipe is up to date, upload skipped", client.out)
+        self.assertIn("Uploading conan_package.tgz", client.out)
+        self.assertNotIn("Forbbiden overwrite", client.out)
 
     def skip_upload_test(self):
         """ Check that the option --dry does not upload anything
