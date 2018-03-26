@@ -81,13 +81,8 @@ class CmdUpload(object):
         if not force:
             self._check_recipe_date(conan_ref)
 
-        if no_overwrite == "all":
-            self._check_recipe_different(conan_ref)
-        elif no_overwrite == "recipe":
-            self._check_recipe_already_uploaded(conan_ref)
-
         self._user_io.out.info("Uploading %s" % str(conan_ref))
-        self._remote_proxy.upload_recipe(conan_ref, retry, retry_wait, skip_upload)
+        self._remote_proxy.upload_recipe(conan_ref, retry, retry_wait, skip_upload, no_overwrite)
 
         if all_packages:
             self._check_reference(conan_ref)
@@ -118,7 +113,7 @@ class CmdUpload(object):
         t1 = time.time()
         self._user_io.out.info(msg)
         self._remote_proxy.upload_package(package_ref, retry, retry_wait, skip_upload,
-                                          integrity_check)
+                                          integrity_check, no_overwrite)
 
         logger.debug("====> Time uploader upload_package: %f" % (time.time() - t1))
 
@@ -135,23 +130,3 @@ class CmdUpload(object):
             raise ConanException("Remote recipe is newer than local recipe: "
                                  "\n Remote date: %s\n Local date: %s" %
                                  (remote_recipe_manifest.time, local_manifest.time))
-
-    def _check_recipe_different(self, conan_ref):
-        try:
-            remote_manifest = self._remote_proxy.get_conan_digest(conan_ref)
-        except NotFoundException:
-            return
-
-        local_manifest = self._client_cache.load_manifest(conan_ref)
-
-        if (remote_manifest != local_manifest):
-            raise ConanException("Local recipe is different from the remote recipe. "
-                                 "Skipping overwrite.")
-
-    def _check_recipe_already_uploaded(self, conan_ref):
-        try:
-            self._remote_proxy.get_conan_digest(conan_ref)
-        except NotFoundException:
-            return
-
-        raise ConanException("Recipe already in the remote. Skipping overwrite.")
