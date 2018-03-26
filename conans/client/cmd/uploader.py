@@ -126,7 +126,7 @@ class CmdUpload(object):
         local_manifest = self._client_cache.load_manifest(conan_ref)
 
         if (remote_recipe_manifest != local_manifest and
-            remote_recipe_manifest.time > local_manifest.time):
+                remote_recipe_manifest.time > local_manifest.time):
             raise ConanException("Remote recipe is newer than local recipe: "
                                  "\n Remote date: %s\n Local date: %s" %
                                  (remote_recipe_manifest.time, local_manifest.time))

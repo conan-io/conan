@@ -175,11 +175,10 @@ class RestApiClient(object):
         if ignore_deleted_file and ignore_deleted_file in deleted:
             deleted.remove(ignore_deleted_file)
 
-        if not new and not deleted and modified == ["conanmanifest.txt"]:
+        if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
 
-        if no_overwrite in ["all", "recipe"] and (modified not in (["conanmanifest.txt"], []) or
-                                                  new or deleted):
+        if no_overwrite in ["all", "recipe"]:
             raise ConanException("Local recipe is different from the remote recipe. "
                                  "Forbbiden overwrite")
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
@@ -211,11 +210,10 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if not new and not deleted and modified == ["conanmanifest.txt"]:
+        if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
 
-        if no_overwrite in ["all"] and (modified not in (["conanmanifest.txt"], []) or new or
-                                        deleted):
+        if no_overwrite in ["all"]:
             raise ConanException("Local package is different from the remote package. "
                                  "Forbbiden overwrite")
 
