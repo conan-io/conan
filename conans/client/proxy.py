@@ -396,23 +396,3 @@ class ConanProxy(object):
         except NotFoundException as e:
             output.warn('Binary for %s not in remote: %s' % (package_id, str(e)))
             return False
-
-    def authenticate(self, name, password, all_remotes=False):
-        """
-        Manage user auth against remote.
-        Also displays a list of authenticated users against remote(s) if user name is evaluated to False.
-
-        :param name: user name string
-        :param password: password string
-        :param all_remotes: True/False to use all available remotes to display a list of authenticated users if
-                            user name is evaluated to False.
-        """
-        current_remote, _ = self._get_remote()
-
-        if name:
-            return self._remote_manager.authenticate(current_remote, name, password)
-
-        # List all users from required remotes
-        remotes = self._registry.remotes if all_remotes else [current_remote]
-        for remote in remotes:
-            self._remote_manager.authenticate(remote, None, None)

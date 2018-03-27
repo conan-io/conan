@@ -22,10 +22,10 @@ from conans.client.source import merge_directories
 class RemoteManager(object):
     """ Will handle the remotes to get conans, packages etc """
 
-    def __init__(self, client_cache, remote_client, output):
+    def __init__(self, client_cache, auth_manager, output):
         self._client_cache = client_cache
         self._output = output
-        self._remote_client = remote_client
+        self._auth_manager = auth_manager
 
     def upload_recipe(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file,
                       skip_upload=False, no_overwrite=None):
@@ -244,9 +244,9 @@ class RemoteManager(object):
         return self._call_remote(remote, 'authenticate', name, password)
 
     def _call_remote(self, remote, method, *argc, **argv):
-        self._remote_client.remote = remote
+        self._auth_manager.remote = remote
         try:
-            return getattr(self._remote_client, method)(*argc, **argv)
+            return getattr(self._auth_manager, method)(*argc, **argv)
         except ConnectionError as exc:
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))

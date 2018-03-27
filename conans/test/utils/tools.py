@@ -13,7 +13,7 @@ from mock import Mock
 from six.moves.urllib.parse import urlsplit, urlunsplit
 from webtest.app import TestApp
 
-from conans import __version__ as CLIENT_VERSION
+from conans import __version__ as CLIENT_VERSION, tools
 from conans.client import settings_preprocessor
 from conans.client.client_cache import ClientCache
 from conans.client.command import Command
@@ -33,6 +33,7 @@ from conans.test.server.utils.server_launcher import (TESTING_REMOTE_PRIVATE_USE
 from conans.test.utils.runner import TestRunner
 from conans.test.utils.test_files import temp_folder
 from conans.tools import set_global_instances
+from conans.util.env_reader import get_env
 from conans.util.files import save_files, save, mkdir
 from conans.util.log import logger
 
@@ -273,10 +274,11 @@ class MockedUserIO(UserIO):
         UserIO.__init__(self, ins, out)
 
     def get_username(self, remote_name):
-        """Overridable for testing purpose"""
         username_env = self._get_env_username(remote_name)
         if username_env:
             return username_env
+
+        self._raise_if_non_interactive()
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         if len(sub_dict) - 1 < index:
@@ -290,6 +292,7 @@ class MockedUserIO(UserIO):
         if password_env:
             return password_env
 
+        self._raise_if_non_interactive()
         sub_dict = self.logins[remote_name]
         index = self.login_index[remote_name]
         tmp = sub_dict[index][1]
@@ -417,8 +420,11 @@ class TestClient(object):
             tuple if required
         """
         self.init_dynamic_vars(user_io)
-        conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
-                      self.search_manager, settings_preprocessor)
+        with tools.environment_append(self.client_cache.conan_config.env_vars):
+            # Settings preprocessor
+            interactive = not get_env("CONAN_NON_INTERACTIVE", False)
+            conan = Conan(self.client_cache, self.user_io, self.runner, self.remote_manager,
+                          self.search_manager, settings_preprocessor, interactive=interactive)
         outputer = CommandOutputer(self.user_io, self.client_cache)
         command = Command(conan, self.client_cache, self.user_io, outputer)
         args = shlex.split(command_line)
