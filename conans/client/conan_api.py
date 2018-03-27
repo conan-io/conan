@@ -371,10 +371,12 @@ class ConanAPIV1(object):
                                  profile=profile, force=force)
 
     @api_method
-    def download(self, reference, remote=None, package=None):
+    def download(self, reference, remote=None, package=None, recipe=False):
+        if package and recipe:
+            raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         conan_ref = ConanFileReference.loads(reference)
-        self._manager.download(conan_ref, package, remote=remote)
+        self._manager.download(conan_ref, package, remote=remote, recipe=recipe)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -452,7 +454,7 @@ class ConanAPIV1(object):
     @api_method
     def config_install(self, item, verify_ssl):
         from conans.client.conf.config_installer import configuration_install
-        return configuration_install(item, self._client_cache, self._user_io.out, self._runner, verify_ssl)
+        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = os.getcwd()

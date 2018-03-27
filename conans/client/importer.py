@@ -1,6 +1,7 @@
 import calendar
 import fnmatch
 import os
+import stat
 import time
 
 from conans import tools
@@ -9,6 +10,7 @@ from conans.client.output import ScopedOutput
 from conans.errors import ConanException
 from conans.model.conan_file import get_env_context_manager
 from conans.model.manifest import FileTreeManifest
+from conans.util.env_reader import get_env
 from conans.util.files import save, md5sum, load
 
 IMPORTS_MANIFESTS = "conan_imports_manifest.txt"
@@ -60,6 +62,12 @@ def _report_save_manifest(copied_files, output, dest_folder, manifest_name):
         manifest = FileTreeManifest(date, file_dict)
         save(os.path.join(dest_folder, manifest_name), str(manifest))
 
+def _make_files_writable(file_names):
+    if not get_env("CONAN_READ_ONLY_CACHE", False):
+        return
+
+    for file_name in file_names:
+        os.chmod(file_name, os.stat(file_name).st_mode | stat.S_IWRITE)
 
 def run_imports(conanfile, dest_folder, output):
     if not hasattr(conanfile, "imports"):
@@ -71,6 +79,7 @@ def run_imports(conanfile, dest_folder, output):
         with tools.chdir(dest_folder):
             conanfile.imports()
     copied_files = file_importer.copied_files
+    _make_files_writable(copied_files)
     import_output = ScopedOutput("%s imports()" % output.scope, output)
     _report_save_manifest(copied_files, import_output, dest_folder, IMPORTS_MANIFESTS)
     return copied_files
@@ -95,6 +104,7 @@ def run_deploy(conanfile, install_folder, output):
     def file_copier(*args, **kwargs):
         file_copy = FileCopier(conanfile.package_folder, install_folder)
         copied = file_copy(*args, **kwargs)
+        _make_files_writable(copied)
         package_copied.update(copied)
 
     conanfile.copy_deps = file_importer

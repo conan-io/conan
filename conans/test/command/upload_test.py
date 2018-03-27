@@ -379,3 +379,51 @@ class Pkg(ConanFile):
         client2.run("upload * --all --confirm -r=server2")
         self.assertIn("Uploading conanfile.py", client2.out)
         self.assertIn("Uploading conan_package.tgz", client2.out)
+
+    def upload_login_prompt_disabled_no_user_test(self):
+        """ Without user info, uploads should fail when login prompt has been disabled.
+        """
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client = self._client()
+        client.save(files)
+        client.run("config set general.disable_login_prompt=True")
+        client.run("create . user/testing")
+        client.run("user -c")
+        error = client.run("upload Hello0/1.2.1@user/testing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn('ERROR: User "None" not authenticated', client.out)
+        self.assertNotIn("Uploading conanmanifest.txt", client.out)
+        self.assertNotIn("Uploading conanfile.py", client.out)
+        self.assertNotIn("Uploading conan_export.tgz", client.out)
+        
+    def upload_login_prompt_disabled_user_not_authenticated_test(self):
+        """ When a user is not authenticated, uploads should fail when login prompt has been disabled.
+        """
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client = self._client()
+        client.save(files)
+        client.run("config set general.disable_login_prompt=True")
+        client.run("create . user/testing")
+        client.run("user -c")
+        client.run("user lasote")
+        error = client.run("upload Hello0/1.2.1@user/testing", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn('ERROR: User "lasote" not authenticated', client.out)
+        self.assertNotIn("Uploading conanmanifest.txt", client.out)
+        self.assertNotIn("Uploading conanfile.py", client.out)
+        self.assertNotIn("Uploading conan_export.tgz", client.out)
+        
+    def upload_login_prompt_disabled_user_authenticated_test(self):
+        """ When a user is authenticated, uploads should work even when login prompt has been disabled.
+        """
+        files = cpp_hello_conan_files("Hello0", "1.2.1", build=False)
+        client = self._client()
+        client.save(files)
+        client.run("config set general.disable_login_prompt=True")
+        client.run("create . user/testing")
+        client.run("user -c")
+        client.run("user lasote -p mypass")
+        client.run("upload Hello0/1.2.1@user/testing")
+        self.assertIn("Uploading conanmanifest.txt", client.out)
+        self.assertIn("Uploading conanfile.py", client.out)
+        self.assertIn("Uploading conan_export.tgz", client.out)
