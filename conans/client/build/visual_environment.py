@@ -23,9 +23,7 @@ class VisualStudioBuildEnvironment(object):
                             environment_append keep it to True, for virtualbuildenv quote_paths=False is required.
         """
         self._settings = conanfile.settings
-        self._options = conanfile.options
         self._deps_cpp_info = conanfile.deps_cpp_info
-        self._build_type = self._settings.get_safe("build_type")
         self._runtime = self._settings.get_safe("compiler.runtime")
 
         self.include_paths = conanfile.deps_cpp_info.include_paths
@@ -43,12 +41,7 @@ class VisualStudioBuildEnvironment(object):
 
     def _configure_flags(self):
         ret = copy.copy(self._deps_cpp_info.cflags)
-        btd = build_type_define(build_type=self._build_type)
-        if btd:
-            ret.extend(format_defines([btd], compiler="Visual Studio"))
-        btf = build_type_flag("Visual Studio", build_type=self._build_type)
-        if btf:
-            ret.append(btf)
+        ret.extend(vs_build_type_flags(self._settings))
         return ret
 
     def _get_cl_list(self, quotes=True):
@@ -101,13 +94,30 @@ class VisualStudioBuildEnvironment(object):
         return ret
 
     def _std_cpp(self):
-        if self._settings.get_safe("compiler") == "Visual Studio" and \
-                self._settings.get_safe("cppstd"):
-            flag = cppstd_flag(self._settings.get_safe("compiler"),
-                               self._settings.get_safe("compiler.version"),
-                               self._settings.get_safe("cppstd"))
-            return flag
-        return None
+       return vs_std_cpp(self._settings)
+
+
+def vs_build_type_flags(settings):
+    build_type = settings.get_safe("build_type")
+    ret = []
+    btd = build_type_define(build_type=build_type)
+    if btd:
+        ret.extend(format_defines([btd], compiler="Visual Studio"))
+    btf = build_type_flag("Visual Studio", build_type=build_type)
+    if btf:
+        ret.append(btf)
+
+    return ret
+
+
+def vs_std_cpp(settings):
+    if settings.get_safe("compiler") == "Visual Studio" and \
+       settings.get_safe("cppstd"):
+        flag = cppstd_flag(settings.get_safe("compiler"),
+                           settings.get_safe("compiler.version"),
+                           settings.get_safe("cppstd"))
+        return flag
+    return None
 
 
 def _environ_value_prefix(var_name, prefix=" "):

@@ -3,7 +3,6 @@ import os
 from conans.errors import ConanException
 from conans.client.profile_loader import read_profile, get_profile_path
 from conans.util.files import save
-from conans.model.env_info import EnvValues
 from conans.model.options import OptionsValues
 from conans.model.profile import Profile
 from conans.client.conf.detect import detect_defaults_settings

@@ -206,11 +206,12 @@ class ConanManager(object):
             packager.create_package(conanfile, source_folder, build_folder, dest_package_folder,
                                     install_folder, package_output, local=True)
 
-    def download(self, reference, package_ids, remote):
+    def download(self, reference, package_ids, remote, recipe):
         """ Download conanfile and specified packages to local repository
         @param reference: ConanFileReference
         @param package_ids: Package ids or empty for download all
         @param remote: install only from that remote
+        @param only_recipe: download only the recipe
         """
         assert(isinstance(reference, ConanFileReference))
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
@@ -221,6 +222,10 @@ class ConanManager(object):
 
         # First of all download package recipe
         remote_proxy.get_recipe(reference)
+
+        if recipe:
+            return
+
         # Download the sources too, don't be lazy
         conan_file_path = self._client_cache.conanfile(reference)
         conanfile = load_conanfile_class(conan_file_path)
@@ -295,12 +300,8 @@ class ConanManager(object):
     def info_get_graph(self, reference, profile, remote=None, check_updates=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
-        @param current_path: where the output files will be saved
         @param remote: install only from that remote
-        @param profile: Profile object with both the -s introduced options and profile readed values
-        @param build_modes: List of build_modes specified
         """
-
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=False, check_updates=check_updates)
 
@@ -533,7 +534,9 @@ class ConanManager(object):
             if not remote:
                 remote = remote_proxy.registry.default_remote.name
             name, password = self._user_io.request_login(remote_name=remote, username=name)
-        return remote_proxy.authenticate(name, password)
+
+        all_remotes = True if remote is None else False
+        return remote_proxy.authenticate(name, password, all_remotes=all_remotes)
 
     def get_path(self, reference, package_id=None, path=None, remote=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
