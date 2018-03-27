@@ -31,6 +31,7 @@ from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BU
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
+from conans.client.store.localdb import LocalDB
 
 
 class BuildMode(object):

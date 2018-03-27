@@ -12,12 +12,12 @@ Flow:
     get_conan with the new token.
 """
 
-from conans.errors import AuthenticationException, ForbiddenException,\
-    ConanException
+from conans.errors import AuthenticationException, ForbiddenException, ConanException
 from uuid import getnode as get_mac
 import hashlib
 from conans.util.log import logger
 from conans.client.cmd.user import update_localdb
+from conans.util.env_reader import get_env
 
 
 def input_credentials_if_unauthorized(func):
@@ -126,7 +126,7 @@ class ConanApiAuthManager(object):
     # ######### CONAN API METHODS ##########
 
     @input_credentials_if_unauthorized
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file, 
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
                       no_overwrite):
         return self._rest_client.upload_recipe(conan_reference, the_files, retry, retry_wait,
                                                ignore_deleted_file, no_overwrite)
