@@ -21,6 +21,7 @@ from conans.client.source import config_source
 from conans.util.tracer import log_package_built
 from conans.util.env_reader import get_env
 from conans.client.importer import remove_imports
+from conans.client.tools.env import pythonpath
 
 
 def build_id(conan_file):
@@ -440,13 +441,14 @@ class ConanInstaller(object):
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
-        with tools.chdir(package_folder):
-            with conanfile_exception_formatter(str(conanfile), "package_info"):
-                conanfile.package_folder = package_folder
-                conanfile.source_folder = None
-                conanfile.build_folder = None
-                conanfile.install_folder = None
-                conanfile.package_info()
+        with pythonpath(conanfile):  # Minimal pythonpath, not the whole context, make it 50% slower
+            with tools.chdir(package_folder):
+                with conanfile_exception_formatter(str(conanfile), "package_info"):
+                    conanfile.package_folder = package_folder
+                    conanfile.source_folder = None
+                    conanfile.build_folder = None
+                    conanfile.install_folder = None
+                    conanfile.package_info()
 
     def _get_nodes(self, nodes_by_level, skip_nodes):
         """Compute a list of (conan_ref, package_id, conan_file, build_node)

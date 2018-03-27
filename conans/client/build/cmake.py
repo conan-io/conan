@@ -177,7 +177,7 @@ class CMake(object):
                 if self._os != self._os_build:
                     if self._os:  # the_os is the host (regular setting)
                         ret["CMAKE_SYSTEM_NAME"] = "Darwin" if self._os in ["iOS", "tvOS",
-                                                                          "watchOS"] else self._os
+                                                                            "watchOS"] else self._os
                         if os_ver:
                             ret["CMAKE_SYSTEM_VERSION"] = os_ver
                     else:

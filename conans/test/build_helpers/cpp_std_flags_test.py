@@ -78,26 +78,26 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEquals(cppstd_flag("clang", "5", "11"), '-std=c++11')
         self.assertEquals(cppstd_flag("clang", "5", "14"), '-std=c++14')
         self.assertEquals(cppstd_flag("clang", "5", "gnu14"), '-std=gnu++14')
-        self.assertEquals(cppstd_flag("clang", "5", "17"), '-std=c++1z')
+        self.assertEquals(cppstd_flag("clang", "5", "17"), '-std=c++17')
 
         self.assertEquals(cppstd_flag("clang", "5.1", "11"), '-std=c++11')
         self.assertEquals(cppstd_flag("clang", "5.1", "14"), '-std=c++14')
-        self.assertEquals(cppstd_flag("clang", "5.1", "17"), '-std=c++1z')
+        self.assertEquals(cppstd_flag("clang", "5.1", "17"), '-std=c++17')
 
         self.assertEquals(cppstd_flag("clang", "7", "11"), '-std=c++11')
         self.assertEquals(cppstd_flag("clang", "7", "14"), '-std=c++14')
-        self.assertEquals(cppstd_flag("clang", "7", "17"), '-std=c++1z')
+        self.assertEquals(cppstd_flag("clang", "7", "17"), '-std=c++17')
 
     def test_clang_cppstd_defaults(self):
-        self.assertEquals(cppstd_default("clang", "2"), "gnu++98")
-        self.assertEquals(cppstd_default("clang", "2.1"), "gnu++98")
-        self.assertEquals(cppstd_default("clang", "3.0"), "gnu++98")
-        self.assertEquals(cppstd_default("clang", "3.1"), "gnu++98")
-        self.assertEquals(cppstd_default("clang", "3.4"), "gnu++98")
-        self.assertEquals(cppstd_default("clang", "3.5"), "gnu++98")
-        self.assertEquals(cppstd_default("clang", "5"), "gnu++98")
-        self.assertEquals(cppstd_default("clang", "5.1"), "gnu++98")
-        self.assertEquals(cppstd_default("clang", "7"), "gnu++98")
+        self.assertEquals(cppstd_default("clang", "2"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "2.1"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "3.0"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "3.1"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "3.4"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "3.5"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "5"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "5.1"), "gnu98")
+        self.assertEquals(cppstd_default("clang", "7"), "gnu14")
 
     def test_apple_clang_cppstd_flags(self):
         self.assertEquals(cppstd_flag("apple-clang", "3.9", "98"), None)
@@ -137,14 +137,14 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEquals(cppstd_flag("apple-clang", "9", "17"), "-std=c++1z")
 
     def test_apple_clang_cppstd_defaults(self):
-        self.assertEquals(cppstd_default("apple-clang", "2"), "gnu++98")
-        self.assertEquals(cppstd_default("apple-clang", "3"), "gnu++98")
-        self.assertEquals(cppstd_default("apple-clang", "4"), "gnu++98")
-        self.assertEquals(cppstd_default("apple-clang", "5"), "gnu++98")
-        self.assertEquals(cppstd_default("apple-clang", "6"), "gnu++98")
-        self.assertEquals(cppstd_default("apple-clang", "7"), "gnu++98")
-        self.assertEquals(cppstd_default("apple-clang", "8"), "gnu++98")
-        self.assertEquals(cppstd_default("apple-clang", "9"), "gnu++98")
+        self.assertEquals(cppstd_default("apple-clang", "2"), "gnu98")
+        self.assertEquals(cppstd_default("apple-clang", "3"), "gnu98")
+        self.assertEquals(cppstd_default("apple-clang", "4"), "gnu98")
+        self.assertEquals(cppstd_default("apple-clang", "5"), "gnu98")
+        self.assertEquals(cppstd_default("apple-clang", "6"), "gnu98")
+        self.assertEquals(cppstd_default("apple-clang", "7"), "gnu98")
+        self.assertEquals(cppstd_default("apple-clang", "8"), "gnu98")
+        self.assertEquals(cppstd_default("apple-clang", "9"), "gnu98")
 
     def test_visual_cppstd_flags(self):
         self.assertEquals(cppstd_flag("Visual Studio", "12", "11"), None)

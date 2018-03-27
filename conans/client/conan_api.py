@@ -132,7 +132,7 @@ class ConanAPIV1(object):
         return localdb, rest_api_client, remote_manager
 
     @staticmethod
-    def factory():
+    def factory(interactive=None):
         """Factory"""
 
         use_color = get_env("CONAN_COLOR_DISPLAY", 1)
@@ -172,13 +172,15 @@ class ConanAPIV1(object):
             search_manager = DiskSearchManager(client_cache)
 
             # Settings preprocessor
+            if interactive is None:
+                interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
-                          settings_preprocessor)
+                          settings_preprocessor, interactive=interactive)
 
         return conan, client_cache, user_io
 
     def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
-                 settings_preprocessor):
+                 _settings_preprocessor, interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
@@ -186,7 +188,9 @@ class ConanAPIV1(object):
         self._runner = runner
         self._remote_manager = remote_manager
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     settings_preprocessor)
+                                     _settings_preprocessor)
+        if not interactive:
+            self._user_io.disable_input()
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -455,7 +459,7 @@ class ConanAPIV1(object):
     @api_method
     def config_install(self, item, verify_ssl):
         from conans.client.conf.config_installer import configuration_install
-        return configuration_install(item, self._client_cache, self._user_io.out, self._runner, verify_ssl)
+        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = os.getcwd()
