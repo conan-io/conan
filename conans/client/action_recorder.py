@@ -4,9 +4,7 @@
 # about the downloaded files prior to unzip them
 
 import time
-from collections import namedtuple
-
-from conans.util import OrderedDefaultDict
+from collections import namedtuple, OrderedDict
 
 # Install actions
 INSTALL_CACHE = 0
@@ -32,34 +30,45 @@ class Action(namedtuple("Action", "type, doc, time")):
 class ActionRecorder(object):
 
     def __init__(self):
-        self._inst_recipes_actions = OrderedDefaultDict(list)
-        self._inst_packages_actions = OrderedDefaultDict(list)
+        self._inst_recipes_actions = OrderedDict()
+        self._inst_packages_actions = OrderedDict()
 
     # ###### INSTALL METHODS ############
 
+    def _add_recipe_action(self, reference, action):
+        if reference not in self._inst_recipes_actions:
+            self._inst_recipes_actions[reference] = []
+        self._inst_recipes_actions[reference].append(action)
+
+    def _add_package_action(self, reference, action):
+        if reference not in self._inst_packages_actions:
+            self._inst_packages_actions[reference] = []
+        self._inst_packages_actions[reference].append(action)
+
     # RECIPE METHODS
     def recipe_fetched_from_cache(self, reference):
-        self._inst_recipes_actions[reference].append(Action(INSTALL_CACHE))
+        self._add_recipe_action(reference, Action(INSTALL_CACHE))
 
     def recipe_downloaded(self, reference, remote):
-        self._inst_recipes_actions[reference].append(Action(INSTALL_DOWNLOADED, {"remote": remote}))
+        self._add_recipe_action(reference, Action(INSTALL_DOWNLOADED, {"remote": remote}))
 
     def recipe_install_error(self, reference, error_type, description, remote):
         doc = {"type": error_type, "description": description, "remote": remote}
-        self._inst_recipes_actions[reference].append(Action(INSTALL_ERROR, doc))
+        self._add_recipe_action(reference, Action(INSTALL_ERROR, doc))
 
     # PACKAGE METHODS
     def package_built(self, reference):
-        self._inst_packages_actions[reference].append(Action(INSTALL_BUILT))
+        self._add_package_action(reference, Action(INSTALL_BUILT))
 
     def package_fetched_from_cache(self, reference):
-        self._inst_packages_actions[reference].append(Action(INSTALL_CACHE))
+        self._add_package_action(reference, Action(INSTALL_CACHE))
 
     def package_downloaded(self, reference, remote):
-        self._inst_packages_actions[reference].append(Action(INSTALL_DOWNLOADED,
-                                                             {"remote": remote}))
+        self._add_package_action(reference, Action(INSTALL_DOWNLOADED, {"remote": remote}))
 
     def package_install_error(self, reference, error_type, description, remote=None):
+        if reference not in self._inst_packages_actions:
+            self._inst_packages_actions[reference] = []
         doc = {"type": error_type, "description": description, "remote": remote}
         self._inst_packages_actions[reference].append(Action(INSTALL_ERROR, doc))
 
