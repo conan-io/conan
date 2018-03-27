@@ -590,7 +590,7 @@ class ConanAPIV1(object):
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._remote_manager, force=force)
+                 self._user_io, self._remote_manager, self.recorder, force=force)
 
     @api_method
     def user(self, name=None, clean=False, remote=None, password=None):
@@ -618,7 +618,7 @@ class ConanAPIV1(object):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
         uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
-                             remote)
+                             remote, self.recorder)
         return uploader.upload(pattern, package, all_packages, force, confirm, retry,
                                retry_wait, skip_upload, integrity_check)
 

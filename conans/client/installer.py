@@ -239,17 +239,12 @@ class ConanInstaller(object):
         self._build_requires = build_requires
         self._build_mode = build_mode
         self._built_packages = set()  # To avoid re-building twice the same package reference
-        self._install_info = None
         self._recorder = recorder
 
     def install(self, deps_graph, profile_build_requires, keep_build=False):
         """ given a DepsGraph object, build necessary nodes or retrieve them
         """
         t1 = time.time()
-        self._install_info = {"status": None,
-                              "packages": [],
-                              "start":  t1,
-                              "end": None}
 
         # order by levels and separate the root node (conan_ref=None) from the rest
         nodes_by_level = deps_graph.by_levels()

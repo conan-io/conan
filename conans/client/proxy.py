@@ -21,7 +21,7 @@ class ConanProxy(object):
     getting conanfiles, uploading, removing from remote, etc.
     It uses the RemoteRegistry to control where the packages come from.
     """
-    def __init__(self, client_cache, user_io, remote_manager, remote_name, recorder=None,
+    def __init__(self, client_cache, user_io, remote_manager, remote_name, recorder,
                  update=False, check_updates=False, manifest_manager=False):
         self._client_cache = client_cache
         self._out = user_io.out
@@ -99,8 +99,7 @@ class ConanProxy(object):
             output.success('Already installed!')
             installed = True
             log_package_got_from_local_cache(package_ref)
-            if self._recorder:
-                self._recorder.package_fetched_from_cache(package_ref)
+            self._recorder.package_fetched_from_cache(package_ref)
         else:
             installed = self._retrieve_remote_package(package_ref, package_folder,
                                                       output)
@@ -139,8 +138,7 @@ class ConanProxy(object):
 
         if os.path.exists(conanfile_path):
             log_recipe_got_from_local_cache(conan_reference)
-            if self._recorder:
-                self._recorder.recipe_fetched_from_cache(conan_reference)
+            self._recorder.recipe_fetched_from_cache(conan_reference)
             if self._check_updates:
                 ret = self.update_available(conan_reference)
                 if ret != 0:  # Found and not equal
@@ -208,8 +206,7 @@ class ConanProxy(object):
             export_path = self._client_cache.export(conan_reference)
             self._remote_manager.get_recipe(conan_reference, export_path, the_remote)
             self._registry.set_ref(conan_reference, the_remote)
-            if self._recorder:
-                self._recorder.recipe_downloaded(conan_reference, the_remote.url)
+            self._recorder.recipe_downloaded(conan_reference, the_remote.url)
 
         if self._remote_name:
             output.info("Not found, retrieving from server '%s' " % self._remote_name)
@@ -225,14 +222,12 @@ class ConanProxy(object):
                 return
             except NotFoundException:
                 msg = "%s was not found in remote '%s'" % (str(conan_reference), ref_remote.name)
-                if self._recorder:
-                    self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
-                                                        msg, ref_remote.url)
+                self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
+                                                    msg, ref_remote.url)
                 raise NotFoundException(msg)
             except RequestException as exc:
-                if self._recorder:
-                    self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_NETWORK,
-                                                        str(exc), ref_remote.url)
+                self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_NETWORK,
+                                                    str(exc), ref_remote.url)
                 raise exc
             except Exception as exc:
                 raise exc
@@ -249,8 +244,7 @@ class ConanProxy(object):
                 if remote == remotes[-1]:  # Last element not found
                     msg = "Unable to find '%s' in remotes" % str(conan_reference)
                     logger.debug("Not found in any remote, raising...%s" % exc)
-                    if self._recorder:
-                        self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
+                    self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_MISSING,
                                                             msg, None)
                     raise NotFoundException(msg)
 
@@ -413,23 +407,18 @@ class ConanProxy(object):
             # Will raise if not found NotFoundException
             self._remote_manager.get_package(package_ref, package_folder, remote)
             output.success('Package installed %s' % package_id)
-            if self._recorder:
-                self._recorder.package_downloaded(package_ref, remote.url)
+            self._recorder.package_downloaded(package_ref, remote.url)
 
             return True
         except NotFoundException as e:
             msg = 'Binary for %s not in remote: %s' % (package_id, str(e))
             output.warn(msg)
-            if self._recorder:
-                self._recorder.package_install_error(package_ref, INSTALL_ERROR_MISSING, msg,
-                                                     remote.url)
+            self._recorder.package_install_error(package_ref, INSTALL_ERROR_MISSING, msg,
+                                                 remote.url)
             return False
         except RequestException as e:
-            if self._recorder:
-                self._recorder.package_install_error(package_ref, INSTALL_ERROR_NETWORK, str(e),
-                                                     remote.url)
-            raise e
-        except Exception as e:
+            self._recorder.package_install_error(package_ref, INSTALL_ERROR_NETWORK, str(e),
+                                                 remote.url)
             raise e
 
     def authenticate(self, name, password):

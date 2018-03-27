@@ -20,10 +20,11 @@ def _is_a_reference(ref):
 
 class CmdUpload(object):
 
-    def __init__(self, client_cache, user_io, remote_manager, remote):
+    def __init__(self, client_cache, user_io, remote_manager, remote, recorder):
         self._client_cache = client_cache
         self._user_io = user_io
-        self._remote_proxy = ConanProxy(self._client_cache, self._user_io, remote_manager, remote)
+        self._remote_proxy = ConanProxy(self._client_cache, self._user_io, remote_manager, remote,
+                                        recorder)
         self._cache_search = DiskSearchManager(self._client_cache)
 
     def upload(self, conan_reference_or_pattern, package_id=None, all_packages=None,
