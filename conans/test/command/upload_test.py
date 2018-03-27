@@ -199,7 +199,7 @@ class UploadTest(unittest.TestCase):
         self.assertIn("ERROR", client.out)
 
         # --force not valid with --no-overwrite
-        error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite all --force",
+        error = client.run("upload Hello0/1.2.1@frodo/stable --no-overwrite --force",
                            ignore_error=True)
         self.assertTrue(error)
         self.assertIn("ERROR", client.out)
@@ -228,7 +228,7 @@ class MyPkg(ConanFile):
         client.run("upload Hello0/1.2.1@frodo/stable --all")
 
         # CASE: Upload again
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all")
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
         self.assertIn("Recipe is up to date, upload skipped", client.out)
         self.assertIn("Package is up to date, upload skipped", client.out)
         self.assertNotIn("Forbbiden overwrite", client.out)
@@ -236,7 +236,7 @@ class MyPkg(ConanFile):
         # CASE: Without changes
         client.run("create . frodo/stable")
         ## upload recipe and packages
-        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all")
+        client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite")
         self.assertIn("Recipe is up to date, upload skipped", client.all_output)
         self.assertIn("Package is up to date, upload skipped", client.out)
         self.assertNotIn("Forbbiden overwrite", client.out)
@@ -247,7 +247,7 @@ class MyPkg(ConanFile):
         client.save({"conanfile.py": new_recipe})
         client.run("create . frodo/stable")
         ## upload recipe and packages
-        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all",
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                            ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Forbbiden overwrite", client.out)
@@ -258,7 +258,7 @@ class MyPkg(ConanFile):
         with environment_append({"MY_VAR": "True"}):
             client.run("create . frodo/stable")
         ## upload recipe and packages
-        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite all",
+        error = client.run("upload Hello0/1.2.1@frodo/stable --all --no-overwrite",
                            ignore_error=True)
         self.assertTrue(error)
         self.assertIn("Recipe is up to date, upload skipped", client.out)

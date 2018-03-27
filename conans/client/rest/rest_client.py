@@ -178,9 +178,10 @@ class RestApiClient(object):
         if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
 
-        if no_overwrite in ["all", "recipe"]:
-            raise ConanException("Local recipe is different from the remote recipe. "
-                                 "Forbbiden overwrite")
+        if no_overwrite:
+            if no_overwrite in ("all", "recipe"):
+                raise ConanException("Local recipe is different from the remote recipe. "
+                                     "Forbbiden overwrite")
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
 
@@ -213,9 +214,10 @@ class RestApiClient(object):
         if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
 
-        if no_overwrite in ["all"]:
-            raise ConanException("Local package is different from the remote package. "
-                                 "Forbbiden overwrite")
+        if no_overwrite:
+            if no_overwrite in ("all"):
+                raise ConanException("Local package is different from the remote package. "
+                                     "Forbbiden overwrite")
 
         files_to_upload = {filename: the_files[filename] for filename in new + modified}
         if files_to_upload:        # Obtain upload urls
