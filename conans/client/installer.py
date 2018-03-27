@@ -7,12 +7,13 @@ from conans.client import tools
 from conans.model.conan_file import get_env_context_manager
 from conans.model.env_info import EnvInfo
 from conans.model.user_info import UserInfo
-from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME
+from conans.paths import CONANINFO, BUILD_INFO, RUN_LOG_NAME, rm_conandir
 from conans.util.files import save, rmdir, mkdir, make_read_only
 from conans.model.ref import PackageReference
 from conans.util.log import logger
 from conans.errors import (ConanException, conanfile_exception_formatter,
-                           ConanExceptionInUserConanfileMethod)
+                           ConanExceptionInUserConanfileMethod,
+                           ConanManifestException)
 from conans.client.packager import create_package
 from conans.client.generators import write_generators, TXTGenerator
 from conans.model.build_info import CppInfo
@@ -384,7 +385,7 @@ class ConanInstaller(object):
         # is that package is already installed and OK. If don't, the proxy
         # will print some other message about it
         if not os.path.exists(package_folder):
-            self._out.info("Retrieving package %s" % package_reference.package_id)
+            output.info("Retrieving package %s" % package_reference.package_id)
 
         try:
             if self._remote_proxy.get_package(package_reference,
@@ -394,13 +395,17 @@ class ConanInstaller(object):
                 if get_env("CONAN_READ_ONLY_CACHE", False):
                     make_read_only(package_folder)
                 return True
-        except Exception:
-            if os.path.exists(package_folder):
-                try:
-                    rmdir(package_folder)
-                except OSError as e:
-                    raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
-                                         "using it, and retry" % (str(e), package_folder))
+        except ConanManifestException:
+            raise  # If is a manifest verify exception, do NOT remove folder
+        except BaseException as e:
+            output.error("Exception while getting package: %s" % str(package_reference.package_id))
+            output.error("Exception: %s %s" % (type(e), str(e)))
+            try:
+                output.warn("Trying to remove package folder: %s" % package_folder)
+                rm_conandir(package_folder)
+            except OSError as e:
+                raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
+                                     "using it, and retry" % (str(e), package_folder))
             raise
         _raise_package_not_found_error(conan_file, package_reference.conan,
                                        package_reference.package_id, output)

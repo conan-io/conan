@@ -28,7 +28,7 @@ class RemoteManager(object):
         self._auth_manager = auth_manager
 
     def upload_recipe(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file,
-                      skip_upload=False):
+                      skip_upload=False, no_overwrite=None):
         """Will upload the conans to the first remote"""
 
         t1 = time.time()
@@ -44,7 +44,7 @@ class RemoteManager(object):
             return None
 
         ret = self._call_remote(remote, "upload_recipe", conan_reference, the_files,
-                                retry, retry_wait, ignore_deleted_file)
+                                retry, retry_wait, ignore_deleted_file, no_overwrite)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files, remote)
         if ret:
@@ -83,7 +83,7 @@ class RemoteManager(object):
         self._output.writeln("")
 
     def upload_package(self, package_reference, remote, retry, retry_wait, skip_upload=False,
-                       integrity_check=False):
+                       integrity_check=False, no_overwrite=None):
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
@@ -107,7 +107,7 @@ class RemoteManager(object):
             return None
 
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
-                                retry, retry_wait)
+                                retry, retry_wait, no_overwrite)
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
         logger.debug("====> Time remote_manager upload_package: %f" % duration)

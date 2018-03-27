@@ -2,7 +2,7 @@ import os
 from conans.paths import SimplePaths
 from conans.model.manifest import FileTreeManifest
 from conans.util.files import load, save
-from conans.errors import ConanException
+from conans.errors import ConanException, ConanManifestException
 
 
 class ManifestManager(object):
@@ -35,7 +35,7 @@ class ManifestManager(object):
             save(path, str(manifest))
             self._log.append("Installed manifest for '%s' from %s" % (str(reference), remote))
         else:
-            raise ConanException("Installation of '%s' rejected!" % str(reference))
+            raise ConanManifestException("Installation of '%s' rejected!" % str(reference))
 
     def _check(self, reference, manifest, remote, path):
         if os.path.exists(path):
@@ -48,17 +48,17 @@ class ManifestManager(object):
             diff = existing_manifest.difference(manifest)
             error_msg = os.linesep.join("Mismatched checksum '%s' (manifest: %s, file: %s)"
                                         % (fname, h1, h2) for fname, (h1, h2) in diff.items())
-            raise ConanException("Modified or new manifest '%s' detected.\n"
-                                 "Remote: %s\nProject manifest doesn't match installed one\n%s"
-                                 % (str(reference), remote, error_msg))
+            raise ConanManifestException("Modified or new manifest '%s' detected.\n"
+                                         "Remote: %s\nProject manifest doesn't match installed one\n%s"
+                                         % (str(reference), remote, error_msg))
 
         self._handle_add(reference, remote, manifest, path)
 
     def _match_manifests(self, read_manifest, expected_manifest, reference):
         if read_manifest is None or read_manifest != expected_manifest:
-            raise ConanException("%s local cache package is corrupted: "
-                                 "some file hash doesn't match manifest"
-                                 % (str(reference)))
+            raise ConanManifestException("%s local cache package is corrupted: "
+                                         "some file hash doesn't match manifest"
+                                         % (str(reference)))
 
     def check_recipe(self, conan_reference, remote):
         manifests = self._client_cache.conan_manifests(conan_reference)
