@@ -94,6 +94,7 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # cache_no_locks = True
 # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
 # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
+# disable_login_prompt = False        # environment CONAN_DISABLE_LOGIN_PROMPT
 
 # conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
 
@@ -155,6 +156,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_TRACE_FILE": self._env_c("log.trace_file", "CONAN_TRACE_FILE", None),
                "CONAN_PRINT_RUN_COMMANDS": self._env_c("log.print_run_commands", "CONAN_PRINT_RUN_COMMANDS", "False"),
                "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
+               "CONAN_DISABLE_LOGIN_PROMPT": self._env_c("general.disable_login_prompt", "CONAN_DISABLE_LOGIN_PROMPT", "False"),
                "CONAN_PYLINTRC": self._env_c("general.pylintrc", "CONAN_PYLINTRC", None),
                "CONAN_PYLINT_WERR": self._env_c("general.pylint_werr", "CONAN_PYLINT_WERR", None),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),

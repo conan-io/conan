@@ -304,12 +304,8 @@ class ConanManager(object):
     def info_get_graph(self, reference, profile, remote=None, check_updates=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
-        @param current_path: where the output files will be saved
         @param remote: install only from that remote
-        @param profile: Profile object with both the -s introduced options and profile readed values
-        @param build_modes: List of build_modes specified
         """
-
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=False, check_updates=check_updates,
                                   recorder=self._recorder)
@@ -547,7 +543,9 @@ class ConanManager(object):
             if not remote:
                 remote = remote_proxy.registry.default_remote.name
             name, password = self._user_io.request_login(remote_name=remote, username=name)
-        return remote_proxy.authenticate(name, password)
+
+        all_remotes = True if remote is None else False
+        return remote_proxy.authenticate(name, password, all_remotes=all_remotes)
 
     def get_path(self, reference, package_id=None, path=None, remote=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,

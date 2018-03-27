@@ -35,10 +35,13 @@ class Extender(argparse.Action):
             # share this destination.
             parser.set_defaults(**{self.dest: None})
 
-        try:
-            dest.extend(values)
-        except ValueError:
+        if isinstance(values, str):
             dest.append(values)
+        elif values:
+            try:
+                dest.extend(values)
+            except ValueError:
+                dest.append(values)
 
 
 class OnceArgument(argparse.Action):
@@ -1252,7 +1255,7 @@ def _add_common_install_arguments(parser, build_help):
                              '-e CXX=/usr/bin/clang++',
                         nargs=1, action=Extender)
     if build_help:
-        parser.add_argument("-b", "--build", action=Extender, nargs="*", help=build_help)
+        parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:

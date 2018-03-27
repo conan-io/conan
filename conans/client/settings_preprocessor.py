@@ -19,9 +19,9 @@ def check_cppstd(settings):
     if str(cppstd) not in available:
         raise ConanException("The specified 'cppstd=%s' is not available "
                              "for '%s %s'. Possible values are %s'" % (cppstd,
-                                                                      compiler,
-                                                                      compiler_version,
-                                                                      available))
+                                                                       compiler,
+                                                                       compiler_version,
+                                                                       available))
 
 
 def fill_runtime(settings):
