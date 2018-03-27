@@ -895,13 +895,17 @@ class Command(object):
         parser.add_argument('--retry-wait', default=5, type=int,
                             help='Waits specified seconds before retry again',
                             action=OnceArgument)
+        parser.add_argument("-no", "--no-overwrite", nargs="?", type=str, choices=["all", "recipe"],
+                            help="Uploads package only if recipe is the same as the remote one",
+                            action=OnceArgument, const="all")
 
         args = parser.parse_args(*args)
+
         return self._conan.upload(pattern=args.pattern, package=args.package, remote=args.remote,
-                                  all_packages=args.all,
-                                  force=args.force, confirm=args.confirm, retry=args.retry,
-                                  retry_wait=args.retry_wait,
-                                  skip_upload=args.skip_upload, integrity_check=args.check)
+                                  all_packages=args.all, force=args.force, confirm=args.confirm,
+                                  retry=args.retry, retry_wait=args.retry_wait,
+                                  skip_upload=args.skip_upload, integrity_check=args.check,
+                                  no_overwrite=args.no_overwrite)
 
     def remote(self, *args):
         """ Manages the remote list and the package recipes associated to a remote.
