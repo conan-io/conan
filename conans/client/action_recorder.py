@@ -74,7 +74,8 @@ class ActionRecorder(object):
 
     @property
     def install_errored(self):
-        for acts in self._inst_recipes_actions.values() + self._inst_packages_actions.values():
+        all_values = list(self._inst_recipes_actions.values()) + list(self._inst_packages_actions.values())
+        for acts in all_values:
             for act in acts:
                 if act.type == INSTALL_ERROR:
                     return True
