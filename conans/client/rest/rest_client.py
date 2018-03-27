@@ -159,7 +159,8 @@ class RestApiClient(object):
         file_paths = self.download_files_to_folder(urls, dest_folder, self._output)
         return file_paths
 
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
+                      no_overwrite):
         """
         the_files: dict with relative_path: content
         """
@@ -174,8 +175,13 @@ class RestApiClient(object):
         if ignore_deleted_file and ignore_deleted_file in deleted:
             deleted.remove(ignore_deleted_file)
 
-        if not new and not deleted and modified == ["conanmanifest.txt"]:
+        if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
+
+        if no_overwrite:
+            if no_overwrite in ("all", "recipe"):
+                raise ConanException("Local recipe is different from the remote recipe. "
+                                     "Forbbiden overwrite")
         files_to_upload = {filename.replace("\\", "/"): the_files[filename]
                            for filename in new + modified}
 
@@ -191,7 +197,7 @@ class RestApiClient(object):
 
         return files_to_upload or deleted
 
-    def upload_package(self, package_reference, the_files, retry, retry_wait):
+    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
         """
         basedir: Base directory with the files to upload (for read the files in disk)
         relative_files: relative paths to upload
@@ -205,8 +211,13 @@ class RestApiClient(object):
 
         # Get the diff
         new, modified, deleted = diff_snapshots(local_snapshot, remote_snapshot)
-        if not new and not deleted and modified == ["conanmanifest.txt"]:
+        if not new and not deleted and modified in (["conanmanifest.txt"], []):
             return False
+
+        if no_overwrite:
+            if no_overwrite in ("all"):
+                raise ConanException("Local package is different from the remote package. "
+                                     "Forbbiden overwrite")
 
         files_to_upload = {filename: the_files[filename] for filename in new + modified}
         if files_to_upload:        # Obtain upload urls

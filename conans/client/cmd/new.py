@@ -21,9 +21,11 @@ class {package_name}Conan(ConanFile):
     def source(self):
         self.run("git clone https://github.com/memsharded/hello.git")
         self.run("cd hello && git checkout static_shared")
-        # This small hack might be useful to guarantee proper /MT /MD linkage in MSVC
-        # if the packaged project doesn't have variables to set it properly
-        tools.replace_in_file("hello/CMakeLists.txt", "PROJECT(MyHello)", '''PROJECT(MyHello)
+        # This small hack might be useful to guarantee proper /MT /MD linkage
+        # in MSVC if the packaged project doesn't have variables to set it
+        # properly
+        tools.replace_in_file("hello/CMakeLists.txt", "PROJECT(MyHello)",
+                              '''PROJECT(MyHello)
 include(${{CMAKE_BINARY_DIR}}/conanbuildinfo.cmake)
 conan_basic_setup()''')
 
@@ -33,7 +35,8 @@ conan_basic_setup()''')
         cmake.build()
 
         # Explicit way:
-        # self.run('cmake %s/hello %s' % (self.source_folder, cmake.command_line))
+        # self.run('cmake %s/hello %s'
+        #          % (self.source_folder, cmake.command_line))
         # self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
@@ -46,10 +49,11 @@ conan_basic_setup()''')
 
     def package_info(self):
         self.cpp_info.libs = ["hello"]
+
 """
 
-conanfile_bare = """from conans import ConanFile
-from conans import tools
+conanfile_bare = """from conans import ConanFile, tools
+
 
 class {package_name}Conan(ConanFile):
     name = "{name}"
@@ -87,7 +91,8 @@ class {package_name}Conan(ConanFile):
         cmake.build()
 
         # Explicit way:
-        # self.run('cmake %s/src %s' % (self.source_folder, cmake.command_line))
+        # self.run('cmake %s/hello %s'
+        #          % (self.source_folder, cmake.command_line))
         # self.run("cmake --build . %s" % cmake.build_config)
 
     def package(self):
@@ -102,8 +107,9 @@ class {package_name}Conan(ConanFile):
         self.cpp_info.libs = ["hello"]
 """
 
-conanfile_header = """from conans import ConanFile, tools
-import os
+conanfile_header = """import os
+
+from conans import ConanFile, tools
 
 
 class {package_name}Conan(ConanFile):
@@ -116,20 +122,23 @@ class {package_name}Conan(ConanFile):
     # No settings/options are necessary, this is header only
 
     def source(self):
-        '''retrieval of the source code here. Remember you can also put the code in the folder and
-        use exports instead of retrieving it with this source() method
+        '''retrieval of the source code here. Remember you can also put the code
+        in the folder and use exports instead of retrieving it with this
+        source() method
         '''
-        #self.run("git clone ...") or
-        #tools.download("url", "file.zip")
-        #tools.unzip("file.zip" )
+        # self.run("git clone ...") or
+        # tools.download("url", "file.zip")
+        # tools.unzip("file.zip" )
 
     def package(self):
         self.copy("*.h", "include")
 """
 
 
-test_conanfile = """from conans import ConanFile, CMake, tools
-import os
+test_conanfile = """import os
+
+from conans import ConanFile, CMake, tools
+
 
 class {package_name}TestConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
@@ -137,7 +146,8 @@ class {package_name}TestConan(ConanFile):
 
     def build(self):
         cmake = CMake(self)
-        # Current dir is "test_package/build/<build_id>" and CMakeLists.txt is in "test_package"
+        # Current dir is "test_package/build/<build_id>" and CMakeLists.txt is
+        # in "test_package"
         cmake.configure()
         cmake.build()
 
@@ -258,7 +268,7 @@ def cmd_new(ref, header=False, pure_c=False, test=False, exports_sources=False, 
         files = {"conanfile.py": conanfile.format(name=name, version=version,
                                                   package_name=package_name)}
         if pure_c:
-            config = "\n    def configure(self):\n        del self.settings.compiler.libcxx"
+            config = "    def configure(self):\n        del self.settings.compiler.libcxx\n"
             files["conanfile.py"] = files["conanfile.py"] + config
 
     if test:

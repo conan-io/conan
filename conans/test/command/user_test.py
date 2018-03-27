@@ -150,3 +150,15 @@ class ConanLib(ConanFile):
         self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
         conan.run("user")
         self.assertIn("Current 'default' user: lasote", conan.user_io.out)
+
+    def test_command_user_with_interactive_password_login_prompt_disabled(self):
+        """ Interactive password should still work, even when login prompt has been disabled.
+        """
+        test_server = TestServer()
+        servers = {"default": test_server}
+        conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
+        conan.run('config set general.disable_login_prompt=True')
+        conan.run('user -p -r default lasote')
+        self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
+        conan.run("user")
+        self.assertIn("Current 'default' user: lasote", conan.user_io.out)

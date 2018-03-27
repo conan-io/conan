@@ -455,7 +455,7 @@ class ConanAPIV1(object):
     @api_method
     def config_install(self, item, verify_ssl):
         from conans.client.conf.config_installer import configuration_install
-        return configuration_install(item, self._client_cache, self._user_io.out, self._runner, verify_ssl)
+        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = os.getcwd()
@@ -628,13 +628,17 @@ class ConanAPIV1(object):
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all_packages=False, force=False,
-               confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
+               confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False,
+               no_overwrite=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
-                             remote)
-        return uploader.upload(pattern, package, all_packages, force, confirm, retry,
-                               retry_wait, skip_upload, integrity_check)
+
+        if force and no_overwrite:
+            raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
+
+        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager, remote)
+        return uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
+                               skip_upload, integrity_check, no_overwrite)
 
     @api_method
     def remote_list(self):

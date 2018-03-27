@@ -301,12 +301,8 @@ class ConanManager(object):
     def info_get_graph(self, reference, profile, remote=None, check_updates=False):
         """ Fetch and build all dependencies for the given reference
         @param reference: ConanFileReference or path to user space conanfile
-        @param current_path: where the output files will be saved
         @param remote: install only from that remote
-        @param profile: Profile object with both the -s introduced options and profile readed values
-        @param build_modes: List of build_modes specified
         """
-
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote,
                                   update=False, check_updates=check_updates)
 

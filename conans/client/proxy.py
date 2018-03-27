@@ -257,7 +257,7 @@ class ConanProxy(object):
                 ignore_deleted_file = EXPORT_SOURCES_TGZ_NAME
         return ignore_deleted_file
 
-    def upload_recipe(self, conan_reference, retry, retry_wait, skip_upload):
+    def upload_recipe(self, conan_reference, retry, retry_wait, skip_upload, no_overwrite):
         """ upload to defined remote in (-r=remote), to current remote
         or to default remote, in that order.
         If the remote is not set, set it
@@ -271,7 +271,8 @@ class ConanProxy(object):
 
         result = self._remote_manager.upload_recipe(conan_reference, remote, retry, retry_wait,
                                                     ignore_deleted_file=ignore_deleted_file,
-                                                    skip_upload=skip_upload)
+                                                    skip_upload=skip_upload,
+                                                    no_overwrite=no_overwrite)
         if not ref_remote and not skip_upload:
             self._registry.set_ref(conan_reference, remote)
         return result
@@ -288,13 +289,14 @@ class ConanProxy(object):
                 remote = self._registry.default_remote
         return remote, ref_remote
 
-    def upload_package(self, package_ref, retry, retry_wait, skip_upload, integrity_check):
+    def upload_package(self, package_ref, retry, retry_wait, skip_upload, integrity_check,
+                       no_overwrite):
         remote, current_remote = self._get_remote(package_ref.conan)
         if not current_remote:
             self._out.warn("Remote for '%s' not defined, uploading to %s"
                            % (str(package_ref.conan), remote.name))
         result = self._remote_manager.upload_package(package_ref, remote, retry, retry_wait,
-                                                     skip_upload, integrity_check)
+                                                     skip_upload, integrity_check, no_overwrite)
         if not current_remote and not skip_upload:
             self._registry.set_ref(package_ref.conan, remote)
         return result

@@ -7,7 +7,6 @@ from conans.errors import ConanException
 import six
 
 
-
 class ConanRunner(object):
 
     def __init__(self, print_commands_to_output=False, generate_run_log_file=False, log_run_to_output=True):

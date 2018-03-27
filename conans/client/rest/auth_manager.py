@@ -12,12 +12,12 @@ Flow:
     get_conan with the new token.
 """
 
-from conans.errors import AuthenticationException, ForbiddenException,\
-    ConanException
+from conans.errors import AuthenticationException, ForbiddenException, ConanException
 from uuid import getnode as get_mac
 import hashlib
 from conans.util.log import logger
 from conans.client.cmd.user import update_localdb
+from conans.util.env_reader import get_env
 
 
 def input_credentials_if_unauthorized(func):
@@ -44,6 +44,8 @@ def input_credentials_if_unauthorized(func):
                 if "bintray" in remote.url:
                     self._user_io.out.info('If you don\'t have an account sign up here: '
                                            'https://bintray.com/signup/oss')
+                if get_env("CONAN_DISABLE_LOGIN_PROMPT", False):
+                    raise AuthenticationException('User "%s" not authenticated' % self.user)
                 return retry_with_new_token(self, *args, **kwargs)
             else:
                 # Token expired or not valid, so clean the token and repeat the call
@@ -126,13 +128,15 @@ class ConanApiAuthManager(object):
     # ######### CONAN API METHODS ##########
 
     @input_credentials_if_unauthorized
-    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file):
+    def upload_recipe(self, conan_reference, the_files, retry, retry_wait, ignore_deleted_file,
+                      no_overwrite):
         return self._rest_client.upload_recipe(conan_reference, the_files, retry, retry_wait,
-                                               ignore_deleted_file)
+                                               ignore_deleted_file, no_overwrite)
 
     @input_credentials_if_unauthorized
-    def upload_package(self, package_reference, the_files, retry, retry_wait):
-        return self._rest_client.upload_package(package_reference, the_files, retry, retry_wait)
+    def upload_package(self, package_reference, the_files, retry, retry_wait, no_overwrite):
+        return self._rest_client.upload_package(package_reference, the_files, retry, retry_wait,
+                                                no_overwrite)
 
     @input_credentials_if_unauthorized
     def get_conan_digest(self, conan_reference):
