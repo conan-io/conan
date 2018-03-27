@@ -38,6 +38,7 @@ from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 from conans.client.cmd.search import Search
+from conans.client.cmd.user import users_clean, users_list, user_set
 
 
 default_manifest_folder = '.conan_manifests'
@@ -131,7 +132,7 @@ class ConanAPIV1(object):
         return localdb, rest_api_client, remote_manager
 
     @staticmethod
-    def factory():
+    def factory(interactive=None):
         """Factory"""
 
         use_color = get_env("CONAN_COLOR_DISPLAY", 1)
@@ -171,13 +172,15 @@ class ConanAPIV1(object):
             search_manager = DiskSearchManager(client_cache)
 
             # Settings preprocessor
+            if interactive is None:
+                interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
-                          settings_preprocessor)
+                          settings_preprocessor, interactive=interactive)
 
         return conan, client_cache, user_io
 
     def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
-                 settings_preprocessor):
+                 _settings_preprocessor, interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
@@ -185,7 +188,9 @@ class ConanAPIV1(object):
         self._runner = runner
         self._remote_manager = remote_manager
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     settings_preprocessor)
+                                     _settings_preprocessor)
+        if not interactive:
+            self._user_io.disable_input()
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -589,13 +594,30 @@ class ConanAPIV1(object):
                  self._user_io, self._remote_manager, force=force)
 
     @api_method
-    def user(self, name=None, clean=False, remote=None, password=None):
-        if clean:
-            localdb = LocalDB(self._client_cache.localdb)
-            localdb.init(clean=True)
-            self._user_io.out.success("Deleted user data")
-            return
-        self._manager.user(remote, name, password)
+    def authenticate(self, name, password, remote=None):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        if not remote:
+            remote = registry.default_remote
+        else:
+            remote = registry.remote(remote)
+        if password == "":
+            name, password = self._user_io.request_login(remote_name=remote.name,
+                                                         username=name)
+        self._remote_manager.authenticate(remote, name, password)
+
+    @api_method
+    def user_set(self, user, remote_name=None):
+        return user_set(self._client_cache, self._user_io.out, user, remote_name)
+
+    @api_method
+    def users_clean(self):
+        return users_clean(self._client_cache)
+
+    @api_method
+    def users_list(self, remote=None):
+        users = users_list(self._client_cache, self._user_io.out, remote)
+        for remote_name, username in users:
+            self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):

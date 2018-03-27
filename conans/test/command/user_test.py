@@ -10,7 +10,7 @@ class UserTest(unittest.TestCase):
         client = TestClient()
         with self.assertRaises(Exception):
             client.run("user")
-        self.assertIn("ERROR: No default remote defined", client.user_io.out)
+        self.assertIn("ERROR: No remotes defined", client.user_io.out)
 
         with self.assertRaises(Exception):
             client.run("user -r wrong_remote")
@@ -42,6 +42,14 @@ class UserTest(unittest.TestCase):
              "Current 'test_remote_1' user: None (anonymous)"),
             client.user_io.out
         )
+
+    def test_with_no_user(self):
+        test_server = TestServer()
+        client = TestClient(servers={"default": test_server})
+        error = client.run('user -p test', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("ERROR: User for remote 'default' is not defined. [Remote: default]",
+                      client.out)
 
     def test_with_remote_no_connect(self):
         test_server = TestServer()
@@ -144,13 +152,14 @@ class ConanLib(ConanFile):
         self.assertIn("Current 'default' user: lasote", conan.user_io.out)
 
     def test_command_user_with_interactive_password_login_prompt_disabled(self):
-        """ Interactive password should still work, even when login prompt has been disabled.
+        """ Interactive password should not work.
         """
         test_server = TestServer()
         servers = {"default": test_server}
         conan = TestClient(servers=servers, users={"default": [("lasote", "mypass")]})
-        conan.run('config set general.disable_login_prompt=True')
-        conan.run('user -p -r default lasote')
-        self.assertIn('Please enter a password for "lasote" account:', conan.user_io.out)
+        conan.run('config set general.non_interactive=True')
+        error = conan.run('user -p -r default lasote', ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn('ERROR: Conan interactive mode disabled', conan.user_io.out)
         conan.run("user")
-        self.assertIn("Current 'default' user: lasote", conan.user_io.out)
+        self.assertIn("Current 'default' user: None", conan.user_io.out)

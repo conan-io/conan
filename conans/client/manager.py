@@ -31,6 +31,7 @@ from conans.paths import CONANFILE, CONANINFO, CONANFILE_TXT, CONAN_MANIFEST, BU
 from conans.util.files import save, rmdir, normalize, mkdir, load
 from conans.util.log import logger
 from conans.client.loader_parse import load_conanfile_class
+from conans.client.store.localdb import LocalDB
 
 
 class BuildMode(object):
@@ -527,16 +528,6 @@ class ConanManager(object):
         remover = ConanRemover(self._client_cache, self._remote_manager, self._user_io, remote_proxy)
         remover.remove(pattern, remote, src, build_ids, package_ids_filter, force=force,
                        packages_query=packages_query, outdated=outdated)
-
-    def user(self, remote=None, name=None, password=None):
-        remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)
-        if password == "":
-            if not remote:
-                remote = remote_proxy.registry.default_remote.name
-            name, password = self._user_io.request_login(remote_name=remote, username=name)
-
-        all_remotes = True if remote is None else False
-        return remote_proxy.authenticate(name, password, all_remotes=all_remotes)
 
     def get_path(self, reference, package_id=None, path=None, remote=None):
         remote_proxy = ConanProxy(self._client_cache, self._user_io, self._remote_manager, remote)

@@ -788,8 +788,15 @@ class Command(object):
                                  'and escape quotes if existing. If empty, the password is '
                                  'requested interactively (not exposed)')
         args = parser.parse_args(*parameters)  # To enable -h
-        return self._conan.user(name=args.name, clean=args.clean, remote=args.remote,
-                                password=args.password)
+        if args.clean:
+            return self._conan.users_clean()
+        if args.password is None:
+            if args.name is None:
+                return self._conan.users_list(args.remote)
+            else:
+                return self._conan.user_set(args.name, args.remote)
+        return self._conan.authenticate(name=args.name, remote=args.remote,
+                                        password=args.password)
 
     def search(self, *args):
         """ Searches package recipes and binaries in the local cache or in a remote.
