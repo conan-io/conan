@@ -23,6 +23,28 @@ class ActionRecorderTest(unittest.TestCase):
         self.assertTrue(install_info["error"])
         self.assertEquals(install_info["installed"][0]["packages"], [])
 
+    def double_actions_test(self):
+        tracer = ActionRecorder()
+        tracer.recipe_downloaded(self.ref1, "http://drl.com")
+        tracer.recipe_fetched_from_cache(self.ref1)
+        tracer.package_downloaded(self.ref_p1, "http://drl.com")
+        tracer.package_fetched_from_cache(self.ref_p1)
+
+        install_info = tracer.get_install_info()
+        self.assertFalse(install_info["error"])
+
+        first_installed = install_info["installed"][0]
+        self.assertFalse(first_installed["recipe"]["cache"])
+        self.assertTrue(first_installed["recipe"]["downloaded"])
+        self.assertIsNone(first_installed["recipe"]["error"])
+        self.assertEquals(str(first_installed["recipe"]["id"]), "lib1/1.0@conan/stable")
+
+        self.assertFalse(first_installed["packages"][0]["cache"])
+        self.assertTrue(first_installed["packages"][0]["downloaded"])
+        self.assertIsNone(first_installed["packages"][0]["error"])
+        self.assertEquals(first_installed["packages"][0]["remote"], 'http://drl.com')
+        self.assertEquals(str(first_installed["packages"][0]["id"]), "1")
+
     def test_install(self):
         tracer = ActionRecorder()
         tracer.recipe_fetched_from_cache(self.ref1)

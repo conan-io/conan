@@ -4,7 +4,9 @@
 # about the downloaded files prior to unzip them
 
 import time
-from collections import namedtuple, OrderedDict
+from collections import namedtuple
+
+from conans.util import OrderedDefaultDict
 
 # Install actions
 INSTALL_CACHE = 0
@@ -30,67 +32,50 @@ class Action(namedtuple("Action", "type, doc, time")):
 class ActionRecorder(object):
 
     def __init__(self):
-        self._inst_recipes_actions = OrderedDict()
-        self._inst_packages_actions = OrderedDict()
+        self._inst_recipes_actions = OrderedDefaultDict(list)
+        self._inst_packages_actions = OrderedDefaultDict(list)
 
     # ###### INSTALL METHODS ############
 
     # RECIPE METHODS
     def recipe_fetched_from_cache(self, reference):
-        if reference in self._inst_recipes_actions:
-            if self._inst_recipes_actions[reference].type == INSTALL_DOWNLOADED:
-                return
-            assert self._inst_recipes_actions[reference].type == INSTALL_CACHE
-        else:
-            self._inst_recipes_actions[reference] = Action(INSTALL_CACHE)
+        self._inst_recipes_actions[reference].append(Action(INSTALL_CACHE))
 
     def recipe_downloaded(self, reference, remote):
-        assert reference not in self._inst_recipes_actions
-        self._inst_recipes_actions[reference] = Action(INSTALL_DOWNLOADED, {"remote": remote})
+        self._inst_recipes_actions[reference].append(Action(INSTALL_DOWNLOADED, {"remote": remote}))
 
     def recipe_install_error(self, reference, error_type, description, remote):
-        assert reference not in self._inst_recipes_actions
-        self._inst_recipes_actions[reference] = Action(INSTALL_ERROR,
-                                                       {"type": error_type,
-                                                        "description": description,
-                                                        "remote": remote})
+        doc = {"type": error_type, "description": description, "remote": remote}
+        self._inst_recipes_actions[reference].append(Action(INSTALL_ERROR, doc))
 
     # PACKAGE METHODS
     def package_built(self, reference):
-        assert reference not in self._inst_packages_actions
-        self._inst_packages_actions[reference] = Action(INSTALL_BUILT)
+        self._inst_packages_actions[reference].append(Action(INSTALL_BUILT))
 
     def package_fetched_from_cache(self, reference):
-        if reference in self._inst_packages_actions:
-            if self._inst_packages_actions[reference].type == INSTALL_BUILT:
-                return
-            assert self._inst_packages_actions[reference].type == INSTALL_CACHE
-        else:
-            self._inst_packages_actions[reference] = Action(INSTALL_CACHE)
+        self._inst_packages_actions[reference].append(Action(INSTALL_CACHE))
 
     def package_downloaded(self, reference, remote):
-        assert reference not in self._inst_packages_actions
-        self._inst_packages_actions[reference] = Action(INSTALL_DOWNLOADED, {"remote": remote})
+        self._inst_packages_actions[reference].append(Action(INSTALL_DOWNLOADED,
+                                                             {"remote": remote}))
 
     def package_install_error(self, reference, error_type, description, remote=None):
-        assert reference not in self._inst_packages_actions
-        self._inst_packages_actions[reference] = Action(INSTALL_ERROR, {"type": error_type,
-                                                                        "description": description,
-                                                                        "remote": remote})
+        doc = {"type": error_type, "description": description, "remote": remote}
+        self._inst_packages_actions[reference].append(Action(INSTALL_ERROR, doc))
 
     @property
     def install_errored(self):
-        for act in self._inst_recipes_actions.values():
-            if act.type == INSTALL_ERROR:
-                return True
-        for act in self._inst_packages_actions.values():
-            if act.type == INSTALL_ERROR:
-                return True
+        for acts in self._inst_recipes_actions.values() + self._inst_packages_actions.values():
+            for act in acts:
+                if act.type == INSTALL_ERROR:
+                    return True
         return False
 
     def _get_installed_packages(self, reference):
         ret = []
-        for _package_ref, _package_action in self._inst_packages_actions.items():
+        for _package_ref, _package_actions in self._inst_packages_actions.items():
+            # Could be a download and then an access to cache, we want the first one
+            _package_action = _package_actions[0]
             if _package_ref.conan == reference:
                 ret.append((_package_ref, _package_action))
         return ret
@@ -112,7 +97,9 @@ class ActionRecorder(object):
                 doc["remote"] = error.get("remote", None)
             return doc
 
-        for ref, action in self._inst_recipes_actions.items():
+        for ref, actions in self._inst_recipes_actions.items():
+            # Could be a download and then an access to cache, we want the first one
+            action = actions[0]
             recipe_doc = get_doc_for_ref(ref, action)
             del recipe_doc["built"]  # Avoid confusions
             packages = self._get_installed_packages(ref)
