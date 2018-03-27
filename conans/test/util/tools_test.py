@@ -684,3 +684,4 @@ class MyConan(ConanFile):
         # Authorized using headers
         tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
+

@@ -123,7 +123,7 @@ class OSInfo(object):
     def with_zypper(self):
         return self.is_linux and self.linux_distro in \
             ("opensuse", "sles")
-    
+
     @staticmethod
     def get_win_os_version():
         """

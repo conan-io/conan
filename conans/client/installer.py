@@ -21,6 +21,7 @@ from conans.client.source import config_source
 from conans.util.tracer import log_package_built
 from conans.util.env_reader import get_env
 from conans.client.importer import remove_imports
+from conans.client.tools.env import pythonpath
 
 
 def build_id(conan_file):
@@ -385,14 +386,22 @@ class ConanInstaller(object):
         if not os.path.exists(package_folder):
             self._out.info("Retrieving package %s" % package_reference.package_id)
 
-        if self._remote_proxy.get_package(package_reference,
-                                          short_paths=conan_file.short_paths):
-            _handle_system_requirements(conan_file, package_reference,
-                                        self._client_cache, output)
-            if get_env("CONAN_READ_ONLY_CACHE", False):
-                make_read_only(package_folder)
-            return True
-
+        try:
+            if self._remote_proxy.get_package(package_reference,
+                                              short_paths=conan_file.short_paths):
+                _handle_system_requirements(conan_file, package_reference,
+                                            self._client_cache, output)
+                if get_env("CONAN_READ_ONLY_CACHE", False):
+                    make_read_only(package_folder)
+                return True
+        except Exception:
+            if os.path.exists(package_folder):
+                try:
+                    rmdir(package_folder)
+                except OSError as e:
+                    raise ConanException("%s\n\nCouldn't remove folder '%s', might be busy or open. Close any app "
+                                         "using it, and retry" % (str(e), package_folder))
+            raise
         _raise_package_not_found_error(conan_file, package_reference.conan,
                                        package_reference.package_id, output)
 
@@ -432,13 +441,14 @@ class ConanInstaller(object):
         conanfile.cpp_info.public_deps = public_deps
         # Once the node is build, execute package info, so it has access to the
         # package folder and artifacts
-        with tools.chdir(package_folder):
-            with conanfile_exception_formatter(str(conanfile), "package_info"):
-                conanfile.package_folder = package_folder
-                conanfile.source_folder = None
-                conanfile.build_folder = None
-                conanfile.install_folder = None
-                conanfile.package_info()
+        with pythonpath(conanfile):  # Minimal pythonpath, not the whole context, make it 50% slower
+            with tools.chdir(package_folder):
+                with conanfile_exception_formatter(str(conanfile), "package_info"):
+                    conanfile.package_folder = package_folder
+                    conanfile.source_folder = None
+                    conanfile.build_folder = None
+                    conanfile.install_folder = None
+                    conanfile.package_info()
 
     def _get_nodes(self, nodes_by_level, skip_nodes):
         """Compute a list of (conan_ref, package_id, conan_file, build_node)
