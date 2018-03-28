@@ -169,6 +169,7 @@ class CMake(object):
         if self._cmake_system_name is False:
             return ret
 
+        # System name and system version
         if self._cmake_system_name is not True:  # String not empty
             ret["CMAKE_SYSTEM_NAME"] = self._cmake_system_name
             ret["CMAKE_SYSTEM_VERSION"] = os_ver
@@ -177,15 +178,19 @@ class CMake(object):
                 if self._os != self._os_build:
                     if self._os:  # the_os is the host (regular setting)
                         ret["CMAKE_SYSTEM_NAME"] = "Darwin" if self._os in ["iOS", "tvOS",
-                                                                          "watchOS"] else self._os
+                                                                            "watchOS"] else self._os
                         if os_ver:
                             ret["CMAKE_SYSTEM_VERSION"] = os_ver
                     else:
                         ret["CMAKE_SYSTEM_NAME"] = "Generic"
 
+        # system processor
+        cmake_system_processor = os.getenv("CONAN_CMAKE_SYSTEM_PROCESSOR", None)
+        if cmake_system_processor:
+            ret["CMAKE_SYSTEM_PROCESSOR"] = cmake_system_processor
+
         if ret:  # If enabled cross compile
-            for env_var in ["CONAN_CMAKE_SYSTEM_PROCESSOR",
-                            "CONAN_CMAKE_FIND_ROOT_PATH",
+            for env_var in ["CONAN_CMAKE_FIND_ROOT_PATH",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_PROGRAM",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_LIBRARY",
                             "CONAN_CMAKE_FIND_ROOT_PATH_MODE_INCLUDE"]:
@@ -347,6 +352,8 @@ class CMake(object):
                   source_folder=None, build_folder=None, cache_build_folder=None):
 
         # TODO: Deprecate source_dir and build_dir in favor of xxx_folder
+        if not self._conanfile.should_configure:
+            return
         args = args or []
         defs = defs or {}
         source_dir, self.build_dir = self._get_dirs(source_folder, build_folder,
@@ -367,6 +374,8 @@ class CMake(object):
             self._conanfile.run(command)
 
     def build(self, args=None, build_dir=None, target=None):
+        if not self._conanfile.should_build:
+            return
         args = args or []
         build_dir = build_dir or self.build_dir or self._conanfile.build_folder
         if target is not None:
@@ -392,6 +401,8 @@ class CMake(object):
         self._conanfile.run(command)
 
     def install(self, args=None, build_dir=None):
+        if not self._conanfile.should_install:
+            return
         mkdir(self._conanfile.package_folder)
         if not self.definitions.get("CMAKE_INSTALL_PREFIX"):
             raise ConanException("CMAKE_INSTALL_PREFIX not defined for 'cmake.install()'\n"
@@ -448,7 +459,8 @@ class CMake(object):
                 cmake.install()
                 cmake.patch_config_paths()
         """
-
+        if not self._conanfile.should_install:
+            return
         if not self._conanfile.name:
             raise ConanException("cmake.patch_config_paths() can't work without package name. "
                                  "Define name in your recipe")

@@ -2,7 +2,7 @@ from conans import tools
 from conans.test.utils.tools import TestClient
 import unittest
 import os
-from nose_parameterized.parameterized import parameterized
+from parameterized.parameterized import parameterized
 
 
 class CreateTest(unittest.TestCase):

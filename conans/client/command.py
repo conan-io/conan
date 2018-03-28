@@ -35,10 +35,13 @@ class Extender(argparse.Action):
             # share this destination.
             parser.set_defaults(**{self.dest: None})
 
-        try:
-            dest.extend(values)
-        except ValueError:
+        if isinstance(values, str):
             dest.append(values)
+        elif values:
+            try:
+                dest.extend(values)
+            except ValueError:
+                dest.append(values)
 
 
 class OnceArgument(argparse.Action):
@@ -196,6 +199,9 @@ class Command(object):
         parser.add_argument('-kb', '--keep-build', default=False, action='store_true',
                             help='Optional. Do not remove the build folder in local cache. '
                                  'Use for testing purposes only')
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='Path to a json file where the install information '
+                                 'will be written')
 
         _add_manifests_arguments(parser)
         _add_common_install_arguments(parser, build_help=_help_build_policies)
@@ -208,13 +214,19 @@ class Command(object):
             # Now if parameter --test-folder=None (string None) we have to skip tests
             args.test_folder = False
 
-        return self._conan.create(args.path, name, version, user, channel,
-                                  args.profile, args.settings, args.options,
-                                  args.env, args.test_folder, args.not_export,
-                                  args.build, args.keep_source, args.keep_build, args.verify,
-                                  args.manifests, args.manifests_interactive,
-                                  args.remote, args.update,
-                                  test_build_folder=args.test_build_folder)
+        cwd = os.getcwd()
+
+        try:
+            self._conan.create(args.path, name, version, user, channel,
+                               args.profile, args.settings, args.options,
+                               args.env, args.test_folder, args.not_export,
+                               args.build, args.keep_source, args.keep_build, args.verify,
+                               args.manifests, args.manifests_interactive,
+                               args.remote, args.update,
+                               test_build_folder=args.test_build_folder)
+        finally:
+            if args.json:
+                self._outputer.json_install(self._conan.recorder.get_install_info(), args.json, cwd)
 
     def download(self, *args):
         """Downloads recipe and binaries to the local cache, without using settings.
@@ -232,10 +244,13 @@ class Command(object):
                             help='Force install specified package ID (ignore settings/options)')
         parser.add_argument("-r", "--remote", help='look in the specified remote server',
                             action=OnceArgument)
+        parser.add_argument("-re", "--recipe", help='Downloads only the recipe', default=False,
+                            action="store_true")
 
         args = parser.parse_args(*args)
 
-        return self._conan.download(reference=args.reference, package=args.package, remote=args.remote)
+        return self._conan.download(reference=args.reference, package=args.package,
+                                    remote=args.remote, recipe=args.recipe)
 
     def install(self, *args):
         """Installs the requirements specified in a conanfile (.py or .txt).
@@ -264,35 +279,43 @@ class Command(object):
 
         parser.add_argument("--no-imports", action='store_true', default=False,
                             help='Install specified packages but avoid running imports')
+        parser.add_argument("-j", "--json", default=None, action=OnceArgument,
+                            help='Path to a json file where the install information '
+                                 'will be written')
 
         _add_common_install_arguments(parser, build_help=_help_build_policies)
 
         args = parser.parse_args(*args)
+        cwd = os.getcwd()
 
         try:
-            reference = ConanFileReference.loads(args.path)
-        except ConanException:
-            return self._conan.install(path=args.path,
-                                       settings=args.settings, options=args.options,
-                                       env=args.env,
-                                       remote=args.remote,
-                                       verify=args.verify, manifests=args.manifests,
-                                       manifests_interactive=args.manifests_interactive,
-                                       build=args.build, profile_name=args.profile,
-                                       update=args.update, generators=args.generator,
-                                       no_imports=args.no_imports,
-                                       install_folder=args.install_folder)
-        else:
-            return self._conan.install_reference(reference, settings=args.settings,
-                                                 options=args.options,
-                                                 env=args.env,
-                                                 remote=args.remote,
-                                                 verify=args.verify, manifests=args.manifests,
-                                                 manifests_interactive=args.manifests_interactive,
-                                                 build=args.build, profile_name=args.profile,
-                                                 update=args.update,
-                                                 generators=args.generator,
-                                                 install_folder=args.install_folder)
+            try:
+                reference = ConanFileReference.loads(args.path)
+            except ConanException:
+                self._conan.install(path=args.path,
+                                    settings=args.settings, options=args.options,
+                                    env=args.env,
+                                    remote=args.remote,
+                                    verify=args.verify, manifests=args.manifests,
+                                    manifests_interactive=args.manifests_interactive,
+                                    build=args.build, profile_name=args.profile,
+                                    update=args.update, generators=args.generator,
+                                    no_imports=args.no_imports,
+                                    install_folder=args.install_folder)
+            else:
+                self._conan.install_reference(reference, settings=args.settings,
+                                              options=args.options,
+                                              env=args.env,
+                                              remote=args.remote,
+                                              verify=args.verify, manifests=args.manifests,
+                                              manifests_interactive=args.manifests_interactive,
+                                              build=args.build, profile_name=args.profile,
+                                              update=args.update,
+                                              generators=args.generator,
+                                              install_folder=args.install_folder)
+        finally:
+            if args.json:
+                self._outputer.json_install(self._conan.recorder.get_install_info(), args.json, cwd)
 
     def config(self, *args):
         """Manages configuration. Edits the conan.conf or installs config files.
@@ -499,12 +522,29 @@ class Command(object):
                             help="Optional. Local folder containing the conaninfo.txt and "
                                  "conanbuildinfo.txt files (from a previous conan install "
                                  "execution). Defaulted to --build-folder")
+        parser.add_argument("-c", "--configure", default=None, action="store_true",
+                            help="Execute the configuration step (variable should_configure=True)."
+                            " When specified, build/install won't run unless --build/--install specified")
+        parser.add_argument("-b", "--build", default=None, action="store_true",
+                            help="Execute the build step (variable should_build=True)."
+                            " When specified, configure/install won't run unless --configure/--install specified")
+        parser.add_argument("-i", "--install", default=None, action="store_true",
+                            help="Execute the install step (variable should_install=True)."
+                            " When specified, configure/build won't run unless --configure/--build specified")
         args = parser.parse_args(*args)
+
+        if args.build or args.configure or args.install:
+            build, config, install = bool(args.build), bool(args.configure), bool(args.install)
+        else:
+            build = config = install = True
         return self._conan.build(conanfile_path=args.path,
                                  source_folder=args.source_folder,
                                  package_folder=args.package_folder,
                                  build_folder=args.build_folder,
-                                 install_folder=args.install_folder)
+                                 install_folder=args.install_folder,
+                                 should_configure=config,
+                                 should_build=build,
+                                 should_install=install)
 
     def package(self, *args):
         """ Calls your local conanfile.py 'package()' method.
@@ -609,6 +649,10 @@ class Command(object):
                             help="build folder, working directory of the build process. Defaulted "
                                  "to the current directory. A relative path can also be specified "
                                  "(relative to the current directory)")
+        parser.add_argument("-pf", "--package-folder", action=OnceArgument,
+                            help="folder containing a locally created package. "
+                                 "If a value is giving, it won't call the recipe 'package()' "
+                                 "method, and will run a copy of the provided folder.")
         parser.add_argument("-if", "--install-folder", action=OnceArgument,
                             help="local folder containing the conaninfo.txt and conanbuildinfo.txt "
                             "files (from a previous conan install execution). Defaulted to "
@@ -638,6 +682,7 @@ class Command(object):
                                       version=version,
                                       source_folder=args.source_folder,
                                       build_folder=args.build_folder,
+                                      package_folder=args.package_folder,
                                       install_folder=args.install_folder,
                                       profile_name=args.profile,
                                       env=args.env,
@@ -760,8 +805,15 @@ class Command(object):
                                  'and escape quotes if existing. If empty, the password is '
                                  'requested interactively (not exposed)')
         args = parser.parse_args(*parameters)  # To enable -h
-        return self._conan.user(name=args.name, clean=args.clean, remote=args.remote,
-                                password=args.password)
+        if args.clean:
+            return self._conan.users_clean()
+        if args.password is None:
+            if args.name is None:
+                return self._conan.users_list(args.remote)
+            else:
+                return self._conan.user_set(args.name, args.remote)
+        return self._conan.authenticate(name=args.name, remote=args.remote,
+                                        password=args.password)
 
     def search(self, *args):
         """ Searches package recipes and binaries in the local cache or in a remote.
@@ -867,13 +919,17 @@ class Command(object):
         parser.add_argument('--retry-wait', default=5, type=int,
                             help='Waits specified seconds before retry again',
                             action=OnceArgument)
+        parser.add_argument("-no", "--no-overwrite", nargs="?", type=str, choices=["all", "recipe"],
+                            help="Uploads package only if recipe is the same as the remote one",
+                            action=OnceArgument, const="all")
 
         args = parser.parse_args(*args)
+
         return self._conan.upload(pattern=args.pattern, package=args.package, remote=args.remote,
-                                  all_packages=args.all,
-                                  force=args.force, confirm=args.confirm, retry=args.retry,
-                                  retry_wait=args.retry_wait,
-                                  skip_upload=args.skip_upload, integrity_check=args.check)
+                                  all_packages=args.all, force=args.force, confirm=args.confirm,
+                                  retry=args.retry, retry_wait=args.retry_wait,
+                                  skip_upload=args.skip_upload, integrity_check=args.check,
+                                  no_overwrite=args.no_overwrite)
 
     def remote(self, *args):
         """ Manages the remote list and the package recipes associated to a remote.
@@ -1210,7 +1266,7 @@ def _add_common_install_arguments(parser, build_help):
                              '-e CXX=/usr/bin/clang++',
                         nargs=1, action=Extender)
     if build_help:
-        parser.add_argument("-b", "--build", action=Extender, nargs="*", help=build_help)
+        parser.add_argument("-b", "--build", action=Extender, nargs="?", help=build_help)
 
 
 _help_build_policies = '''Optional, use it to choose if you want to build from sources:

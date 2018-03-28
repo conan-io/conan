@@ -3,10 +3,11 @@ from conans.paths import CONANFILE
 from conans.test.utils.tools import TestClient
 import six
 import os
+from conans import tools
 
 
 conanfile = """
-from conans import ConanFile
+from conans import ConanFile, tools
 class TestConan(ConanFile):
     name = "Hello"
     version = "1.2"
@@ -14,10 +15,19 @@ class TestConan(ConanFile):
         print("HEllo world")
         for k, v in {}.iteritems():
             pass
+        tools.msvc_build_command(self.settings, "path")
 """
 
 
 class ExportLinterTest(unittest.TestCase):
+
+    def setUp(self):
+        self.old_env = dict(os.environ)
+        os.environ["CONAN_RECIPE_LINTER"] = "True"
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.old_env)
 
     def test_basic(self):
         client = TestClient()
@@ -36,10 +46,10 @@ class ExportLinterTest(unittest.TestCase):
     def test_disable_linter(self):
         client = TestClient()
         client.save({CONANFILE: conanfile})
-        client.run("config set general.recipe_linter=False")
-        client.run("export . lasote/stable")
-        self.assertNotIn("ERROR: Py3 incompatibility", client.user_io.out)
-        self.assertNotIn("WARN: Linter", client.user_io.out)
+        with tools.environment_append({"CONAN_RECIPE_LINTER": "False"}):
+            client.run("export . lasote/stable")
+            self.assertNotIn("ERROR: Py3 incompatibility", client.user_io.out)
+            self.assertNotIn("WARN: Linter", client.user_io.out)
 
     def test_custom_rc_linter(self):
         client = TestClient()
@@ -125,3 +135,22 @@ class BaseConan(ConanFile):
         self._check_linter(client.user_io.out)
         self.assertIn("ERROR: Package recipe has linter errors. Please fix them",
                       client.user_io.out)
+
+    def export_deploy_test(self):
+        conanfile = """
+from conans import ConanFile
+class BaseConan(ConanFile):
+    name = "baselib"
+    version = "1.0"
+
+    def deploy(self):
+        self.copy_deps("*.dll")
+"""
+        client = TestClient()
+        client.save({CONANFILE: conanfile})
+        client.run("export . conan/stable")
+        self.assertNotIn("Linter warnings", client.out)
+        self.assertNotIn("WARN: Linter. Line 8: Instance of 'BaseConan' has no 'copy_deps' member",
+                         client.out)
+        self.assertNotIn("WARN: Linter. Line 8: self.copy_deps is not callable",
+                         client.out)

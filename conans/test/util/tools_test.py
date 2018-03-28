@@ -576,6 +576,29 @@ compiler:
                 # Not raising
                 tools.vcvars_command(settings, force=True)
 
+    def vcvars_context_manager_test(self):
+        conanfile = """
+from conans import ConanFile, tools
+
+class MyConan(ConanFile):
+    name = "MyConan"
+    version = "0.1"
+    settings = "os", "compiler"
+
+    def build(self):
+        with tools.vcvars(self.settings):
+            self.output.info("VCINSTALLDIR set to: " + str(tools.get_env("VCINSTALLDIR")))
+"""
+        client = TestClient()
+        client.save({"conanfile.py": conanfile})
+
+        if platform.system() == "Windows":
+            client.run("create . conan/testing")
+            self.assertNotIn("VCINSTALLDIR set to: None", client.out)
+        else:
+            client.run("create . conan/testing")
+            self.assertIn("VCINSTALLDIR set to: None", client.out)
+
     def run_in_bash_test(self):
         if platform.system() != "Windows":
             return
@@ -661,3 +684,4 @@ compiler:
         # Authorized using headers
         tools.download("https://httpbin.org/basic-auth/user/passwd", dest,
                        headers={"Authorization": "Basic dXNlcjpwYXNzd2Q="}, overwrite=True)
+

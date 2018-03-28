@@ -439,6 +439,15 @@ helloTest/1.4.10@fenix/stable""".format(remote)
         client.run("search nonexist/1.0@lasote/stable")
         self.assertIn("There are no packages", self.client.user_io.out)
 
+    def search_with_no_registry_test(self):
+        # https://github.com/conan-io/conan/issues/2589
+        client = TestClient()
+        os.remove(os.path.join(client.client_cache.registry))
+        error = client.run("search nonexist/1.0@lasote/stable -r=myremote", ignore_error=True)
+        self.assertTrue(error)
+        self.assertIn("WARN: Remotes registry file missing, creating default one", client.out)
+        self.assertIn("ERROR: No remote 'myremote' defined in remotes", client.out)
+
 
 class SearchOutdatedTest(unittest.TestCase):
     def search_outdated_test(self):
