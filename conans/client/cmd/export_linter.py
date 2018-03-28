@@ -18,8 +18,8 @@ def conan_linter(conanfile_path, out):
     if not apply_lint or apply_lint == "False":
         return
 
-    dir_path = os.path.dirname(root_path[0])
-    dirname = os.path.dirname(conanfile_path)
+    dir_path = os.path.dirname(root_path[0]).replace("\\", "/")
+    dirname = os.path.dirname(conanfile_path).replace("\\", "/")
     hook = '--init-hook="import sys;sys.path.extend([\'%s\', \'%s\'])"' % (dirname, dir_path)
 
     try:
@@ -46,7 +46,7 @@ def _runner(args):
     shell = True if platform.system() != "Windows" else False
     proc = Popen(command, shell=shell, bufsize=10, stdout=PIPE, stderr=PIPE)
     stdout, _ = proc.communicate()
-    return json.loads(stdout) if stdout else {}
+    return json.loads(stdout.decode("utf-8")) if stdout else {}
 
 
 def _normal_linter(conanfile_path, hook):
