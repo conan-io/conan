@@ -7,8 +7,8 @@ from conans.client.loader_parse import load_conanfile_class
 from conans.client.proxy import ConanProxy
 
 
-def _prepare_sources(client_cache, user_io, remote_manager, reference):
-    remote_proxy = ConanProxy(client_cache, user_io, remote_manager, None)
+def _prepare_sources(client_cache, user_io, remote_manager, reference, recorder):
+    remote_proxy = ConanProxy(client_cache, user_io, remote_manager, None, recorder)
     conan_file_path = client_cache.conanfile(reference)
     conanfile = load_conanfile_class(conan_file_path)
     remote_proxy.complete_recipe_sources(conanfile, reference,
@@ -28,14 +28,14 @@ def _get_package_ids(client_cache, reference, package_ids):
     return package_ids
 
 
-def cmd_copy(reference, user_channel, package_ids, client_cache, user_io, remote_manager,
+def cmd_copy(reference, user_channel, package_ids, client_cache, user_io, remote_manager, recorder,
              force=False):
     """
     param package_ids: Falsey=do not copy binaries. True=All existing. []=list of ids
     """
     src_ref = ConanFileReference.loads(reference)
 
-    short_paths = _prepare_sources(client_cache, user_io, remote_manager, src_ref)
+    short_paths = _prepare_sources(client_cache, user_io, remote_manager, src_ref, recorder)
     package_ids = _get_package_ids(client_cache, src_ref, package_ids)
     package_copy(src_ref, user_channel, package_ids, client_cache, user_io,
                  short_paths, force)
