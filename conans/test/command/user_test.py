@@ -28,20 +28,17 @@ class UserTest(unittest.TestCase):
         # Test with wrong remote right error is reported
         with self.assertRaises(Exception):
             client.run("user -r Test_Wrong_Remote")
-        self.assertIn("ERROR: No remote 'Test_Wrong_Remote' defined", client.user_io.out)
+        self.assertIn("ERROR: No remote 'Test_Wrong_Remote' defined", client.out)
 
         # Test user list for requested remote reported
         client.run("user -r test_remote_1")
-        self.assertIn("Current 'test_remote_1' user: None (anonymous)", client.user_io.out)
-        self.assertNotIn("Current 'default' user: None (anonymous)", client.user_io.out)
+        self.assertIn("Current 'test_remote_1' user: None (anonymous)", client.out)
+        self.assertNotIn("Current 'default' user: None (anonymous)", client.out)
 
         # Test user list for all remotes is reported
         client.run("user")
-        self.assertIn(
-            ("Current 'default' user: None (anonymous)\n"
-             "Current 'test_remote_1' user: None (anonymous)"),
-            client.user_io.out
-        )
+        self.assertIn("Current 'test_remote_1' user: None (anonymous)", client.out)
+        self.assertIn("Current 'default' user: None (anonymous)", client.out)
 
     def test_with_no_user(self):
         test_server = TestServer()
