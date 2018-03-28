@@ -57,47 +57,63 @@ class AutoToolsBuildEnvironment(object):
         # Not declared by default
         self.fpic = None
 
+    def _get_triplet(self, the_arch, the_os):
+        """
+        machine-vendor-op_system, But vendor can be omitted in practice
+        """
+
+        # Calculate the arch
+        machine = {"x86": "i686" if the_os != "Linux" else "x86",
+                   "x86_64": "x86_64",
+                   "armv6": "arm",
+                   "armv7": "arm",
+                   "armv7s": "arm",
+                   "armv7k": "arm",
+                   "armv7hf": "arm",
+                   "armv8": "aarch64"}.get(the_arch, None)
+        if machine is None:
+            self._conanfile.output.warn("Unknown '%s' machine, Conan doesn't know how to "
+                                        "translate it to the GNU triplet, please report at "
+                                        " https://github.com/conan-io/conan/issues" % the_arch)
+            return "unknown"
+
+        # Calculate the OS
+        compiler = self._conanfile.settings.get_safe("compiler")
+        if compiler == "gcc":
+            windows_op = "w64-mingw32"
+        elif compiler == "Visual Studio":
+            windows_op = "windows-msvc"
+        else:
+            windows_op = "windows"
+
+        op_system = {"Windows": windows_op,
+                     "Linux": "linux-gnu",
+                     "Darwin": "apple-darwin",
+                     "Android": "linux-android",
+                     "Macos": "apple-darwin",
+                     "iOS": "apple-darwin",
+                     "watchOS": "apple-darwin",
+                     "tvOS": "apple-darwin"}.get(the_os, the_os.lower())
+
+        if the_os in ("Linux", "Android"):
+            if "arm" in the_arch and the_arch != "armv8":
+                op_system += "eabi"
+
+            if the_arch == "armv7hf" and the_os == "Linux":
+                op_system += "hf"
+
+        return "%s-%s" % (machine, op_system)
+
     def _get_host_build_target_flags(self, arch_detected, os_detected):
         """Based on google search for build/host triplets, it could need a lot
         and complex verification"""
+
         if not cross_building(self._conanfile.settings, os_detected, arch_detected):
             return False, False, False
 
-        arch_setting = self._conanfile.settings.get_safe("arch")
-        os_setting = self._conanfile.settings.get_safe("os")
-
-        if os_detected == "Windows" and os_setting != "Windows":
-            # Don't know what to do with these, even exists? its only for configure
-            return None, None, None
-
-        # Building FOR windows
-        if os_setting == "Windows":
-            build = "i686-w64-mingw32" if arch_detected == "x86" else "x86_64-w64-mingw32"
-            host = "i686-w64-mingw32" if arch_setting == "x86" else "x86_64-w64-mingw32"
-        else:  # Building for Linux or Android
-            build = "%s-%s" % (arch_detected, {"Linux": "linux-gnu",
-                                               "Darwin": "apple-darwin"}.get(os_detected,
-                                                                             os_detected.lower()))
-            if arch_setting == "x86":
-                host_arch = "i686"
-            elif arch_setting == "armv8":
-                host_arch = "aarch64"
-            else:
-                host_arch = "arm" if "arm" in arch_setting else arch_setting
-
-            host = "%s%s" % (host_arch, {"Linux": "-linux-gnu",
-                                         "Android": "-linux-android",
-                                         "Macos": "-apple-darwin",
-                                         "iOS": "-apple-darwin",
-                                         "watchOS": "-apple-darwin",
-                                         "tvOS": "-apple-darwin"}.get(os_setting, ""))
-
-            if os_setting in ("Linux", "Android"):
-                if "arm" in arch_setting and arch_setting != "armv8":
-                    host += "eabi"
-
-                if arch_setting == "armv7hf" and os_setting == "Linux":
-                    host += "hf"
+        build = self._get_triplet(arch_detected, os_detected)
+        host = self._get_triplet(self._conanfile.settings.get_safe("arch"),
+                                 self._conanfile.settings.get_safe("os"))
 
         return build, host, None
 
@@ -119,13 +135,17 @@ class AutoToolsBuildEnvironment(object):
         https://gcc.gnu.org/onlinedocs/gccint/Configure-Terms.html
 
         """
+        if not self._conanfile.should_configure:
+            return
         if configure_dir:
             configure_dir = configure_dir.rstrip("/")
         else:
             configure_dir = "."
         auto_build, auto_host, auto_target = None, None, None
         if build is None or host is None or target is None:
-            flags = self._get_host_build_target_flags(detected_architecture(), platform.system())
+            arch_detected = detected_architecture() or platform.machine()
+            os_detected = platform.system()
+            flags = self._get_host_build_target_flags(arch_detected, os_detected)
             auto_build, auto_host, auto_target = flags
         triplet_args = []
 
@@ -152,8 +172,10 @@ class AutoToolsBuildEnvironment(object):
         with environment_append(pkg_env):
             with environment_append(self.vars):
                 configure_dir = self._adjust_path(configure_dir)
-                self._conanfile.run('%s/configure %s %s'
-                                    % (configure_dir, args_to_string(args), " ".join(triplet_args)),
+                command = '%s/configure %s %s' % (configure_dir,
+                                                  args_to_string(args), " ".join(triplet_args))
+                self._conanfile.output.info("Calling:\n > %s" % command)
+                self._conanfile.run(command,
                                     win_bash=self._win_bash,
                                     subsystem=self.subsystem)
 
@@ -163,6 +185,8 @@ class AutoToolsBuildEnvironment(object):
         return '"%s"' % path if " " in path else path
 
     def make(self, args="", make_program=None, target=None):
+        if not self._conanfile.should_build:
+            return
         make_program = os.getenv("CONAN_MAKE_PROGRAM") or make_program or "make"
         with environment_append(self.vars):
             str_args = args_to_string(args)

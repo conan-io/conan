@@ -9,7 +9,7 @@ from conans.paths import CONANFILE
 from collections import OrderedDict
 from conans.test.utils.test_files import temp_folder
 from conans.test.utils.profiles import create_profile as _create_profile
-from nose_parameterized import parameterized
+from parameterized import parameterized
 
 
 conanfile_scope_env = """

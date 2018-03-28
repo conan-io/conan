@@ -21,6 +21,7 @@ from .virtualenv import VirtualEnvGenerator
 from .cmake_multi import CMakeMultiGenerator
 from .virtualbuildenv import VirtualBuildEnvGenerator
 from .boostbuild import BoostBuildGenerator
+from .json_generator import JsonGenerator
 import traceback
 from conans.util.env_reader import get_env
 
@@ -64,6 +65,7 @@ registered_generators.add("virtualbuildenv", VirtualBuildEnvGenerator)
 registered_generators.add("virtualrunenv", VirtualRunEnvGenerator)
 registered_generators.add("boost-build", BoostBuildGenerator)
 registered_generators.add("pkg_config", PkgConfigGenerator)
+registered_generators.add("json", JsonGenerator)
 
 
 def write_generators(conanfile, path, output):

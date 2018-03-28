@@ -2,6 +2,7 @@ import unittest
 import os
 import platform
 import re
+import subprocess
 
 from conans import tools
 from conans.test.utils.tools import TestClient
@@ -141,6 +142,52 @@ class InfoFoldersTest(unittest.TestCase):
                          client.client_cache.package(pkg_ref, True)):
                 self.assertFalse(os.path.exists(path))
                 self.assertTrue(os.path.exists(os.path.dirname(path)))
+
+    def test_short_paths_home_set_acl(self):
+        """
+        When CONAN_USER_HOME_SHORT is living in NTFS file systems, current user needs to be
+        granted with full control permission to avoid access problems when cygwin/msys2 windows subsystems
+        are mounting/using that folder.
+        """
+        if platform.system() != "Windows":
+            return
+
+        folder = temp_folder(False)  # Creates a temporary folder in %HOME%\appdata\local\temp
+
+        out = subprocess.check_output("wmic logicaldisk %s get FileSystem" % os.path.splitdrive(folder)[0])
+        if "NTFS" not in str(out):
+            return
+        short_folder = os.path.join(folder, ".cnacls")
+
+        self.assertFalse(os.path.exists(short_folder), "short_folder: %s shouldn't exists" % short_folder)
+        os.makedirs(short_folder)
+
+        current_domain = os.environ['USERDOMAIN']
+        current_user = os.environ['USERNAME']
+
+        # Explicitly revoke full control permission to current user
+        cmd = r'cacls %s /E /R "%s\%s"' % (short_folder, current_domain, current_user)
+        try:
+            subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            raise Exception("Error %s setting ACL to short_folder: '%s'."
+                            "Please check that cacls.exe exists" % (e, short_folder))
+
+        # Run conan export in using short_folder
+        with tools.environment_append({"CONAN_USER_HOME_SHORT": short_folder}):
+            client = TestClient(base_folder=folder)
+            client.save({CONANFILE: conanfile_py.replace("False", "True")})
+            client.run("export . %s" % self.user_channel)
+
+        # Retrieve ACLs from short_folder
+        try:
+            short_folder_acls = subprocess.check_output("cacls %s" % short_folder, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            raise Exception("Error %s getting ACL from short_folder: '%s'." % (e, short_folder))
+
+        # Check user has full control
+        user_acl = "%s\\%s:(OI)(CI)F" % (current_domain, current_user)
+        self.assertIn(user_acl.encode(), short_folder_acls)
 
     def test_direct_conanfile(self):
         client = TestClient()

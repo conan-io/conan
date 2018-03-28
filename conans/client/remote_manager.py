@@ -14,21 +14,24 @@ from conans.util.files import gzopen_without_timestamps
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch
 from conans.util.log import logger
-from conans.util.tracer import log_package_upload, log_recipe_upload,\
-    log_recipe_download, log_package_download, log_recipe_sources_download, log_uncompressed_file, log_compressed_files
+# FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
+from conans.util.tracer import (log_package_upload, log_recipe_upload,
+                                log_recipe_sources_download,
+                                log_uncompressed_file, log_compressed_files, log_recipe_download,
+                                log_package_download)
 from conans.client.source import merge_directories
 
 
 class RemoteManager(object):
     """ Will handle the remotes to get conans, packages etc """
 
-    def __init__(self, client_cache, remote_client, output):
+    def __init__(self, client_cache, auth_manager, output):
         self._client_cache = client_cache
         self._output = output
-        self._remote_client = remote_client
+        self._auth_manager = auth_manager
 
     def upload_recipe(self, conan_reference, remote, retry, retry_wait, ignore_deleted_file,
-                      skip_upload=False):
+                      skip_upload=False, no_overwrite=None):
         """Will upload the conans to the first remote"""
 
         t1 = time.time()
@@ -44,7 +47,7 @@ class RemoteManager(object):
             return None
 
         ret = self._call_remote(remote, "upload_recipe", conan_reference, the_files,
-                                retry, retry_wait, ignore_deleted_file)
+                                retry, retry_wait, ignore_deleted_file, no_overwrite)
         duration = time.time() - t1
         log_recipe_upload(conan_reference, duration, the_files, remote)
         if ret:
@@ -83,7 +86,7 @@ class RemoteManager(object):
         self._output.writeln("")
 
     def upload_package(self, package_reference, remote, retry, retry_wait, skip_upload=False,
-                       integrity_check=False):
+                       integrity_check=False, no_overwrite=None):
         """Will upload the package to the first remote"""
         t1 = time.time()
         # existing package, will use short paths if defined
@@ -107,7 +110,7 @@ class RemoteManager(object):
             return None
 
         tmp = self._call_remote(remote, "upload_package", package_reference, the_files,
-                                retry, retry_wait)
+                                retry, retry_wait, no_overwrite)
         duration = time.time() - t1
         log_package_upload(package_reference, duration, the_files, remote)
         logger.debug("====> Time remote_manager upload_package: %f" % duration)
@@ -244,9 +247,9 @@ class RemoteManager(object):
         return self._call_remote(remote, 'authenticate', name, password)
 
     def _call_remote(self, remote, method, *argc, **argv):
-        self._remote_client.remote = remote
+        self._auth_manager.remote = remote
         try:
-            return getattr(self._remote_client, method)(*argc, **argv)
+            return getattr(self._auth_manager, method)(*argc, **argv)
         except ConnectionError as exc:
             raise ConanConnectionError("%s\n\nUnable to connect to %s=%s"
                                        % (str(exc), remote.name, remote.url))

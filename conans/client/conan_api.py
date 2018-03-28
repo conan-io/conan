@@ -5,6 +5,7 @@ import requests
 
 import conans
 from conans import __version__ as client_version, tools
+from conans.client.action_recorder import ActionRecorder
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager, existing_info_files
@@ -16,6 +17,7 @@ from conans.client.remote_manager import RemoteManager
 from conans.client.remote_registry import RemoteRegistry
 from conans.client.rest.auth_manager import ConanApiAuthManager
 from conans.client.rest.rest_client import RestApiClient
+from conans.client.rest.conan_requester import ConanRequester
 from conans.client.rest.version_checker import VersionCheckerRequester
 from conans.client.runner import ConanRunner
 from conans.client.store.localdb import LocalDB
@@ -37,6 +39,7 @@ from conans.client.cmd.uploader import CmdUpload
 from conans.client.cmd.profile import cmd_profile_update, cmd_profile_get,\
     cmd_profile_delete_key, cmd_profile_create, cmd_profile_list
 from conans.client.cmd.search import Search
+from conans.client.cmd.user import users_clean, users_list, user_set
 
 
 default_manifest_folder = '.conan_manifests'
@@ -44,14 +47,8 @@ default_manifest_folder = '.conan_manifests'
 
 def get_basic_requester(client_cache):
     requester = requests.Session()
-    proxies = client_cache.conan_config.proxies
-    if proxies:
-        # Account for the requests NO_PROXY env variable, not defined as a proxy like http=
-        no_proxy = proxies.pop("no_proxy", None)
-        if no_proxy:
-            os.environ["NO_PROXY"] = no_proxy
-        requester.proxies = proxies
-    return requester
+    # Manage the verify and the client certificates and setup proxies
+    return ConanRequester(requester, client_cache)
 
 
 def api_method(f):
@@ -115,26 +112,29 @@ def _get_conanfile_path(path, cwd, py):
 class ConanAPIV1(object):
 
     @staticmethod
-    def factory():
-        """Factory"""
+    def instance_remote_manager(requester, client_cache, user_io, _client_version,
+                                min_server_compatible_version):
 
-        def instance_remote_manager(client_cache):
-            requester = get_basic_requester(client_cache)
-            # Verify client version against remotes
-            version_checker_req = VersionCheckerRequester(requester, Version(client_version),
-                                                          Version(MIN_SERVER_COMPATIBLE_VERSION),
-                                                          out)
-            # To handle remote connections
-            put_headers = client_cache.read_put_headers()
-            rest_api_client = RestApiClient(out, requester=version_checker_req,
-                                            put_headers=put_headers)
-            # To store user and token
-            localdb = LocalDB(client_cache.localdb)
-            # Wraps RestApiClient to add authentication support (same interface)
-            auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
-            # Handle remote connections
-            remote_manager = RemoteManager(client_cache, auth_manager, out)
-            return remote_manager
+        # Verify client version against remotes
+        version_checker_req = VersionCheckerRequester(requester, _client_version,
+                                                      min_server_compatible_version,
+                                                      user_io.out)
+
+        # To handle remote connections
+        put_headers = client_cache.read_put_headers()
+        rest_api_client = RestApiClient(user_io.out, requester=version_checker_req,
+                                        put_headers=put_headers)
+        # To store user and token
+        localdb = LocalDB(client_cache.localdb)
+        # Wraps RestApiClient to add authentication support (same interface)
+        auth_manager = ConanApiAuthManager(rest_api_client, user_io, localdb)
+        # Handle remote connections
+        remote_manager = RemoteManager(client_cache, auth_manager, user_io.out)
+        return localdb, rest_api_client, remote_manager
+
+    @staticmethod
+    def factory(interactive=None):
+        """Factory"""
 
         use_color = get_env("CONAN_COLOR_DISPLAY", 1)
         if use_color and hasattr(sys.stdout, "isatty") and sys.stdout.isatty():
@@ -159,29 +159,41 @@ class ConanAPIV1(object):
             conans.util.log.logger = configure_logger()
 
             # Get the new command instance after migrations have been done
-            remote_manager = instance_remote_manager(client_cache)
+            requester = get_basic_requester(client_cache)
+            _, _, remote_manager = ConanAPIV1.instance_remote_manager(
+                                                requester,
+                                                client_cache, user_io,
+                                                Version(client_version),
+                                                Version(MIN_SERVER_COMPATIBLE_VERSION))
+
+            # Adjust global tool variables
+            set_global_instances(out, requester)
 
             # Get a search manager
             search_manager = DiskSearchManager(client_cache)
 
             # Settings preprocessor
+            if interactive is None:
+                interactive = not get_env("CONAN_NON_INTERACTIVE", False)
             conan = Conan(client_cache, user_io, get_conan_runner(), remote_manager, search_manager,
-                          settings_preprocessor)
+                          settings_preprocessor, interactive=interactive)
 
         return conan, client_cache, user_io
 
     def __init__(self, client_cache, user_io, runner, remote_manager, search_manager,
-                 settings_preprocessor):
+                 _settings_preprocessor, interactive=True):
         assert isinstance(user_io, UserIO)
         assert isinstance(client_cache, ClientCache)
         self._client_cache = client_cache
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
+        self.recorder = ActionRecorder()
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     settings_preprocessor)
-        # Patch the tools module with a good requester and user_io
-        set_global_instances(self._user_io.out, get_basic_requester(self._client_cache))
+                                     _settings_preprocessor, self.recorder)
+        if not interactive:
+            self._user_io.disable_input()
+
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -310,10 +322,12 @@ class ConanAPIV1(object):
                                   update=update,
                                   keep_build=keep_build)
 
+
+
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
-                   install_folder=None, profile_name=None, settings=None, options=None,
-                   env=None, force=False, user=None, version=None, cwd=None):
+                   package_folder=None, install_folder=None, profile_name=None, settings=None,
+                   options=None, env=None, force=False, user=None, version=None, cwd=None):
 
         settings = settings or []
         options = options or []
@@ -322,10 +336,16 @@ class ConanAPIV1(object):
 
         # Checks that info files exists if the install folder is specified
         if install_folder and not existing_info_files(_make_abs_path(install_folder, cwd)):
-            raise ConanException("The specified --install-folder doesn't contain '%s' and '%s' "
+            raise ConanException("The specified install folder doesn't contain '%s' and '%s' "
                                  "files" % (CONANINFO, BUILD_INFO))
 
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
+
+        if package_folder:
+            if build_folder or source_folder:
+                raise ConanException("package folder definition incompatible with build and source folders")
+            package_folder = _make_abs_path(package_folder, cwd)
+
         build_folder = _make_abs_path(build_folder, cwd)
         install_folder = _make_abs_path(install_folder, cwd, default=build_folder)
         source_folder = _make_abs_path(source_folder, cwd, default=os.path.dirname(conanfile_path))
@@ -357,13 +377,16 @@ class ConanAPIV1(object):
 
         reference = ConanFileReference(name, version, user, channel)
         self._manager.export_pkg(reference, source_folder=source_folder, build_folder=build_folder,
-                                 install_folder=install_folder, profile=profile, force=force)
+                                 package_folder=package_folder, install_folder=install_folder,
+                                 profile=profile, force=force)
 
     @api_method
-    def download(self, reference, remote=None, package=None):
+    def download(self, reference, remote=None, package=None, recipe=False):
+        if package and recipe:
+            raise ConanException("recipe parameter cannot be used together with package")
         # Install packages without settings (fixed ids or all)
         conan_ref = ConanFileReference.loads(reference)
-        self._manager.download(conan_ref, package, remote=remote)
+        self._manager.download(conan_ref, package, remote=remote, recipe=recipe)
 
     @api_method
     def install_reference(self, reference, settings=None, options=None, env=None,
@@ -441,7 +464,7 @@ class ConanAPIV1(object):
     @api_method
     def config_install(self, item, verify_ssl):
         from conans.client.conf.config_installer import configuration_install
-        return configuration_install(item, self._client_cache, self._user_io.out, self._runner, verify_ssl)
+        return configuration_install(item, self._client_cache, self._user_io.out, verify_ssl)
 
     def _info_get_profile(self, reference, install_folder, profile_name, settings, options, env):
         cwd = os.getcwd()
@@ -490,7 +513,7 @@ class ConanAPIV1(object):
 
     @api_method
     def build(self, conanfile_path, source_folder=None, package_folder=None, build_folder=None,
-              install_folder=None, cwd=None):
+              install_folder=None, should_configure=True, should_build=True, should_install=True, cwd=None):
 
         cwd = cwd or os.getcwd()
         conanfile_path = _get_conanfile_path(conanfile_path, cwd, py=True)
@@ -501,7 +524,8 @@ class ConanAPIV1(object):
         package_folder = _make_abs_path(package_folder, cwd, default=default_pkg_folder)
 
         self._manager.build(conanfile_path, source_folder, build_folder, package_folder,
-                            install_folder)
+                            install_folder, should_configure=should_configure, should_build=should_build,
+                            should_install=should_install)
 
     @api_method
     def package(self, path, build_folder, package_folder, source_folder=None, install_folder=None, cwd=None):
@@ -572,16 +596,33 @@ class ConanAPIV1(object):
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._remote_manager, force=force)
+                 self._user_io, self._remote_manager, self.recorder, force=force)
 
     @api_method
-    def user(self, name=None, clean=False, remote=None, password=None):
-        if clean:
-            localdb = LocalDB(self._client_cache.localdb)
-            localdb.init(clean=True)
-            self._user_io.out.success("Deleted user data")
-            return
-        self._manager.user(remote, name, password)
+    def authenticate(self, name, password, remote=None):
+        registry = RemoteRegistry(self._client_cache.registry, self._user_io.out)
+        if not remote:
+            remote = registry.default_remote
+        else:
+            remote = registry.remote(remote)
+        if password == "":
+            name, password = self._user_io.request_login(remote_name=remote.name,
+                                                         username=name)
+        self._remote_manager.authenticate(remote, name, password)
+
+    @api_method
+    def user_set(self, user, remote_name=None):
+        return user_set(self._client_cache, self._user_io.out, user, remote_name)
+
+    @api_method
+    def users_clean(self):
+        return users_clean(self._client_cache)
+
+    @api_method
+    def users_list(self, remote=None):
+        users = users_list(self._client_cache, self._user_io.out, remote)
+        for remote_name, username in users:
+            self._user_io.out.info("Current '%s' user: %s" % (remote_name, username))
 
     @api_method
     def search_recipes(self, pattern, remote=None, case_sensitive=False):
@@ -596,13 +637,17 @@ class ConanAPIV1(object):
 
     @api_method
     def upload(self, pattern, package=None, remote=None, all_packages=False, force=False,
-               confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False):
+               confirm=False, retry=2, retry_wait=5, skip_upload=False, integrity_check=False,
+               no_overwrite=None):
         """ Uploads a package recipe and the generated binary packages to a specified remote
         """
-        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager,
-                             remote)
-        return uploader.upload(pattern, package, all_packages, force, confirm, retry,
-                               retry_wait, skip_upload, integrity_check)
+
+        if force and no_overwrite:
+            raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
+
+        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager, remote, self.recorder)
+        return uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
+                               skip_upload, integrity_check, no_overwrite)
 
     @api_method
     def remote_list(self):

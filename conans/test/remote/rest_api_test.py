@@ -41,7 +41,6 @@ class RestApiTest(unittest.TestCase):
             token = cls.api.authenticate("private_user", "private_pass")
             cls.api.token = token
 
-
     @classmethod
     def tearDownClass(cls):
         cls.server.stop()
@@ -255,7 +254,8 @@ class RestApiTest(unittest.TestCase):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0)
+        self.api.upload_package(package_reference, abs_paths, retry=1, retry_wait=0,
+                                no_overwrite=None)
 
     def _upload_recipe(self, conan_reference, base_files=None, retry=1, retry_wait=0):
 
@@ -282,4 +282,4 @@ class MyConan(ConanFile):
             save(abs_path, content)
             abs_paths[filename] = abs_path
 
-        self.api.upload_recipe(conan_reference, abs_paths, retry, retry_wait, False)
+        self.api.upload_recipe(conan_reference, abs_paths, retry, retry_wait, False, None)
