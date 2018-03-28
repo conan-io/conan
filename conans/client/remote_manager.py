@@ -14,8 +14,11 @@ from conans.util.files import gzopen_without_timestamps
 from conans.util.files import tar_extract, rmdir, exception_message_safe, mkdir
 from conans.util.files import touch
 from conans.util.log import logger
-from conans.util.tracer import log_package_upload, log_recipe_upload,\
-    log_recipe_download, log_package_download, log_recipe_sources_download, log_uncompressed_file, log_compressed_files
+# FIXME: Eventually, when all output is done, tracer functions should be moved to the recorder class
+from conans.util.tracer import (log_package_upload, log_recipe_upload,
+                                log_recipe_sources_download,
+                                log_uncompressed_file, log_compressed_files, log_recipe_download,
+                                log_package_download)
 from conans.client.source import merge_directories
 
 

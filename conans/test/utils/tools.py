@@ -163,7 +163,6 @@ class TestRequester(object):
                 kwargs["content_type"] = "application/json"
             kwargs.pop("json", None)
 
-
         return app, url
 
     @staticmethod

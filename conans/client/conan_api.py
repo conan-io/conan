@@ -5,6 +5,7 @@ import requests
 
 import conans
 from conans import __version__ as client_version, tools
+from conans.client.action_recorder import ActionRecorder
 from conans.client.client_cache import ClientCache
 from conans.client.conf import MIN_SERVER_COMPATIBLE_VERSION, ConanClientConfigParser
 from conans.client.manager import ConanManager, existing_info_files
@@ -187,10 +188,12 @@ class ConanAPIV1(object):
         self._user_io = user_io
         self._runner = runner
         self._remote_manager = remote_manager
+        self.recorder = ActionRecorder()
         self._manager = ConanManager(client_cache, user_io, runner, remote_manager, search_manager,
-                                     _settings_preprocessor)
+                                     _settings_preprocessor, self.recorder)
         if not interactive:
             self._user_io.disable_input()
+
 
     @api_method
     def new(self, name, header=False, pure_c=False, test=False, exports_sources=False, bare=False,
@@ -318,6 +321,8 @@ class ConanAPIV1(object):
                                   build_modes=build_modes,
                                   update=update,
                                   keep_build=keep_build)
+
+
 
     @api_method
     def export_pkg(self, conanfile_path, name, channel, source_folder=None, build_folder=None,
@@ -591,7 +596,7 @@ class ConanAPIV1(object):
         from conans.client.cmd.copy import cmd_copy
         # FIXME: conan copy does not support short-paths in Windows
         cmd_copy(reference, user_channel, packages, self._client_cache,
-                 self._user_io, self._remote_manager, force=force)
+                 self._user_io, self._remote_manager, self.recorder, force=force)
 
     @api_method
     def authenticate(self, name, password, remote=None):
@@ -640,7 +645,7 @@ class ConanAPIV1(object):
         if force and no_overwrite:
             raise ConanException("'no_overwrite' argument cannot be used together with 'force'")
 
-        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager, remote)
+        uploader = CmdUpload(self._client_cache, self._user_io, self._remote_manager, remote, self.recorder)
         return uploader.upload(pattern, package, all_packages, force, confirm, retry, retry_wait,
                                skip_upload, integrity_check, no_overwrite)
 
