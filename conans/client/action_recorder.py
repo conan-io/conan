@@ -3,7 +3,7 @@
 # of them because it has to be called in the remote manager, not in the proxy, where we have info
 # about the downloaded files prior to unzip them
 
-import time
+from datetime import datetime
 from collections import namedtuple, OrderedDict
 
 # Install actions
@@ -23,7 +23,7 @@ class Action(namedtuple("Action", "type, doc, time")):
 
     def __new__(cls, the_type, doc=None):
         doc = doc or {}
-        the_time = time.time()
+        the_time = datetime.utcnow()
         return super(cls, Action).__new__(cls, the_type, doc, the_time)
 
 

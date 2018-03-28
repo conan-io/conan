@@ -2,6 +2,8 @@ import json
 import os
 import unittest
 
+import datetime
+
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
 from conans.test.utils.tools import TestServer, TestClient
 from conans.util.files import save, load
@@ -31,6 +33,8 @@ class JsonOutputTest(unittest.TestCase):
         self.client.run("install CC/1.0@private_user/channel --json=myfile.json --build missing ")
         my_json = json.loads(load(os.path.join(self.client.current_folder, "myfile.json")))
 
+        the_time_str = my_json["installed"][0]["recipe"]["time"]
+        self.assertIn("T", the_time_str) # Weak validation of the ISO 8601
         self.assertFalse(my_json["error"])
         self.assertEquals(my_json["installed"][0]["recipe"]["id"], "CC/1.0@private_user/channel")
         self.assertFalse(my_json["installed"][0]["recipe"]["cache"])
