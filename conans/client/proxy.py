@@ -229,8 +229,6 @@ class ConanProxy(object):
                 self._recorder.recipe_install_error(conan_reference, INSTALL_ERROR_NETWORK,
                                                     str(exc), ref_remote.url)
                 raise exc
-            except Exception as exc:
-                raise exc
 
         output.info("Not found in local cache, looking in remotes...")
         remotes = self._registry.remotes
