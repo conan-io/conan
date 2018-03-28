@@ -50,7 +50,11 @@ class CommandOutputer(object):
         cwd = os.path.abspath(cwd or os.getcwd())
         if not os.path.isabs(json_output):
             json_output = os.path.join(cwd, json_output)
-        save(json_output, json.dumps(info))
+
+        def date_handler(obj):
+            return obj.isoformat() if hasattr(obj, 'isoformat') else obj
+
+        save(json_output, json.dumps(info, default=date_handler))
         self.user_io.out.info("json file created at '%s'" % json_output)
 
     def _read_dates(self, deps_graph):
