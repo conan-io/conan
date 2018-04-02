@@ -114,10 +114,10 @@ class PrivateDepsTest(unittest.TestCase):
         self.client.run("remove Hello0* -p -f ")
         self.client.run("remove Hello1* -p -f")
         self.client.run("search Hello0/0.1@lasote/stable")
-        self.assertIn("There are no packages for pattern 'Hello0/0.1@lasote/stable'",
+        self.assertIn("There are no packages for reference 'Hello0/0.1@lasote/stable', but package recipe found.",
                       self.client.user_io.out)
         self.client.run("search Hello1/0.1@lasote/stable")
-        self.assertIn("There are no packages for pattern 'Hello1/0.1@lasote/stable'",
+        self.assertIn("There are no packages for reference 'Hello1/0.1@lasote/stable', but package recipe found.",
                       self.client.user_io.out)
 
         self.client.run('install . --build missing')

@@ -62,7 +62,7 @@ compiler:
         version: ["8", "9", "10", "11", "12", "14", "15"]
         toolset: [None, v90, v100, v110, v110_xp, v120, v120_xp, v140, v140_xp, v140_clang_c2, LLVM-vs2014, LLVM-vs2014_xp, v141, v141_xp, v141_clang_c2]
     clang:
-        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0"]
+        version: ["3.3", "3.4", "3.5", "3.6", "3.7", "3.8", "3.9", "4.0", "5.0", "6.0"]
         libcxx: [libstdc++, libstdc++11, libc++]
     apple-clang:
         version: ["5.0", "5.1", "6.0", "6.1", "7.0", "7.3", "8.0", "8.1", "9.0"]
@@ -94,6 +94,7 @@ sysrequires_sudo = True               # environment CONAN_SYSREQUIRES_SUDO
 # cache_no_locks = True
 # user_home_short = your_path         # environment CONAN_USER_HOME_SHORT
 # skip_vs_projects_upgrade = False    # environment CONAN_SKIP_VS_PROJECTS_UPGRADE
+# non_interactive = False             # environment CONAN_NON_INTERACTIVE
 
 # conan_make_program = make           # environment CONAN_MAKE_PROGRAM (overrides the make program used in AutoToolsBuildEnvironment.make)
 
@@ -127,6 +128,8 @@ path = ~/.conan/data
 # http = http://user:pass@10.10.1.10:3128/
 # http = http://10.10.1.10:3128
 # https = http://10.10.1.10:1080
+# You can skip the proxy for the matching (fnmatch) urls (comma-separated)
+# no_proxy_match = *bintray.com*, https://myserver.*
 
 
 # Default settings now declared in the default profile
@@ -153,6 +156,7 @@ class ConanClientConfigParser(ConfigParser, object):
                "CONAN_TRACE_FILE": self._env_c("log.trace_file", "CONAN_TRACE_FILE", None),
                "CONAN_PRINT_RUN_COMMANDS": self._env_c("log.print_run_commands", "CONAN_PRINT_RUN_COMMANDS", "False"),
                "CONAN_COMPRESSION_LEVEL": self._env_c("general.compression_level", "CONAN_COMPRESSION_LEVEL", "9"),
+               "CONAN_NON_INTERACTIVE": self._env_c("general.non_interactive", "CONAN_NON_INTERACTIVE", "False"),
                "CONAN_PYLINTRC": self._env_c("general.pylintrc", "CONAN_PYLINTRC", None),
                "CONAN_PYLINT_WERR": self._env_c("general.pylint_werr", "CONAN_PYLINT_WERR", None),
                "CONAN_SYSREQUIRES_SUDO": self._env_c("general.sysrequires_sudo", "CONAN_SYSREQUIRES_SUDO", "False"),

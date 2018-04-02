@@ -98,7 +98,7 @@ class HelloConan(ConanFile):
             self.assertIn("_action", doc)  # Valid jsons
 
         self.assertEquals(json.loads(actions[0])["_action"], "COMMAND")
-        self.assertEquals(json.loads(actions[0])["name"], "user")
+        self.assertEquals(json.loads(actions[0])["name"], "authenticate")
 
         self.assertEquals(json.loads(actions[2])["_action"], "COMMAND")
         self.assertEquals(json.loads(actions[2])["name"], "export")

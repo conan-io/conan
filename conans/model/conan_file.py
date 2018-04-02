@@ -148,6 +148,7 @@ class ConanFile(object):
         self.deps_user_info = DepsUserInfo()
 
         self.copy = None  # initialized at runtime
+        self.copy_deps = None  # initialized at runtime
 
         # an output stream (writeln, info, warn error)
         self.output = output
@@ -161,11 +162,12 @@ class ConanFile(object):
         self._user = user
         self._channel = channel
 
-        # Are we in local cache? Suggest a better name
         self.in_local_cache = False
-
-        # Init a description
         self.description = None
+        # Vars to control the build steps (build(), package())
+        self.should_configure = True
+        self.should_build = True
+        self.should_install = True
 
     @property
     def env(self):
@@ -238,9 +240,15 @@ class ConanFile(object):
         """
 
     def build(self):
+        """ build your project calling the desired build tools as done in the command line.
+        E.g. self.run("cmake --build .") Or use the provided build helpers. E.g. cmake.build()
+        """
         self.output.warn("This conanfile has no build step")
 
     def package(self):
+        """ package the needed files from source and build folders.
+        E.g. self.copy("*.h", src="src/includes", dst="includes")
+        """
         self.output.warn("This conanfile has no package step")
 
     def package_info(self):
@@ -265,6 +273,9 @@ class ConanFile(object):
         """
 
     def test(self):
+        """ test the generated executable.
+        E.g.  self.run("./example")
+        """
         raise ConanException("You need to create a method 'test' in your test/conanfile.py")
 
     def __repr__(self):
