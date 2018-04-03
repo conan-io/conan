@@ -12,11 +12,16 @@ class DepsCppCmake(object):
             return "\n\t\t\t".join('"%s"' % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
                                    for p in paths)
 
-        def join(separator, values, suffix=""):
-            # Flags have to be escaped, included spaces
-            return separator.join("%s%s" % (suffix, v.replace('\\', '\\\\').replace('$', '\\$').
-                                            replace('"', '\\"').replace(' ', '\\ '))
+        def join_flags(separator, values):
+            # Flags have to be escaped
+            return separator.join(v.replace('\\', '\\\\').replace('$', '\\$').replace('"', '\\"')
                                   for v in values)
+
+        def join_defines(values, prefix=""):
+            # Defines have to be escaped, included spaces
+            return "\n\t\t\t".join("%s%s" % (prefix, v.replace('\\', '\\\\').replace('$', '\\$').
+                                   replace('"', '\\"').replace(' ', '\\ '))
+                                   for v in values)
 
         self.include_paths = join_paths(cpp_info.include_paths)
         self.lib_paths = join_paths(cpp_info.lib_paths)
@@ -24,22 +29,22 @@ class DepsCppCmake(object):
         self.bin_paths = join_paths(cpp_info.bin_paths)
         self.build_paths = join_paths(cpp_info.build_paths)
 
-        self.libs = join(" ", cpp_info.libs)
-        self.defines = join("\n\t\t\t", cpp_info.defines, "-D")
-        self.compile_definitions = join("\n\t\t\t", cpp_info.defines)
+        self.libs = join_flags(" ", cpp_info.libs)
+        self.defines = join_defines(cpp_info.defines, "-D")
+        self.compile_definitions = join_defines(cpp_info.defines)
 
-        self.cppflags = join(" ", cpp_info.cppflags)
-        self.cflags = join(" ", cpp_info.cflags)
-        self.sharedlinkflags = join(" ", cpp_info.sharedlinkflags)
-        self.exelinkflags = join(" ", cpp_info.exelinkflags)
+        self.cppflags = join_flags(" ", cpp_info.cppflags)
+        self.cflags = join_flags(" ", cpp_info.cflags)
+        self.sharedlinkflags = join_flags(" ", cpp_info.sharedlinkflags)
+        self.exelinkflags = join_flags(" ", cpp_info.exelinkflags)
 
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
         # Issue: #1251
-        self.cppflags_list = join(";", cpp_info.cppflags)
-        self.cflags_list = join(";", cpp_info.cflags)
-        self.sharedlinkflags_list = join(";", cpp_info.sharedlinkflags)
-        self.exelinkflags_list = join(";", cpp_info.exelinkflags)
+        self.cppflags_list = join_flags(";", cpp_info.cppflags)
+        self.cflags_list = join_flags(";", cpp_info.cflags)
+        self.sharedlinkflags_list = join_flags(";", cpp_info.sharedlinkflags)
+        self.exelinkflags_list = join_flags(";", cpp_info.exelinkflags)
 
         self.rootpath = join_paths([cpp_info.rootpath])
 
