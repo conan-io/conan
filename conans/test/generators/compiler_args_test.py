@@ -33,7 +33,6 @@ class CompilerArgsTest(unittest.TestCase):
         conan_file.env_info = EnvInfo()
         return conan_file
 
-
     def gcc_test(self):
         settings = Settings.loads(default_settings_yml)
         settings.os = "Linux"
@@ -41,12 +40,13 @@ class CompilerArgsTest(unittest.TestCase):
         settings.compiler.version = "6.3"
         settings.arch = "x86"
         settings.build_type = "Release"
+        settings.cppstd = "gnu17"
 
         conan_file = self._get_conanfile(settings)
         gcc = GCCGenerator(conan_file)
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -s -DNDEBUG '
                           '-Wl,-rpath="path/to/lib1" '
-                          '-Lpath/to/lib1 -lmylib', gcc.content)
+                          '-Lpath/to/lib1 -lmylib -std=gnu++1z', gcc.content)
 
         settings.arch = "x86_64"
         settings.build_type = "Debug"
@@ -55,14 +55,14 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
                           '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
-                          '-D_GLIBCXX_USE_CXX11_ABI=1',
+                          '-D_GLIBCXX_USE_CXX11_ABI=1 -std=gnu++1z',
                           gcc.content)
 
         settings.compiler.libcxx = "libstdc++"
         gcc = GCCGenerator(conan_file)
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m64 -g '
                           '-Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib '
-                          '-D_GLIBCXX_USE_CXX11_ABI=0',
+                          '-D_GLIBCXX_USE_CXX11_ABI=0 -std=gnu++1z',
                           gcc.content)
 
         settings.os = "Windows"
@@ -73,7 +73,8 @@ class CompilerArgsTest(unittest.TestCase):
         gcc = GCCGenerator(conan_file)
         # GCC generator ignores the compiler setting, it is always gcc
         self.assertEquals('-Dmydefine1 -Ipath/to/include1 cxx_flag1 c_flag1 -m32 -s '
-                          '-DNDEBUG -Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib', gcc.content)
+                          '-DNDEBUG -Wl,-rpath="path/to/lib1" -Lpath/to/lib1 -lmylib',
+                          gcc.content)
 
     def compiler_args_test(self):
         settings = Settings.loads(default_settings_yml)
