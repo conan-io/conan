@@ -38,6 +38,8 @@ class _CppInfo(object):
     def _filter_paths(self, paths):
         abs_paths = [os.path.join(self.rootpath, p)
                      if not os.path.isabs(p) else p for p in paths]
+        print "ABS PATHS ", abs_paths
+        print "FILTERED ", [p for p in abs_paths if os.path.isdir(p)]
         return [p for p in abs_paths if os.path.isdir(p)]
 
     @property

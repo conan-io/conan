@@ -348,8 +348,22 @@ class ConanInstaller(object):
 
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
-            # Call the info method
-            self._call_package_info(conan_file, package_folder)
+            if not self._conan_project:
+                # Call the info method
+                self._call_package_info(conan_file, package_folder)
+            else:
+                local_package = self._conan_project[conan_ref.name]
+                include_dirs = local_package._includedirs
+                lib_dirs = local_package._libdirs
+                if not include_dirs:
+                    self._call_package_info(conan_file, package_folder)
+                else:
+                    root_folder = os.path.dirname(local_package.conanfile_path)
+                    self._call_package_info(conan_file, root_folder)
+                    if include_dirs:
+                        conan_file.cpp_info.includedirs = include_dirs
+                    if lib_dirs:
+                        conan_file.cpp_info.libdirs = lib_dirs
 
         # Finally, propagate information to root node (conan_ref=None)
         self._propagate_info(root_conanfile, None, flat, deps_graph)
@@ -363,7 +377,11 @@ class ConanInstaller(object):
         # Assign to node the propagated info
         self._propagate_info(conan_file, conan_ref, flat, deps_graph)
         output.highlight("Calling build()")
-        build_folder = self._conan_project.get_build_path(conan_ref)
+
+        local_package = self._conan_project[conan_ref.name]
+        include_dirs = local_package._includedirs
+
+        build_folder = local_package.build_path
         package_ref = PackageReference(conan_ref, package_id)
         package_folder = self._conan_project.get_package_path(package_ref)
         mkdir(build_folder)
@@ -386,10 +404,9 @@ class ConanInstaller(object):
         save(os.path.join(build_folder, BUILD_INFO), TXTGenerator(conan_file).content)
         output.info("Generated %s" % BUILD_INFO)
 
-        create_package(conan_file, source_folder, build_folder, package_folder,
-                       build_folder, output)
-
-        self._call_package_info(conan_file, package_folder)
+        if not include_dirs:
+            create_package(conan_file, source_folder, build_folder, package_folder,
+                           build_folder, output)
 
     def _build_package(self, conan_file, conan_ref, package_id, package_ref, output, keep_build,
                        profile_build_requires, flat, deps_graph):
@@ -488,6 +505,8 @@ class ConanInstaller(object):
         # Get deps_cpp_info from upstream nodes
         node_order = deps_graph.ordered_closure((conan_ref, conan_file), flat)
         for n in node_order:
+            print "GETTING UDPATETO ", conan_ref, " FROM ", n.conan_ref
+            print "GETTING PATHS ", n.conanfile.cpp_info.include_paths
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
             conan_file.deps_user_info[n.conan_ref.name] = n.conanfile.user_info

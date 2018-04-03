@@ -341,15 +341,7 @@ class ConanManager(object):
         @param inject_require: Reference to add as a requirement to the conanfile
         """
 
-        try:
-            base_folder = os.path.dirname(reference)
-            path = os.path.join(base_folder, "conan-project.txt")
-            text = load(path)
-            conan_project = ConanProject(base_folder)
-            conan_project.loads(text)
-        except Exception as e:
-            print "SOMETHING WRONG!!!!! ", e
-            conan_project = None
+        conan_project = ConanProject.get_conan_project(reference)
 
         if generators is not False:
             generators = set(generators) if generators else set()

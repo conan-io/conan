@@ -440,7 +440,8 @@ class DepsGraphBuilder(object):
         """ creates and adds a new node to the dependency graph
         """
         if self._conan_project:
-            conanfile_path = self._conan_project.get_conanfile_path(requirement.conan_reference)
+            local_package = self._conan_project[requirement.conan_reference]
+            conanfile_path = local_package.conanfile_path
         else:
             conanfile_path = None
         if not conanfile_path:

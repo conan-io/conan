@@ -4,6 +4,7 @@ import os
 from conans.util.files import load, mkdir
 import re
 from conans.test.utils.cpp_test_files import cpp_hello_conan_files
+from conans.model.project import CONAN_PROJECT
 
 
 conanfile = """from conans import ConanFile
@@ -89,6 +90,57 @@ folder: ../C
         self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
 
         client.run("build .")
+        print client.out
+        command = os.sep.join([".", "bin", "say_hello"])
+        client.runner(command, cwd=client.current_folder)
+        print client.current_folder
+        print client.out
+        self.assertIn("Hello HelloA", client.out)
+        self.assertIn("Hello HelloB", client.out)
+        self.assertIn("Hello HelloC", client.out)
+
+    def build_cmake_test(self):
+        client = TestClient()
+        c_files = cpp_hello_conan_files(name="HelloC", settings='"os", "compiler", "arch", "build_type"')
+        client.save(c_files, path=os.path.join(client.current_folder, "C"))
+        b_files = cpp_hello_conan_files(name="HelloB", deps=["HelloC/0.1@lasote/stable"],
+                                        settings='"os", "compiler", "arch", "build_type"')
+        client.save(b_files, path=os.path.join(client.current_folder, "B"))
+
+        base_folder = client.current_folder
+        project = """HelloB:
+    folder: ../B
+    includedirs: .
+    libdirs: build/lib
+HelloC:
+    folder: ../C
+    includedirs: .
+    libdirs: build/lib
+"""
+        a_files = cpp_hello_conan_files(name="HelloA", deps=["HelloB/0.1@lasote/stable"],
+                                        settings='"os", "compiler", "arch", "build_type"')
+        a_files[CONAN_PROJECT] = project
+        client.save(a_files, path=os.path.join(client.current_folder, "A"))
+
+        client.current_folder = os.path.join(base_folder, "A")
+        client.run("install . -g cmake --build")
+        print client.out
+
+        # Check A
+        content = load(os.path.join(client.current_folder, "conanbuildinfo.cmake"))
+
+        include_dirs_hellob = re.search('set\(CONAN_INCLUDE_DIRS_HELLOB "(.*)"\)', content).group(1)
+        self.assertIn("void helloHelloB();", load(os.path.join(include_dirs_hellob, "helloHelloB.h")))
+        include_dirs_helloc = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
+        self.assertIn("void helloHelloC();", load(os.path.join(include_dirs_helloc, "helloHelloC.h")))
+
+        # Check B
+        content = load(os.path.join(base_folder, "B/build/conanbuildinfo.cmake"))
+        include_dirs_helloc2 = re.search('set\(CONAN_INCLUDE_DIRS_HELLOC "(.*)"\)', content).group(1)
+        self.assertEqual(include_dirs_helloc2, include_dirs_helloc)
+
+        client.run("build .")
+        print "CURRENT FOLDER ", client.current_folder
         print client.out
         command = os.sep.join([".", "bin", "say_hello"])
         client.runner(command, cwd=client.current_folder)
