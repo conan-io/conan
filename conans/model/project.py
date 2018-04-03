@@ -45,10 +45,13 @@ class ConanProject(object):
         parent = os.path.dirname(folder)
         if parent and parent != folder:
             return ConanProject.get_conan_project(parent)
+        return ConanProject(None)
 
     def __init__(self, path):
-        self._base_folder = os.path.dirname(path)
         self._local_packages = OrderedDict()  # {reference: LocalPackage}
+        if not path:
+            return
+        self._base_folder = os.path.dirname(path)
         content = load(path)
         self._loads(content)
 

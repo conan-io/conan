@@ -325,34 +325,28 @@ class ConanInstaller(object):
             package_folder = self._client_cache.package(package_ref,
                                                         conan_file.short_paths)
 
-            conanfile_path = False
-            if self._conan_project:
-                conanfile_path = self._conan_project.get_conanfile_path(conan_ref)
-                if conanfile_path:
-                    package_folder = self._conan_project.get_package_path(package_ref)
-                    mkdir(package_folder)
+            local_package = self._conan_project[conan_ref]
             if build_needed and (conan_ref, package_id) not in self._built_packages:
-                if conanfile_path:
+                if local_package:
+                    conanfile_path = local_package.conanfile_path
                     self._build_project_pkg(conan_file, output, conan_ref, package_id, flat,
                                             deps_graph, conanfile_path, profile_build_requires)
                 else:
                     self._build_package(conan_file, conan_ref, package_id, package_ref, output,
                                         keep_build, profile_build_requires, flat, deps_graph)
             else:
-                if conanfile_path:
-                    pass
-                else:
+                if not local_package:
                     # Get the package, we have a not outdated remote package
                     with self._client_cache.package_lock(package_ref):
                         self._get_remote_package(conan_file, package_ref, output, package_folder)
 
                 self._propagate_info(conan_file, conan_ref, flat, deps_graph)
 
-            if not self._conan_project:
+            if not local_package:
                 # Call the info method
                 self._call_package_info(conan_file, package_folder)
             else:
-                local_package = self._conan_project[conan_ref.name]
+                package_folder = local_package.conanfile_path
                 include_dirs = local_package._includedirs
                 lib_dirs = local_package._libdirs
                 if not include_dirs:
@@ -378,12 +372,11 @@ class ConanInstaller(object):
         self._propagate_info(conan_file, conan_ref, flat, deps_graph)
         output.highlight("Calling build()")
 
-        local_package = self._conan_project[conan_ref.name]
+        local_package = self._conan_project[conan_ref]
         include_dirs = local_package._includedirs
 
         build_folder = local_package.build_path
-        package_ref = PackageReference(conan_ref, package_id)
-        package_folder = self._conan_project.get_package_path(package_ref)
+        package_folder = local_package.package_path
         mkdir(build_folder)
         mkdir(package_folder)
         os.chdir(build_folder)
@@ -505,8 +498,6 @@ class ConanInstaller(object):
         # Get deps_cpp_info from upstream nodes
         node_order = deps_graph.ordered_closure((conan_ref, conan_file), flat)
         for n in node_order:
-            print "GETTING UDPATETO ", conan_ref, " FROM ", n.conan_ref
-            print "GETTING PATHS ", n.conanfile.cpp_info.include_paths
             conan_file.deps_cpp_info.update(n.conanfile.cpp_info, n.conan_ref.name)
             conan_file.deps_env_info.update(n.conanfile.env_info, n.conan_ref.name)
             conan_file.deps_user_info[n.conan_ref.name] = n.conanfile.user_info
@@ -566,10 +557,8 @@ class ConanInstaller(object):
                     if self._build_mode.forced(conan_file, conan_ref):
                         build_node = True
                     else:
-                        is_project = False
-                        if self._conan_project:
-                            is_project = self._conan_project.get_conanfile_path(conan_ref)
-                        if is_project:
+                        local_project = self._conan_project[conan_ref]
+                        if local_project:
                             build_node = False
                         else:
                             available = self._remote_proxy.package_available(package_reference,

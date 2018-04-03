@@ -439,12 +439,11 @@ class DepsGraphBuilder(object):
                          alias_ref=None):
         """ creates and adds a new node to the dependency graph
         """
-        if self._conan_project:
-            local_package = self._conan_project[requirement.conan_reference]
+
+        local_package = self._conan_project[requirement.conan_reference]
+        if local_package:
             conanfile_path = local_package.conanfile_path
         else:
-            conanfile_path = None
-        if not conanfile_path:
             conanfile_path = self._retriever.get_recipe(requirement.conan_reference)
         output = ScopedOutput(str(requirement.conan_reference), self._output)
         dep_conanfile = self._loader.load_conan(conanfile_path, output,
