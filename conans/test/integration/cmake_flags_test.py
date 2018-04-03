@@ -4,6 +4,7 @@ import os
 
 from conans.test.utils.tools import TestClient
 from nose.plugins.attrib import attr
+from parameterized.parameterized import parameterized
 
 
 conanfile_py = """
@@ -66,7 +67,8 @@ class CMakeFlagsTest(unittest.TestCase):
         self.assertNotIn('"', flags)
         return flags
 
-    def build_app_test(self):
+    @parameterized.expand([(True, ), (False, )])
+    def build_app_test(self, targets):
         client = TestClient()
         conanfile_py = """
 from conans import ConanFile
@@ -91,10 +93,17 @@ class App(ConanFile):
         cmake.build()
         self.run(os.sep.join([".", "bin", "myapp"]))
 """
-        cmake_app = cmake + """
+        cmake_app = """set(CMAKE_CXX_COMPILER_WORKS 1)
+set(CMAKE_CXX_ABI_COMPILED 1)
+project(MyHello CXX)
+cmake_minimum_required(VERSION 2.8.12)
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(%s)
 add_executable(myapp myapp.cpp)
 conan_target_link_libraries(myapp)
-"""
+""" % ("TARGETS" if targets else "")
+
         myapp = r"""#include <iostream>
 #define STRINGIFY(x) #x
 #define STRINGIFYMACRO(y) STRINGIFY(y)

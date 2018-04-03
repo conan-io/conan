@@ -19,8 +19,8 @@ class DepsCppCmake(object):
 
         def join_defines(values, prefix=""):
             # Defines have to be escaped, included spaces
-            return "\n\t\t\t".join("%s%s" % (prefix, v.replace('\\', '\\\\').replace('$', '\\$').
-                                   replace('"', '\\"').replace(' ', '\\ '))
+            return "\n\t\t\t".join('"%s%s"' % (prefix, v.replace('\\', '\\\\').replace('$', '\\$').
+                                   replace('"', '\\"'))
                                    for v in values)
 
         self.include_paths = join_paths(cpp_info.include_paths)
