@@ -7,42 +7,41 @@ from conans.client.generators.cmake_common import cmake_dependency_vars,\
 
 class DepsCppCmake(object):
     def __init__(self, cpp_info):
-        def escape(value, path=False):
-            """Escapes the specified string for use in a CMake command surrounded with double quotes
-                :param value the string to escape
-                :param path True if this should be treated as a path (backslash will be transformed to forward slash)
-                                 or False otherwise (backslash will be transformed to double backslash)"""
-            return '{0}'.format(value.replace('\\', '/' if path else '\\\\')
-                                     .replace('$', '\\$')
-                                     .replace('"', '\\"'))
+        def join_paths(paths):
+            # Paths are doubled quoted, and escaped (but spaces)
+            return "\n\t\t\t".join('"%s"' % p.replace('\\', '/').replace('$', '\\$').replace('"', '\\"')
+                                   for p in paths)
 
-        def multiline(field):
-            return "\n\t\t\t".join('"%s"' % escape(p, True) for p in field)
+        def join(separator, values, suffix=""):
+            # Flags have to be escaped, included spaces
+            return separator.join("%s%s" % (suffix, v.replace('\\', '\\\\').replace('$', '\\$').
+                                            replace('"', '\\"').replace(' ', '\\ '))
+                                  for v in values)
 
-        self.include_paths = multiline(cpp_info.include_paths)
-        self.lib_paths = multiline(cpp_info.lib_paths)
-        self.res_paths = multiline(cpp_info.res_paths)
-        self.bin_paths = multiline(cpp_info.bin_paths)
-        self.build_paths = multiline(cpp_info.build_paths)
+        self.include_paths = join_paths(cpp_info.include_paths)
+        self.lib_paths = join_paths(cpp_info.lib_paths)
+        self.res_paths = join_paths(cpp_info.res_paths)
+        self.bin_paths = join_paths(cpp_info.bin_paths)
+        self.build_paths = join_paths(cpp_info.build_paths)
 
-        self.libs = escape(" ".join(cpp_info.libs))
-        self.defines = "\n\t\t\t".join("-D%s" % d for d in cpp_info.defines)
-        self.compile_definitions = "\n\t\t\t".join(cpp_info.defines)
+        self.libs = join(" ", cpp_info.libs)
+        self.defines = join("\n\t\t\t", cpp_info.defines, "-D")
+        self.compile_definitions = join("\n\t\t\t", cpp_info.defines)
 
-        self.cppflags = escape(" ".join(cpp_info.cppflags))
-        self.cflags = escape(" ".join(cpp_info.cflags))
-        self.sharedlinkflags = escape(" ".join(cpp_info.sharedlinkflags))
-        self.exelinkflags = escape(" ".join(cpp_info.exelinkflags))
+        self.cppflags = join(" ", cpp_info.cppflags)
+        self.cflags = join(" ", cpp_info.cflags)
+        self.sharedlinkflags = join(" ", cpp_info.sharedlinkflags)
+        self.exelinkflags = join(" ", cpp_info.exelinkflags)
 
         # For modern CMake targets we need to prepare a list to not
         # loose the elements in the list by replacing " " with ";". Example "-framework Foundation"
         # Issue: #1251
-        self.cppflags_list = escape(";".join(cpp_info.cppflags))
-        self.cflags_list = escape(";".join(cpp_info.cflags))
-        self.sharedlinkflags_list = escape(";".join(cpp_info.sharedlinkflags))
-        self.exelinkflags_list = escape(";".join(cpp_info.exelinkflags))
+        self.cppflags_list = join(";", cpp_info.cppflags)
+        self.cflags_list = join(";", cpp_info.cflags)
+        self.sharedlinkflags_list = join(";", cpp_info.sharedlinkflags)
+        self.exelinkflags_list = join(";", cpp_info.exelinkflags)
 
-        self.rootpath = '"%s"' % escape(cpp_info.rootpath, True)
+        self.rootpath = join_paths([cpp_info.rootpath])
 
 
 class CMakeGenerator(Generator):
