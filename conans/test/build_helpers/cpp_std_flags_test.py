@@ -136,6 +136,10 @@ class CompilerFlagsTest(unittest.TestCase):
         self.assertEquals(cppstd_flag("apple-clang", "9", "14"), '-std=c++14')
         self.assertEquals(cppstd_flag("apple-clang", "9", "17"), "-std=c++1z")
 
+        self.assertEquals(cppstd_flag("apple-clang", "9.1", "11"), '-std=c++11')
+        self.assertEquals(cppstd_flag("apple-clang", "9.1", "14"), '-std=c++14')
+        self.assertEquals(cppstd_flag("apple-clang", "9.1", "17"), "-std=c++17")
+
     def test_apple_clang_cppstd_defaults(self):
         self.assertEquals(cppstd_default("apple-clang", "2"), "gnu98")
         self.assertEquals(cppstd_default("apple-clang", "3"), "gnu98")

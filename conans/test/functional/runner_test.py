@@ -39,10 +39,6 @@ class ConanFileToolsTest(ConanFile):
         runner = ConanRunner(print_commands_to_output=True,
                              generate_run_log_file=True,
                              log_run_to_output=True)
-        out = StringIO()
-        if six.PY2:
-            with self.assertRaisesRegexp(Exception, "Invalid output parameter"):
-                runner("python --version", output=out)
 
         out = six.StringIO()
         runner("python --version", output=out)
