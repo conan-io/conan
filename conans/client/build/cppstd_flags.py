@@ -26,7 +26,7 @@ def cppstd_flag(compiler, compiler_version, cppstd):
 def cppstd_default(compiler, compiler_version):
     default = {"gcc": _gcc_cppstd_default(compiler_version),
                "clang": _clang_cppstd_default(compiler_version),
-               "apple-clang": "gnu98",
+               "apple-clang": "gnu98",  # Confirmed in apple-clang 9.1 with a simple "auto i=1;"
                "Visual Studio": _visual_cppstd_default(compiler_version)}.get(str(compiler), None)
     return default
 
@@ -84,6 +84,11 @@ def _cppstd_apple_clang(clang_version, cppstd):
     if Version(clang_version) >= "6.1":
         v17 = "c++1z"
         vgnu17 = "gnu++1z"
+
+    if Version(clang_version) >= "9.1":
+        # Not confirmed that it didn't work before 9.1 but 1z is still valid, so we are ok
+        v17 = "c++17"
+        vgnu17 = "gnu++17"
 
     flag = {"98": v98, "gnu98": vgnu98,
             "11": v11, "gnu11": vgnu11,
